@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystem.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -45,7 +45,7 @@ namespace Akka.Actor
             {
             }
 
-            public static readonly Local Instance = new Local();
+            public static readonly Local Instance = new();
         }
 
         public sealed class Remote : ProviderSelection
@@ -54,7 +54,7 @@ namespace Akka.Actor
             {
             }
 
-            public static readonly Remote Instance = new Remote();
+            public static readonly Remote Instance = new();
         }
 
         public sealed class Cluster : ProviderSelection
@@ -63,7 +63,7 @@ namespace Akka.Actor
             {
             }
 
-            public static readonly Cluster Instance = new Cluster();
+            public static readonly Cluster Instance = new();
         }
 
         public sealed class Custom : ProviderSelection
@@ -399,26 +399,19 @@ namespace Akka.Actor
             // runtime from inside the finalizer and you should not reference
             // other objects. Only unmanaged resources can be disposed.
 
-            try
+            //Make sure Dispose does not get called more than once, by checking the disposed field
+            if (!_isDisposed)
             {
-                //Make sure Dispose does not get called more than once, by checking the disposed field
-                if (!_isDisposed)
+                if (disposing)
                 {
-                    if (disposing)
-                    {
-                        Log.Debug("Disposing system");
-                        Terminate().Wait(); // System needs to be disposed before method returns
-                    }
-
-                    //Clean up unmanaged resources
+                    Log.Debug("Disposing system");
+                    Terminate().Wait(); // System needs to be disposed before method returns
                 }
 
-                _isDisposed = true;
+                //Clean up unmanaged resources
             }
-            finally
-            {
 
-            }
+            _isDisposed = true;
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonApiSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,7 +24,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         public sealed class Pong
         {
-            public static Pong Instance => new Pong();
+            public static Pong Instance => new();
             private Pong() { }
         }
 
@@ -36,7 +36,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         public sealed class Perish
         {
-            public static Perish Instance => new Perish();
+            public static Perish Instance => new();
             private Perish() { }
         }
 
@@ -124,10 +124,10 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }, TimeSpan.FromSeconds(3));
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await _system2.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(3));
+            base.AfterAll();
+            Shutdown(_system2);
         }
     }
 }

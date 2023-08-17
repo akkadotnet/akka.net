@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CurrentEventsByPersistenceIdSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -47,7 +48,7 @@ namespace Akka.Persistence.TCK.Query
             var src = queries.CurrentEventsByPersistenceId("a", 0, long.MaxValue);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
             probe.Request(2)
-                .ExpectNext("a-1", "a-2")
+                .ExpectNext( "a-1", "a-2")
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             probe.Request(2)
                 .ExpectNext("a-3")
@@ -62,7 +63,7 @@ namespace Akka.Persistence.TCK.Query
             var src = queries.CurrentEventsByPersistenceId("b", 0L, 2L);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
                 .Request(5)
-                .ExpectNext("b-1", "b-2")
+                .ExpectNext( "b-1", "b-2")
                 .ExpectComplete();
         }
 
@@ -74,7 +75,7 @@ namespace Akka.Persistence.TCK.Query
             var src = queries.CurrentEventsByPersistenceId("f", 0L, long.MaxValue);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
             probe.Request(2)
-                .ExpectNext("f-1", "f-2")
+                .ExpectNext( "f-1", "f-2")
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             pref.Tell("f-4");
@@ -204,10 +205,10 @@ namespace Akka.Persistence.TCK.Query
             return Sys.ActorOf(Query.TestActor.Props(persistenceId));
         }
 
-        public override Task DisposeAsync()
+        protected override void AfterAll()
         {
             Materializer.Dispose();
-            return base.DisposeAsync();
+            base.AfterAll();
         }
     }
 }

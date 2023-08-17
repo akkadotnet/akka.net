@@ -62,6 +62,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         public Akka.Persistence.Sql.Common.Journal.CircuitBreakerSettings CircuitBreakerSettings { get; }
         public string ConnectionString { get; }
         public System.TimeSpan ConnectionTimeout { get; }
+        [System.ObsoleteAttribute("This property should never be used for writes, use the default `System.Object` se" +
+            "rializer instead")]
         public string DefaultSerializer { get; }
         public System.Data.IsolationLevel IsolationLevel { get; }
         public int MaxBatchSize { get; }
@@ -221,6 +223,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly System.TimeSpan Timeout;
         public readonly string TimestampColumnName;
         public QueryConfiguration(string schemaName, string journalEventsTableName, string metaTableName, string persistenceIdColumnName, string sequenceNrColumnName, string payloadColumnName, string manifestColumnName, string timestampColumnName, string isDeletedColumnName, string tagsColumnName, string orderingColumnName, string serializerIdColumnName, System.TimeSpan timeout, string defaultSerializer, bool useSequentialAccess) { }
+        [System.ObsoleteAttribute("This property should never be used for writes, use the default `System.Object` se" +
+            "rializer instead")]
         public string DefaultSerializer { get; }
         public string FullJournalTableName { get; }
         public string FullMetaTableName { get; }
@@ -352,6 +356,8 @@ namespace Akka.Persistence.Sql.Common
         public string ConnectionString { get; }
         public string ConnectionStringName { get; }
         public System.TimeSpan ConnectionTimeout { get; }
+        [System.ObsoleteAttribute("This property should never be used, use the default `System.Object` serializer in" +
+            "stead")]
         public string DefaultSerializer { get; }
         public string FullTableName { get; }
         public string SchemaName { get; }
@@ -398,6 +404,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
     }
     public class QueryConfiguration
     {
+        [System.ObsoleteAttribute("This property should never be used for writes, use the default `System.Object` se" +
+            "rializer instead")]
         public readonly string DefaultSerializer;
         public readonly string ManifestColumnName;
         public readonly string PayloadColumnName;

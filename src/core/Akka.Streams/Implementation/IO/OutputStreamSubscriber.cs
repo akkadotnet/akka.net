@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="OutputStreamSubscriber.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ namespace Akka.Streams.Implementation.IO
                 throw new ArgumentException("Buffer size must be > 0");
 
             return
-                Actor.Props.Create(() => new OutputStreamSubscriber(os, completionPromise, bufferSize, autoFlush))
+                Actor.Props.Create<OutputStreamSubscriber>(os, completionPromise, bufferSize, autoFlush)
                     .WithDeploy(Deploy.Local);
         }
 
@@ -53,6 +53,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="completionPromise">TBD</param>
         /// <param name="bufferSize">TBD</param>
         /// <param name="autoFlush">TBD</param>
+        /// If this gets changed you must change <see cref="OutputStreamSubscriber.Props"/> as well!
         public OutputStreamSubscriber(Stream outputStream, TaskCompletionSource<IOResult> completionPromise, int bufferSize, bool autoFlush)
         {
             _outputStream = outputStream;

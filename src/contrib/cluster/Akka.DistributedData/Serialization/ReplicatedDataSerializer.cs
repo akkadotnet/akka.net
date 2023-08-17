@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReplicatedDataSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -66,9 +66,13 @@ namespace Akka.DistributedData.Serialization
 
         private readonly byte[] _emptyArray = Array.Empty<byte>();
 
+        private readonly bool _backwardCompatWireFormat;
+        
         public ReplicatedDataSerializer(ExtendedActorSystem system) : base(system)
         {
             _ser = new SerializationSupport(system);
+            _backwardCompatWireFormat =
+                system.Settings.Config.GetBoolean("akka.cluster.sharding.distributed-data.backward-compatible-wire-format");
         }
 
 
@@ -735,6 +739,11 @@ namespace Akka.DistributedData.Serialization
             pLww.State = _ser.OtherMessageToProto(register.Value);
             pLww.Timestamp = register.Timestamp;
             pLww.TypeInfo = GetTypeDescriptor(r.RegisterType);
+            
+            // HACK: Really really ugly hack to make sure that v1.5 DData cluster sharding works with v1.4
+            if(_backwardCompatWireFormat && pLww.TypeInfo.TypeName == "Akka.Cluster.Sharding.ShardCoordinator+CoordinatorState, Akka.Cluster.Sharding")
+                pLww.TypeInfo.TypeName = "Akka.Cluster.Sharding.PersistentShardCoordinator+State, Akka.Cluster.Sharding";
+            
             return pLww;
         }
 
@@ -766,9 +775,13 @@ namespace Akka.DistributedData.Serialization
                     }
                 case ValType.Other:
                     {
+                        // HACK: Really really ugly hack to make sure that v1.5 DData cluster sharding works with v1.4
+                        var typeName = proto.TypeInfo.TypeName;
+                        if (typeName == "Akka.Cluster.Sharding.PersistentShardCoordinator+State, Akka.Cluster.Sharding")
+                            typeName = "Akka.Cluster.Sharding.ShardCoordinator+CoordinatorState, Akka.Cluster.Sharding";
+                        
                         // runtime type - enter horrible dynamic serialization stuff
-
-                        var setContentType = Type.GetType(proto.TypeInfo.TypeName);
+                        var setContentType = Type.GetType(typeName);
 
                         var setType = LWWRegisterMaker.MakeGenericMethod(setContentType);
                         return (ILWWRegister)setType.Invoke(this, new object[] { proto });
@@ -977,13 +990,14 @@ namespace Akka.DistributedData.Serialization
         {
             switch (op)
             {
+                case null: throw new ArgumentNullException(nameof(op), $"Failed to serialize {nameof(ORDictionary.IDeltaOperation)} to protobuf");
                 case ORDictionary.IPutDeltaOp p: return ORDictionaryPutToProto(p);
                 case ORDictionary.IRemoveDeltaOp r: return ORDictionaryRemoveToProto(r);
                 case ORDictionary.IRemoveKeyDeltaOp r: return ORDictionaryRemoveKeyToProto(r);
                 case ORDictionary.IUpdateDeltaOp u: return ORDictionaryUpdateToProto(u);
                 case ORDictionary.IDeltaGroupOp g: return ORDictionaryDeltasToProto(g.OperationsSerialization.ToList());
                 default:
-                    throw new SerializationException($"Unrecognized delta operation [{op}]");
+                    throw new SerializationException($"Unrecognized delta operation [({op.GetType().Name}):{op}]");
             }
 
         }
@@ -1260,8 +1274,12 @@ namespace Akka.DistributedData.Serialization
 
         private ILWWDictionaryDeltaOperation LWWDictionaryDeltaFromProto<TKey, TValue>(ORDictionary.IDeltaOperation op)
         {
-            var casted = (ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation)op;
-            return new LWWDictionary<TKey, TValue>.LWWDictionaryDelta(casted);
+            return op switch
+            {
+                null => throw new ArgumentNullException(nameof(op), $"Failed to deserialize {nameof(ILWWDictionaryDeltaOperation)}"),
+                ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation casted => new LWWDictionary<TKey, TValue>.LWWDictionaryDelta(casted),
+                _ => throw new ArgumentException($"Failed to cast cast {op.GetType().FullName} to {typeof(ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation).FullName}")
+            };
         }
 
         #endregion

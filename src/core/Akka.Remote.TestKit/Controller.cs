@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Controller.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -49,7 +49,7 @@ namespace Akka.Remote.TestKit
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is ClientDisconnected && Equals((ClientDisconnected) obj);
+                return obj is ClientDisconnected disconnected && Equals(disconnected);
             }
 
             /// <inheritdoc/>
@@ -111,7 +111,7 @@ namespace Akka.Remote.TestKit
         public class GetNodes
         {
             private GetNodes() { }
-            private static readonly GetNodes _instance = new GetNodes();
+            private static readonly GetNodes _instance = new();
 
             public static GetNodes Instance
             {
@@ -125,7 +125,7 @@ namespace Akka.Remote.TestKit
         public class GetSockAddr
         {
             private GetSockAddr() { }
-            private static readonly GetSockAddr _instance = new GetSockAddr();
+            private static readonly GetSockAddr _instance = new();
 
             public static GetSockAddr Instance
             {

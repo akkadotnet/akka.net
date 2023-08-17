@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventsByPersistenceIdSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -47,7 +48,7 @@ namespace Akka.Persistence.TCK.Query
             var src = queries.EventsByPersistenceId("c", 0, long.MaxValue);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
                 .Request(5)
-                .ExpectNext("c-1", "c-2", "c-3");
+                .ExpectNext( "c-1", "c-2", "c-3");
 
             pref.Tell("c-4");
             ExpectMsg("c-4-done");
@@ -64,7 +65,7 @@ namespace Akka.Persistence.TCK.Query
             var src = queries.EventsByPersistenceId("d", 0, 4);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
                 .Request(5)
-                .ExpectNext("d-1", "d-2", "d-3");
+                .ExpectNext( "d-1", "d-2", "d-3");
 
             pref.Tell("d-4");
             ExpectMsg("d-4-done");
@@ -81,7 +82,7 @@ namespace Akka.Persistence.TCK.Query
             var src = queries.EventsByPersistenceId("e", 0, long.MaxValue);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
             probe.Request(2)
-                .ExpectNext("e-1", "e-2")
+                .ExpectNext( "e-1", "e-2")
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             pref.Tell("e-4");
@@ -127,10 +128,10 @@ namespace Akka.Persistence.TCK.Query
             return Sys.ActorOf(Query.TestActor.Props(persistenceId));
         }
 
-        public override Task DisposeAsync()
+        protected override void AfterAll()
         {
             Materializer.Dispose();
-            return base.DisposeAsync();
+            base.AfterAll();
         }
     }
 }

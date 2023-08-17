@@ -1,13 +1,15 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowWhereSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
@@ -41,11 +43,11 @@ namespace Akka.Streams.Tests.Dsl
                 return ((ICollection<int>)new[] { x }, (ICollection<int>)((x & 1) == 0 ? new[] { x } : new int[] { }));
             }).ToArray());
 
-            RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.Where(x => x%2 == 0)));
+            RandomTestRange(Sys).Select(async _ => await RunScriptAsync(script, Settings, flow => flow.Where(x => x%2 == 0)));
         }
 
         [Fact]
-        public void A_Where_must_not_blow_up_with_high_request_counts()
+        public async Task A_Where_must_not_blow_up_with_high_request_counts()
         {
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(1, 1);
             var materializer = ActorMaterializer.Create(Sys, settings);
@@ -59,18 +61,17 @@ namespace Akka.Streams.Tests.Dsl
             for (var i = 1; i <= 1000; i++)
                 subscription.Request(int.MaxValue);
 
-            probe.ExpectNext(1);
-            probe.ExpectComplete();
+            await probe.ExpectNextAsync(1);
+            await probe.ExpectCompleteAsync();
         }
 
         [Fact]
-        public void A_Where_must_continue_if_error()
+        public async Task A_Where_must_continue_if_error()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var ex = new TestException("Test");
 
-                Source.From(Enumerable.Range(1, 3))
+                await Source.From(Enumerable.Range(1, 3))
                     .Where(x =>
                     {
                         if (x == 2)
@@ -81,7 +82,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
                     .ExpectNext(1, 3)
-                    .ExpectComplete();
+                    .ExpectCompleteAsync();
             }, Materializer);
         }
 
@@ -95,7 +96,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ((ICollection<int>)new[] { x }, (ICollection<int>)((x & 1) == 1 ? new[] { x } : new int[] { }));
             }).ToArray());
 
-            RandomTestRange(Sys).ForEach(_ => RunScript(script, Settings, flow => flow.WhereNot(x => x % 2 == 0)));
+            RandomTestRange(Sys).Select(async _ => await RunScriptAsync(script, Settings, flow => flow.WhereNot(x => x % 2 == 0)));
         }
     }
 }

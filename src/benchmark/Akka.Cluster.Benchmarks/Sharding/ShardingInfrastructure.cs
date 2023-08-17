@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardingInfrastructure.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ namespace Akka.Cluster.Benchmarks.Sharding
     {
         public sealed class Resolve
         {
-            public static readonly Resolve Instance = new Resolve();
+            public static readonly Resolve Instance = new();
             private Resolve(){}
         }
 
@@ -89,7 +89,7 @@ namespace Akka.Cluster.Benchmarks.Sharding
                 Become(WaitRequest);
             });
 
-            ReceiveAny(msg =>
+            ReceiveAny(_ =>
                 Stash.Stash()
             );
 
@@ -211,7 +211,7 @@ namespace Akka.Cluster.Benchmarks.Sharding
 
     public static class ShardingHelper
     {
-        public static AtomicCounter DbId = new AtomicCounter(0);
+        public static AtomicCounter DbId = new(0);
 
         internal static string BoolToToggle(bool val)
         {
@@ -260,7 +260,7 @@ namespace Akka.Cluster.Benchmarks.Sharding
         {
             var props = Props.Create(() => new ShardedEntityActor());
             var sharding = ClusterSharding.Get(system);
-            return sharding.Start(entityName, s => props, ClusterShardingSettings.Create(system),
+            return sharding.Start(entityName, _ => props, ClusterShardingSettings.Create(system),
                 new ShardMessageExtractor());
         }
     }

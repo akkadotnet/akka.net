@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InterpreterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -35,8 +35,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
         }
 
-        private static readonly Take<int> TakeOne = new Take<int>(1);
-        private static readonly Take<int> TakeTwo = new Take<int>(2);
+        private static readonly Take<int> TakeOne = new(1);
+        private static readonly Take<int> TakeTwo = new(2);
 
         [Fact]
         public void Interpreter_should_implement_map_correctly()
@@ -96,7 +96,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_work_with_only_boundary_ops()
         {
-            WithOneBoundedSetup(new IStage<int, int>[0],
+            WithOneBoundedSetup(Array.Empty<IStage<int, int>>(),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -328,7 +328,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_implement_batch_conflate()
         {
-            WithOneBoundedSetup<int>(new Batch<int, int>(1L, e => 0L, e => e, (agg, x) => agg + x),
+            WithOneBoundedSetup<int>(new Batch<int, int>(1L, _ => 0L, e => e, (agg, x) => agg + x),
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEquivalentTo(new RequestOne());
@@ -395,8 +395,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[]
             {
-                new Batch<int, int>(1L, e => 0L, e => e, (agg, x) => agg + x),
-                new Batch<int, int>(1L, e => 0L, e => e, (agg, x) => agg + x)
+                new Batch<int, int>(1L, _ => 0L, e => e, (agg, x) => agg + x),
+                new Batch<int, int>(1L, _ => 0L, e => e, (agg, x) => agg + x)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -473,7 +473,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[]
             {
-                new Batch<int, int>(1L, e => 0L, e => e, (agg, x) => agg + x),
+                new Batch<int, int>(1L, _ => 0L, e => e, (agg, x) => agg + x),
                 new Expand<int, int>(e => Enumerable.Repeat(e, int.MaxValue).GetEnumerator())
             },
                 (lastEvents, upstream, downstream) =>
@@ -512,7 +512,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup<int>(new IGraphStageWithMaterializedValue<Shape, object>[]
             {
                 new Doubler<int>(),
-                new Batch<int, int>(1L, e => 0L, e => e, (agg, x) => agg + x)
+                new Batch<int, int>(1L, _ => 0L, e => e, (agg, x) => agg + x)
             },
                 (lastEvents, upstream, downstream) =>
                 {
@@ -691,7 +691,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             // This test must be kept since it tests the compatibility layer, which while is deprecated it is still here.
             WithOneBoundedSetup(ToGraphStage(new InvalidAbsorbTermination<int>()),
-                (lastEvents, upstream, downstream) =>
+                (lastEvents, _, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
 

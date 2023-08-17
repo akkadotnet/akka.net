@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReadAggregator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -164,7 +164,7 @@ namespace Akka.DistributedData
 
     public sealed class ReadLocal : IReadConsistency
     {
-        public static readonly ReadLocal Instance = new ReadLocal();
+        public static readonly ReadLocal Instance = new();
 
         public TimeSpan Timeout => TimeSpan.Zero;
 
@@ -192,7 +192,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is ReadFrom && Equals((ReadFrom) obj);
+        public override bool Equals(object obj) => obj is ReadFrom from && Equals(from);
 
         
         public bool Equals(ReadFrom other)
@@ -229,7 +229,7 @@ namespace Akka.DistributedData
         
         public override bool Equals(object obj)
         {
-            return obj is ReadMajority && Equals((ReadMajority) obj);
+            return obj is ReadMajority majority && Equals(majority);
         }
 
         
@@ -274,7 +274,7 @@ namespace Akka.DistributedData
         
         public override bool Equals(object obj)
         {
-            return obj is ReadMajorityPlus && Equals((ReadMajorityPlus)obj);
+            return obj is ReadMajorityPlus plus && Equals(plus);
         }
 
         
@@ -314,7 +314,7 @@ namespace Akka.DistributedData
         
         public override bool Equals(object obj)
         {
-            return obj is ReadAll && Equals((ReadAll) obj);
+            return obj is ReadAll all && Equals(all);
         }
 
         

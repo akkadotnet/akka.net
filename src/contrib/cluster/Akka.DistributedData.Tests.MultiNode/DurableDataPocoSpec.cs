@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DurableDataPocoSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -97,9 +97,9 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly IWriteConsistency _writeThree;
         private readonly IReadConsistency _readThree;
 
-        private readonly ORDictionaryKey<string, PocoObject> _keyA = new ORDictionaryKey<string, PocoObject>("durable-A");
-        private readonly ORDictionaryKey<string, PocoObject> _keyB = new ORDictionaryKey<string, PocoObject>("durable-B");
-        private readonly ORSetKey<string> _keyC = new ORSetKey<string>("durable-C");
+        private readonly ORDictionaryKey<string, PocoObject> _keyA = new("durable-A");
+        private readonly ORDictionaryKey<string, PocoObject> _keyB = new("durable-B");
+        private readonly ORSetKey<string> _keyC = new("durable-C");
 
         private int _testStepCounter = 0;
 

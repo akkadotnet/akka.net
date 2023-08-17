@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliveryFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ namespace Akka.Persistence.Tests
 {
     static class ChaosSupportExtensions
     {
-        private static readonly Random random = new Random();
+        private static readonly Random random = new();
 
         internal static void Add(this AtLeastOnceDeliveryFailureSpec.IChaosSupport chaos, int i)
         {
@@ -42,7 +42,7 @@ namespace Akka.Persistence.Tests
 
         internal sealed class Start
         {
-            public static readonly Start Instance = new Start();
+            public static readonly Start Instance = new();
             private Start() { }
         }
 
@@ -134,7 +134,7 @@ namespace Akka.Persistence.Tests
             private readonly double _replayProcessingFailureRate;
             private ILoggingAdapter _log;
 
-            public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); }}
+            public ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); }}
 
             public ChaosSender(IActorRef destination, IActorRef probe) 
                 : base(x => x.WithRedeliverInterval(TimeSpan.FromMilliseconds(500)))
@@ -199,15 +199,13 @@ namespace Akka.Persistence.Tests
 
             private void UpdateState(IEvt evt)
             {
-                if (evt is MsgSent)
+                if (evt is MsgSent msg)
                 {
-                    var msg = (MsgSent)evt;
                     Add(msg.I);
                     Deliver(_destination.Path, deliveryId => new Msg(deliveryId, msg.I));
                 }
-                else if (evt is MsgConfirmed)
+                else if (evt is MsgConfirmed confirmation)
                 {
-                    var confirmation = (MsgConfirmed)evt;
                     ConfirmDelivery(confirmation.DeliveryId);
                 }
             }
@@ -244,7 +242,7 @@ namespace Akka.Persistence.Tests
             private readonly double _confirmFailureRate;
             private ILoggingAdapter _log;
 
-            public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+            public ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
 
             public ChaosDestination(IActorRef probe)
             {
@@ -301,7 +299,7 @@ namespace Akka.Persistence.Tests
                     }
                 });
                 Receive<Ack>(x => _acks.Add(x.I));
-                Receive<Terminated>(x =>
+                Receive<Terminated>(_ =>
                 {
                     // snd will be stopped if recover or persist fail
                     _log.Debug("sender stopped, starting it again");

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorsLeakSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -75,7 +75,7 @@ namespace Akka.Remote.Tests
         {
             public StoppableActor()
             {
-                Receive<string>(str => str.Equals("stop"), s =>
+                Receive<string>(str => str.Equals("stop"), _ =>
                 {
                     Context.Stop(Self);
                 });
@@ -117,7 +117,7 @@ namespace Akka.Remote.Tests
                 }
                 finally
                 {
-                    await ShutdownAsync(remoteSystem);
+                    Shutdown(remoteSystem);
                 }
 
                 Assert.True(await remoteSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10)));
@@ -159,7 +159,7 @@ namespace Akka.Remote.Tests
                 }
                 finally
                 {
-                    await ShutdownAsync(remoteSystem);
+                    Shutdown(remoteSystem);
                 }
                 Assert.True(await remoteSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10)));
             }
@@ -184,7 +184,7 @@ namespace Akka.Remote.Tests
                 }
                 finally
                 {
-                    await ShutdownAsync(remoteSystem);
+                    Shutdown(remoteSystem);
                 }
 
                 await EventFilter.Warning(contains: "Association with remote system").ExpectOneAsync(async () =>
@@ -222,7 +222,7 @@ namespace Akka.Remote.Tests
             }
             finally
             {
-                await ShutdownAsync(idleRemoteSystem);
+                Shutdown(idleRemoteSystem);
             }
 
             await EventFilter.Warning(contains: "Association with remote system").ExpectOneAsync(async () =>
@@ -234,7 +234,7 @@ namespace Akka.Remote.Tests
              * Wait for the ReliableDeliverySupervisor to receive its "TooLongIdle" message,
              * which will throw a HopelessAssociation wrapped around a TimeoutException.
              */
-            await EventFilter.Exception<TimeoutException>().ExpectOneAsync(async () => { });
+            await EventFilter.Exception<TimeoutException>().ExpectOneAsync(() => { return Task.CompletedTask; });
 
             await AwaitAssertAsync(() =>
             {

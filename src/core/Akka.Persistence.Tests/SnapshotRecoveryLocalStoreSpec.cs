@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotRecoveryLocalStoreSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ namespace Akka.Persistence.Tests
         public sealed class TakeSnapshot
         {
             private TakeSnapshot() {}
-            public static readonly TakeSnapshot Instance = new TakeSnapshot();
+            public static readonly TakeSnapshot Instance = new();
         }
 
         internal class SaveSnapshotTestPersistentActor : NamedPersistentActor
@@ -42,8 +42,8 @@ namespace Akka.Persistence.Tests
             {
                 if (message is TakeSnapshot)
                     SaveSnapshot(_state);
-                else if (message is SaveSnapshotSuccess)
-                    _probe.Tell(((SaveSnapshotSuccess)message).Metadata.SequenceNr);
+                else if (message is SaveSnapshotSuccess success)
+                    _probe.Tell(success.Metadata.SequenceNr);
                 else if (message is GetState)
                     _probe.Tell(_state);
                 else return false;
@@ -60,7 +60,7 @@ namespace Akka.Persistence.Tests
                 _probe = probe;
             }
 
-            public override Recovery Recovery => new Recovery(SnapshotSelectionCriteria.Latest, 0);
+            public override Recovery Recovery => new(SnapshotSelectionCriteria.Latest, 0);
 
             protected override bool ReceiveRecover(object message)
             {

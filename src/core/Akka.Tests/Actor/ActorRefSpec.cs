@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -125,19 +125,19 @@ namespace Akka.Tests.Actor
 
             var bserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
 
-            await AwaitConditionAsync(async () =>
+            await AwaitConditionAsync(() =>
             {
-                var bref = (IActorRef) bserializer.FromBinary(binary, typeof (IActorRef));
+                var bref = (IActorRef)bserializer.FromBinary(binary, typeof(IActorRef));
                 try
                 {
-                    bref.GetType().ShouldBe(typeof (EmptyLocalActorRef));
+                    bref.GetType().ShouldBe(typeof(EmptyLocalActorRef));
                     bref.Path.ShouldBe(aref.Path);
 
-                    return true;
+                    return Task.FromResult(true);
                 }
                 catch (Exception)
                 {
-                    return false;
+                    return Task.FromResult(false);
                 }
             });
         }
@@ -145,31 +145,31 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task An_ActorRef_should_restart_when_Killed()
         {
-            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(async () =>
-            {
+            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(() => {
                 var latch = CreateTestLatch(2);
                 var boss = ActorOf(a =>
                 {
                     var child = a.ActorOf(c =>
                     {
-                        c.ReceiveAny((msg, ctx) => { });
-                        c.OnPreRestart = (reason, msg, ctx) =>
+                        c.ReceiveAny((_, _) => { });
+                        c.OnPreRestart = (reason, msg, _) =>
                         {
-                            latch.CountDown(); 
+                            latch.CountDown();
                             c.DefaultPreRestart(reason, msg);
                         };
-                        c.OnPostRestart = (reason, ctx) =>
+                        c.OnPostRestart = (reason, _) =>
                         {
                             latch.CountDown();
                             c.DefaultPostRestart(reason);
                         };
                     });
-                    a.Strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), r=> Directive.Restart);
-                    a.Receive<string>((_, ctx) => child.Tell(Kill.Instance));
+                    a.Strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), _ => Directive.Restart);
+                    a.Receive<string>((_, _) => child.Tell(Kill.Instance));
                 });
 
                 boss.Tell("send kill");
                 latch.Ready(TimeSpan.FromSeconds(5));
+                return Task.CompletedTask;
             });
         }
 
@@ -304,7 +304,7 @@ namespace Akka.Tests.Actor
         {          
             var actor = ActorOfAsTestActorRef<NonPublicActor>(Props.Create<NonPublicActor>(SupervisorStrategy.StoppingStrategy));
             // actors with a null sender should always write to deadletters
-            await EventFilter.DeadLetter<object>().ExpectOneAsync(async () => actor.Tell(new object(), null));
+            await EventFilter.DeadLetter<object>().ExpectOneAsync(() => { actor.Tell(new object(), null); return Task.CompletedTask; });
 
             // will throw an exception if there's a bug
             await ExpectNoMsgAsync(default);
@@ -592,9 +592,8 @@ namespace Akka.Tests.Actor
         {
             protected override bool Receive(object message)
             {
-                if (message is int)
+                if (message is int i)
                 {
-                    var i = (int)message;
                     string msg = null;
                     if (i == 0) msg = "zero";
                     else if (i == 5) msg = "five";

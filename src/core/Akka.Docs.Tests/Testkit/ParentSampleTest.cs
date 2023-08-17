@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ParentSampleTest.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,11 +24,11 @@ namespace DocsExamples.Testkit
             public Parent()
             {
                 child = Context.ActorOf(Props.Create<Child>(), "child");
-                Receive<string>(str => str.Equals("pingit"), m =>
+                Receive<string>(str => str.Equals("pingit"), _ =>
                 {
                     child.Tell("ping");
                 });
-                Receive<string>(str => str.Equals("pong"), m =>
+                Receive<string>(str => str.Equals("pong"), _ =>
                 {
                     ponged = true;
                 });
@@ -39,7 +39,7 @@ namespace DocsExamples.Testkit
         {
             public Child()
             {
-                Receive<string>(str => str.Equals("ping"), m =>
+                Receive<string>(str => str.Equals("ping"), _ =>
                 {
                     Context.Parent.Tell("pong");
                 });
@@ -56,7 +56,7 @@ namespace DocsExamples.Testkit
             {
                 this.parent = parent;
 
-                Receive<string>(s => s.Equals("ping"), m =>
+                Receive<string>(s => s.Equals("ping"), _ =>
                 {
                     parent.Tell("pong", Self);
                 });
@@ -114,11 +114,11 @@ namespace DocsExamples.Testkit
                 child = childMaker(Context);
                 ponged = false;
 
-                Receive<string>(str => str.Equals("pingit"), m =>
+                Receive<string>(str => str.Equals("pingit"), _ =>
                 {
                     child.Tell("ping");
                 });
-                Receive<string>(str => str.Equals("pong"), m =>
+                Receive<string>(str => str.Equals("pong"), _ =>
                 {
                     ponged = true;
                 });

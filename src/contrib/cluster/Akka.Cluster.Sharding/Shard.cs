@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Shard.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Cluster.Sharding.Internal;
 using Akka.Coordination;
 using Akka.Event;
@@ -23,6 +24,13 @@ namespace Akka.Cluster.Sharding
     using EntityId = String;
     using ShardId = String;
 
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// This actor creates children entity actors on demand that it is told to be
+    /// responsible for.
+    /// </summary>
+    [InternalStableApi]
     internal sealed class Shard : ActorBase, IWithTimers, IWithUnboundedStash
     {
         #region messages
@@ -134,7 +142,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly GetCurrentShardState Instance = new GetCurrentShardState();
+            public static readonly GetCurrentShardState Instance = new();
 
             private GetCurrentShardState()
             {
@@ -211,7 +219,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly GetShardStats Instance = new GetShardStats();
+            public static readonly GetShardStats Instance = new();
 
             private GetShardStats()
             {
@@ -309,7 +317,7 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class LeaseRetry : IDeadLetterSuppression, INoSerializationVerificationNeeded
         {
-            public static readonly LeaseRetry Instance = new LeaseRetry();
+            public static readonly LeaseRetry Instance = new();
             private LeaseRetry() { }
         }
 
@@ -340,7 +348,7 @@ namespace Akka.Cluster.Sharding
         [Serializable]
         public sealed class PassivateIdleTick : INoSerializationVerificationNeeded
         {
-            public static readonly PassivateIdleTick Instance = new PassivateIdleTick();
+            public static readonly PassivateIdleTick Instance = new();
             private PassivateIdleTick() { }
         }
 
@@ -456,7 +464,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         internal sealed class NoState : EntityState
         {
-            public static readonly NoState Instance = new NoState();
+            public static readonly NoState Instance = new();
 
             private NoState()
             {
@@ -488,7 +496,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         internal sealed class RememberedButNotCreated : EntityState
         {
-            public static readonly RememberedButNotCreated Instance = new RememberedButNotCreated();
+            public static readonly RememberedButNotCreated Instance = new();
 
             private RememberedButNotCreated()
             {
@@ -518,7 +526,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         internal sealed class RememberingStart : EntityState, IEquatable<RememberingStart>
         {
-            private static readonly RememberingStart Empty = new RememberingStart(ImmutableHashSet<IActorRef>.Empty);
+            private static readonly RememberingStart Empty = new(ImmutableHashSet<IActorRef>.Empty);
 
             public static RememberingStart Create(IActorRef ackTo)
             {
@@ -601,7 +609,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         internal sealed class RememberingStop : EntityState
         {
-            public static readonly RememberingStop Instance = new RememberingStop();
+            public static readonly RememberingStop Instance = new();
 
             private RememberingStop()
             {
@@ -705,7 +713,7 @@ namespace Akka.Cluster.Sharding
 
         internal sealed class WaitingForRestart : EntityState
         {
-            public static readonly WaitingForRestart Instance = new WaitingForRestart();
+            public static readonly WaitingForRestart Instance = new();
 
             private WaitingForRestart()
             {
@@ -730,11 +738,11 @@ namespace Akka.Cluster.Sharding
 
         internal sealed class Entities
         {
-            private readonly Dictionary<EntityId, EntityState> _entities = new Dictionary<EntityId, EntityState>();
+            private readonly Dictionary<EntityId, EntityState> _entities = new();
             // needed to look up entity by ref when a Passivating is received
-            private readonly Dictionary<IActorRef, EntityId> _byRef = new Dictionary<IActorRef, EntityId>();
+            private readonly Dictionary<IActorRef, EntityId> _byRef = new();
             // optimization to not have to go through all entities to find batched writes
-            private readonly HashSet<EntityId> _remembering = new HashSet<EntityId>();
+            private readonly HashSet<EntityId> _remembering = new();
 
 
             public Entities(
@@ -928,8 +936,8 @@ namespace Akka.Cluster.Sharding
         private readonly IActorRef _rememberEntitiesStore;
         private readonly bool _rememberEntities;
         private readonly Entities _entities;
-        private readonly Dictionary<EntityId, DateTime> _lastMessageTimestamp = new Dictionary<EntityId, DateTime>();
-        private readonly MessageBufferMap<EntityId> _messageBuffers = new MessageBufferMap<EntityId>();
+        private readonly Dictionary<EntityId, DateTime> _lastMessageTimestamp = new();
+        private readonly MessageBufferMap<EntityId> _messageBuffers = new();
 
         private IActorRef _handOffStopper;
         private readonly ICancelable _passivateIdleTask;
@@ -1117,7 +1125,7 @@ namespace Akka.Cluster.Sharding
                 Timers.StartSingleTimer(
                     RememberEntityTimeoutKey,
                     new RememberEntityTimeout(RememberEntitiesShardStore.GetEntities.Instance),
-                    _settings.TuningParameters.WaitingForStateTimeout);
+                    _settings.TuningParameters.UpdatingStateTimeout);
                 Context.Become(AwaitingRememberedEntities);
             }
             else
@@ -1254,7 +1262,7 @@ namespace Akka.Cluster.Sharding
             Timers.StartSingleTimer(
                 RememberEntityTimeoutKey,
                 new RememberEntityTimeout(update),
-                _settings.TuningParameters.UpdatingStateTimeout);
+                _settings.TuningParameters.WaitingForStateTimeout);
 
             Context.Become(WaitingForRememberEntitiesStore(update, startTime));
         }
@@ -1460,7 +1468,7 @@ namespace Akka.Cluster.Sharding
                 case RememberingStart _:
                     _entities.RememberingStart(entityId, ackTo);
                     break;
-                case EntityState state when state is RememberedButNotCreated || state is WaitingForRestart:
+                case EntityState state and (RememberedButNotCreated or WaitingForRestart):
                     // already remembered or waiting for backoff to restart, just start it -
                     // this is the normal path for initially remembered entities getting started
                     Log.Debug("{0}: Request to start entity [{1}] (in state [{2}])", _typeName, entityId, state);
@@ -1787,7 +1795,7 @@ namespace Akka.Cluster.Sharding
                             case Passivating _:
                                 AppendToMessageBuffer(entityId, msg, snd);
                                 break;
-                            case EntityState state when state is WaitingForRestart || state is RememberedButNotCreated:
+                            case EntityState state and (WaitingForRestart or RememberedButNotCreated):
                                 if (_verboseDebug)
                                     Log.Debug("{0}: Delivering message of type [{1}] to [{2}] (starting because [{3}])",
                                         _typeName,

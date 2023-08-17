@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="WindowsFactAttribute.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -35,9 +35,7 @@ namespace Akka.TestKit.Xunit2.Attributes
                     return _skip;
                 
                 var platform = Environment.OSVersion.Platform;
-                var notWindows = platform == PlatformID.MacOSX 
-                                 || platform == PlatformID.Unix 
-                                 || platform == PlatformID.Xbox;
+                var notWindows = platform is PlatformID.MacOSX or PlatformID.Unix or PlatformID.Xbox;
                 return notWindows ? SkipUnix ?? "Skipped under Unix platforms" : null;
             }
             set => _skip = value;

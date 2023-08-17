@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Discovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,8 +19,7 @@ namespace Akka.Discovery
     {
         private readonly ExtendedActorSystem _system;
         private readonly Lazy<ServiceDiscovery> _defaultImpl;
-        private readonly ConcurrentDictionary<string, Lazy<ServiceDiscovery>> _implementations =
-            new ConcurrentDictionary<string, Lazy<ServiceDiscovery>>();
+        private readonly ConcurrentDictionary<string, Lazy<ServiceDiscovery>> _implementations = new();
         private readonly ILoggingAdapter _log;
 
         public Discovery(ExtendedActorSystem system)
@@ -75,7 +74,7 @@ namespace Akka.Discovery
             Try<ServiceDiscovery> Create(string typeName)
             {
                 var dynamic = DynamicAccess.CreateInstanceFor<ServiceDiscovery>(typeName, _system);
-                return dynamic.RecoverWith(ex => ex is TypeLoadException || ex is MissingMethodException 
+                return dynamic.RecoverWith(ex => ex is TypeLoadException or MissingMethodException 
                     ? DynamicAccess.CreateInstanceFor<ServiceDiscovery>(typeName) 
                     : dynamic);
             }
@@ -87,7 +86,7 @@ namespace Akka.Discovery
             return instanceTry.IsSuccess switch
             {
                 true => instanceTry.Get(),
-                false when instanceTry.Failure.Value is TypeLoadException || instanceTry.Failure.Value is MissingMethodException =>
+                false when instanceTry.Failure.Value is TypeLoadException or MissingMethodException =>
                     throw new ArgumentException(nameof(method), $"Illegal akka.discovery.{method}.class value or incompatible class! \n" +
                         "The implementation class MUST extend Akka.Discovery.ServiceDiscovery and take an \n" +
                         "ExtendedActorSystem as constructor argument."),
@@ -100,7 +99,7 @@ namespace Akka.Discovery
 
     public class DiscoveryProvider : ExtensionIdProvider<Discovery>
     {
-        public override Discovery CreateExtension(ExtendedActorSystem system) => new Discovery(system);
+        public override Discovery CreateExtension(ExtendedActorSystem system) => new(system);
 
         /// <summary>
         /// Returns a default configuration for the Akka Discovery module.

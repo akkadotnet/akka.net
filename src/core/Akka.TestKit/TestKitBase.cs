@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ namespace Akka.TestKit
                 akka.log-dead-letters = true
                 akka.loglevel = DEBUG
                 akka.stdout-loglevel = DEBUG");
-        private static readonly AtomicCounter _testActorId = new AtomicCounter(0);
+        private static readonly AtomicCounter _testActorId = new(0);
 
         private readonly ITestKitAssertions _assertions;
         private TestState _testState;
@@ -331,7 +331,7 @@ namespace Akka.TestKit
         /// <c>true</c> the message will be ignored by <see cref="TestActor"/>.</param>
         public void IgnoreMessages<TMsg>(Func<TMsg, bool> shouldIgnoreMessage)
         {
-            _testState.TestActor.Tell(new TestActor.SetIgnore(m => m is TMsg && shouldIgnoreMessage((TMsg)m)));
+            _testState.TestActor.Tell(new TestActor.SetIgnore(m => m is TMsg msg && shouldIgnoreMessage(msg)));
         }
 
         /// <summary>
@@ -497,30 +497,11 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="duration">Optional. The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor".</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
         /// <exception cref="TimeoutException">TBD</exception>
         public virtual void Shutdown(
             TimeSpan? duration = null,
-            bool verifySystemShutdown = false,
-            CancellationToken cancellationToken = default)
-            => ShutdownAsync(_testState.System, duration, verifySystemShutdown, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-
-        /// <summary>
-        /// Shuts down this system.
-        /// On failure debug output will be logged about the remaining actors in the system.
-        /// If verifySystemShutdown is true, then an exception will be thrown on failure.
-        /// </summary>
-        /// <param name="duration">Optional. The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor".</param>
-        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
-        /// <exception cref="TimeoutException">TBD</exception>
-        public virtual async Task ShutdownAsync(
-            TimeSpan? duration = null,
-            bool verifySystemShutdown = false,
-            CancellationToken cancellationToken = default)
-            => await ShutdownAsync(_testState.System, duration, verifySystemShutdown, cancellationToken)
-                .ConfigureAwait(false);
+            bool verifySystemShutdown = false)
+            => Shutdown(_testState.System, duration, verifySystemShutdown);
 
         /// <summary>
         /// Shuts down the specified system.
@@ -530,37 +511,17 @@ namespace Akka.TestKit
         /// <param name="system">The system to shutdown.</param>
         /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
         /// <exception cref="TimeoutException">TBD</exception>
         protected virtual void Shutdown(
             ActorSystem system,
             TimeSpan? duration = null,
-            bool verifySystemShutdown = false,
-            CancellationToken cancellationToken = default)
-            => ShutdownAsync(system, duration, verifySystemShutdown, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-
-        /// <summary>
-        /// Shuts down the specified system.
-        /// On failure debug output will be logged about the remaining actors in the system.
-        /// If verifySystemShutdown is true, then an exception will be thrown on failure.
-        /// </summary>
-        /// <param name="system">The system to shutdown.</param>
-        /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
-        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
-        /// <exception cref="TimeoutException">TBD</exception>
-        protected virtual async Task ShutdownAsync(
-            ActorSystem system,
-            TimeSpan? duration = null,
-            bool verifySystemShutdown = false,
-            CancellationToken cancellationToken = default)
+            bool verifySystemShutdown = false)
         {
             system ??= _testState.System;
 
             var durationValue = duration.GetValueOrDefault(Dilated(TimeSpan.FromSeconds(5)).Min(TimeSpan.FromSeconds(10)));
 
-            var wasShutdownDuringWait = await system.Terminate().AwaitWithTimeout(durationValue, cancellationToken);
+            var wasShutdownDuringWait = system.Terminate().Wait(durationValue);
             if(!wasShutdownDuringWait)
             {
                 // Forcefully close the ActorSystem to make sure we exit the test cleanly

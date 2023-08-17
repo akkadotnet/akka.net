@@ -193,8 +193,6 @@ namespace Akka.Cluster
         public bool AllowWeaklyUpMembers { get; }
         public Akka.Util.AppVersion AppVersion { get; }
         public System.Nullable<System.TimeSpan> AutoDownUnreachableAfter { get; }
-        [System.ObsoleteAttribute("Use Cluster.DowningProvider.DownRemovalMargin [1.1.2]")]
-        public System.TimeSpan DownRemovalMargin { get; }
         public System.Type DowningProviderType { get; }
         public Akka.Configuration.Config FailureDetectorConfig { get; }
         public string FailureDetectorImplementationClass { get; }
@@ -352,10 +350,6 @@ namespace Akka.Cluster.Routing
     }
     public sealed class ClusterRouterGroupSettings : Akka.Cluster.Routing.ClusterRouterSettingsBase
     {
-        [System.ObsoleteAttribute("This method is deprecated [1.1.0]")]
-        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, System.Collections.Generic.IEnumerable<string> routeesPaths) { }
-        [System.ObsoleteAttribute("This method is deprecated [1.1.0]")]
-        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, string useRole, System.Collections.Immutable.ImmutableHashSet<string> routeesPaths) { }
         public ClusterRouterGroupSettings(int totalInstances, System.Collections.Generic.IEnumerable<string> routeesPaths, bool allowLocalRoutees, string useRole = null) { }
         public System.Collections.Generic.IEnumerable<string> RouteesPaths { get; }
         public static Akka.Cluster.Routing.ClusterRouterGroupSettings FromConfig(Akka.Configuration.Config config) { }
@@ -378,10 +372,6 @@ namespace Akka.Cluster.Routing
     }
     public sealed class ClusterRouterPoolSettings : Akka.Cluster.Routing.ClusterRouterSettingsBase
     {
-        [System.ObsoleteAttribute("This method is deprecated [1.1.0]")]
-        public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, int maxInstancesPerNode) { }
-        [System.ObsoleteAttribute("This method is deprecated [1.1.0]")]
-        public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, string useRole, int maxInstancesPerNode) { }
         public ClusterRouterPoolSettings(int totalInstances, int maxInstancesPerNode, bool allowLocalRoutees, string useRole = null) { }
         public int MaxInstancesPerNode { get; }
         public override bool Equals(object obj) { }
@@ -406,10 +396,6 @@ namespace Akka.Cluster.SBR
     }
     public sealed class LeaseMajoritySettings
     {
-        [System.ObsoleteAttribute()]
-        public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, string role) { }
-        [System.ObsoleteAttribute()]
-        public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, string role, string leaseName) { }
         public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, System.TimeSpan releaseAfter, string role, string leaseName) { }
         public System.TimeSpan AcquireLeaseDelayForMinority { get; }
         public string LeaseImplementation { get; }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqliteCurrentAllEventsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
 {
     public class SqliteCurrentAllEventsSpec:CurrentAllEventsSpec
     {
-        public static readonly AtomicCounter Counter = new AtomicCounter(0);
+        public static readonly AtomicCounter Counter = new(0);
 
         public static Config Config(int id) => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO

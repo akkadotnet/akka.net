@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PagedSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,8 +12,10 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.Util;
+using Akka.TestKit.Extensions;
 using Akka.Util;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Streams.Tests.Dsl
@@ -42,21 +44,23 @@ namespace Akka.Streams.Tests.Dsl
             }
 
             [Fact]
-            public void PagedSource_should_return_the_items_in_the_proper_order()
+            public async Task PagedSource_should_return_the_items_in_the_proper_order()
             {
                 var source = PagedSource.Create(0, new MultiplesOfTwoPage().Page);
                 var t = source.Take(3).RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-                t.AwaitResult().Should().BeEquivalentTo(new[] { 0, 2, 4 }, o => o.WithStrictOrdering());
+                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                complete.Should().BeEquivalentTo(new[] { 0, 2, 4 }, o => o.WithStrictOrdering());
             }
 
             [Fact]
-            public void PagedSource_should_return_not_more_items_then_available()
+            public async Task PagedSource_should_return_not_more_items_then_available()
             {
                 var source = PagedSource.Create(0, new MultiplesOfTwoPage(4).Page);
                 var t = source.Take(10).RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-                t.AwaitResult().Should().HaveCount(4);
+                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                complete.Should().HaveCount(4);
             }
         }
 
@@ -80,19 +84,21 @@ namespace Akka.Streams.Tests.Dsl
             }
 
             [Fact]
-            public void PagedSource_should_return_the_items_in_the_proper_order()
+            public async Task PagedSource_should_return_the_items_in_the_proper_order()
             {
                 var t = _source.Take(4).RunWith(Sink.Seq<string>(), Sys.Materializer());
 
-                t.AwaitResult().Should().BeEquivalentTo(new[] { "a", "b", "c", "d" }, o => o.WithStrictOrdering());
+                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                complete.Should().BeEquivalentTo(new[] { "a", "b", "c", "d" }, o => o.WithStrictOrdering());
             }
 
             [Fact]
-            public void PagedSource_should_close_stream_when_received_empty_page()
+            public async Task PagedSource_should_close_stream_when_received_empty_page()
             {
                 var t = _source.RunWith(Sink.Seq<string>(), Sys.Materializer());
 
-                t.AwaitResult().Should().BeEquivalentTo(new[] { "a", "b", "c", "d", "e" }, o => o.WithStrictOrdering());
+                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                complete.Should().BeEquivalentTo(new[] { "a", "b", "c", "d", "e" }, o => o.WithStrictOrdering());
             }
         }
 
@@ -123,19 +129,21 @@ namespace Akka.Streams.Tests.Dsl
             }
 
             [Fact]
-            public void PagedSource_should_return_the_items_in_the_proper_order()
+            public async Task PagedSource_should_return_the_items_in_the_proper_order()
             {
                 var t = _source.Take(4).RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-                t.AwaitResult().Should().BeEquivalentTo(new[] { 1, 2, 3, 4 }, o => o.WithStrictOrdering());
+                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                complete.Should().BeEquivalentTo(new[] { 1, 2, 3, 4 }, o => o.WithStrictOrdering());
             }
 
             [Fact]
-            public void PagedSource_should_close_stream_when_received_empty_link()
+            public async Task PagedSource_should_close_stream_when_received_empty_link()
             {
                 var t = _source.RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-                t.AwaitResult().Should().BeEquivalentTo(new[] { 1, 2, 3, 4, 5 }, o => o.WithStrictOrdering());
+                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                complete.Should().BeEquivalentTo(new[] { 1, 2, 3, 4, 5 }, o => o.WithStrictOrdering());
             }
         }
     }

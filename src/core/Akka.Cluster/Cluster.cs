@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Cluster.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -67,13 +67,11 @@ namespace Akka.Cluster
             bool GetAssertInvariants()
             {
                 var isOn = Environment.GetEnvironmentVariable("AKKA_CLUSTER_ASSERT")?.ToLowerInvariant();
-                switch (isOn)
+                return isOn switch
                 {
-                    case "on":
-                        return true;
-                    default:
-                        return false;
-                }
+                    "on" => true,
+                    _ => false
+                };
             }
 
             IsAssertInvariantsEnabled = GetAssertInvariants();
@@ -114,12 +112,24 @@ namespace Akka.Cluster
             System = system;
             Settings = new ClusterSettings(system.Settings.Config, system.Name);
 
-            if (!(system.Provider is IClusterActorRefProvider provider))
+            if (system.Provider is not IClusterActorRefProvider provider)
                 throw new ConfigurationException(
                     $"ActorSystem {system} needs to have a 'IClusterActorRefProvider' enabled in the configuration, currently uses {system.Provider.GetType().FullName}");
             SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
             _log = Logging.GetLogger(system, "Cluster");
+            
+            // log a warning if the user has set auto-down-unreachable-after to any value other than "off"
+            // obsolete setting, so suppress obsolete warning
+#pragma warning disable CS0618
+            if (Settings.AutoDownUnreachableAfter != null)
+#pragma warning restore CS0618
+            {
+                _log.Warning(
+                    "The `auto-down-unreachable-after` feature has been deprecated as of Akka.NET v1.5.2 and will be removed in a future version of Akka.NET. " +
+                    "The `keep-majority` split brain resolver will be used instead. See https://getakka.net/articles/cluster/split-brain-resolver.html for more details.");
+            }
+            
 
             CurrentInfoLogger = new InfoLogger(_log, Settings, SelfAddress);
 
@@ -271,19 +281,18 @@ namespace Akka.Cluster
                 return Task.CompletedTask;
 
             var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
-            
-            var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            timeoutCts.CancelAfter(Settings.SeedNodeTimeout);
-            timeoutCts.Token.Register(() =>
+
+            if (token != default)
             {
-                timeoutCts.Dispose();
-                completion.TrySetException(new ClusterJoinFailedException(
-                    $"Node has not managed to join the cluster using provided address: {address}"));
-            });
+                token.Register(() =>
+                {
+                    completion.TrySetException(new ClusterJoinFailedException(
+                        $"Node has not managed to join the cluster using provided address: {address}"));
+                });
+            }
             
             RegisterOnMemberUp(() =>
             {
-                timeoutCts.Dispose();
                 completion.TrySetResult(NotUsed.Instance);
             });
             
@@ -348,19 +357,18 @@ namespace Akka.Cluster
             
             var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
             var nodes = seedNodes.ToList();
-            
-            var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            timeoutCts.CancelAfter(Settings.SeedNodeTimeout);
-            timeoutCts.Token.Register(() =>
+
+            if (token != default)
             {
-                timeoutCts.Dispose();
-                completion.TrySetException(new ClusterJoinFailedException(
-                    $"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", nodes)}."));
-            });
+                token.Register(() =>
+                {
+                    completion.TrySetException(new ClusterJoinFailedException(
+                        $"Node has not managed to join the cluster using provided addresses: [{string.Join(",", nodes)}]"));
+                });
+            }
             
             RegisterOnMemberUp(() =>
             {
-                timeoutCts.Dispose();
                 completion.TrySetResult(NotUsed.Instance);
             });
             
@@ -535,7 +543,7 @@ namespace Akka.Cluster
         /// </summary>
         public Member SelfMember => _readView.Self;
 
-        private readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
+        private readonly AtomicBoolean _isTerminated = new(false);
 
         /// <summary>
         /// Determine whether or not this cluster instance has been shutdown.
@@ -545,7 +553,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Determine whether the cluster is in the UP state.
         /// </summary>
-        public bool IsUp => SelfMember.Status == MemberStatus.Up || SelfMember.Status == MemberStatus.WeaklyUp;
+        public bool IsUp => SelfMember.Status is MemberStatus.Up or MemberStatus.WeaklyUp;
         
         /// <summary>
         /// The underlying <see cref="ActorSystem"/> supported by this plugin.

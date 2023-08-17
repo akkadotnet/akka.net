@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -91,7 +91,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public Mailbox Mailbox => Volatile.Read(ref _mailboxDoNotCallMeDirectly);
+        public Mailbox Mailbox => _mailboxDoNotCallMeDirectly;
 
         /// <summary>
         /// TBD
@@ -355,6 +355,7 @@ namespace Akka.Actor
 
             // Apply default of custom behaviors to actor.
             var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
+
             pipeline.AfterActorIncarnated(actor, this);
 
             if (actor is IInitializableActor initializableActor)
@@ -480,19 +481,6 @@ namespace Akka.Actor
         protected void SetActorFields(ActorBase actor)
         {
             actor?.Unclear();
-        }
-        /// <summary>
-        /// INTERNAL API
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Not used. Will be removed in Akka.NET v1.5.")]
-        public static NameAndUid SplitNameAndUid(string name)
-        {
-            var i = name.IndexOf('#');
-            return i < 0
-                ? new NameAndUid(name, UndefinedUid)
-                : new NameAndUid(name.Substring(0, i), Int32.Parse(name.Substring(i + 1)));
         }
 
         /// <summary>

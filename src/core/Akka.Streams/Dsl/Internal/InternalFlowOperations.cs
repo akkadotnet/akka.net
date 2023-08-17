@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalFlowOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1111,7 +1111,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<TSeed, TMat> ConflateWithSeed<T, TMat, TSeed>(this IFlow<T, TMat> flow, Func<T, TSeed> seed,
             Func<TSeed, T, TSeed> aggregate)
         {
-            return flow.Via(new Fusing.Batch<T, TSeed>(1L, elem => 0L, seed, aggregate));
+            return flow.Via(new Fusing.Batch<T, TSeed>(1L, _ => 0L, seed, aggregate));
         }
 
         /// <summary>
@@ -1286,7 +1286,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<TOut, TMat> Transform<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<IStage<TIn, TOut>> stageFactory)
         {
-            return flow.Via(new PushPullGraphStage<TIn, TOut>(attr => stageFactory(), Attributes.None));
+            return flow.Via(new PushPullGraphStage<TIn, TOut>(_ => stageFactory(), Attributes.None));
         }
 
         /// <summary>
@@ -2568,7 +2568,7 @@ namespace Akka.Streams.Dsl.Internal
         /// elements that would've been sent to it will be dropped instead.
         /// </para>
         /// <para>It is similar to <seealso cref="AlsoToMaterialized{TOut,TMat,TMat2,TMat3}"/> which does backpressure instead of dropping elements.</para>
-        /// <para>@see <seealso cref="WireTap"/></para>
+        /// <para>@see <seealso cref="WireTap{TOut, TMat}(IFlow{TOut, TMat}, Action{TOut})"/></para>
         /// <para>
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.

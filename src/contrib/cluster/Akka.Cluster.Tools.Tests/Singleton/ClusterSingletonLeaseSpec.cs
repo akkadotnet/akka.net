@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonLeaseSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -80,7 +80,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         private Cluster cluster;
         private TestLeaseExt testLeaseExt;
 
-        private AtomicCounter counter = new AtomicCounter(0);
+        private AtomicCounter counter = new(0);
         private TimeSpan shortDuration = TimeSpan.FromMilliseconds(50);
         private string leaseOwner;
 

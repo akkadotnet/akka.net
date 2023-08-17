@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InboxSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -95,7 +95,7 @@ namespace Akka.Tests.Actor
                 await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
                 //The inbox is full. Sending another message should result in a Warning message
-                await EventFilter.Warning(start: "Dropping message").ExpectOneAsync(async () => _inbox.Receiver.Tell(42));
+                await EventFilter.Warning(start: "Dropping message").ExpectOneAsync(() => { _inbox.Receiver.Tell(42); return Task.CompletedTask; });
 
                 //The inbox is still full. But since the warning message has already been sent, no more warnings should be sent
                 _inbox.Receiver.Tell(42);
@@ -141,7 +141,7 @@ namespace Akka.Tests.Actor
         public void Select_WithClient_should_update_Client_and_copy_the_rest_of_the_properties_BUG_427()
         {
             var deadline = new TimeSpan(Sys.Scheduler.MonotonicClock.Ticks / 2); //Some point in the past
-            Predicate<object> predicate = o => true;
+            Predicate<object> predicate = _ => true;
             var actorRef = new EmptyLocalActorRef(((ActorSystemImpl)Sys).Provider, new RootActorPath(new Address("akka", "test")), Sys.EventStream);
             var select = new Select(deadline, predicate, actorRef);
 

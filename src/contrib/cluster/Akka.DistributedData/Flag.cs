@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Flag.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,11 +26,11 @@ namespace Akka.DistributedData
         /// <summary>
         /// Flag with a false value set.
         /// </summary>
-        public static readonly Flag False = new Flag(false);
+        public static readonly Flag False = new(false);
         /// <summary>
         /// Flag with a true value set.
         /// </summary>
-        public static readonly Flag True = new Flag(true);
+        public static readonly Flag True = new(true);
 
         /// <summary>
         /// Checks if current flag value is set.
@@ -65,11 +65,11 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is Flag && Equals((Flag) obj);
+        public override bool Equals(object obj) => obj is Flag flag && Equals(flag);
 
         public override int GetHashCode() => Enabled.GetHashCode();
         
-        public int CompareTo(object obj) => obj is Flag ? CompareTo((Flag) obj) : 1;
+        public int CompareTo(object obj) => obj is Flag flag ? CompareTo(flag) : 1;
         
         public int CompareTo(Flag other) => other == null ? 1 : Enabled.CompareTo(other.Enabled);
         

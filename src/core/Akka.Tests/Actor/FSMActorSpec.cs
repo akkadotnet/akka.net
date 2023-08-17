@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FSMActorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -70,14 +70,14 @@ namespace Akka.Tests.Actor
 
         public class Hello
         {
-            public static Hello Instance { get; } = new Hello();
+            public static Hello Instance { get; } = new();
 
             private Hello() { }
         }
 
         public class Bye
         {
-            public static Bye Instance { get; } = new Bye();
+            public static Bye Instance { get; } = new();
 
             private Bye() { }
         }
@@ -243,7 +243,7 @@ namespace Akka.Tests.Actor
 
                 StartWith(1, null);
 
-                When(1, evt => null);
+                When(1, _ => null);
 
                 OnTermination(x =>
                 {
@@ -322,7 +322,7 @@ namespace Akka.Tests.Actor
                     }
                 });
 
-                OnTermination(x =>
+                OnTermination(_ =>
                 {
                     foreach (var timerName in timerNames)
                     {
@@ -371,13 +371,13 @@ namespace Akka.Tests.Actor
                             return Stay();
 
                         return null;
-                    }).Using(state =>
+                    }).Using(_ =>
                     {
                         return GoTo(1);
                     })(evt);
                 });
 
-                When(1, evt =>
+                When(1, _ =>
                 {
                     return Stay();
                 });
@@ -436,10 +436,10 @@ namespace Akka.Tests.Actor
             latches.TransitionCallBackLatch.Ready(timeout);
             latches.LockedLatch.Ready(timeout);
 
-            await EventFilter.Warning("unhandled event").ExpectOneAsync(async () =>
-            {
+            await EventFilter.Warning("unhandled event").ExpectOneAsync(() => {
                 lockFsm.Tell("not_handled");
                 latches.UnhandledLatch.Ready(timeout);
+                return Task.CompletedTask;
             });
 
             var answerLatch = new TestLatch();

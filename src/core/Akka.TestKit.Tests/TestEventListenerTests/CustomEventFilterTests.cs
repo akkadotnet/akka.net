@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CustomEventFilterTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,9 +27,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         {
             var eventFilter = CreateTestingEventFilter();
             await eventFilter.Custom(logEvent => logEvent is Error && (string) logEvent.Message == "whatever")
-                .ExpectOneAsync(async () =>
-                {
+                .ExpectOneAsync(() => {
                     Log.Error("whatever");
+                    return Task.CompletedTask;
                 });
         }
 
@@ -38,9 +38,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         {
             var eventFilter = CreateTestingEventFilter();
             await eventFilter.Custom<Error>(logEvent => (string)logEvent.Message == "whatever")
-                .ExpectOneAsync(async () =>
-                {
+                .ExpectOneAsync(() => {
                     Log.Error("whatever");
+                    return Task.CompletedTask;
                 });
         }
     }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestActorRefSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,9 +19,9 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 {
     public class TestActorRefSpec : AkkaSpec
     {
-        private readonly AtomicCounter _counter = new AtomicCounter(4);
+        private readonly AtomicCounter _counter = new(4);
         private readonly Thread _thread = Thread.CurrentThread;
-        private readonly AtomicReference<Thread> _otherThread = new AtomicReference<Thread>(null);
+        private readonly AtomicReference<Thread> _otherThread = new(null);
 
         public TestActorRefSpec()
             : base(GetConfig())

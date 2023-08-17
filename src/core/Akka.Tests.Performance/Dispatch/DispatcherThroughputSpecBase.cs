@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DispatcherThroughputSpecBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ namespace Akka.Tests.Performance.Dispatch
         /// <summary>
         /// Used to block the benchmark method from exiting before all scheduled work is completed
         /// </summary>
-        protected readonly ManualResetEventSlim EventBlock = new ManualResetEventSlim(false);
+        protected readonly ManualResetEventSlim EventBlock = new(false);
 
         protected Action ScheduledWork;
 

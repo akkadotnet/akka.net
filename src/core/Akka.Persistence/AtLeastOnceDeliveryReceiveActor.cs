@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliveryReceiveActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -178,7 +178,7 @@ namespace Akka.Persistence
         /// </exception>
         public void Deliver(ActorSelection destination, Func<long, object> deliveryMessageMapper)
         {
-            var isWildcardSelection = destination.PathString.Contains("*");
+            var isWildcardSelection = destination.PathString.Contains('*');
             if (isWildcardSelection)
                 throw new NotSupportedException(
                     "Delivering to wildcard actor selections is not supported by AtLeastOnceDelivery. " +

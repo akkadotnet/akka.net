@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestSubscriber_Fluent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,8 +28,7 @@ namespace Akka.Streams.TestKit
             ///   after another before executing its own code.
             /// </summary>
             /// <returns></returns>
-            public SubscriberFluentBuilder<T> AsyncBuilder()
-                => new SubscriberFluentBuilder<T>(this);
+            public SubscriberFluentBuilder<T> AsyncBuilder() => new(this);
 
             /// <summary>
             /// Fluent DSL. Expect and return <see cref="ISubscriberEvent"/> (any of: <see cref="OnSubscribe"/>, <see cref="OnNext"/>, <see cref="OnError"/> or <see cref="OnComplete"/>).
@@ -66,7 +65,6 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Fluent DSL. Expect multiple stream elements.
             /// </summary>
-            [Obsolete("Use the method with CancellationToken support instead")]
             public ManualProbe<T> ExpectNext(params T[] elems)
             {
                 ExpectNextTask(this, null, default, elems)
@@ -108,7 +106,6 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Fluent DSL. Expect multiple stream elements in arbitrary order.
             /// </summary>
-            [Obsolete("Use the method with CancellationToken support instead")]
             public ManualProbe<T> ExpectNextUnordered(params T[] elems)
             {
                 ExpectNextUnorderedTask(this, null, default, elems)

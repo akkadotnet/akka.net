@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardingMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -72,7 +72,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GracefulShutdown Instance = new GracefulShutdown();
+        public static readonly GracefulShutdown Instance = new();
 
         private GracefulShutdown()
         {
@@ -85,7 +85,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GracefulShutdownTimeout Instance = new GracefulShutdownTimeout();
+        public static readonly GracefulShutdownTimeout Instance = new();
 
         private GracefulShutdownTimeout()
         {
@@ -151,7 +151,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GetCurrentRegions Instance = new GetCurrentRegions();
+        public static readonly GetCurrentRegions Instance = new();
 
         private GetCurrentRegions()
         {
@@ -399,7 +399,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GetShardRegionStats Instance = new GetShardRegionStats();
+        public static readonly GetShardRegionStats Instance = new();
 
         private GetShardRegionStats()
         {
@@ -427,12 +427,12 @@ namespace Akka.Cluster.Sharding
         /// Creates a new ShardRegionStats instance.
         /// </summary>
         /// <param name="stats">the region stats mapping of `ShardId` to number of entities</param>
-        [Obsolete]
+        [Obsolete("Use constructor with `failed` argument. Obsolete since 1.5.0-alpha1")]
         public ShardRegionStats(IImmutableDictionary<ShardId, int> stats)
             : this(stats, ImmutableHashSet<ShardId>.Empty)
         {
         }
-
+        
         /// <summary>
         /// Creates a new ShardRegionStats instance.
         /// </summary>
@@ -493,7 +493,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly GetShardRegionState Instance = new GetShardRegionState();
+        public static readonly GetShardRegionState Instance = new();
 
         private GetShardRegionState()
         {
@@ -520,12 +520,12 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         /// <param name="shards">TBD</param>
-        [Obsolete]
+        [Obsolete("Use constructor with `failed` argument. Obsolete since 1.5.0-alpha1")]
         public CurrentShardRegionState(IImmutableSet<ShardState> shards)
             : this(shards, ImmutableHashSet<ShardId>.Empty)
         {
         }
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -644,7 +644,7 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     internal sealed class GetShardRegionStatus : IShardRegionQuery, INoSerializationVerificationNeeded
     {
-        public static readonly GetShardRegionStatus Instance = new GetShardRegionStatus();
+        public static readonly GetShardRegionStatus Instance = new();
 
         private GetShardRegionStatus()
         {

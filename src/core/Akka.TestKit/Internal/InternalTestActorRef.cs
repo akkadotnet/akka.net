@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalTestActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,7 +27,7 @@ namespace Akka.TestKit.Internal
     /// </summary>
     public class InternalTestActorRef : LocalActorRef
     {
-        private static readonly AtomicCounterLong _uniqueNameNumber = new AtomicCounterLong(0);
+        private static readonly AtomicCounterLong _uniqueNameNumber = new(0);
 
         /// <summary>INTERNAL
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
@@ -261,8 +261,7 @@ namespace Akka.TestKit.Internal
             }
 
 
-            private readonly Dictionary<object, TaskCompletionSource<Done>> _testActorTasks =
-                new Dictionary<object, TaskCompletionSource<Done>>();
+            private readonly Dictionary<object, TaskCompletionSource<Done>> _testActorTasks = new();
         
             /// <summary>
             /// This is only intended to be called from TestKit's TestActorRef
@@ -350,7 +349,7 @@ namespace Akka.TestKit.Internal
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly InternalGetActor Instance = new InternalGetActor();
+            public static readonly InternalGetActor Instance = new();
             private InternalGetActor() { }
         }
     }

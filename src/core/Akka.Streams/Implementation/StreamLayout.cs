@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamLayout.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,14 +24,14 @@ using Reactive.Streams;
 namespace Akka.Streams.Implementation
 {
     /// <summary>
-    /// TBD
+    /// Helper functions for managing the layout of a stream graph.
     /// </summary>
     public static class StreamLayout
     {
         /// <summary>
-        /// TBD
+        /// Elided at runtime, but useful for debugging.
         /// </summary>
-        public static readonly bool IsDebug = false;
+        public const bool IsDebug = false;
 
         #region Materialized Value Node types
 
@@ -148,7 +148,7 @@ namespace Akka.Streams.Implementation
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Ignore Instance = new Ignore();
+            public static readonly Ignore Instance = new();
 
             private Ignore()
             {
@@ -268,7 +268,7 @@ namespace Akka.Streams.Implementation
             var atomics = Atomics(module.MaterializedValueComputation);
             var graphValues =
                 module.SubModules.SelectMany(
-                    m => m is GraphModule ? ((GraphModule) m).MaterializedValueIds : Enumerable.Empty<IModule>());
+                    m => m is GraphModule graphModule ? graphModule.MaterializedValueIds : Enumerable.Empty<IModule>());
             var nonExistent = atomics.Except(module.SubModules).Except(graphValues).Except(new[] {module});
             if (nonExistent.Any())
                 problems.Add("computation refers to non-existent modules " + string.Join(", ", nonExistent));
@@ -278,7 +278,7 @@ namespace Akka.Streams.Implementation
             if (print)
             {
                 var indent = string.Empty.PadLeft(level*2);
-                Console.Out.WriteLine("{0}{1}({2}): {3} {4}", indent, typeof(StreamLayout).Name, shape, ins(inPorts),
+                Console.Out.WriteLine("{0}{1}({2}): {3} {4}", indent, nameof(StreamLayout), shape, ins(inPorts),
                     outs(outPorts));
                 foreach (var downstream in module.Downstreams)
                     Console.Out.WriteLine("{0}    {1} -> {2}", indent, outPort(downstream.Key), inPort(downstream.Value));
@@ -296,12 +296,15 @@ namespace Akka.Streams.Implementation
 
         private static ImmutableHashSet<IModule> Atomics(IMaterializedValueNode node)
         {
-            if (node is Ignore)
-                return ImmutableHashSet<IModule>.Empty;
-            if (node is Transform)
-                return Atomics(((Transform) node).Node);
-            if (node is Atomic)
-                return ImmutableHashSet.Create(((Atomic) node).Module);
+            switch (node)
+            {
+                case Ignore:
+                    return ImmutableHashSet<IModule>.Empty;
+                case Transform transform:
+                    return Atomics(transform.Node);
+                case Atomic atomic:
+                    return ImmutableHashSet.Create(atomic.Module);
+            }
 
             Combine c;
             if ((c = node as Combine) != null)
@@ -322,13 +325,18 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public static bool Apply(StreamLayout.IMaterializedValueNode composition)
         {
-            if (composition is StreamLayout.Combine || composition is StreamLayout.Transform)
-                return false;
-            if (composition is StreamLayout.Ignore)
-                return true;
-
-            var atomic = composition as StreamLayout.Atomic;
-            return atomic != null && Apply(atomic.Module);
+            switch (composition)
+            {
+                case StreamLayout.Combine or StreamLayout.Transform:
+                    return false;
+                case StreamLayout.Ignore:
+                    return true;
+                default:
+                {
+                    var atomic = composition as StreamLayout.Atomic;
+                    return atomic != null && Apply(atomic.Module);
+                }
+            }
         }
 
         /// <summary>
@@ -338,18 +346,20 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public static bool Apply(IModule module)
         {
-            if (module is AtomicModule || module is EmptyModule)
-                return true;
-            var copied = module as CopiedModule;
-            if (copied != null)
-                return Apply(copied.CopyOf);
-
-            var composite = module as CompositeModule;
-            if(composite != null)
-                return Apply(composite.MaterializedValueComputation);
-
-            var fused = module as FusedModule;
-            return fused != null && Apply(fused.MaterializedValueComputation);
+            switch (module)
+            {
+                case AtomicModule or EmptyModule:
+                    return true;
+                case CopiedModule copied:
+                    return Apply(copied.CopyOf);
+                case CompositeModule composite:
+                    return Apply(composite.MaterializedValueComputation);
+                default:
+                {
+                    var fused = module as FusedModule;
+                    return fused != null && Apply(fused.MaterializedValueComputation);
+                }
+            }
         }
     }
 
@@ -638,7 +648,9 @@ namespace Akka.Streams.Implementation
         public virtual IModule Wire(OutPort from, InPort to)
         {
             if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                 StreamLayout.Validate(this);
+#pragma warning restore CS0162 // Unreachable code detected
 
             if (!OutPorts.Contains(from))
             {
@@ -677,7 +689,9 @@ namespace Akka.Streams.Implementation
         public virtual IModule TransformMaterializedValue<TMat, TMat2>(Func<TMat, TMat2> mapFunc)
         {
             if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                 StreamLayout.Validate(this);
+#pragma warning restore CS0162 // Unreachable code detected
 
             return new CompositeModule(
                 subModules: IsSealed ? ImmutableArray.Create(this as IModule) : SubModules,
@@ -710,7 +724,9 @@ namespace Akka.Streams.Implementation
         public virtual IModule Compose<T1, T2, T3>(IModule other, Func<T1, T2, T3> matFunc)
         {
             if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                 StreamLayout.Validate(this);
+#pragma warning restore CS0162 // Unreachable code detected
 
             if (Equals(other, this))
                 throw new ArgumentException(
@@ -746,10 +762,10 @@ namespace Akka.Streams.Implementation
 
         private bool IsIgnorable(StreamLayout.IMaterializedValueNode computation)
         {
-            if (computation is StreamLayout.Atomic)
-                return IsIgnorable(((StreamLayout.Atomic) computation).Module);
+            if (computation is StreamLayout.Atomic atomic)
+                return IsIgnorable(atomic.Module);
 
-            if (computation is StreamLayout.Combine || computation is StreamLayout.Transform)
+            if (computation is StreamLayout.Combine or StreamLayout.Transform)
                 return false;
 
             return computation is StreamLayout.Ignore;
@@ -757,12 +773,15 @@ namespace Akka.Streams.Implementation
 
         private bool IsIgnorable(IModule module)
         {
-            if (module is AtomicModule || module is EmptyModule) return true;
-            if (module is CopiedModule) return IsIgnorable(((CopiedModule) module).CopyOf);
-            if (module is CompositeModule) return IsIgnorable(((CompositeModule) module).MaterializedValueComputation);
-            if (module is FusedModule) return IsIgnorable(((FusedModule) module).MaterializedValueComputation);
-
-            throw new NotSupportedException($"Module of type {module.GetType()} is not supported by this method");
+            return module switch
+            {
+                AtomicModule or EmptyModule => true,
+                CopiedModule copiedModule => IsIgnorable(copiedModule.CopyOf),
+                CompositeModule compositeModule => IsIgnorable(compositeModule.MaterializedValueComputation),
+                FusedModule fusedModule => IsIgnorable(fusedModule.MaterializedValueComputation),
+                _ => throw new NotSupportedException(
+                    $"Module of type {module.GetType()} is not supported by this method")
+            };
         }
 
         /// <summary>
@@ -774,7 +793,9 @@ namespace Akka.Streams.Implementation
         public IModule ComposeNoMaterialized(IModule that)
         {
             if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                 StreamLayout.Validate(this);
+#pragma warning restore CS0162 // Unreachable code detected
 
             if (ReferenceEquals(this, that))
                 throw new ArgumentException(
@@ -891,7 +912,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly EmptyModule Instance = new EmptyModule();
+        public static readonly EmptyModule Instance = new();
 
         private EmptyModule()
         {
@@ -1559,7 +1580,7 @@ namespace Akka.Streams.Implementation
         {
             public static readonly ISubscriber<T> Subscriber = new CancellingSubscriber<T>();
 
-            public static readonly Inert Instance = new Inert();
+            public static readonly Inert Instance = new();
 
             private Inert()
             {
@@ -1594,7 +1615,7 @@ namespace Akka.Streams.Implementation
                 ISubscriber<T> subscriber = null,
                 bool? onCompleteBuffered = null,
                 Exception onErrorBuffered = null)
-                => new Establishing(
+                => new(
                     subscriber ?? Subscriber,
                     onCompleteBuffered ?? OnCompleteBuffered,
                     onErrorBuffered ?? OnErrorBuffered);
@@ -1763,14 +1784,14 @@ namespace Akka.Streams.Implementation
                     // changed by someone else
                     switch (Value)
                     {
-                        case Establishing est when est.OnErrorBuffered != null:
+                        case Establishing { OnErrorBuffered: { } } est:
                             // there was an onError while establishing
                             PrintDebug($"VirtualProcessor#{_hashCode}.EstablishSubscription.Rec(Establishing(OnErrorBuffered)) -> Inert");
                             ReactiveStreamsCompliance.TryOnError(est.Subscriber, est.OnErrorBuffered);
                             Value = Inert.Instance;
                             break;
                         
-                        case Establishing est when est.OnCompleteBuffered:
+                        case Establishing { OnCompleteBuffered: true } est:
                             // there was on onComplete while we were establishing
                             PrintDebug($"VirtualProcessor#{_hashCode}.EstablishSubscription.Rec(Establishing(OnCompleteBuffered)) -> Inert");
                             ReactiveStreamsCompliance.TryOnComplete(est.Subscriber);
@@ -2029,7 +2050,7 @@ namespace Akka.Streams.Implementation
 
         private sealed class PassThrough : ISubscriptionState
         {
-            public static PassThrough Instance { get; } = new PassThrough();
+            public static PassThrough Instance { get; } = new();
 
             private PassThrough() { }
 
@@ -2048,7 +2069,7 @@ namespace Akka.Streams.Implementation
 
         private sealed class WrappedSubscription : AtomicReference<ISubscriptionState>, ISubscription
         {
-            private static readonly Buffering NoBufferedDemand = new Buffering(0);
+            private static readonly Buffering NoBufferedDemand = new(0);
             private readonly ISubscription _real;
             private readonly VirtualProcessor<T> _processor;
             
@@ -2155,7 +2176,7 @@ namespace Akka.Streams.Implementation
         {
             public static readonly ISubscriber<T> Subscriber = new CancellingSubscriber<T>();
 
-            public static readonly Inert Instance = new Inert();
+            public static readonly Inert Instance = new();
 
             private Inert()
             {
@@ -2174,26 +2195,21 @@ namespace Akka.Streams.Implementation
 
             while (true)
             {
-                if (Value == null)
+                switch (Value)
                 {
-                    if (!CompareAndSet(null, subscriber))
+                    case null when !CompareAndSet(null, subscriber):
                         continue;
-                    return;
-                }
-
-                var publisher = Value as IPublisher<T>;
-                if (publisher != null)
-                {
-                    if (CompareAndSet(publisher, Inert.Subscriber))
-                    {
+                    case null:
+                        return;
+                    case IPublisher<T> publisher when CompareAndSet(publisher, Inert.Subscriber):
                         publisher.Subscribe(subscriber);
                         return;
-                    }
-                    continue;
+                    case IPublisher<T> publisher:
+                        continue;
+                    default:
+                        ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "Sink.AsPublisher(fanout = false)");
+                        return;
                 }
-
-                ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "Sink.AsPublisher(fanout = false)");
-                return;
             }
         }
 
@@ -2218,22 +2234,19 @@ namespace Akka.Streams.Implementation
                 Console.WriteLine($"{this}.RegisterPublisher({publisher})");
             while (true)
             {
-                if (Value == null)
+                switch (Value)
                 {
-                    if (!CompareAndSet(null, publisher))
+                    case null when !CompareAndSet(null, publisher):
                         continue;
-                    return;
+                    case null:
+                        return;
+                    case ISubscriber<T> subscriber:
+                        Value = Inert.Instance;
+                        publisher.Subscribe(subscriber);
+                        return;
+                    default:
+                        throw new IllegalStateException("internal error");
                 }
-
-                var subscriber = Value as ISubscriber<T>;
-                if (subscriber != null)
-                {
-                    Value = Inert.Instance;
-                    publisher.Subscribe(subscriber);
-                    return;
-                }
-
-                throw new IllegalStateException("internal error");
             }
         }
     }
@@ -2283,15 +2296,12 @@ namespace Akka.Streams.Implementation
         /// </summary>
         protected readonly Attributes InitialAttributes;
 
-        private readonly LinkedList<IDictionary<InPort, object>> _subscribersStack =
-            new LinkedList<IDictionary<InPort, object>>();
+        private readonly LinkedList<IDictionary<InPort, object>> _subscribersStack = new();
 
-        private readonly LinkedList<IDictionary<OutPort, IUntypedPublisher>> _publishersStack =
-            new LinkedList<IDictionary<OutPort, IUntypedPublisher>>();
+        private readonly LinkedList<IDictionary<OutPort, IUntypedPublisher>> _publishersStack = new();
 
         private readonly LinkedList<IDictionary<StreamLayout.IMaterializedValueNode, LinkedList<IMaterializedValueSource>>>
-            _materializedValueSources =
-                new LinkedList<IDictionary<StreamLayout.IMaterializedValueNode, LinkedList<IMaterializedValueSource>>>();
+            _materializedValueSources = new();
 
         /// <summary>
         /// Please note that this stack keeps track of the scoped modules wrapped in CopiedModule but not the CopiedModule
@@ -2301,7 +2311,7 @@ namespace Akka.Streams.Implementation
         /// The reason why the encapsulated (copied) modules are stored as mutable state to save subclasses of this class
         /// from passing the current scope around or even knowing about it.
         /// </summary>
-        private readonly LinkedList<IModule> _moduleStack = new LinkedList<IModule>();
+        private readonly LinkedList<IModule> _moduleStack = new();
 
         /// <summary>
         /// TBD
@@ -2403,11 +2413,10 @@ namespace Akka.Streams.Implementation
                 // (This is an attempt to clean up after an exception during materialization)
                 var ex = new MaterializationPanicException(cause);
 
-                foreach (var subMap in _subscribersStack)
-                    foreach (var value in subMap.Values)
+                foreach (var value in _subscribersStack.SelectMany(subMap => subMap.Values))
+                    switch (value)
                     {
-                        var subscriber = value as IUntypedSubscriber;
-                        if (subscriber != null)
+                        case IUntypedSubscriber subscriber:
                         {
                             var subscribedType = UntypedSubscriber.ToTyped(subscriber).GetType().GetSubscribedType();
                             var publisher = typeof(ErrorPublisher<>).Instantiate(subscribedType, ex, string.Empty);
@@ -2415,14 +2424,13 @@ namespace Akka.Streams.Implementation
                             UntypedPublisher.FromTyped(publisher).Subscribe(subscriber);
                             continue;
                         }
-
-                        var virtualPublisher = value as IUntypedVirtualPublisher;
-                        if (virtualPublisher != null)
+                        case IUntypedVirtualPublisher virtualPublisher:
                         {
                             var publishedType =
                                 UntypedVirtualPublisher.ToTyped(virtualPublisher).GetType().GetPublishedType();
                             var publisher = typeof(ErrorPublisher<>).Instantiate(publishedType, ex, string.Empty);
                             virtualPublisher.RegisterPublisher(UntypedPublisher.FromTyped(publisher));
+                            break;
                         }
                     }
 
@@ -2479,19 +2487,21 @@ namespace Akka.Streams.Implementation
             {
                 var subEffectiveAttributes = MergeAttributes(effectiveAttributes, submodule.Attributes);
 
-                var atomic = submodule as AtomicModule;
-                if (atomic != null)
-                    MaterializeAtomic(atomic, subEffectiveAttributes, materializedValues);
-                else if (submodule is CopiedModule)
+                switch (submodule)
                 {
-                    var copied = submodule as CopiedModule;
-                    EnterScope(copied);
-                    materializedValues.Add(copied, MaterializeModule(copied, subEffectiveAttributes));
-                    ExitScope(copied);
+                    case AtomicModule atomic:
+                        MaterializeAtomic(atomic, subEffectiveAttributes, materializedValues);
+                        break;
+                    case CopiedModule copied:
+                        EnterScope(copied);
+                        materializedValues.Add(copied, MaterializeModule(copied, subEffectiveAttributes));
+                        ExitScope(copied);
+                        break;
+                    case CompositeModule or FusedModule:
+                        materializedValues.Add(submodule, MaterializeComposite(submodule, subEffectiveAttributes));
+                        break;
                 }
-                else if(submodule is CompositeModule || submodule is FusedModule)
-                    materializedValues.Add(submodule, MaterializeComposite(submodule, subEffectiveAttributes));
-                
+
                 //EmptyModule, nothing to do or say
             }
 
@@ -2541,36 +2551,34 @@ namespace Akka.Streams.Implementation
             if (IsDebug)
                 Console.WriteLine($"{indent}{node}");
             object result;
-            if (node is StreamLayout.Atomic)
+            
+            switch (node)
             {
-                var atomic = (StreamLayout.Atomic) node;
-                values.TryGetValue(atomic.Module, out result);
+                case StreamLayout.Atomic atomic:
+                    values.TryGetValue(atomic.Module, out result);
+                    break;
+                case StreamLayout.Combine combine:
+                    result = combine.Combinator(ResolveMaterialized(combine.Left, values, spaces + 2),
+                        ResolveMaterialized(combine.Right, values, spaces + 2));
+                    break;
+                case StreamLayout.Transform transform:
+                    result = transform.Transformator(ResolveMaterialized(transform.Node, values, spaces + 2));
+                    break;
+                default:
+                    result = NotUsed.Instance;
+                    break;
             }
-            else if (node is StreamLayout.Combine)
-            {
-                var combine = (StreamLayout.Combine) node;
-                result = combine.Combinator(ResolveMaterialized(combine.Left, values, spaces + 2),
-                    ResolveMaterialized(combine.Right, values, spaces + 2));
-            }
-            else if (node is StreamLayout.Transform)
-            {
-                var transform = (StreamLayout.Transform) node;
-                result = transform.Transformator(ResolveMaterialized(transform.Node, values, spaces + 2));
-            }
-            else
-                result = NotUsed.Instance;
 
             if (IsDebug)
                 Console.WriteLine($"{indent}result = {result}");
 
-            if (MaterializedValueSource.TryGetValue(node, out var sources))
-            {
-                if (IsDebug)
-                    Console.WriteLine($"{indent}triggering sources {sources}");
-                MaterializedValueSource.Remove(node);
-                foreach (var source in sources)
-                    source.SetValue(result);
-            }
+            if (!MaterializedValueSource.TryGetValue(node, out var sources)) return result;
+            
+            if (IsDebug)
+                Console.WriteLine($"{indent}triggering sources {sources}");
+            MaterializedValueSource.Remove(node);
+            foreach (var source in sources)
+                source.SetValue(result);
 
             return result;
         }
@@ -2605,23 +2613,20 @@ namespace Akka.Streams.Implementation
                     DoSubscribe(publisher, subscriber);
         }
 
-        private void DoSubscribe(IUntypedPublisher publisher, object subscriberOrVirtual)
+        private static void DoSubscribe(IUntypedPublisher publisher, object subscriberOrVirtual)
         {
-            var subscriber = subscriberOrVirtual as IUntypedSubscriber;
-            if (subscriber != null)
+            switch (subscriberOrVirtual)
             {
-                publisher.Subscribe(subscriber);
-                return;
+                case IUntypedSubscriber subscriber:
+                    publisher.Subscribe(subscriber);
+                    return;
+                case IUntypedVirtualPublisher virtualPublisher:
+                    virtualPublisher.RegisterPublisher(UntypedPublisher.FromTyped(publisher));
+                    return;
+                default:
+                    publisher.Subscribe(UntypedSubscriber.FromTyped(subscriberOrVirtual));
+                    break;
             }
-
-            var virtualPublisher = subscriberOrVirtual as IUntypedVirtualPublisher;
-            if (virtualPublisher != null)
-            {
-                virtualPublisher.RegisterPublisher(UntypedPublisher.FromTyped(publisher));
-                return;
-            }
-
-            publisher.Subscribe(UntypedSubscriber.FromTyped(subscriberOrVirtual));
         }
     }
 

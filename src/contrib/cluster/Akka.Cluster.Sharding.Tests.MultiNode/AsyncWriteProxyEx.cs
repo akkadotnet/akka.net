@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncWriteProxyEx.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -86,7 +86,7 @@ namespace Akka.Cluster.Sharding.Tests
     {
         private class InitTimeout
         {
-            public static readonly InitTimeout Instance = new InitTimeout();
+            public static readonly InitTimeout Instance = new();
             private InitTimeout() { }
         }
 
@@ -124,7 +124,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// <param name="receive">TBD</param>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        protected override bool AroundReceive(Receive receive, object message)
+        protected internal override bool AroundReceive(Receive receive, object message)
         {
             if (_isInitialized)
             {
@@ -177,14 +177,14 @@ namespace Akka.Cluster.Sharding.Tests
                 .ContinueWith(r =>
                 {
                     if (r.IsCanceled)
-                        return (IImmutableList<Exception>)trueMsgs.Select(i => (Exception)new TimeoutException()).ToImmutableList();
+                        return (IImmutableList<Exception>)trueMsgs.Select(_ => (Exception)new TimeoutException()).ToImmutableList();
                     if (r.IsFaulted)
-                        return trueMsgs.Select(i => (Exception)r.Exception).ToImmutableList();
+                        return trueMsgs.Select(_ => (Exception)r.Exception).ToImmutableList();
 
                     return r.Result switch
                     {
-                        WriteMessageSuccess wms => trueMsgs.Select(i => (Exception)null).ToImmutableList(),
-                        WriteMessageFailure wmf => trueMsgs.Select(i => wmf.Cause).ToImmutableList(),
+                        WriteMessageSuccess wms => trueMsgs.Select(_ => (Exception)null).ToImmutableList(),
+                        WriteMessageFailure wmf => trueMsgs.Select(_ => wmf.Cause).ToImmutableList(),
                         _ => null
                     };
                 }, TaskContinuationOptions.ExecuteSynchronously);

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CircuitBreakerState.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -147,16 +147,16 @@ namespace Akka.Pattern
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task<T> Invoke<T>(Func<Task<T>> body)
+        public override Task<T> Invoke<T>(Func<Task<T>> body)
         {
             CheckState();
-            return await CallThrough(body);
+            return CallThrough(body);
         }
         
-        public override async Task<T> InvokeState<T,TState>(TState state, Func<TState, Task<T>> body)
+        public override Task<T> InvokeState<T,TState>(TState state, Func<TState, Task<T>> body)
         {
             CheckState();
-            return await CallThrough(state,body);
+            return CallThrough(state,body);
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventSourcedRememberEntitiesCoordinatorStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -74,7 +74,7 @@ namespace Akka.Cluster.Sharding.Internal
 
         public sealed class MigrationMarker : IClusterShardingSerializable
         {
-            public static readonly MigrationMarker Instance = new MigrationMarker();
+            public static readonly MigrationMarker Instance = new();
 
             private MigrationMarker()
             {
@@ -107,7 +107,7 @@ namespace Akka.Cluster.Sharding.Internal
         /// </summary>
         public override string PersistenceId { get; }
 
-        private readonly HashSet<ShardId> _shards = new HashSet<EntityId>();
+        private readonly HashSet<ShardId> _shards = new();
         private bool _writtenMarker = false;
 
         protected override bool ReceiveRecover(object message)

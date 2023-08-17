@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphStageTimersSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
@@ -49,60 +50,59 @@ namespace Akka.Streams.Tests.Dsl
         public async Task GraphStage_timer_support_must_receive_single_shot_timer()
         {
             var driver = SetupIsolatedStage();
-            await AwaitAssertAsync(() =>
+            await AwaitAssertAsync(async() =>
             {
                 driver.Tell(TestSingleTimer.Instance);
-                ExpectMsg(new Tick(1), TimeSpan.FromSeconds(10));
-                ExpectNoMsg(TimeSpan.FromSeconds(1));
+                await ExpectMsgAsync(new Tick(1), TimeSpan.FromSeconds(10));
+                await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
             });
             driver.StopStage();
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void GraphStage_timer_support_must_resubmit_single_shot_timer()
+        public async Task GraphStage_timer_support_must_resubmit_single_shot_timer()
         {
             var driver = SetupIsolatedStage();
-            Within(TimeSpan.FromSeconds(2.5), () =>
+            await WithinAsync(TimeSpan.FromSeconds(2.5), async() =>
             {
-                Within(TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1), () =>
+                await WithinAsync(TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1), async() =>
                 {
                     driver.Tell(TestSingleTimerResubmit.Instance);
-                    ExpectMsg(new Tick(1));
+                    await ExpectMsgAsync(new Tick(1));
                 });
-                Within(TimeSpan.FromSeconds(1), () => ExpectMsg(new Tick(2)));
+                await WithinAsync(TimeSpan.FromSeconds(1), async() => await ExpectMsgAsync(new Tick(2)));
 
-                ExpectNoMsg(TimeSpan.FromSeconds(1));
+                await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
             });
             driver.StopStage();
         }
 
         [Fact]
-        public void GraphStage_timer_support_must_correctly_cancel_a_named_timer()
+        public async Task GraphStage_timer_support_must_correctly_cancel_a_named_timer()
         {
             var driver = SetupIsolatedStage();
             driver.Tell(TestCancelTimer.Instance);
-            Within(TimeSpan.FromMilliseconds(5000), () => ExpectMsg<TestCancelTimerAck>());
-            Within(TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(3000), () => ExpectMsg(new Tick(1)));
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await WithinAsync(TimeSpan.FromMilliseconds(5000), async() => await ExpectMsgAsync<TestCancelTimerAck>());
+            await WithinAsync(TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(3000), async() => await ExpectMsgAsync(new Tick(1)));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
             driver.StopStage();
         }
 
         [Fact]
-        public void GraphStage_timer_support_must_receive_and_cancel_a_repeated_timer()
+        public async Task GraphStage_timer_support_must_receive_and_cancel_a_repeated_timer()
         {
             var driver = SetupIsolatedStage();
             driver.Tell(TestRepeatedTimer.Instance);
             var seq = ReceiveWhile(TimeSpan.FromSeconds(30), o => (Tick)o, msgs: 5);
             seq.Should().HaveCount(5);
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
             driver.StopStage();
         }
 
         [Fact]
-        public void GraphStage_timer_support_must_produce_scheduled_ticks_as_expected()
+        public async Task GraphStage_timer_support_must_produce_scheduled_ticks_as_expected()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -113,18 +113,17 @@ namespace Akka.Streams.Tests.Dsl
                 downstream.Request(5);
                 downstream.ExpectNext(1, 2, 3);
 
-                downstream.ExpectNoMsg(TimeSpan.FromSeconds(1));
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
-                upstream.SendComplete();
-                downstream.ExpectComplete();
+                await upstream.SendCompleteAsync();
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void GraphStage_timer_support_must_propagate_error_if_OnTimer_throws_an_Exception()
+        public async Task GraphStage_timer_support_must_propagate_error_if_OnTimer_throws_an_Exception()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var exception = new TestException("Expected exception to the rule");
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
@@ -135,6 +134,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 downstream.Request(1);
                 downstream.ExpectError().Should().Be(exception);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class TestSingleTimer
         {
-            public static readonly TestSingleTimer Instance = new TestSingleTimer();
+            public static readonly TestSingleTimer Instance = new();
 
             private TestSingleTimer()
             {
@@ -152,7 +152,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class TestSingleTimerResubmit
         {
-            public static readonly TestSingleTimerResubmit Instance = new TestSingleTimerResubmit();
+            public static readonly TestSingleTimerResubmit Instance = new();
 
             private TestSingleTimerResubmit()
             {
@@ -162,7 +162,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class TestCancelTimer
         {
-            public static readonly TestCancelTimer Instance = new TestCancelTimer();
+            public static readonly TestCancelTimer Instance = new();
 
             private TestCancelTimer()
             {
@@ -172,7 +172,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class TestCancelTimerAck
         {
-            public static readonly TestCancelTimerAck Instance = new TestCancelTimerAck();
+            public static readonly TestCancelTimerAck Instance = new();
 
             private TestCancelTimerAck()
             {
@@ -182,7 +182,7 @@ namespace Akka.Streams.Tests.Dsl
 
         private sealed class TestRepeatedTimer
         {
-            public static readonly TestRepeatedTimer Instance = new TestRepeatedTimer();
+            public static readonly TestRepeatedTimer Instance = new();
 
             private TestRepeatedTimer()
             {
@@ -312,7 +312,7 @@ namespace Akka.Streams.Tests.Dsl
                         onUpstreamFailure: FailStage);
 
 
-                    SetHandler(stage.Outlet, onPull: DoNothing, onDownstreamFinish: cause => CompleteStage());
+                    SetHandler(stage.Outlet, onPull: DoNothing, onDownstreamFinish: _ => CompleteStage());
                 }
 
                 public override void PreStart() => ScheduleRepeatedly(TimerKey, TimeSpan.FromMilliseconds(100));

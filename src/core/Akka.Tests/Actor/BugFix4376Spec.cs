@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BugFix4376Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,18 +31,18 @@ namespace Akka.Tests.Actor
 
         private class SimpleActor : ReceiveActor
         {
-            private readonly object _lock = new object();
+            private readonly object _lock = new();
             private static int Counter = 0;
 
             public SimpleActor()
             {
-                Receive<int>(i => i == 1, c => {
+                Receive<int>(i => i == 1, _ => {
                     lock (_lock)
                         Counter++;
                     throw new InvalidOperationException($"I'm dead. #{Counter}");
                 });
 
-                Receive<int>(i => i == 2, c => {
+                Receive<int>(i => i == 2, _ => {
                     Sender.Tell(2);
                 });
             }
@@ -51,20 +51,20 @@ namespace Akka.Tests.Actor
         private class SimpleBroadcastActor : ReceiveActor
         {
             private readonly AtomicCounter _counter = null;
-            private readonly object _lock = new object();
+            private readonly object _lock = new();
             private static int Counter = 0;
 
             public SimpleBroadcastActor(AtomicCounter counter)
             {
                 _counter = counter;
 
-                Receive<int>(i => i == 1, c => {
+                Receive<int>(i => i == 1, _ => {
                     lock (_lock)
                         Counter++;
                     throw new InvalidOperationException($"I'm dead. #{Counter}");
                 });
 
-                Receive<int>(i => i == 2, c => {
+                Receive<int>(i => i == 2, _ => {
                     _counter.AddAndGet(1);
                     Sender.Tell(2);
                 });
@@ -74,7 +74,7 @@ namespace Akka.Tests.Actor
         private class ParentActor : ReceiveActor
         {
             private readonly AtomicCounter _counter;
-            private readonly List<IActorRef> _children = new List<IActorRef>();
+            private readonly List<IActorRef> _children = new();
 
             public ParentActor(AtomicCounter counter)
             {
@@ -86,7 +86,7 @@ namespace Akka.Tests.Actor
                     _children.Add(child);
                 }
 
-                ReceiveAsync<string>(str => str.Equals("spam-fails"), async m =>
+                ReceiveAsync<string>(str => str.Equals("spam-fails"), async _ =>
                 {
                     foreach (var child in _children)
                     {
@@ -95,7 +95,7 @@ namespace Akka.Tests.Actor
                     await Task.Delay(1000);
                 });
 
-                ReceiveAsync<string>(str => str.Equals("run-test"), async m =>
+                ReceiveAsync<string>(str => str.Equals("run-test"), async _ =>
                 {
                     for (var i = 0; i < 2; ++i)
                     {

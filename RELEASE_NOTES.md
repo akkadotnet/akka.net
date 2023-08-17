@@ -1,3 +1,344 @@
+#### 1.5.12 August 2nd 2023 ####
+
+Akka.NET v1.5.12 is a maintenance release with a minor API change and a minor bug fix.
+
+* [Persistence.Query: Fix `ReadJournalFor()` thread safety](https://github.com/akkadotnet/akka.net/pull/6859)
+* [Persistence.Query: Expose new `Tags` property in `EventEnvelope`](https://github.com/akkadotnet/akka.net/pull/6862)
+* [Documentation: Fix typo in member-roles.md](https://github.com/akkadotnet/akka.net/pull/6784)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.12, click here](https://github.com/akkadotnet/akka.net/milestone/94?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 5       | 34   | 18   | Aaron Stannard      |
+| 2       | 150  | 51   | Gregorius Soedharmo |
+| 1       | 1    | 1    | dependabot[bot]     |
+| 1       | 1    | 1    | Jim Aho             |
+
+#### 1.5.11 July 27th 2023 ####
+
+Akka.NET v1.5.11 is a maintenance release with a minor API change and internal code modernization/cleanup.
+
+* [Remote: Modernize DotNettyTransportSettings class and add support for a SSL Setup class](https://github.com/akkadotnet/akka.net/pull/6854)
+* [PubSub: Make CountSubscriber query command public](https://github.com/akkadotnet/akka.net/pull/6856)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.11, click here](https://github.com/akkadotnet/akka.net/milestone/93?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 465  | 321  | Gregorius Soedharmo |
+| 1       | 22   | 2    | Aaron Stannard      |
+
+#### 1.5.10 July 26th 2023 ####
+
+Akka.NET v1.5.10 is a maintenance release with a minor API change.
+
+* [Persistence.TCK: Add constructor overload that takes ActorSystemSetup argument](https://github.com/akkadotnet/akka.net/pull/6850)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.10, click here](https://github.com/akkadotnet/akka.net/milestone/92?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 70   | 12   | Gregorius Soedharmo |
+
+#### 1.5.9 July 18th 2023 ####
+
+Akka.NET v1.5.9 is a maintenance release that introduces some performance improvements and internal code cleanup/modernization.
+
+__Changes:__
+* [Remoting: Make transport adapter component public](https://github.com/akkadotnet/akka.net/pull/6838)
+
+__Improvements:__
+* [Memory optimization, use `Array.Empty` instead of creating empty arrays](https://github.com/akkadotnet/akka.net/pull/6801)
+* [Remoting: Log all wrapped message layers during errors](https://github.com/akkadotnet/akka.net/pull/6818)
+* [Port #6805 and #6807, Improve Stream and Pattern.Backoff instance creation time performance](https://github.com/akkadotnet/akka.net/pull/6821)
+* [DData: Harden LWWDictionary serialization null check](https://github.com/akkadotnet/akka.net/pull/6837)
+
+__Code modernization:__ 
+* [Use C# 9.0 target-typed new()](https://github.com/akkadotnet/akka.net/pull/6798)
+* [Use C# 8.0 null-coalescing operator](https://github.com/akkadotnet/akka.net/pull/6814)
+
+__Update dependency versions:__
+* [Bump Google.Protobuf to 3.23.4](https://github.com/akkadotnet/akka.net/pull/6826)
+* [Bump Akka.MultiNode.TestAdapter to 1.5.8](https://github.com/akkadotnet/akka.net/pull/6802)
+* [Bump Microsoft.Data.SQLite to 7.0.9](https://github.com/akkadotnet/akka.net/pull/6835)
+* [Bump Microsoft.Extensions.ObjectPool to 7.0.8](https://github.com/akkadotnet/akka.net/pull/6813)
+* [Bump Xunit to 2.5.0](https://github.com/akkadotnet/akka.net/pull/6825)
+
+__Akka.TestKit.Xunit Changes__
+
+Due to breaking API change in Xunit 2.5.0, updating to Akka.NET 1.5.9 might break your unit tests. Some of the breaking change that we've noticed are:
+
+* `AkkaEqualException` constructor has been changed due to changes in Xunit API. If you're using this class, please use the `AkkaEqualException.ForMismatchedValues()` static method instead of using the constructor.
+* Testing for exception types by calling async code inside a sync delegate will not unwrap the `AggregateException` thrown. Either use async all the way or manually unwrap the exception.
+* Xunit `Asset.Equal()` does not automatically check for collection item equality anymore, that means doing `Assert.Equal()` between two dictionary or list would not work anymore.
+* Some Xunit classes have been changed from public to private. If you're using these classes, you will need to refactor your code.
+* __FsCheck.Xunit:__ Xunit Roslyn analyzer has become a bit too overzealous and insists that all unit test method can only return either void or Task and will raise a compilation error if you tried to return anything else. If you're using `FsCheck.Xunit`, you will need to use a pragma to disable this check: `#pragma warning disable xUnit1028`.
+
+If you want to see the [full set of changes made in Akka.NET v1.5.9, click here](https://github.com/akkadotnet/akka.net/milestone/91?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 12      | 171  | 155  | dependabot[bot]     |
+| 7       | 466  | 165  | Aaron Stannard      |
+| 4       | 1648 | 1725 | Simon Cropp         |
+| 1       | 9    | 4    | Gregorius Soedharmo |
+| 1       | 7    | 1    | Michael Buck        |
+
+#### 1.5.8 June 15th 2023 ####
+
+Akka.NET v1.5.8 is a maintenance release that introduces some new features and fixes some bugs with Akka.NET v1.5.7 and earlier.
+
+* [Akka.Streams: Added `Source`/`Flow` `Setup` operator](https://github.com/akkadotnet/akka.net/pull/6788)
+* [Akka.Cluster.Sharding: fixed potential wire format problem when upgrading from v1.4 to v1.5 with `state-store-mode=ddata` and `remember-entities=on`](https://github.com/akkadotnet/akka.net/issues/6704)
+* [Akka.Remote.TestKit: Fix MNTR crashing because it is using PolyFill extension method](https://github.com/akkadotnet/akka.net/pull/6768)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.8, click here](https://github.com/akkadotnet/akka.net/milestone/90?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 9 | 11 | 11 | dependabot[bot] |
+| 2 | 8 | 0 | Aaron Stannard |
+| 2 | 75 | 4 | Gregorius Soedharmo |
+| 2 | 132 | 158 | Simon Cropp |
+| 1 | 431 | 1 | Ismael Hamed |
+| 1 | 1 | 1 | Andrea Di Stefano |
+
+#### 1.5.7 May 17th 2023 ####
+
+Akka.NET v1.5.7 is a significant release that introduces a [major new reliable message delivery feature to Akka.NET and Akka.Cluster.Sharding](https://getakka.net/articles/actors/reliable-delivery.html): `Akka.Delivery`.
+
+**`Akka.Delivery`**
+
+Akka.Delivery is a reliable delivery system that leverages built-in actors, serialization, and persistence to help guarantee that all messages sent from one producer to one consumer will be delivered, in-order, even across process restarts / actor restarts / network outages.
+
+Akka.Delivery's functionality is divded across four libraries:
+
+* Akka - defines the base definitions for all messages, the `ProducerController` type, and the `ConsumerController` type;
+* Akka.Cluster - contains the serialization definitions for Akka.Delivery;
+* Akka.Persistence - contains the `EventSourcedProducerQueue` implementation, an optional feature that can be used to make the `ProducerController`'s outbound delivery queue persisted to the Akka.Persistence Journal and SnapshotStore; and
+* Akka.Cluster.Sharding - contains the definitions for the `ShardingProducerController` and `ShardingConsumerController`.
+
+We've documented how these features work in the following two detailed articles official website:
+
+* "[Reliable Message Delivery with Akka.Delivery](https://getakka.net/articles/actors/reliable-delivery.html)"
+* "[Reliable Delivery over Akka.Cluster.Sharding](https://getakka.net/articles/clustering/cluster-sharding-delivery.html)"
+
+If you want to see the [full set of changes made in Akka.NET v1.5.7, click here](https://github.com/akkadotnet/akka.net/milestone/86?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |   
+| --- | --- | --- | --- |            
+| 9 | 13972 | 135 | Aaron Stannard | 
+| 6 | 92 | 88 | Ebere Abanonu |      
+| 4 | 803 | 807 | Simon Cropp |      
+| 3 | 70 | 53 | Gregorius Soedharmo |
+| 3 | 3 | 3 | dependabot[bot] |      
+
+#### 1.5.6 May 8th 2023 ####
+
+Version 1.5.6 is a patch with a few minor bug fix
+
+* [TestKit: Remove duplicate info log for unhandled messages](https://github.com/akkadotnet/akka.net/pull/6730)
+* [Core: Change logging DateTime formatter from 12 hour to 24 hour format](https://github.com/akkadotnet/akka.net/pull/6734)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.6, click here](https://github.com/akkadotnet/akka.net/milestone/88?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 2       | 4    | 4    | Aaron Stannard      |
+| 2       | 33   | 84   | Simon Cropp         |
+| 2       | 2    | 2    | dependabot[bot]     |
+| 2       | 2    | 2    | Richard Smith       |
+| 1       | 2    | 2    | Gregorius Soedharmo |
+| 1       | 2    | 12   | Sergey Popov        |
+
+#### 1.5.5 May 4th 2023 ####
+
+* [TestKit: Add new variant of `ExpectAll` that accepts predicates](https://github.com/akkadotnet/akka.net/pull/6668)
+* [FSharp: Downgrade FSharp to v6.0.5](https://github.com/akkadotnet/akka.net/pull/6688)
+* [Core: Bump Google.Protobuf from 3.22.1 to 3.22.3](https://github.com/akkadotnet/akka.net/pull/6648)
+* [Core: Fix ByteString to check for index bounds](https://github.com/akkadotnet/akka.net/pull/6709)
+* [Core: Fix ReceiveActor ReceiveAsync ReceiveTimeout bug](https://github.com/akkadotnet/akka.net/pull/6718)
+* [Core: Fix race condition inside FastLazy](https://github.com/akkadotnet/akka.net/pull/6707)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.5, click here](https://github.com/akkadotnet/akka.net/milestone/87?closed=1).
+
+7 contributors since release 1.5.4
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 16      | 68   | 34   | Ebere Abanonu       |
+| 9       | 598  | 1053 | Simon Cropp         |
+| 4       | 4    | 4    | dependabot[bot]     |
+| 2       | 229  | 5    | Gregorius Soedharmo |
+| 1       | 33   | 28   | Aaron Stannard      |
+| 1       | 256  | 3    | Malcolm Learner     |
+| 1       | 148  | 140  | Sergey Popov        |
+
+#### 1.5.4 April 25th 2023 ####
+
+* [Akka: Enhance IStash API and configuration](https://github.com/akkadotnet/akka.net/pull/6660)
+* [Akka: Add bounded IStash configuration](https://github.com/akkadotnet/akka.net/pull/6661)
+
+**IStash Enhancements**
+
+`IStash` API have been improved with metrics API and its bound/capacity can be programatically set. Documentation can be read [here](https://getakka.net/articles/actors/receive-actor-api.html#bounded-stashes)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.4, click here](https://github.com/akkadotnet/akka.net/milestone/86?closed=1).
+
+5 contributors since release 1.5.3
+
+| COMMITS   | LOC+  | LOC-  | AUTHOR              |
+|-----------|-------|-------|---------------------|
+| 7         | 477   | 486   | Ebere Abanonu       |
+| 4         | 627   | 143   | Aaron Stannard      |
+| 2         | 2     | 2     | dependabot[bot]     |
+| 1         | 87    | 0     | Sergey Popov        |
+| 1         | 0     | 1     | Gregorius Soedharmo |
+
+#### 1.5.3 April 20th 2023 ####
+
+* [Persistence.Sqlite: Bump Microsoft.Data.SQLite to 7.0.5](https://github.com/akkadotnet/akka.net/pull/6643)
+* [Serialization.Hyperion: Fix bug: surrogate and known type provider not applied correctly by Setup](https://github.com/akkadotnet/akka.net/pull/6655)
+* [Akka: Bump Microsoft.Extensions.ObjectPool to 7.0.5](https://github.com/akkadotnet/akka.net/pull/6644)
+* [Persistence.Sql.Common: Add transaction isolation level to SQL queries](https://github.com/akkadotnet/akka.net/pull/6654)
+
+**SQL Transaction Isolation Level Setting**
+
+In 1.5.3, we're introducing fine-grained control over transaction isolation level inside the `Akka.Persistence.Sql.Common` common library. This setting will be propagated to the rest of the SQL persistence plugin ecosystem and the `Akka.Hosting` package in their next release version.
+
+Four new HOCON settings are introduced:
+* `akka.persistence.journal.{plugin-name}.read-isolation-level`
+* `akka.persistence.journal.{plugin-name}.write-isolation-level`
+* `akka.persistence.snapshot-store.{plugin-name}.read-isolation-level`
+* `akka.persistence.snapshot-store.{plugin-name}.write-isolation-level`
+
+you can go to the [official Microsoft documentation](https://learn.microsoft.com/en-us/dotnet/api/system.data.isolationlevel?#fields) to read more about these isolation level settings.
+
+If you want to see the [full set of changes made in Akka.NET v1.5.3, click here](https://github.com/akkadotnet/akka.net/milestone/85?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 23      | 1284 | 1248 | Ebere Abanonu       |
+| 4       | 7    | 7    | dependabot[bot]     |
+| 3       | 933  | 267  | Gregorius Soedharmo |
+| 2       | 4498 | 4407 | Aaron Stannard      |
+
+#### 1.5.2 April 5th 2023 ####
+
+There are some major behavioral changes introduced to Akka.Cluster and Akka.Persistence in Akka.NET v1.5.2 - to learn how these changes might affect your Akka.NET applications, please [see our Akka.NET v1.5.2 Upgrade Advisories on the Akka.NET website](https://getakka.net/community/whats-new/akkadotnet-v1.5-upgrade-advisories.html#upgrading-to-akkanet-v152).
+
+* [Akka.Remote: Remove secure cookie from configuration](https://github.com/akkadotnet/akka.net/pull/6515)
+* [DData: Remove unused _pruningPerformed and _tombstonedNodes variables](https://github.com/akkadotnet/akka.net/pull/6526)
+* [Akka.Persistence: Remove default object serializer in Sql.Common](https://github.com/akkadotnet/akka.net/pull/6528)
+* [Akka.Cluster: Log send time in verbose heartbeat message](https://github.com/akkadotnet/akka.net/pull/6548)
+* [Akka.Streams: Optimize ForEachAsync](https://github.com/akkadotnet/akka.net/pull/6538)
+* [Akka: Implement alternative AtomicState leveraging WaitAsync](https://github.com/akkadotnet/akka.net/pull/6109)
+* [Akka.Streams: Use correct capacity when creating DynamicQueue when FixedQueue is full](https://github.com/akkadotnet/akka.net/pull/6632)
+* [Akka.Cluster: Enable keep majority split brain resolver as default](https://github.com/akkadotnet/akka.net/pull/6628)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.2, click here](https://github.com/akkadotnet/akka.net/milestone/83?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 56      | 2580 | 2913 | Ebere Abanonu       |
+| 5       | 201  | 82   | Aaron Stannard      |
+| 4       | 754  | 558  | Ismael Hamed        |
+| 3       | 4    | 4    | dependabot[bot]     |
+| 2       | 33   | 12   | Sergey Popov        |
+| 1       | 511  | 53   | Gregorius Soedharmo |
+| 1       | 1    | 1    | ondravondra         |
+| 1       | 0    | 2    | Simon Cropp         |
+
+#### 1.5.1 March 15th 2023 ####
+
+* [Akka.Persistence: Improve memory allocation](https://github.com/akkadotnet/akka.net/pull/6487)
+* [Akka.Persistence: Implement persistence query in InMemory journal](https://github.com/akkadotnet/akka.net/pull/6409)
+* [Akka: Fix bugs reported by PVS-Studio static analysis](https://github.com/akkadotnet/akka.net/pull/6497)
+* [Akka: Bump Google.Protobuf to 3.22.1](https://github.com/akkadotnet/akka.net/pull/6500)
+* [Akka.Persistence.Sqlite: Bump Microsoft.Data.SQLite to 7.0.4](https://github.com/akkadotnet/akka.net/pull/6516)
+* [Akka: Fix StackOverflow exception in NewtonSoftSerializer](https://github.com/akkadotnet/akka.net/pull/6503)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.1, click here](https://github.com/akkadotnet/akka.net/milestone/82?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 9       | 425  | 331  | Ebere Abanonu       |
+| 5       | 6    | 6    | dependabot[bot]     |
+| 3       | 2399 | 109  | Sergey Popov        |
+| 1       | 97   | 4    | Gregorius Soedharmo |
+| 1       | 2    | 2    | Aaron Stannard      |
+
+#### 1.5.0 March 2nd 2023 ####
+Version 1.5.0 is a major new release of Akka.NET that is now marked as stable and ready for production use.
+
+You can read the [full notes about what's changed in Akka.NET v1.5 here](https://getakka.net/community/whats-new/akkadotnet-v1.5.html). We also encourage you to watch our video: "[Akka NET v1.5 New Features and Upgrade Guide](https://www.youtube.com/watch?v=-UPestlIw4k)"
+
+If you want to see the [full set of changes made in Akka.NET v1.5.0 so far, click here](https://github.com/akkadotnet/akka.net/milestone/7).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 95 | 25041 | 24976 | Gregorius Soedharmo |
+| 85 | 89784 | 18362 | Aaron Stannard |
+| 76 | 95 | 95 | dependabot[bot] |
+| 18 | 3201 | 908 | Ismael Hamed |
+| 5 | 230 | 251 | Sergey Popov |
+| 2 | 77 | 7 | Vagif Abilov |
+| 2 | 38 | 8 | Brah McDude |
+| 1 | 92 | 92 | nabond251 |
+| 1 | 843 | 0 | Drew |
+| 1 | 7 | 6 | Tjaart Blignaut |
+| 1 | 5 | 4 | Sean Killeen |
+| 1 | 32 | 1 | JonnyII |
+| 1 | 26 | 4 | Thomas Stegemann |
+| 1 | 203 | 5 | Ebere Abanonu |
+| 1 | 2 | 2 | Popov Sergey |
+| 1 | 2 | 2 | Denis |
+| 1 | 16 | 0 | Damian |
+| 1 | 11 | 2 | Nicolai Davies |
+| 1 | 101 | 3 | aminchenkov |
+| 1 | 1 | 1 | zbynek001 |
+| 1 | 1 | 1 | Michel van Os |
+| 1 | 1 | 1 | Adrian D. Alvarez |
+
+#### 1.5.0-beta5 February 28th 2023 ####
+Version 1.5.0-beta5 contains **breaking API changes** and new API changes for Akka.NET.
+
+* [Akka.Cluster: Remove `JoinAsync` and `JoinSeedNodesAsync` default timeout values](https://github.com/akkadotnet/akka.net/pull/6473)
+* [Akka.Event: expose `Args()` on `LogMessage`](https://github.com/akkadotnet/akka.net/pull/6472)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 50 | 28 | Aaron Stannard |
+| 1 | 22 | 32 | Gregorius Soedharmo |
+
+#### 1.5.0-beta4 February 28th 2023 ####
+Version 1.5.0-beta4 contains **breaking API changes** and new API changes for Akka.NET.
+
+* [Akka.Persistence.TCK: remove `IDisposable` from Akka.Persistence.TCK](https://github.com/akkadotnet/akka.net/pull/6465) - this hid methods from the `TestKit` base classes.
+* [Akka.Remote: Make transport adapter messages public](https://github.com/akkadotnet/akka.net/pull/6469) - adds back public APIs from v1.4.
+* [Akka.TestKit: fix accidental breaking changes in v1.5.0-beta3](https://github.com/akkadotnet/akka.net/issues/6466)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 110 | 37 | Aaron Stannard |
+| 1 | 253 | 7 | Gregorius Soedharmo |
+
+#### 1.5.0-beta3 February 27th 2023 ####
+Version 1.5.0-beta3 contains **breaking API changes** and new API changes for Akka.NET.
+
+* Removed a number of `Obsolete` APIs that were generally not used much.
+* [Akka.Actor: `ActorSystem.Create` throws `PlatformNotSupportedException` on net7.0-android](https://github.com/akkadotnet/akka.net/issues/6459)
+* [Akka.Actor: Append message content to `DeadLetter` log messages](https://github.com/akkadotnet/akka.net/pull/6448)
+* [Akka.Streams: Use `ActorSystem` for `Materializer`](https://github.com/akkadotnet/akka.net/pull/6453) - *massive* memory improvements for applications that materialize a large number of streams.
+* [Akka.Persistence.Query.Sql: backpressure control for queries](https://github.com/akkadotnet/akka.net/pull/6436) - full details on this here: https://petabridge.com/blog/largescale-cqrs-akkadotnet-v1.5/
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 14 | 68 | 794 | Gregorius Soedharmo |
+| 5 | 997 | 498 | Aaron Stannard |
+| 3 | 6 | 6 | dependabot[bot] |
+
 #### 1.5.0-beta2 February 20th 2023 ####
 Version 1.5.0-beta2 contains **breaking API changes** and new API changes for Akka.NET.
 

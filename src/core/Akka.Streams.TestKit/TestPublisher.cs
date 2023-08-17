@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestPublisher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -205,7 +205,7 @@ namespace Akka.Streams.TestKit
                 TimeSpan max,
                 Func<TOther> execute,
                 CancellationToken cancellationToken = default)
-                => WithinAsync(min, max, async () => execute(), cancellationToken)
+                => WithinAsync(min, max, () => Task.FromResult(execute()), cancellationToken)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
 
             /// <summary>
@@ -244,7 +244,7 @@ namespace Akka.Streams.TestKit
             /// Sane as calling Within(TimeSpan.Zero, max, function, cancellationToken).
             /// </summary>
             public TOther Within<TOther>(TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default)
-                => WithinAsync(max, async () => execute(), cancellationToken)
+                => WithinAsync(max, () => Task.FromResult(execute()), cancellationToken)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
             
             /// <summary>
@@ -364,10 +364,8 @@ namespace Akka.Streams.TestKit
         /// <summary>
         /// Probe that implements Reactive.Streams.IPublisher{T} interface.
         /// </summary>
-        public static ManualProbe<T> CreateManualPublisherProbe<T>(this TestKitBase testKit, bool autoOnSubscribe = true) 
-            => new ManualProbe<T>(testKit, autoOnSubscribe);
+        public static ManualProbe<T> CreateManualPublisherProbe<T>(this TestKitBase testKit, bool autoOnSubscribe = true) => new(testKit, autoOnSubscribe);
 
-        public static Probe<T> CreatePublisherProbe<T>(this TestKitBase testKit, long initialPendingRequests = 0L)
-            => new Probe<T>(testKit, initialPendingRequests);
+        public static Probe<T> CreatePublisherProbe<T>(this TestKitBase testKit, long initialPendingRequests = 0L) => new(testKit, initialPendingRequests);
     }
 }

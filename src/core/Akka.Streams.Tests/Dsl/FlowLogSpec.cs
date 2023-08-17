@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowLogSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -150,7 +150,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var ex = new TestException("test");
             var future = Source.From(Enumerable.Range(1, 5))
-                .Log("hi", n => { throw ex; })
+                .Log("hi", _ => { throw ex; })
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(Sink.Aggregate<int, int>(0, (i, i1) => i + i1), Materializer);
 

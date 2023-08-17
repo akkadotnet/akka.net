@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Remoting.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -437,7 +437,7 @@ namespace Akka.Remote
     /// </summary>
     internal class TransportSupervisor : ReceiveActor
     {
-        private readonly SupervisorStrategy _strategy = new OneForOneStrategy(exception => Directive.Restart);
+        private readonly SupervisorStrategy _strategy = new OneForOneStrategy(_ => Directive.Restart);
         /// <summary>
         /// TBD
         /// </summary>

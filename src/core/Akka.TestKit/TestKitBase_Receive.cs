@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase_Receive.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,14 +42,13 @@ namespace Akka.TestKit
         } 
 
         /// <inheritdoc cref="FishForMessage(Predicate{object}, TimeSpan?, string, CancellationToken)"/>
-        public async ValueTask<object> FishForMessageAsync(
-            Predicate<object> isMessage, 
+        public ValueTask<object> FishForMessageAsync(
+            Predicate<object> isMessage,
             TimeSpan? max = null,
             string hint = "",
             CancellationToken cancellationToken = default)
         {
-            return await FishForMessageAsync<object>(isMessage, max, hint, cancellationToken)
-                .ConfigureAwait(false);
+            return FishForMessageAsync<object>(isMessage, max, hint, cancellationToken);
         }
 
         /// <summary>
@@ -73,14 +72,13 @@ namespace Akka.TestKit
         }
 
         /// <inheritdoc cref="FishForMessage{T}(Predicate{T}, TimeSpan?, string, CancellationToken)"/>
-        public async ValueTask<T> FishForMessageAsync<T>(
+        public ValueTask<T> FishForMessageAsync<T>(
             Predicate<T> isMessage,
             TimeSpan? max = null,
             string hint = "",
             CancellationToken cancellationToken = default)
         {
-            return await FishForMessageAsync(isMessage, null, max, hint, cancellationToken)
-                .ConfigureAwait(false);
+            return FishForMessageAsync(isMessage, null, max, hint, cancellationToken);
         }
 
         /// <summary>
@@ -238,12 +236,11 @@ namespace Akka.TestKit
         }
 
         /// <inheritdoc cref="TryReceiveOne(out MessageEnvelope, TimeSpan?, CancellationToken)"/>
-        public async ValueTask<(bool success, MessageEnvelope envelope)> TryReceiveOneAsync(
+        public ValueTask<(bool success, MessageEnvelope envelope)> TryReceiveOneAsync(
             TimeSpan? max,
             CancellationToken cancellationToken = default)
         {
-            return await InternalTryReceiveOneAsync(max, true, cancellationToken)
-                .ConfigureAwait(false);
+            return InternalTryReceiveOneAsync(max, true, cancellationToken);
         }
 
         private async ValueTask<(bool success, MessageEnvelope envelope)> InternalTryReceiveOneAsync(
@@ -370,10 +367,9 @@ namespace Akka.TestKit
         }
 
         /// <inheritdoc cref="TryPeekOne(out MessageEnvelope, TimeSpan?, CancellationToken)"/>
-        public async ValueTask<(bool success, MessageEnvelope envelope)> TryPeekOneAsync(TimeSpan? max, CancellationToken cancellationToken)
+        public ValueTask<(bool success, MessageEnvelope envelope)> TryPeekOneAsync(TimeSpan? max, CancellationToken cancellationToken)
         {
-            return await InternalTryPeekOneAsync(max, true, cancellationToken)
-                .ConfigureAwait(false);
+            return InternalTryPeekOneAsync(max, true, cancellationToken);
         }
 
         private async ValueTask<(bool success, MessageEnvelope envelope)> InternalTryPeekOneAsync(

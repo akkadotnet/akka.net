@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaProtocolSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -51,11 +51,9 @@ namespace Akka.Remote
             // backwards compatibility with the existing dot-netty.tcp.connection-timeout
             var enabledTransports = config.GetStringList("akka.remote.enabled-transports", new string[] { });
             if (enabledTransports.Contains("akka.remote.dot-netty.tcp"))
-                HandshakeTimeout = config.GetTimeSpan("akka.remote.dot-netty.tcp.connection-timeout", null);
-            else if (enabledTransports.Contains("akka.remote.dot-netty.ssl"))
-                HandshakeTimeout = config.GetTimeSpan("akka.remote.dot-netty.ssl.connection-timeout", null);
+                HandshakeTimeout = config.GetTimeSpan("akka.remote.dot-netty.tcp.connection-timeout", TimeSpan.FromSeconds(15), allowInfinite:false);
             else
-                HandshakeTimeout = config.GetTimeSpan("akka.remote.handshake-timeout", TimeSpan.FromSeconds(20), allowInfinite:false);
+                HandshakeTimeout = config.GetTimeSpan("akka.remote.handshake-timeout", TimeSpan.FromSeconds(15), allowInfinite:false);
         }
     }
 }

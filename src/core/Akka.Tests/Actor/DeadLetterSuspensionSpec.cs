@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadLetterSuspensionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -85,19 +85,19 @@ namespace Akka.Tests.Actor
         {
             await EventFilter
                 .Info(start: ExpectedDeadLettersLogMessage(1))
-                .ExpectAsync(1, async () => _deadActor.Tell(1));
+                .ExpectAsync(1, () => { _deadActor.Tell(1); return Task.CompletedTask; });
 
             await EventFilter
                 .Info(start: ExpectedDroppedLogMessage(2))
-                .ExpectAsync(1, async () => _droppingActor.Tell(2));
+                .ExpectAsync(1, () => { _droppingActor.Tell(2); return Task.CompletedTask; });
 
             await EventFilter
                 .Info(start: ExpectedUnhandledLogMessage(3))
-                .ExpectAsync(1, async () => _unhandledActor.Tell(3));
+                .ExpectAsync(1, () => { _unhandledActor.Tell(3); return Task.CompletedTask; });
 
             await EventFilter
                 .Info(start: ExpectedDeadLettersLogMessage(4) + ", no more dead letters will be logged in next")
-                .ExpectAsync(1, async () => _deadActor.Tell(4));
+                .ExpectAsync(1, () => { _deadActor.Tell(4); return Task.CompletedTask; });
             _deadActor.Tell(5);
             _droppingActor.Tell(6);
 
@@ -107,12 +107,12 @@ namespace Akka.Tests.Actor
             // re-enabled
             await EventFilter
                 .Info(start: ExpectedDeadLettersLogMessage(7) + ", of which 2 were not logged")
-                .ExpectAsync(1, async () => _deadActor.Tell(7));
+                .ExpectAsync(1, () => { _deadActor.Tell(7); return Task.CompletedTask; });
 
             // reset count
             await EventFilter
                 .Info(start: ExpectedDeadLettersLogMessage(1))
-                .ExpectAsync(1, async () => _deadActor.Tell(8));
+                .ExpectAsync(1, () => { _deadActor.Tell(8); return Task.CompletedTask; });
         }
     }
 }

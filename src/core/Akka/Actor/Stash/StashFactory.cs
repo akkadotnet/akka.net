@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StashFactory.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -48,8 +48,10 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static IStash CreateStash(this IActorContext context, Type actorType)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             if (actorType.Implements<IWithBoundedStash>())
                 return new BoundedStashImpl(context);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             if (actorType.Implements<IWithUnboundedStash>())
                 return new UnboundedStashImpl(context);

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpConnected.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -90,7 +90,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly UdpConnected Instance = new UdpConnected();
+        public static readonly UdpConnected Instance = new();
 
         /// <summary>
         /// TBD
@@ -138,7 +138,7 @@ namespace Akka.IO
             /// Default <see cref="NoAck"/> instance which is used when no acknowledgment information is
             /// explicitly provided. Its "token" is <see langword="null"/>.
             /// </summary>
-            public static readonly NoAck Instance = new NoAck(null);
+            public static readonly NoAck Instance = new(null);
 
             /// <summary>
             /// TBD
@@ -165,12 +165,6 @@ namespace Akka.IO
         /// </summary>
         public sealed class Send : Command
         {
-            [Obsolete("Akka.IO.Udp.Send public constructors are obsolete. Use `Send.Create` or `Send(ByteString, EndPoint, Event)` instead.")]
-            public Send(IEnumerator<ByteBuffer> payload, Event ack)
-                : this(ByteString.FromBuffers(payload), ack)
-            {
-            }
-
             /// <summary>
             /// Creates a new send request to be executed via UDP socket to a addressed to an endpoint known by the connected UDP actor.
             /// Once send completes, this request will acknowledged back on the sender side with an <paramref name="ack"/>
@@ -206,7 +200,7 @@ namespace Akka.IO
             /// object.
             /// </summary>
             /// <param name="payload">Binary payload to be send.</param>
-            public static Send Create(ByteString payload) => new Send(payload, NoAck.Instance);
+            public static Send Create(ByteString payload) => new(payload, NoAck.Instance);
         }
 
         /// <summary>
@@ -263,7 +257,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Disconnect Instance = new Disconnect();
+            public static readonly Disconnect Instance = new();
 
             private Disconnect()
             {
@@ -281,7 +275,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly SuspendReading Instance = new SuspendReading();
+            public static readonly SuspendReading Instance = new();
 
             private SuspendReading()
             { }
@@ -296,7 +290,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ResumeReading Instance = new ResumeReading();
+            public static readonly ResumeReading Instance = new();
 
             private ResumeReading()
             { }
@@ -359,7 +353,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Connected Instance = new Connected();
+            public static readonly Connected Instance = new();
 
             private Connected()
             { }
@@ -374,7 +368,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Disconnected Instance = new Disconnected();
+            public static readonly Disconnected Instance = new();
 
             private Disconnected()
             { }

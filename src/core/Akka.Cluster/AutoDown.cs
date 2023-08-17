@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AutoDown.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Configuration;
 using static Akka.Cluster.MembershipState;
@@ -66,7 +67,7 @@ namespace Akka.Cluster
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is UnreachableTimeout && Equals((UnreachableTimeout)obj);
+                return obj is UnreachableTimeout timeout && Equals(timeout);
             }
 
             /// <inheritdoc/>
@@ -270,6 +271,7 @@ namespace Akka.Cluster
     /// <summary>
     /// Used when no custom provider is configured and 'auto-down-unreachable-after' is enabled.
     /// </summary>
+    [InternalApi] // really only used during MNTR for Akka.Cluster.Sharding
     public sealed class AutoDowning : IDowningProvider
     {
         private readonly ActorSystem _system;
@@ -296,7 +298,9 @@ namespace Akka.Cluster
         {
             get
             {
+#pragma warning disable CS0618 // disable obsolete warning here because this entire class is obsolete
                 var autoDownUnreachableAfter = _cluster.Settings.AutoDownUnreachableAfter;
+#pragma warning restore CS0618
                 if (!autoDownUnreachableAfter.HasValue)
                     throw new ConfigurationException("AutoDowning downing provider selected but 'akka.cluster.auto-down-unreachable-after' not set");
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestSerializers.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,8 +31,8 @@ namespace Akka.Persistence.Tests.Serialization
 
         public override byte[] ToBinary(object obj)
         {
-            if (obj is MyPayload)
-                return Encoding.UTF8.GetBytes("." + ((MyPayload) obj).Data);
+            if (obj is MyPayload payload)
+                return Encoding.UTF8.GetBytes("." + payload.Data);
             return null;
         }
 

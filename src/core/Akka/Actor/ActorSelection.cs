@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSelection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -86,14 +86,14 @@ namespace Akka.Actor
                     case null:
                     case "":
                         break;
-                    case "**":                        
+                    case "**":
                         list.Add(SelectChildRecursive.Instance);
                         hasDoubleWildcard = true;
                         break;
-                    case string e when e.Contains("?") || e.Contains("*"):
+                    case string e when e.Contains('?') || e.Contains('*'):
                         list.Add(new SelectChildPattern(e));
                         break;
-                    case string e when e == "..":
+                    case string and "..":
                         list.Add(SelectParent.Instance);
                         break;
                     default:
@@ -478,7 +478,7 @@ namespace Akka.Actor
         /// <summary>
         ///  Use this instead of calling the default constructor
         /// </summary>
-        public static readonly SelectChildRecursive Instance = new SelectChildRecursive();
+        public static readonly SelectChildRecursive Instance = new();
 
         
         public override int GetHashCode() => "**".GetHashCode();
@@ -496,7 +496,7 @@ namespace Akka.Actor
         /// <summary>
         ///  Use this instead of calling the default constructor
         /// </summary>
-        public static readonly SelectParent Instance = new SelectParent();
+        public static readonly SelectParent Instance = new();
 
         
         public override bool Equals(object obj) => !ReferenceEquals(obj, null) && obj is SelectParent;

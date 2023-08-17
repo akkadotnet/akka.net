@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="Bugfix3903Specs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="Bugfix3903Spec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -60,14 +60,14 @@ namespace Akka.Remote.Tests.Serialization
         {
             public class Fail
             {
-                public static readonly Fail Instance = new Fail();
+                public static readonly Fail Instance = new();
                 private Fail(){}
             }
             
             public EchoActor()
             {
                 // receive message that will cause this actor to fail
-                Receive<Fail>(s =>
+                Receive<Fail>(_ =>
                 {
                     throw new ApplicationException("fail");
                 });

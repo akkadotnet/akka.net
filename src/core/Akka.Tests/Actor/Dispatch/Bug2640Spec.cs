@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Bug2640Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -32,7 +32,7 @@ namespace Akka.Tests.Actor.Dispatch
 
         private class GetThread
         {
-            public static readonly GetThread Instance = new GetThread();
+            public static readonly GetThread Instance = new();
 
             private GetThread()
             {
@@ -124,7 +124,7 @@ namespace Akka.Tests.Actor.Dispatch
 
             Sys.Stop(actor);
             await ExpectTerminatedAsync(actor);
-            await AwaitConditionAsync(async () => !thread.IsAlive); // wait for thread to terminate
+            await AwaitConditionAsync(() => Task.FromResult(!thread.IsAlive)); // wait for thread to terminate
         }
     }
 }

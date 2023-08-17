@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Ops.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                SetHandler(stage.In, stage.Out, this);
+                SetHandlers(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -92,12 +92,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("Select.in");
+        public Inlet<TIn> In { get; } = new("Select.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("Select.out");
+        public Outlet<TOut> Out { get; } = new("Select.out");
 
         /// <summary>
         /// TBD
@@ -526,7 +526,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private class NotApplied
             {
-                public static readonly NotApplied Instance = new NotApplied();
+                public static readonly NotApplied Instance = new();
                 private NotApplied() { }
             }
         }
@@ -559,12 +559,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("Collect.in");
+        public Inlet<TIn> In { get; } = new("Collect.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("Collect.out");
+        public Outlet<TOut> Out { get; } = new("Collect.out");
 
         /// <summary>
         /// TBD
@@ -606,7 +606,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _stage = stage;
 
-                SetHandler(stage.Inlet, stage.Outlet, this);
+                SetHandlers(stage.Inlet, stage.Outlet, this);
             }
 
             public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
@@ -699,7 +699,7 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(SelectError<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                SetHandler(stage.Inlet, stage.Outlet, this);
+                SetHandlers(stage.Inlet, stage.Outlet, this);
             }
 
             public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
@@ -746,7 +746,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _left = stage._count;
 
-                SetHandler(stage.Inlet, stage.Outlet, this);
+                SetHandlers(stage.Inlet, stage.Outlet, this);
             }
 
             public override void OnPush()
@@ -824,7 +824,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _left = stage._count;
 
-                SetHandler(stage.Inlet, stage.Outlet, this);
+                SetHandlers(stage.Inlet, stage.Outlet, this);
             }
 
             public override void OnPush()
@@ -926,7 +926,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                 };
 
-                SetHandler(stage.In, stage.Out, this);
+                SetHandlers(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -977,12 +977,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("Scan.in");
+        public Inlet<TIn> In { get; } = new("Scan.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("Scan.out");
+        public Outlet<TOut> Out { get; } = new("Scan.out");
 
         /// <summary>
         /// TBD
@@ -1160,12 +1160,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("ScanAsync.in");
+        public Inlet<TIn> In { get; } = new("ScanAsync.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("ScanAsync.out");
+        public Outlet<TOut> Out { get; } = new("ScanAsync.out");
 
         /// <summary>
         /// TBD
@@ -1215,7 +1215,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                SetHandler(stage.In, stage.Out, this);
+                SetHandlers(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -1286,12 +1286,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("Aggregate.in");
+        public Inlet<TIn> In { get; } = new("Aggregate.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("Aggregate.out");
+        public Outlet<TOut> Out { get; } = new("Aggregate.out");
 
         /// <summary>
         /// TBD
@@ -1383,7 +1383,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                 });
 
-                SetHandler(stage.In, stage.Out, this);
+                SetHandlers(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -1459,12 +1459,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("AggregateAsync.in");
+        public Inlet<TIn> In { get; } = new("AggregateAsync.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("AggregateAsync.out");
+        public Outlet<TOut> Out { get; } = new("AggregateAsync.out");
 
         /// <summary>
         /// TBD
@@ -1625,7 +1625,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _buffer = new List<T>(stage._count);
                 _left = stage._count;
 
-                SetHandler(stage.In, stage.Out, this);
+                SetHandlers(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -1689,12 +1689,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<T> In { get; } = new Inlet<T>("Grouped.in");
+        public Inlet<T> In { get; } = new("Grouped.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<IEnumerable<T>> Out { get; } = new Outlet<IEnumerable<T>>("Grouped.out");
+        public Outlet<IEnumerable<T>> Out { get; } = new("Grouped.out");
 
         /// <summary>
         /// TBD
@@ -1834,7 +1834,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _buffer = ImmutableList<T>.Empty;
 
-                SetHandler(stage.In, stage.Out, this);
+                SetHandlers(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -1911,12 +1911,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<T> In { get; } = new Inlet<T>("Sliding.in");
+        public Inlet<T> In { get; } = new("Sliding.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<IEnumerable<T>> Out { get; } = new Outlet<IEnumerable<T>>("Sliding.out");
+        public Outlet<IEnumerable<T>> Out { get; } = new("Sliding.out");
 
         /// <summary>
         /// TBD
@@ -2108,7 +2108,7 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(OnCompleted<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                SetHandler(stage.In, stage.Out, this);
+                SetHandlers(stage.In, stage.Out, this);
             }
 
             public override void OnPush() => Pull(_stage.In);
@@ -2149,9 +2149,9 @@ namespace Akka.Streams.Implementation.Fusing
             Shape = new FlowShape<T, NotUsed>(In, Out);
         }
 
-        public Inlet<T> In { get; } = new Inlet<T>("OnCompleted.in");
+        public Inlet<T> In { get; } = new("OnCompleted.in");
 
-        public Outlet<NotUsed> Out { get; } = new Outlet<NotUsed>("OnCompleted.out");
+        public Outlet<NotUsed> Out { get; } = new("OnCompleted.out");
 
         public override FlowShape<T, NotUsed> Shape { get; }
 
@@ -2185,7 +2185,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
                 _left = stage._max;
 
-                SetHandler(_shape.Inlet, _shape.Outlet, this);
+                SetHandlers(_shape.Inlet, _shape.Outlet, this);
             }
 
             public override void OnPush()
@@ -2404,7 +2404,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _iterator = new IteratorAdapter<TOut>(Enumerable.Empty<TOut>().GetEnumerator());
 
-                SetHandler(stage.In, stage.Out, this);
+                SetHandlers(stage.In, stage.Out, this);
             }
 
             public override void PreStart() => Pull(_stage.In);
@@ -2485,12 +2485,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("expand.in");
+        public Inlet<TIn> In { get; } = new("expand.in");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("expand.out");
+        public Outlet<TOut> Out { get; } = new("expand.out");
 
         /// <summary>
         /// TBD
@@ -2566,14 +2566,15 @@ namespace Akka.Streams.Implementation.Fusing
 
                 _taskCallback = GetAsyncCallback<Holder<TOut>>(HolderCompleted);
 
-                SetHandler(stage.In, stage.Out, this);
+                SetHandlers(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
             {
+                var message = Grab(_stage.In);
                 try
                 {
-                    var task = _stage._mapFunc(Grab(_stage.In));
+                    var task = _stage._mapFunc(message);
                     var holder = new Holder<TOut>(NotYetThere, _taskCallback);
                     _buffer.Enqueue(holder);
 
@@ -2590,8 +2591,21 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 catch (Exception e)
                 {
-                    if (_decider(e) == Directive.Stop)
-                        FailStage(e);
+                    var strategy = _decider(e);
+                    Log.Error(e, "An exception occured inside SelectAsync while processing message [{0}]. Supervision strategy: {1}", message, strategy);
+                    switch (strategy)
+                    {
+                        case Directive.Stop:
+                            FailStage(e);
+                            break;
+                        
+                        case Directive.Resume:
+                        case Directive.Restart:
+                            break;
+                        
+                        default:
+                            throw new AggregateException($"Unknown SupervisionStrategy directive: {strategy}", e);
+                    }
                 }
                 if (Todo < _stage._parallelism && !HasBeenPulled(_stage.In))
                     TryPull(_stage.In);
@@ -2644,10 +2658,31 @@ namespace Akka.Streams.Implementation.Fusing
             private void HolderCompleted(Holder<TOut> holder)
             {
                 var element = holder.Element;
-                if (!element.IsSuccess && _decider(element.Exception) == Directive.Stop)
-                    FailStage(element.Exception);
-                else if (IsAvailable(_stage.Out))
-                    PushOne();
+                if (element.IsSuccess)
+                {
+                    if (IsAvailable(_stage.Out))
+                        PushOne();
+                    return;
+                }
+                
+                var exception = element.Exception;
+                var strategy = _decider(exception);
+                Log.Error(exception, "An exception occured inside SelectAsync while executing Task. Supervision strategy: {0}", strategy);
+                switch (strategy)
+                {
+                    case Directive.Stop:
+                        FailStage(exception);
+                        break;
+                    
+                    case Directive.Resume:
+                    case Directive.Restart:
+                        if (IsAvailable(_stage.Out))
+                            PushOne();
+                        break;
+                    
+                    default:
+                        throw new AggregateException($"Unknown SupervisionStrategy directive: {strategy}", exception);
+                }
             }
 
             public override string ToString() => $"SelectAsync.Logic(buffer={_buffer})";
@@ -2661,11 +2696,11 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<TIn> In = new Inlet<TIn>("SelectAsync.in");
+        public readonly Inlet<TIn> In = new("SelectAsync.in");
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<TOut> Out = new Outlet<TOut>("SelectAsync.out");
+        public readonly Outlet<TOut> Out = new("SelectAsync.out");
 
         /// <summary>
         /// TBD
@@ -2811,11 +2846,11 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<TIn> In = new Inlet<TIn>("SelectAsyncUnordered.in");
+        public readonly Inlet<TIn> In = new("SelectAsyncUnordered.in");
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<TOut> Out = new Outlet<TOut>("SelectAsyncUnordered.out");
+        public readonly Outlet<TOut> Out = new("SelectAsyncUnordered.out");
 
         /// <summary>
         /// TBD
@@ -2855,7 +2890,7 @@ namespace Akka.Streams.Implementation.Fusing
     [InternalApi]
     public sealed class Log<T> : SimpleLinearGraphStage<T>
     {
-        private static readonly Attributes.LogLevels DefaultLogLevels = new Attributes.LogLevels(
+        private static readonly Attributes.LogLevels DefaultLogLevels = new(
             onElement: LogLevel.DebugLevel,
             onFinish: LogLevel.DebugLevel,
             onFailure: LogLevel.ErrorLevel);
@@ -3034,7 +3069,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private readonly GroupedWeightedWithin<T> _stage;
 
-            private readonly List<T> _buffer = new List<T>();
+            private readonly List<T> _buffer = new();
             private T _pending = default;
             private long _pendingWeight = 0L;
             // True if:
@@ -3203,8 +3238,8 @@ namespace Akka.Streams.Implementation.Fusing
 
         #endregion
 
-        private readonly Inlet<T> _in = new Inlet<T>("in");
-        private readonly Outlet<IEnumerable<T>> _out = new Outlet<IEnumerable<T>>("out");
+        private readonly Inlet<T> _in = new("in");
+        private readonly Outlet<IEnumerable<T>> _out = new("out");
         private readonly long _maxWeight;
         private readonly int _maxNumber;
         private readonly Func<T, long> _costFn;
@@ -3879,7 +3914,7 @@ namespace Akka.Streams.Implementation.Fusing
         }
 
         #endregion
-        private readonly Outlet<T> _outlet = new Outlet<T>("EnumerableSource.out");
+        private readonly Outlet<T> _outlet = new("EnumerableSource.out");
         private readonly Func<IAsyncEnumerable<T>> _factory;
 
         public AsyncEnumerable(Func<IAsyncEnumerable<T>>  factory)
@@ -3993,8 +4028,8 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly Func<Func<TIn, IEnumerable<TOut>>> _concatFactory;
 
-        private readonly Inlet<TIn> _in = new Inlet<TIn>("StatefulSelectMany.in");
-        private readonly Outlet<TOut> _out = new Outlet<TOut>("StatefulSelectMany.out");
+        private readonly Inlet<TIn> _in = new("StatefulSelectMany.in");
+        private readonly Outlet<TOut> _out = new("StatefulSelectMany.out");
 
         /// <summary>
         /// TBD
@@ -4250,12 +4285,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("lazySink.In");
+        public Inlet<TIn> In { get; } = new("lazySink.In");
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("lazySink.Out");
+        public Outlet<TOut> Out { get; } = new("lazySink.Out");
 
         /// <summary>
         /// TBD

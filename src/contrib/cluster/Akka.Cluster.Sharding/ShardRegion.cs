@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardRegion.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,12 +11,12 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Cluster.Sharding.Internal;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
 using Akka.Util.Internal;
-using Get = Akka.DistributedData.Get;
 
 namespace Akka.Cluster.Sharding
 {
@@ -25,11 +25,14 @@ namespace Akka.Cluster.Sharding
     using ShardId = String;
 
     /// <summary>
+    /// INTERNAL API
+    /// 
     /// This actor creates children shard actors on demand that it is told to be responsible for.
     /// The shard actors in turn create entity actors on demand.
     /// It delegates messages targeted to other shards to the responsible
     /// <see cref="ShardRegion"/> actor on other nodes.
     /// </summary>
+    [InternalStableApi]
     public sealed class ShardRegion : ActorBase, IWithTimers
     {
         #region messages
@@ -44,7 +47,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Retry Instance = new Retry();
+            public static readonly Retry Instance = new();
             private Retry() { }
         }
 
@@ -65,7 +68,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly RegisterRetry Instance = new RegisterRetry();
+            public static readonly RegisterRetry Instance = new();
             private RegisterRetry() { }
         }
 
@@ -214,7 +217,7 @@ namespace Akka.Cluster.Sharding
         {
             private sealed class StopTimeout
             {
-                public static readonly StopTimeout Instance = new StopTimeout();
+                public static readonly StopTimeout Instance = new();
 
                 private StopTimeout()
                 {
@@ -223,7 +226,7 @@ namespace Akka.Cluster.Sharding
 
             private sealed class StopTimeoutWarning
             {
-                public static readonly StopTimeoutWarning Instance = new StopTimeoutWarning();
+                public static readonly StopTimeoutWarning Instance = new();
 
                 private StopTimeoutWarning()
                 {
@@ -236,7 +239,7 @@ namespace Akka.Cluster.Sharding
             /// <summary>
             /// TBD
             /// </summary>
-            public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+            public ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
 
             public ITimerScheduler Timers { get; set; }
 
@@ -292,7 +295,7 @@ namespace Akka.Cluster.Sharding
                         Context.Stop(Self);
                     }
                 });
-                Receive<StopTimeoutWarning>(s =>
+                Receive<StopTimeoutWarning>(_ =>
                 {
                     Log.Warning(
                         $"{{0}}: [{remaining.Count}] of the entities in shard [{{1}}] not stopped after [{{2}}]. " +
@@ -305,7 +308,7 @@ namespace Akka.Cluster.Sharding
                             "" // the region will be shutdown earlier so would be confusing to say more
                             : $"Waiting additional [{handoffTimeout}] before stopping the remaining entities.");
                 });
-                Receive<StopTimeout>(s =>
+                Receive<StopTimeout>(_ =>
                 {
                     Log.Warning("{0}: HandOffStopMessage[{1}] is not handled by some of the entities in shard [{2}] after [{3}], " +
                         "stopping the remaining [{4}] entities.",
@@ -408,7 +411,7 @@ namespace Akka.Cluster.Sharding
 
         private IImmutableDictionary<IActorRef, IImmutableSet<ShardId>> _regions = ImmutableDictionary<IActorRef, IImmutableSet<ShardId>>.Empty;
         private IImmutableDictionary<ShardId, IActorRef> _regionByShard = ImmutableDictionary<ShardId, IActorRef>.Empty;
-        private readonly MessageBufferMap<ShardId> _shardBuffers = new MessageBufferMap<ShardId>();
+        private readonly MessageBufferMap<ShardId> _shardBuffers = new();
         private IImmutableDictionary<ShardId, IActorRef> _shards = ImmutableDictionary<ShardId, IActorRef>.Empty;
         private IImmutableDictionary<IActorRef, ShardId> _shardsByRef = ImmutableDictionary<IActorRef, ShardId>.Empty;
         private IImmutableSet<ShardId> _startingShards = ImmutableHashSet<ShardId>.Empty;
@@ -424,7 +427,7 @@ namespace Akka.Cluster.Sharding
         private bool _gracefulShutdownInProgress;
 
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
-        private readonly TaskCompletionSource<Done> _gracefulShutdownProgress = new TaskCompletionSource<Done>();
+        private readonly TaskCompletionSource<Done> _gracefulShutdownProgress = new();
 
         /// <summary>
         /// TBD
@@ -967,7 +970,7 @@ namespace Akka.Cluster.Sharding
                         sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, destinationAddress,
                             Option<IActorRef>.Create(entityRef)));
                     }
-                    catch (ActorNotFoundException ex)
+                    catch (ActorNotFoundException)
                     {
                         // entity does not exist
                         sender.Tell(new EntityLocation(getEntityLocation.EntityId, shardId, destinationAddress,
@@ -1058,7 +1061,7 @@ namespace Akka.Cluster.Sharding
             }
 
             var tasks = _shards.Select(entity => (Entity: entity.Key, Task: entity.Value.Ask<T>(message, timeout))).ToImmutableList();
-            return Task.WhenAll(tasks.Select(i => i.Task)).ContinueWith(ps =>
+            return Task.WhenAll(tasks.Select(i => i.Task)).ContinueWith(_ =>
             {
                 var qr = ShardsQueryResult<T>.Create(tasks, _shards.Count, timeout);
                 if (qr.Failed.Count > 0)

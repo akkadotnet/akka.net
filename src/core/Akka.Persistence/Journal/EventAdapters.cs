@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventAdapters.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -98,7 +98,7 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// The singleton instance of <see cref="IdentityEventAdapter"/>.
         /// </summary>
-        public static IdentityEventAdapter Instance { get; } = new IdentityEventAdapter();
+        public static IdentityEventAdapter Instance { get; } = new();
 
         private IdentityEventAdapter() { }
 
@@ -338,7 +338,7 @@ namespace Akka.Persistence.Journal
 
             foreach (var pair in bindings)
             {
-                backing.AddOrUpdate(pair.Key, pair.Value, (type, adapter) => pair.Value);
+                backing.AddOrUpdate(pair.Key, pair.Value, (_, _) => pair.Value);
             }
 
             return new EventAdapters(backing, bindings, system.Log);

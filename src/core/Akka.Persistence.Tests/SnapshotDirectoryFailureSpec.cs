@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotDirectoryFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,15 +41,15 @@ namespace Akka.Persistence.Tests
             {
                 if (message is string)
                     SaveSnapshot(message);
-                else if (message is SaveSnapshotSuccess)
-                    _probe.Tell(((SaveSnapshotSuccess)message).Metadata.SequenceNr);
+                else if (message is SaveSnapshotSuccess success)
+                    _probe.Tell(success.Metadata.SequenceNr);
                 else
                     _probe.Tell(message);
                 return true;
             }
         }
 
-        private readonly FileInfo _file = new FileInfo(InUseSnapshotPath);
+        private readonly FileInfo _file = new(InUseSnapshotPath);
 
         public SnapshotDirectoryFailureSpec() : base(Configuration("SnapshotDirectoryFailureSpec",
             extraConfig: "akka.persistence.snapshot-store.local.dir = \"" + InUseSnapshotPath + "\""))
@@ -67,10 +67,10 @@ namespace Akka.Persistence.Tests
             using (_file.Create()) {}
         }
 
-        protected override async Task AfterTerminationAsync()
+        protected override void AfterTermination()
         {
             _file.Delete();
-            await base.AfterTerminationAsync();
+            base.AfterTermination();
         }
 
         [Fact]

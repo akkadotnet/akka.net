@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ORMultiValueDictionary.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -74,8 +74,8 @@ namespace Akka.DistributedData
         IReplicatedDataSerialization, IEquatable<ORMultiValueDictionary<TKey, TValue>>,
         IEnumerable<KeyValuePair<TKey, IImmutableSet<TValue>>>, IORMultiValueDictionary
     {
-        public static readonly ORMultiValueDictionary<TKey, TValue> Empty = new ORMultiValueDictionary<TKey, TValue>(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: false);
-        public static readonly ORMultiValueDictionary<TKey, TValue> EmptyWithValueDeltas = new ORMultiValueDictionary<TKey, TValue>(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: true);
+        public static readonly ORMultiValueDictionary<TKey, TValue> Empty = new(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: false);
+        public static readonly ORMultiValueDictionary<TKey, TValue> EmptyWithValueDeltas = new(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: true);
 
         internal readonly ORDictionary<TKey, ORSet<TValue>> Underlying;
         private readonly bool _withValueDeltas;
@@ -104,8 +104,7 @@ namespace Akka.DistributedData
         {
             if (!_withValueDeltas || Underlying.KeySet.Contains(key))
             {
-                ORSet<TValue> set;
-                if (Underlying.TryGetValue(key, out set))
+                if (Underlying.TryGetValue(key, out var set))
                 {
                     value = set.Elements;
                     return true;
@@ -224,8 +223,7 @@ namespace Akka.DistributedData
         public ORMultiValueDictionary<TKey, TValue> RemoveItem(UniqueAddress node, TKey key, TValue element)
         {
             var newUnderlying = Underlying.AddOrUpdate(node, key, ORSet<TValue>.Empty, _withValueDeltas, set => set.Remove(node, element));
-            ORSet<TValue> found;
-            if (newUnderlying.TryGetValue(key, out found) && found.IsEmpty)
+            if (newUnderlying.TryGetValue(key, out var found) && found.IsEmpty)
             {
                 if (_withValueDeltas)
                     newUnderlying = newUnderlying.RemoveKey(node, key);
@@ -265,10 +263,10 @@ namespace Akka.DistributedData
         IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
 
         public ORMultiValueDictionary<TKey, TValue> Prune(UniqueAddress removedNode, UniqueAddress collapseInto) =>
-            new ORMultiValueDictionary<TKey, TValue>(Underlying.Prune(removedNode, collapseInto), _withValueDeltas);
+            new(Underlying.Prune(removedNode, collapseInto), _withValueDeltas);
 
         public ORMultiValueDictionary<TKey, TValue> PruningCleanup(UniqueAddress removedNode) =>
-            new ORMultiValueDictionary<TKey, TValue>(Underlying.PruningCleanup(removedNode), _withValueDeltas);
+            new(Underlying.PruningCleanup(removedNode), _withValueDeltas);
 
         public bool Equals(ORMultiValueDictionary<TKey, TValue> other)
         {
@@ -282,7 +280,7 @@ namespace Akka.DistributedData
             Underlying.Select(x => new KeyValuePair<TKey, IImmutableSet<TValue>>(x.Key, x.Value.Elements)).GetEnumerator();
 
         public override bool Equals(object obj) =>
-            obj is ORMultiValueDictionary<TKey, TValue> && Equals((ORMultiValueDictionary<TKey, TValue>)obj);
+            obj is ORMultiValueDictionary<TKey, TValue> pairs && Equals(pairs);
 
         public override int GetHashCode() => Underlying.GetHashCode();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -400,8 +398,7 @@ namespace Akka.DistributedData
 
         IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
-        public ORMultiValueDictionary<TKey, TValue> ResetDelta() =>
-            new ORMultiValueDictionary<TKey, TValue>(Underlying.ResetDelta(), _withValueDeltas);
+        public ORMultiValueDictionary<TKey, TValue> ResetDelta() => new(Underlying.ResetDelta(), _withValueDeltas);
 
         #endregion
 

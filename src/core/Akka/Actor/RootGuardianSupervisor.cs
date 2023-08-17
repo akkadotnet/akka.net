@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RootGuardianSupervisor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ namespace Akka.Actor
         private readonly ILoggingAdapter _log;
         private readonly TaskCompletionSource<Status> _terminationPromise;
         private readonly ActorPath _path;
-        private readonly Switch _stopped = new Switch(false);
+        private readonly Switch _stopped = new(false);
         private readonly IActorRefProvider _provider;
 
         private bool IsWalking => !_terminationPromise.Task.IsCompleted;

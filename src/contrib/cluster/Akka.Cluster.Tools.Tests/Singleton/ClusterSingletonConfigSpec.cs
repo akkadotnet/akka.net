@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             clusterSingletonManagerSettings.SingletonName.ShouldBe("singleton");
             clusterSingletonManagerSettings.Role.ShouldBe(null);
             clusterSingletonManagerSettings.HandOverRetryInterval.TotalSeconds.ShouldBe(1);
-            clusterSingletonManagerSettings.RemovalMargin.TotalSeconds.ShouldBe(0);
+            clusterSingletonManagerSettings.RemovalMargin.TotalSeconds.ShouldBe(20); // now 20 due to default SBR settings
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.singleton");
             Assert.False(config.IsNullOrEmpty());

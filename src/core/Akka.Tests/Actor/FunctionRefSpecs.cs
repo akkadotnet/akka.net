@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FunctionRefSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -241,7 +241,7 @@ namespace Akka.Tests.Actor
         public async Task FunctionRef_when_not_registered_must_not_be_found()
         {
             var provider = ((ExtendedActorSystem)Sys).Provider;
-            var fref = new FunctionRef(TestActor.Path / "blabla", provider, Sys.EventStream, (x, y) => { });
+            var fref = new FunctionRef(TestActor.Path / "blabla", provider, Sys.EventStream, (_, _) => { });
             await EventFilter.Exception<InvalidOperationException>().ExpectOneAsync(async() =>
             {
                 // needs to be something that fails when the deserialized form is not a FunctionRef

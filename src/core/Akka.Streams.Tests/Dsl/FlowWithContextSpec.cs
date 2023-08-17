@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowWithContextSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -70,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
             Offset = offset;
         }
 
-        public Message Copy(string data = null, long? offset = null) => new Message(data ?? Data, offset ?? Offset);
+        public Message Copy(string data = null, long? offset = null) => new(data ?? Data, offset ?? Offset);
 
         public bool Equals(Message other)
         {

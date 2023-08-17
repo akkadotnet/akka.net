@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,8 +27,8 @@ namespace Akka.Cluster.Cpu.Benchmark
 
         private const int DefaultWarmUpRepeat = 5;
         
-        private static readonly List<CpuUsage> Usages = new List<CpuUsage>();
-        private static readonly List<Process> Processes = new List<Process>();
+        private static readonly List<CpuUsage> Usages = new();
+        private static readonly List<Process> Processes = new();
         
         public static async Task<int> Main(string[] args)
         {

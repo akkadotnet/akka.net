@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReceivePersistentActorTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -136,7 +136,7 @@ namespace Akka.Persistence.Tests
             ExpectMsg((object)"any:hello");
         }
         
-        private readonly AtomicCounterLong _seqNrCounter = new AtomicCounterLong(1L);
+        private readonly AtomicCounterLong _seqNrCounter = new(1L);
         /// <summary>
         /// Initialize test journal using provided events.
         /// </summary>
@@ -155,7 +155,7 @@ namespace Akka.Persistence.Tests
 
         private abstract class TestReceivePersistentActor : ReceivePersistentActor
         {
-            public readonly LinkedList<object> State = new LinkedList<object>();
+            public readonly LinkedList<object> State = new();
             private readonly string _persistenceId;
 
             protected TestReceivePersistentActor(string persistenceId)
@@ -189,7 +189,7 @@ namespace Akka.Persistence.Tests
             public CallReceiveWhenHandlingMessageActor(string pid) : base(pid)
             {
                 Recover<int>(i => State.AddLast(i));
-                Command<object>(m =>
+                Command<object>(_ =>
                 {
                     try
                     {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSelectManySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
@@ -31,10 +32,10 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void SelectMany_should_map_and_concat()
+        public async Task SelectMany_should_map_and_concat()
         {
             var script = Script.Create(
-                (new[] { 0 }, new int[0]),
+                (new[] { 0 }, Array.Empty<int>()),
                 (new[] { 1 }, new[] { 1 }),
                 (new[] { 2 }, new[] { 2, 2 }),
                 (new[] { 3 }, new[] { 3, 3, 3 }),
@@ -43,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var random = ThreadLocalRandom.Current.Next(1, 10);
             for (int i = 0; i < random; i++)
-                RunScript(script, Settings, a => a.SelectMany(x => Enumerable.Range(1, x).Select(_ => x)));
+                await RunScriptAsync(script, Settings, a => a.SelectMany(x => Enumerable.Range(1, x).Select(_ => x)));
         }
 
         [Fact]
@@ -90,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
                 })
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(4).ExpectNext(1, 2, 4, 5)
+                .Request(4).ExpectNext( 1, 2, 4, 5)
                 .ExpectComplete();
         }
     }

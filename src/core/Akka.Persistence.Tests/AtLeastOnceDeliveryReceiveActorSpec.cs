@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliveryReceiveActorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -56,7 +56,7 @@ namespace Akka.Persistence.Tests
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
-                return obj is Action && Equals((Action) obj);
+                return obj is Action action && Equals(action);
             }
 
             public override int GetHashCode()
@@ -87,7 +87,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         private sealed class Boom
         {
-            public static readonly Boom Instance = new Boom();
+            public static readonly Boom Instance = new();
         }
 
         private class Destination : ReceiveActor
@@ -117,7 +117,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         private sealed class InvalidReq
         {
-            public static readonly InvalidReq Instance = new InvalidReq();
+            public static readonly InvalidReq Instance = new();
 
             private InvalidReq()
             {
@@ -186,13 +186,13 @@ namespace Akka.Persistence.Tests
                     }
                 });
 
-                Command<Boom>(boom =>
+                Command<Boom>(_ =>
                 {
                     _log.Debug("Boom!");
                     throw new Exception("boom");
                 });
 
-                Command<SaveSnap>(save =>
+                Command<SaveSnap>(_ =>
                 {
                     _log.Debug("Save snapshot");
                     _lastSnapshotAskedForBy = Sender;
@@ -261,7 +261,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         private sealed class ReqAck
         {
-            public static readonly ReqAck Instance = new ReqAck();
+            public static readonly ReqAck Instance = new();
 
             private ReqAck()
             {
@@ -292,7 +292,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         private sealed class SaveSnap
         {
-            public static readonly SaveSnap Instance = new SaveSnap();
+            public static readonly SaveSnap Instance = new();
         }
 
         [Serializable]
@@ -344,7 +344,7 @@ namespace Akka.Persistence.Tests
                     }
                 });
 
-                Recover<object>(message => {});
+                Recover<object>(_ => {});
             }
 
             public override string PersistenceId
@@ -585,8 +585,8 @@ namespace Akka.Persistence.Tests
             ExpectMsg(ReqAck.Instance);
 
             UnconfirmedDelivery[] unconfirmed = ReceiveWhile(TimeSpan.FromSeconds(3), x =>
-                x is UnconfirmedWarning
-                    ? ((UnconfirmedWarning) x).UnconfirmedDeliveries
+                x is UnconfirmedWarning warning
+                    ? warning.UnconfirmedDeliveries
                     : Enumerable.Empty<UnconfirmedDelivery>())
                 .SelectMany(e => e).ToArray();
 

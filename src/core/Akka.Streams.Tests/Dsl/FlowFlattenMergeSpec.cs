@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowFlattenMergeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -315,7 +315,7 @@ namespace Akka.Streams.Tests.Dsl
                 Shape = new SourceShape<Attributes>(Out);
             }
 
-            private Outlet<Attributes> Out { get; } = new Outlet<Attributes>("AttributesSource.out");
+            private Outlet<Attributes> Out { get; } = new("AttributesSource.out");
 
             public override SourceShape<Attributes> Shape { get; }
 
@@ -352,7 +352,7 @@ namespace Akka.Streams.Tests.Dsl
                 var matFail = new TestException("fail!");
 
                 var task = Source.Single("whatever")
-                    .MergeMany(4, x => Source.FromGraph(new FailingInnerMat(matFail)))
+                    .MergeMany(4, _ => Source.FromGraph(new FailingInnerMat(matFail)))
                     .RunWith(Sink.Ignore<string>(), Materializer);
 
                 await task.ShouldThrowWithin(matFail, 1.Seconds());

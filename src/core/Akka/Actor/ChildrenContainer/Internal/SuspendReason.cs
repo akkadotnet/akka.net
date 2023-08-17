@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SuspendReason.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -66,7 +66,7 @@ namespace Akka.Actor.Internal
             /// <summary>
             /// TBD
             /// </summary>
-            public static Termination Instance { get; } = new Termination();
+            public static Termination Instance { get; } = new();
         }
 
         /// <summary>
@@ -79,7 +79,7 @@ namespace Akka.Actor.Internal
             /// <summary>
             /// TBD
             /// </summary>
-            public static UserRequest Instance { get; } = new UserRequest();
+            public static UserRequest Instance { get; } = new();
         }
     }
 }

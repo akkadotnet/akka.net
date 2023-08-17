@@ -5,6 +5,9 @@ title: Akka.Cluster Overview
 
 # Akka.Cluster Overview
 
+> [!IMPORTANT]
+> See "[Reliable Akka.NET Message Delivery with Akka.Delivery](xref:reliable-delivery)" for tips on how to achieve reliable messaging over Akka.Remote and Akka.Cluster.
+
 ## What Is a "Cluster"?
 
 A cluster represents a fault-tolerant, elastic, decentralized peer-to-peer network of Akka.NET applications with no single point of failure or bottleneck. Akka.Cluster is the module that gives you the ability to create these applications.
@@ -83,7 +86,7 @@ The first step towards using Akka.Cluster is to install the [Akka.Cluster NuGet 
 PM> Install-Package Akka.Cluster
 ```
 
-Once you've installed Akka.Cluster, we need to update our HOCON configuration to turn on the [`ClusterActorRefProvider`](http://api.getakka.net/docs/stable/html/CC0676F0.htm "Akka.NET API Docs - ClusterActorRefProvider class"), configure an Akka.Remote transport, and enable at least 1 seed node.
+Once you've installed Akka.Cluster, we need to update our HOCON configuration to turn on the `akka.actor.provider = cluster`, configure an Akka.Remote transport, and enable at least 1 seed node.
 
 > [!NOTE]
 > Akka.Cluster depends on Akka.Remote.

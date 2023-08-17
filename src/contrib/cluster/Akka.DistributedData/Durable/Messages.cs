@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Messages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -57,7 +57,7 @@ namespace Akka.DistributedData.Durable
     /// </summary>
     public sealed class LoadAll : IEquatable<LoadAll>
     {
-        public static readonly LoadAll Instance = new LoadAll();
+        public static readonly LoadAll Instance = new();
         private LoadAll() { }
         public bool Equals(LoadAll other) => true;
         public override bool Equals(object obj) => obj is LoadAll;
@@ -75,7 +75,7 @@ namespace Akka.DistributedData.Durable
 
     public sealed class LoadAllCompleted : IEquatable<LoadAllCompleted>
     {
-        public static readonly LoadAllCompleted Instance = new LoadAllCompleted();
+        public static readonly LoadAllCompleted Instance = new();
         private LoadAllCompleted() { }
         public bool Equals(LoadAllCompleted other) => true;
         public override bool Equals(object obj) => obj is LoadAllCompleted;
@@ -125,7 +125,7 @@ namespace Akka.DistributedData.Durable
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is DurableDataEnvelope && Equals((DurableDataEnvelope) obj);
+            return obj is DurableDataEnvelope envelope && Equals(envelope);
         }
     }
 }

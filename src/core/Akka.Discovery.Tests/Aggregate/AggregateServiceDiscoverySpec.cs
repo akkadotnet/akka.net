@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AggregateServiceDiscoverySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -79,7 +79,7 @@ namespace Akka.Discovery.Tests.Aggregate
                 "stubbed",
                 new List<ServiceDiscovery.ResolvedTarget>
                 {
-                    new ServiceDiscovery.ResolvedTarget("stubbed1", 1234)
+                    new("stubbed1", 1234)
                 }));
         }
 
@@ -91,8 +91,8 @@ namespace Akka.Discovery.Tests.Aggregate
                 "config1",
                 new List<ServiceDiscovery.ResolvedTarget>
                 {
-                    new ServiceDiscovery.ResolvedTarget("cat", 1233),
-                    new ServiceDiscovery.ResolvedTarget("dog", 1234)
+                    new("cat", 1233),
+                    new("dog", 1234)
                 }));
         }
         
@@ -105,7 +105,7 @@ namespace Akka.Discovery.Tests.Aggregate
                 "fail",
                 new List<ServiceDiscovery.ResolvedTarget>
                 {
-                    new ServiceDiscovery.ResolvedTarget("from-config")
+                    new("from-config")
                 }));
         }
     }

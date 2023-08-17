@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Base64Encoding.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ namespace Akka.Util
         {
             // 11 is the number of characters it takes to represent long.MaxValue
             // so we will never need a larger size for encoding longs
-            Span<char> sb = stackalloc char[11 + prefix?.Length ?? 0];
+            Span<char> sb = stackalloc char[11 + (prefix?.Length ?? 0)];
             var spanIndex = 0;
             if (!string.IsNullOrWhiteSpace(prefix) && prefix.Length > 0)
             {

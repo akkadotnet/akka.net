@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Inbox.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -177,7 +177,7 @@ namespace Akka.Actor
         // a specific predicate (even if it's in middle of queue), and current queue implementation won't provide that in easy way.
 
 
-        private readonly LinkedList<T> _inner = new LinkedList<T>();
+        private readonly LinkedList<T> _inner = new();
 
         /// <inheritdoc/>
         public IEnumerator<T> GetEnumerator()
@@ -315,7 +315,7 @@ namespace Akka.Actor
     /// </summary>
     internal class DeadlineComparer : IComparer<IQuery>
     {
-        private static readonly DeadlineComparer _instance = new DeadlineComparer();
+        private static readonly DeadlineComparer _instance = new();
 
         /// <summary>
         /// The singleton instance of this comparer

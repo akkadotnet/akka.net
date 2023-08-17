@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RestartSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -792,7 +792,7 @@ namespace Akka.Streams.Tests.Dsl
                 var created = new AtomicCounter(0);
                 const int restarts = 4;
             
-                var flow = RestartFlowFactory<int, int, NotUsed>(() =>
+                var flow = RestartFlowFactory(() =>
                     {
                         created.IncrementAndGet();
                         return Flow.Create<int>()

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReceiveTimeoutSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,7 +47,7 @@ namespace DocsExamples.Actors
         // </ReceiveTimeoutActor>
 
         [Fact]
-        public async Task ShouldReceiveTimeoutActors()
+        public Task ShouldReceiveTimeoutActors()
         {
             var receiveTimeout = Sys.ActorOf(
                 Props.Create(() => new ReceiveTimeoutActor(TimeSpan.FromMilliseconds(100), TestActor)), 
@@ -58,6 +58,7 @@ namespace DocsExamples.Actors
             
             // then should receive timeout due to inactivity
             ExpectMsg("timeout", TimeSpan.FromSeconds(30));
+            return Task.CompletedTask;
         }
     }
 }

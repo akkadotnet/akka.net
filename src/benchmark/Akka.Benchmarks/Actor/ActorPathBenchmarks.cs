@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPathBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,8 +18,8 @@ namespace Akka.Benchmarks.Actor
         private ActorPath x;
         private ActorPath y;
         private ActorPath _childPath;
-        private Address _sysAdr = new Address("akka.tcp", "system", "127.0.0.1", 1337);
-        private Address _otherAdr = new Address("akka.tcp", "system", "127.0.0.1", 1338);
+        private Address _sysAdr = new("akka.tcp", "system", "127.0.0.1", 1337);
+        private Address _otherAdr = new("akka.tcp", "system", "127.0.0.1", 1338);
 
         private string _actorPathStr;
         

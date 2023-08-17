@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static HandOverToMe Instance { get; } = new HandOverToMe();
+        public static HandOverToMe Instance { get; } = new();
         private HandOverToMe() { }
     }
 
@@ -54,7 +54,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static HandOverInProgress Instance { get; } = new HandOverInProgress();
+        public static HandOverInProgress Instance { get; } = new();
         private HandOverInProgress() { }
     }
 
@@ -69,7 +69,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static HandOverDone Instance { get; } = new HandOverDone();
+        public static HandOverDone Instance { get; } = new();
         private HandOverDone() { }
     }
 
@@ -87,7 +87,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static TakeOverFromMe Instance { get; } = new TakeOverFromMe();
+        public static TakeOverFromMe Instance { get; } = new();
         private TakeOverFromMe() { }
     }
 
@@ -100,7 +100,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static Cleanup Instance { get; } = new Cleanup();
+        public static Cleanup Instance { get; } = new();
         private Cleanup() { }
     }
 
@@ -113,7 +113,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static StartOldestChangedBuffer Instance { get; } = new StartOldestChangedBuffer();
+        public static StartOldestChangedBuffer Instance { get; } = new();
         private StartOldestChangedBuffer() { }
     }
 
@@ -168,7 +168,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static LeaseRetry Instance { get; } = new LeaseRetry();
+        public static LeaseRetry Instance { get; } = new();
         private LeaseRetry() { }
     }
 
@@ -186,7 +186,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static Uninitialized Instance { get; } = new Uninitialized();
+        public static Uninitialized Instance { get; } = new();
         private Uninitialized() { }
     }
 
@@ -340,7 +340,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public static EndData Instance { get; } = new EndData();
+        public static EndData Instance { get; } = new();
         private EndData() { }
     }
 
@@ -461,7 +461,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// Singleton instance
         /// </summary>
-        public static SelfExiting Instance { get; } = new SelfExiting();
+        public static SelfExiting Instance { get; } = new();
     }
 
     /// <summary>
@@ -633,7 +633,7 @@ namespace Akka.Cluster.Tools.Singleton
         private ILoggingAdapter _log;
 
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
-        private readonly TaskCompletionSource<Done> _memberExitingProgress = new TaskCompletionSource<Done>();
+        private readonly TaskCompletionSource<Done> _memberExitingProgress = new();
 
         private readonly string singletonLeaseName;
         private readonly Lease lease;
@@ -702,12 +702,12 @@ namespace Akka.Cluster.Tools.Singleton
                 else
                 {
                     var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterExiting);
-                    return self.Ask(SelfExiting.Instance, timeout).ContinueWith(tr => Done.Instance);
+                    return self.Ask(SelfExiting.Instance, timeout).ContinueWith(_ => Done.Instance);
                 }
             });
         }
 
-        private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        private ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
 
         /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void PreStart()
@@ -958,7 +958,7 @@ namespace Akka.Cluster.Tools.Singleton
                 else if (e.FsmEvent is HandOverToMe)
                 {
                     var selfStatus = _cluster.SelfMember.Status;
-                    if (selfStatus == MemberStatus.Leaving || selfStatus == MemberStatus.Exiting)
+                    if (selfStatus is MemberStatus.Leaving or MemberStatus.Exiting)
                     {
                         Log.Info("Ignoring HandOverToMe in Younger from [{0}] because self is [{1}].",
                             Sender.Path.Address, selfStatus);
@@ -1361,7 +1361,7 @@ namespace Akka.Cluster.Tools.Singleton
                     Log.Info("Self removed, stopping ClusterSingletonManager");
                     return Stop();
                 }
-                if (e.FsmEvent is OldestChangedBuffer.OldestChanged || e.FsmEvent is HandOverToMe)
+                if (e.FsmEvent is OldestChangedBuffer.OldestChanged or HandOverToMe)
                 {
                     // not interested anymore - waiting for removal
                     return Stay();
@@ -1477,8 +1477,8 @@ namespace Akka.Cluster.Tools.Singleton
                     lease.Release().ContinueWith(r => new ReleaseLeaseResult(r.Result)).PipeTo(Self);
                 }
 
-                if (to == ClusterSingletonState.Younger || to == ClusterSingletonState.Oldest) GetNextOldestChanged();
-                if (to == ClusterSingletonState.Younger || to == ClusterSingletonState.End)
+                if (to is ClusterSingletonState.Younger or ClusterSingletonState.Oldest) GetNextOldestChanged();
+                if (to is ClusterSingletonState.Younger or ClusterSingletonState.End)
                 {
                     if (_removed.ContainsKey(_cluster.SelfUniqueAddress))
                     {

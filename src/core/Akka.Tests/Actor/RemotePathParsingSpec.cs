@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemotePathParsingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,6 +14,7 @@ using FsCheck;
 using FsCheck.Xunit;
 using static Akka.Util.RuntimeDetector;
 
+#pragma warning disable xUnit1028
 namespace Akka.Tests.Actor
 {
     /// <summary>
@@ -25,9 +26,9 @@ namespace Akka.Tests.Actor
         {
             // TODO: Mono does not support IPV6 Uris correctly https://bugzilla.xamarin.com/show_bug.cgi?id=43649 (Aaronontheweb 9/13/2016)
             if (IsMono)
-                return Arb.From(Gen.Elements<IPEndPoint>(new IPEndPoint(IPAddress.Loopback, 1337),
+                return Arb.From(Gen.Elements(new IPEndPoint(IPAddress.Loopback, 1337),
                new IPEndPoint(IPAddress.Any, 1337)));
-            return Arb.From(Gen.Elements<IPEndPoint>(new IPEndPoint(IPAddress.Loopback, 1337),
+            return Arb.From(Gen.Elements(new IPEndPoint(IPAddress.Loopback, 1337),
               new IPEndPoint(IPAddress.IPv6Loopback, 1337),
               new IPEndPoint(IPAddress.Any, 1337), new IPEndPoint(IPAddress.IPv6Any, 1337)));
         }
@@ -50,8 +51,8 @@ namespace Akka.Tests.Actor
 
         public static string ExtractHost(EndPoint endpoint)
         {
-            if (endpoint is IPEndPoint)
-                return ((IPEndPoint)endpoint).Address.ToString();
+            if (endpoint is IPEndPoint point)
+                return point.Address.ToString();
             return ((DnsEndPoint)endpoint).Host;
         }
 

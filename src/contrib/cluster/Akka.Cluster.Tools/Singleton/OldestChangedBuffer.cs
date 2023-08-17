@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="OldestChangedBuffer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// TBD
             /// </summary>
-            public static GetNext Instance { get; } = new GetNext();
+            public static GetNext Instance { get; } = new();
             private GetNext() { }
         }
 
@@ -131,7 +131,7 @@ namespace Akka.Cluster.Tools.Singleton
                 else
                 {
                     var timeout = _coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterExiting);
-                    return self.Ask(SelfExiting.Instance, timeout).ContinueWith(tr => Done.Instance);
+                    return self.Ask(SelfExiting.Instance, timeout).ContinueWith(_ => Done.Instance);
                 }
             });
         }
@@ -174,7 +174,7 @@ namespace Akka.Cluster.Tools.Singleton
                 .FirstOrDefault() ?? int.MaxValue;
 
             var oldest = _membersByAge.TakeWhile(m => m.UpNumber <= selfUpNumber).ToList();
-            var safeToBeOldest = !oldest.Any(m => m.Status == MemberStatus.Down || m.Status == MemberStatus.Exiting || m.Status == MemberStatus.Leaving);
+            var safeToBeOldest = !oldest.Any(m => m.Status is MemberStatus.Down or MemberStatus.Exiting or MemberStatus.Leaving);
             var initial = new InitialOldestState(oldest.Select(m => m.UniqueAddress).ToList(), safeToBeOldest);
             _changes = _changes.Enqueue(initial);
         }
@@ -201,8 +201,7 @@ namespace Akka.Cluster.Tools.Singleton
             // don't send cluster change events if this node is shutting its self down, just wait for SelfExiting
             if (!_cluster.IsTerminated)
             {
-                object change;
-                _changes = _changes.Dequeue(out change);
+                _changes = _changes.Dequeue(out var change);
                 Context.Parent.Tell(change);
             }
         }

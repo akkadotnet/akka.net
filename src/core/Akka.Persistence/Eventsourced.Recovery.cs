@@ -1,13 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.Recovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Akka.Actor;
 using Akka.Persistence.Internal;
 
@@ -42,7 +40,7 @@ namespace Akka.Persistence
         /// </summary>
         private EventsourcedState WaitingRecoveryPermit(Recovery recovery)
         {
-            return new EventsourcedState("waiting for recovery permit", () => true, (receive, message) =>
+            return new EventsourcedState("waiting for recovery permit", () => true, (_, message) =>
             {
                 if (message is RecoveryPermitGranted)
                     StartRecovery(recovery);
@@ -80,7 +78,7 @@ namespace Akka.Persistence
                 }
             }
 
-            return new EventsourcedState("recovery started - replay max: " + maxReplays, () => true, (receive, message) =>
+            return new EventsourcedState("recovery started - replay max: " + maxReplays, () => true, (_, message) =>
             {
                 try
                 {
@@ -175,7 +173,7 @@ namespace Akka.Persistence
             var eventSeenInInterval = false;
             var recoveryRunning = true;
 
-            return new EventsourcedState("replay started", () => recoveryRunning, (receive, message) =>
+            return new EventsourcedState("replay started", () => recoveryRunning, (_, message) =>
             {
                 try
                 {
@@ -334,11 +332,11 @@ namespace Akka.Persistence
         {
             if (_eventBatch.Count > 0)
             {
-                foreach (var p in _eventBatch.Reverse())
+                foreach (var p in _eventBatch)
                 {
                     _journalBatch.Add(p);
                 }
-                _eventBatch = new LinkedList<IPersistentEnvelope>();
+                _eventBatch.Clear();
             }
 
             FlushJournalBatch();
@@ -350,7 +348,7 @@ namespace Akka.Persistence
         /// </summary>
         private EventsourcedState PersistingEvents()
         {
-            return new EventsourcedState("persisting events", () => false, (receive, message) =>
+            return new EventsourcedState("persisting events", () => false, (_, message) =>
             {
                 var handled = CommonProcessingStateBehavior(message, err =>
                 {

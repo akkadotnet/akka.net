@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RoutingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ namespace Akka.Tests.Routing
         {
             public Echo()
             {
-                ReceiveAny(c => Sender.Tell(Self));
+                ReceiveAny(_ => Sender.Tell(Self));
             }
         }
 
@@ -127,7 +127,7 @@ namespace Akka.Tests.Routing
         {
             public InlineRouterActor()
             {
-                ReceiveAsync<string>(s => s == "start", async c =>
+                ReceiveAsync<string>(s => s == "start", async _ =>
                 {
                     var actor = Context.ActorOf(new RoundRobinPool(2).Props(Props.Create<InlineReceiverActor>()));
                     await actor.Ask("hello").PipeTo(Sender);
@@ -184,8 +184,8 @@ namespace Akka.Tests.Routing
 
                 var res = await ReceiveWhileAsync(100.Milliseconds(), x =>
                 {
-                    if (x is IActorRef)
-                        return x.AsInstanceOf<IActorRef>();
+                    if (x is IActorRef actorRef)
+                        return actorRef;
 
                     return null;
                 }, msgs: 2).ToListAsync();

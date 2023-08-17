@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FailureInjectorTransportAdapter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -67,7 +67,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal class FailureInjectorTransportAdapter : AbstractTransportAdapter, IAssociationEventListener
+    public class FailureInjectorTransportAdapter : AbstractTransportAdapter, IAssociationEventListener
     {
 #region Internal message classes
 
@@ -140,7 +140,7 @@ namespace Akka.Remote.Transport
         {
             private PassThru() { }
 // ReSharper disable once InconsistentNaming
-            private static readonly PassThru _instance = new PassThru();
+            private static readonly PassThru _instance = new();
 
             /// <summary>
             /// TBD
@@ -205,7 +205,7 @@ namespace Akka.Remote.Transport
 
         private bool _shouldDebugLog;
         private volatile IAssociationEventListener _upstreamListener = null;
-        private readonly ConcurrentDictionary<Address,IGremlinMode> addressChaosTable = new ConcurrentDictionary<Address, IGremlinMode>();
+        private readonly ConcurrentDictionary<Address,IGremlinMode> addressChaosTable = new();
         private volatile IGremlinMode _allMode = PassThru.Instance;
 
         /// <summary>
@@ -216,7 +216,7 @@ namespace Akka.Remote.Transport
 #region AbstractTransportAdapter members
 
         // ReSharper disable once InconsistentNaming
-        private static readonly SchemeAugmenter _augmenter = new SchemeAugmenter(FailureInjectorSchemeIdentifier);
+        private static readonly SchemeAugmenter _augmenter = new(FailureInjectorSchemeIdentifier);
         /// <summary>
         /// TBD
         /// </summary>
@@ -232,18 +232,16 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public override Task<bool> ManagementCommand(object message)
         {
-            if (message is All)
+            if (message is All all)
             {
-                var all = message as All;
                 _allMode = all.Mode;
                 return Task.FromResult(true);
             }
             
-            if (message is One)
+            if (message is One one)
             {
-                var one = message as One;
                 //  don't care about the protocol part - we are injected in the stack anyway!
-                addressChaosTable.AddOrUpdate(NakedAddress(one.RemoteAddress), address => one.Mode, (address, mode) => one.Mode);
+                addressChaosTable.AddOrUpdate(NakedAddress(one.RemoteAddress), _ => one.Mode, (_, _) => one.Mode);
                 return Task.FromResult(true);
             }
 
@@ -293,8 +291,8 @@ namespace Akka.Remote.Transport
                WrappedTransport.Associate(remoteAddress).ContinueWith(tr =>
                {
                    var handle = tr.Result;
-                   addressChaosTable.AddOrUpdate(NakedAddress(handle.RemoteAddress), address => PassThru.Instance,
-                       (address, mode) => PassThru.Instance);
+                   addressChaosTable.AddOrUpdate(NakedAddress(handle.RemoteAddress), _ => PassThru.Instance,
+                       (_, _) => PassThru.Instance);
                    statusPromise.SetResult(new FailureInjectorHandle(handle, this));
                }, TaskContinuationOptions.ExecuteSynchronously);
             }
@@ -306,7 +304,7 @@ namespace Akka.Remote.Transport
         /// <param name="ev">TBD</param>
         public void Notify(IAssociationEvent ev)
         {
-            if (ev is InboundAssociation && ShouldDropInbound(ev.AsInstanceOf<InboundAssociation>().Association.RemoteAddress, ev, "notify"))
+            if (ev is InboundAssociation inboundAssociation && ShouldDropInbound(inboundAssociation.Association.RemoteAddress, ev, "notify"))
             {
                 //ignore
             }
@@ -337,9 +335,8 @@ namespace Akka.Remote.Transport
         {
             var mode = ChaosMode(remoteAddress);
             if (mode is PassThru) return false;
-            if (mode is Drop)
+            if (mode is Drop drop)
             {
-                var drop = mode as Drop;
                 if (Rng.NextDouble() <= drop.InboundDropP)
                 {
                     if (_shouldDebugLog) _log.Debug("Dropping inbound [{0}] for [{1}] {2}", instance.GetType(),
@@ -362,9 +359,8 @@ namespace Akka.Remote.Transport
         {
             var mode = ChaosMode(remoteAddress);
             if (mode is PassThru) return false;
-            if (mode is Drop)
+            if (mode is Drop drop)
             {
-                var drop = mode as Drop;
                 if (Rng.NextDouble() <= drop.OutboundDropP)
                 {
                     if (_shouldDebugLog) 
@@ -378,7 +374,10 @@ namespace Akka.Remote.Transport
 
         private IAssociationEvent InterceptInboundAssociation(IAssociationEvent ev)
         {
-            if (ev is InboundAssociation) return new InboundAssociation(new FailureInjectorHandle(ev.AsInstanceOf<InboundAssociation>().Association, this));
+            if (ev is InboundAssociation inboundAssociation)
+            {
+                return new InboundAssociation(new FailureInjectorHandle(inboundAssociation.Association, this));
+            }
             return ev;
         }
 
@@ -438,12 +437,17 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
+
+#pragma warning disable CS0672
         public override void Disassociate()
+#pragma warning restore CS0672
         {
+#pragma warning disable CS0618
             WrappedHandle.Disassociate();
+#pragma warning restore CS0618
         }
 
-#region IHandleEventListener members
+        #region IHandleEventListener members
 
         /// <summary>
         /// TBD

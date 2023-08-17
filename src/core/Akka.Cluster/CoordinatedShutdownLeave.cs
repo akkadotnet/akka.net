@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CoordinatedShutdownLeave.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ namespace Akka.Cluster
             /// <summary>
             /// Singleton instance.
             /// </summary>
-            public static readonly LeaveReq Instance = new LeaveReq();
+            public static readonly LeaveReq Instance = new();
         }
 
         private readonly Cluster _cluster = Cluster.Get(Context.System);
@@ -41,7 +41,7 @@ namespace Akka.Cluster
 
         public CoordinatedShutdownLeave()
         {
-            Receive<LeaveReq>(req =>
+            Receive<LeaveReq>(_ =>
             {
                 // MemberRemoved is needed in case it was downed instead
                 _cluster.Leave(_cluster.SelfAddress);
@@ -63,8 +63,7 @@ namespace Akka.Cluster
                 }
                 else if (s.Members.Any(m => m.UniqueAddress.Equals(_cluster.SelfUniqueAddress)
                                        &&
-                                       (m.Status == MemberStatus.Leaving || m.Status == MemberStatus.Exiting ||
-                                        m.Status == MemberStatus.Down)))
+                                       m.Status is MemberStatus.Leaving or MemberStatus.Exiting or MemberStatus.Down))
                 {
                     replyTo.Tell(Done.Instance);
                     Context.Stop(Self);

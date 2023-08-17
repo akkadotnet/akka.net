@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DataTypes.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -241,7 +241,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Hello && Equals((Hello)obj);
+            return obj is Hello hello && Equals(hello);
         }
 
         
@@ -313,7 +313,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is EnterBarrier && Equals((EnterBarrier)obj);
+            return obj is EnterBarrier barrier && Equals(barrier);
         }
 
         
@@ -382,7 +382,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is FailBarrier && Equals((FailBarrier)obj);
+            return obj is FailBarrier barrier && Equals(barrier);
         }
 
         
@@ -445,7 +445,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is BarrierResult && Equals((BarrierResult)obj);
+            return obj is BarrierResult result && Equals(result);
         }
 
         
@@ -525,7 +525,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Throttle && Equals((Throttle)obj);
+            return obj is Throttle throttle && Equals(throttle);
         }
 
         
@@ -602,7 +602,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is ThrottleMsg && Equals((ThrottleMsg)obj);
+            return obj is ThrottleMsg msg && Equals(msg);
         }
 
         
@@ -678,7 +678,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Disconnect && Equals((Disconnect)obj);
+            return obj is Disconnect disconnect && Equals(disconnect);
         }
 
         
@@ -747,7 +747,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is DisconnectMsg && Equals((DisconnectMsg)obj);
+            return obj is DisconnectMsg msg && Equals(msg);
         }
 
         
@@ -813,7 +813,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Terminate && Equals((Terminate)obj);
+            return obj is Terminate terminate && Equals(terminate);
         }
 
         
@@ -872,7 +872,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is TerminateMsg && Equals((TerminateMsg)obj);
+            return obj is TerminateMsg msg && Equals(msg);
         }
 
         
@@ -928,7 +928,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is GetAddress && Equals((GetAddress)obj);
+            return obj is GetAddress address && Equals(address);
         }
 
         
@@ -991,7 +991,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is AddressReply && Equals((AddressReply)obj);
+            return obj is AddressReply reply && Equals(reply);
         }
 
         
@@ -1029,7 +1029,7 @@ namespace Akka.Remote.TestKit
     public class Done : IServerOp, IUnconfirmedClientOp, INetworkOp
     {
         private Done() { }
-        private static readonly Done _instance = new Done();
+        private static readonly Done _instance = new();
 
         public static Done Instance
         {
@@ -1064,7 +1064,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Remove && Equals((Remove)obj);
+            return obj is Remove remove && Equals(remove);
         }
 
         

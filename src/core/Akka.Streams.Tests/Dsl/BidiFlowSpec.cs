@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BidiFlowSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -162,19 +162,20 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_BidiFlow_must_combine_materialization_values()
+        public async Task A_BidiFlow_must_combine_materialization_values()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var left = Flow.FromGraph(GraphDsl.Create(Sink.First<int>(), (b, sink) =>
-                {
-                    var broadcast = b.Add(new Broadcast<int>(2));
-                    var merge = b.Add(new Merge<int>(2));
-                    var flow = b.Add(Flow.Create<string>().Select(int.Parse));
-                    b.From(broadcast).To(sink);
-                    b.From(Source.Single(1).MapMaterializedValue(_ => Task.FromResult(0))).Via(broadcast).To(merge);
-                    b.From(flow).To(merge);
-                    return new FlowShape<string, int>(flow.Inlet, merge.Out);
+            await this.AssertAllStagesStoppedAsync(() => {
+                var left = 
+                Flow.FromGraph(GraphDsl.Create(Sink.First<int>(), 
+                (b, sink) =>                                                                        
+                {                                                                             
+                    var broadcast = b.Add(new Broadcast<int>(2));                                                                                               
+                    var merge = b.Add(new Merge<int>(2));                                                                             
+                    var flow = b.Add(Flow.Create<string>().Select(int.Parse));                                                                             
+                    b.From(broadcast).To(sink);                                                                             
+                    b.From(Source.Single(1).MapMaterializedValue(_ => Task.FromResult(0))).Via(broadcast).To(merge);                                                                             
+                    b.From(flow).To(merge);                                                                             
+                    return new FlowShape<string, int>(flow.Inlet, merge.Out);                                                                        
                 }));
 
                 var right = Flow.FromGraph(GraphDsl.Create(Sink.First<List<long>>(), (b, sink) =>
@@ -197,7 +198,8 @@ namespace Akka.Streams.Tests.Dsl
                 Task.WhenAll(l, m, r).Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 l.Result.Should().Be(1);
                 m.Result.Should().Be(42);
-                r.Result.Should().BeEquivalentTo(new [] {3L, 12L});
+                r.Result.Should().BeEquivalentTo(new[] { 3L, 12L });
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -207,8 +209,8 @@ namespace Akka.Streams.Tests.Dsl
             var b = (BidiFlow<int, long, ByteString, string, NotUsed>)
                 Bidi().WithAttributes(Attributes.CreateName("")).Async().Named("name");
 
-            b.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("name");
-            b.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
+            b.Module.Attributes.GetAttribute<Attributes.Name>().Value.Should().Be("name");
+            b.Module.Attributes.GetAttribute<Attributes.AsyncBoundary>()
                 .Should()
                 .Be(Attributes.AsyncBoundary.Instance);
         }

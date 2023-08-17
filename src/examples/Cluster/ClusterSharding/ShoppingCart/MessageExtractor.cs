@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MessageExtractor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,17 +10,6 @@ using Akka.Cluster.Sharding;
 namespace ShoppingCart
 {
     #region ExtractorClass
-    public sealed class ShardEnvelope
-    {
-        public string EntityId { get; }
-        public object Payload { get; }
-
-        public ShardEnvelope(string entityId, object payload)
-        {
-            EntityId = entityId;
-            Payload = payload;
-        }
-    }
 
     public sealed class MessageExtractor : HashCodeMessageExtractor
     {
@@ -32,14 +21,14 @@ namespace ShoppingCart
             => message switch
             {
                 ShardRegion.StartEntity start => start.EntityId,
-                ShardEnvelope e => e.EntityId,
+                ShardingEnvelope e => e.EntityId,
                 _ => null
             };
 
         public override object EntityMessage(object message)
             => message switch
             {
-                ShardEnvelope e => e.Payload,
+                ShardingEnvelope e => e.Message,
                 _ => message
             };
     }

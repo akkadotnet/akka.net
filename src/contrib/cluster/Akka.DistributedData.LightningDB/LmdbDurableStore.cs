@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LmdbDurableStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -45,7 +45,7 @@ namespace Akka.DistributedData.LightningDB
 
         private sealed class WriteBehind : IDeadLetterSuppression
         {
-            public static readonly WriteBehind Instance = new WriteBehind();
+            public static readonly WriteBehind Instance = new();
             private WriteBehind() { }
         }
 
@@ -58,7 +58,7 @@ namespace Akka.DistributedData.LightningDB
         private readonly TimeSpan _writeBehindInterval;
         private readonly string _dir;
 
-        private readonly Dictionary<string, DurableDataEnvelope> _pending = new Dictionary<string, DurableDataEnvelope>();
+        private readonly Dictionary<string, DurableDataEnvelope> _pending = new();
         private readonly ILoggingAdapter _log;
 
         public LmdbDurableStore(Config config)
@@ -75,9 +75,7 @@ namespace Akka.DistributedData.LightningDB
 
             var useWriteBehind = _config.GetString("write-behind-interval", "").ToLowerInvariant();
             _writeBehindInterval = 
-                useWriteBehind == "off" ||
-                useWriteBehind == "false" ||
-                useWriteBehind == "no" ? 
+                useWriteBehind is "off" or "false" or "no" ? 
                     TimeSpan.Zero :
                     _config.GetTimeSpan("write-behind-interval");
 
@@ -181,7 +179,7 @@ namespace Akka.DistributedData.LightningDB
 
         private void Init()
         {
-            Receive<LoadAll>(loadAll =>
+            Receive<LoadAll>(_ =>
             {
                 if(_dir.Length == 0 || !Directory.Exists(_dir))
                 {
@@ -200,7 +198,7 @@ namespace Akka.DistributedData.LightningDB
                     using(var db = tx.OpenDatabase(DatabaseName))
                     using(var cursor = tx.CreateCursor(db))
                     {
-                        var data = cursor.AsEnumerable().Select((x, i)
+                        var data = cursor.AsEnumerable().Select((x, _)
                             => {
                             var (key, value) = x;
                             return new KeyValuePair<string, DurableDataEnvelope>(

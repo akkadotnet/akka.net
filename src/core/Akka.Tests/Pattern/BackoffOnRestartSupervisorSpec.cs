@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BackoffOnRestartSupervisorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -53,15 +53,15 @@ namespace Akka.Tests.Pattern
 
                 _probe.Tell("STARTED");
 
-                Receive<string>(str => str.Equals("DIE"), msg => Context.Stop(Self));
+                Receive<string>(str => str.Equals("DIE"), _ => Context.Stop(Self));
 
-                Receive<string>(str => str.Equals("THROW"), msg =>
+                Receive<string>(str => str.Equals("THROW"), _ =>
                 {
                     throw new NormalException();
                     return;
                 });
 
-                Receive<string>(str => str.Equals("THROW_STOPPING_EXCEPTION"), msg =>
+                Receive<string>(str => str.Equals("THROW_STOPPING_EXCEPTION"), _ =>
                 {
                     throw new StoppingException();
                     return;
@@ -109,14 +109,14 @@ namespace Akka.Tests.Pattern
             {
                 _latch = latch;
 
-                Receive<string>(str => str.Equals("THROW"), msg =>
+                Receive<string>(str => str.Equals("THROW"), _ =>
                 {
                     Sender.Tell("THROWN");
                     throw new NormalException();
                     return;
                 });
 
-                Receive<string>(str => str.Equals("PING"), msg =>
+                Receive<string>(str => str.Equals("PING"), _ =>
                 {
                     Sender.Tell("PONG");
                 });

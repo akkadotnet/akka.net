@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpHorizontalScaleSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,7 +24,7 @@ namespace Akka.Tests.Performance.IO
             public TestListener(EndPoint endPoint, Counter clientConnectCounter, Counter inboundCounter, Counter errorCounter)
             {
                 Context.System.Tcp().Tell(new Tcp.Bind(Self, endPoint));
-                Receive<Tcp.Connected>(connected =>
+                Receive<Tcp.Connected>(_ =>
                 {
                     var connection = Sender;
                     var handler = Context.ActorOf(Props.Create(() => new TestHandler(connection, inboundCounter, errorCounter)));
@@ -56,7 +56,7 @@ namespace Akka.Tests.Performance.IO
 
                     Context.Stop(Self);
                 });
-                Receive<Terminated>(terminated => Context.Stop(Self));
+                Receive<Terminated>(_ => Context.Stop(Self));
             }
 
             protected override void PreRestart(Exception reason, object message)
@@ -81,14 +81,14 @@ namespace Akka.Tests.Performance.IO
                     outboundCounter.Increment();
                     connection.Tell(Tcp.Write.Create(received.Data));
                 });
-                Receive<Tcp.Connected>(connected =>
+                Receive<Tcp.Connected>(_ =>
                 {
                     connection = Sender;
                     Context.Watch(connection);
                     connection.Tell(new Tcp.Register(Self));
                     connection.Tell(Tcp.Write.Create(ByteString.FromBytes(payload)));
                 });
-                Receive<Tcp.CommandFailed>(failed =>
+                Receive<Tcp.CommandFailed>(_ =>
                 {
                     _errorCounter.Increment();
                     Context.Stop(Self);
@@ -114,7 +114,7 @@ namespace Akka.Tests.Performance.IO
         private const string OutboundThroughputCounterName = "outbound ops";
         private const string ClientConnectCounterName = "connected clients";
 
-        private static readonly IPEndPoint TestEndPoint = new IPEndPoint(IPAddress.Loopback, ThreadLocalRandom.Current.Next(5000, 11000));
+        private static readonly IPEndPoint TestEndPoint = new(IPAddress.Loopback, ThreadLocalRandom.Current.Next(5000, 11000));
         private static readonly TimeSpan SleepInterval = TimeSpan.FromMilliseconds(100);
 
         private Counter _clientConnectedCounter;

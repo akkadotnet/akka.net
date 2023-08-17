@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -52,13 +52,13 @@ namespace Akka.IO
         enum ConnectionStatus
         {
             /// <summary>
-            /// Marks that connection has invoked <see cref="Socket.ReceiveAsync"/> and that 
+            /// Marks that connection has invoked <see cref="Socket.ReceiveAsync(ByteBuffer, SocketFlags)"/> and that 
             /// <see cref="TcpConnection.ReceiveArgs"/> are currently trying to receive data.
             /// </summary>
             Receiving = 1,
 
             /// <summary>
-            /// Marks that connection has invoked <see cref="Socket.SendAsync"/> and that 
+            /// Marks that connection has invoked <see cref="Socket.SendAsync(ByteBuffer, SocketFlags)"/> and that 
             /// <see cref="TcpConnection.SendArgs"/> are currently sending data. It's important as 
             /// <see cref="SocketAsyncEventArgs"/> will throw exception if another socket operations will
             /// be called over it as it's performing send request. For that reason we cannot release send args
@@ -97,18 +97,16 @@ namespace Akka.IO
 
         private bool _isOutputShutdown;
 
-        private readonly ConcurrentQueue<(IActorRef Commander, object Ack)> _pendingAcks = new ConcurrentQueue<(IActorRef, object)>();
+        private readonly ConcurrentQueue<(IActorRef Commander, object Ack)> _pendingAcks = new();
         private bool _peerClosed;
         private IActorRef _interestedInResume;
         private CloseInformation _closedMessage;  // for ConnectionClosed message in postStop
 
         private IActorRef _watchedActor = Context.System.DeadLetters;
 
-        private readonly IOException droppingWriteBecauseWritingIsSuspendedException =
-            new IOException("Dropping write because writing is suspended");
+        private readonly IOException droppingWriteBecauseWritingIsSuspendedException = new("Dropping write because writing is suspended");
 
-        private readonly IOException droppingWriteBecauseQueueIsFullException =
-            new IOException("Dropping write because queue is full");
+        private readonly IOException droppingWriteBecauseQueueIsFullException = new("Dropping write because queue is full");
 
         protected TcpConnection(TcpExt tcp, Socket socket, bool pullMode, Option<int> writeCommandsBufferMaxSize)
         {
@@ -676,7 +674,7 @@ namespace Akka.IO
 
             var args = new SocketAsyncEventArgs();
             args.UserToken = onCompleteNotificationsReceiver;
-            args.Completed += (sender, e) =>
+            args.Completed += (_, e) =>
             {
                 var actorRef = e.UserToken as IActorRef;
                 var completeMsg = ResolveMessage(e);
@@ -836,8 +834,8 @@ namespace Akka.IO
 
         private struct ReadResult
         {
-            public static readonly ReadResult EndOfStream = new ReadResult(ReadResultType.EndOfStream, SocketError.Success);
-            public static readonly ReadResult AllRead = new ReadResult(ReadResultType.AllRead, SocketError.Success);
+            public static readonly ReadResult EndOfStream = new(ReadResultType.EndOfStream, SocketError.Success);
+            public static readonly ReadResult AllRead = new(ReadResultType.AllRead, SocketError.Success);
 
             public readonly ReadResultType Type;
             public readonly SocketError Error;

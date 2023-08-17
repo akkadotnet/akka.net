@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowGroupBySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,6 +19,7 @@ using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
+using Akka.TestKit.Xunit2.Internals;
 using Akka.Util;
 using FluentAssertions;
 using FluentAssertions.Extensions;
@@ -112,7 +113,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var source = (Source<IEnumerable<string>, NotUsed>)Source.From(new[] { "Aaa", "Abb", "Bcc", "Cdd", "Cee" })
-                    .GroupBy(3, s => s.StartsWith("A") ? null : s.Substring(0, 1))
+                    .GroupBy(3, s => s.StartsWith('A') ? null : s.Substring(0, 1))
                     .Grouped(10)
                     .MergeSubstreams();
                 var down = source.RunWith(this.SinkProbe<IEnumerable<string>>(), Materializer);
@@ -698,7 +699,7 @@ namespace Akka.Streams.Tests.Dsl
                                 await RandomDemandAsync(map, props);
                             }
                             else
-                                throw new AssertActualExpectedException(true, false, "state.HasDemand INVALID STATE");
+                                throw new XunitException("state.HasDemand INVALID STATE");
                         }
                         else
                         {
@@ -818,8 +819,7 @@ namespace Akka.Streams.Tests.Dsl
 
             public int ProbesReaderTop { get; set; }
 
-            public List<TaskCompletionSource<TestSubscriber.Probe<ByteString>>> Probes { get; } =
-                new List<TaskCompletionSource<TestSubscriber.Probe<ByteString>>>(100);
+            public List<TaskCompletionSource<TestSubscriber.Probe<ByteString>>> Probes { get; } = new(100);
 
             public ByteString BlockingNextElement { get; set; }
         }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Sharding.Serialization.Proto.Msg;
+using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Google.Protobuf;
@@ -26,10 +27,11 @@ namespace Akka.Cluster.Sharding.Serialization
     /// </summary>
     public class ClusterShardingMessageSerializer : SerializerWithStringManifest
     {
-        private static readonly byte[] Empty = new byte[0];
+        private static readonly byte[] Empty = Array.Empty<byte>();
 
         #region manifests
 
+        private const string ShardingEnvelopeManifest = "a";
         private const string CoordinatorStateManifest = "AA";
         private const string ShardRegionRegisteredManifest = "AB";
         private const string ShardRegionProxyRegisteredManifest = "AC";
@@ -82,6 +84,7 @@ namespace Akka.Cluster.Sharding.Serialization
         #endregion
 
         private readonly Dictionary<string, Func<byte[], object>> _fromBinaryMap;
+        private readonly WrappedPayloadSupport _payloadSupport;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterShardingMessageSerializer"/> class.
@@ -89,8 +92,10 @@ namespace Akka.Cluster.Sharding.Serialization
         /// <param name="system">The actor system to associate with this serializer.</param>
         public ClusterShardingMessageSerializer(ExtendedActorSystem system) : base(system)
         {
+            _payloadSupport = new WrappedPayloadSupport(system);
             _fromBinaryMap = new Dictionary<string, Func<byte[], object>>
             {
+                {  ShardingEnvelopeManifest, bytes => ShardingEnvelopeFromBinary(bytes) },
                 { EntityStateManifest, bytes => EntityStateFromBinary(bytes) },
                 { EntityStartedManifest, bytes => EntityStartedFromBinary(bytes) },
                 { EntitiesStartedManifest, bytes => EntitiesStartedFromBinary(bytes) },
@@ -119,28 +124,35 @@ namespace Akka.Cluster.Sharding.Serialization
                 { GracefulShutdownReqManifest, bytes => new ShardCoordinator.GracefulShutdownRequest(ActorRefMessageFromBinary(bytes)) },
                 { RegionStoppedManifest, bytes => new ShardCoordinator.RegionStopped(ActorRefMessageFromBinary(bytes)) },
 
-                { GetShardStatsManifest, bytes => Shard.GetShardStats.Instance },
+                { GetShardStatsManifest, _ => Shard.GetShardStats.Instance },
                 { ShardStatsManifest, bytes => ShardStatsFromBinary(bytes) },
-                { GetShardRegionStatsManifest, bytes => GetShardRegionStats.Instance },
+                { GetShardRegionStatsManifest, _ => GetShardRegionStats.Instance },
                 { ShardRegionStatsManifest, bytes => ShardRegionStatsFromBinary(bytes) },
 
                 { GetClusterShardingStatsManifest, bytes => GetClusterShardingStatsFromBinary(bytes) },
                 { ClusterShardingStatsManifest, bytes => ClusterShardingStatsFromBinary(bytes) },
 
-                { GetCurrentRegionsManifest, bytes => GetCurrentRegions.Instance },
+                { GetCurrentRegionsManifest, _ => GetCurrentRegions.Instance },
                 { CurrentRegionsManifest, bytes => CurrentRegionsFromBinary(bytes) },
 
                 { StartEntityManifest, bytes => StartEntityFromBinary(bytes) },
                 { StartEntityAckManifest, bytes => StartEntityAckFromBinary(bytes) },
 
-                { GetCurrentShardStateManifest, bytes => Shard.GetCurrentShardState.Instance },
+                { GetCurrentShardStateManifest, _ => Shard.GetCurrentShardState.Instance },
                 { CurrentShardStateManifest, bytes => CurrentShardStateFromBinary(bytes) },
-                { GetShardRegionStateManifest, bytes => GetShardRegionState.Instance },
+                { GetShardRegionStateManifest, _ => GetShardRegionState.Instance },
                 { ShardStateManifest, bytes => ShardStateFromBinary(bytes) },
                 { CurrentShardRegionStateManifest, bytes => CurrentShardRegionStateFromBinary(bytes) },
-                { EventSourcedRememberShardsMigrationMarkerManifest, bytes => EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker.Instance},
+                { EventSourcedRememberShardsMigrationMarkerManifest, _ => EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker.Instance},
                 { EventSourcedRememberShardsState, bytes => RememberShardsStateFromBinary(bytes) }
             };
+        }
+
+        private ShardingEnvelope ShardingEnvelopeFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.ShardingEnvelope.Parser.ParseFrom(bytes);
+            var payload = _payloadSupport.PayloadFrom(proto.Message);
+            return new ShardingEnvelope(proto.EntityId, payload);
         }
 
         /// <summary>
@@ -155,6 +167,7 @@ namespace Akka.Cluster.Sharding.Serialization
         {
             switch (obj)
             {
+                case ShardingEnvelope o: return ShardingEnvelopeToProto(o).ToByteArray();
                 case ShardCoordinator.CoordinatorState o: return CoordinatorStateToProto(o).ToByteArray();
                 case ShardCoordinator.ShardRegionRegistered o: return ActorRefMessageToProto(o.Region).ToByteArray();
                 case ShardCoordinator.ShardRegionProxyRegistered o: return ActorRefMessageToProto(o.RegionProxy).ToByteArray();
@@ -236,6 +249,7 @@ namespace Akka.Cluster.Sharding.Serialization
         internal static string GetManifest(object o)
             => o switch
             {
+                ShardingEnvelope _ => ShardingEnvelopeManifest,
                 EventSourcedRememberEntitiesShardStore.State _ => EntityStateManifest,
                 EventSourcedRememberEntitiesShardStore.EntitiesStarted _ => EntitiesStartedManifest,
                 EventSourcedRememberEntitiesShardStore.EntitiesStopped _ => EntitiesStoppedManifest,
@@ -300,6 +314,18 @@ namespace Akka.Cluster.Sharding.Serialization
             if(ReferenceEquals(man, string.Empty))
                 throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{GetType()}]");
             return man;
+        }
+        
+        /// <summary>
+        /// ShardingEnvelope binary serialization
+        /// </summary>
+        private Proto.Msg.ShardingEnvelope ShardingEnvelopeToProto(ShardingEnvelope shardingEnvelope)
+        {
+            return new Proto.Msg.ShardingEnvelope
+            {
+                Message = _payloadSupport.PayloadToProto(shardingEnvelope.Message),
+                EntityId = shardingEnvelope.EntityId,
+            };
         }
 
         //
@@ -420,7 +446,7 @@ namespace Akka.Cluster.Sharding.Serialization
         }
 
         //
-        // ShardCoordinator.State
+        // ShardCoordinator.CoordinatorState
         //
         private static Proto.Msg.CoordinatorState CoordinatorStateToProto(ShardCoordinator.CoordinatorState state)
         {

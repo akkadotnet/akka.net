@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DaemonMsgCreateSerializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -72,7 +72,7 @@ namespace Akka.Remote.Tests.Serialization
                 ConfigurationFactory.ParseString("a=1"),
                 new RoundRobinPool(5, null, supervisorStrategy, null),
                 new RemoteScope(new Address("akka", "Test", "host1", 1921)),
-                "mydispatcher");
+                "mydispatcher").WithStashCapacity(10);
             var deploy2 = new Deploy("path2",
                 ConfigurationFactory.ParseString("a=2"),
                 FromConfig.Instance,

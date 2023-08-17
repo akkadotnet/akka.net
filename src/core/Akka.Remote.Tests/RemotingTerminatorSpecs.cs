@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemotingTerminatorSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,11 +36,11 @@ namespace Akka.Remote.Tests
         
         public RemotingTerminatorSpecs(ITestOutputHelper output) : base(RemoteConfig, output) { }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
+            base.AfterAll();
             if (_sys2 != null)
-                await ShutdownAsync(_sys2);
+                Shutdown(_sys2);
         }
 
         [Fact]
@@ -119,9 +119,13 @@ namespace Akka.Remote.Tests
                     (await associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault)).MessageId.ShouldBe("foo");
 
                     // terminate the DEPLOYED system
-                    Assert.True(await _sys2.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
-                    await ExpectTerminatedAsync(associated); // expect that the remote deployed actor is dead
-                    
+                    await WithinAsync(TimeSpan.FromSeconds(10), async () =>
+                    {
+                        var terminationTask = _sys2.Terminate(); // start termination process
+                        await ExpectTerminatedAsync(associated);  // expect that the remote deployed actor is dead
+                        Assert.True(await terminationTask.AwaitWithTimeout(RemainingOrDefault), "Expected to terminate within 10 seconds, but didn't.");
+                    });
+
                     // now terminate the DEPLOYER system
                     Assert.True(await Sys.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
                 });

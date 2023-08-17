@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase_Expect.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -79,18 +79,17 @@ namespace Akka.TestKit
         }
 
         /// <inheritdoc cref="ExpectMsg{T}(T, TimeSpan?, string, CancellationToken)"/>
-        public async ValueTask<T> ExpectMsgAsync<T>(
+        public ValueTask<T> ExpectMsgAsync<T>(
             T message,
             TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
-            return await InternalExpectMsgAsync<T>(
-                    timeout: RemainingOrDilated(timeout), 
-                    msgAssert: m => _assertions.AssertEqual(message, m), 
+            return InternalExpectMsgAsync<T>(
+                    timeout: RemainingOrDilated(timeout),
+                    msgAssert: m => _assertions.AssertEqual(message, m),
                     hint: hint, 
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -118,26 +117,24 @@ namespace Akka.TestKit
             return ExpectMsgAsync(isMessage, timeout, hint, cancellationToken)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
         }
-        
+
         /// <inheritdoc cref="ExpectMsg{T}(Predicate{T}, TimeSpan?, string, CancellationToken)"/>
-        public async ValueTask<T> ExpectMsgAsync<T>(
+        public ValueTask<T> ExpectMsgAsync<T>(
             Predicate<T> isMessage,
             TimeSpan? timeout = null,
-            string hint = null, 
+            string hint = null,
             CancellationToken cancellationToken = default)
         {
-            return await InternalExpectMsgAsync<T>(
-                timeout: RemainingOrDilated(timeout), 
-                assert: (m, sender) =>
+            return InternalExpectMsgAsync<T>(
+                timeout: RemainingOrDilated(timeout),
+                assert: (m, _) =>
                 {
                     if (isMessage != null)
                         AssertPredicateIsTrueForMessage(isMessage, m, hint);
-                }, 
-                hint: hint, 
-                cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                },
+                hint: hint,
+                cancellationToken: cancellationToken);
         }
-
 
         /// <summary>
         /// Receive one message of the specified type from the test actor and calls the 
@@ -166,14 +163,13 @@ namespace Akka.TestKit
         }
 
         /// <inheritdoc cref="ExpectMsg{T}(Action{T}, TimeSpan?, string, CancellationToken)"/>
-        public async ValueTask<T> ExpectMsgAsync<T>(
+        public ValueTask<T> ExpectMsgAsync<T>(
             Action<T> assert,
             TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
-            return await InternalExpectMsgAsync(RemainingOrDilated(timeout), assert, hint, cancellationToken)
-                .ConfigureAwait(false);
+            return InternalExpectMsgAsync(RemainingOrDilated(timeout), assert, hint, cancellationToken);
         }
 
         /// <summary>
@@ -203,25 +199,24 @@ namespace Akka.TestKit
         }
 
         /// <inheritdoc cref="ExpectMsg{T}(Func{T, IActorRef, bool}, TimeSpan?, string, CancellationToken)"/>
-        public async ValueTask<T> ExpectMsgAsync<T>(
-            Func<T, IActorRef, bool> isMessageAndSender, 
+        public ValueTask<T> ExpectMsgAsync<T>(
+            Func<T, IActorRef, bool> isMessageAndSender,
             TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
-            return await InternalExpectMsgAsync<T>(
-                    timeout: RemainingOrDilated(RemainingOrDilated(timeout)), 
+            return InternalExpectMsgAsync<T>(
+                    timeout: RemainingOrDilated(RemainingOrDilated(timeout)),
                     assert: (m, sender) =>
                     {
                         _assertions.AssertTrue(
-                        isMessageAndSender(m, sender), 
+                        isMessageAndSender(m, sender),
                         "Got a message of the expected type <{2}> from {4}. Also expected {0} but the message {{{1}}} " +
-                        "of type <{3}> did not match", hint ?? "the predicate to return true", 
+                        "of type <{3}> did not match", hint ?? "the predicate to return true",
                         m, typeof(T).FullName, m.GetType().FullName, sender);
-                    }, 
-                    hint: hint, 
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    },
+                    hint: hint,
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -251,14 +246,13 @@ namespace Akka.TestKit
         }
         
         /// <inheritdoc cref="ExpectMsg{T}(Action{T, IActorRef}, TimeSpan?, string, CancellationToken)"/>
-        public async ValueTask<T> ExpectMsgAsync<T>(
+        public ValueTask<T> ExpectMsgAsync<T>(
             Action<T, IActorRef> assertMessageAndSender,
             TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
-            return await InternalExpectMsgAsync(RemainingOrDilated(timeout), assertMessageAndSender, hint, cancellationToken)
-                .ConfigureAwait(false);
+            return InternalExpectMsgAsync(RemainingOrDilated(timeout), assertMessageAndSender, hint, cancellationToken);
         }
 
 
@@ -289,19 +283,18 @@ namespace Akka.TestKit
         }
         
         /// <inheritdoc cref="ExpectMsg{T}(T, Func{T, T, bool}, TimeSpan?, string, CancellationToken)"/>
-        public async ValueTask<T> ExpectMsgAsync<T>(
+        public ValueTask<T> ExpectMsgAsync<T>(
             T expected,
             Func<T, T, bool> comparer,
             TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
-            return await InternalExpectMsgAsync<T>(
-                    timeout: RemainingOrDilated(timeout), 
-                    msgAssert: actual => _assertions.AssertEqual(expected, actual, comparer, hint), 
-                    hint: hint, 
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+            return InternalExpectMsgAsync<T>(
+                    timeout: RemainingOrDilated(timeout),
+                    msgAssert: actual => _assertions.AssertEqual(expected, actual, comparer, hint),
+                    hint: hint,
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -328,22 +321,21 @@ namespace Akka.TestKit
         }
         
         /// <inheritdoc cref="ExpectTerminated(IActorRef, TimeSpan?, string, CancellationToken)"/>
-        public async ValueTask<Terminated> ExpectTerminatedAsync(
+        public ValueTask<Terminated> ExpectTerminatedAsync(
             IActorRef target,
             TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
             var msg = $"Terminated {target}. {hint ?? ""}";
-            return await InternalExpectMsgAsync<Terminated>(
-                    timeout: RemainingOrDilated(timeout), 
+            return InternalExpectMsgAsync<Terminated>(
+                    timeout: RemainingOrDilated(timeout),
                     msgAssert: terminated =>
                     {
                         _assertions.AssertEqual(target, terminated.ActorRef, msg);
-                    }, 
-                    hint: msg, 
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    },
+                    hint: msg,
+                    cancellationToken: cancellationToken);
         }
 
 
@@ -359,14 +351,13 @@ namespace Akka.TestKit
         /// action that performs extra assertions. Wait time is bounded by the given duration.
         /// Use this variant to implement more complicated or conditional processing.
         /// </summary>
-        private async ValueTask<T> InternalExpectMsgAsync<T>(
+        private ValueTask<T> InternalExpectMsgAsync<T>(
             TimeSpan? timeout,
             Action<T> msgAssert,
             string hint,
             CancellationToken cancellationToken)
         {
-            return await InternalExpectMsgAsync(timeout, msgAssert, null, hint, cancellationToken)
-                .ConfigureAwait(false);
+            return InternalExpectMsgAsync(timeout, msgAssert, null, hint, cancellationToken);
         }
 
         private T InternalExpectMsg<T>(
@@ -410,8 +401,8 @@ namespace Akka.TestKit
             string hint,
             CancellationToken cancellationToken)
         {
-            msgAssert ??= m => { };
-            senderAssert ??= sender => { };
+            msgAssert ??= _ => { };
+            senderAssert ??= _ => { };
 
             Action<T, IActorRef> combinedAssert = (m, sender) =>
             {
@@ -549,10 +540,9 @@ namespace Akka.TestKit
                 .ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
-        public async ValueTask<T> ExpectMsgAnyOfAsync<T>(IEnumerable<T> messages, CancellationToken cancellationToken = default)
+        public ValueTask<T> ExpectMsgAnyOfAsync<T>(IEnumerable<T> messages, CancellationToken cancellationToken = default)
         {
-            return await InternalExpectMsgAnyOfAsync(RemainingOrDefault, messages, cancellationToken)
-                .ConfigureAwait(false);
+            return InternalExpectMsgAnyOfAsync(RemainingOrDefault, messages, cancellationToken);
         }
 
         private async ValueTask<T> InternalExpectMsgAnyOfAsync<T>(
@@ -567,6 +557,14 @@ namespace Akka.TestKit
             _assertions.AssertTrue(o is T typed && messages.Contains(typed), "ExpectMsgAnyOf found unexpected {0}", o);
 
             return (T)o;
+        }
+        
+        public IReadOnlyCollection<T> ExpectMsgAllOf<T>(
+            params T[] messages)
+        {
+            // assert that there is at least one message in messages
+            using var cts = new CancellationTokenSource(RemainingOrDefault);
+            return ExpectMsgAllOf(messages, cts.Token);
         }
 
         /// <summary>
@@ -605,6 +603,13 @@ namespace Akka.TestKit
             {
                 yield return item;
             }
+        }
+        
+        public IReadOnlyCollection<T> ExpectMsgAllOf<T>(
+            TimeSpan max,
+            params T[] messages)
+        {
+            return ExpectMsgAllOf(max, messages, default(CancellationToken));
         }
 
         /// <summary>
@@ -668,7 +673,7 @@ namespace Akka.TestKit
             await foreach (var item in enumerable)
             {
                 // check that we can cast the returned object to T
-                if (!(item is T typed))
+                if (item is not T typed)
                 {
                     unexpected.Add(item);
                     continue;

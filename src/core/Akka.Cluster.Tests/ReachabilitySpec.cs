@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReachabilitySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,11 +15,11 @@ namespace Akka.Cluster.Tests
 {
     public class ReachabilitySpec
     {
-        static readonly UniqueAddress nodeA = new UniqueAddress(new Address("akka.tcp", "sys", "a", 2552), 1);
-        static readonly UniqueAddress nodeB = new UniqueAddress(new Address("akka.tcp", "sys", "b", 2552), 2);
-        static readonly UniqueAddress nodeC = new UniqueAddress(new Address("akka.tcp", "sys", "c", 2552), 3);
-        static readonly UniqueAddress nodeD = new UniqueAddress(new Address("akka.tcp", "sys", "d", 2552), 4);
-        static readonly UniqueAddress nodeE = new UniqueAddress(new Address("akka.tcp", "sys", "e", 2552), 5);
+        static readonly UniqueAddress nodeA = new(new Address("akka.tcp", "sys", "a", 2552), 1);
+        static readonly UniqueAddress nodeB = new(new Address("akka.tcp", "sys", "b", 2552), 2);
+        static readonly UniqueAddress nodeC = new(new Address("akka.tcp", "sys", "c", 2552), 3);
+        static readonly UniqueAddress nodeD = new(new Address("akka.tcp", "sys", "d", 2552), 4);
+        static readonly UniqueAddress nodeE = new(new Address("akka.tcp", "sys", "e", 2552), 5);
 
         [Fact]
         public void ReachabilityTable_must_be_reachable_when_empty()

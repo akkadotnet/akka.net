@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DisabledBufferPool.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -50,8 +50,7 @@ namespace Akka.IO.Buffers
             }
         }
 
-        public BufferPoolInfo Diagnostics()
-            => new BufferPoolInfo(typeof(DisabledBufferPool), 0, 0, 0);
+        public BufferPoolInfo Diagnostics() => new(typeof(DisabledBufferPool), 0, 0, 0);
 
         private ByteBuffer RentOfSize(int size)
         {

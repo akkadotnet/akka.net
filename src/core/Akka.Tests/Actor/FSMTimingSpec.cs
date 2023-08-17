@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FSMTimingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -233,25 +233,25 @@ namespace Akka.Tests.Actor
         public class Tick
         {
             private Tick() { }
-            public static Tick Instance { get; } = new Tick();
+            public static Tick Instance { get; } = new();
         }
 
         public class Tock
         {
             private Tock() { }
-            public static Tock Instance { get; } = new Tock();
+            public static Tock Instance { get; } = new();
         }
 
         public class Cancel
         {
             private Cancel() { }
-            public static Cancel Instance { get; } = new Cancel();
+            public static Cancel Instance { get; } = new();
         }
 
         public class SetHandler
         {
             private SetHandler() { }
-            public static SetHandler Instance { get; } = new SetHandler();
+            public static SetHandler Instance { get; } = new();
         }
 
         public class Unhandled
@@ -278,10 +278,9 @@ namespace Akka.Tests.Actor
 
                 When(FsmState.Initial, @event =>
                 {
-                    if (@event.FsmEvent is FsmState)
+                    if (@event.FsmEvent is FsmState name)
                     {
-                        var s = (FsmState)@event.FsmEvent;
-                        switch (s)
+                        switch (name)
                         {
                             case FsmState.TestSingleTimer:
                                 SetTimer("tester", Tick.Instance, 500.Milliseconds(), false);
@@ -292,7 +291,7 @@ namespace Akka.Tests.Actor
                             case FsmState.TestStateTimeoutOverride:
                                 return GoTo(FsmState.TestStateTimeout).ForMax(TimeSpan.MaxValue);
                             default:
-                                return GoTo(s);
+                                return GoTo(name);
                         }
                     }
                     return null;
@@ -454,9 +453,8 @@ namespace Akka.Tests.Actor
 
                 When(FsmState.Initial, evt =>
                 {
-                    if (evt.FsmEvent is FsmState)
+                    if (evt.FsmEvent is FsmState state)
                     {
-                        var state = (FsmState)evt.FsmEvent;
                         if (state == FsmState.TestStoppingActorStateTimeout)
                         {
                             Context.Stop(Self);

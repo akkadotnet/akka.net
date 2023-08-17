@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SupervisorStrategySpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -35,7 +35,7 @@ namespace Akka.Tests.Actor
         [MemberData(nameof(RetriesTestData))]
         public void A_constructed_OneForOne_supervisor_strategy_with_nullable_retries_has_the_expected_properties(int? retries, int expectedRetries)
         {
-            var uut = new OneForOneStrategy(retries, null, exn => Directive.Restart);
+            var uut = new OneForOneStrategy(retries, null, _ => Directive.Restart);
 
             Assert.Equal(uut.MaxNumberOfRetries, expectedRetries);
         }
@@ -44,7 +44,7 @@ namespace Akka.Tests.Actor
         [MemberData(nameof(TimeoutTestData))]
         public void A_constructed_OneForOne_supervisor_strategy_with_nullable_timeouts_has_the_expected_properties(TimeSpan? timeout, int expectedTimeoutMilliseconds)
         {
-            var uut = new OneForOneStrategy(-1, timeout, exn => Directive.Restart);
+            var uut = new OneForOneStrategy(-1, timeout, _ => Directive.Restart);
 
             Assert.Equal(uut.WithinTimeRangeMilliseconds, expectedTimeoutMilliseconds);
         }
@@ -71,7 +71,7 @@ namespace Akka.Tests.Actor
         [MemberData(nameof(RetriesTestData))]
         public void A_constructed_AllForOne_supervisor_strategy_with_nullable_retries_has_the_expected_properties(int? retries, int expectedRetries)
         {
-            var uut = new AllForOneStrategy(retries, null, exn => Directive.Restart);
+            var uut = new AllForOneStrategy(retries, null, _ => Directive.Restart);
 
             Assert.Equal(uut.MaxNumberOfRetries, expectedRetries);
         }
@@ -80,7 +80,7 @@ namespace Akka.Tests.Actor
         [MemberData(nameof(TimeoutTestData))]
         public void A_constructed_AllForOne_supervisor_strategy_with_nullable_timeouts_has_the_expected_properties(TimeSpan? timeout, int expectedTimeoutMilliseconds)
         {
-            var uut = new AllForOneStrategy(-1, timeout, exn => Directive.Restart);
+            var uut = new AllForOneStrategy(-1, timeout, _ => Directive.Restart);
 
             Assert.Equal(uut.WithinTimeRangeMilliseconds, expectedTimeoutMilliseconds);
         }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StatsSampleSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,7 +13,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using FluentAssertions;
-using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
 using FluentAssertions.Extensions;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
@@ -26,7 +25,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         public readonly RoleName Second;
         public readonly RoleName Third;
 
-        public IImmutableSet<RoleName> NodeList => ImmutableHashSet.Create<RoleName>(First, Second, Third);
+        public IImmutableSet<RoleName> NodeList => ImmutableHashSet.Create(First, Second, Third);
 
         public StatsSampleSpecConfig()
         {
@@ -88,8 +87,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
 
         private async Task Should_startup_cluster()
         {
-            await WithinAsync(15.Seconds(), async () =>
-            {
+            await WithinAsync(15.Seconds(), () => {
                 var cluster = Cluster.Get(Sys);
                 cluster.Subscribe(TestActor, typeof(ClusterEvent.MemberUp));
                 ExpectMsg<ClusterEvent.CurrentClusterState>();
@@ -97,7 +95,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 var firstAddress = Node(_config.First).Address;
                 var secondAddress = Node(_config.Second).Address;
                 var thirdAddress = Node(_config.Third).Address;
-                
+
                 cluster.Join(firstAddress);
 
                 Sys.ActorOf(Props.Create<StatsWorker>(), "statsWorker");
@@ -105,10 +103,11 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
 
                 ReceiveN(3).Select(m => (m as ClusterEvent.MemberUp).Member.Address).Distinct()
                     .Should().BeEquivalentTo(firstAddress, secondAddress, thirdAddress);
-                
+
                 cluster.Unsubscribe(TestActor);
-                
+
                 EnterBarrier("all-up");
+                return Task.CompletedTask;
             });
         }
 

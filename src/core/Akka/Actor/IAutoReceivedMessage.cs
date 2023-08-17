@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IAutoReceivedMessage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -114,7 +114,7 @@ namespace Akka.Actor
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Identify && Equals((Identify)obj);
+            return obj is Identify identify && Equals(identify);
         }
 
         
@@ -169,7 +169,7 @@ namespace Akka.Actor
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is ActorIdentity && Equals((ActorIdentity)obj);
+            return obj is ActorIdentity identity && Equals(identity);
         }
 
         
@@ -204,7 +204,7 @@ namespace Akka.Actor
         /// <summary>
         /// The singleton instance of PoisonPill.
         /// </summary>
-        public static PoisonPill Instance { get; } = new PoisonPill();
+        public static PoisonPill Instance { get; } = new();
 
         
         public override string ToString()
@@ -227,7 +227,7 @@ namespace Akka.Actor
         /// <summary>
         /// The singleton instance of Kill.
         /// </summary>
-        public static Kill Instance { get; } = new Kill();
+        public static Kill Instance { get; } = new();
 
         
         public override string ToString()

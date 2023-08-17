@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventFilterApplier.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -45,8 +45,29 @@ namespace Akka.TestKit.Internal
         /// <param name="cancellationToken"></param>
         public void ExpectOne(Action action, CancellationToken cancellationToken = default)
         {
-            ExpectOneAsync(async () => action(), cancellationToken)
+            ExpectOneAsync(() => { action(); return Task.CompletedTask; }, cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
+        }
+        
+        /// <summary>
+        /// Async version of <see cref="ExpectOne(System.Action, CancellationToken)"/>
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="cancellationToken"></param>
+        /// <remarks>
+        /// This is for backwards compat.
+        /// </remarks>
+        [Obsolete("Only for backwards compat. Use ExpectOneAsync(Func<Task>, CancellationToken) instead beginning in Akka.NET v1.5")]
+        public async Task ExpectOneAsync(Action action, CancellationToken cancellationToken = default)
+        {
+            Task Wrapped()
+            {
+                action();
+                return Task.CompletedTask;
+            }
+
+            await ExpectOneAsync(Wrapped, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -76,7 +97,7 @@ namespace Akka.TestKit.Internal
             Action action,
             CancellationToken cancellationToken = default)
         {
-            ExpectOneAsync(timeout, async () => action(), cancellationToken)
+            ExpectOneAsync(timeout, () => { action(); return Task.CompletedTask; }, cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
         }
         
@@ -109,7 +130,7 @@ namespace Akka.TestKit.Internal
             Action action,
             CancellationToken cancellationToken = default)
         {
-            ExpectAsync(expectedCount, async () => action(), cancellationToken)
+            ExpectAsync(expectedCount, () => { action(); return Task.CompletedTask; }, cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
         }
 
@@ -159,7 +180,7 @@ namespace Akka.TestKit.Internal
             Action action,
             CancellationToken cancellationToken = default)
         {
-            ExpectAsync(expectedCount, timeout, async () => action(), cancellationToken)
+            ExpectAsync(expectedCount, timeout, () => { action(); return Task.CompletedTask; }, cancellationToken)
                 .WaitAndUnwrapException(cancellationToken); 
         }
         
@@ -181,6 +202,17 @@ namespace Akka.TestKit.Internal
                 .ConfigureAwait(false);
         }
 
+        public async Task ExpectAsync(int expectedCount, TimeSpan timeout, Action action, CancellationToken cancellationToken = default)
+        {
+            Task Wrapped()
+            {
+                action();
+                return Task.CompletedTask;
+            }
+
+            await ExpectAsync(expectedCount, timeout, Wrapped, cancellationToken);
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -190,24 +222,23 @@ namespace Akka.TestKit.Internal
         /// <returns>TBD</returns>
         public T ExpectOne<T>(Func<T> func, CancellationToken cancellationToken = default)
         {
-            return ExpectOneAsync(async () => func(), cancellationToken)
+            return ExpectOneAsync(() => Task.FromResult(func()), cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
         }
         
         /// <summary>
         /// Async version of ExpectOne
         /// </summary>
-        public async Task<T> ExpectOneAsync<T>(
+        public Task<T> ExpectOneAsync<T>(
             Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
-            return await InterceptAsync(
+            return InterceptAsync(
                     func: func,
                     system: _actorSystem,
                     timeout: null,
                     expectedOccurrences: 1,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -223,26 +254,25 @@ namespace Akka.TestKit.Internal
             Func<T> func,
             CancellationToken cancellationToken = default)
         {
-            return ExpectOneAsync(timeout, async () => func(), cancellationToken)
+            return ExpectOneAsync(timeout, () => Task.FromResult(func()), cancellationToken)
                 .WaitAndUnwrapException();
         }
         
         /// <summary>
         /// Async version of ExpectOne
         /// </summary>
-        public async Task<T> ExpectOneAsync<T>(
+        public Task<T> ExpectOneAsync<T>(
             TimeSpan timeout,
             Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
-            return await InterceptAsync(
+            return InterceptAsync(
                     func: func, 
                     system: _actorSystem,
                     timeout: timeout,
                     expectedOccurrences: 1,
                     matchedEventHandler: null,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -258,26 +288,25 @@ namespace Akka.TestKit.Internal
             Func<T> func,
             CancellationToken cancellationToken = default)
         {
-            return ExpectAsync(expectedCount, async () => func(), cancellationToken)
+            return ExpectAsync(expectedCount, () => Task.FromResult(func()), cancellationToken)
                 .WaitAndUnwrapException();
         }
 
         /// <summary>
         /// Async version of Expect
         /// </summary>
-        public async Task<T> ExpectAsync<T>(
+        public Task<T> ExpectAsync<T>(
             int expectedCount, 
             Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
-            return await InterceptAsync(
+            return InterceptAsync(
                     func: func,
                     system: _actorSystem,
                     timeout: null,
                     expectedOccurrences: expectedCount,
                     matchedEventHandler: null,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -295,7 +324,7 @@ namespace Akka.TestKit.Internal
             Func<T> func,
             CancellationToken cancellationToken = default)
         {
-            return ExpectAsync(expectedCount, timeout, async () => func(), cancellationToken)
+            return ExpectAsync(expectedCount, timeout, () => Task.FromResult(func()), cancellationToken)
                 .WaitAndUnwrapException();
         }
         
@@ -303,20 +332,19 @@ namespace Akka.TestKit.Internal
         /// Async version of Expect
         /// Note: <paramref name="func"/> might not get awaited.
         /// </summary>
-        public async Task<T> ExpectAsync<T>(
+        public Task<T> ExpectAsync<T>(
             int expectedCount,
             TimeSpan timeout,
             Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
-            return await InterceptAsync(
+            return InterceptAsync(
                     func: func,
                     system: _actorSystem,
                     timeout: timeout,
                     expectedOccurrences: expectedCount,
                     matchedEventHandler: null,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -328,23 +356,22 @@ namespace Akka.TestKit.Internal
         /// <returns>TBD</returns>
         public T Mute<T>(Func<T> func, CancellationToken cancellationToken = default)
         {
-            return MuteAsync(async () => func(), cancellationToken)
+            return MuteAsync(() => Task.FromResult(func()), cancellationToken)
                 .WaitAndUnwrapException();
         }
         
         /// <summary>
         /// Async version of Mute
         /// </summary>
-        public async Task<T> MuteAsync<T>(Func<Task<T>> func, CancellationToken cancellationToken = default)
+        public Task<T> MuteAsync<T>(Func<Task<T>> func, CancellationToken cancellationToken = default)
         {
-            return await InterceptAsync(
+            return InterceptAsync(
                     func: func,
                     system: _actorSystem,
                     timeout: null,
                     expectedOccurrences: null,
                     matchedEventHandler: null,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -354,7 +381,7 @@ namespace Akka.TestKit.Internal
         /// <param name="cancellationToken"></param>
         public void Mute(Action action, CancellationToken cancellationToken = default)
         {
-            MuteAsync(async () => action(), cancellationToken)
+            MuteAsync(() => { action(); return Task.CompletedTask; }, cancellationToken)
                 .WaitAndUnwrapException(cancellationToken);
         }
         
@@ -375,6 +402,17 @@ namespace Akka.TestKit.Internal
                     matchedEventHandler: null,
                     cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
+        }
+
+        public async Task MuteAsync(Action action, CancellationToken cancellationToken = default)
+        {
+            Task Wrapped()
+            {
+                action();
+                return Task.CompletedTask;
+            }
+
+            await MuteAsync(Wrapped, cancellationToken);
         }
 
         /// <summary>
@@ -418,7 +456,7 @@ namespace Akka.TestKit.Internal
             CancellationToken cancellationToken = default)
         {
             return InterceptAsync(
-                    func: async () => func(),
+                    func: () => Task.FromResult(func()),
                     system: system,
                     timeout: timeout,
                     expectedOccurrences: expectedOccurrences,
@@ -526,13 +564,13 @@ namespace Akka.TestKit.Internal
                 var expected = expectedOccurrences.GetValueOrDefault();
                 if (expected > 0)
                 {
-                    await _testkit.AwaitConditionNoThrowAsync(async () => matchedEventHandler.ReceivedCount >= expected, timeout, cancellationToken: cancellationToken);
+                    await _testkit.AwaitConditionNoThrowAsync(() => Task.FromResult(matchedEventHandler.ReceivedCount >= expected), timeout, cancellationToken: cancellationToken);
                     return matchedEventHandler.ReceivedCount == expected;
                 }
                 else
                 {
                     // if expecting no events to arrive - assert that given condition will never match
-                    var foundEvent = await _testkit.AwaitConditionNoThrowAsync(async () => matchedEventHandler.ReceivedCount > 0, timeout, cancellationToken: cancellationToken);
+                    var foundEvent = await _testkit.AwaitConditionNoThrowAsync(() => Task.FromResult(matchedEventHandler.ReceivedCount > 0), timeout, cancellationToken: cancellationToken);
                     return foundEvent == false;
                 }
             }

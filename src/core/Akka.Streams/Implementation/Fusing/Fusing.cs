@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Fusing.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -85,7 +85,9 @@ namespace Akka.Streams.Implementation.Fusing
                 Attributes.None,
                 info);
 
+#pragma warning disable CS0162 // Unreachable code detected
             if (StreamLayout.IsDebug) StreamLayout.Validate(module);
+#pragma warning restore CS0162 // Unreachable code detected
             if (IsDebug) Console.WriteLine(module.ToString());
 
             return new Streams.Fusing.FusedGraph<TShape, TMat>(module, (TShape) shape);
@@ -292,10 +294,10 @@ namespace Akka.Streams.Implementation.Fusing
             outOwnersB3.CopyTo(outOwners, outStart);
 
             var firstModule = group.First();
-            if(!(firstModule is CopiedModule))
+            if(!(firstModule is CopiedModule module))
                 throw new ArgumentException("unexpected module structure");
-            var asyncAttrs = IsAsync((CopiedModule) firstModule) ? new Attributes(Attributes.AsyncBoundary.Instance) : Attributes.None;
-            var dispatcher = GetDispatcher(firstModule);
+            var asyncAttrs = IsAsync(module) ? new Attributes(Attributes.AsyncBoundary.Instance) : Attributes.None;
+            var dispatcher = GetDispatcher(module);
             var dispatcherAttrs = dispatcher == null ? Attributes.None : new Attributes(dispatcher);
             var attr = asyncAttrs.And(dispatcherAttrs);
 
@@ -327,7 +329,7 @@ namespace Akka.Streams.Implementation.Fusing
             int indent)
         {
 
-            var isAsync = module is GraphStageModule || module is GraphModule
+            var isAsync = module is GraphStageModule or GraphModule
                 ? module.Attributes.Contains(Attributes.AsyncBoundary.Instance)
                 : module.IsAtomic || module.Attributes.Contains(Attributes.AsyncBoundary.Instance);
             if (IsDebug)
@@ -583,7 +585,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// The list of all groups of modules that are within each async boundary.
         /// </summary>
-        public readonly LinkedList<ISet<IModule>> Groups = new LinkedList<ISet<IModule>>();
+        public readonly LinkedList<ISet<IModule>> Groups = new();
 
         /// <summary>
         /// A mapping from OutPort to its containing group, needed when determining whether an upstream connection is internal or not.
@@ -628,7 +630,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// A stack of materialized value sources, grouped by materialized computation context.
         /// </summary>
-        private readonly LinkedList<LinkedList<CopiedModule>> _materializedSources = new LinkedList<LinkedList<CopiedModule>>();
+        private readonly LinkedList<LinkedList<CopiedModule>> _materializedSources = new();
 
         /// <summary>
         /// TBD
@@ -818,9 +820,9 @@ namespace Akka.Streams.Implementation.Fusing
 
             if (IsCopiedModuleWithGraphStageAndMaterializedValue(copy))
                 PushMaterializationSource((CopiedModule) copy);
-            else if (copy is GraphModule)
+            else if (copy is GraphModule graphModule)
             {
-                var mvids = ((GraphModule) copy).MaterializedValueIds;
+                var mvids = graphModule.MaterializedValueIds;
                 foreach (IModule mvid in mvids)
                 {
                     if (IsCopiedModuleWithGraphStageAndMaterializedValue(mvid))
@@ -904,7 +906,7 @@ namespace Akka.Streams.Implementation.Fusing
             Type stageType;
             return copiedModule != null
                 && (graphStageModule = copiedModule.CopyOf as GraphStageModule) != null
-                && (stageType = graphStageModule.Stage.GetType()).GetTypeInfo().IsGenericType
+                && (stageType = graphStageModule.Stage.GetType()).IsGenericType
                 && stageType.GetGenericTypeDefinition() == typeof(MaterializedValueSource<>);
         }
 

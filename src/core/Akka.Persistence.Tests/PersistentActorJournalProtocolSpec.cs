@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorJournalProtocolSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -220,9 +220,9 @@ namespace Akka.Persistence.Tests
             {
                 if (!Behavior(message))
                 {
-                    if (message is Multi)
+                    if (message is Multi multi)
                     {
-                        foreach (var command in ((Multi) message).Commands)
+                        foreach (var command in multi.Commands)
                             Behavior(command);
                         return true;
                     }
@@ -233,14 +233,14 @@ namespace Akka.Persistence.Tests
 
             private bool Behavior(object message)
             {
-                if (message is Persist)
-                    P((Persist) message);
-                else if (message is PersistAsync)
-                    PA((PersistAsync) message);
-                else if (message is Echo)
-                    Sender.Tell(new Done(((Echo) message).Id, 0));
-                else if (message is Fail)
-                    throw ((Fail) message).Exception;
+                if (message is Persist persist)
+                    P(persist);
+                else if (message is PersistAsync async)
+                    PA(async);
+                else if (message is Echo echo)
+                    Sender.Tell(new Done(echo.Id, 0));
+                else if (message is Fail fail)
+                    throw fail.Exception;
                 else return false;
                 return true;
             }
@@ -274,7 +274,7 @@ namespace Akka.Persistence.Tests
 
         public class JournalProbeExtension : ExtensionIdProvider<JournalProbe>
         {
-            public static readonly JournalProbeExtension Instance = new JournalProbeExtension();
+            public static readonly JournalProbeExtension Instance = new();
 
             private JournalProbeExtension()
             {
@@ -349,9 +349,8 @@ akka.persistence.snapshot-store.plugin = ""akka.persistence.no-snapshot-store"""
             {
                 var message = messages[i];
                 var msg = msgs[i];
-                if (message is AtomicWrite)
+                if (message is AtomicWrite aw)
                 {
-                    var aw = ((AtomicWrite) message);
                     var writes = ((IEnumerable<IPersistentRepresentation>) aw.Payload).ToList();
                     writes.Count.ShouldBe(msg.Messages.Count);
                     for (int j = 0; j < writes.Count; j++)
@@ -371,9 +370,9 @@ akka.persistence.snapshot-store.plugin = ""akka.persistence.no-snapshot-store"""
             _journal.Send(w.PersistentActor, WriteMessagesSuccessful.Instance);
             foreach (var message in w.Messages)
             {
-                if (message is AtomicWrite)
+                if (message is AtomicWrite write)
                 {
-                    var msgs = (IEnumerable<IPersistentRepresentation>) ((AtomicWrite) message).Payload;
+                    var msgs = (IEnumerable<IPersistentRepresentation>) write.Payload;
                     foreach (var msg in msgs)
                     {
                         w.PersistentActor.Tell(new WriteMessageSuccess(msg, w.ActorInstanceId), msg.Sender);

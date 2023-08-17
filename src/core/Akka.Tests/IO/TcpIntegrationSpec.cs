@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpIntegrationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,14 +28,14 @@ namespace Akka.Tests.IO
     {
         public const int InternalConnectionActorMaxQueueSize = 10000;
         
-        class Aye : Tcp.Event { public static readonly Aye Instance = new Aye(); }
-        class Yes : Tcp.Event { public static readonly Yes Instance = new Yes(); }
-        class Ack : Tcp.Event { public static readonly Ack Instance = new Ack(); }
+        class Aye : Tcp.Event { public static readonly Aye Instance = new(); }
+        class Yes : Tcp.Event { public static readonly Yes Instance = new(); }
+        class Ack : Tcp.Event { public static readonly Ack Instance = new(); }
 
         class AckWithValue : Tcp.Event
         {
             public object Value { get; }
-            public static AckWithValue Create(object value) => new AckWithValue(value);
+            public static AckWithValue Create(object value) => new(value);
             private AckWithValue(object value) { Value = value; }
         }
 
@@ -57,7 +57,7 @@ namespace Akka.Tests.IO
         [Fact]
         public async Task The_TCP_transport_implementation_should_properly_bind_a_test_server()
         {
-            await new TestSetup(this).RunAsync(async x => await Task.CompletedTask);
+            await new TestSetup(this).RunAsync(async _ => await Task.CompletedTask);
         }
 
         [Fact(Skip="FIXME .net core / linux")]
@@ -195,7 +195,7 @@ namespace Akka.Tests.IO
             var testData = ByteString.FromString(str);
             clientEp.Tell(Tcp.Write.Create(testData, Ack.Instance), clientHandler);
             await clientHandler.ExpectMsgAsync<Ack>();
-            var received = await serverHandler.ReceiveWhileAsync<Tcp.Received>(o =>
+            var received = await serverHandler.ReceiveWhileAsync(o =>
             {
                 return o as Tcp.Received;
             }, RemainingOrDefault, TimeSpan.FromSeconds(0.5)).ToListAsync();
@@ -219,7 +219,7 @@ namespace Akka.Tests.IO
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
 
-                var serverMsgs = await actors.ServerHandler.ReceiveWhileAsync<Tcp.Received>(o =>
+                var serverMsgs = await actors.ServerHandler.ReceiveWhileAsync(o =>
                 {
                     return o as Tcp.Received;
                 }, RemainingOrDefault, TimeSpan.FromSeconds(2)).ToListAsync();
@@ -237,16 +237,16 @@ namespace Akka.Tests.IO
                 var actors = await x.EstablishNewClientConnectionAsync();
 
                 // Error message should contain invalid message type
-                await EventFilter.Error(contains: nameof(Tcp.Close)).ExpectOneAsync(async () =>
-                {
+                await EventFilter.Error(contains: nameof(Tcp.Close)).ExpectOneAsync(() => {
                     // Sending `Tcp.Close` to TcpManager instead of outgoing connection
                     Sys.Tcp().Tell(Tcp.Close.Instance, actors.ClientHandler);
+                    return Task.CompletedTask;
                 });
                 // Should also contain ref to documentation
-                await EventFilter.Error(contains: "https://getakka.net/articles/networking/io.html").ExpectOneAsync(async () =>
-                {
+                await EventFilter.Error(contains: "https://getakka.net/articles/networking/io.html").ExpectOneAsync(() => {
                     // Sending `Tcp.Close` to TcpManager instead of outgoing connection
                     Sys.Tcp().Tell(Tcp.Close.Instance, actors.ClientHandler);
+                    return Task.CompletedTask;
                 });
             });
         }
@@ -260,10 +260,10 @@ namespace Akka.Tests.IO
 
                 var msg = ByteString.FromString("msg"); // 3 bytes
 
-                await EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectOneAsync(async () =>
-                {
+                await EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectOneAsync(() => {
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(msg));
                     actors.ClientConnection.Tell(new Tcp.Register(actors.ClientHandler));
+                    return Task.CompletedTask;
                 });
                 
                 var serverMsgs = await actors.ServerHandler.ReceiveWhileAsync(o =>
@@ -285,9 +285,9 @@ namespace Akka.Tests.IO
                 var overflowData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize + 1]);
 
                 // We do not want message about receiving Write to be logged, if the write was actually discarded
-                await EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectAsync(0, async () =>
-                {
+                await EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectAsync(0, () => {
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData));
+                    return Task.CompletedTask;
                 });
                 
                 await actors.ClientHandler.ExpectMsgAsync<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
@@ -484,7 +484,7 @@ namespace Akka.Tests.IO
         [Fact]
         public async Task The_TCP_transport_implementation_handle_tcp_connection_actor_death_properly()
         {
-            await new TestSetup(this, shouldBindServer:false).RunAsync(async x =>
+            await new TestSetup(this, shouldBindServer:false).RunAsync(async _ =>
             {
                 var serverSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
                 serverSocket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
@@ -500,16 +500,16 @@ namespace Akka.Tests.IO
                 var connectionActor = connectCommander.LastSender;
                 connectCommander.Send(connectionActor, PoisonPill.Instance);
 
-                await AwaitConditionNoThrowAsync(async () =>
+                await AwaitConditionNoThrowAsync(() =>
                 {
                     try
                     {
                         var buffer = new byte[1024];
-                        return accept.Receive(buffer) == 0;
+                        return Task.FromResult(accept.Receive(buffer) == 0);
                     }
                     catch (SocketException ex)
                     {
-                        return true;
+                        return Task.FromResult(true);
                     }
                 }, TimeSpan.FromSeconds(3));
 

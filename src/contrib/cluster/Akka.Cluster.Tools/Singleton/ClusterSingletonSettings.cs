@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -109,7 +109,7 @@ namespace Akka.Cluster.Tools.Singleton
             if (handOverRetryInterval <= TimeSpan.Zero)
                 throw new ArgumentException("ClusterSingletonManagerSettings.HandOverRetryInterval must be positive", nameof(handOverRetryInterval));
 
-            if (bufferSize < 0 || bufferSize > 10000)
+            if (bufferSize is < 0 or > 10000)
                 throw new ArgumentException("bufferSize must be >= 0 and <= 10000", nameof(bufferSize));
 
             Role = role;
@@ -150,11 +150,11 @@ namespace Akka.Cluster.Tools.Singleton
 
         [InternalApi]
         internal ClusterSingletonManagerSettings ToManagerSettings(string singletonName) =>
-            new ClusterSingletonManagerSettings(singletonName, Role, RemovalMargin, HandOverRetryInterval, LeaseSettings, ConsiderAppVersion);
+            new(singletonName, Role, RemovalMargin, HandOverRetryInterval, LeaseSettings, ConsiderAppVersion);
 
         [InternalApi]
         internal ClusterSingletonProxySettings ToProxySettings(string singletonName) =>
-            new ClusterSingletonProxySettings(singletonName, Role, SingletonIdentificationInterval, BufferSize, ConsiderAppVersion);
+            new(singletonName, Role, SingletonIdentificationInterval, BufferSize, ConsiderAppVersion);
 
         [InternalApi]
         internal bool ShouldRunManager(Cluster cluster) => string.IsNullOrEmpty(Role) || cluster.SelfMember.Roles.Contains(Role);

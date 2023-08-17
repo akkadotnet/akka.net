@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RouteeCreationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ namespace Akka.Tests.Routing
                 _testActor = testActor;
                 Context.Parent.Tell("one");
 
-                Receive<string>(s => s == "one", c =>
+                Receive<string>(s => s == "one", _ =>
                 {
                     _testActor.Forward("two");
                 });
@@ -61,7 +61,7 @@ namespace Akka.Tests.Routing
         {
             int n = 100;
             Sys.ActorOf(new RoundRobinPool(n).Props(Props.Create(() => new ForwardActor(TestActor))));
-            var gotIt = await ReceiveWhileAsync<string>(msg =>
+            var gotIt = await ReceiveWhileAsync(msg =>
             {
                 if (msg.Equals("two"))
                 {

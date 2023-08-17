@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPublisherTest.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,7 +27,7 @@ namespace Akka.Streams.Tests.TCK
         {
             private sealed class Produce
             {
-                public static Produce Instance { get; } = new Produce();
+                public static Produce Instance { get; } = new();
 
                 private Produce()
                 {
@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.TCK
 
             private sealed class Loop
             {
-                public static Loop Instance { get; } = new Loop();
+                public static Loop Instance { get; } = new();
 
                 private Loop()
                 {
@@ -47,7 +47,7 @@ namespace Akka.Streams.Tests.TCK
 
             private sealed class Complete
             {
-                public static Complete Instance { get; } = new Complete();
+                public static Complete Instance { get; } = new();
 
                 private Complete()
                 {

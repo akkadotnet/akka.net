@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,9 +24,9 @@ namespace Samples.Cluster.Transformation
             _clusterConfig = section.AkkaConfig;
             LaunchBackend(new []{ "2551" });
             LaunchBackend(new[] { "2552" });
-            LaunchBackend(new string[0]);
-            LaunchFrontend(new string[0]);
-            LaunchFrontend(new string[0]);
+            LaunchBackend(Array.Empty<string>());
+            LaunchFrontend(Array.Empty<string>());
+            LaunchFrontend(Array.Empty<string>());
             //starting 2 frontend nodes and 3 backend nodes
             Console.WriteLine("Press any key to exit.");
             Console.ReadLine();

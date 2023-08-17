@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestSubscriber_Shared.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -261,7 +261,7 @@ namespace Akka.Streams.TestKit
                 CancellationToken cancellationToken = default)
             {
                 var message = await probe.FishForMessageAsync(
-                    isMessage: m => m is OnNext<T> || m is OnError, 
+                    isMessage: m => m is OnNext<T> or TestSubscriber.OnError, 
                     hint: "OnNext(_) or error", 
                     cancellationToken: cancellationToken);
 
@@ -277,7 +277,7 @@ namespace Akka.Streams.TestKit
                 CancellationToken cancellationToken = default)
             {
                 var message = await probe.FishForMessageAsync(
-                    isMessage: m => m is OnNext<T> || m is OnComplete, 
+                    isMessage: m => m is OnNext<T> or TestSubscriber.OnComplete, 
                     hint: "OnNext(_) or OnComplete", 
                     cancellationToken: cancellationToken);
 

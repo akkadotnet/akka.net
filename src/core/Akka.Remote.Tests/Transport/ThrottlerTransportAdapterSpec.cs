@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ThrottlerTransportAdapterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -70,20 +70,20 @@ namespace Akka.Remote.Tests.Transport
                 _remoteRef = remoteRef;
                 _controller = controller;
 
-                Receive<string>(s => s.Equals("start"), s =>
+                Receive<string>(s => s.Equals("start"), _ =>
                 {
                     Self.Tell("sendNext");
                     _startTime = MonotonicClock.GetNanos();
                 });
 
-                Receive<string>(s => s.Equals("sendNext") && _messageCount > 0, s =>
+                Receive<string>(s => s.Equals("sendNext") && _messageCount > 0, _ =>
                 {
                     _remoteRef.Tell("ping");
                     Self.Tell("sendNext");
                     _messageCount--;
                 });
 
-                Receive<string>(s => s.Equals("pong"), s =>
+                Receive<string>(s => s.Equals("pong"), _ =>
                 {
                     _received++;
                     if (_received >= MessageCount)
@@ -143,8 +143,7 @@ namespace Akka.Remote.Tests.Transport
 
         private TimeSpan DefaultTimeout => Dilated(TestKitSettings.DefaultTimeout);
             
-        private RootActorPath RootB
-            => new RootActorPath(_systemB.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress);
+        private RootActorPath RootB => new(_systemB.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress);
 
         private async Task<IActorRef> Here()
         {
@@ -153,23 +152,23 @@ namespace Akka.Remote.Tests.Transport
             return identity.Subject;
         }
 
-        private async Task<bool> Throttle(ThrottleTransportAdapter.Direction direction, ThrottleMode mode)
+        private Task<bool> Throttle(ThrottleTransportAdapter.Direction direction, ThrottleMode mode)
         {
             var rootBAddress = new Address("akka", "systemB", "localhost", RootB.Address.Port.Value);
             var transport =
                 Sys.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
-            
-            return await transport.ManagementCommand(new SetThrottle(rootBAddress, direction, mode))
+
+            return transport.ManagementCommand(new SetThrottle(rootBAddress, direction, mode))
                 .ShouldCompleteWithin(DefaultTimeout);
         }
 
-        private async Task<bool> Disassociate()
+        private Task<bool> Disassociate()
         {
             var rootBAddress = new Address("akka", "systemB", "localhost", RootB.Address.Port.Value);
             var transport =
                 Sys.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
-            
-            return await transport.ManagementCommand(new ForceDisassociate(rootBAddress))
+
+            return transport.ManagementCommand(new ForceDisassociate(rootBAddress))
                 .ShouldCompleteWithin(DefaultTimeout);
         }
 
@@ -248,20 +247,20 @@ namespace Akka.Remote.Tests.Transport
 
         #region Cleanup 
 
-        protected override async Task BeforeTerminationAsync()
+        protected override void BeforeTermination()
         {
             EventFilter.Warning(start: "received dead letter").Mute();
             EventFilter.Warning(new Regex("received dead letter.*(InboundPayload|Disassociate)")).Mute();
             _systemB.EventStream.Publish(new Mute(new WarningFilter(new RegexMatcher(new Regex("received dead letter.*(InboundPayload|Disassociate)"))), 
                 new ErrorFilter(typeof(EndpointException)),
                 new ErrorFilter(new StartsWithString("AssociationError"))));
-            await base.BeforeTerminationAsync();
+            base.BeforeTermination();
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(_systemB);
+            base.AfterAll();
+            Shutdown(_systemB);
         }
 
         #endregion

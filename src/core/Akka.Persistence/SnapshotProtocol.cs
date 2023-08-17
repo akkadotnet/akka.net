@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotProtocol.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -478,12 +478,12 @@ namespace Akka.Persistence
         /// <summary>
         /// The latest saved snapshot.
         /// </summary>
-        public static SnapshotSelectionCriteria Latest { get; } = new SnapshotSelectionCriteria(long.MaxValue, DateTime.MaxValue);
+        public static SnapshotSelectionCriteria Latest { get; } = new(long.MaxValue, DateTime.MaxValue);
 
         /// <summary>
         /// No saved snapshot matches.
         /// </summary>
-        public static SnapshotSelectionCriteria None { get; } = new SnapshotSelectionCriteria(0L, DateTime.MinValue);
+        public static SnapshotSelectionCriteria None { get; } = new(0L, DateTime.MinValue);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotSelectionCriteria"/> class.
@@ -767,7 +767,7 @@ namespace Akka.Persistence
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is LoadSnapshotFailed && Equals((LoadSnapshotFailed)obj);
+            return obj is LoadSnapshotFailed failed && Equals(failed);
         }
 
         public override int GetHashCode() => Cause?.GetHashCode() ?? 0;

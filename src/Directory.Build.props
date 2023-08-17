@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-2023 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.5.0</VersionPrefix>
+    <VersionPrefix>1.5.7</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
@@ -14,25 +14,25 @@
     <LangVersion>11.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <XunitVersion>2.4.2</XunitVersion>
-    <XunitRunnerVersion>2.4.2</XunitRunnerVersion>
-    <TestSdkVersion>17.4.1</TestSdkVersion>
+    <XunitVersion>2.5.0</XunitVersion>
+    <XunitRunnerVersion>2.5.0</XunitRunnerVersion>
+    <TestSdkVersion>17.7.1</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
-    <ProtobufVersion>3.22.0</ProtobufVersion>
-    <BenchmarkDotNetVersion>0.13.2</BenchmarkDotNetVersion>
-    <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
+    <ProtobufVersion>3.24.0</ProtobufVersion>
+    <BenchmarkDotNetVersion>0.13.7</BenchmarkDotNetVersion>
     <NetTestVersion>net7.0</NetTestVersion>
+    <FsharpVersion>6.0.5</FsharpVersion>
     <NetFrameworkTestVersion>net471</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
     <NetLibVersion>net6.0</NetLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
-    <FsCheckVersion>2.16.5</FsCheckVersion>
+    <FsCheckVersion>2.16.6</FsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
-    <MultiNodeAdapterVersion>1.5.0-beta1</MultiNodeAdapterVersion>
+    <MultiNodeAdapterVersion>1.5.8</MultiNodeAdapterVersion>
     <MicrosoftLibVersion>5.0.0</MicrosoftLibVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
@@ -40,19 +40,7 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Version 1.5.0-beta2 contains **breaking API changes** and new API changes for Akka.NET.
-[Akka.Event: Add K to the DateTime format string to include TZ information](https://github.com/akkadotnet/akka.net/pull/6419)
-[Akka.TestKit: Reintroduce old code and mark them obsolete](https://github.com/akkadotnet/akka.net/pull/6420) - fixes major regression in Akka.TestKit.Xunit2 where we removed `IDipsoable` before. This PR reintroduces it for backwards compat.
-[Akka.Cluster.Sharding: clean its internal cache if region/proxy died](https://github.com/akkadotnet/akka.net/pull/6424)
-[Akka.Util: Harden `Option&lt;T&gt;` by disallowing null value](https://github.com/akkadotnet/akka.net/pull/6426)
-[Akka.Util: move `DateTime` / `TimeSpan` extension APIs out of Akka.Util and into Akka.Cluster.Metrics](https://github.com/akkadotnet/akka.net/pull/6427)
-[Akka.Util: Remove unsafe `implicit` conversion operators in `AtomicBoolean` and `AtomicReference&lt;T&gt;`](https://github.com/akkadotnet/akka.net/pull/6429)
-[Akka: Standardize on C# 11.0](https://github.com/akkadotnet/akka.net/pull/6431)
-[Akka.Persistence: improve `AsyncWriteJournal` and `PersistentActor` performance](https://github.com/akkadotnet/akka.net/pull/6432)
-| COMMITS | LOC+ | LOC- | AUTHOR |
-| --- | --- | --- | --- |
-| 8 | 260 | 942 | Aaron Stannard |
-| 5 | 169 | 60 | Gregorius Soedharmo |</PackageReleaseNotes>
+    <PackageReleaseNotes>Placeholder for nightlies*</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>

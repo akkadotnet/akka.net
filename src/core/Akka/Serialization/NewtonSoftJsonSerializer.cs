@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="NewtonSoftJsonSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ namespace Akka.Serialization
         /// <summary>
         /// A default instance of <see cref="NewtonSoftJsonSerializerSettings"/> used when no custom configuration has been provided.
         /// </summary>
-        public static readonly NewtonSoftJsonSerializerSettings Default = new NewtonSoftJsonSerializerSettings(
+        public static readonly NewtonSoftJsonSerializerSettings Default = new(
             encodeTypeNames: true,
             preserveObjectReferences: true,
             converters: Enumerable.Empty<Type>(),
@@ -196,7 +196,7 @@ namespace Akka.Serialization
             if (system != null)
             {
                 var settingsSetup = system.Settings.Setup.Get<NewtonSoftJsonSerializerSetup>()
-                    .GetOrElse(NewtonSoftJsonSerializerSetup.Create(s => {}));
+                    .GetOrElse(NewtonSoftJsonSerializerSetup.Create(_ => {}));
 
                 settingsSetup.ApplySettings(Settings);
             }
@@ -331,8 +331,7 @@ namespace Akka.Serialization
 
         private static object TranslateSurrogate(object deserializedValue, NewtonSoftJsonSerializer parent, Type type)
         {
-            var j = deserializedValue as JObject;
-            if (j != null)
+            if (deserializedValue is JObject j)
             {
                 //The JObject represents a special akka.net wrapper for primitives (int,float,decimal) to preserve correct type when deserializing
                 if (j["$"] != null)
@@ -341,17 +340,50 @@ namespace Akka.Serialization
                     return GetValue(value);
                 }
 
+                // Bug: #6502 Newtonsoft could not deserialize pure JObject inside an object payload.
+                // If type is `object`, deep-convert object and return as is.
+                if (type == typeof(object))
+                {
+                    return RestoreJToken(j);
+                }
+                
                 //The JObject is not of our concern, let Json.NET deserialize it.
                 return j.ToObject(type, parent._serializer);
             }
-            var surrogate = deserializedValue as ISurrogate;
 
             //The deserialized object is a surrogate, unwrap it
-            if (surrogate != null)
+            if (deserializedValue is ISurrogate surrogate)
             {
                 return surrogate.FromSurrogate(parent.system);
             }
             return deserializedValue;
+        }
+
+        private static JToken RestoreJToken(JToken value)
+        {
+            switch (value)
+            {
+                case JObject obj:
+                    if (obj["$"] != null)
+                    {
+                        var v = obj["$"].Value<string>();
+                        return new JValue(GetValue(v));
+                    }
+                    var dict = (IDictionary<string, JToken>)obj;
+                    foreach (var kvp in dict)
+                    {
+                        dict[kvp.Key] = RestoreJToken(kvp.Value);
+                    }
+                    return obj;
+                case JArray arr:
+                    for (var i = 0; i < arr.Count; i++)
+                    {
+                        arr[i] = RestoreJToken(arr[i]);
+                    }
+                    return arr;
+                default:
+                    return value;
+            }
         }
 
         private static object GetValue(string V)
@@ -429,7 +461,7 @@ namespace Akka.Serialization
             /// <param name="serializer">The calling serializer.</param>
             public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
             {
-                if (value is int || value is decimal || value is float)
+                if (value is int or decimal or float)
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("$");
@@ -454,12 +486,12 @@ namespace Akka.Serialization
 
             private object GetString(object value)
             {
-                if (value is int)
-                    return "I" + ((int)value).ToString(NumberFormatInfo.InvariantInfo);
-                if (value is float)
-                    return "F" + ((float)value).ToString(NumberFormatInfo.InvariantInfo);
-                if (value is decimal)
-                    return "M" + ((decimal)value).ToString(NumberFormatInfo.InvariantInfo);
+                if (value is int i)
+                    return "I" + i.ToString(NumberFormatInfo.InvariantInfo);
+                if (value is float f)
+                    return "F" + f.ToString(NumberFormatInfo.InvariantInfo);
+                if (value is decimal value1)
+                    return "M" + value1.ToString(NumberFormatInfo.InvariantInfo);
                 throw new NotSupportedException();
             }
         }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SupervisorStrategy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -193,7 +193,7 @@ namespace Akka.Actor
         ///     This strategy resembles Erlang in that failing children are always
         ///     terminated (one-for-one).
         /// </summary>
-        public static readonly OneForOneStrategy StoppingStrategy = new OneForOneStrategy(ex => Directive.Stop);
+        public static readonly OneForOneStrategy StoppingStrategy = new(_ => Directive.Stop);
 
         /// <summary>
         /// This method is called after the child has been removed from the set of children.

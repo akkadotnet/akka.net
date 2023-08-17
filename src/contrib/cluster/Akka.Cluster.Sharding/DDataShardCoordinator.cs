@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DDataShardCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ namespace Akka.Cluster.Sharding
 
         private sealed class RememberEntitiesStoreStopped
         {
-            public static RememberEntitiesStoreStopped Instance = new RememberEntitiesStoreStopped();
+            public static RememberEntitiesStoreStopped Instance = new();
 
             private RememberEntitiesStoreStopped()
             {
@@ -47,7 +47,7 @@ namespace Akka.Cluster.Sharding
 
         private sealed class RememberEntitiesLoadTimeout
         {
-            public static readonly RememberEntitiesLoadTimeout Instance = new RememberEntitiesLoadTimeout();
+            public static readonly RememberEntitiesLoadTimeout Instance = new();
 
             private RememberEntitiesLoadTimeout()
             {
@@ -206,6 +206,7 @@ namespace Akka.Cluster.Sharding
                         return true;
 
                     case RememberEntitiesLoadTimeout _:
+                        Log.Debug("{0}: Remember entities load timeout, retrying", TypeName);
                         // repeat until successful
                         GetAllRememberedShards();
                         return true;

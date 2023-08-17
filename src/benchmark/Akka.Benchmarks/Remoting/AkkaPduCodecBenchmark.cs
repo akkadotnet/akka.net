@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="AkkaPduCodecBenchmark.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="AkkaPduCodecBenchmark.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Threading;
@@ -48,7 +48,7 @@ namespace Akka.Benchmarks.Remoting
         /// </summary>
         private readonly object _message = "foobar";
 
-        private readonly Ack _lastAck = new Ack(-1);
+        private readonly Ack _lastAck = new(-1);
 
         private ByteString _fullDecode;
         private ByteString _pduDecoded;
@@ -64,10 +64,10 @@ namespace Akka.Benchmarks.Remoting
             _addr2 = RARP.For(_sys2).Provider.DefaultAddress;
 
             _senderActorRef =
-                _sys2.ActorOf(act => { act.ReceiveAny((o, context) => context.Sender.Tell(context.Sender)); },
+                _sys2.ActorOf(act => { act.ReceiveAny((_, context) => context.Sender.Tell(context.Sender)); },
                     "sender1");
 
-            _localReceiveRef = _sys1.ActorOf(act => { act.ReceiveAny((o, context) => context.Sender.Tell(context.Sender)); },
+            _localReceiveRef = _sys1.ActorOf(act => { act.ReceiveAny((_, context) => context.Sender.Tell(context.Sender)); },
                 "recv1");
 
             // create an association

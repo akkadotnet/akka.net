@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Option.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Akka.Annotations;
 
 namespace Akka.Util
 {
@@ -17,6 +18,7 @@ namespace Akka.Util
     /// Useful where distinguishing between null (or zero, or false) and uninitialized is significant.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalStableApi]
     public readonly struct Option<T>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -28,7 +30,7 @@ namespace Akka.Util
         /// <summary>
         /// None.
         /// </summary>
-        public static readonly Option<T> None = new Option<T>();
+        public static readonly Option<T> None = new();
 
         // TODO: Change this to private constructor in the future
         [Obsolete("Use Option<T>.Create() instead")] 

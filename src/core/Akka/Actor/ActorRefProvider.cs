@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -173,8 +173,8 @@ namespace Akka.Actor
         private readonly AtomicCounterLong _tempNumber;
         private readonly ActorPath _tempNode;
         private ActorSystemImpl _system;
-        private readonly Dictionary<string, IInternalActorRef> _extraNames = new Dictionary<string, IInternalActorRef>();
-        private readonly TaskCompletionSource<Status> _terminationPromise = new TaskCompletionSource<Status>();
+        private readonly Dictionary<string, IInternalActorRef> _extraNames = new();
+        private readonly TaskCompletionSource<Status> _terminationPromise = new();
         private readonly SupervisorStrategy _systemGuardianStrategy;
         private readonly SupervisorStrategyConfigurator _userGuardianStrategyConfigurator;
         private VirtualPathContainer _tempContainer;
@@ -540,7 +540,7 @@ namespace Akka.Actor
                 if (Settings.DebugRouterMisconfiguration)
                 {
                     var d = Deployer.Lookup(path);
-                    if (d != null && !(d.RouterConfig is NoRouter))
+                    if (d is { RouterConfig: not NoRouter })
                         Log.Warning("Configuration says that [{0}] should be a router, but code disagrees. Remove the config or add a RouterConfig to its Props.",
                                     path);
                 }
@@ -555,6 +555,8 @@ namespace Akka.Actor
                         props2 = props2.WithMailbox(propsDeploy.Mailbox);
                     if (propsDeploy.Dispatcher != Deploy.NoDispatcherGiven)
                         props2 = props2.WithDispatcher(propsDeploy.Dispatcher);
+                    if(propsDeploy.StashCapacity != Deploy.NoStashSize)
+                        props2 = props2.WithStashCapacity(propsDeploy.StashCapacity);
                 }
 
                 if (!system.Dispatchers.HasDispatcher(props2.Dispatcher))

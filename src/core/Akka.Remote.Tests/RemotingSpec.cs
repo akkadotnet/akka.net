@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemotingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Routing;
 using Akka.TestKit;
@@ -31,6 +32,19 @@ namespace Akka.Remote.Tests
     {
         public RemotingSpec(ITestOutputHelper helper) : base(GetConfig(), helper)
         {
+            var c1 = ConfigurationFactory.ParseString(GetConfig());
+            var c2 = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
+            var conf = c2.WithFallback(c1); //ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
+
+            _remoteSystem = ActorSystem.Create("remote-sys", conf);
+            InitializeLogger(_remoteSystem);
+            Deploy(Sys, new Deploy(@"/gonk", new RemoteScope(Addr(_remoteSystem, "tcp"))));
+            Deploy(Sys, new Deploy(@"/zagzag", new RemoteScope(Addr(_remoteSystem, "udp"))));
+
+            _remote = _remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
+            _here = Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
+
+            AtStartup();
         }
 
         private static string GetConfig()
@@ -133,31 +147,12 @@ namespace Akka.Remote.Tests
 
         private TimeSpan DefaultTimeout => Dilated(TestKitSettings.DefaultTimeout);
 
-        public override async Task InitializeAsync()
-        {
-            await base.InitializeAsync();
-
-            var c1 = ConfigurationFactory.ParseString(GetConfig());
-            var c2 = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
-            var conf = c2.WithFallback(c1); //ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
-
-            _remoteSystem = ActorSystem.Create("remote-sys", conf);
-            InitializeLogger(_remoteSystem);
-            Deploy(Sys, new Deploy(@"/gonk", new RemoteScope(Addr(_remoteSystem, "tcp"))));
-            Deploy(Sys, new Deploy(@"/zagzag", new RemoteScope(Addr(_remoteSystem, "udp"))));
-
-            _remote = _remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
-            _here = Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
-
-            AtStartup();
-        }
-
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
             if (_remoteSystem != null)
-                await ShutdownAsync(_remoteSystem);
+                Shutdown(_remoteSystem);
             AssociationRegistry.Clear();
-            await base.AfterAllAsync();
+            base.AfterAll();
         }
 
         #region Tests
@@ -511,7 +506,7 @@ namespace Akka.Remote.Tests
                     (new ActorAssociationEventListener(remoteTransportProbe)));
 
                 // Hijack associations through the test transport
-                await AwaitConditionAsync(async () => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
+                await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(rawLocalAddress, rawRemoteAddress)));
                 var testTransport = registry.TransportFor(rawLocalAddress).Value.Item1;
                 testTransport.WriteBehavior.PushConstant(true);
 
@@ -522,7 +517,7 @@ namespace Akka.Remote.Tests
 
                 var remoteHandle =
                     await remoteTransportProbe.ExpectMsgAsync<InboundAssociation>(TimeSpan.FromMinutes(4));
-                remoteHandle.Association.ReadHandlerSource.TrySetResult(new ActionHandleEventListener(ev => { }));
+                remoteHandle.Association.ReadHandlerSource.TrySetResult(new ActionHandleEventListener(_ => { }));
 
                 // Now we initiate an emulated inbound connection to the real system
                 var inboundHandleProbe = CreateTestProbe();
@@ -557,7 +552,7 @@ namespace Akka.Remote.Tests
             }
             finally
             {
-                await ShutdownAsync(thisSystem);
+                Shutdown(thisSystem);
             }
         }
 
@@ -594,7 +589,7 @@ namespace Akka.Remote.Tests
                     (new ActorAssociationEventListener(remoteTransportProbe)));
 
                 // Hijack associations through the test transport
-                await AwaitConditionAsync(async () => registry.TransportsReady(rawLocalAddress, rawRemoteAddress));
+                await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(rawLocalAddress, rawRemoteAddress)));
                 var testTransport = registry.TransportFor(rawLocalAddress).Value.Item1;
                 testTransport.WriteBehavior.PushConstant(true);
 
@@ -605,7 +600,7 @@ namespace Akka.Remote.Tests
 
                 var remoteHandle =
                     await remoteTransportProbe.ExpectMsgAsync<InboundAssociation>(TimeSpan.FromMinutes(4));
-                remoteHandle.Association.ReadHandlerSource.TrySetResult(new ActionHandleEventListener(ev => { }));
+                remoteHandle.Association.ReadHandlerSource.TrySetResult(new ActionHandleEventListener(_ => { }));
 
                 // Now we initiate an emulated inbound connection to the real system
                 var inboundHandleProbe = CreateTestProbe();
@@ -642,7 +637,7 @@ namespace Akka.Remote.Tests
             }
             finally
             {
-                await ShutdownAsync(thisSystem);
+                Shutdown(thisSystem);
             }
         }
 
@@ -655,6 +650,21 @@ namespace Akka.Remote.Tests
                 {
                     await VerifySendAsync(oversized, async () => { await ExpectNoMsgAsync(); });
                 });
+        }
+
+        /// <summary>
+        /// Validate that we can accurately log wrapped messages that fail to be delivered
+        /// </summary>
+        [Fact]
+        public void Log_Wrapped_messages_that_fail_to_Send()
+        {
+            // 2x wrapped message
+            var wrappedMessage =
+                new DeadLetter(new ActorSelectionMessage("hit", Array.Empty<SelectionPathElement>(), false), TestActor,
+                    TestActor);
+
+            var loggedType = EndpointWriter.LogPossiblyWrappedMessageType(wrappedMessage);
+            loggedType.Should().Contain("DeadLetter").And.Contain("ActorSelectionMessage").And.Contain("String");
         }
 
         [Fact]
@@ -961,7 +971,7 @@ namespace Akka.Remote.Tests
         {
             private readonly Action<IHandleEvent> _handler;
 
-            public ActionHandleEventListener() : this(ev => { })
+            public ActionHandleEventListener() : this(_ => { })
             {
             }
 

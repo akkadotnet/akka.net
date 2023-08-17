@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Sinks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -97,8 +97,7 @@ namespace Akka.Streams.Implementation
 
         object ISinkModule.Create(MaterializationContext context, out object materializer)
         {
-            TMat m;
-            var result = Create(context, out m);
+            var result = Create(context, out var m);
             materializer = m;
             return result;
         }
@@ -486,7 +485,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> In = new Inlet<T>("LastOrDefault.in");
+        public readonly Inlet<T> In = new("LastOrDefault.in");
 
         /// <summary>
         /// TBD
@@ -571,7 +570,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> In = new Inlet<T>("FirstOrDefault.in");
+        public readonly Inlet<T> In = new("FirstOrDefault.in");
 
         /// <summary>
         /// TBD
@@ -675,7 +674,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> In = new Inlet<T>("Seq.in");
+        public readonly Inlet<T> In = new("Seq.in");
 
         /// <summary>
         /// TBD
@@ -817,7 +816,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<T> In = new Inlet<T>("QueueSink.in");
+        public readonly Inlet<T> In = new("QueueSink.in");
 
         /// <summary>
         /// TBD
@@ -1038,7 +1037,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("lazySink.in");
+        public Inlet<TIn> In { get; } = new("lazySink.in");
 
         /// <summary>
         /// TBD
@@ -1072,7 +1071,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly ObservableLogic _logic;
             private readonly IObserver<T> _observer;
-            private readonly AtomicBoolean _disposed = new AtomicBoolean(false);
+            private readonly AtomicBoolean _disposed = new(false);
 
             public ObserverDisposable(ObservableLogic logic, IObserver<T> observer)
             {
@@ -1148,7 +1147,7 @@ namespace Akka.Streams.Implementation
             Shape = new SinkShape<T>(Inlet);
         }
 
-        public Inlet<T> Inlet { get; } = new Inlet<T>("observable.in");
+        public Inlet<T> Inlet { get; } = new("observable.in");
         public override SinkShape<T> Shape { get; }
         public override ILogicAndMaterializedValue<IObservable<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {

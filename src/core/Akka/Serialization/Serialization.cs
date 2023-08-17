@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Serialization.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -143,9 +143,9 @@ namespace Akka.Serialization
 
         private readonly Serializer _nullSerializer;
 
-        private readonly ConcurrentDictionary<Type, Serializer> _serializerMap = new ConcurrentDictionary<Type, Serializer>();
-        private readonly Dictionary<int, Serializer> _serializersById = new Dictionary<int, Serializer>();
-        private readonly Dictionary<string, Serializer> _serializersByName = new Dictionary<string, Serializer>();
+        private readonly ConcurrentDictionary<Type, Serializer> _serializerMap = new();
+        private readonly Dictionary<int, Serializer> _serializersById = new();
+        private readonly Dictionary<string, Serializer> _serializersByName = new();
 
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
         private readonly MinimalLogger _initializationLogger;
@@ -561,9 +561,9 @@ namespace Akka.Serialization
 
             var path = actorRef.Path;
             ExtendedActorSystem originalSystem = null;
-            if (actorRef is ActorRefWithCell)
+            if (actorRef is ActorRefWithCell actorRefWithCell)
             {
-                originalSystem = actorRef.AsInstanceOf<ActorRefWithCell>().Underlying.System.AsInstanceOf<ExtendedActorSystem>();
+                originalSystem = actorRefWithCell.Underlying.System.AsInstanceOf<ExtendedActorSystem>();
             }
 
             if (CurrentTransportInformation == null)

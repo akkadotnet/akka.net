@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Gossip.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -55,7 +55,7 @@ namespace Akka.Cluster
         /// <summary>
         /// An empty <see cref="Gossip"/> object.
         /// </summary>
-        public static readonly Gossip Empty = new Gossip(EmptyMembers);
+        public static readonly Gossip Empty = new(EmptyMembers);
 
         /// <summary>
         /// Creates a new <see cref="Gossip"/> from the given set of members.

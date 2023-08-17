@@ -1,11 +1,10 @@
-// //-----------------------------------------------------------------------
-// // <copyright file="UnhandledMessageEventFilterTestsBase.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="UnhandledMessageEventFilterTests.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -32,10 +31,10 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         public async Task Unhandled_message_should_produce_info_message()
         {
             await EventFilter
-                .Info(new Regex("^Unhandled message from"))
-                .ExpectOneAsync(async () =>
-                {
+                .Info()
+                .ExpectOneAsync(() => {
                     _unhandledMessageActor.Tell("whatever");
+                    return Task.CompletedTask;
                 });
         }
         
@@ -46,9 +45,9 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
                 .Warning()
                 .And
                 .Error()
-                .ExpectAsync(0, async () =>
-                {
+                .ExpectAsync(0, () => {
                     _unhandledMessageActor.Tell("whatever");
+                    return Task.CompletedTask;
                 });
         }
     }

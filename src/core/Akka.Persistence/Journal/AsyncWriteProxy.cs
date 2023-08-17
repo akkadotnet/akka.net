@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncWriteProxy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -416,7 +416,7 @@ namespace Akka.Persistence.Journal
         public class InitTimeout
         {
             private InitTimeout() { }
-            private static readonly InitTimeout _instance = new InitTimeout();
+            private static readonly InitTimeout _instance = new();
 
             /// <summary>
             /// TBD
@@ -465,15 +465,14 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if (message is IPersistentRepresentation) _replayCallback(message as IPersistentRepresentation);
+            if (message is IPersistentRepresentation representation) _replayCallback(representation);
             else if (message is AsyncWriteTarget.ReplaySuccess)
             {
                 _replayCompletionPromise.SetResult(new object());
                 Context.Stop(Self);
             }
-            else if (message is AsyncWriteTarget.ReplayFailure)
+            else if (message is AsyncWriteTarget.ReplayFailure failure)
             {
-                var failure = message as AsyncWriteTarget.ReplayFailure;
                 _replayCompletionPromise.SetException(failure.Cause);
                 Context.Stop(Self);
             }

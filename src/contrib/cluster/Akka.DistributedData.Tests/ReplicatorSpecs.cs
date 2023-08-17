@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReplicatorSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -59,11 +59,11 @@ namespace Akka.DistributedData.Tests
         private readonly ReadMajority _readMajority;
         private readonly ReadAll _readAll;
 
-        private readonly PNCounterDictionaryKey<string> _keyC = new PNCounterDictionaryKey<string>("C");
-        private readonly ORDictionaryKey<string, Flag> _keyH = new ORDictionaryKey<string, Flag>("H");
-        private readonly GSetKey<string> _keyI = new GSetKey<string>("I");
-        private readonly ORMultiValueDictionaryKey<string, string> _keyJ = new ORMultiValueDictionaryKey<string, string>("J");
-        private readonly LWWDictionaryKey<string, string> _keyK = new LWWDictionaryKey<string, string>("K");
+        private readonly PNCounterDictionaryKey<string> _keyC = new("C");
+        private readonly ORDictionaryKey<string, Flag> _keyH = new("H");
+        private readonly GSetKey<string> _keyI = new("I");
+        private readonly ORMultiValueDictionaryKey<string, string> _keyJ = new("J");
+        private readonly LWWDictionaryKey<string, string> _keyK = new("K");
 
         public ReplicatorSpecs(ITestOutputHelper helper) : base(SpecConfig, helper)
         {
@@ -173,7 +173,7 @@ namespace Akka.DistributedData.Tests
             await ReplicatorDuplicatePublish();
         }
 
-        private async Task ReplicatorDuplicatePublish()
+        private Task ReplicatorDuplicatePublish()
         {
             var p1 = CreateTestProbe(_sys1);
             var p2 = CreateTestProbe(_sys2);
@@ -205,6 +205,7 @@ namespace Akka.DistributedData.Tests
 
             // no probe should receive an update
             p2.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -217,7 +218,7 @@ namespace Akka.DistributedData.Tests
             await PNCounterDictionary_Should_Merge();
         }
 
-        private async Task PNCounterDictionary_Should_Merge()
+        private Task PNCounterDictionary_Should_Merge()
         {
             var p1 = CreateTestProbe(_sys1);
             var p2 = CreateTestProbe(_sys2);
@@ -262,6 +263,7 @@ namespace Akka.DistributedData.Tests
             });
 
             Sys.Log.Info("Done");
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -366,7 +368,7 @@ namespace Akka.DistributedData.Tests
             await ORMultiValueDictionary_Should_Merge();
         }
 
-        private async Task ORMultiValueDictionary_Should_Merge()
+        private Task ORMultiValueDictionary_Should_Merge()
         {
             var changedProbe = CreateTestProbe(_sys2);
 
@@ -475,6 +477,7 @@ namespace Akka.DistributedData.Tests
                         changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries);
                 });
             });
+            return Task.CompletedTask;
         }
 
         private void VerifyMultiValueDictionaryEntries(
@@ -646,12 +649,12 @@ namespace Akka.DistributedData.Tests
             node3EntriesBCA["A"].Should().BeEquivalentTo(entryA1);
         }
         
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(_sys1);
-            await ShutdownAsync(_sys2);
-            await ShutdownAsync(_sys3);
+            base.AfterAll();
+            Shutdown(_sys1);
+            Shutdown(_sys2);
+            Shutdown(_sys3);
             GC.Collect();
         }
 

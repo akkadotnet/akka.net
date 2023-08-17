@@ -1,8 +1,8 @@
 ---
 uid: cluster-sharding
-title: Akka.Cluster.Sharding module
+title: Akka.Cluster.Sharding - Reliable, Automatic State Distribution with Akka.Cluster
 ---
-# Akka.Cluster.Sharding Module
+# Akka.Cluster.Sharding
 
 Cluster sharding is useful in cases when you want to contact with cluster actors using their logical id's, but don't want to care about their physical location inside the cluster or manage their creation. Moreover it's able to re-balance them, as nodes join/leave the cluster. It's often used to represent i.e. Aggregate Roots in Domain Driven Design terminology.
 
@@ -11,7 +11,7 @@ Cluster sharding is useful in cases when you want to contact with cluster actors
 
 Cluster sharding can operate in 2 modes, configured via `akka.cluster.sharding.state-store-mode` HOCON configuration:
 
-1. `persistence` (**default**) depends on Akka.Persistence module. In order to use it, you'll need to specify an event journal accessible by all of the participating nodes. An information about the particular shard placement is stored in a persistent cluster singleton actor known as *coordinator*. In order to guarantee consistent state between different incarnations, coordinator stores its own state using Akka.Persistence event journals.
+1. `persistence` (**default**) depends on Akka.Persistence module. In order to use it, you'll need to specify an event journal accessible by all of the participating nodes. An information about the particular shard placement is stored in a persistent cluster singleton actor known as *coordinator*. In order to guarantee consistent state between different incarnations, coordinator stores its own state using Akka.Persistence event journals. **This setting is being deprecated after 1.5 - please move to using `state-store-mode=ddata` for all new and existing applications**.
 2. `ddata` depends on Akka.DistributedData module. It uses Conflict-free Replicated Data Types (CRDT) to ensure eventually consistent shard placement and global availability via node-to-node replication and automatic conflict resolution. In this mode event journals don't have to be configured.
 
 Cluster sharding may be active only on nodes in `Up` status - so the ones fully recognized and acknowledged by every other node in a cluster.
@@ -83,6 +83,10 @@ As you may have seen in the examples above shard resolution algorithm is one of 
 
 By default re-balancing process always happens from nodes with the highest number of shards, to the ones with the smallest one. This can be configured into by specifying custom implementation of the `IShardAllocationStrategy` interface in `ClusterSharding.Start` parameters.
 
+## Reliable Delivery of Messages to Sharded Entity Actors
+
+If you are interested in ensuring that all messages are guaranteed to be delivered to your entity actors even across restarts, re-balancing operations, or crashes then please see "[Reliable Delivery over Akka.Cluster.Sharding](xref:cluster-sharding-delivery)."
+
 ## Passivation
 
 To reduce memory consumption, you may decide to stop entities after some period of inactivity using `Context.SetReceiveTimeout(timeout)`. In order to make cluster sharding aware of stopping entities, **DON'T use `Context.Stop(Self)` on the entities**, as this may result in losing messages. Instead send a `ShardRegion.Passivate` message to current entity `Context.Parent` (which is shard itself in this case). This will inform shard to stop forwarding messages to target entity, and buffer them instead until it's terminated. Once that happens, if there are still some messages buffered, entity will be reincarnated and messages flushed to it automatically.
@@ -124,17 +128,23 @@ Using `ShardRegion.StartEntity` implies, that you're able to infer a shard id gi
 
 ### Remember Entities Store
 
-There are two options for the remember entities store:
-
-1. Distributed data
-2. Persistence
-
-#### Remember Entities Persistence Mode
-
-You can enable persistence mode (enabled by default) with:
+As of Akka.NET v1.5, there is now a dedicated setting for storing data about remembered entities:
 
 ```hocon
-akka.cluster.sharding.state-store-mode = persistence
+akka.cluster.sharding{
+  state-store-mode = ddata
+  remember-entities-store = eventsourced or ddata
+}
+```
+
+You don't need to configure this setting if you don't have `remember-entities=on`.
+
+#### Remember Entities Event Sourced Mode
+
+You can enable event sourced with:
+
+```hocon
+akka.cluster.sharding.remember-entities-store = eventsourced
 ```
 
 This mode uses [persistence](../persistence/event-sourcing.md) to store the active shards and active entities for each shard.
@@ -208,10 +218,12 @@ akka.cluster.sharding.snapshot-plugin-id = akka.persistence.snapshot-store.shard
 
 #### Remember Entities Distributed Data Mode
 
+It's recommended to use `state-store-mode=eventsourced` as it's much faster and more scalable than `ddata`, but in case you can't use Akka.Persistence for some reason you can still use DData.
+
 You can enable DData mode by setting these configuration:
 
 ```hocon
-akka.cluster.sharding.state-store-mode = ddata
+akka.cluster.sharding.remember-entities-store = ddata
 ```
 
 To support restarting entities after a full cluster restart (non-rolling) the remember entities store is persisted to disk by distributed data. This can be disabled if not needed:
@@ -402,3 +414,13 @@ In this example, we will use the built-in `HashCodeMessageExtractor`; this extra
 shard id by applying murmur hash algorithm on the entity id so we don't need to create our own.
 
 [!code-csharp[MessageExtractor.cs](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/MessageExtractor.cs?name=ExtractorClass "Message envelope and extractor class")]
+
+### Migrating to Different Sharding State Storage Modes
+
+After you've gone live with Akka.Cluster.Sharding, one day you might decide it'd be better to migrate from `state-store-mode=persistence` to `state-store-mode=ddata` as the latter is more performant and resilient, plus the former (persistence) will be deprecated eventually.
+
+Migrating between storage modes requires a **full restart of your Akka.Cluster** as it's a significant, far-reaching change. You can see a demonstration of how to perform this upgrade in our ["Akka NET v1.5 New Features and Upgrade Guide" video beginning at 12:53](https://youtu.be/-UPestlIw4k?t=773).
+
+<!-- markdownlint-disable MD033 -->
+<iframe width="560" height="315" src="https://www.youtube.com/embed/-UPestlIw4k" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->

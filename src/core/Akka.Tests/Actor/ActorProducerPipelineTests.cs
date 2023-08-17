@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorProducerPipelineTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -43,7 +43,6 @@ namespace Akka.Tests.Actor
 
         internal class PlugActorA : PlugActor { }
         internal class PlugActorB : PlugActor { }
-
         internal class GenericPlugin<T> : ActorProducerPluginBase<T> where T : PlugActor
         {
             public override void AfterIncarnated(T actor, IActorContext context)
@@ -51,7 +50,6 @@ namespace Akka.Tests.Actor
                 actor.PluginMessages.Add(typeof(T).ToString());
             }
         }
-
         internal class WorkingPlugin : ActorProducerPluginBase<PlugActor>
         {
             public override void AfterIncarnated(PlugActor actor, IActorContext context)
@@ -59,7 +57,6 @@ namespace Akka.Tests.Actor
                 actor.PluginMessages.Add("working plugin");
             }
         }
-
         internal class FailingPlugin : ActorProducerPluginBase<PlugActor>
         {
             public override void AfterIncarnated(PlugActor actor, IActorContext context)
@@ -68,7 +65,6 @@ namespace Akka.Tests.Actor
                 throw new TestException("plugin failed");
             }
         }
-
         internal class OrderedPlugin : ActorProducerPluginBase<PlugActor>
         {
             private readonly int _index;
@@ -101,7 +97,7 @@ namespace Akka.Tests.Actor
 
         internal sealed class StashStatus
         {
-            public static readonly StashStatus Instance = new StashStatus();
+            public static readonly StashStatus Instance = new();
             private StashStatus() { }
         }
 
@@ -109,7 +105,7 @@ namespace Akka.Tests.Actor
         {
             public StashingActor()
             {
-                Receive<StashStatus>(status => Sender.Tell("actor stash is " + (Stash != null ? "initialized" : "uninitialized")));
+                Receive<StashStatus>(_ => Sender.Tell("actor stash is " + (Stash != null ? "initialized" : "uninitialized")));
                 ReceiveAny(_ => Stash.Stash());
             }
 
@@ -123,7 +119,9 @@ namespace Akka.Tests.Actor
         public ActorProducerPipelineTests()
         {
             var extendedSystem = (ExtendedActorSystem)Sys;
+
             _resolver = extendedSystem.ActorPipelineResolver;
+
         }
 
         [Fact]
@@ -189,16 +187,16 @@ namespace Akka.Tests.Actor
         {
             // we'll send 3 int messages to stash by the actor and then stop it,
             // all stashed messages should then be unstashed back and sent to dead letters
-            await EventFilter.DeadLetter<int>().ExpectAsync(3, async () =>
-            {
+            await EventFilter.DeadLetter<int>().ExpectAsync(3, () => {
                 var actor = ActorOf<StashingActor>();
                 // send some messages to stash
                 actor.Tell(1);
                 actor.Tell(2);
                 actor.Tell(3);
-                
+
                 // stop actor
                 actor.Tell(PoisonPill.Instance);
+                return Task.CompletedTask;
             });
         }
     }

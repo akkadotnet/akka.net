@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DirectBufferPool.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -110,14 +110,14 @@ namespace Akka.IO.Buffers
     internal sealed class DirectBufferPool : IBufferPool
     {
         private const int Retries = 30;
-        private readonly object _syncRoot = new object();
+        private readonly object _syncRoot = new();
 
         private readonly int _bufferSize;
         private readonly int _buffersPerSegment;
         private readonly int _segmentSize;
         private readonly int _maxSegmentCount;
 
-        private readonly ConcurrentStack<ByteBuffer> _buffers = new ConcurrentStack<ByteBuffer>();
+        private readonly ConcurrentStack<ByteBuffer> _buffers = new();
         private readonly List<byte[]> _segments;
 
         /// <summary>
@@ -153,7 +153,7 @@ namespace Akka.IO.Buffers
         }
 
         public BufferPoolInfo Diagnostics()
-            => new BufferPoolInfo(
+            => new(
                 type: typeof(DirectBufferPool),
                 totalSize: _segments.Count * _segmentSize,
                 free: _buffers.Count * _bufferSize,
@@ -184,8 +184,7 @@ namespace Akka.IO.Buffers
         {
             for (int i = 0; i < Retries; i++)
             {
-                ByteBuffer buf;
-                if (_buffers.TryPop(out buf))
+                if (_buffers.TryPop(out var buf))
                     return buf;
                 AllocateSegment();
             }
@@ -202,10 +201,9 @@ namespace Akka.IO.Buffers
             {
                 for (int i = 0; i < Retries; i++)
                 {
-                    ByteBuffer buf;
                     while (received < buffersToGet)
                     {
-                        if (!_buffers.TryPop(out buf)) break;
+                        if (!_buffers.TryPop(out var buf)) break;
                         result[received] = buf;
                         received++;
                     }

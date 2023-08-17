@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="ActorMessagingMemoryPressureBenchmark.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorMessagingMemoryPressureBenchmark.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
@@ -21,7 +21,7 @@ namespace Akka.Benchmarks.Actor
         public sealed class StopActor
         {
             private StopActor(){}
-            public static readonly StopActor Instance = new StopActor();
+            public static readonly StopActor Instance = new();
         }
         
         public sealed class MyActor : ReceiveActor

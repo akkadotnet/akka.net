@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LocalSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,7 +27,7 @@ namespace Akka.Persistence.Snapshot
     /// </remarks>
     public class LocalSnapshotStore : SnapshotStore
     {
-        private static readonly Regex FilenameRegex = new Regex(@"^snapshot-(.+)-(\d+)-(\d+)", RegexOptions.Compiled);
+        private static readonly Regex FilenameRegex = new(@"^snapshot-(.+)-(\d+)-(\d+)", RegexOptions.Compiled);
 
         private readonly int _maxLoadAttempts;
         private readonly MessageDispatcher _streamDispatcher;
@@ -289,8 +289,7 @@ namespace Akka.Persistence.Snapshot
                 var seqNrString = match.Groups[2].Value;
                 var timestampTicks = match.Groups[3].Value;
 
-                long sequenceNr, ticks;
-                if (long.TryParse(seqNrString, out sequenceNr) && long.TryParse(timestampTicks, out ticks))
+                if (long.TryParse(seqNrString, out var sequenceNr) && long.TryParse(timestampTicks, out var ticks))
                 {
                     return new SnapshotMetadata(pid, sequenceNr, new DateTime(ticks));
                 }

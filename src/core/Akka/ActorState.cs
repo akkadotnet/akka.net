@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorState.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -403,10 +403,10 @@ namespace Akka.Actor
     /// </summary>
     internal class FullActorState : IActorState
     {
-        private readonly Dictionary<IActorRef, Option<object>> _watching = new Dictionary<IActorRef, Option<object>>();
-        private readonly HashSet<IActorRef> _watchedBy = new HashSet<IActorRef>();
-        private readonly Dictionary<IActorRef, Option<object>> _terminatedQueue = new Dictionary<IActorRef, Option<object>>(); //terminatedqueue should never be used outside the message loop
-        private Stack<Receive> _behaviorStack = new Stack<Receive>(2);
+        private readonly Dictionary<IActorRef, Option<object>> _watching = new();
+        private readonly HashSet<IActorRef> _watchedBy = new();
+        private readonly Dictionary<IActorRef, Option<object>> _terminatedQueue = new(); //terminatedqueue should never be used outside the message loop
+        private Stack<Receive> _behaviorStack = new(2);
         /// <summary>
         /// TBD
         /// </summary>
@@ -641,3 +641,4 @@ namespace Akka.Actor
         }
     }
 }
+

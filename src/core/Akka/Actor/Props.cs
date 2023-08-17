@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Props.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,8 +36,8 @@ namespace Akka.Actor
     {
         private const string NullActorTypeExceptionText = "Props must be instantiated with an actor type.";
 
-        private static readonly Deploy DefaultDeploy = new Deploy();
-        private static readonly object[] NoArgs = { };
+        private static readonly Deploy DefaultDeploy = new();
+        private static readonly object[] NoArgs = Array.Empty<object>();
 
         /// <summary>
         ///     A pre-configured <see cref="Akka.Actor.Props" /> that doesn't create actors.
@@ -162,8 +162,10 @@ namespace Akka.Actor
         /// <param name="type">The type of the actor to create.</param>
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <exception cref="ArgumentException">This exception is thrown if <paramref name="type" /> is an unknown actor producer.</exception>
-        public Props(Deploy deploy, Type type, params object[] args) 
+        public Props(Deploy deploy, Type type, params object[] args)
+#pragma warning disable CS0618 // Type or member is obsolete
             : this(CreateProducer(type, args), deploy, args) // have to preserve the "CreateProducer" call here to preserve backwards compat with Akka.DI.Core
+#pragma warning restore CS0618 // Type or member is obsolete
         {
 
         }
@@ -466,6 +468,25 @@ namespace Akka.Actor
             copy.Deploy = Deploy.WithRouterConfig(routerConfig);
             return copy;
         }
+        
+        /// <summary>
+        ///     Creates a new <see cref="Akka.Actor.Props" /> with a given stash size.
+        ///     <note>
+        ///         This method is immutable and returns a new instance of <see cref="Akka.Actor.Props" />.
+        ///     </note>
+        /// </summary>
+        /// <remarks>
+        /// If the actor doesn't use an <see cref="IStash"/> or if it uses an <see cref="IWithUnboundedStash"/>, then this
+        /// setting will be ignored.
+        /// </remarks>
+        /// <param name="stashCapacity">The stash size to use when creating the actor.</param>
+        /// <returns>A new <see cref="Akka.Actor.Props" /> with the provided stash size..</returns>
+        public Props WithStashCapacity(int stashCapacity)
+        {
+            var copy = Copy();
+            copy.Deploy = Deploy.WithStashCapacity(stashCapacity);
+            return copy;
+        }
 
         /// <summary>
         ///     Creates a new <see cref="Akka.Actor.Props" /> with a given deployment configuration.
@@ -638,7 +659,7 @@ namespace Akka.Actor
         {
             private DefaultProducer(){}
 
-            public static readonly DefaultProducer Instance = new DefaultProducer();
+            public static readonly DefaultProducer Instance = new();
 
             public ActorBase Produce()
             {

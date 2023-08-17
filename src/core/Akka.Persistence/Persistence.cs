@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Persistence.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Journal;
@@ -51,7 +52,7 @@ namespace Akka.Persistence
         private readonly Lazy<IStashOverflowStrategy> _defaultInternalStashOverflowStrategy;
         private readonly Lazy<IActorRef> _recoveryPermitter;
 
-        private readonly ConcurrentDictionary<string, Lazy<PluginHolder>> _pluginExtensionIds = new ConcurrentDictionary<string, Lazy<PluginHolder>>();
+        private readonly ConcurrentDictionary<string, Lazy<PluginHolder>> _pluginExtensionIds = new();
 
         private const string JournalFallbackConfigPath = "akka.persistence.journal-plugin-fallback";
         private const string SnapshotStoreFallbackConfigPath = "akka.persistence.snapshot-store-plugin-fallback";
@@ -231,6 +232,7 @@ namespace Akka.Persistence
         /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
         /// </exception>
         /// <returns>TBD</returns>
+        [InternalStableApi]
         public IActorRef JournalFor(string journalPluginId)
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
@@ -249,6 +251,7 @@ namespace Akka.Persistence
         /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
         /// </exception>
         /// <returns>TBD</returns>
+        [InternalStableApi]
         public IActorRef SnapshotStoreFor(string snapshotPluginId)
         {
             var configPath = string.IsNullOrEmpty(snapshotPluginId) ? _defaultSnapshotPluginId.Value : snapshotPluginId;
@@ -313,7 +316,7 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public static Persistence Instance { get; } = new Persistence();
+        public static Persistence Instance { get; } = new();
 
         /// <summary>
         /// TBD

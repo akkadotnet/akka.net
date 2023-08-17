@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonProxySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,7 +26,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             seed.Cluster.Join(seed.Cluster.SelfAddress);
 
             var testSystems =
-                Enumerable.Range(0, 4).Select(x => new ActorSys(joinTo: seed.Cluster.SelfAddress))
+                Enumerable.Range(0, 4).Select(_ => new ActorSys(joinTo: seed.Cluster.SelfAddress))
                 .Concat(new[] {seed})
                 .ToList();
 
@@ -53,7 +53,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             
             // have to wait for cluster singleton to be ready, otherwise message will be rejected
             await AwaitConditionAsync(
-                async () => Cluster.Get(testSystem.Sys).State.Members.Count(m => m.Status == MemberStatus.Up) == 2,
+                () => Task.FromResult(Cluster.Get(testSystem.Sys).State.Members.Count(m => m.Status == MemberStatus.Up) == 2),
                 TimeSpan.FromSeconds(30));
 
             try

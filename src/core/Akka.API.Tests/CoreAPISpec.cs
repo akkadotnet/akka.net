@@ -1,10 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CoreAPISpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster;
@@ -16,10 +19,10 @@ using Akka.Persistence.Query;
 using static PublicApiGenerator.ApiGenerator;
 using Akka.Cluster.Sharding;
 using Akka.Cluster.Metrics;
+using Akka.Persistence.Query.InMemory;
 using Akka.Persistence.Query.Sql;
 using Akka.Persistence.Sql.Common.Journal;
 using Akka.Streams;
-using VerifyTests;
 using VerifyXunit;
 
 namespace Akka.API.Tests
@@ -27,18 +30,9 @@ namespace Akka.API.Tests
     [UsesVerify]
     public class CoreAPISpec
     {
-        static CoreAPISpec()
-        {
-            VerifierSettings.ScrubLinesContaining("[assembly: ReleaseDateAttribute(");
-            VerifyDiffPlex.Initialize();
-        }
-
         static Task VerifyAssembly<T>()
         {
-            var settings = new VerifySettings() { };
-            settings.UniqueForRuntime();
-            settings.UseDirectory("verify");
-            return Verifier.Verify(GeneratePublicApi(typeof(T).Assembly), settings);
+            return Verifier.Verify(GeneratePublicApi(typeof(T).Assembly));
         }
 
         [Fact]
@@ -75,6 +69,12 @@ namespace Akka.API.Tests
         public Task ApprovePersistenceSqlCommonQuery()
         {
             return VerifyAssembly<SqlReadJournal>();
+        }
+
+        [Fact]
+        public Task ApprovePersistenceInMemoryQuery()
+        {
+            return VerifyAssembly<InMemoryReadJournal>();
         }
 
         [Fact]

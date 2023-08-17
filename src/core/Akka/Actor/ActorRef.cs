@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -560,10 +560,12 @@ namespace Akka.Actor
         {
             get { return true; }
         }
-
+        
         /// <inheritdoc cref="InternalActorRefBase"/>
         [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
+#pragma warning disable CS0809
         public override bool IsTerminated { get { return false; } }
+#pragma warning restore CS0809
     }
 
 
@@ -588,7 +590,7 @@ namespace Akka.Actor
             }
         }
 
-        private static readonly IgnoreActorRefSurrogate SurrogateInstance = new IgnoreActorRefSurrogate();
+        private static readonly IgnoreActorRefSurrogate SurrogateInstance = new();
 
         private const string fakeSystemName = "local";
 
@@ -650,9 +652,9 @@ namespace Akka.Actor
         /// <summary>
         /// Singleton instance of <see cref="Nobody"/>.
         /// </summary>
-        public static Nobody Instance = new Nobody();
+        public static Nobody Instance = new();
 
-        private static readonly NobodySurrogate SurrogateInstance = new NobodySurrogate();
+        private static readonly NobodySurrogate SurrogateInstance = new();
         private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/Nobody");
 
         private Nobody() { }
@@ -734,7 +736,7 @@ namespace Akka.Actor
         private readonly IActorRefProvider _provider;
         private readonly ActorPath _path;
 
-        private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new ConcurrentDictionary<string, IInternalActorRef>();
+        private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new();
 
         /// <summary>
         /// TBD
@@ -801,7 +803,7 @@ namespace Akka.Actor
         /// <param name="actor">TBD</param>
         public void AddChild(string name, IInternalActorRef actor)
         {
-            _children.AddOrUpdate(name, actor, (k, v) =>
+            _children.AddOrUpdate(name, actor, (_, v) =>
             {
                 Log.Warning("{0} replacing child {1} ({2} -> {3})", name, actor, v, actor);
                 return v;

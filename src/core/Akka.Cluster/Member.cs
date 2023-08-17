@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Member.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -255,7 +255,7 @@ namespace Akka.Cluster
         /// Orders the members by their address except that members with status
         /// Joining, Exiting and Down are ordered last (in that order).
         /// </summary>
-        internal static readonly LeaderStatusMemberComparer LeaderStatusOrdering = new LeaderStatusMemberComparer();
+        internal static readonly LeaderStatusMemberComparer LeaderStatusOrdering = new();
 
         /// <summary>
         /// INTERNAL API
@@ -283,7 +283,7 @@ namespace Akka.Cluster
         /// <summary>
         /// <see cref="Member"/> ordering type class, sorts members by host and port.
         /// </summary>
-        internal static readonly MemberComparer Ordering = new MemberComparer();
+        internal static readonly MemberComparer Ordering = new();
 
         /// <summary>
         /// INTERNAL API

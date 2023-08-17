@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowAggregateAsyncSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -56,51 +56,54 @@ namespace Akka.Streams.Tests.Dsl
 
 
         [Fact]
-        public void A_AggregateAsync_must_work_when_using_Source_AggregateAsync()
+        public async Task A_AggregateAsync_must_work_when_using_Source_AggregateAsync()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var task = AggregateSource.RunWith(Sink.First<int>(), Materializer);
-                task.AwaitResult().Should().Be(Expected);
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Be(Expected);
             }, Materializer);
         }
 
         [Fact]
-        public void A_AggregateAsync_must_work_when_using_Sink_AggregateAsync()
+        public async Task A_AggregateAsync_must_work_when_using_Sink_AggregateAsync()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var task = InputSource.RunWith(AggregateSink, Materializer);
-                task.AwaitResult().Should().Be(Expected);
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Be(Expected);
             }, Materializer);
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void A_AggregateAsync_must_work_when_using_Flow_AggregateAsync()
+        public async Task A_AggregateAsync_must_work_when_using_Flow_AggregateAsync()
         {
             var flowTimeout = TimeSpan.FromMilliseconds(FlowDelayInMs*Input.Count()) + TimeSpan.FromSeconds(3);
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var task = InputSource.Via(AggregateFlow).RunWith(Sink.First<int>(), Materializer);
-                task.AwaitResult(flowTimeout).Should().Be(Expected);
+                var complete = await task.ShouldCompleteWithin(flowTimeout);
+                complete.Should().Be(Expected);
             }, Materializer);
         }
 
         [Fact]
-        public void A_AggregateAsync_must_work_when_using_Source_AggregateAsync_and_Flow_AggregateAsync_and_Sink_AggregateAsync()
+        public async Task A_AggregateAsync_must_work_when_using_Source_AggregateAsync_and_Flow_AggregateAsync_and_Sink_AggregateAsync()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var task = AggregateSource.Via(AggregateFlow).RunWith(AggregateSink, Materializer);
-                task.AwaitResult().Should().Be(Expected);
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Be(Expected);
             }, Materializer);
         }
 
         [Fact]
-        public void A_AggregateAsync_must_propagate_an_error()
+        public async Task A_AggregateAsync_must_propagate_an_error()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var error = new TestException("buh");
                 var future = InputSource.Select(x =>
                 {
@@ -112,14 +115,14 @@ namespace Akka.Streams.Tests.Dsl
                 future.Invoking(f => f.Wait(TimeSpan.FromSeconds(3)))
                     .Should().Throw<TestException>()
                     .And.Should().Be(error);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_AggregateAsync_must_complete_task_with_failure_when_Aggregating_functions_throws()
+        public async Task A_AggregateAsync_must_complete_task_with_failure_when_Aggregating_functions_throws()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var error = new TestException("buh");
                 var future = InputSource.RunAggregateAsync(0, (x, y) =>
                 {
@@ -135,6 +138,7 @@ namespace Akka.Streams.Tests.Dsl
                 future.Invoking(f => f.Wait(TimeSpan.FromSeconds(3)))
                     .Should().Throw<TestException>()
                     .And.Should().Be(error);
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -155,10 +159,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_signal_task_failure()
+        public async Task A_AggregateAsync_must_signal_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe = this.CreateSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 5)).AggregateAsync(0, (_, n) => Task.Run(() =>
                 {
@@ -170,14 +173,14 @@ namespace Akka.Streams.Tests.Dsl
                 var subscription = probe.ExpectSubscription();
                 subscription.Request(100);
                 probe.ExpectError().InnerException.Message.Should().Be("err1");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_AggregateAsync_must_signal_error_from_AggregateAsync()
+        public async Task A_AggregateAsync_must_signal_error_from_AggregateAsync()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var c = this.CreateManualSubscriberProbe<int>();
 
                 Source.From(Enumerable.Range(1, 5)).AggregateAsync(0, (_, n) =>
@@ -191,14 +194,14 @@ namespace Akka.Streams.Tests.Dsl
                 var subscription = c.ExpectSubscription();
                 subscription.Request(10);
                 c.ExpectError().Message.Should().Be("err2");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_AggregateAsync_must_resume_after_task_failure()
+        public async Task A_AggregateAsync_must_resume_after_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe = this.CreateSubscriberProbe<(int, int)>();
                 Source.From(Enumerable.Range(1, 5)).AggregateAsync((0, 1), (t, n) =>
                     {
@@ -209,7 +212,7 @@ namespace Akka.Streams.Tests.Dsl
                             if (n == 3)
                                 throw new Exception("err3");
 
-                            return (n, i + res*n);
+                            return (n, i + res * n);
                         });
                     })
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
@@ -220,14 +223,14 @@ namespace Akka.Streams.Tests.Dsl
                 subscription.Request(10);
                 probe.ExpectNext((5, 74));
                 probe.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_AggregateAsync_must_restart_after_task_failure()
+        public async Task A_AggregateAsync_must_restart_after_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var probe = this.CreateSubscriberProbe<(int, int)>();
                 Source.From(Enumerable.Range(1, 5)).AggregateAsync((0, 1), (t, n) =>
                 {
@@ -249,6 +252,7 @@ namespace Akka.Streams.Tests.Dsl
                 subscription.Request(10);
                 probe.ExpectNext((5, 24));
                 probe.ExpectComplete();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -277,11 +281,11 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_finish_after_task_failure()
+        public async Task A_AggregateAsync_must_finish_after_task_failure()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
-                Source.From(Enumerable.Range(1, 3)).AggregateAsync(1, (_, n) => Task.Run(() =>
+                var complete = await Source.From(Enumerable.Range(1, 3)).AggregateAsync(1, (_, n) => Task.Run(() =>
                     {
                         if (n == 3)
                             throw new Exception("err3b");
@@ -290,7 +294,8 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer)
-                    .AwaitResult().Should().BeEquivalentTo(2);
+                    .ShouldCompleteWithin(3.Seconds());
+                complete.Should().BeEquivalentTo(2);
             }, Materializer);
         }
 
@@ -342,7 +347,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var c = this.CreateManualSubscriberProbe<string>();
             Source.From(new[] {"a", "b"})
-                .AggregateAsync("", (_, __) => Task.FromResult<string>(null))
+                .AggregateAsync("", (_, _) => Task.FromResult<string>(null))
                 .To(Sink.FromSubscriber(c))
                 .Run(Materializer);
 
@@ -394,10 +399,9 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_AggregateAsync_must_handle_cancel_properly()
+        public async Task A_AggregateAsync_must_handle_cancel_properly()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var pub = this.CreateManualPublisherProbe<int>();
                 var sub = this.CreateSubscriberProbe<int>();
 
@@ -409,30 +413,33 @@ namespace Akka.Streams.Tests.Dsl
                 upstream.ExpectRequest();
 
                 sub.ExpectSubscription().Cancel();
-                
+
                 upstream.ExpectCancellation();
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void A_AggregateAsync_must_complete_task_and_return_zero_given_an_empty_stream()
+        public async Task A_AggregateAsync_must_complete_task_and_return_zero_given_an_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var task = Source.From(Enumerable.Empty<int>())
                     .RunAggregateAsync(0, (acc, element) => Task.FromResult(acc + element), Materializer);
-                task.AwaitResult(RemainingOrDefault).ShouldBe(0);
+                var complete = await task.ShouldCompleteWithin(RemainingOrDefault);
+                complete.ShouldBe(0);
             }, Materializer);
         }
 
         [Fact]
-        public void A_AggregateAsync_must_complete_task_and_return_zero_and_item_given_a_stream_of_one_item()
+        public async Task A_AggregateAsync_must_complete_task_and_return_zero_and_item_given_a_stream_of_one_item()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var task = Source.Single(100)
                     .RunAggregateAsync(5, (acc, element) => Task.FromResult(acc + element), Materializer);
-                task.AwaitResult(RemainingOrDefault).ShouldBe(105);
+                var complete = await task.ShouldCompleteWithin(RemainingOrDefault);
+                complete.ShouldBe(105);
             }, Materializer);
         }
     }

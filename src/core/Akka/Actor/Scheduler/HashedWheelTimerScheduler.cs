@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HashedWheelTimerScheduler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -73,9 +73,7 @@ namespace Akka.Actor
         private long _tick;
         private readonly int _mask;
         private readonly CountdownEvent _workerInitialized = new(1);
-
         private readonly ConcurrentQueue<SchedulerRegistration> _registrations = new();
-
         private readonly Bucket[] _wheel;
 
         private const int WORKER_STATE_INIT = 0;
@@ -115,11 +113,9 @@ namespace Akka.Actor
             return normalizedTicksPerWheel;
         }
 
-        private readonly HashSet<SchedulerRegistration>
-            _unprocessedRegistrations = new();
-
+        private readonly HashSet<SchedulerRegistration> _unprocessedRegistrations = new();
         private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new();
-
+        
 #if NET6_0_OR_GREATER
         private PeriodicTimer _timer;
         private readonly CancellationTokenSource _cts = new();

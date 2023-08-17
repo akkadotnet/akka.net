@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="QueryThrottler.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="QueryThrottler.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -18,7 +18,7 @@ namespace Akka.Persistence.Query.Sql;
 /// </summary>
 internal sealed class RequestQueryStart
 {
-    public static readonly RequestQueryStart Instance = new RequestQueryStart();
+    public static readonly RequestQueryStart Instance = new();
     private RequestQueryStart() { }
 }
 
@@ -27,7 +27,7 @@ internal sealed class RequestQueryStart
 /// </summary>
 internal sealed class QueryStartGranted
 {
-    public static readonly QueryStartGranted Instance = new QueryStartGranted();
+    public static readonly QueryStartGranted Instance = new();
     private QueryStartGranted() { }
 }
 
@@ -36,7 +36,7 @@ internal sealed class QueryStartGranted
 /// </summary>
 internal sealed class ReturnQueryStart
 {
-    public static readonly ReturnQueryStart Instance = new ReturnQueryStart();
+    public static readonly ReturnQueryStart Instance = new();
     private ReturnQueryStart() { }
 }
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterMetricsSupervisor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -95,7 +95,7 @@ namespace Akka.Cluster.Metrics
             /// <summary>
             /// Singleton instance for 
             /// </summary>
-            public static readonly CollectionStartMessage Instance = new CollectionStartMessage();
+            public static readonly CollectionStartMessage Instance = new();
         }
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace Akka.Cluster.Metrics
             /// <summary>
             /// Singleton instance for 
             /// </summary>
-            public static readonly CollectionStopMessage Instance = new CollectionStopMessage();
+            public static readonly CollectionStopMessage Instance = new();
         }
     }
 }

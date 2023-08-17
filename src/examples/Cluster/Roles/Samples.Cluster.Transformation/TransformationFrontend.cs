@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TransformationFrontend.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,7 +12,7 @@ namespace Samples.Cluster.Transformation
 {
     public class TransformationFrontend : UntypedActor
     {
-        protected List<IActorRef> Backends = new List<IActorRef>();
+        protected List<IActorRef> Backends = new();
         protected int Jobs = 0;
 
         protected override void OnReceive(object message)

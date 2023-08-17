@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMediatorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
         {
             EventFilter.Exception<NullReferenceException>().Expect(0, () =>
             {
-                var actor = Sys.ActorOf((dsl, context) =>
+                var actor = Sys.ActorOf((dsl, _) =>
                 {
                     IActorRef mediator = null;
                     dsl.OnPreStart = actorContext =>
@@ -48,7 +48,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
                     };
 
                     dsl.Receive<string>(s => s.Equals("check"),
-                        (s, actorContext) => { actorContext.Sender.Tell(mediator); });
+                        (_, actorContext) => { actorContext.Sender.Tell(mediator); });
                 }, "childActor");
 
                 actor.Tell("check");
@@ -66,7 +66,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
         {
             // arrange
             var mediator = DistributedPubSub.Get(Sys).Mediator;
-            var actor = Sys.ActorOf((dsl, context) => { }, "childActor");
+            var actor = Sys.ActorOf((_, _) => { }, "childActor");
 
             // act
             // create a topic
@@ -80,17 +80,17 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 
             // assert
             await EventFilter.DeadLetter<object>().ExpectAsync(1,
-                async () => { mediator.Tell(new Publish("pub-sub", "hit")); });
+                () => { mediator.Tell(new Publish("pub-sub", "hit")); return Task.CompletedTask; });
         }
     }
 
     public sealed class QueryTopics
     {
-        public static QueryTopics Instance = new QueryTopics();
+        public static QueryTopics Instance = new();
     }
 
     public sealed class PublishTopic
     {
-        public static PublishTopic Instance = new PublishTopic();
+        public static PublishTopic Instance = new();
     }
 }

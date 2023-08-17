@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaService.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -49,9 +49,11 @@ namespace Akka.AspNetCore
             //await _actorSystem.WhenTerminated.ContinueWith(tr => {
             //   _applicationLifetime.StopApplication();
             //});
-            _actorSystem.WhenTerminated.ContinueWith(tr => {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            _actorSystem.WhenTerminated.ContinueWith(_ => {
                 _applicationLifetime.StopApplication();
               });
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             await Task.CompletedTask;
         }
 
@@ -67,9 +69,9 @@ namespace Akka.AspNetCore
             _actorRef.Tell(message);
         }
 
-        public async Task<T> Ask<T>(object message)
+        public Task<T> Ask<T>(object message)
         {
-            return await _actorRef.Ask<T>(message);
+            return _actorRef.Ask<T>(message);
         }
     }
 }

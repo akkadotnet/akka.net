@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RestartFlow.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -162,6 +162,7 @@ namespace Akka.Streams.Dsl
         /// <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions"/>.</para>
         /// </summary>
         /// <param name="flowFactory">A factory for producing the <see cref="Flow"/>] to wrap.</param>
+        /// <param name="settings"><see cref="RestartSettings" /> defining restart configuration</param>
         public static Flow<TIn, TOut, NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory, RestartSettings settings)
             => Flow.FromGraph(new RestartWithBackoffFlow<TIn, TOut, TMat>(flowFactory, settings, onlyOnFailures: true));
     }
@@ -183,9 +184,9 @@ namespace Akka.Streams.Dsl
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("RestartWithBackoffFlow.in");
+        public Inlet<TIn> In { get; } = new("RestartWithBackoffFlow.in");
 
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("RestartWithBackoffFlow.out");
+        public Outlet<TOut> Out { get; } = new("RestartWithBackoffFlow.out");
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
@@ -202,7 +203,7 @@ namespace Akka.Streams.Dsl
                 : base(name, stage.Shape, stage.In, stage.Out, stage.Settings, stage.OnlyOnFailures)
             {
                 _inheritedAttributes = inheritedAttributes;
-                _delay = _inheritedAttributes.GetAttribute<RestartWithBackoffFlow.Delay>(new RestartWithBackoffFlow.Delay(TimeSpan.FromMilliseconds(50))).Duration;
+                _delay = _inheritedAttributes.GetAttribute(new RestartWithBackoffFlow.Delay(TimeSpan.FromMilliseconds(50))).Duration;
                 _stage = stage;
                 Backoff();
             }
@@ -444,7 +445,7 @@ namespace Akka.Streams.Dsl
         public bool Equals(Delay other) => !ReferenceEquals(other, null) && Equals(Duration, other.Duration);
 
        
-        public override bool Equals(object obj) => obj is Delay && Equals((Delay)obj);
+        public override bool Equals(object obj) => obj is Delay delay && Equals(delay);
 
        
         public override int GetHashCode() => Duration.GetHashCode();
@@ -513,9 +514,9 @@ namespace Akka.Streams.Dsl
 
         public bool IsOverdue => Time.Ticks - DateTime.UtcNow.Ticks < 0;
 
-        public static Deadline Now => new Deadline(new TimeSpan(DateTime.UtcNow.Ticks));
+        public static Deadline Now => new(new TimeSpan(DateTime.UtcNow.Ticks));
 
-        public static Deadline operator +(Deadline deadline, TimeSpan duration) => new Deadline(deadline.Time.Add(duration));
+        public static Deadline operator +(Deadline deadline, TimeSpan duration) => new(deadline.Time.Add(duration));
     }
 
     internal static class DeadlineExtensions

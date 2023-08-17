@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LeastShardAllocationStrategyRandomizedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -64,7 +64,7 @@ namespace Akka.Cluster.Sharding.Tests
                 var regions = Enumerable.Range(1, numberOfRegions).Select(n => LeastShardAllocationStrategySpec.NewFakeRegion($"{iteration}-R{n}", memberArray[n - 1]));
 
                 //var regions = Enumerable.Range(1, numberOfRegions).Select(n => Sys.ActorOf(Props.Empty, $"{iteration}-R{n}")).ToImmutableList();
-                var countPerRegion = regions.ToImmutableDictionary(region => region, region => rnd.Next(maxShardsPerRegion));
+                var countPerRegion = regions.ToImmutableDictionary(region => region, _ => rnd.Next(maxShardsPerRegion));
                 var allocations = CreateAllocations(countPerRegion);
                 TestRebalance(allocationStrategy, allocations, ImmutableList.Create(allocations), expectedMaxSteps);
                 foreach (var region in regions)

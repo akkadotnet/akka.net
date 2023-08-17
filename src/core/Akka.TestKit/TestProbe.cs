@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestProbe.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -82,6 +82,7 @@ namespace Akka.TestKit
             Sender.Tell(message,TestActor);
         }
 
+
         /// <summary>
         /// N/A
         /// </summary>
@@ -91,7 +92,9 @@ namespace Akka.TestKit
         /// </exception>
         /// <returns>N/A</returns>
         [Obsolete("Cannot create a TestProbe from a TestProbe", true)]
+#pragma warning disable CS0809
         public override TestProbe CreateTestProbe(string name=null)
+#pragma warning restore CS0809
         {
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }
@@ -124,7 +127,9 @@ namespace Akka.TestKit
 
         IActorRefProvider IInternalActorRef.Provider { get { return ((IInternalActorRef)TestActor).Provider; } }
 
+#pragma warning disable CS0618 // Type or member is obsolete
         bool IInternalActorRef.IsTerminated { get { return ((IInternalActorRef)TestActor).IsTerminated; } }
+#pragma warning restore CS0618 // Type or member is obsolete
 
         IActorRef IInternalActorRef.GetChild(IReadOnlyList<string> name)
         {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InterlockedSpinTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -46,7 +46,7 @@ namespace Akka.Tests.Util.Internal
             //  Test that sharedVariable="updated"												 
             //  Test that updateWhenSignaled was called twice
 
-            Func<string, string> updateWhenSignaled = i =>
+            Func<string, string> updateWhenSignaled = _ =>
             {
                 numberOfCallsToUpdateWhenSignaled++;
                 hasEnteredUpdateMethod.Set();	//Signal THREAD 1 to update sharedVariable
@@ -90,7 +90,7 @@ namespace Akka.Tests.Util.Internal
             //  Test that sharedVariable="updated"												 
             //  Test that updateWhenSignaled was called twice
 
-            Func<string, (bool, string, string)> updateWhenSignaled = i =>
+            Func<string, (bool, string, string)> updateWhenSignaled = _ =>
             {
                 numberOfCallsToUpdateWhenSignaled++;
                 hasEnteredUpdateMethod.Set();	//Signal THREAD 1 to update sharedVariable

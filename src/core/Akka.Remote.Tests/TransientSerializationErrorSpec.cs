@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TransientSerializationErrorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,42 +21,42 @@ namespace Akka.Remote.Tests
     {
         internal class ManifestNotSerializable
         {
-            public static readonly ManifestNotSerializable Instance = new ManifestNotSerializable();
+            public static readonly ManifestNotSerializable Instance = new();
 
             private ManifestNotSerializable() { }
         }
 
         internal class ManifestIllegal
         {
-            public static readonly ManifestIllegal Instance = new ManifestIllegal();
+            public static readonly ManifestIllegal Instance = new();
 
             private ManifestIllegal() { }
         }
 
         internal class ToBinaryNotSerializable
         {
-            public static readonly ToBinaryNotSerializable Instance = new ToBinaryNotSerializable();
+            public static readonly ToBinaryNotSerializable Instance = new();
 
             private ToBinaryNotSerializable() { }
         }
 
         internal class ToBinaryIllegal
         {
-            public static readonly ToBinaryIllegal Instance = new ToBinaryIllegal();
+            public static readonly ToBinaryIllegal Instance = new();
 
             private ToBinaryIllegal() { }
         }
 
         internal class NotDeserializable
         {
-            public static readonly NotDeserializable Instance = new NotDeserializable();
+            public static readonly NotDeserializable Instance = new();
 
             private NotDeserializable() { }
         }
 
         internal class IllegalOnDeserialize
         {
-            public static readonly IllegalOnDeserialize Instance = new IllegalOnDeserialize();
+            public static readonly IllegalOnDeserialize Instance = new();
 
             private IllegalOnDeserialize() { }
         }
@@ -111,7 +111,7 @@ namespace Akka.Remote.Tests
                     case ToBinaryIllegal _:
                         throw new ArgumentException();
                     default:
-                        return new byte[0];
+                        return Array.Empty<byte>();
                 }
             }
         }
@@ -168,10 +168,10 @@ namespace Akka.Remote.Tests
             ";
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(_system2);
+            base.AfterAll();
+            Shutdown(_system2);
         }
 
 

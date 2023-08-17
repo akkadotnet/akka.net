@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UnfoldResourceAsyncSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,9 +36,9 @@ namespace Akka.Streams.Tests.Dsl
             private readonly Task<Done> _firstReadFuture;
             private readonly Task<Done> _closeFuture;
 
-            private readonly TaskCompletionSource<Done> _createdPromise = new TaskCompletionSource<Done>();
-            private readonly TaskCompletionSource<Done> _closedPromise = new TaskCompletionSource<Done>();
-            private readonly TaskCompletionSource<Done> _firstReadPromise = new TaskCompletionSource<Done>();
+            private readonly TaskCompletionSource<Done> _createdPromise = new();
+            private readonly TaskCompletionSource<Done> _closedPromise = new();
+            private readonly TaskCompletionSource<Done> _firstReadPromise = new();
 
             // these can be used to observe when the resource calls has happened
             public Task<Done> Created => _createdPromise.Task;
@@ -457,8 +457,7 @@ namespace Akka.Streams.Tests.Dsl
             // use a separate materializer to ensure we know what child is our stream
             var materializer = Sys.Materializer();
             
-            await this.AssertAllStagesStoppedAsync(async () =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var tcs = new TaskCompletionSource<Task>();
                 try
                 {
@@ -478,6 +477,8 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     tcs.TrySetResult(Task.CompletedTask);
                 }
+
+                return Task.CompletedTask;
             }, materializer);
         }
 

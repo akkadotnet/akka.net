@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamRefsSerializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests
         public ProducerActor(string data)
         {
             _data = data;
-            Receive<RequestStream>(request =>
+            Receive<RequestStream>(_ =>
             {
                 // create a source
                 StreamLogs()
@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests
         {
             var sourceActor = Context.ActorSelection(sourceActorPath);
 
-            Receive<StartListening>((listening =>
+            Receive<StartListening>((_ =>
             {
                 sourceActor.Tell(new RequestStream(Self));
             }));
@@ -170,16 +170,16 @@ namespace Akka.Streams.Tests
         private readonly TestProbe _probe;
         private readonly IActorRef _remoteActor;
 
-        protected override async Task BeforeTerminationAsync()
+        protected override void BeforeTermination()
         {
-            await base.BeforeTerminationAsync();
             Materializer.Dispose();
+            base.BeforeTermination();
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(RemoteSystem);
+            Shutdown(RemoteSystem);
+            base.AfterAll();
         }
 
         [Fact]

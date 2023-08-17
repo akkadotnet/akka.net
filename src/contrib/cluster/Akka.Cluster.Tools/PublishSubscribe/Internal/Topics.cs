@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Topics.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -324,8 +324,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// </summary>
     internal static class Utils
     {
-        private static System.Text.RegularExpressions.Regex _pathRegex =
-            new System.Text.RegularExpressions.Regex("^/remote/.+(/user/.+)");
+        private static System.Text.RegularExpressions.Regex _pathRegex = new("^/remote/.+(/user/.+)");
 
         /// <summary>
         /// <para>

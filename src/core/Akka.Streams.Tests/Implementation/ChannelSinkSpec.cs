@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="ChannelSinkSpec.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ChannelSinkSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Threading;
@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Implementation
         #region from writer
 
         [Fact]
-        public async Task ChannelSink_writer_when_isOwner_should_complete_channel_with_success_when_upstream_completes()
+        public Task ChannelSink_writer_when_isOwner_should_complete_channel_with_success_when_upstream_completes()
         {
             var probe = this.CreateManualPublisherProbe<int>();
             var channel = Channel.CreateBounded<int>(10);
@@ -44,6 +44,7 @@ namespace Akka.Streams.Tests.Implementation
             subscription.SendComplete();
 
             channel.Reader.Completion.Wait(1.Seconds()).Should().BeTrue();
+            return Task.CompletedTask;
         }
 
         [Fact]
@@ -158,7 +159,7 @@ namespace Akka.Streams.Tests.Implementation
         #region as reader
 
         [Fact]
-        public async Task ChannelSink_reader_should_complete_channel_with_success_when_upstream_completes()
+        public Task ChannelSink_reader_should_complete_channel_with_success_when_upstream_completes()
         {
             var probe = this.CreateManualPublisherProbe<int>();
 
@@ -170,6 +171,7 @@ namespace Akka.Streams.Tests.Implementation
             subscription.SendComplete();
 
             reader.Completion.Wait(1.Seconds()).Should().BeTrue();
+            return Task.CompletedTask;
         }
 
         [Fact]

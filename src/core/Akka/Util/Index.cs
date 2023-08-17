@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Index.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ namespace Akka.Util
         }
 
         private readonly ConcurrentDictionary<TKey, ConcurrentSet<TValue>> _container;
-        private readonly ConcurrentSet<TValue> _emptySet = new ConcurrentSet<TValue>();
+        private readonly ConcurrentSet<TValue> _emptySet = new();
 
         /// <summary>
         /// Associates the value of <typeparamref name="TValue"/> with key of type <typeparamref name="TKey"/>.
@@ -192,8 +192,7 @@ namespace Akka.Util
         /// <returns>An enumerable collection of <typeparamref name="TValue"/> if the key exists. An empty collection otherwise.</returns>
         public IEnumerable<TValue> Remove(TKey key)
         {
-            ConcurrentSet<TValue> set;
-            if (_container.TryRemove(key, out set))
+            if (_container.TryRemove(key, out var set))
             {
                 // grab a shallow copy of the set
                 var ret = set.ToArray();

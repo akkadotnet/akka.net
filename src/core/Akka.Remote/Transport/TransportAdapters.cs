@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TransportAdapters.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -303,7 +303,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal abstract class AbstractTransportAdapterHandle : AssociationHandle
+    public abstract class AbstractTransportAdapterHandle : AssociationHandle
     {
         /// <summary>
         /// TBD
@@ -385,7 +385,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Marker interface for all transport operations
     /// </summary>
-    internal abstract class TransportOperation : INoSerializationVerificationNeeded
+    public abstract class TransportOperation : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// TBD
@@ -396,7 +396,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class ListenerRegistered : TransportOperation
+    public sealed class ListenerRegistered : TransportOperation
     {
         /// <summary>
         /// TBD
@@ -416,7 +416,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class AssociateUnderlying : TransportOperation
+    public sealed class AssociateUnderlying : TransportOperation
     {
         /// <summary>
         /// TBD
@@ -443,7 +443,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class ListenUnderlying : TransportOperation
+    public sealed class ListenUnderlying : TransportOperation
     {
         /// <summary>
         /// TBD
@@ -470,7 +470,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class DisassociateUnderlying : TransportOperation, IDeadLetterSuppression
+    public sealed class DisassociateUnderlying : TransportOperation, IDeadLetterSuppression
     {
         /// <summary>
         /// TBD
@@ -556,12 +556,12 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal abstract class ActorTransportAdapterManager : UntypedActor
+    public abstract class ActorTransportAdapterManager : UntypedActor
     {
         /// <summary>
         /// Lightweight Stash implementation
         /// </summary>
-        protected Queue<object> DelayedEvents = new Queue<object>();
+        protected Queue<object> DelayedEvents = new();
 
         /// <summary>
         /// TBD

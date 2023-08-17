@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="JournalPerfSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -342,7 +342,7 @@ namespace Akka.Persistence.TestKit.Performance
 
     internal class ResetCounter
     {
-        public static ResetCounter Instance { get; } = new ResetCounter();
+        public static ResetCounter Instance { get; } = new();
         private ResetCounter() { }
     }
 
@@ -363,7 +363,7 @@ namespace Akka.Persistence.TestKit.Performance
     {
         private int _counter = 0;
         private const int BatchSize = 50;
-        private List<Cmd> _batch = new List<Cmd>(BatchSize);
+        private List<Cmd> _batch = new(BatchSize);
         
         public BenchActor(string persistenceId, IActorRef replyTo, int replyAfter, bool isGroup = false)
         {

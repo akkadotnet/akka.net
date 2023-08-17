@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaProtocolStressTest.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -61,7 +61,7 @@ namespace Akka.Remote.Tests.Transport
         {
             private ResendFinal() { }
 
-            public static ResendFinal Instance { get; } = new ResendFinal();
+            public static ResendFinal Instance { get; } = new();
         }
 
         private class SequenceVerifier : UntypedActor
@@ -95,7 +95,7 @@ namespace Akka.Remote.Tests.Transport
                     else
                         Self.Tell("sendNext");
                 }
-                else if (message is int || message is long)
+                else if (message is int or long)
                 {
                     var seq = Convert.ToInt32(message);
                     if (seq > _maxSeq)
@@ -138,7 +138,7 @@ namespace Akka.Remote.Tests.Transport
             protected override void OnReceive(object message)
             {
                 //BUG: looks like the serializer will by default convert plain numerics sent over the wire into long integers
-                if (message is int || message is long)
+                if (message is int or long)
                 {
                     Sender.Tell(message);
                 }
@@ -203,7 +203,7 @@ namespace Akka.Remote.Tests.Transport
 
         #region Cleanup
 
-        protected override async Task BeforeTerminationAsync()
+        protected override void BeforeTermination()
         {
             EventFilter.Warning(start: "received dead letter").Mute();
             EventFilter.Warning(new Regex("received dead letter.*(InboundPayload|Disassociate)")).Mute();
@@ -211,13 +211,13 @@ namespace Akka.Remote.Tests.Transport
                 new ErrorFilter(typeof(EndpointException)),
                 new ErrorFilter(new StartsWithString("AssociationError"))));
 
-            await base.BeforeTerminationAsync();
+            base.BeforeTermination();
         }
 
-        protected override async Task AfterTerminationAsync()
+        protected override void AfterAll()
         {
-            await ShutdownAsync(_systemB);
-            await base.AfterTerminationAsync();
+            Shutdown(_systemB);
+            base.AfterAll();
         }
 
         #endregion

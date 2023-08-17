@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefBackpressureSinkStage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -133,7 +133,7 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
-        private readonly Inlet<TIn> _inlet = new Inlet<TIn>("ActorRefBackpressureSink.in");
+        private readonly Inlet<TIn> _inlet = new("ActorRefBackpressureSink.in");
 
         private readonly IActorRef _actorRef;
         private readonly object _onInitMessage;

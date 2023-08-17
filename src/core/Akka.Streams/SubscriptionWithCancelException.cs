@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SubscriptionWithCancelException.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,13 +21,13 @@ namespace Akka.Streams
         
         public sealed class NoMoreElementsNeeded : NonFailureCancellation
         {
-            public static readonly NoMoreElementsNeeded Instance = new NoMoreElementsNeeded();
+            public static readonly NoMoreElementsNeeded Instance = new();
             private NoMoreElementsNeeded() { }
         }
     
         public sealed class StageWasCompleted : NonFailureCancellation
         {
-            public static readonly StageWasCompleted Instance = new StageWasCompleted();
+            public static readonly StageWasCompleted Instance = new();
             private StageWasCompleted() { }
         }
     }

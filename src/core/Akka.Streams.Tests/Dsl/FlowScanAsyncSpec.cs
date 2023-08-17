@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowScanAsyncSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
@@ -15,10 +16,12 @@ using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using Decider = Akka.Streams.Supervision.Decider;
+using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -53,19 +56,20 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(SumScanFlow)
                 .RunWith(this.SinkProbe<int>(), Materializer)
                 .Request(2)
-                .ExpectNext(0, 1)
+                .ExpectNext( 0, 1)
                 .ExpectComplete();
         }
 
         [Fact]
-        public void A_ScanAsync_must_work_with_a_large_source()
+        public async Task A_ScanAsync_must_work_with_a_large_source()
         {
             var elements = Enumerable.Range(1, 100000).Select(i => (long)i).ToList();
             var expectedSum = elements.Sum();
             var eventualActual = Source.From(elements)
                 .ScanAsync(0L, (l, l1) => Task.FromResult(l + l1))
                 .RunWith(Sink.Last<long>(), Materializer);
-            eventualActual.AwaitResult().ShouldBe(expectedSum);
+            var complete = await eventualActual.ShouldCompleteWithin(3.Seconds());
+            complete.ShouldBe(expectedSum);
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
@@ -101,7 +105,7 @@ namespace Akka.Streams.Tests.Dsl
             var elements = new[] { 1, -1, 1 };
 
             WhenFailedScan(elements, 0, decider: Deciders.RestartingDecider)
-                .ExpectNext(1, 1)
+                .ExpectNext( 1, 1)
                 .ExpectComplete();
         }
 
@@ -111,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
             var elements = new[] { 1, -1, 1 };
 
             WhenFailedTask(elements, 0, decider: Deciders.RestartingDecider)
-                .ExpectNext(1, 1)
+                .ExpectNext( 1, 1)
                 .ExpectComplete();
         }
 
@@ -121,7 +125,7 @@ namespace Akka.Streams.Tests.Dsl
             var elements = new[] { 1, -1, 1 };
 
             WhenFailedScan(elements, 0, decider: Deciders.ResumingDecider)
-                .ExpectNext(1, 2)
+                .ExpectNext( 1, 2)
                 .ExpectComplete();
         }
 
@@ -131,7 +135,7 @@ namespace Akka.Streams.Tests.Dsl
             var elements = new[] { 1, -1, 1 };
 
             WhenFailedTask(elements, 0, decider: Deciders.ResumingDecider)
-                .ExpectNext(1, 2)
+                .ExpectNext( 1, 2)
                 .ExpectComplete();
         }
 
@@ -213,7 +217,7 @@ namespace Akka.Streams.Tests.Dsl
             decider = decider ?? Deciders.StoppingDecider;
 
             var probe = Source.From(elements)
-                .ScanAsync(zero, (i, i1) => Task.FromResult(i1 != "null" ? i1 : null))
+                .ScanAsync(zero, (_, i1) => Task.FromResult(i1 != "null" ? i1 : null))
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(decider))
                 .RunWith(this.SinkProbe<string>(), Materializer);
             probe.Request(elements.Count + 1)

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RememberEntitiesStarterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ namespace Akka.Cluster.Sharding.Tests.Internal
                 RememberEntityStarter.Props(regionProbe.Ref, shardProbe.Ref, shardId, ImmutableHashSet.Create("1", "2", "3"), defaultSettings));
 
             Watch(rememberEntityStarter);
-            var startedEntityIds = Enumerable.Range(1, 3).Select(i =>
+            var startedEntityIds = Enumerable.Range(1, 3).Select(_ =>
             {
                 var start = regionProbe.ExpectMsg<ShardRegion.StartEntity>();
                 regionProbe.LastSender.Tell(new ShardRegion.StartEntityAck(start.EntityId, shardId));
@@ -95,7 +95,7 @@ namespace Akka.Cluster.Sharding.Tests.Internal
             {
                 var start = regionProbe.ExpectMsg<ShardRegion.StartEntity>();
             }
-            var startedOnSecondTry = Enumerable.Range(1, 3).Select(i =>
+            var startedOnSecondTry = Enumerable.Range(1, 3).Select(_ =>
              {
                  var start = regionProbe.ExpectMsg<ShardRegion.StartEntity>();
                  regionProbe.LastSender.Tell(new ShardRegion.StartEntityAck(start.EntityId, shardId));

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TickSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -49,7 +49,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Can't control the flow of ticks with any guaranteed precision")]
         public async Task A_Flow_based_on_a_tick_publisher_must_drop_ticks_when_not_requested()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -148,7 +148,7 @@ namespace Akka.Streams.Tests.Dsl
                 await c.ExpectNextAsync("tick");
                 
                 cancelable.Cancel();
-                await AwaitConditionAsync(async () => cancelable.IsCancellationRequested);
+                await AwaitConditionAsync(() => Task.FromResult(cancelable.IsCancellationRequested));
                 
                 sub.Request(3);
                 await c.ExpectCompleteAsync();

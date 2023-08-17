@@ -1,6 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="RepeatPrevious.cs" company="Akka.NET Project">
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="ReuseLatest.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,16 +20,16 @@ namespace Akka.Streams.Dsl
     /// <typeparam name="T">The output type.</typeparam>
     public sealed class ReuseLatest<T> : GraphStage<FlowShape<T, T>>
     {
-        private readonly Inlet<T> _in = new Inlet<T>("RepeatPrevious.in");
-        private readonly Outlet<T> _out = new Outlet<T>("RepeatPrevious.out");
+        private readonly Inlet<T> _in = new("RepeatPrevious.in");
+        private readonly Outlet<T> _out = new("RepeatPrevious.out");
 
-        public override FlowShape<T, T> Shape => new FlowShape<T, T>(_in, _out);
+        public override FlowShape<T, T> Shape => new(_in, _out);
         private readonly Action<T,T> _onItemChanged;
 
         /// <summary>
         /// Do nothing by default
         /// </summary>
-        private static readonly Action<T,T> DefaultSwap = (oldValue, newValue) => { };
+        private static readonly Action<T,T> DefaultSwap = (_, _) => { };
 
         public ReuseLatest() : this(DefaultSwap)
         {

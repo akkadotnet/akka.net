@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardedDaemonProcess.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ namespace Akka.Cluster.Sharding
     {
         private sealed class Tick
         {
-            public static Tick Instance { get; } = new Tick();
+            public static Tick Instance { get; } = new();
             private Tick() { }
         }
 
@@ -74,25 +74,6 @@ namespace Akka.Cluster.Sharding
     }
 
     /// <summary>
-    /// <para>Default envelope type that may be used with Cluster Sharding.</para>
-    /// <para>
-    /// The alternative way of routing messages through sharding is to not use envelopes,
-    /// and have the message types themselves carry identifiers.
-    /// </para>
-    /// </summary>
-    public sealed class ShardingEnvelope: IWrappedMessage
-    {
-        public string EntityId { get; }
-        public object Message { get; }
-
-        public ShardingEnvelope(string entityId, object message)
-        {
-            EntityId = entityId;
-            Message = message;
-        }
-    }
-
-    /// <summary>
     /// <para>This extension runs a pre set number of actors in a cluster.</para>
     /// <para>
     /// The typical use case is when you have a task that can be divided in a number of workers, each doing a
@@ -134,17 +115,6 @@ namespace Akka.Cluster.Sharding
         /// <param name="stopMessage">Sent to the actors when they need to stop because of a rebalance across the nodes of the cluster or cluster shutdown.</param>
         public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory, object stopMessage) => 
             Init(name, numberOfInstances, propsFactory, ShardedDaemonProcessSettings.Create(_system), stopMessage);
-
-        /// <summary>
-        /// Start a specific number of actors, each with a unique numeric id in the set, that is then kept alive in the cluster.
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="numberOfInstances">TBD</param>
-        /// <param name="propsFactory">Given a unique id of `0` until `numberOfInstance` create an entity actor.</param>
-        /// <param name="settings">TBD</param>
-        [Obsolete("Use the overloaded one which accepts a stopMessage instead.")]
-        public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory, ShardedDaemonProcessSettings settings) =>
-            Init(name, numberOfInstances, propsFactory, settings, null);
 
         /// <summary>
         /// Start a specific number of actors, each with a unique numeric id in the set, that is then kept alive in the cluster.
@@ -200,6 +170,6 @@ namespace Akka.Cluster.Sharding
 
     public class ShardedDaemonProcessExtensionProvider : ExtensionIdProvider<ShardedDaemonProcess>
     {
-        public override ShardedDaemonProcess CreateExtension(ExtendedActorSystem system) => new ShardedDaemonProcess(system);
+        public override ShardedDaemonProcess CreateExtension(ExtendedActorSystem system) => new(system);
     }
 }

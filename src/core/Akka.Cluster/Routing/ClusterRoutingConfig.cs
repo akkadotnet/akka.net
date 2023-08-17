@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterRoutingConfig.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,33 +22,6 @@ namespace Akka.Cluster.Routing
     /// </summary>
     public sealed class ClusterRouterGroupSettings : ClusterRouterSettingsBase
     {
-        /// <summary>
-        /// Obsolete. This constructor is no longer applicable.
-        /// </summary>
-        /// <param name="totalInstances">N/A</param>
-        /// <param name="allowLocalRoutees">N/A</param>
-        /// <param name="routeesPaths">N/A</param>
-        [Obsolete("This method is deprecated [1.1.0]")]
-        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, IEnumerable<string> routeesPaths)
-            : this(totalInstances, routeesPaths, allowLocalRoutees, null)
-        {
-
-        }
-
-        /// <summary>
-        /// Obsolete. This constructor is no longer applicable.
-        /// </summary>
-        /// <param name="totalInstances">N/A</param>
-        /// <param name="allowLocalRoutees">N/A</param>
-        /// <param name="useRole">N/A</param>
-        /// <param name="routeesPaths">N/A</param>
-        [Obsolete("This method is deprecated [1.1.0]")]
-        public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, string useRole, ImmutableHashSet<string> routeesPaths)
-            : this(totalInstances, routeesPaths, allowLocalRoutees, useRole)
-        {
-
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterRouterGroupSettings"/> class.
         /// </summary>
@@ -108,31 +81,6 @@ namespace Akka.Cluster.Routing
     /// </summary>
     public sealed class ClusterRouterPoolSettings : ClusterRouterSettingsBase
     {
-        /// <summary>
-        /// Obsolete. This constructor is no longer applicable.
-        /// </summary>
-        /// <param name="totalInstances">N/A</param>
-        /// <param name="allowLocalRoutees">N/A</param>
-        /// <param name="maxInstancesPerNode">N/A</param>
-        [Obsolete("This method is deprecated [1.1.0]")]
-        public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, int maxInstancesPerNode)
-            : this(totalInstances, maxInstancesPerNode, allowLocalRoutees)
-        {
-        }
-
-        /// <summary>
-        /// Obsolete. This constructor is no longer applicable.
-        /// </summary>
-        /// <param name="totalInstances">N/A</param>
-        /// <param name="allowLocalRoutees">N/A</param>
-        /// <param name="useRole">N/A</param>
-        /// <param name="maxInstancesPerNode">N/A</param>
-        [Obsolete("This method is deprecated [1.1.0]")]
-        public ClusterRouterPoolSettings(int totalInstances, bool allowLocalRoutees, string useRole, int maxInstancesPerNode) 
-            : this(totalInstances, maxInstancesPerNode, allowLocalRoutees, useRole)
-        {
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterRouterPoolSettings"/> class.
         /// </summary>
@@ -259,7 +207,7 @@ namespace Akka.Cluster.Routing
         internal static int GetMaxTotalNrOfInstances(Config config)
         {
             int number = config.GetInt("nr-of-instances", 0);
-            if (number == 0 || number == 1)
+            if (number is 0 or 1)
             {
                 return config.GetInt("cluster.max-nr-of-instances-per-node");
             }
@@ -279,7 +227,7 @@ namespace Akka.Cluster.Routing
     /// </summary>
     public sealed class ClusterRouterPool : Pool
     {
-        private readonly AtomicCounter _childNameCounter = new AtomicCounter(0);
+        private readonly AtomicCounter _childNameCounter = new(0);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterRouterPool"/> class.
@@ -659,7 +607,7 @@ namespace Akka.Cluster.Routing
         /// <returns>TBD</returns>
         public bool IsAvailable(Member member)
         {
-            return (member.Status == MemberStatus.Up || member.Status == MemberStatus.WeaklyUp) && 
+            return member.Status is MemberStatus.Up or MemberStatus.WeaklyUp && 
                    SatisfiesRole(member.Roles) &&
                    (Settings.AllowLocalRoutees || member.Address != Cluster.SelfAddress);
         }

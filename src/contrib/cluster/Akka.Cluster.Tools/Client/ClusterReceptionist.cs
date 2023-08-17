@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterReceptionist.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -92,7 +92,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public static SubscribeClusterClients Instance { get; } = new SubscribeClusterClients();
+        public static SubscribeClusterClients Instance { get; } = new();
         private SubscribeClusterClients() { }
     }
 
@@ -104,7 +104,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public static UnsubscribeClusterClients Instance { get; } = new UnsubscribeClusterClients();
+        public static UnsubscribeClusterClients Instance { get; } = new();
         private UnsubscribeClusterClients() { }
     }
 
@@ -117,7 +117,7 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// TBD
         /// </summary>
-        public static GetClusterClients Instance { get; } = new GetClusterClients();
+        public static GetClusterClients Instance { get; } = new();
         private GetClusterClients() { }
     }
 
@@ -176,7 +176,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static GetContacts Instance { get; } = new GetContacts();
+            public static GetContacts Instance { get; } = new();
             private GetContacts() { }
         }
 
@@ -236,7 +236,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static Heartbeat Instance { get; } = new Heartbeat();
+            public static Heartbeat Instance { get; } = new();
             private Heartbeat() { }
         }
 
@@ -249,7 +249,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static HeartbeatRsp Instance { get; } = new HeartbeatRsp();
+            public static HeartbeatRsp Instance { get; } = new();
             private HeartbeatRsp() { }
         }
 
@@ -262,7 +262,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static Ping Instance { get; } = new Ping();
+            public static Ping Instance { get; } = new();
             private Ping() { }
         }
 
@@ -274,7 +274,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// TBD
             /// </summary>
-            public static CheckDeadlines Instance { get; } = new CheckDeadlines();
+            public static CheckDeadlines Instance { get; } = new();
             private CheckDeadlines() { }
         }
 
@@ -286,7 +286,7 @@ namespace Akka.Cluster.Tools.Client
         /// </summary>
         internal sealed class ReceptionistShutdown : IClusterClientMessage
         {
-            public static readonly ReceptionistShutdown Instance = new ReceptionistShutdown();
+            public static readonly ReceptionistShutdown Instance = new();
             private ReceptionistShutdown() { }
         }
         #endregion
@@ -314,7 +314,7 @@ namespace Akka.Cluster.Tools.Client
             /// <summary>
             /// The singleton instance of this comparer
             /// </summary>
-            public static RingOrdering Instance { get; } = new RingOrdering();
+            public static RingOrdering Instance { get; } = new();
             private RingOrdering() { }
 
             /// <summary>
@@ -435,9 +435,7 @@ namespace Akka.Cluster.Tools.Client
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if (message is PublishSubscribe.Send
-                || message is PublishSubscribe.SendToAll
-                || message is PublishSubscribe.Publish)
+            if (message is PublishSubscribe.Send or PublishSubscribe.SendToAll or PublishSubscribe.Publish)
             {
                 var tunnel = ResponseTunnel(Sender);
                 tunnel.Tell(Ping.Instance); // keep alive
@@ -627,7 +625,7 @@ namespace Akka.Cluster.Tools.Client
         private bool IsAsk()
         {
             var pathElements = _client.Path.Elements;
-            return pathElements.Count == 2 && pathElements[0] == "temp" && pathElements.Last().StartsWith("$");
+            return pathElements.Count == 2 && pathElements[0] == "temp" && pathElements.Last().StartsWith('$');
         }
     }
 }
