@@ -95,5 +95,7 @@ namespace Akka.Util
         {
             return nanos/NanosPerTick;
         }
+
+        internal static bool IsHighResolution => Stopwatch.IsHighResolution;
     }
 }

@@ -52,6 +52,9 @@ namespace Akka.Actor
             if (SchedulerConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<HashedWheelTimerScheduler>();
 
+            if (!Util.MonotonicClock.IsHighResolution)
+                Log.Warning("HashedWheelTimerScheduler depends on the availability of high resolution performance counter which is not available in this system");
+            
             var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel");
             // ReSharper disable NotResolvedInText
             if (ticksPerWheel <= 0)
