@@ -29,22 +29,16 @@ namespace Akka.Util
         /// <summary>
         /// Time as measured by the current system up-time.
         /// </summary>
-        public static TimeSpan Elapsed
-        {
-            get
-            {
-                return TimeSpan.FromTicks(GetTicks());
-            }
-        }
+        public static TimeSpan Elapsed => TimeSpan.FromTicks(GetTicks());
 
         /// <summary>
         /// High resolution elapsed time as determined by a <see cref="Stopwatch"/>
         /// running continuously in the background.
         /// </summary>
-        public static TimeSpan ElapsedHighRes
-        {
-            get { return Stopwatch.Elapsed; }
-        }
+        public static TimeSpan ElapsedHighRes => Stopwatch.Elapsed;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long GetTicksHighRes() => Stopwatch.ElapsedTicks;
 
         /// <summary>
         /// TBD
@@ -83,6 +77,7 @@ namespace Akka.Util
         /// </summary>
         /// <param name="ticks">TBD</param>
         /// <returns>TBD</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static long ToNanos(this long ticks)
         {
             return ticks*NanosPerTick;
@@ -95,6 +90,7 @@ namespace Akka.Util
         /// </summary>
         /// <param name="nanos">TBD</param>
         /// <returns>TBD</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static long ToTicks(this long nanos)
         {
             return nanos/NanosPerTick;

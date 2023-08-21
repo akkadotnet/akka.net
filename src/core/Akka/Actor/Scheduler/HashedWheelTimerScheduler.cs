@@ -13,10 +13,8 @@ using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
-using Akka.Util;
 
-// ReSharper disable NotResolvedInText
-
+#nullable enable
 namespace Akka.Actor
 {
     /// <summary>
@@ -32,11 +30,17 @@ namespace Akka.Actor
     /// Further reading: http://www.cs.columbia.edu/~nahum/w6998/papers/sosp87-timing-wheels.pdf
     /// Presentation: http://www.cse.wustl.edu/~cdgill/courses/cs6874/TimingWheels.ppt
     /// </summary>
-    public class HashedWheelTimerScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider, IDisposable
+    public sealed class HashedWheelTimerScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider, IDisposable
     {
         private readonly TimeSpan _shutdownTimeout;
         private readonly long _tickDuration; // a timespan expressed as ticks
 
+        static HashedWheelTimerScheduler()
+        {
+            // Kickstart the monotonic clock as soon as possible
+            Util.MonotonicClock.GetTicksHighRes();
+        }
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -48,11 +52,23 @@ namespace Akka.Actor
             if (SchedulerConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<HashedWheelTimerScheduler>();
 
-            var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel", 0);
-            var tickDuration = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration", null);
+            var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel");
+            // ReSharper disable NotResolvedInText
+            if (ticksPerWheel <= 0)
+                throw new ArgumentOutOfRangeException("akka.scheduler.ticks-per-wheel", ticksPerWheel, "Must be greater than 0.");
+            if (ticksPerWheel > 1073741824)
+                throw new ArgumentOutOfRangeException("akka.scheduler.ticks-per-wheel", ticksPerWheel,
+                    "Cannot be greater than 2^30.");
+            // ReSharper restore NotResolvedInText
+            
+            var tickDuration = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration", TimeSpan.Zero);
             if (tickDuration.TotalMilliseconds < 10.0d)
-                throw new ArgumentOutOfRangeException(
+            {
+                // ReSharper disable NotResolvedInText
+                throw new ArgumentOutOfRangeException("akka.scheduler.tick-duration", tickDuration.TotalMilliseconds,
                     "minimum supported akka.scheduler.tick-duration on Windows is 10ms");
+                // ReSharper restore NotResolvedInText
+            }
 
             // convert tick-duration to ticks
             _tickDuration = tickDuration.Ticks;
@@ -63,36 +79,37 @@ namespace Akka.Actor
 
             // prevent overflow
             if (_tickDuration >= long.MaxValue / _wheel.Length)
+            {
+                // ReSharper disable NotResolvedInText
                 throw new ArgumentOutOfRangeException("akka.scheduler.tick-duration", _tickDuration,
                     $"akka.scheduler.tick-duration: {_tickDuration} (expected: 0 < tick-duration in ticks < {long.MaxValue / _wheel.Length}");
+                // ReSharper restore NotResolvedInText
+            }
 
-            _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout", null);
+            _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout", TimeSpan.Zero);
         }
 
-        private long _startTime = 0;
+        private long _startTime;
         private long _tick;
         private readonly int _mask;
         private readonly CountdownEvent _workerInitialized = new(1);
         private readonly ConcurrentQueue<SchedulerRegistration> _registrations = new();
         private readonly Bucket[] _wheel;
 
+        // ReSharper disable InconsistentNaming
         private const int WORKER_STATE_INIT = 0;
         private const int WORKER_STATE_STARTED = 1;
         private const int WORKER_STATE_SHUTDOWN = 2;
+        // ReSharper restore InconsistentNaming
 
         /// <summary>
         /// 0 - init, 1 - started, 2 - shutdown
         /// </summary>
-        private volatile int _workerState = WORKER_STATE_INIT;
+        private int _workerState = WORKER_STATE_INIT;
+        private readonly object _stateLock = new ();
 
         private static Bucket[] CreateWheel(int ticksPerWheel, ILoggingAdapter log)
         {
-            if (ticksPerWheel <= 0)
-                throw new ArgumentOutOfRangeException(nameof(ticksPerWheel), ticksPerWheel, "Must be greater than 0.");
-            if (ticksPerWheel > 1073741824)
-                throw new ArgumentOutOfRangeException(nameof(ticksPerWheel), ticksPerWheel,
-                    "Cannot be greater than 2^30.");
-
             ticksPerWheel = NormalizeTicksPerWheel(ticksPerWheel);
             var wheel = new Bucket[ticksPerWheel];
             for (var i = 0; i < wheel.Length; i++)
@@ -117,48 +134,59 @@ namespace Akka.Actor
         private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new();
         
 #if NET6_0_OR_GREATER
-        private PeriodicTimer _timer;
+        private PeriodicTimer? _timer;
         private readonly CancellationTokenSource _cts = new();
 
         private void Start()
         {
-            if (_workerState == WORKER_STATE_STARTED)
+            if (_workerState is WORKER_STATE_INIT)
             {
-            } // do nothing
-            else if (_workerState == WORKER_STATE_INIT)
-            {
-                var t = TimeSpan.FromTicks(_tickDuration);
-                _timer = new PeriodicTimer(t);
-#pragma warning disable 420
-                if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
-#pragma warning restore 420
-                    WORKER_STATE_INIT)
+                lock (_stateLock)
                 {
-#pragma warning disable CS4014
-                    RunAsync(); // start the clock
-#pragma warning restore CS4014
+                    if (_workerState is WORKER_STATE_INIT)
+                    {
+                        _workerState = WORKER_STATE_STARTED;
+                        
+                        var t = TimeSpan.FromTicks(_tickDuration);
+                        _timer = new PeriodicTimer(t);
+                        
+#pragma warning disable CS4014 // Intentional, running detached async Task
+                        RunAsync(_cts.Token); // start the clock
+#pragma warning restore CS4014 // Intentional, running detached async Task
+                        
+                        while (_startTime == 0)
+                        {
+                            _workerInitialized.Wait();
+                        }
+                        return;
+                    }
                 }
             }
-
-            else if (_workerState == WORKER_STATE_SHUTDOWN)
+            
+            switch (_workerState)
             {
-                throw new SchedulerException("cannot enqueue after timer shutdown");
-            }
-            else
-            {
-                throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
-            }
-
-            while (_startTime == 0)
-            {
-                _workerInitialized.Wait();
+                case WORKER_STATE_STARTED:
+                    // do nothing
+                    break;
+                
+                case WORKER_STATE_INIT:
+                    throw new InvalidOperationException($"Worker in invalid state when it is supposed to be initialized: {_workerState}");
+                
+                case WORKER_STATE_SHUTDOWN:
+                    throw new SchedulerException("cannot enqueue after timer shutdown");
+                
+                default:
+                    throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
             }
         }
 
-        private async Task RunAsync()
+        private async Task RunAsync(CancellationToken token)
         {
+            if (_timer is null)
+                throw new Exception("Scheduler has not been initialized");
+            
             // Initialize the clock
-            _startTime = HighResMonotonicClock.Ticks;
+            _startTime = Util.MonotonicClock.GetTicksHighRes();
             if (_startTime == 0)
             {
                 // 0 means it's an uninitialized value, so bump to 1 to indicate it's started
@@ -169,17 +197,27 @@ namespace Akka.Actor
 
             try
             {
-                while (await _timer.WaitForNextTickAsync(_cts.Token))
+                while (await _timer.WaitForNextTickAsync(token))
                 {
-                    var deadline = _tickDuration * (_tick + 1);
-                    var idx = (int)(_tick & _mask);
-                    var bucket = _wheel[idx];
-                    TransferRegistrationsToBuckets();
-                    bucket.Execute(deadline);
-                    _tick++; // it will take 2^64 * 10ms for this to overflow
+                    var deadline = Util.MonotonicClock.GetTicksHighRes() - _startTime;
+                    var clockDrift = deadline - (_tickDuration * _tick + _tickDuration);
+                    
+                    // Catch up with any missed ticks
+                    while(clockDrift >= _tickDuration)
+                    {
+                        var idx = (int)(_tick & _mask);
+                        var bucket = _wheel[idx];
+                        TransferRegistrationsToBuckets();
+                        bucket.Execute(deadline);
 
-                    bucket.ClearReschedule(_rescheduleRegistrations);
-                    ProcessReschedule();
+                        _tick++; // it will take 2^64 * 10ms for this to overflow
+
+                        bucket.ClearReschedule(_rescheduleRegistrations);
+                        ProcessReschedule(deadline, clockDrift);
+                        
+                        deadline = Util.MonotonicClock.GetTicksHighRes() - _startTime;
+                        clockDrift = deadline - (_tickDuration * _tick + _tickDuration);
+                    }
                 }
             }
             catch (OperationCanceledException)
@@ -199,41 +237,59 @@ namespace Akka.Actor
             }
 
             // return the list of unprocessedRegistrations and signal that we're finished
-            _stopped.Value.TrySetResult(_unprocessedRegistrations);
+            _stopped.TrySetResult(_unprocessedRegistrations);
+        }
+
+        private void ProcessReschedule(long now, long clockDrift)
+        {
+            foreach (var schedule in _rescheduleRegistrations)
+            {
+                schedule.Deadline = now - clockDrift + schedule.Offset;
+                PlaceInBucket(schedule);
+            }
+
+            _rescheduleRegistrations.Clear();
         }
 #else
-private Thread _worker;
+        private Thread? _worker;
 
         private void Start()
         {
-            if (_workerState == WORKER_STATE_STARTED) { } // do nothing
-            else if (_workerState == WORKER_STATE_INIT)
+            if (_workerState is WORKER_STATE_INIT)
             {
-                _worker = new Thread(Run) { IsBackground = true };
-#pragma warning disable 420
-                if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
-#pragma warning restore 420
-                    WORKER_STATE_INIT)
+                lock (_stateLock)
                 {
-                    _worker.Start();
+                    if (_workerState is WORKER_STATE_INIT)
+                    {
+                        _workerState = WORKER_STATE_STARTED;
+                        _worker = new Thread(Run) { IsBackground = true };
+                        _worker.Start();
+                        
+                        while (_startTime == 0)
+                        {
+                            _workerInitialized.Wait();
+                        }
+                        return;
+                    }
                 }
             }
-
-            else if (_workerState == WORKER_STATE_SHUTDOWN)
+            
+            switch (_workerState)
             {
-                throw new SchedulerException("cannot enqueue after timer shutdown");
-            }
-            else
-            {
-                throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
-            }
-
-            while (_startTime == 0)
-            {
-                _workerInitialized.Wait();
+                case WORKER_STATE_STARTED:
+                    // do nothing
+                    break;
+                
+                case WORKER_STATE_INIT:
+                    throw new InvalidOperationException($"Worker in invalid state when it is supposed to be initialized: {_workerState}");
+                
+                case WORKER_STATE_SHUTDOWN:
+                    throw new SchedulerException("cannot enqueue after timer shutdown");
+                
+                default:
+                    throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
             }
         }
-        
         
         /// <summary>
         /// Scheduler thread entry method
@@ -241,7 +297,7 @@ private Thread _worker;
         private void Run()
         {
             // Initialize the clock
-            _startTime = HighResMonotonicClock.Ticks;
+            _startTime = Util.MonotonicClock.GetTicksHighRes();
             if (_startTime == 0)
             {
                 // 0 means it's an uninitialized value, so bump to 1 to indicate it's started
@@ -278,17 +334,17 @@ private Thread _worker;
             }
 
             // return the list of unprocessedRegistrations and signal that we're finished
-            _stopped.Value.TrySetResult(_unprocessedRegistrations);
+            _stopped.TrySetResult(_unprocessedRegistrations);
         }
         
-          private long WaitForNextTick()
+        private long WaitForNextTick()
         {
             var deadline = _tickDuration * (_tick + 1);
             unchecked // just to avoid trouble with long-running applications
             {
                 for (;;)
                 {
-                    long currentTime = HighResMonotonicClock.Ticks - _startTime;
+                    var currentTime = Util.MonotonicClock.GetTicksHighRes() - _startTime;
                     var sleepMs = ((deadline - currentTime + TimeSpan.TicksPerMillisecond - 1) /
                                    TimeSpan.TicksPerMillisecond);
 
@@ -304,19 +360,19 @@ private Thread _worker;
             }
         }
 
-#endif
-
         private void ProcessReschedule()
         {
-            foreach (var sched in _rescheduleRegistrations)
+            foreach (var schedule in _rescheduleRegistrations)
             {
-                var nextDeadline = HighResMonotonicClock.Ticks - _startTime + sched.Offset;
-                sched.Deadline = nextDeadline;
-                PlaceInBucket(sched);
+                var nextDeadline = Util.MonotonicClock.GetTicksHighRes() - _startTime + schedule.Offset;
+                schedule.Deadline = nextDeadline;
+                PlaceInBucket(schedule);
             }
 
             _rescheduleRegistrations.Clear();
         }
+
+#endif
 
 
         private void TransferRegistrationsToBuckets()
@@ -387,7 +443,7 @@ private Thread _worker;
         private void InternalSchedule(TimeSpan delay, TimeSpan interval, IRunnable action, ICancelable cancelable)
         {
             Start();
-            var deadline = HighResMonotonicClock.Ticks + delay.Ticks - _startTime;
+            var deadline = Util.MonotonicClock.GetTicksHighRes() + delay.Ticks - _startTime;
             var offset = interval.Ticks;
             var reg = new SchedulerRegistration(action, cancelable) { Deadline = deadline, Offset = offset };
             _registrations.Enqueue(reg);
@@ -444,33 +500,35 @@ private Thread _worker;
             InternalSchedule(initialDelay, interval, action, cancelable);
         }
 
-        private readonly AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>> _stopped = new();
+        private readonly TaskCompletionSource<IEnumerable<SchedulerRegistration>> _stopped = new();
 
         private static readonly Task<IEnumerable<SchedulerRegistration>> Completed =
             Task.FromResult((IEnumerable<SchedulerRegistration>)new List<SchedulerRegistration>());
 
         private Task<IEnumerable<SchedulerRegistration>> Stop()
         {
-            var p = new TaskCompletionSource<IEnumerable<SchedulerRegistration>>();
+            if (_workerState is not WORKER_STATE_STARTED) 
+                return Completed;
 
-            if (_stopped.CompareAndSet(null, p)
-#pragma warning disable 420
-                && Interlocked.CompareExchange(ref _workerState, WORKER_STATE_SHUTDOWN, WORKER_STATE_STARTED) ==
-                WORKER_STATE_STARTED)
-#pragma warning restore 420
+            lock (_stateLock)
             {
+                if (_workerState is not WORKER_STATE_STARTED) 
+                    return Completed;
+                _workerState = WORKER_STATE_SHUTDOWN;
+                
 #if NET6_0_OR_GREATER
                 _cts.Cancel();
 #endif
                 // Let remaining work that is already being processed finished. The termination task will complete afterwards
-                return p.Task;
+                return _stopped.Task;
             }
-
-            return Completed;
         }
 
         public void Dispose()
         {
+#if NET6_0_OR_GREATER
+            _timer?.Dispose();
+#endif
             var stopped = Stop();
             if (!stopped.Wait(_shutdownTimeout))
             {
@@ -501,9 +559,6 @@ private Thread _worker;
             }
 
             _unprocessedRegistrations.Clear();
-#if NET6_0_OR_GREATER
-            _timer.Dispose();
-#endif
         }
 
         /// <summary>
@@ -545,7 +600,7 @@ private Thread _worker;
             /// <summary>
             /// The cancellation handle, if any
             /// </summary>
-            public readonly ICancelable Cancellation;
+            public readonly ICancelable? Cancellation;
 
             /// <summary>
             /// The task to be executed
@@ -556,8 +611,8 @@ private Thread _worker;
              * Linked list is only ever modified from the scheduler thread, so this
              * implementation does not need to be synchronized or implement CAS semantics.
              */
-            public SchedulerRegistration Next;
-            public SchedulerRegistration Prev;
+            public SchedulerRegistration? Next;
+            public SchedulerRegistration? Prev;
 
             public long RemainingRounds;
 
@@ -571,7 +626,7 @@ private Thread _worker;
             /// </summary>
             public long Deadline;
 
-            public SchedulerRegistration(IRunnable action, ICancelable cancellation)
+            public SchedulerRegistration(IRunnable action, ICancelable? cancellation)
             {
                 Action = action;
                 Cancellation = cancellation;
@@ -590,7 +645,7 @@ private Thread _worker;
             /// <summary>
             /// The <see cref="Bucket"/> to which this registration belongs.
             /// </summary>
-            public Bucket Bucket;
+            public Bucket? Bucket;
 
             /// <summary>
             /// Resets all of the fields so this registration object can be used again
@@ -618,11 +673,11 @@ private Thread _worker;
             /*
              * Endpoints of our doubly linked list
              */
-            private SchedulerRegistration _head;
-            private SchedulerRegistration _tail;
+            private SchedulerRegistration? _head;
+            private SchedulerRegistration? _tail;
 
-            private SchedulerRegistration _rescheduleHead;
-            private SchedulerRegistration _rescheduleTail;
+            private SchedulerRegistration? _rescheduleHead;
+            private SchedulerRegistration? _rescheduleTail;
 
             public Bucket(ILoggingAdapter log)
             {
@@ -640,10 +695,10 @@ private Thread _worker;
                 if (_head == null) // first time the bucket has been used
                 {
                     _head = _tail = reg;
-                }
+                } 
                 else
                 {
-                    _tail.Next = reg;
+                    _tail!.Next = reg;
                     reg.Prev = _tail;
                     _tail = reg;
                 }
@@ -661,7 +716,7 @@ private Thread _worker;
                 }
                 else
                 {
-                    _rescheduleTail.Next = reg;
+                    _rescheduleTail!.Next = reg;
                     reg.Prev = _rescheduleTail;
                     _rescheduleTail = reg;
                 }
@@ -701,8 +756,6 @@ private Thread _worker;
                 }
             }
 
-            private static readonly Action<object> ExecuteRunnableWithState = r => ((IRunnable)r).Run();
-
             /// <summary>
             /// Execute all <see cref="SchedulerRegistration"/>s that are due by or after <paramref name="deadline"/>.
             /// </summary>
@@ -714,7 +767,7 @@ private Thread _worker;
                 // process all registrations
                 while (current != null)
                 {
-                    bool remove = false;
+                    var remove = false;
                     if (current.Cancelled) // check for cancellation first
                     {
                         remove = true;
@@ -740,7 +793,8 @@ private Thread _worker;
                                 }
                                 catch
                                 {
-                                } // suppress any errors thrown during logging
+                                    // suppress any errors thrown during logging
+                                } 
                             }
 
                             remove = true;
@@ -757,7 +811,7 @@ private Thread _worker;
                         current.RemainingRounds--;
                     }
 
-                    var next = current.Next;
+                    var next = current!.Next;
                     if (remove)
                     {
                         Remove(current);
@@ -810,7 +864,7 @@ private Thread _worker;
                 reg.Reset();
             }
 
-            private SchedulerRegistration Poll()
+            private SchedulerRegistration? Poll()
             {
                 var head = _head;
                 if (head == null)
@@ -833,7 +887,7 @@ private Thread _worker;
                 return head;
             }
 
-            private SchedulerRegistration PollReschedule()
+            private SchedulerRegistration? PollReschedule()
             {
                 var head = _rescheduleHead;
                 if (head == null)
