@@ -200,7 +200,7 @@ namespace Akka.Actor
                 while (await _timer.WaitForNextTickAsync(token))
                 {
                     var deadline = Util.MonotonicClock.GetTicksHighRes() - _startTime;
-                    var clockDrift = deadline - (_tickDuration * _tick + _tickDuration);
+                    var clockDrift = deadline - _tickDuration * _tick;
                     
                     // Catch up with any missed ticks
                     while(clockDrift >= _tickDuration)
@@ -216,7 +216,7 @@ namespace Akka.Actor
                         ProcessReschedule(deadline, clockDrift);
                         
                         deadline = Util.MonotonicClock.GetTicksHighRes() - _startTime;
-                        clockDrift = deadline - (_tickDuration * _tick + _tickDuration);
+                        clockDrift = deadline - _tickDuration * _tick;
                     }
                 }
             }
