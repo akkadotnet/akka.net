@@ -218,7 +218,6 @@ namespace Akka.Actor
                         bucket.ClearReschedule(_rescheduleRegistrations);
                         ProcessReschedule(deadline, clockDrift);
                         
-                        deadline = Util.MonotonicClock.GetTicksHighRes() - _startTime;
                         clockDrift = deadline - _tickDuration * _tick;
                     }
                 }

@@ -8,7 +8,6 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace Akka.Util
 {
@@ -20,12 +19,20 @@ namespace Akka.Util
     /// </summary>
     internal static class MonotonicClock
     {
-        private static readonly Stopwatch Stopwatch = Stopwatch.StartNew();
+        private static readonly Stopwatch Stopwatch;
 
-        private const int TicksInMillisecond = 10000;
-
+        private const long TicksInMillisecond = TimeSpan.TicksPerMillisecond;
+        private const long TicksInSecond = TimeSpan.TicksPerSecond;
         private const long NanosPerTick = 100;
 
+        private static readonly double TicksFrequency;
+        
+        static MonotonicClock()
+        {
+            TicksFrequency = (double)TicksInSecond / Stopwatch.Frequency;
+            Stopwatch = Stopwatch.StartNew();
+        }
+        
         /// <summary>
         /// Time as measured by the current system up-time.
         /// </summary>
@@ -38,7 +45,7 @@ namespace Akka.Util
         public static TimeSpan ElapsedHighRes => Stopwatch.Elapsed;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long GetTicksHighRes() => Stopwatch.ElapsedTicks;
+        public static long GetTicksHighRes() => (long)(Stopwatch.ElapsedTicks * TicksFrequency);
 
         /// <summary>
         /// TBD
