@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
-using Akka.Util;
 
 #nullable enable
 namespace Akka.Actor
@@ -229,7 +228,7 @@ namespace Akka.Actor
             }
 
             // return the list of unprocessedRegistrations and signal that we're finished
-            _stopped.Value?.TrySetResult(_unprocessedRegistrations);
+            _stopped.TrySetResult(_unprocessedRegistrations);
         }
 
         private void ProcessReschedule(long now)
@@ -316,7 +315,7 @@ namespace Akka.Actor
             }
 
             // return the list of unprocessedRegistrations and signal that we're finished
-            _stopped.Value?.TrySetResult(_unprocessedRegistrations);
+            _stopped.TrySetResult(_unprocessedRegistrations);
         }
 
         private void ProcessReschedule()
@@ -480,24 +479,21 @@ namespace Akka.Actor
             InternalSchedule(initialDelay, interval, action, cancelable);
         }
 
-        private readonly AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>?> _stopped = new();
+        private readonly TaskCompletionSource<IEnumerable<SchedulerRegistration>> _stopped = new();
 
         private static readonly Task<IEnumerable<SchedulerRegistration>> Completed =
             Task.FromResult((IEnumerable<SchedulerRegistration>)new List<SchedulerRegistration>());
 
         private Task<IEnumerable<SchedulerRegistration>> Stop()
         {
-            var p = new TaskCompletionSource<IEnumerable<SchedulerRegistration>>();
-
-            if (_stopped.CompareAndSet(null, p)
-                && Interlocked.CompareExchange(ref _workerState, WORKER_STATE_SHUTDOWN, WORKER_STATE_STARTED) ==
+            if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_SHUTDOWN, WORKER_STATE_STARTED) ==
                 WORKER_STATE_STARTED)
             {
 #if NET6_0_OR_GREATER
                 _cts.Cancel();
 #endif
                 // Let remaining work that is already being processed finished. The termination task will complete afterwards
-                return p.Task;
+                return _stopped.Task;
             }
 
             return Completed;
