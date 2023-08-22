@@ -319,16 +319,27 @@ namespace Akka.Actor
             _stopped.Value?.TrySetResult(_unprocessedRegistrations);
         }
 
+        private void ProcessReschedule()
+        {
+            foreach (var sched in _rescheduleRegistrations)
+            {
+                var nextDeadline = HighResMonotonicClock.Ticks - _startTime + sched.Offset;
+                sched.Deadline = nextDeadline;
+                PlaceInBucket(sched);
+            }
+
+            _rescheduleRegistrations.Clear();
+        }
+
         private long WaitForNextTick()
         {
-            long deadline = _tickDuration * (_tick + 1);
+            var deadline = _tickDuration * (_tick + 1);
             unchecked // just to avoid trouble with long-running applications
             {
                 for (;;)
                 {
                     long currentTime = HighResMonotonicClock.Ticks - _startTime;
-                    var sleepMs = ((deadline - currentTime + TimeSpan.TicksPerMillisecond - 1) / 
-                                   TimeSpan.TicksPerMillisecond);
+                    var sleepMs = ((deadline - currentTime + TimeSpan.TicksPerMillisecond - 1) / TimeSpan.TicksPerMillisecond);
 
                     if (sleepMs <= 0) // no need to sleep
                     {
@@ -340,18 +351,6 @@ namespace Akka.Actor
                     Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
                 }
             }
-        }
-
-        private void ProcessReschedule()
-        {
-            foreach (var sched in _rescheduleRegistrations)
-            {
-                var nextDeadline = HighResMonotonicClock.Ticks - _startTime + sched.Offset;
-                sched.Deadline = nextDeadline;
-                PlaceInBucket(sched);
-            }
-
-            _rescheduleRegistrations.Clear();
         }
 #endif
 
