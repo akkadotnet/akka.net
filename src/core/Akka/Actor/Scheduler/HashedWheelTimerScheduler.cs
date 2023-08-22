@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.Util;
 
 #nullable enable
 namespace Akka.Actor
@@ -108,8 +109,7 @@ namespace Akka.Actor
         /// <summary>
         /// 0 - init, 1 - started, 2 - shutdown
         /// </summary>
-        private int _workerState = WORKER_STATE_INIT;
-        private readonly object _stateLock = new ();
+        private volatile int _workerState = WORKER_STATE_INIT;
 
         private static Bucket[] CreateWheel(int ticksPerWheel, ILoggingAdapter log)
         {
@@ -142,44 +142,34 @@ namespace Akka.Actor
 
         private void Start()
         {
-            if (_workerState is WORKER_STATE_INIT)
+            if (_workerState == WORKER_STATE_STARTED)
             {
-                lock (_stateLock)
+            } // do nothing
+            else if (_workerState == WORKER_STATE_INIT)
+            {
+                if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
+                    WORKER_STATE_INIT)
                 {
-                    if (_workerState is WORKER_STATE_INIT)
-                    {
-                        _workerState = WORKER_STATE_STARTED;
-                        
-                        var t = TimeSpan.FromTicks(_tickDuration);
-                        _timer = new PeriodicTimer(t);
-                        
+                    var t = TimeSpan.FromTicks(_tickDuration);
+                    _timer = new PeriodicTimer(t);
+                    
 #pragma warning disable CS4014 // Intentional, running detached async Task
-                        RunAsync(_cts.Token); // start the clock
+                    RunAsync(_cts.Token); // start the clock
 #pragma warning restore CS4014 // Intentional, running detached async Task
-                        
-                        while (_startTime == 0)
-                        {
-                            _workerInitialized.Wait();
-                        }
-                        return;
-                    }
                 }
             }
-            
-            switch (_workerState)
+            else if (_workerState == WORKER_STATE_SHUTDOWN)
             {
-                case WORKER_STATE_STARTED:
-                    // do nothing
-                    break;
-                
-                case WORKER_STATE_INIT:
-                    throw new InvalidOperationException($"Worker in invalid state when it is supposed to be initialized: {_workerState}");
-                
-                case WORKER_STATE_SHUTDOWN:
-                    throw new SchedulerException("cannot enqueue after timer shutdown");
-                
-                default:
-                    throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
+                throw new SchedulerException("cannot enqueue after timer shutdown");
+            }
+            else
+            {
+                throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
+            }
+                    
+            while (_startTime == 0)
+            {
+                _workerInitialized.Wait();
             }
         }
 
@@ -216,7 +206,7 @@ namespace Akka.Actor
                         _tick++; // it will take 2^64 * 10ms for this to overflow
 
                         bucket.ClearReschedule(_rescheduleRegistrations);
-                        ProcessReschedule(deadline, clockDrift);
+                        ProcessReschedule(deadline - clockDrift);
                         
                         clockDrift = deadline - _tickDuration * _tick;
                     }
@@ -239,14 +229,14 @@ namespace Akka.Actor
             }
 
             // return the list of unprocessedRegistrations and signal that we're finished
-            _stopped.TrySetResult(_unprocessedRegistrations);
+            _stopped.Value?.TrySetResult(_unprocessedRegistrations);
         }
 
-        private void ProcessReschedule(long now, long clockDrift)
+        private void ProcessReschedule(long now)
         {
             foreach (var schedule in _rescheduleRegistrations)
             {
-                schedule.Deadline = now - clockDrift + schedule.Offset;
+                schedule.Deadline = now + schedule.Offset;
                 PlaceInBucket(schedule);
             }
 
@@ -257,41 +247,31 @@ namespace Akka.Actor
 
         private void Start()
         {
-            if (_workerState is WORKER_STATE_INIT)
+            if (_workerState == WORKER_STATE_STARTED) { } // do nothing
+            else if (_workerState == WORKER_STATE_INIT)
             {
-                lock (_stateLock)
+                if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
+                    WORKER_STATE_INIT)
                 {
-                    if (_workerState is WORKER_STATE_INIT)
-                    {
-                        _workerState = WORKER_STATE_STARTED;
-                        _worker = new Thread(Run) { IsBackground = true };
-                        _worker.Start();
-                        
-                        while (_startTime == 0)
-                        {
-                            _workerInitialized.Wait();
-                        }
-                        return;
-                    }
+                    _worker = new Thread(Run) { IsBackground = true };
+                    _worker.Start();
                 }
             }
-            
-            switch (_workerState)
+            else if (_workerState is WORKER_STATE_SHUTDOWN)
             {
-                case WORKER_STATE_STARTED:
-                    // do nothing
-                    break;
-                
-                case WORKER_STATE_INIT:
-                    throw new InvalidOperationException($"Worker in invalid state when it is supposed to be initialized: {_workerState}");
-                
-                case WORKER_STATE_SHUTDOWN:
-                    throw new SchedulerException("cannot enqueue after timer shutdown");
-                
-                default:
-                    throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
+                throw new SchedulerException("cannot enqueue after timer shutdown");
+            }
+            else
+            {
+                throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
+            }
+            
+            while (_startTime == 0)
+            {
+                _workerInitialized.Wait();
             }
         }
+        
         
         /// <summary>
         /// Scheduler thread entry method
@@ -299,7 +279,7 @@ namespace Akka.Actor
         private void Run()
         {
             // Initialize the clock
-            _startTime = Util.MonotonicClock.GetTicksHighRes();
+            _startTime = HighResMonotonicClock.Ticks;
             if (_startTime == 0)
             {
                 // 0 means it's an uninitialized value, so bump to 1 to indicate it's started
@@ -336,18 +316,18 @@ namespace Akka.Actor
             }
 
             // return the list of unprocessedRegistrations and signal that we're finished
-            _stopped.TrySetResult(_unprocessedRegistrations);
+            _stopped.Value?.TrySetResult(_unprocessedRegistrations);
         }
-        
+
         private long WaitForNextTick()
         {
-            var deadline = _tickDuration * (_tick + 1);
+            long deadline = _tickDuration * (_tick + 1);
             unchecked // just to avoid trouble with long-running applications
             {
                 for (;;)
                 {
-                    var currentTime = Util.MonotonicClock.GetTicksHighRes() - _startTime;
-                    var sleepMs = ((deadline - currentTime + TimeSpan.TicksPerMillisecond - 1) /
+                    long currentTime = HighResMonotonicClock.Ticks - _startTime;
+                    var sleepMs = ((deadline - currentTime + TimeSpan.TicksPerMillisecond - 1) / 
                                    TimeSpan.TicksPerMillisecond);
 
                     if (sleepMs <= 0) // no need to sleep
@@ -364,16 +344,15 @@ namespace Akka.Actor
 
         private void ProcessReschedule()
         {
-            foreach (var schedule in _rescheduleRegistrations)
+            foreach (var sched in _rescheduleRegistrations)
             {
-                var nextDeadline = Util.MonotonicClock.GetTicksHighRes() - _startTime + schedule.Offset;
-                schedule.Deadline = nextDeadline;
-                PlaceInBucket(schedule);
+                var nextDeadline = HighResMonotonicClock.Ticks - _startTime + sched.Offset;
+                sched.Deadline = nextDeadline;
+                PlaceInBucket(sched);
             }
 
             _rescheduleRegistrations.Clear();
         }
-
 #endif
 
 
@@ -445,7 +424,7 @@ namespace Akka.Actor
         private void InternalSchedule(TimeSpan delay, TimeSpan interval, IRunnable action, ICancelable cancelable)
         {
             Start();
-            var deadline = Util.MonotonicClock.GetTicksHighRes() + delay.Ticks - _startTime;
+            var deadline = HighResMonotonicClock.Ticks + delay.Ticks - _startTime;
             var offset = interval.Ticks;
             var reg = new SchedulerRegistration(action, cancelable) { Deadline = deadline, Offset = offset };
             _registrations.Enqueue(reg);
@@ -502,28 +481,27 @@ namespace Akka.Actor
             InternalSchedule(initialDelay, interval, action, cancelable);
         }
 
-        private readonly TaskCompletionSource<IEnumerable<SchedulerRegistration>> _stopped = new();
+        private readonly AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>?> _stopped = new();
 
         private static readonly Task<IEnumerable<SchedulerRegistration>> Completed =
             Task.FromResult((IEnumerable<SchedulerRegistration>)new List<SchedulerRegistration>());
 
         private Task<IEnumerable<SchedulerRegistration>> Stop()
         {
-            if (_workerState is not WORKER_STATE_STARTED) 
-                return Completed;
+            var p = new TaskCompletionSource<IEnumerable<SchedulerRegistration>>();
 
-            lock (_stateLock)
+            if (_stopped.CompareAndSet(null, p)
+                && Interlocked.CompareExchange(ref _workerState, WORKER_STATE_SHUTDOWN, WORKER_STATE_STARTED) ==
+                WORKER_STATE_STARTED)
             {
-                if (_workerState is not WORKER_STATE_STARTED) 
-                    return Completed;
-                _workerState = WORKER_STATE_SHUTDOWN;
-                
 #if NET6_0_OR_GREATER
                 _cts.Cancel();
 #endif
                 // Let remaining work that is already being processed finished. The termination task will complete afterwards
-                return _stopped.Task;
+                return p.Task;
             }
+
+            return Completed;
         }
 
         public void Dispose()
@@ -589,7 +567,7 @@ namespace Akka.Actor
                 return $"[{_receiver}.Tell({_message}, {_sender})]";
             }
 
-#if !NETSTANDARD
+#if NET6_0_OR_GREATER
             public void Execute()
             {
                 Run();
@@ -697,7 +675,7 @@ namespace Akka.Actor
                 if (_head == null) // first time the bucket has been used
                 {
                     _head = _tail = reg;
-                } 
+                }
                 else
                 {
                     _tail!.Next = reg;
