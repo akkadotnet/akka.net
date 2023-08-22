@@ -250,10 +250,10 @@ namespace Akka.Actor
             if (_workerState == WORKER_STATE_STARTED) { } // do nothing
             else if (_workerState == WORKER_STATE_INIT)
             {
+                _worker = new Thread(Run) { IsBackground = true };
                 if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
                     WORKER_STATE_INIT)
                 {
-                    _worker = new Thread(Run) { IsBackground = true };
                     _worker.Start();
                 }
             }
