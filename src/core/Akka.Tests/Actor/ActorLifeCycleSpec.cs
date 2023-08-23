@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorLifeCycleSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ namespace Akka.Tests
 
             protected override void OnReceive(object message)
             {
-                if (message is string && (string)message == "status")
+                if (message is string s && s == "status")
                 {
                     testActor.Tell(("OK",id,CurrentGeneration));
                 }
@@ -89,7 +89,7 @@ namespace Akka.Tests
 
             protected override void OnReceive(object message)
             {
-                if (message is string && (string)message == "status")
+                if (message is string s && s == "status")
                 {
                     testActor.Tell(("OK", id, CurrentGeneration));
                 }
@@ -202,10 +202,10 @@ namespace Akka.Tests
         public async Task Log_failures_in_PostStop()
         {
             var a = Sys.ActorOf<EmptyActor>();
-            await EventFilter.Exception<Exception>(message: "hurrah").ExpectOneAsync(async () =>
-                {
-                    a.Tell(PoisonPill.Instance);
-                });            
+            await EventFilter.Exception<Exception>(message: "hurrah").ExpectOneAsync(() => {
+                a.Tell(PoisonPill.Instance);
+                return Task.CompletedTask;
+            });            
         }
 
         public class Become
@@ -385,7 +385,7 @@ namespace Akka.Tests
         {
             var broken = ActorOf(c =>
             {
-                c.Receive<string>((m, context) =>
+                c.Receive<string>((_, _) =>
                 {
                     throw new MyCustomException();
                 });

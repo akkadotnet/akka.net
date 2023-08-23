@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="OptionalSnapshotStoreSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ namespace Akka.Persistence.Tests
     {
         public sealed class GetConfig
         {
-            public static readonly GetConfig Instance = new GetConfig();
+            public static readonly GetConfig Instance = new();
             private GetConfig() { }
         }
 
@@ -38,7 +38,7 @@ namespace Akka.Persistence.Tests
                     _lastSender = Sender;
                     SaveSnapshot(message);
                 }
-                else if (message is SaveSnapshotFailure || message is SaveSnapshotSuccess)
+                else if (message is SaveSnapshotFailure or SaveSnapshotSuccess)
                     _lastSender.Tell(message);
                 else return false;
                 return true;

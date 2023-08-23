@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SupervisorHierarchySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -152,9 +152,9 @@ namespace Akka.Tests.Actor
             var boss = ActorOf((cfg, ctx) =>
             {
                 var crasher = ctx.ActorOf(Props.Create(() => new CountDownActor(countDownMessages, SupervisorStrategy.DefaultStrategy)), "crasher");
-                cfg.Receive("killCrasher", (s, context) => crasher.Tell(Kill.Instance));
-                cfg.Receive<Terminated>((terminated, context) => countDownMax.Signal());
-                cfg.Strategy = new OneForOneStrategy(1, TimeSpan.FromSeconds(5), e => Directive.Restart);
+                cfg.Receive("killCrasher", (_, _) => crasher.Tell(Kill.Instance));
+                cfg.Receive<Terminated>((_, _) => countDownMax.Signal());
+                cfg.Strategy = new OneForOneStrategy(1, TimeSpan.FromSeconds(5), _ => Directive.Restart);
                 ctx.Watch(crasher);
             }, "boss");
 
@@ -197,10 +197,11 @@ namespace Akka.Tests.Actor
             //Check everything is in place by sending ping to worker and expect it to respond with pong
             worker.Tell("ping");
             await ExpectMsgAsync("pong");
-            await EventFilter.Warning("expected").ExpectOneAsync(async () => //expected exception is thrown by the boss when it crashes
-            {
-                middle.Tell("fail");    //Throws an exception, and then it's resumed
-            });
+            await EventFilter.Warning("expected").ExpectOneAsync(() => //expected exception is thrown by the boss when it crashes
+{
+    middle.Tell("fail");    //Throws an exception, and then it's resumed
+    return Task.CompletedTask;
+});
 
             //verify that middle answers
             middle.Tell("ping");
@@ -224,9 +225,9 @@ namespace Akka.Tests.Actor
             var latch = CreateTestLatch();
             var slowResumer = ActorOf(c =>
             {
-                c.Strategy = new OneForOneStrategy(e => { latch.Ready(Dilated(TimeSpan.FromSeconds(4))); return Directive.Resume; });
+                c.Strategy = new OneForOneStrategy(_ => { latch.Ready(Dilated(TimeSpan.FromSeconds(4))); return Directive.Resume; });
                 c.Receive<string>(s => s.StartsWith("spawn:"), (s, ctx) => ctx.Sender.Tell(ctx.ActorOf<Resumer>(s.Substring(6))));
-                c.Receive("spawn", (s, ctx) => ctx.Sender.Tell(ctx.ActorOf<Resumer>()));
+                c.Receive("spawn", (_, ctx) => ctx.Sender.Tell(ctx.ActorOf<Resumer>()));
             }, "slowResumer");
 
             //Build this hierarchy:
@@ -297,7 +298,7 @@ namespace Akka.Tests.Actor
                             if (ca < 6)
                                 throw new InvalidOperationException("OH NO!");
                             childDsl.OnPreStart = _ => preStartCalled.IncrementAndGet();
-                            childDsl.OnPostRestart = (e, _) => postRestartCalled.IncrementAndGet();
+                            childDsl.OnPostRestart = (_, _) => postRestartCalled.IncrementAndGet();
                             childDsl.ReceiveAny((m, actorContext) => actorContext.Sender.Tell(m));
                         }, "failingChild");
                         resumerDsl.ReceiveAny((m, _) => failingChild.Forward(m));

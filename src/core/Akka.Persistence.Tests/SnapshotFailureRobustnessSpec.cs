@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotFailureRobustnessSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -100,17 +100,16 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = (Cmd) message;
                     Persist(cmd.Payload, _ => SaveSnapshot(cmd.Payload));
                 }
-                else if (message is DeleteSnapshot)
-                    DeleteSnapshot(((DeleteSnapshot)message).SequenceNr);
-                else if (message is DeleteSnapshots)
-                    DeleteSnapshots(((DeleteSnapshots)message).Criteria);
-                else if (message is SaveSnapshotSuccess)
-                    _probe.Tell(((SaveSnapshotSuccess)message).Metadata.SequenceNr);
+                else if (message is DeleteSnapshot snapshot)
+                    DeleteSnapshot(snapshot.SequenceNr);
+                else if (message is DeleteSnapshots snapshots)
+                    DeleteSnapshots(snapshots.Criteria);
+                else if (message is SaveSnapshotSuccess success)
+                    _probe.Tell(success.Metadata.SequenceNr);
                 else
                     _probe.Tell(message);
                 return true;
@@ -137,17 +136,16 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = (Cmd) message;
                     Persist(cmd.Payload, _ => SaveSnapshot(cmd.Payload));
                 }
-                else if (message is DeleteSnapshot)
-                    DeleteSnapshot(((DeleteSnapshot)message).SequenceNr);
-                else if (message is DeleteSnapshots)
-                    DeleteSnapshots(((DeleteSnapshots)message).Criteria);
-                else if (message is SaveSnapshotSuccess)
-                    _probe.Tell(((SaveSnapshotSuccess)message).Metadata.SequenceNr);
+                else if (message is DeleteSnapshot snapshot)
+                    DeleteSnapshot(snapshot.SequenceNr);
+                else if (message is DeleteSnapshots snapshots)
+                    DeleteSnapshots(snapshots.Criteria);
+                else if (message is SaveSnapshotSuccess success)
+                    _probe.Tell(success.Metadata.SequenceNr);
                 else
                     _probe.Tell(message);
                 return true;
@@ -180,7 +178,9 @@ namespace Akka.Persistence.Tests
 
             protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
             {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 base.DeleteAsync(persistenceId, criteria); // we actually delete it properly, but act as if it failed
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 var promise = new TaskCompletionSource<object>();
                 promise.SetException(new InvalidOperationException("Failed to delete snapshot for some reason."));
                 return promise.Task;

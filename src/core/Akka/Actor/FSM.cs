@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FSM.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -211,7 +211,7 @@ namespace Akka.Actor
             /// <summary>
             /// Singleton instance of Normal
             /// </summary>
-            public static Normal Instance { get; } = new Normal();
+            public static Normal Instance { get; } = new();
         }
 
         /// <summary>
@@ -225,7 +225,7 @@ namespace Akka.Actor
             /// <summary>
             /// Singleton instance of Shutdown
             /// </summary>
-            public static Shutdown Instance { get; } = new Shutdown();
+            public static Shutdown Instance { get; } = new();
         }
 
         /// <summary>
@@ -263,7 +263,7 @@ namespace Akka.Actor
             /// <summary>
             /// Singleton instance of StateTimeout
             /// </summary>
-            public static StateTimeout Instance { get; } = new StateTimeout();
+            public static StateTimeout Instance { get; } = new();
         }
 
         /// <summary>
@@ -837,7 +837,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
-        public TransformHelper Transform(StateFunction func) => new TransformHelper(func);
+        public TransformHelper Transform(StateFunction func) => new(func);
 
         /// <summary>
         /// Schedule named timer to deliver message after given delay, possibly repeating.
@@ -1003,7 +1003,7 @@ namespace Akka.Actor
         /// <summary>
         /// Retrieves the support needed to interact with an actor's listeners.
         /// </summary>
-        public ListenerSupport Listeners { get; } = new ListenerSupport();
+        public ListenerSupport Listeners { get; } = new();
 
         /// <summary>
         /// Can be set to enable debugging on certain actions taken by the FSM
@@ -1023,13 +1023,13 @@ namespace Akka.Actor
         /// Timer handling
         /// </summary>
         private readonly IDictionary<string, Timer> _timers = new Dictionary<string, Timer>();
-        private readonly AtomicCounter _timerGen = new AtomicCounter(0);
+        private readonly AtomicCounter _timerGen = new(0);
 
         /// <summary>
         /// State definitions
         /// </summary>
-        private readonly Dictionary<TState, StateFunction> _stateFunctions = new Dictionary<TState, StateFunction>();
-        private readonly Dictionary<TState, TimeSpan?> _stateTimeouts = new Dictionary<TState, TimeSpan?>();
+        private readonly Dictionary<TState, StateFunction> _stateFunctions = new();
+        private readonly Dictionary<TState, TimeSpan?> _stateTimeouts = new();
 
         private void Register(TState name, StateFunction function, TimeSpan? timeout)
         {
@@ -1064,7 +1064,7 @@ namespace Akka.Actor
 
         private StateFunction HandleEvent
         {
-            get { return _handleEvent ?? (_handleEvent = HandleEventDefault); }
+            get { return _handleEvent ??= HandleEventDefault; }
             set { _handleEvent = value; }
         }
 
@@ -1072,7 +1072,7 @@ namespace Akka.Actor
         /// <summary>
         /// Termination handling
         /// </summary>
-        private Action<StopEvent<TState, TData>> _terminateEvent = @event =>{};
+        private Action<StopEvent<TState, TData>> _terminateEvent = _ =>{};
 
         /// <summary>
         /// Transition handling
@@ -1332,9 +1332,9 @@ namespace Akka.Actor
         {
             if (reason is Failure failure)
             {
-                if (failure.Cause is Exception)
+                if (failure.Cause is Exception exception)
                 {
-                    _log.Error(failure.Cause.AsInstanceOf<Exception>(), "terminating due to Failure");
+                    _log.Error(exception, "terminating due to Failure");
                 }
                 else
                 {

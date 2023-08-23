@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CoordinatedShutdownSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ namespace Akka.Tests.Actor
             return new Phase(dependsOn?.ToImmutableHashSet() ?? ImmutableHashSet<string>.Empty, TimeSpan.FromSeconds(10), true);
         }
 
-        private static readonly Phase EmptyPhase = new Phase(ImmutableHashSet<string>.Empty, TimeSpan.FromSeconds(10), true);
+        private static readonly Phase EmptyPhase = new(ImmutableHashSet<string>.Empty, TimeSpan.FromSeconds(10), true);
 
         private List<string> CheckTopologicalSort(Dictionary<string, Phase> phases)
         {

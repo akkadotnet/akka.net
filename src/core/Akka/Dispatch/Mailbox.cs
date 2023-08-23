@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Mailbox.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -176,7 +176,7 @@ namespace Akka.Dispatch
         internal bool CanBeScheduledForExecution(bool hasMessageHint, bool hasSystemMessageHint)
         {
             var currentStatus = CurrentStatus();
-            if (currentStatus == MailboxStatus.Open || currentStatus == MailboxStatus.Scheduled)
+            if (currentStatus is MailboxStatus.Open or MailboxStatus.Scheduled)
                 return hasMessageHint || hasSystemMessageHint || HasSystemMessages || HasMessages;
             if (currentStatus == MailboxStatus.Closed) return false;
             return hasSystemMessageHint || HasSystemMessages;

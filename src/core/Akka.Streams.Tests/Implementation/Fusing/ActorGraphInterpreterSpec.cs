@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorGraphInterpreterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,11 +16,15 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
+using Akka.Streams.Tests.Actor;
+using System.Threading.Tasks;
 
 namespace Akka.Streams.Tests.Implementation.Fusing
 {
@@ -34,9 +38,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_interpret_a_simple_identity_graph_stage()
+        public async Task ActorGraphInterpreter_should_be_able_to_interpret_a_simple_identity_graph_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var identity = GraphStages.Identity<int>();
 
@@ -44,15 +48,15 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                
-                task.AwaitResult().Should().Equal(Enumerable.Range(1, 100));
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Equal(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_reuse_a_simple_identity_graph_stage()
+        public async Task ActorGraphInterpreter_should_be_able_to_reuse_a_simple_identity_graph_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var identity = GraphStages.Identity<int>();
 
@@ -62,15 +66,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                
-                task.AwaitResult().Should().Equal(Enumerable.Range(1, 100));
+
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Equal(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_interpret_a_simple_bidi_stage()
+        public async Task ActorGraphInterpreter_should_be_able_to_interpret_a_simple_bidi_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var identityBidi = new IdentityBidiGraphStage();
                 var identity = BidiFlow.FromGraph(identityBidi).Join(Flow.Identity<int>().Select(x => x));
@@ -79,15 +84,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                
-                task.AwaitResult().Should().Equal(Enumerable.Range(1, 10));
+
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Equal(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_interpret_and_reuse_a_simple_bidi_stage()
+        public async Task ActorGraphInterpreter_should_be_able_to_interpret_and_reuse_a_simple_bidi_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var identityBidi = new IdentityBidiGraphStage();
                 var identityBidiFlow = BidiFlow.FromGraph(identityBidi);
@@ -97,15 +103,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                
-                task.AwaitResult().Should().Equal(Enumerable.Range(1, 10));
+
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Equal(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_interpret_a_rotated_identity_bidi_stage()
+        public async Task ActorGraphInterpreter_should_be_able_to_interpret_a_rotated_identity_bidi_stage()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var rotatedBidi = new RotatedIdentityBidiGraphStage();
                 var takeAll = Flow.Identity<int>()
@@ -129,8 +136,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                         return ClosedShape.Instance;
                     })).Run(Materializer);
                 
-                tasks.Item1.AwaitResult().Should().Equal(Enumerable.Range(1, 100));
-                tasks.Item2.AwaitResult().Should().Equal(Enumerable.Range(1, 10));
+                var complete = await tasks.Item1.ShouldCompleteWithin(3.Seconds());
+                complete.Should().Equal(Enumerable.Range(1, 100));
+                var complete1 = await tasks.Item2.ShouldCompleteWithin(3.Seconds());
+                complete1.Should().Equal(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -146,15 +155,14 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_properly_handle_case_where_a_stage_fails_before_subscription_happens()
+        public async Task ActorGraphInterpreter_should_be_able_to_properly_handle_case_where_a_stage_fails_before_subscription_happens()
         {
             // Fuzzing needs to be off, so that the failure can propagate to the output boundary
             // before the ExposedPublisher message.
             var noFuzzMaterializer = ActorMaterializer.Create(Sys,
                 ActorMaterializerSettings.Create(Sys).WithFuzzingMode(false));
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(() =>
             {
-
                 var evilLatch = new CountdownEvent(1);
 
                 // This is a somewhat tricky test setup. We need the following conditions to be met:
@@ -198,14 +206,14 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 upstream.SendComplete();
                 downstream1.ExpectComplete();
+                return Task.CompletedTask;
             }, noFuzzMaterializer);
         }
         
         [Fact]
-        public void ActorGraphInterpreter_should_be_to_handle_Publisher_spec_violations_without_leaking()
+        public async Task ActorGraphInterpreter_should_be_to_handle_Publisher_spec_violations_without_leaking()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -222,6 +230,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 ex.InnerException.Should().BeAssignableTo<ISpecViolation>();
                 ex.InnerException.InnerException.Should().BeOfType<TestException>();
                 ex.InnerException.InnerException.Message.Should().Be("violating your spec");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -240,10 +249,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_to_handle_Subscriber_spec_violations_without_leaking()
+        public async Task ActorGraphInterpreter_should_be_to_handle_Subscriber_spec_violations_without_leaking()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -258,15 +266,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 ex.InnerException.Should().BeAssignableTo<ISpecViolation>();
                 ex.InnerException.InnerException.Should().BeOfType<TestException>();
                 ex.InnerException.InnerException.Message.Should().Be("violating your spec");
+                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_trigger_PostStop_in_all_stages_when_abruptly_terminated_and_no_upstream_boundaries()
+        public async Task ActorGraphInterpreter_should_trigger_PostStop_in_all_stages_when_abruptly_terminated_and_no_upstream_boundaries()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var materializer = ActorMaterializer.Create(Sys);
+            await this.AssertAllStagesStoppedAsync(() => {
+                // force the system to create a new materializer
+                var materializer = ActorMaterializer.Create(Sys, ActorMaterializerSettings.Create(Sys));
                 var gotStop = new TestLatch(1);
                 var downstream = this.CreateSubscriberProbe<string>();
 
@@ -280,6 +289,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 gotStop.Ready(RemainingOrDefault);
 
                 downstream.ExpectError().Should().BeOfType<AbruptTerminationException>();
+                return Task.CompletedTask;
             }, Materializer);
         }
 

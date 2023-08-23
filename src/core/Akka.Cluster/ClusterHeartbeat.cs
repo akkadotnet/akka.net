@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterHeartbeat.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Linq;
 using Akka.Actor;
 using Akka.Event;
@@ -43,8 +44,7 @@ namespace Akka.Cluster
             switch (message)
             {
                 case ClusterHeartbeatSender.Heartbeat hb:
-                    // TODO log the sequence nr once serializer is enabled
-                    if(VerboseHeartbeat) _cluster.CurrentInfoLogger.LogDebug("Heartbeat from [{0}]", hb.From);
+                    if (VerboseHeartbeat) _cluster.CurrentInfoLogger.LogDebug($"Heartbeat from [{hb.From}] - Sequence number [{hb.SequenceNr.ToString(CultureInfo.InvariantCulture)}]");
                     Sender.Tell(new ClusterHeartbeatSender.HeartbeatRsp(_cluster.SelfUniqueAddress,
                         hb.SequenceNr, hb.CreationTimeNanos));
                     break;
@@ -58,7 +58,6 @@ namespace Akka.Cluster
         {
             return Akka.Actor.Props.Create(() => new ClusterHeartbeatReceiver(getCluster));
         }
-
     }
 
     /// <summary>
@@ -151,7 +150,7 @@ namespace Akka.Cluster
                 Init(state);
                 Become(Active);
             });
-            Receive<HeartbeatTick>(tick =>
+            Receive<HeartbeatTick>(_ =>
             {
                 _tickTimestamp = DateTime.UtcNow; // start checks when active
             }); //do nothing
@@ -159,7 +158,7 @@ namespace Akka.Cluster
 
         private void Active()
         {
-            Receive<HeartbeatTick>(tick => DoHeartbeat());
+            Receive<HeartbeatTick>(_ => DoHeartbeat());
             Receive<HeartbeatRsp>(rsp => DoHeartbeatRsp(rsp));
             Receive<ClusterEvent.MemberRemoved>(removed => RemoveMember(removed.Member));
             Receive<ClusterEvent.IMemberEvent>(evt => AddMember(evt.Member));
@@ -248,7 +247,8 @@ namespace Akka.Cluster
                     "Previous heartbeat was sent [{1}] ms ago, expected interval is [{2}] ms. This may cause failure detection " +
                     "to mark members as unreachable. The reason can be thread starvation, e.g. by running blocking tasks on the " +
                     "default dispatcher, CPU overload, or GC.",
-                    _cluster.SelfAddress, (now - _tickTimestamp).TotalMilliseconds, _cluster.Settings.HeartbeatInterval.TotalMilliseconds);
+                    _cluster.SelfAddress, (now - _tickTimestamp).TotalMilliseconds.ToString(CultureInfo.InvariantCulture), 
+                    _cluster.Settings.HeartbeatInterval.TotalMilliseconds.ToString(CultureInfo.InvariantCulture));
             }
             
             _tickTimestamp = DateTime.UtcNow;
@@ -258,8 +258,8 @@ namespace Akka.Cluster
         {
             if (_cluster.Settings.VerboseHeartbeatLogging)
             {
-                // TODO: log response time and validate sequence nrs once serialisation of sendTime is released
-                _log.Debug("Cluster Node [{0}] - Heartbeat response from [{1}]", _cluster.SelfAddress, rsp.From.Address);
+                _log.Debug("Cluster Node [{0}] - Heartbeat response from [{1}] - Sequence number [{2}] - Creation time [{3}]", _cluster.SelfAddress, rsp.From.Address,
+                    rsp.SequenceNr.ToString(CultureInfo.InvariantCulture), new TimeSpan(rsp.CreationTimeNanos.ToTicks()).ToString());
             }
             _state = _state.HeartbeatRsp(rsp.From);
         }
@@ -754,7 +754,7 @@ namespace Akka.Cluster
             /// <summary>
             /// The singleton instance of this comparer
             /// </summary>
-            public static readonly RingComparer Instance = new RingComparer();
+            public static readonly RingComparer Instance = new();
             private RingComparer() { }
 
             /// <inheritdoc/>
@@ -769,4 +769,3 @@ namespace Akka.Cluster
         #endregion
     }
 }
-

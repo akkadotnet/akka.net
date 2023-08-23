@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ namespace DocsExamples.Persistence.PersistentActor
 
         public class PersistentActor : UntypedPersistentActor
         {
-            private ExampleState _state = new ExampleState();
+            private ExampleState _state = new();
 
             private void UpdateState(Evt evt)
             {
@@ -78,8 +78,8 @@ namespace DocsExamples.Persistence.PersistentActor
                     case Evt evt:
                         UpdateState(evt);
                         break;
-                    case SnapshotOffer snapshot when snapshot.Snapshot is ExampleState:
-                        _state = (ExampleState)snapshot.Snapshot;
+                    case SnapshotOffer snapshot when snapshot.Snapshot is ExampleState state:
+                        _state = state;
                         break;
                 }
             }

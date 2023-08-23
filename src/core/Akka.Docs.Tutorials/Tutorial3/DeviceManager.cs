@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeviceManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,15 +29,15 @@ namespace Tutorials.Tutorial3
 
         public sealed class DeviceRegistered
         {
-            public static DeviceRegistered Instance { get; } = new DeviceRegistered();
+            public static DeviceRegistered Instance { get; } = new();
             private DeviceRegistered() { }
         }
         #endregion
 
         public class DeviceManager : UntypedActor
         {
-            private Dictionary<string, IActorRef> groupIdToActor = new Dictionary<string, IActorRef>();
-            private Dictionary<IActorRef, string> actorToGroupId = new Dictionary<IActorRef, string>();
+            private Dictionary<string, IActorRef> groupIdToActor = new();
+            private Dictionary<IActorRef, string> actorToGroupId = new();
 
             protected override void PreStart() => Log.Info("DeviceManager started");
             protected override void PostStop() => Log.Info("DeviceManager stopped");

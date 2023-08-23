@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DowningStrategy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ namespace Akka.Cluster.SBR
 
     internal class DownReachable : IDecision
     {
-        public static readonly DownReachable Instance = new DownReachable();
+        public static readonly DownReachable Instance = new();
 
         private DownReachable()
         {
@@ -32,7 +32,7 @@ namespace Akka.Cluster.SBR
 
     internal class DownUnreachable : IDecision
     {
-        public static readonly DownUnreachable Instance = new DownUnreachable();
+        public static readonly DownUnreachable Instance = new();
 
         private DownUnreachable()
         {
@@ -43,7 +43,7 @@ namespace Akka.Cluster.SBR
 
     internal class DownAll : IDecision
     {
-        public static readonly DownAll Instance = new DownAll();
+        public static readonly DownAll Instance = new();
 
         private DownAll()
         {
@@ -54,7 +54,7 @@ namespace Akka.Cluster.SBR
 
     internal class DownIndirectlyConnected : IDecision
     {
-        public static readonly DownIndirectlyConnected Instance = new DownIndirectlyConnected();
+        public static readonly DownIndirectlyConnected Instance = new();
 
         private DownIndirectlyConnected()
         {
@@ -129,7 +129,7 @@ namespace Akka.Cluster.SBR
 
     internal class ReverseDownIndirectlyConnected : IDecision
     {
-        public static readonly ReverseDownIndirectlyConnected Instance = new ReverseDownIndirectlyConnected();
+        public static readonly ReverseDownIndirectlyConnected Instance = new();
 
         public bool IsIndirectlyConnected => true;
 
@@ -155,7 +155,7 @@ namespace Akka.Cluster.SBR
 
         // all Joining and WeaklyUp members
         public ImmutableSortedSet<Member> Joining =>
-            AllMembers.Where(m => m.Status == MemberStatus.Joining || m.Status == MemberStatus.WeaklyUp)
+            AllMembers.Where(m => m.Status is MemberStatus.Joining or MemberStatus.WeaklyUp)
                 .ToImmutableSortedSet(Ordering);
 
         // all members, both joining and up.
@@ -258,7 +258,7 @@ namespace Akka.Cluster.SBR
 
         public bool IsAllUnreachableDownOrExiting =>
             Unreachable.IsEmpty ||
-            UnreachableMembers.All(m => m.Status == MemberStatus.Down || m.Status == MemberStatus.Exiting);
+            UnreachableMembers.All(m => m.Status is MemberStatus.Down or MemberStatus.Exiting);
 
         public Lease Lease { get; protected set; }
 
@@ -368,8 +368,7 @@ namespace Akka.Cluster.SBR
         {
             // skip records with Reachability.Reachable, and skip records related to other DC
             Reachability = r.FilterRecords(record =>
-                record.Status == Reachability.ReachabilityStatus.Unreachable ||
-                record.Status == Reachability.ReachabilityStatus.Terminated
+                record.Status is Reachability.ReachabilityStatus.Unreachable or Reachability.ReachabilityStatus.Terminated
             );
         }
 

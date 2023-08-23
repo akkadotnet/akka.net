@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InputStreamSinkStage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ namespace Akka.Streams.Implementation.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ReadElementAcknowledgement Instance = new ReadElementAcknowledgement();
+            public static readonly ReadElementAcknowledgement Instance = new();
 
             private ReadElementAcknowledgement()
             {
@@ -54,7 +54,7 @@ namespace Akka.Streams.Implementation.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Close Instance = new Close();
+            public static readonly Close Instance = new();
 
             private Close()
             {
@@ -97,7 +97,7 @@ namespace Akka.Streams.Implementation.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Finished Instance = new Finished();
+            public static readonly Finished Instance = new();
 
             private Finished()
             {
@@ -113,7 +113,7 @@ namespace Akka.Streams.Implementation.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Initialized Instance = new Initialized();
+            public static readonly Initialized Instance = new();
 
             private Initialized()
             {
@@ -221,7 +221,7 @@ namespace Akka.Streams.Implementation.IO
 
         #endregion
 
-        private readonly Inlet<ByteString> _in = new Inlet<ByteString>("InputStreamSink.in");
+        private readonly Inlet<ByteString> _in = new("InputStreamSink.in");
         private readonly TimeSpan _readTimeout;
         private BlockingCollection<IStreamToAdapterMessage> _dataQueue;
 

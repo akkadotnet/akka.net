@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Framing.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -61,7 +61,7 @@ namespace Akka.Streams.Dsl
         public static Flow<ByteString, ByteString, NotUsed> LengthField(int fieldLength, int maximumFramelength,
             int fieldOffset = 0, ByteOrder byteOrder = ByteOrder.LittleEndian)
         {
-            if (fieldLength < 1 || fieldLength > 4)
+            if (fieldLength is < 1 or > 4)
                 throw new ArgumentException("Length field length must be 1,2,3 or 4", nameof(fieldLength));
 
             return Flow.Create<ByteString>()
@@ -98,7 +98,7 @@ namespace Akka.Streams.Dsl
             ByteOrder byteOrder,
             Func<IReadOnlyList<byte>, int, int> computeFrameSize)
         {
-            if (fieldLength < 1 || fieldLength > 4)
+            if (fieldLength is < 1 or > 4)
                 throw new ArgumentException("Length field length must be 1,2,3 or 4", nameof(fieldLength));
 
             return Flow.Create<ByteString>()
@@ -107,7 +107,7 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Returns a BidiFlow that implements a simple framing protocol. This is a convenience wrapper over <see cref="LengthField"/>
+        /// Returns a BidiFlow that implements a simple framing protocol. This is a convenience wrapper over <see cref="LengthField(int, int, int, ByteOrder)"/>
         /// and simply attaches a length field header of four bytes (using big endian encoding) to outgoing messages, and decodes
         /// such messages in the inbound direction. The decoded messages do not contain the header.
         /// 
@@ -215,7 +215,7 @@ namespace Akka.Streams.Dsl
                 {
                     _stage = stage;
 
-                    SetHandler(stage.Inlet, stage.Outlet, this);
+                    SetHandlers(stage.Inlet, stage.Outlet, this);
                 }
 
                 public override void OnPush()
@@ -271,7 +271,7 @@ namespace Akka.Streams.Dsl
                     _stage = stage;
                     _firstSeparatorByte = stage._separatorBytes[0];
 
-                    SetHandler(stage.Inlet, stage.Outlet, this);
+                    SetHandlers(stage.Inlet, stage.Outlet, this);
                 }
 
                 public override void OnPush()
@@ -396,7 +396,7 @@ namespace Akka.Streams.Dsl
                 {
                     _stage = stage;
 
-                    SetHandler(stage.Inlet, stage.Outlet, this);
+                    SetHandlers(stage.Inlet, stage.Outlet, this);
                 }
 
                 public override void OnPush()

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeltaPropagationSelectorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ namespace Akka.DistributedData.Tests
             protected override int MaxDeltaSize => 10;
 
             protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData, long, long)> deltas) =>
-                new DeltaPropagation(selfUniqueAddress, false, deltas
+                new(selfUniqueAddress, false, deltas
                     .Select(kv => new KeyValuePair<string, Delta>(kv.Key, new Delta(new DataEnvelope(kv.Value.Item1), kv.Value.Item2, kv.Value.Item3)))
                     .ToImmutableDictionary());
         }

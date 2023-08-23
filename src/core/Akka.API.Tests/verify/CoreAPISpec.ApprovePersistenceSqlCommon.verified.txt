@@ -221,6 +221,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly System.TimeSpan Timeout;
         public readonly string TimestampColumnName;
         public QueryConfiguration(string schemaName, string journalEventsTableName, string metaTableName, string persistenceIdColumnName, string sequenceNrColumnName, string payloadColumnName, string manifestColumnName, string timestampColumnName, string isDeletedColumnName, string tagsColumnName, string orderingColumnName, string serializerIdColumnName, System.TimeSpan timeout, string defaultSerializer, bool useSequentialAccess) { }
+        [System.ObsoleteAttribute("This property will always return null")]
         public string DefaultSerializer { get; }
         public string FullJournalTableName { get; }
         public string FullMetaTableName { get; }

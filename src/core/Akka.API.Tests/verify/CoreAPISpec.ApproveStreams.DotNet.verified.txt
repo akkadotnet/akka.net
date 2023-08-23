@@ -12,7 +12,7 @@ namespace Akka.Streams
     public sealed class AbruptStageTerminationException : System.Exception
     {
         public AbruptStageTerminationException(Akka.Streams.Stage.GraphStageLogic logic) { }
-        protected AbruptStageTerminationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public AbruptStageTerminationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class AbruptTerminationException : System.Exception
     {
@@ -1353,6 +1353,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Flow<T, T, Akka.NotUsed> Identity<T>() { }
         public static Akka.Streams.Dsl.Flow<T, T, TMat> Identity<T, TMat>() { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, System.Threading.Tasks.Task<Akka.Util.Option<TMat>>> LazyInitAsync<TIn, TOut, TMat>(System.Func<System.Threading.Tasks.Task<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>>> flowFactory) { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, System.Threading.Tasks.Task<TMat>> Setup<TIn, TOut, TMat>(System.Func<Akka.Streams.ActorMaterializer, Akka.Streams.Attributes, Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> factory) { }
     }
     public class static FlowOperations
     {
@@ -1619,6 +1620,7 @@ namespace Akka.Streams.Dsl
         Akka.Streams.Dsl.IRunnableGraph<TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> func);
         Akka.Streams.Dsl.IRunnableGraph<TMat> Named(string name);
         TMat Run(Akka.Streams.IMaterializer materializer);
+        TMat Run(Akka.Actor.ActorSystem actorSystem);
         Akka.Streams.Dsl.IRunnableGraph<TMat> WithAttributes(Akka.Streams.Attributes attributes);
     }
     public interface IUnzipWithCreator<out TIn, in TOut, out T>
@@ -1803,7 +1805,7 @@ namespace Akka.Streams.Dsl
     public sealed class PartitionOutOfBoundsException : System.Exception
     {
         public PartitionOutOfBoundsException(string message) { }
-        protected PartitionOutOfBoundsException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public PartitionOutOfBoundsException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class PartitionWith<TIn, TOut0, TOut1> : Akka.Streams.Stage.GraphStage<Akka.Streams.FanOutShape<TIn, TOut0, TOut1>>
     {
@@ -1924,6 +1926,7 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.IRunnableGraph<TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> func) { }
         public Akka.Streams.Dsl.IRunnableGraph<TMat> Named(string name) { }
         public TMat Run(Akka.Streams.IMaterializer materializer) { }
+        public TMat Run(Akka.Actor.ActorSystem actorSystem) { }
         public Akka.Streams.Dsl.IRunnableGraph<TMat> WithAttributes(Akka.Streams.Attributes attributes) { }
     }
     public class Sample<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, T>>
@@ -1958,6 +1961,8 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> FirstOrDefault<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<Akka.Done>> ForEach<TIn>(System.Action<TIn> action) { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<Akka.Done>> ForEachAsync<TIn>(int parallelism, System.Func<TIn, System.Threading.Tasks.Task> action) { }
+        [System.ObsoleteAttribute("Use `ForEachAsync` instead, it allows you to choose how to run the procedure, by " +
+            "calling some other API returning a Task or using Task.Run. Obsolete since 1.5.2")]
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<Akka.Done>> ForEachParallel<TIn>(int parallelism, System.Action<TIn> action) { }
         public static Akka.Streams.Dsl.Sink<TIn, TMat> FromGraph<TIn, TMat>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TIn>, TMat> graph) { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> FromSubscriber<TIn>(Reactive.Streams.ISubscriber<TIn> subscriber) { }
@@ -2029,6 +2034,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Never<T>() { }
         public static Akka.Streams.Dsl.Source<T, Akka.Streams.ISourceQueueWithComplete<T>> Queue<T>(int bufferSize, Akka.Streams.OverflowStrategy overflowStrategy) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Repeat<T>(T element) { }
+        public static Akka.Streams.Dsl.Source<T, System.Threading.Tasks.Task<TMat>> Setup<T, TMat>(System.Func<Akka.Streams.ActorMaterializer, Akka.Streams.Attributes, Akka.Streams.Dsl.Source<T, TMat>> factory) { }
         public static Akka.Streams.SourceShape<T> Shape<T>(string name) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Single<T>(T element) { }
         public static Akka.Streams.Dsl.Source<T, Akka.Actor.ICancelable> Tick<T>(System.TimeSpan initialDelay, System.TimeSpan interval, T tick) { }
@@ -2190,13 +2196,21 @@ namespace Akka.Streams.Dsl
         public Akka.Streams.Dsl.Source<TOut, TMat2> MapMaterializedValue<TMat2>(System.Func<TMat, TMat2> mapFunc) { }
         public Akka.Streams.Dsl.Source<TOut, TMat> Named(string name) { }
         public System.ValueTuple<TMat, Akka.Streams.Dsl.Source<TOut, Akka.NotUsed>> PreMaterialize(Akka.Streams.IMaterializer materializer) { }
+        public System.ValueTuple<TMat, Akka.Streams.Dsl.Source<TOut, Akka.NotUsed>> PreMaterialize(Akka.Actor.ActorSystem actorSystem) { }
         public System.Threading.Tasks.Task<TOut2> RunAggregate<TOut2>(TOut2 zero, System.Func<TOut2, TOut, TOut2> aggregate, Akka.Streams.IMaterializer materializer) { }
+        public System.Threading.Tasks.Task<TOut2> RunAggregate<TOut2>(TOut2 zero, System.Func<TOut2, TOut, TOut2> aggregate, Akka.Actor.ActorSystem materializer) { }
         public System.Threading.Tasks.Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, System.Func<TOut2, TOut, System.Threading.Tasks.Task<TOut2>> aggregate, Akka.Streams.IMaterializer materializer) { }
+        public System.Threading.Tasks.Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, System.Func<TOut2, TOut, System.Threading.Tasks.Task<TOut2>> aggregate, Akka.Actor.ActorSystem materializer) { }
         public System.Collections.Generic.IAsyncEnumerable<TOut> RunAsAsyncEnumerable(Akka.Streams.IMaterializer materializer) { }
+        public System.Collections.Generic.IAsyncEnumerable<TOut> RunAsAsyncEnumerable(Akka.Actor.ActorSystem materializer) { }
         public System.Collections.Generic.IAsyncEnumerable<TOut> RunAsAsyncEnumerableBuffer(Akka.Streams.IMaterializer materializer, int minBuffer = 4, int maxBuffer = 16) { }
+        public System.Collections.Generic.IAsyncEnumerable<TOut> RunAsAsyncEnumerableBuffer(Akka.Actor.ActorSystem materializer, int minBuffer = 4, int maxBuffer = 16) { }
         public System.Threading.Tasks.Task RunForeach(System.Action<TOut> action, Akka.Streams.IMaterializer materializer) { }
+        public System.Threading.Tasks.Task RunForeach(System.Action<TOut> action, Akka.Actor.ActorSystem materializer) { }
         public System.Threading.Tasks.Task<TOut> RunSum(System.Func<TOut, TOut, TOut> reduce, Akka.Streams.IMaterializer materializer) { }
+        public System.Threading.Tasks.Task<TOut> RunSum(System.Func<TOut, TOut, TOut> reduce, Akka.Actor.ActorSystem materializer) { }
         public TMat2 RunWith<TMat2>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> sink, Akka.Streams.IMaterializer materializer) { }
+        public TMat2 RunWith<TMat2>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> sink, Akka.Actor.ActorSystem materializer) { }
         public Akka.Streams.Dsl.IRunnableGraph<TMat> To<TMat2>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> sink) { }
         public Akka.Streams.Dsl.IRunnableGraph<TMat3> ToMaterialized<TMat2, TMat3>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> sink, System.Func<TMat, TMat2, TMat3> combine) { }
         public override string ToString() { }
@@ -2381,7 +2395,7 @@ namespace Akka.Streams.Dsl
     public sealed class TcpIdleTimeoutException : System.TimeoutException
     {
         public TcpIdleTimeoutException(string message, System.TimeSpan duration) { }
-        protected TcpIdleTimeoutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public TcpIdleTimeoutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public System.TimeSpan Duration { get; }
     }
     public class static TcpStreamExtensions
@@ -3570,6 +3584,25 @@ namespace Akka.Streams.Implementation
         public override Akka.Streams.Stage.ILogicAndMaterializedValue<System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<T>>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
     }
+    [Akka.Annotations.InternalApiAttribute()]
+    public sealed class SetupFlowStage<TIn, TOut, TMat> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.FlowShape<TIn, TOut>, System.Threading.Tasks.Task<TMat>>
+    {
+        public SetupFlowStage(System.Func<Akka.Streams.ActorMaterializer, Akka.Streams.Attributes, Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> factory) { }
+        public Akka.Streams.Inlet<TIn> In { get; }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        public Akka.Streams.Outlet<TOut> Out { get; }
+        public override Akka.Streams.FlowShape<TIn, TOut> Shape { get; }
+        public override Akka.Streams.Stage.ILogicAndMaterializedValue<System.Threading.Tasks.Task<TMat>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public sealed class SetupSourceStage<TOut, TMat> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SourceShape<TOut>, System.Threading.Tasks.Task<TMat>>
+    {
+        public SetupSourceStage(System.Func<Akka.Streams.ActorMaterializer, Akka.Streams.Attributes, Akka.Streams.Dsl.Source<TOut, TMat>> factory) { }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        public Akka.Streams.Outlet<TOut> Out { get; }
+        public override Akka.Streams.SourceShape<TOut> Shape { get; }
+        public override Akka.Streams.Stage.ILogicAndMaterializedValue<System.Threading.Tasks.Task<TMat>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
+    }
     public class SignalThrewException : Akka.Pattern.IllegalStateException, Akka.Streams.Implementation.ISpecViolation
     {
         public SignalThrewException(string message, System.Exception cause) { }
@@ -3637,7 +3670,7 @@ namespace Akka.Streams.Implementation
     }
     public class static StreamLayout
     {
-        public static readonly bool IsDebug;
+        public const bool IsDebug = false;
         public static void Validate(Akka.Streams.Implementation.IModule module, int level = 0, bool shouldPrint = False, System.Collections.Generic.IDictionary<object, int> idMap = null) { }
         public sealed class Atomic : Akka.Streams.Implementation.StreamLayout.IMaterializedValueNode
         {

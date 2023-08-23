@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="One2OneBidiFlow.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -159,10 +159,10 @@ namespace Akka.Streams.Dsl
         #endregion
 
         private readonly int _maxPending;
-        private readonly Inlet<TIn> _inInlet = new Inlet<TIn>("inIn");
-        private readonly Outlet<TIn> _inOutlet = new Outlet<TIn>("inOut");
-        private readonly Inlet<TOut> _outInlet = new Inlet<TOut>("outIn");
-        private readonly Outlet<TOut> _outOutlet = new Outlet<TOut>("outOut");
+        private readonly Inlet<TIn> _inInlet = new("inIn");
+        private readonly Outlet<TIn> _inOutlet = new("inOut");
+        private readonly Inlet<TOut> _outInlet = new("outIn");
+        private readonly Outlet<TOut> _outOutlet = new("outOut");
 
         /// <summary>
         /// TBD

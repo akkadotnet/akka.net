@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpStages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -35,11 +35,11 @@ namespace Akka.Streams.Implementation.IO
         {
             private const string BindShutdownTimer = "BindTimer";
 
-            private readonly AtomicCounterLong _connectionFlowsAwaitingInitialization = new AtomicCounterLong();
+            private readonly AtomicCounterLong _connectionFlowsAwaitingInitialization = new();
             private readonly ConnectionSourceStage _stage;
             private IActorRef _listener;
             private readonly TaskCompletionSource<StreamTcp.ServerBinding> _bindingPromise;
-            private readonly TaskCompletionSource<NotUsed> _unbindPromise = new TaskCompletionSource<NotUsed>();
+            private readonly TaskCompletionSource<NotUsed> _unbindPromise = new();
             private bool _unbindStarted = false;
 
             public ConnectionSourceStageLogic(Shape shape, ConnectionSourceStage stage, TaskCompletionSource<StreamTcp.ServerBinding> bindingPromise)
@@ -196,7 +196,7 @@ namespace Akka.Streams.Implementation.IO
         private readonly bool _halfClose;
         private readonly TimeSpan? _idleTimeout;
         private readonly TimeSpan _bindShutdownTimeout;
-        private readonly Outlet<StreamTcp.IncomingConnection> _out = new Outlet<StreamTcp.IncomingConnection>("IncomingConnections.out");
+        private readonly Outlet<StreamTcp.IncomingConnection> _out = new("IncomingConnections.out");
 
         /// <summary>
         /// TBD
@@ -255,9 +255,9 @@ namespace Akka.Streams.Implementation.IO
         private readonly IActorRef _connection;
         private readonly EndPoint _remoteAddress;
         private readonly bool _halfClose;
-        private readonly AtomicBoolean _hasBeenCreated = new AtomicBoolean();
-        private readonly Inlet<ByteString> _bytesIn = new Inlet<ByteString>("IncomingTCP.in");
-        private readonly Outlet<ByteString> _bytesOut = new Outlet<ByteString>("IncomingTCP.out");
+        private readonly AtomicBoolean _hasBeenCreated = new();
+        private readonly Inlet<ByteString> _bytesIn = new("IncomingTCP.in");
+        private readonly Outlet<ByteString> _bytesOut = new("IncomingTCP.out");
 
         /// <summary>
         /// TBD
@@ -312,7 +312,7 @@ namespace Akka.Streams.Implementation.IO
     {
         private class WriteAck : Tcp.Event
         {
-            public static readonly WriteAck Instance = new WriteAck();
+            public static readonly WriteAck Instance = new();
 
             private WriteAck()
             {
@@ -487,9 +487,8 @@ namespace Akka.Streams.Implementation.IO
             {
                 SetKeepGoing(true);
 
-                if (_role is Inbound)
+                if (_role is Inbound inbound)
                 {
-                    var inbound = (Inbound)_role;
                     SetHandler(_bytesOut, _readHandler);
                     _connection = inbound.Connection;
                     GetStageActor(Connected).Watch(_connection);
@@ -509,9 +508,8 @@ namespace Akka.Streams.Implementation.IO
             /// </summary>
             public override void PostStop()
             {
-                if (_role is Outbound)
+                if (_role is Outbound outbound)
                 {
-                    var outbound = (Outbound)_role;
                     // Fail if has not been completed with an address earlier
                     outbound.LocalAddressPromise.TrySetException(new StreamTcpException("Connection failed"));
                 }
@@ -526,12 +524,10 @@ namespace Akka.Streams.Implementation.IO
 
                     if (msg is Terminated)
                         FailStage(new StreamTcpException("The IO manager actor (TCP) has terminated. Stopping now."));
-                    else if (msg is Tcp.CommandFailed)
-                        FailStage(new StreamTcpException($"Tcp command {((Tcp.CommandFailed)msg).Cmd} failed"));
-                    else if (msg is Tcp.Connected)
+                    else if (msg is Tcp.CommandFailed failed)
+                        FailStage(new StreamTcpException($"Tcp command {failed.Cmd} failed"));
+                    else if (msg is Tcp.Connected connected)
                     {
-                        var connected = (Tcp.Connected)msg;
-
                         ((Outbound)_role).LocalAddressPromise.TrySetResult(connected.LocalAddress);
                         _connection = sender;
                         SetHandler(_bytesOut, _readHandler);
@@ -554,15 +550,14 @@ namespace Akka.Streams.Implementation.IO
                 var msg = args.Item2;
 
                 if (msg is Terminated) FailStage(new StreamTcpException("The connection actor has terminated. Stopping now."));
-                else if (msg is Tcp.CommandFailed) FailStage(new StreamTcpException($"Tcp command {((Tcp.CommandFailed)msg).Cmd} failed"));
-                else if (msg is Tcp.ErrorClosed) FailStage(new StreamTcpException($"The connection closed with error: {((Tcp.ErrorClosed)msg).Cause}"));
+                else if (msg is Tcp.CommandFailed failed) FailStage(new StreamTcpException($"Tcp command {failed.Cmd} failed"));
+                else if (msg is Tcp.ErrorClosed closed) FailStage(new StreamTcpException($"The connection closed with error: {closed.Cause}"));
                 else if (msg is Tcp.Aborted) FailStage(new StreamTcpException("The connection has been aborted"));
                 else if (msg is Tcp.Closed) CompleteStage();
                 else if (msg is Tcp.ConfirmedClosed) CompleteStage();
                 else if (msg is Tcp.PeerClosed) Complete(_bytesOut);
-                else if (msg is Tcp.Received)
+                else if (msg is Tcp.Received received)
                 {
-                    var received = (Tcp.Received)msg;
                     // Keep on reading even when closed. There is no "close-read-side" in TCP
                     if (IsClosed(_bytesOut)) _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
                     else Push(_bytesOut, received.Data);
@@ -587,8 +582,8 @@ namespace Akka.Streams.Implementation.IO
         private readonly IImmutableList<Inet.SocketOption> _options;
         private readonly bool _halfClose;
         private readonly TimeSpan? _connectionTimeout;
-        private readonly Inlet<ByteString> _bytesIn = new Inlet<ByteString>("IncomingTCP.in");
-        private readonly Outlet<ByteString> _bytesOut = new Outlet<ByteString>("IncomingTCP.out");
+        private readonly Inlet<ByteString> _bytesIn = new("IncomingTCP.in");
+        private readonly Outlet<ByteString> _bytesOut = new("IncomingTCP.out");
 
         /// <summary>
         /// TBD

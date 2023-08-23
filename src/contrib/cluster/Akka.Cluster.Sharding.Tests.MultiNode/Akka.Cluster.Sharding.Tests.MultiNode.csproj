@@ -1,9 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\..\common.props" />
-    
+
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.Sharding.Tests.MultiNode</AssemblyTitle>
-    <TargetFrameworks>$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,11 +22,5 @@
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
   </ItemGroup>
-    
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
-
-
 
 </Project>

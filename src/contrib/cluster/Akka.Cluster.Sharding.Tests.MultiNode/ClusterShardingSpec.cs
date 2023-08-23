@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ namespace Akka.Cluster.Sharding.Tests
             CommonConfig = ConfigurationFactory.ParseString($@"
                 akka.cluster.sharding.verbose-debug-logging = on
                 #akka.loggers = [""akka.testkit.SilenceAllTestEventListener""]
-
+                akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.roles = [""backend""]
                 akka.cluster.distributed-data.gossip-interval = 1s
                 akka.persistence.journal.sqlite-shared.timeout = 10s #the original default, base test uses 5s
@@ -160,7 +160,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Serializable]
         internal sealed class Increment
         {
-            public static readonly Increment Instance = new Increment();
+            public static readonly Increment Instance = new();
 
             private Increment()
             {
@@ -170,7 +170,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Serializable]
         internal sealed class Decrement
         {
-            public static readonly Decrement Instance = new Decrement();
+            public static readonly Decrement Instance = new();
 
             private Decrement()
             {
@@ -202,7 +202,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Serializable]
         internal sealed class Stop
         {
-            public static readonly Stop Instance = new Stop();
+            public static readonly Stop Instance = new();
 
             private Stop()
             {
@@ -703,7 +703,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 // mute logging of deadLetters during shutdown of systems
                 if (!Log.IsDebugEnabled)
-                    Sys.EventStream.Publish(new Mute(new DeadLettersFilter(new PredicateMatcher(x => true), new PredicateMatcher(x => true))));
+                    Sys.EventStream.Publish(new Mute(new DeadLettersFilter(new PredicateMatcher(_ => true), new PredicateMatcher(_ => true))));
                 EnterBarrier("logs-muted");
 
                 RunOn(() =>

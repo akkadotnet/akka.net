@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DurablePruningSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -44,11 +44,11 @@ namespace Akka.DistributedData.Tests.MultiNode
     public class DurablePruningSpec : MultiNodeClusterSpec
     {
         private readonly Cluster.Cluster cluster;
-        private readonly RoleName first = new RoleName("first");
-        private readonly RoleName second = new RoleName("second");
+        private readonly RoleName first = new("first");
+        private readonly RoleName second = new("second");
         private readonly TimeSpan maxPruningDissemination = TimeSpan.FromSeconds(3);
         private readonly TimeSpan timeout;
-        private readonly GCounterKey keyA = new GCounterKey("A");
+        private readonly GCounterKey keyA = new("A");
         private readonly IActorRef replicator;
 
         public DurablePruningSpec() : this(new DurablePruningSpecConfig())

@@ -1,13 +1,50 @@
 ---
 uid: akkadotnet-v15-whats-new
-title: What's new in Akka.NET v1.5.0?
+title: What's New in Akka.NET v1.5.0?
 ---
 
-# Akka.NET v1.5 Plans and Goals
+# What's New in Akka.NET v1.5?
 
-Beginning with our [March 9th, 2022 Akka.NET Community Standup](xref:community-standups) we've shared our plans for the roadmap of Akka.NET v1.5.
+<!-- markdownlint-disable MD033 -->
+<iframe width="560" height="315" src="https://www.youtube.com/embed/-UPestlIw4k" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
 
-While not every technical detail is finalized yet, we do want to share the goals and some of the specific plans of what's included in this next minor version release of Akka.NET!
+## Summary
+
+Akka.NET v1.5 is a major new release of Akka.NET aimed at solving common pain points for existing users of the software. We've been working tirelessly at this release for over a year, with the help and feedback of many users and contributors, and we are quite pleased with the results.
+
+A summary of our major changes include:
+
+* **Introduction of [Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting)** - a new library that eliminates the need for HOCON configuration; offers deep + seamless integration with Microsoft.Extensions.Logging / Hosting / DependencyInjection / and Configuration; makes dependency injection a first-class citizen in Akka.NET with the `ActorRegistry` and `IRequiredActor<T>` types; implements `ActorSystem` lifecycle management best practices automatically; and makes it much easier to standardize and scale Akka.NET development across large development teams.
+* **Introduction of [Akka.Management](https://github.com/akkadotnet/Akka.Management)** - a new library that provides automatic [Akka.Cluster](xref:cluster-overview) bootstrapping and environment-specific service discovery capabilities. Akka.Management eliminates the need for things like Lighthouse - clusters can instead be formed by querying environments like [Kubernetes](https://github.com/akkadotnet/Akka.Management/tree/dev/src/discovery/kubernetes/Akka.Discovery.KubernetesApi), [Azure Table Storage](https://github.com/akkadotnet/Akka.Management/tree/dev/src/discovery/azure/Akka.Discovery.Azure), or [Amazon Web Services EC2/ECS](https://github.com/akkadotnet/Akka.Management/tree/dev/src/discovery/kubernetes/Akka.Discovery.KubernetesApi). This also enables Akka.Cluster to run in much lighter-weight PaaS enviroments such as [Akka.NET on Azure App Service](https://github.com/petabridge/azure-app-service-akkadotnet) or [Akka.NET on Azure Container Apps](https://github.com/petabridge/azure-container-app-akkadotnet).
+* **Introduction of [Akka.HealthCheck](https://github.com/petabridge/akkadotnet-healthcheck)** - the Akka.HealthCheck library has actually been around for a few years, but it's been modernized to support Microsoft.Extensions.HealthCheck and includes automated liveness and readiness checks for Akka.Persistence and Akka.Cluster out of the box. It's also [very easy to write your own custom healthchecks](https://github.com/petabridge/akkadotnet-healthcheck#manually-setup-custom-akkanet-iprobeprovider-with-health-check-middleware).
+* **.NET 6 Dual Targeting** - Akka.NET v1.5 now dual targets .NET Standard 2.0 (same as Akka.NET v1.4) _and_ .NET 6. We've done this in order to take advantage of newer .NET APIs for performance reasons. On .NET 6 Akka.NET in-memory messaging is now up to 50% faster as a result.
+* **Akka.Cluster.Sharding Restructuring** - in Akka.NET v1.5 we've split Akka.Cluster.Sharding's `state-store-mode` into two parts: CoordinatorStore (`akka.cluster.sharding.state-store-mode`) and ShardStore (`akka.cluster.sharding.remember-entities-store`.) We've also added a new `remember-entities-store` mode: `eventsourced`. You should watch our "[Akka NET v1.5 New Features and Upgrade Guide (10:30)](https://youtu.be/-UPestlIw4k?t=630)" for a full summary of these changes, but the short version is that Akka.Cluster.Sharding is much more scalable, performant, and robust in Akka.NET v1.5.
+* **Improved Logging Performance** - we made some breaking changes to the logging API (but they're still source-compatible) and the results are a 40% throughput improvement, 50%+ memory usage improvement for all of your user-defined actors. Watch our "[Akka NET v1.5 New Features and Upgrade Guide (7:30)](https://youtu.be/-UPestlIw4k?t=450)" for details.
+* **Akka.Persistence.Query Backpressure Support** - this change is invisible from a coding and API standpoint, but from a behavioral standpoint it is significant. Akka.Persistence.Query can now run hundreds of thousands of parallel queries without torching your database instance. See "[
+Scaling Akka.Persistence.Query to 100k+ Concurrent Queries for Large-Scale CQRS](https://petabridge.com/blog/largescale-cqrs-akkadotnet-v1.5/)" for details.
+* **Fully Asynchronous TestKit APIs** - the entire [Akka.TestKit](xref:testing-actor-systems) now supports `async` methods for 100% of its capabilities. The old synchronous implementations still exist, but they're now built on top of the `async` ones. This should improve the developer experience for writing tests and reduce the completion time of your test suite.
+* **Akka.Streams Improvements** - Akka.Streams now uses tremendously less memory than it did in Akka.NET v1.4 and many individual stream stages have been improved, made more robust, or extended to support new behaviors in Akka.NET v1.5.
+
+We have many more features planned over the v1.5 lifecycle - such as:
+
+* Continuing our work on making CQRS a first-class citizen with Akka.NET;
+* Introducing better, easier to use methods for making actor-to-actor message delivery more reliable;
+* Leveraging more .NET 6 APIs for improved performance;
+* Retooling all of our examples and documentation to incorporate Akka.NET best practices, such as Akka.Hosting;
+* Addressing structural issues with Akka.Remote, serialization, and more.
+
+We appreciate the support of the Akka.NET community and its users in helping us deliver great software. Thank you!
+
+### Upgrading Existing Applications to Akka.NET v1.5
+
+Please see "[Akka.NET v1.5 Upgrade Advisories](xref:akkadotnet-v15-upgrade-advisories)" for upgrade instructions.
+
+And in case you need help upgrading:
+
+* [Akka.NET Discord](https://discord.gg/GSCfPwhbWP)
+* [Akka.NET GitHub Discussions](https://github.com/akkadotnet/akka.net/discussions)
+* [Akka.NET Commercial Support](https://petabridge.com/services/support/)
 
 ## Goals
 
@@ -44,138 +81,3 @@ Contributing to the v1.5 effort is somewhat different than our [normal maintenan
 
 > [!IMPORTANT]
 > Familiarize yourself with our [Akka.NET contribution guidelines](xref:contributing-to-akkadotnet) for best experience.
-
-## Designs & Major Changes
-
-### Akka.Cluster.Sharding State Storage
-
-One of the most significant upgrades we've made in Akka.NET v1.5 is a complete rewrite of Akka.Cluster.Sharding's state storage system.
-
-> [!NOTE]
-> You can watch [our discussion of this Akka.Cluster.Sharding upgrade during our September, 2022 Akka.NET Community Standup for more details](https://www.youtube.com/watch?v=rTBgxeHf91M&t=359s).
-
-In Akka.NET v1.5 we've split Akka.Cluster.Sharding's `state-store-mode` into two parts:
-
-* CoordinatorStore (`akka.cluster.sharding.state-store-mode`) and
-* ShardStore (`akka.cluster.sharding.remember-entities-store`.)
-
-Which can use different persistence modes configured via `akka.cluster.sharding.state-store-mode` & `akka.cluster.sharding.remember-entities-store`.
-
-> [!IMPORTANT]
-> The goal behind this split was to remove the `ShardCoordinator` as a single point of bottleneck during `remember-entities=on` recovery - in Akka.NET v1.4 all remember-entity state is concentrated in the journal of the `PersistentShardCoordinator` or the CRDT used by the `DDataCoordinator`. In v1.5 the responsibility for remembering entities has been pushed to the `Shard` actors themselves, which allows for remembered-entities to be recovered in parallel for all shards.
-
-Possible combinations:
-
-state-store-mode | remember-entities-store | CoordinatorStore mode | ShardStore mode
------------------- | ------------------------- | ------------------------ | ------------------
-persistence (default) | - (ignored) | persistence | persistence
-ddata | ddata | ddata | ddata
-ddata | eventsourced (new) | ddata | persistence
-
-There should be no breaking changes from user perspective. Only some internal messages/objects were moved. There should be no change in the `PersistentId` behavior and default persistent configuration (`akka.cluster.sharding.state-store-mode`)
-
-This change is designed to speed up the performance of Akka.Cluster.Sharding coordinator recovery by moving `remember-entities` recovery into separate actors - this also solves major performance problems with the `ddata` recovery mode overall.
-
-The recommended settings for maximum ease-of-use for Akka.Cluster.Sharding in new applications going forward will be:
-
-```hocon
-akka.cluster.sharding{
-  state-store-mode = ddata
-  remember-entities-store = eventsourced
-}
-```
-
-However, for the sake of backwards compatibility the Akka.Cluster.Sharding defaults have been left as-is:
-
-```hocon
-akka.cluster.sharding{
-  state-store-mode = persistence
-  # remember-entities-store (not set - also uses legacy Akka.Persistence)
-}
-```
-
-> [!IMPORTANT]
-> Read "[Upgrading to Akka.NET V1.5 - Cluster.Sharding](xref:akkadotnet-v15-upgrade-advisories)" for details on how to upgrade from Akka.NET v1.5.
-
-### Akka.Hosting
-
-We want to make Akka.NET something that can be instantiated more typically per the patterns often used with the Microsoft.Extensions.Hosting APIs that are common throughout .NET.
-
-```csharp
-using Akka.Hosting;
-using Akka.Actor;
-using Akka.Actor.Dsl;
-using Akka.Cluster.Hosting;
-using Akka.Remote.Hosting;
-
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddAkka("MyActorSystem", configurationBuilder =>
-{
-    configurationBuilder
-        .WithRemoting("localhost", 8110)
-        .WithClustering(new ClusterOptions(){ Roles = new[]{ "myRole" }, 
-            SeedNodes = new[]{ Address.Parse("akka.tcp://MyActorSystem@localhost:8110")}})
-        .WithActors((system, registry) =>
-    {
-        var echo = system.ActorOf(act =>
-        {
-            act.ReceiveAny((o, context) =>
-            {
-                context.Sender.Tell($"{context.Self} rcv {o}");
-            });
-        }, "echo");
-        registry.TryRegister<Echo>(echo); // register for DI
-    });
-});
-
-var app = builder.Build();
-
-app.MapGet("/", async (context) =>
-{
-    var echo = context.RequestServices.GetRequiredService<ActorRegistry>().Get<Echo>();
-    var body = await echo.Ask<string>(context.TraceIdentifier, context.RequestAborted).ConfigureAwait(false);
-    await context.Response.WriteAsync(body);
-});
-
-app.Run();
-```
-
-No HOCON. Automatically runs all Akka.NET application lifecycle best practices behind the scene. Automatically binds the `ActorSystem` and the `ActorRegistry`, another new 1.5 feature, to the `IServiceCollection` so they can be safely consumed via both actors and non-Akka.NET parts of users' .NET applications.
-
-This should be open to extension in other child plugins, such as Akka.Persistence.SqlServer:
-
-```csharp
-builder.Services.AddAkka("MyActorSystem", configurationBuilder =>
-{
-    configurationBuilder
-        .WithRemoting("localhost", 8110)
-        .WithClustering(new ClusterOptions()
-        {
-            Roles = new[] { "myRole" },
-            SeedNodes = new[] { Address.Parse("akka.tcp://MyActorSystem@localhost:8110") }
-        })
-        .WithSqlServerPersistence(builder.Configuration.GetConnectionString("sqlServerLocal"))
-        .WithShardRegion<UserActionsEntity>("userActions", s => UserActionsEntity.Props(s),
-            new UserMessageExtractor(),
-            new ShardOptions(){ StateStoreMode = StateStoreMode.DData, Role = "myRole"})
-        .WithActors((system, registry) =>
-        {
-            var userActionsShard = registry.Get<UserActionsEntity>();
-            var indexer = system.ActorOf(Props.Create(() => new Indexer(userActionsShard)), "index");
-            registry.TryRegister<Index>(indexer); // register for DI
-        });
-})
-```
-
-#### `ActorRegistry`
-
-As part of Akka.Hosting, we need to provide a means of making it easy to pass around top-level `IActorRef`s via dependency injection both within the `ActorSystem` and outside of it.
-
-The `ActorRegistry` will fulfill this role through a set of generic, typed methods that make storage and retrieval of long-lived `IActorRef`s easy and coherent:
-
-```csharp
-var registry = ActorRegistry.For(myActorSystem); // fetch from ActorSystem
-registry.TryRegister<Index>(indexer); // register for DI
-registry.Get<Index>(); // use in DI
-```

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaProtocolTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -107,7 +107,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         protected AkkaPduCodec Codec { get; private set; }
 
-        private readonly SchemeAugmenter _schemeAugmenter = new SchemeAugmenter(RemoteSettings.AkkaScheme);
+        private readonly SchemeAugmenter _schemeAugmenter = new(RemoteSettings.AkkaScheme);
 
         /// <summary>
         /// TBD
@@ -140,10 +140,8 @@ namespace Akka.Remote.Transport
         {
             get
             {
-                return _managerProps ??
-                       (_managerProps =
-                           Props.Create(() => new AkkaProtocolManager(WrappedTransport, Settings))
-                               .WithDeploy(Deploy.Local));
+                return _managerProps ??= Props.Create(() => new AkkaProtocolManager(WrappedTransport, Settings))
+                    .WithDeploy(Deploy.Local);
             }
         }
 
@@ -178,7 +176,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public static AtomicCounter UniqueId = new AtomicCounter(0);
+        public static AtomicCounter UniqueId = new(0);
 
         #endregion
     }
@@ -207,7 +205,7 @@ namespace Akka.Remote.Transport
         /// The <see cref="AkkaProtocolTransport"/> does not handle recovery of associations, this task is implemented
         /// in the remoting itself. Hence the strategy <see cref="Directive.Stop"/>.
         /// </summary>
-        private readonly SupervisorStrategy _supervisor = new OneForOneStrategy(exception => Directive.Stop);
+        private readonly SupervisorStrategy _supervisor = new OneForOneStrategy(_ => Directive.Stop);
         /// <summary>
         /// TBD
         /// </summary>
@@ -354,7 +352,7 @@ namespace Akka.Remote.Transport
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is HandshakeInfo && Equals((HandshakeInfo)obj);
+            return obj is HandshakeInfo info && Equals(info);
         }
 
         private bool Equals(HandshakeInfo other)
@@ -1120,11 +1118,10 @@ namespace Akka.Remote.Transport
                         // Invalidate exposed but still unfinished promise. The underlying association disappeared, so after
                         // registration immediately signal a disassociate
                         Disassociated disassociateNotification;
-                        if (@event.Reason is Failure && @event.Reason.AsInstanceOf<Failure>().Cause is DisassociateInfo)
+                        if (@event.Reason is Failure { Cause: DisassociateInfo disassociateInfo })
                         {
                             disassociateNotification =
-                                new Disassociated(@event.Reason.AsInstanceOf<Failure>().Cause
-                                    .AsInstanceOf<DisassociateInfo>());
+                                new Disassociated(disassociateInfo);
                         }
                         else
                         {
@@ -1140,10 +1137,10 @@ namespace Akka.Remote.Transport
                     case ListenerReady lr:
                     {
                         Disassociated disassociateNotification;
-                        if (@event.Reason is Failure failure && failure.Cause is DisassociateInfo)
+                        if (@event.Reason is Failure { Cause: DisassociateInfo disassociateInfo })
                         {
                             disassociateNotification =
-                                new Disassociated(failure.Cause.AsInstanceOf<DisassociateInfo>());
+                                new Disassociated(disassociateInfo);
                         }
                         else
                         {

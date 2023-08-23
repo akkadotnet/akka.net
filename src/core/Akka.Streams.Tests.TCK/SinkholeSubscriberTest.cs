@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SinkholeSubscriberTest.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,7 +26,7 @@ namespace Akka.Streams.Tests.TCK
 
         private sealed class Subscriber : ISubscriber<int?>
         {
-            private readonly SinkholeSubscriber<int?> _hole = new SinkholeSubscriber<int?>(new TaskCompletionSource<NotUsed>());
+            private readonly SinkholeSubscriber<int?> _hole = new(new TaskCompletionSource<NotUsed>());
             private readonly WhiteboxSubscriberProbe<int?> _probe;
 
             public Subscriber(WhiteboxSubscriberProbe<int?> probe)

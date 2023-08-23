@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MaterializationBenchmark.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -183,7 +183,7 @@ namespace Akka.Streams.Tests.Performance
         {
             var flow = Flow.Create<NotUsed>().Select(x => x);
             for (var i = 0; i < numberOfNestedGraphs; i++)
-                flow = Flow.FromGraph(GraphDsl.Create(flow, (b, f) => new FlowShape<NotUsed, NotUsed>(f.Inlet, f.Outlet)));
+                flow = Flow.FromGraph(GraphDsl.Create(flow, (_, f) => new FlowShape<NotUsed, NotUsed>(f.Inlet, f.Outlet)));
 
             return RunnableGraph.FromGraph(GraphDsl.Create(flow, (b, f) =>
             {

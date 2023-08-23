@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SplitBrainResolver.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -139,7 +139,7 @@ namespace Akka.Cluster
 
             if (remaining.Count < unreachable.Count) return context.Remaining;
             if (remaining.Count > unreachable.Count) return context.Unreachable;
-            if (remaining.IsEmpty && unreachable.IsEmpty) return new Member[0];
+            if (remaining.IsEmpty && unreachable.IsEmpty) return Array.Empty<Member>();
 
             // if the parts are of equal size the part containing the node with the lowest address is kept.
             var oldest = remaining.Union(unreachable).First();
@@ -237,7 +237,7 @@ namespace Akka.Cluster
 
         private sealed class StabilityReached
         {
-            public static readonly StabilityReached Instance = new StabilityReached();
+            public static readonly StabilityReached Instance = new();
             private StabilityReached() { }
         }
 
@@ -264,7 +264,7 @@ namespace Akka.Cluster
             _cluster = cluster;
         }
 
-        public ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        public ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         protected override void PreStart()
         {

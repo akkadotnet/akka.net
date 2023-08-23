@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AppVersion.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ namespace Akka.Util
     /// </summary>
     public class AppVersion : IComparable<AppVersion>, IEquatable<AppVersion>
     {
-        public static readonly AppVersion Zero = new AppVersion("0.0.0");
+        public static readonly AppVersion Zero = new("0.0.0");
 
         // made internal for testing purposes
         internal const string AssemblyVersionMarker = "assembly-version";

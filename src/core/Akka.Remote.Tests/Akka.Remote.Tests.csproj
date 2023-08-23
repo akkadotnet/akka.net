@@ -1,10 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\common.props" />
   <Import Project="..\..\xunitSettings.props" />
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Remote.Tests</AssemblyTitle>
-    <TargetFrameworks>$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,7 +32,4 @@
     <DefineConstants>$(DefineConstants);HELIOS</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
 </Project>

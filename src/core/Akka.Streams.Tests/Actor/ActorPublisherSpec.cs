@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPublisherSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -771,28 +771,28 @@ my-dispatcher1 {
 
     internal class Boom
     {
-        public static Boom Instance { get; } = new Boom();
+        public static Boom Instance { get; } = new();
 
         private Boom() { }
     }
 
     internal class Complete
     {
-        public static Complete Instance { get; } = new Complete();
+        public static Complete Instance { get; } = new();
 
         private Complete() { }
     }
 
     internal class CompleteThenStop
     {
-        public static CompleteThenStop Instance { get; } = new CompleteThenStop();
+        public static CompleteThenStop Instance { get; } = new();
 
         private CompleteThenStop() { }
     }
 
     internal class ThreadName
     {
-        public static ThreadName Instance { get; } = new ThreadName();
+        public static ThreadName Instance { get; } = new();
 
         private ThreadName() { }
     }

@@ -155,7 +155,7 @@ This strategy is typically declared inside the actor in order to have access to 
 The remaining visible methods are user-overridable life-cycle hooks which are described in the following:
 
 ```csharp
-public override void PreStart()
+protected override void PreStart()
 {
 }
 
@@ -842,6 +842,38 @@ The result of this is that when an actor is restarted, any stashed messages will
 
 > [!NOTE]
 > If you want to enforce that your actor can only work with an unbounded stash, then you should use the `IWithUnboundedStash` interface instead.
+
+### Bounded Stashes
+
+In certain scenarios, it might be helpful to put a limit on the size of the `IStash` inside your actor. You can configure a bounded stash via the following actor definition:
+
+```csharp
+public class StashingActorWithOverflow : UntypedActor, IWithStash
+```
+
+The `IWithStash` interface will default to *unbounded* stash behavior, but the the `Props` class or via `akka.actor.deployment` we can easily configure this actor to impose a limit on its stash capacity:
+
+```csharp
+// create an actor with a stash size of 2
+IActorRef stasher = Sys.ActorOf(Props.Create<StashingActorWithOverflow>().WithStashCapacity(2));
+```
+
+Or via HOCON:
+
+```hocon
+akka.actor.deployment{{
+    /configStashingActor {{
+        stash-capacity = 2
+    }}
+}}
+```
+
+Either of these settings will configure the `IStash` to only have a maximum capacity of 2 items. If a third item is attempted to be stashed the `IStash` will throw a `StashOverflowException`.
+
+> [!TIP]
+> You can always check to see if your `IStash` is approaching its capacity by checking the `IStash.IsFull`, `IStash.Capacity`, or `IStash.Count` properties.
+
+If you attempt to apply a maximum stash capacity to an `IWithUnboundedStash` actor then the setting will be ignored.
 
 ## Killing an Actor
 

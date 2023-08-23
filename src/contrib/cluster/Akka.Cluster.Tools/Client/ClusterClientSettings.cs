@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -128,7 +128,7 @@ namespace Akka.Cluster.Tools.Client
             int bufferSize,
             TimeSpan? reconnectTimeout = null)
         {
-            if (bufferSize < 0 || bufferSize > 10000)
+            if (bufferSize is < 0 or > 10000)
             {
                 throw new ArgumentException("BufferSize must be >= 0 and <= 10000");
             }

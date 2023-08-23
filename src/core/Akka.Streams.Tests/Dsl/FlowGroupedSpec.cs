@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowGroupedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ namespace Akka.Streams.Tests.Dsl
             Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
         }
 
-        private readonly Random _random = new Random(12345);
+        private readonly Random _random = new(12345);
         private ICollection<int> RandomSeq(int n) => Enumerable.Range(1, n).Select(_ => _random.Next()).ToList();
 
         private (ICollection<int>, ICollection<IEnumerable<int>>) RandomTest(int n)

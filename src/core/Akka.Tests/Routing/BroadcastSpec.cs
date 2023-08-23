@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BroadcastSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ namespace Akka.Tests.Routing
                 _doneLatch = doneLatch;
                 _counter = counter;
 
-                Receive<string>(s => s == "end", c => _doneLatch.CountDown());
+                Receive<string>(s => s == "end", _ => _doneLatch.CountDown());
                 Receive<int>(msg => _counter.AddAndGet(msg));
             }
         }

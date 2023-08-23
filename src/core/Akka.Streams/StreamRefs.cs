@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamRefs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -92,7 +92,7 @@ namespace Akka.Streams
     public sealed class RemoteStreamRefActorTerminatedException : Exception
     {
         internal static readonly RemoteStreamRefActorTerminatedException Default =
-            new RemoteStreamRefActorTerminatedException("Remote target receiver of data terminated. Local stream terminating, message loss (on remote side) may have happened.");
+            new("Remote target receiver of data terminated. Local stream terminating, message loss (on remote side) may have happened.");
 
         public RemoteStreamRefActorTerminatedException(string message) : base(message)
         {

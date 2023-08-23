@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterRouterSupervisorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -32,7 +32,7 @@ namespace Akka.Cluster.Tests.Routing
             public KillableActor(IActorRef testActor)
             {
                 TestActor = testActor;
-                Receive<string>(s => s == "go away", s =>
+                Receive<string>(s => s == "go away", _ =>
                 {
                     throw new ArgumentException("Goodbye then!");
                 });
@@ -43,7 +43,7 @@ namespace Akka.Cluster.Tests.Routing
         public async Task Cluster_aware_routers_must_use_provided_supervisor_strategy()
         {
             var escalator = new OneForOneStrategy(
-                exception =>
+                _ =>
                 {
                     TestActor.Tell("supervised");
                     return Directive.Stop;

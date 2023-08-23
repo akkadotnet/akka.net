@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Dispatchers.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -107,7 +107,7 @@ namespace Akka.Dispatch
     internal sealed class FixedConcurrencyTaskScheduler : TaskScheduler
     {
         [ThreadStatic] private static bool _threadRunning = false;
-        private ConcurrentQueue<Task> _tasks = new ConcurrentQueue<Task>();
+        private ConcurrentQueue<Task> _tasks = new();
 
         private int _readers = 0;
 
@@ -334,8 +334,7 @@ namespace Akka.Dispatch
         /// 
         /// Has to be thread-safe, as this collection can be accessed concurrently by many actors.
         /// </summary>
-        private readonly ConcurrentDictionary<string, MessageDispatcherConfigurator> _dispatcherConfigurators =
-            new ConcurrentDictionary<string, MessageDispatcherConfigurator>();
+        private readonly ConcurrentDictionary<string, MessageDispatcherConfigurator> _dispatcherConfigurators = new();
 
         /// <summary>
         /// Get (possibly aliased) dispatcher config. Returns empty config if not found.

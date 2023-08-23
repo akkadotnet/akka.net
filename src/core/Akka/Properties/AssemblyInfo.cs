@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AssemblyInfo.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,16 +22,21 @@ using System.Runtime.InteropServices;
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 
 [assembly: Guid("1a5cab08-b032-49ca-8db3-9428c5a9db14")]
+[assembly: InternalsVisibleTo("Akka.Docs.Tests")]
 [assembly: InternalsVisibleTo("Akka.Tests")]
+[assembly: InternalsVisibleTo("Akka.API.Tests")]
 [assembly: InternalsVisibleTo("Akka.Tests.Performance")]
 [assembly: InternalsVisibleTo("Akka.TestKit")]
 [assembly: InternalsVisibleTo("Akka.TestKit.Tests")]
 [assembly: InternalsVisibleTo("Akka.Remote")]
+[assembly: InternalsVisibleTo("Akka.Remote.TestKit")]
 [assembly: InternalsVisibleTo("Akka.Remote.Tests")]
 [assembly: InternalsVisibleTo("Akka.Remote.Tests.MultiNode")]
 [assembly: InternalsVisibleTo("Akka.Remote.TestKit.Tests")]
 [assembly: InternalsVisibleTo("Akka.Cluster")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Sharding")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests.MultiNode")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tools")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests")]
 [assembly: InternalsVisibleTo("Akka.MultiNodeTestRunner.Shared.Tests")]
@@ -40,6 +45,8 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.Cluster.Tools")]
 [assembly: InternalsVisibleTo("Akka.DistributedData")]
 [assembly: InternalsVisibleTo("Akka.Persistence")]
+[assembly: InternalsVisibleTo("Akka.Persistence.Sql.TestKit")]
+[assembly: InternalsVisibleTo("Akka.Persistence.Tests")]
 [assembly: InternalsVisibleTo("Akka.Streams")]
 [assembly: InternalsVisibleTo("Akka.Streams.Tests")]
 [assembly: InternalsVisibleTo("Akka.Benchmarks")]

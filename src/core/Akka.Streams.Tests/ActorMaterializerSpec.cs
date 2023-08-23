@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorMaterializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -88,6 +88,24 @@ namespace Akka.Streams.Tests
             var m = sys.Materializer();
             sys.Terminate().Wait();
             m.IsShutdown.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task CanMaterializeStreamsUsingActorSystem()
+        {
+            Func<Task> task = () => Source.Single(1).RunForeach(_ => { }, Sys);
+            await task.Should().NotThrowAsync();
+        }
+        
+        [Fact]
+        public void ShouldReturnSameMaterializerForActorSystem()
+        {
+            var mat1 = Sys.Materializer();
+            var mat2 = Sys.Materializer();
+            var mat3 = Sys.Materializer(namePrefix: "different");
+            
+            mat1.Should().Be(mat2);
+            mat1.Should().NotBe(mat3);
         }
     }
 }

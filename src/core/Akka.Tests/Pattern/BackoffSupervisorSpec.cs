@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BackoffSupervisorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ namespace Akka.Tests.Pattern
             {
                 _probe = probe;
 
-                Receive<string>(str => str.Equals("boom"), message =>
+                Receive<string>(str => str.Equals("boom"), _ =>
                 {
                     throw new TestException();
                     return;
@@ -65,7 +65,7 @@ namespace Akka.Tests.Pattern
             {
                 _probe = probe;
 
-                Receive<string>(str => str.Equals("boom"), message =>
+                Receive<string>(str => str.Equals("boom"), _ =>
                 {
                     throw new TestException();
                     return;
@@ -332,7 +332,7 @@ namespace Akka.Tests.Pattern
 
         internal class DelayTable : IEnumerable<object[]>
         {
-            private readonly List<object[]> delayTable = new List<object[]>
+            private readonly List<object[]> delayTable = new()
             {
                 new object[] { 0, TimeSpan.Zero, TimeSpan.Zero, 0.0, TimeSpan.Zero },
                 new object[] { 0, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(7), 0d, TimeSpan.FromMinutes(5) },

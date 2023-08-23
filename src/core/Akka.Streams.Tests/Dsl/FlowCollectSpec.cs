@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowCollectSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,7 +20,7 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class FlowCollectSpec : ScriptedTest
     {
-        private Random Random { get; } = new Random(12345);
+        private Random Random { get; } = new(12345);
         private ActorMaterializer Materializer { get; }
 
         public FlowCollectSpec(ITestOutputHelper helper) : base(helper)

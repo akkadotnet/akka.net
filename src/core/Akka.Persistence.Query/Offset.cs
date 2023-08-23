@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Offset.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -69,7 +69,7 @@ namespace Akka.Persistence.Query
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Sequence && Equals((Sequence)obj);
+            return obj is Sequence sequence && Equals(sequence);
         }
 
         public override int GetHashCode() => Value.GetHashCode();
@@ -133,7 +133,7 @@ namespace Akka.Persistence.Query
         /// <summary>
         /// The singleton instance of <see cref="NoOffset"/>.
         /// </summary>
-        public static NoOffset Instance { get; } = new NoOffset();
+        public static NoOffset Instance { get; } = new();
         private NoOffset() { }
 
         public override int CompareTo(Offset other)

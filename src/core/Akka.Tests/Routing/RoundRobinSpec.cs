@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RoundRobinSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -50,15 +50,15 @@ namespace Akka.Tests.Routing
         {
             private readonly TestLatch _doneLatch;
             private static AtomicCounter _counter;
-            private readonly Lazy<int> id = new Lazy<int>(() => _counter.GetAndIncrement()); 
+            private readonly Lazy<int> id = new(() => _counter.GetAndIncrement()); 
 
             public RoundRobinPoolActor(TestLatch doneLatch, AtomicCounter counter)
             {
                 _doneLatch = doneLatch;
                 _counter = counter;
 
-                Receive<string>(s => s == "hit", c => Sender.Tell(id.Value));
-                Receive<string>(s => s == "end", c => _doneLatch.CountDown());
+                Receive<string>(s => s == "hit", _ => Sender.Tell(id.Value));
+                Receive<string>(s => s == "end", _ => _doneLatch.CountDown());
             }
         }
 
@@ -72,7 +72,7 @@ namespace Akka.Tests.Routing
                 _helloLatch = helloLatch;
                 _stopLatch = stopLatch;
 
-                Receive<string>(s => s == "hello", c => _helloLatch.CountDown());
+                Receive<string>(s => s == "hello", _ => _helloLatch.CountDown());
             }
 
             protected override void PostStop()
@@ -96,8 +96,8 @@ namespace Akka.Tests.Routing
             {
                 _doneLatch = doneLatch;
 
-                Receive<string>(s => s == "hit", c => Sender.Tell(Self.Path.Name));
-                Receive<string>(s => s == "end", c => _doneLatch.CountDown());
+                Receive<string>(s => s == "hit", _ => Sender.Tell(Self.Path.Name));
+                Receive<string>(s => s == "end", _ => _doneLatch.CountDown());
             }
         }
 
@@ -136,8 +136,8 @@ namespace Akka.Tests.Routing
         {
             public RoundRobinLogicPropsActor()
             {
-                Receive<string>(s => s == "hit", c => Sender.Tell(Self.Path.Name));
-                Receive<string>(s => s == "end", c => Context.Stop(Self));
+                Receive<string>(s => s == "hit", _ => Sender.Tell(Self.Path.Name));
+                Receive<string>(s => s == "end", _ => Context.Stop(Self));
             }
         }
 

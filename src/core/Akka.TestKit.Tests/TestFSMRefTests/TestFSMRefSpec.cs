@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestFSMRefSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ namespace Akka.TestKit.Tests.TestFSMRefTests
 
             fsm.SetStateTimeout(100.Milliseconds());
             await WithinAsync(80.Milliseconds(), 500.Milliseconds(), async () =>
-                await AwaitConditionAsync(async () => fsm.StateName == 2 && fsm.StateData == "timeout")
+                await AwaitConditionAsync(() => Task.FromResult(fsm.StateName == 2 && fsm.StateData == "timeout"))
             );
         }
 
@@ -82,7 +82,7 @@ namespace Akka.TestKit.Tests.TestFSMRefTests
             public TimerTestFsm()
             {
                 StartWith(1, null);
-                When(1, e => Stay());
+                When(1, _ => Stay());
             }
         }
     }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TaskExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,9 +36,9 @@ namespace Akka.Util.Internal
 
             return Task.WhenAny(task, tcs.Task)
                 // Dispose subscription to cancellation token
-                .ContinueWith(t => { r.Dispose(); }, TaskContinuationOptions.ExecuteSynchronously)
+                .ContinueWith(_ => { r.Dispose(); }, TaskContinuationOptions.ExecuteSynchronously)
                 // Check cancellation, to return task in cancelled state instead of completed
-                .ContinueWith(t => { }, cancellationToken, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                .ContinueWith(_ => { }, cancellationToken, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
         /// <summary>

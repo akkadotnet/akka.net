@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventFilterFactory.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -185,7 +185,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public IEventFilterApplier Custom<TLogEvent>(Predicate<TLogEvent> predicate) where TLogEvent : LogEvent
         {
-            var filter = new CustomEventFilter(logEvent => logEvent is TLogEvent && predicate((TLogEvent)logEvent));
+            var filter = new CustomEventFilter(logEvent => logEvent is TLogEvent @event && predicate(@event));
             return CreateApplier(filter, _system);
         }
 
@@ -281,7 +281,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public IEventFilterApplier DeadLetter<TMessage>(Func<TMessage, bool> isMatch, string source = null)
         {
-            return DeadLetter(deadLetter => deadLetter.Message is TMessage && isMatch((TMessage)deadLetter.Message), source);
+            return DeadLetter(deadLetter => deadLetter.Message is TMessage message && isMatch(message), source);
         }
 
         /// <summary>

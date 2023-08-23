@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LogEvent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -94,8 +94,8 @@ namespace Akka.Event
         public override string ToString()
         {
             return Cause == null
-                ? $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy hh:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}] {Message}"
-                : $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy hh:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}] {Message}{Environment.NewLine}Cause: {Cause}";
+                ? $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}] {Message}"
+                : $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}] {Message}{Environment.NewLine}Cause: {Cause}";
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SchedulerShutdownSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ namespace Akka.Tests.Actor.Scheduler
         /// </summary>
         private class ShutdownScheduler : SchedulerBase, IDisposable
         {
-            public readonly AtomicCounter Shutdown = new AtomicCounter(0);
+            public readonly AtomicCounter Shutdown = new(0);
 
             
 
@@ -141,12 +141,12 @@ namespace Akka.Tests.Actor.Scheduler
 
             public MyScheduledActor()
             {
-                Receive<string>(str => str.Equals("get"), str =>
+                Receive<string>(str => str.Equals("get"), _ =>
                 {
                     Sender.Tell(_received);
                 });
 
-                Receive<string>(str => str.Equals("set"), str =>
+                Receive<string>(str => str.Equals("set"), _ =>
                 {
                     _received = true;
                 });

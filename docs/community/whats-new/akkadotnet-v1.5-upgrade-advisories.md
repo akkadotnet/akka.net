@@ -7,7 +7,61 @@ title: Akka.NET v1.5 Upgrade Advisories
 
 This document contains specific upgrade suggestions, warnings, and notices that you will want to pay attention to when upgrading between versions within the Akka.NET v1.5 roadmap.
 
+<!-- markdownlint-disable MD033 -->
+<iframe width="560" height="315" src="https://www.youtube.com/embed/-UPestlIw4k" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
+
+## Upgrading to Akka.NET v1.5.2
+
+Akka.NET v1.5.2 introduces two important behavioral changes:
+
+* [Akka.Persistence: need to remove hard-coded Newtonsoft.Json `object` serializer](https://github.com/akkadotnet/akka.net/issues/6389)
+* [Akka.Cluster: enable `keep-majority` as default Split Brain Resolver](https://github.com/akkadotnet/akka.net/pull/6628)
+
+We meant to include both of these changes in Akka.NET v1.5.0 but simply ran out of time before making them into that release.
+
+### Akka.Persistence Changes
+
+The impact of [Akka.Persistence: need to remove hard-coded Newtonsoft.Json `object` serializer](https://github.com/akkadotnet/akka.net/issues/6389) is pretty minor: all versions of Akka.NET prior to 1.5.2 used Newtonsoft.Json as the `object` serializer for Akka.Persistence regardless of whether or not you [used a custom `object` serializer, such as Hyperion](xref:serialization#complex-object-serialization-using-hyperion).
+
+Going forward your user-defined `object` serialization binding will now be respected by Akka.Persistence. Any old data previously saved using Newtonsoft.Json will continue to be recovered automatically by Newtonsoft.Json - it's only the serialization of new objects inserted after upgrading to v1.5.2 that will be affected.
+
+If you _never changed your `object`_ serializer (most users don't) then this change doesn't affect you.
+
+### Akka.Cluster Split Brain Resolver Changes
+
+As of Akka.NET v1.5.2 we've now enabled the `keep-majority` [Split Brain Resolver](xref:split-brain-resolver) by default.
+
+If you were already running with a custom SBR enabled, this change won't affect you.
+
+If you weren't running with an SBR enabled, you should read the [Akka.Cluster Split Brain Resolver documentation](xref:split-brain-resolver).
+
+Also worth noting: we've deprecated the `akka.cluster.auto-down-unreachable-after` setting as it's always been a poor and shoddy way to manage network partitions inside Akka.Cluster. If you have that setting enabled you'll see the following warning appear:
+
+```shell
+The `auto-down-unreachable-after` feature has been deprecated as of Akka.NET v1.5.2 and will be removed in a future version of Akka.NET.
+The `keep-majority` split brain resolver will be used instead. See https://getakka.net/articles/cluster/split-brain-resolver.html for more details.
+```
+
+#### Disabling the Default Downing Provider
+
+To disable the default Akka.Cluster downing provider, simply configure the following in your HOCON:
+
+```hocon
+akka.cluster.downing-provider-class = ""
+```
+
+This will disable the split brain resolver / downing provider functionality altogether in Akka.NET. This was the default behavior for Akka.Cluster as of Akka.NET v1.5.1 and earlier.
+
 ## Upgrading From Akka.NET v1.4 to v1.5
+
+In case you need help upgrading:
+
+* [Akka.NET Discord](https://discord.gg/GSCfPwhbWP)
+* [Akka.NET GitHub Discussions](https://github.com/akkadotnet/akka.net/discussions)
+* [Akka.NET Commercial Support](https://petabridge.com/services/support/)
+
+But first: review this document!
 
 ### Akka.Cluster.Sharding State Storage
 
@@ -56,27 +110,27 @@ akka.cluster.sharding{
 }
 ```
 
-#### Migrating to New Sharding Storage From Akka.Persistence
+> [!WARNING]
+> `state-store-mode=persistence` will be deprecated and `state-store-mode=ddata` will eventually be made the default. Make plans to migrate off of persistence _urgently_.
 
-> [!NOTE]
-> This section applies only to users who were using `akka.cluster.sharding.state-store-mode = persistence`. If you were using `akka.cluster.sharding.state-store-mode`
+#### Migrating to DData From Akka.Persistence with Remember Entities
+
+This section applies to users who are using `remember-entities=on` and want to migrate to using the low-latency event-sourced based storage. All other users should just migrate to `state-store-mode=ddata`.
 
 Switching over to using `remember-entities-store = eventsourced` will cause an initial migration of data from the `ShardCoordinator`'s journal into separate event journals going forward.
 
 Upgrading to Akka.NET v1.5 will **cause an irreversible migration of Akka.Cluster.Sharding data** for users who were previously running `akka.cluster.state-store-mode=persistence`, so follow the steps below carefully:
 
 > [!IMPORTANT]
-> This migration is intended to be performed via upgrading Akka.NET to v1.5 and applying HOCON configuration changes - it requires no downtime.
-
-##### Step 1 - Upgrade to Akka.NET v1.5 With Updated Persistence HOCON
+> This migration is intended to be performed via upgrading Akka.NET to v1.5 and applying the recommended configuration changes below - **it will require a full restart of your cluster any time you change the `state-store-mode` setting**.
 
 Update your Akka.Cluster.Sharding HOCON to look like the following (adjust as necessary for your custom settings):
 
 ```hocon
 akka.cluster.sharding {
     remember-entities = on
-    remember-entities-store = "eventsourced"
-    state-store-mode = "persistence"
+    remember-entities-store = eventsourced
+    state-store-mode = ddata
 
     # fail if upgrade doesn't succeed
     fail-on-invalid-entity-state-transition = on
@@ -92,6 +146,29 @@ akka.cluster.sharding {
     }
 }
 ```
+
+#### Migrating to DData From Akka.Persistence without Remember Entities
+
+If you're migrating from `state-store-mode=persistence` to `state-store-mode=ddata` and don't use `remember-entities=on`, then all you have to configure is the following:
+
+```hocon
+akka.cluster.sharding {
+    state-store-mode = ddata
+}
+
+```
+
+#### Executing Migration
+
+> [!IMPORTANT]
+> This section only applies to users migrating from `state-store-mode=persistence` to `state-store-mode=ddata`. For all other users there is no need to plan a special deployment - the transition to Akka.NET v1.5 sharding will be seamless. It's only the changing of `state-store-mode` settings that requires a restart of the cluster.
+
+To deploy this upgrade:
+
+1. Take your cluster offline and
+2. Roll out the changes with the new version of Akka.NET installed and these HOCON changes.
+
+It should less than 10 seconds to fully migrate over to the new format and the Akka.Cluster.Sharding system will continue to start normally while it takes place.
 
 > [!NOTE]
 > If you don't run Akka.Cluster.Sharding with `remember-entities=on` normally then _there is no need to turn it on here_.
@@ -100,64 +177,10 @@ With these HOCON settings in-place the following will happen:
 
 1. The old `PersitentShardCoordinator` state will be broken up - `remember-entities=on` data will be distributed to each of the `PersistentShard` actors, who will now use the new `remember-entities-store = "eventsourced"` setting going forward;
 2. Old `Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent` will be upgraded to a new storage format via the `coordinator-migration` Akka.Persistence event adapter; and
-3. The `PersistentShardCoordinator` will migrate its journal to the new format as well.
+3. No more data will be persisted by the `ShardCoordinator` - instead it will all be replicated on the fly by DData, which is vastly preferable.
 
-##### Step 2 - Migrating Away From Persistence to DData
-
-Once your cluster has successfully booted up with these settings, you can now optionally move to using `DData` as your `akka.cluster.sharding.state-store-mode` by deploying a second time with the following HOCON:
-
-```hocon
-akka.cluster.sharding {
-    remember-entities = on
-    remember-entities-store = "eventsourced"
-    state-store-mode = "ddata"
-
-    # fail if upgrade doesn't succeed
-    fail-on-invalid-entity-state-transition = on
-}
-
- akka.persistence.journal.{your-journal-implementation} {
-    event-adapters {
-        coordinator-migration = ""Akka.Cluster.Sharding.OldCoordinatorStateMigrationEventAdapter, Akka.Cluster.Sharding""
-    }
-
-    event-adapter-bindings {
-        ""Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent, Akka.Cluster.Sharding"" = coordinator-migration
-    }
-}
-```
-
-Now you'll be running Akka.Cluster.Sharding with the recommended settings.
-
-#### Migrating to New Sharding Storage From Akka.DistributedData
-
-The migration process onto Akka.NET v1.5's new Cluster.Sharding storage system is less involved for users who were already using `akka.cluster.sharding.state-store-mode=ddata`.
-
-All these users need to do this:
-
-1. Setup an `akka.persistence.journal` and `akka.persistence.snapshot-store` to use with `akka.cluster.sharding.remember-entities-store = eventsourced`;
-2. Deploy using the following HOCON:
-
-```hocon
-akka.cluster.sharding {
-    remember-entities = on
-    remember-entities-store = "eventsourced"
-    state-store-mode = "ddata"
-
-    # fail if upgrade doesn't succeed
-    fail-on-invalid-entity-state-transition = on
-}
-
- akka.persistence.journal.{your-journal-implementation} {
-    event-adapters {
-        coordinator-migration = ""Akka.Cluster.Sharding.OldCoordinatorStateMigrationEventAdapter, Akka.Cluster.Sharding""
-    }
-
-    event-adapter-bindings {
-        ""Akka.Cluster.Sharding.ShardCoordinator+IDomainEvent, Akka.Cluster.Sharding"" = coordinator-migration
-    }
-}
-```
+> [!IMPORTANT]
+> This migration is irreversible once completed.
 
 If you run into any trouble upgrading, [please file an issue with Akka.NET](https://github.com/akkadotnet/akka.net/issues/new/choose).
 
@@ -184,4 +207,11 @@ In `Directory.Build.props`:
         <Using Include="Akka.Event" />
     </ItemGroup>
 </Project>
+```
+
+Note, in order to log more than 6 parameters you need to explicitly create ```object[]``` and pass your arguments into corresponding method. It was done in order to eliminate large numbers of accidental ```object[]``` allocations that were created implicitly through the params keyword AND to eliminate the large amount of boxing that occurred whenever value types (struct) were logged:
+
+```csharp
+var @params = new[]{arg1, arg2, arg3, arg4, arg5, arg6, arg7};
+loggingAdapter.Log(format, @params);
 ```

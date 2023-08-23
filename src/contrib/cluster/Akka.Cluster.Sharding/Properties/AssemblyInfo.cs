@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AssemblyInfo.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,6 +14,7 @@ using System.Runtime.InteropServices;
 // associated with an assembly.
 [assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests.MultiNode")]
+[assembly: InternalsVisibleTo("Akka.DistributedData.Tests")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 

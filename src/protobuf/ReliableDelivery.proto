@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package Akka.Cluster.Serialization.Proto.Msg;
+option optimize_for = SPEED;
+
+import "ContainerFormats.proto";
+
+// used to help instantiate back into generics
+message TypeDescriptor{
+  string typeName = 1;
+}
+
+// ConsumerController
+message SequencedMessage {
+  string producerId = 1;
+  int64 seqNr = 2;
+  bool first = 3;
+  bool ack = 4;
+  string producerControllerRef = 5;
+  .Akka.Remote.Serialization.Proto.Msg.Payload message = 6;
+  bool firstChunk = 7;
+  bool lastChunk = 8;
+  TypeDescriptor typeInfo = 9;
+  bool isChunk = 10;
+}
+
+// ProducerController
+message RegisterConsumer {
+  string consumerControllerRef = 1;
+  TypeDescriptor typeInfo = 2;
+}
+
+// ProducerController
+message Request {
+  int64 confirmedSeqNr = 1;
+  int64 requestUpToSeqNr = 2;
+  bool supportResend = 3;
+  bool viaTimeout = 4;
+}
+
+// ProducerController
+message Resend {
+  int64 fromSeqNr = 1;
+}
+
+// ProducerController
+message Ack {
+  int64 confirmedSeqNr = 1;
+}
+
+// DurableProducerQueue
+message State {
+  int64 currentSeqNr = 1;
+  int64 highestConfirmedSeqNr = 2;
+  repeated Confirmed confirmed = 3;
+  repeated MessageSent unconfirmed = 4;
+  TypeDescriptor typeInfo = 5;
+}
+
+// DurableProducerQueue
+message Confirmed {
+  int64 seqNr = 1;
+  string qualifier = 2;
+  int64 timestamp = 3;
+}
+
+// DurableProducerQueue
+message MessageSent {
+  int64 seqNr = 1;
+  string qualifier = 2;
+  bool ack = 3;
+  int64 timestamp = 4;
+  .Akka.Remote.Serialization.Proto.Msg.Payload message = 5;
+  bool firstChunk = 6;
+  bool lastChunk = 7;
+  TypeDescriptor typeInfo = 8;
+  bool isChunk = 9;
+}
+
+// DurableProducerQueue
+message Cleanup {
+  repeated string qualifiers = 1;
+}

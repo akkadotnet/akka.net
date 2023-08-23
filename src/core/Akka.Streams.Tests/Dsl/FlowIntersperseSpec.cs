@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowIntersperseSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
         public void A_Intersperse_must_not_surround_empty_stream_with_null_start_and_stop()
         {
             var probe =
-                Source.From(new int[0])
+                Source.From(Array.Empty<int>())
                     .Select(x => x.ToString())
                     .Intersperse(",")
                     .RunWith(this.SinkProbe<string>(), Materializer);

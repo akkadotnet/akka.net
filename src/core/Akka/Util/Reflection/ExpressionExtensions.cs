@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ExpressionExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,14 +33,11 @@ namespace Akka.Util.Reflection
     }
     internal static class ExpressionBasedParser
     {
-        private static readonly ConcurrentDictionary<ConstructorInfo, string[]>
-            paramNameDictionary =
-                new ConcurrentDictionary<ConstructorInfo, string[]>();
+        private static readonly ConcurrentDictionary<ConstructorInfo, string[]> paramNameDictionary = new();
 
         private static readonly Type _objectType = typeof(object);
 
-        private static readonly Type _multicastDelegateType =
-            typeof(MulticastDelegate);
+        private static readonly Type _multicastDelegateType = typeof(MulticastDelegate);
         
         public static object[] ParseExpressionArgs(
             this NewExpression newExpr)

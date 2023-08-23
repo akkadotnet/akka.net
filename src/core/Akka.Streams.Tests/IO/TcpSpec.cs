@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -517,7 +517,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             }
             finally
             {
-                await ShutdownAsync(system2);
+                Shutdown(system2);
             }
         }
 
@@ -544,7 +544,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             }
             finally
             {
-                await ShutdownAsync(sys2);
+                Shutdown(sys2);
             }
         }
 

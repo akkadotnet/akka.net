@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorModelSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -146,7 +146,7 @@ namespace Akka.Tests.Actor.Dispatch
         {
             private Interrupt() { }
 
-            public static readonly Interrupt Instance = new Interrupt();
+            public static readonly Interrupt Instance = new();
         }
 
         sealed class InterruptNicely : IActorModelMessage
@@ -163,21 +163,21 @@ namespace Akka.Tests.Actor.Dispatch
         {
             private Restart() { }
 
-            public static readonly Restart Instance = new Restart();
+            public static readonly Restart Instance = new();
         }
 
         sealed class DoubleStop : IActorModelMessage
         {
             private DoubleStop() { }
 
-            public static readonly DoubleStop Instance = new DoubleStop();
+            public static readonly DoubleStop Instance = new();
         }
 
         private class GetStats : IActorModelMessage
         {
             private GetStats(){}
 
-            public static readonly GetStats Instance = new GetStats();
+            public static readonly GetStats Instance = new();
         }
 
         sealed class ThrowException : IActorModelMessage
@@ -195,7 +195,7 @@ namespace Akka.Tests.Actor.Dispatch
 
         class DispatcherActor : ReceiveActor
         {
-            private Switch _busy = new Switch(false);
+            private Switch _busy = new(false);
             private readonly ILoggingAdapter _log = Context.GetLogger();
             private MessageDispatcherInterceptor _interceptor = Context.Dispatcher.AsInstanceOf<MessageDispatcherInterceptor>();
 
@@ -229,12 +229,12 @@ namespace Akka.Tests.Actor.Dispatch
                 Receive<CountDown>(countDown => { Ack(); countDown.Latch.Signal(); _busy.SwitchOff(); });
                 Receive<Increment>(increment => { Ack(); increment.Counter.IncrementAndGet(); _busy.SwitchOff(); });
                 Receive<CountDownNStop>(countDown => { Ack(); countDown.Latch.Signal(); Context.Stop(Self); _busy.SwitchOff(); });
-                Receive<Restart>(restart => { Ack(); _busy.SwitchOff(); throw new Exception("restart requested"); }, restart => true); // had to add predicate for compiler magic
-                Receive<Interrupt>(interrupt => { Ack(); Sender.Tell(new Status.Failure(new ActorInterruptedException(cause: new Exception(Ping)))); _busy.SwitchOff(); throw new Exception(Ping); }, interrupt => true);
+                Receive<Restart>(_ => { Ack(); _busy.SwitchOff(); throw new Exception("restart requested"); }, _ => true); // had to add predicate for compiler magic
+                Receive<Interrupt>(_ => { Ack(); Sender.Tell(new Status.Failure(new ActorInterruptedException(cause: new Exception(Ping)))); _busy.SwitchOff(); throw new Exception(Ping); }, _ => true);
                 Receive<InterruptNicely>(interrupt => { Ack(); Sender.Tell(interrupt.Expect); _busy.SwitchOff(); });
-                Receive<ThrowException>(throwEx => { Ack(); _busy.SwitchOff(); throw throwEx.E; }, throwEx => true);
-                Receive<DoubleStop>(doubleStop => { Ack(); Context.Stop(Self); Context.Stop(Self); _busy.SwitchOff(); });
-                Receive<GetStats>(stats => {
+                Receive<ThrowException>(throwEx => { Ack(); _busy.SwitchOff(); throw throwEx.E; }, _ => true);
+                Receive<DoubleStop>(_ => { Ack(); Context.Stop(Self); Context.Stop(Self); _busy.SwitchOff(); });
+                Receive<GetStats>(_ => {
                     Ack();
                     Sender.Tell(_interceptor.GetStats(Self));
                     _busy.SwitchOff();
@@ -244,13 +244,13 @@ namespace Akka.Tests.Actor.Dispatch
 
         public class InterceptorStats
         {
-            public readonly AtomicCounterLong Suspensions = new AtomicCounterLong(0L);
-            public readonly AtomicCounterLong Resumes = new AtomicCounterLong(0L);
-            public readonly AtomicCounterLong Registers = new AtomicCounterLong(0L);
-            public readonly AtomicCounterLong Unregisters = new AtomicCounterLong(0L);
-            public readonly AtomicCounterLong MsgsReceived = new AtomicCounterLong(0L);
-            public readonly AtomicCounterLong MsgsProcessed = new AtomicCounterLong(0L);
-            public readonly AtomicCounterLong Restarts = new AtomicCounterLong(0L);
+            public readonly AtomicCounterLong Suspensions = new(0L);
+            public readonly AtomicCounterLong Resumes = new(0L);
+            public readonly AtomicCounterLong Registers = new(0L);
+            public readonly AtomicCounterLong Unregisters = new(0L);
+            public readonly AtomicCounterLong MsgsReceived = new(0L);
+            public readonly AtomicCounterLong MsgsProcessed = new(0L);
+            public readonly AtomicCounterLong Restarts = new(0L);
 
             public override string ToString()
             {
@@ -261,8 +261,8 @@ namespace Akka.Tests.Actor.Dispatch
 
         public class MessageDispatcherInterceptor : Dispatcher
         {
-            public readonly ConcurrentDictionary<IActorRef, InterceptorStats> Stats = new ConcurrentDictionary<IActorRef, InterceptorStats>();
-            public readonly AtomicCounterLong Stops = new AtomicCounterLong(0L);
+            public readonly ConcurrentDictionary<IActorRef, InterceptorStats> Stats = new();
+            public readonly AtomicCounterLong Stops = new(0L);
 
             public MessageDispatcherInterceptor(MessageDispatcherConfigurator configurator, string id, int throughput, long? throughputDeadlineTime, ExecutorServiceFactory executorServiceFactory, TimeSpan shutdownTimeout) : base(configurator, id, throughput, throughputDeadlineTime, executorServiceFactory, shutdownTimeout)
             {
@@ -500,6 +500,7 @@ namespace Akka.Tests.Actor.Dispatch
 
             foreach (var i in Enumerable.Range(1, 10))
             {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 Task.Run(() =>
                 {
                     foreach (var c in Enumerable.Range(1, 20))
@@ -507,6 +508,7 @@ namespace Akka.Tests.Actor.Dispatch
                         a.Tell(new CountDown(counter));
                     }
                 });
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
 
             try
@@ -560,7 +562,7 @@ namespace Akka.Tests.Actor.Dispatch
                 var waitTime = (int)Dilated(TimeSpan.FromSeconds(20)).TotalMilliseconds;
                 Action<IActorDsl> bossActor = c =>
                 {
-                    c.Receive<string>(str => str.Equals("run"), (s, context) =>
+                    c.Receive<string>(str => str.Equals("run"), (_, context) =>
                     {
                         for (var i = 1; i <= num; i++)
                         {
@@ -568,7 +570,7 @@ namespace Akka.Tests.Actor.Dispatch
                         }
                     });
 
-                    c.Receive<Terminated>((terminated, context) =>
+                    c.Receive<Terminated>((_, _) =>
                     {
                         stopLatch.Signal();
                     });

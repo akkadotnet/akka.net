@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Stage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -185,7 +185,7 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Finish Instance = new Finish();
+            public static readonly Finish Instance = new();
             private Finish() { }
         }
 
@@ -221,7 +221,7 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Stay Instance = new Stay();
+            public static readonly Stay Instance = new();
             private Stay() { }
         }
 
@@ -418,9 +418,8 @@ namespace Akka.Streams.Stage
                         _isEmitting = false;
 
                         if (andThen is StatefulStage.Stay) ;
-                        else if (andThen is StatefulStage.Become<TIn, TOut>)
+                        else if (andThen is StatefulStage.Become<TIn, TOut> become)
                         {
-                            var become = andThen as StatefulStage.Become<TIn, TOut>;
                             Become(become.State);
                         }
                         else if (andThen is StatefulStage.Finish)

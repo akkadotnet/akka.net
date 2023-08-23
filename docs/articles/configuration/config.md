@@ -23,7 +23,7 @@ Other parts of Akka.NET in the future, such as its dependency injection system, 
 
 So what if we want to use some built-in `Setup` types in combination with an `ActorSystem`? How do we work with these new types?
 
-First, if we have HOCON that we need to pass into our `ActorSystem` still then we must use the [`BootstrapSetup` class]((xref:Akka.Actor.BootstrapSetup) to store our HOCON `Config`:
+First, if we have HOCON that we need to pass into our `ActorSystem` still then we must use the [`BootstrapSetup` class](xref:Akka.Actor.BootstrapSetup) to store our HOCON `Config`:
 
 [!code-csharp[SerializationSetup](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=MergedSetup)]
 

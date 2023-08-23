@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SpawnActorBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,7 +15,7 @@ using BenchmarkDotNet.Engines;
 namespace Akka.Benchmarks.Actor
 {
     [Config(typeof(MicroBenchmarkConfig))]
-    [SimpleJob(RunStrategy.Throughput, targetCount:10, warmupCount:5)]
+    [SimpleJob(RunStrategy.Throughput, warmupCount:5)]
     public class SpawnActorBenchmarks
     {
         [Params(100_000)]
@@ -66,13 +66,13 @@ namespace Akka.Benchmarks.Actor
 
         sealed class ChildReady
         {
-            public static readonly ChildReady Instance = new ChildReady();
+            public static readonly ChildReady Instance = new();
             private ChildReady() { }
         }
 
         sealed class TestDone
         {
-            public static readonly TestDone Instance = new TestDone();
+            public static readonly TestDone Instance = new();
             private TestDone() { }
         }
 

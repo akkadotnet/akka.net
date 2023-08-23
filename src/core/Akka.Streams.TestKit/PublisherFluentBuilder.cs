@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PublisherFluentBuilder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ namespace Akka.Streams.TestKit
 {
     public class PublisherFluentBuilder<T>
     {
-        private readonly List<Func<CancellationToken, Task>> _tasks = new List<Func<CancellationToken, Task>>();
+        private readonly List<Func<CancellationToken, Task>> _tasks = new();
         private bool _executed;
 
         internal PublisherFluentBuilder(ManualProbe<T> probe)

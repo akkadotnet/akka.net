@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonLeavingSpeedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -71,7 +71,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             _systems = Enumerable.Range(1, 3).Select(n =>
                 ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($"akka.cluster.roles=[role-{n % 3}]").WithFallback(Sys.Settings.Config))).ToArray();
 
-            _probes = _systems.Select(i => CreateTestProbe()).ToArray();
+            _probes = _systems.Select(_ => CreateTestProbe()).ToArray();
         }
 
         public void Join(ActorSystem from, ActorSystem to, IActorRef probe)
@@ -161,11 +161,11 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
+            base.AfterAll();
             foreach (var s in _systems)
-                await ShutdownAsync(s);
+                Shutdown(s);
         }
     }
 }

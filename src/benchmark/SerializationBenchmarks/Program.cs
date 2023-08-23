@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -55,7 +55,7 @@ serialization-settings {{
             _poolSer = 
             _sys_pool.Serialization.FindSerializerForType(typeof(object));
         }
-        private static TestSer testObj = new TestSer()
+        private static TestSer testObj = new()
         {
             Id = 124,
             someStr =
@@ -93,13 +93,13 @@ serialization-settings {{
         public void Pooling_MultiTasks()
         {
             Task.WaitAll(Enumerable.Repeat(0, 10)
-                .Select((l) => Task.Run(Pooling)).ToArray());
+                .Select((_) => Task.Run(Pooling)).ToArray());
         }
         [Benchmark]
         public void NoPooling_MultiTasks()
         {
             Task.WaitAll(Enumerable.Repeat(0, 10)
-                .Select((l) => Task.Run(NoPooling)).ToArray());
+                .Select((_) => Task.Run(NoPooling)).ToArray());
         }
     }
 
@@ -123,8 +123,7 @@ akka.actor {{
             _ser = _sys.Serialization.FindSerializerForType(typeof(MyType));
         }
         
-        public static MyType payload =>
-            new MyType() { SomeInt = 1, SomeStr = "lol" };
+        public static MyType payload => new() { SomeInt = 1, SomeStr = "lol" };
         [Benchmark]
         public void Serialization_WithTransport_NoState()
         {

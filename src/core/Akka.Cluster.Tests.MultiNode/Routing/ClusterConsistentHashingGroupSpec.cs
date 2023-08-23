@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterConsistentHashingGroupSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
 
         public class Destination : UntypedActor
         {
-            private readonly HashSet<object> _receivedMessages = new HashSet<object>();
+            private readonly HashSet<object> _receivedMessages = new();
 
             protected override void OnReceive(object message)
             {
@@ -130,7 +130,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 CurrentRoutees(router).Members.Should().HaveCount(3);
             });
             var keys = new[] { "A", "B", "C", "D", "E", "F", "G" };
-            foreach (var key in Enumerable.Range(1, 10).SelectMany(i => keys))
+            foreach (var key in Enumerable.Range(1, 10).SelectMany(_ => keys))
             {
                 router.Tell(key, TestActor);
             }

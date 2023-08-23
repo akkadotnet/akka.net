@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BidiFlow.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,8 +30,8 @@ namespace Akka.Streams.Dsl
         public static BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat> FromGraph<TIn1, TOut1, TIn2, TOut2, TMat>(
             IGraph<BidiShape<TIn1, TOut1, TIn2, TOut2>, TMat> graph)
         {
-            return graph is BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>
-                ? (BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>) graph
+            return graph is BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat> flow
+                ? flow
                 : new BidiFlow<TIn1, TOut1, TIn2, TOut2, TMat>(graph.Module);
         }
 
@@ -70,7 +70,7 @@ namespace Akka.Streams.Dsl
                 IGraph<FlowShape<TIn2, TOut2>, TMat2> flow2, Func<TMat1, TMat2, TMat> combine)
         {
             return FromGraph(GraphDsl.Create(flow1, flow2, combine,
-                 (builder, f1, f2) => new BidiShape<TIn1, TOut1, TIn2, TOut2>(f1.Inlet, f1.Outlet, f2.Inlet, f2.Outlet)));
+                 (_, f1, f2) => new BidiShape<TIn1, TOut1, TIn2, TOut2>(f1.Inlet, f1.Outlet, f2.Inlet, f2.Outlet)));
         }
 
         /// <summary>

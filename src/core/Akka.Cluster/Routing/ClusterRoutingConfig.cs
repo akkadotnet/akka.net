@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterRoutingConfig.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -207,7 +207,7 @@ namespace Akka.Cluster.Routing
         internal static int GetMaxTotalNrOfInstances(Config config)
         {
             int number = config.GetInt("nr-of-instances", 0);
-            if (number == 0 || number == 1)
+            if (number is 0 or 1)
             {
                 return config.GetInt("cluster.max-nr-of-instances-per-node");
             }
@@ -227,7 +227,7 @@ namespace Akka.Cluster.Routing
     /// </summary>
     public sealed class ClusterRouterPool : Pool
     {
-        private readonly AtomicCounter _childNameCounter = new AtomicCounter(0);
+        private readonly AtomicCounter _childNameCounter = new(0);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterRouterPool"/> class.
@@ -607,7 +607,7 @@ namespace Akka.Cluster.Routing
         /// <returns>TBD</returns>
         public bool IsAvailable(Member member)
         {
-            return (member.Status == MemberStatus.Up || member.Status == MemberStatus.WeaklyUp) && 
+            return member.Status is MemberStatus.Up or MemberStatus.WeaklyUp && 
                    SatisfiesRole(member.Roles) &&
                    (Settings.AllowLocalRoutees || member.Address != Cluster.SelfAddress);
         }

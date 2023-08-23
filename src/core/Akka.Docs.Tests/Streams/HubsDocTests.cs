@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HubsDocTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -167,7 +167,7 @@ namespace DocsExamples.Streams
             Func<PartitionHub.IConsumerInfo, string, long> RoundRobbin()
             {
                 var i = -1L;
-                return (info, element) =>
+                return (info, _) =>
                 {
                     i++;
                     return info.ConsumerByIndex((int) (i % info.Size));
@@ -207,7 +207,7 @@ namespace DocsExamples.Streams
             // value to the left is used)
             IRunnableGraph<Source<int, NotUsed>> runnableGraph =
                 producer.ToMaterialized(PartitionHub.StatefulSink<int>(
-                    () => ((info, element) => info.ConsumerIds.Min(info.QueueSize)),
+                    () => ((info, _) => info.ConsumerIds.Min(info.QueueSize)),
                     startAfterNrOfConsumers: 2, bufferSize: 256), Keep.Right);
 
             // By running/materializing the producer, we get back a Source, which

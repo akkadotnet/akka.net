@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -83,7 +83,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
         {
             public TestService(IActorRef testActorRef)
             {
-                Receive<string>(cmd => cmd.Equals("shutdown"), msg =>
+                Receive<string>(cmd => cmd.Equals("shutdown"), _ =>
                 {
                     Context.System.Terminate();
                 });
@@ -109,7 +109,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             #region TestClientListener messages
             public sealed class GetLatestContactPoints
             {
-                public static readonly GetLatestContactPoints Instance = new GetLatestContactPoints();
+                public static readonly GetLatestContactPoints Instance = new();
                 private GetLatestContactPoints() { }
             }
 
@@ -168,7 +168,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             #region TestReceptionistListener messages
             public sealed class GetLatestClusterClients
             {
-                public static readonly GetLatestClusterClients Instance = new GetLatestClusterClients();
+                public static readonly GetLatestClusterClients Instance = new();
                 private GetLatestClusterClients() { }
             }
 

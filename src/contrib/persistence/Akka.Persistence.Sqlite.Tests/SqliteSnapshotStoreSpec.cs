@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqliteSnapshotStoreSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,7 +14,7 @@ namespace Akka.Persistence.Sqlite.Tests
 {
     public class SqliteSnapshotStoreSpec : SnapshotStoreSpec
     {
-        private static AtomicCounter counter = new AtomicCounter(0);
+        private static AtomicCounter counter = new(0);
         public SqliteSnapshotStoreSpec(ITestOutputHelper output)
             : base(CreateSpecConfig("Filename=file:memdb-snapshot-" + counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"), "SqliteSnapshotStoreSpec", output)
         {

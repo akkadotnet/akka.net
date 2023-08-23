@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BugFix5062Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -56,7 +56,7 @@ namespace Akka.Remote.Tests.Serialization
             var serialized = MessageSerializer.Serialize((ExtendedActorSystem)Sys, node1, message);
 
             var o = new object();
-            o.Invoking(s => MessageSerializer.Deserialize((ExtendedActorSystem)Sys, serialized)).Should()
+            o.Invoking(_ => MessageSerializer.Deserialize((ExtendedActorSystem)Sys, serialized)).Should()
                 .Throw<SerializationException>()
                 .WithMessage($"Failed to deserialize payload object when deserializing {nameof(ActorSelectionMessage)} with payload [SerializerId=13, Manifest=SM] addressed to [{childName}]. {Serializer.GetErrorForSerializerId(13)}")
                 .WithInnerExceptionExactly<NotImplementedException>();

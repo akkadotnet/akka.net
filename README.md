@@ -2,7 +2,10 @@
 
 ![Akka.NET logo](https://raw.githubusercontent.com/akkadotnet/akka.net/dev/docs/shfb/icons/AkkaNetLogo.Normal.png)
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/akkadotnet/akka.net?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Akka.NET Discord server](https://img.shields.io/discord/974500337396375553?label=Discord)](https://discord.gg/GSCfPwhbWP)
+[![NuGet](https://img.shields.io/nuget/v/Akka.svg?style=flat-square)](https://www.nuget.org/packages/Akka)
+[![Nuget](https://img.shields.io/nuget/dt/Akka)](https://www.nuget.org/packages/Akka)
+
 
 **[Akka.NET](https://getakka.net/)** is a .NET port of the popular [Akka project](https://akka.io/) from the Scala / Java community. We are an idiomatic [.NET implementation of the actor model](https://petabridge.com/blog/akkadotnet-what-is-an-actor/) built on top of the .NET Common Language Runtime.
 
@@ -41,17 +44,16 @@ You can start by taking the [Akka.NET Bootcamp](https://learnakka.net/), but the
 
 ## Build Status
 
-| Stage                                   | Status                                                                                                                                                                                                                                                                |
-|-------------------------------------    |-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------    |
-| Build                                   | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=Windows%20Build)](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                                       |
-| NuGet Pack                              | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=NuGet%20Pack)](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                                          |
-| .NET Framework Unit Tests               | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%20Framework%20Unit%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)           |
-| .NET Framework MultiNode Tests          | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%20Framework%20Multi-Node%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)     |
-| .NET Core (Windows) Unit Tests          | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%20Core%20Unit%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                |
-| .NET Core (Linux) Unit Tests            | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%20Core%20Unit%20Tests%20(Linux))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                  |
-| .NET Core (Windows) MultiNode Tests     | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%20Core%20Multi-Node%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)          |
-| .NET Core (Linux) MultiNode Tests       |                                                                                                                                                                                                                                                                       |
-| Docs                                    | [![Build Status](https://dev.azure.com/petabridge/akkadotnet-tools/_apis/build/status/Akka.NET%20Docs?branchName=dev)](https://dev.azure.com/petabridge/akkadotnet-tools/_build/latest?definitionId=82&branchName=dev)                                                |
+| Stage                                | Status                                                                                                                                                                                                                                                             |
+|------------------------------------- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build                                | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=Windows%20Build)](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                                    |
+| NuGet Pack                           | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=NuGet%20Pack)](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                                       |
+| .NET Framework Unit Tests            | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%20Framework%20Unit%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)        |
+| .NET 7 Unit Tests (Windows)          | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%207%20Unit%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                |
+| .NET 7 Unit Tests (Linux)            | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%207%20Unit%20Tests%20(Linux))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                  |
+| .NET 7 MultiNode Tests (Windows)     | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%207%20Multi-Node%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)          |
+| .NET 7 MultiNode Tests (Linux)       | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%207%20Multi-Node%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)          |                                                                                                                                                                                                                                                                   |
+| Docs                                 | [![Build Status](https://dev.azure.com/petabridge/akkadotnet-tools/_apis/build/status/Akka.NET%20Docs?branchName=dev)](https://dev.azure.com/petabridge/akkadotnet-tools/_build/latest?definitionId=82&branchName=dev)                                             |
 
 
 ## Install Akka.NET via NuGet
@@ -61,15 +63,26 @@ If you want to include Akka.NET in your project, you can [install it directly fr
 To install Akka.NET Distributed Actor Framework, run the following command in the Package Manager Console
 
 ```
-PM> Install-Package Akka
-PM> Install-Package Akka.Remote
+PM> Install-Package Akka.Hosting
 ```
+
+> [Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting) includes the base Akka NuGet package and also provides an easy interface to integrate Akka.NET with the most-used parts of the Microsoft.Extensions ecosystem: Configuration, Logging, Hosting, and DependencyInjection. We encourage developers to adopt it.
 
 And if you need F# support:
 
 ```
 PM> Install-Package Akka.FSharp
 ```
+
+### Akka.NET Project Templates
+
+To create your own Akka.NET projects using [our templates (Akka.Templates)](https://github.com/akkadotnet/akkadotnet-templates), install them via the `dotnet` CLI:
+
+```
+dotnet new install "Akka.Templates::*"
+```
+
+This will make our templates available via `dotnet new` on the CLI _and_ as new project templates inside any .NET IDE such as Visual Studio or JetBrains Rider. You can view the full list of templates included in our package here: https://github.com/akkadotnet/akkadotnet-templates#available-templates
 
 ## Builds
 Please see [Building Akka.NET](http://getakka.net/community/building-akka-net.html).
@@ -80,7 +93,7 @@ To access nightly Akka.NET builds, please [see the instructions here](http://get
 If you need help getting started with Akka.NET, there's a number of great community resources online:
 
 * Subscribe to the Akka.NET project feed on Twitter: https://twitter.com/AkkaDotNet  (@AkkaDotNet)
-* Join the Akka.NET project Gitter chat: https://gitter.im/akkadotnet/akka.net
+* Join the Akka.NET Discord: https://discord.gg/GSCfPwhbWP
 * Ask Akka.NET questions on Stack Overflow: http://stackoverflow.com/questions/tagged/akka.net
 
 If you and your company are interested in getting professional Akka.NET support, you can [contact Petabridge for dedicated Akka.NET support](https://petabridge.com/).

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Serializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -83,7 +83,9 @@ namespace Akka.Serialization
         /// <returns>TBD</returns>
         public byte[] ToBinaryWithAddress(Address address, object obj)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             return Serialization.WithTransport(system, address, () => ToBinary(obj));
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterLogSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ namespace Akka.Cluster.Tests
         {
             await WithinAsync(TimeSpan.FromSeconds(10), async() =>
             {
-                await AwaitConditionAsync(async () => ClusterView.IsSingletonCluster);
+                await AwaitConditionAsync(() => Task.FromResult(ClusterView.IsSingletonCluster));
                 ClusterView.Self.Address.ShouldBe(_selfAddress);
                 ClusterView.Members.Select(m => m.Address).ShouldBe(new Address[] { _selfAddress });
                 await AwaitAssertAsync(() => ClusterView.Status.ShouldBe(MemberStatus.Up));

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowWithContext.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -89,6 +89,6 @@ namespace Akka.Streams.Dsl
         /// <returns></returns>
         public static FlowWithContext<TIn, TCtxIn, TOut, TCtxOut, TMat> From<TIn, TCtxIn, TOut, TCtxOut, TMat>(
             Flow<(TIn, TCtxIn), (TOut, TCtxOut), TMat> flow) =>
-            new FlowWithContext<TIn, TCtxIn, TOut, TCtxOut, TMat>(flow);
+            new(flow);
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TaskBasedScheduler_TellScheduler_Schedule_Tests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ namespace Akka.Tests.Actor.Scheduler
                     //Receive three messages, and store the time when these were received
                     //after three messages stop the actor and send the times to TestActor
                     var messages = new List<DateTimeOffset>();
-                    dsl.Receive<string>((s, context) =>
+                    dsl.Receive<string>((_, context) =>
                     {
                         messages.Add(context.System.Scheduler.Now);
                         if (messages.Count == 3)

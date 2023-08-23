@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardWithLeaseSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -138,7 +138,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private TimeSpan shortDuration = TimeSpan.FromMilliseconds(100);
         private TestLeaseExt testLeaseExt;
-        private static AtomicCounter typeIdx = new AtomicCounter(0);
+        private static AtomicCounter typeIdx = new(0);
 
         public ShardWithLeaseSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
         {

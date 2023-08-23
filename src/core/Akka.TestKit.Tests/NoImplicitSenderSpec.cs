@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="NoImplicitSenderSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ namespace Akka.TestKit.Tests
         [Fact(Skip = "Type assertion on null message causes NullReferenceException")]
         public async Task When_Not_ImplicitSender_then_testActor_is_not_sender()
         {
-            var echoActor = Sys.ActorOf(c => c.ReceiveAny((m, ctx) => TestActor.Tell(ctx.Sender)));
+            var echoActor = Sys.ActorOf(c => c.ReceiveAny((_, ctx) => TestActor.Tell(ctx.Sender)));
             echoActor.Tell("message");
             await ExpectMsgAsync<IActorRef>(actorRef => Equals(actorRef, ActorRefs.NoSender));
         }
@@ -29,7 +29,7 @@ namespace Akka.TestKit.Tests
         [Fact]
         public async Task ImplicitSender_should_have_testActor_as_sender()
         {
-            var echoActor = Sys.ActorOf(c => c.ReceiveAny((m, ctx) => TestActor.Tell(ctx.Sender)));
+            var echoActor = Sys.ActorOf(c => c.ReceiveAny((_, ctx) => TestActor.Tell(ctx.Sender)));
             echoActor.Tell("message");
             await ExpectMsgAsync<IActorRef>(actorRef => Equals(actorRef, TestActor));
 

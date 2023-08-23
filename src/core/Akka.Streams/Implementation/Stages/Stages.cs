@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Stages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -479,7 +479,9 @@ namespace Akka.Streams.Implementation.Stages
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+#pragma warning disable CS0618 // Type or member is obsolete
     public interface ISymbolicStage<in TIn, out TOut> : IStage<TIn, TOut>
+#pragma warning restore CS0618 // Type or member is obsolete
     {
         /// <summary>
         /// TBD
@@ -491,7 +493,9 @@ namespace Akka.Streams.Implementation.Stages
         /// </summary>
         /// <param name="effectiveAttributes">TBD</param>
         /// <returns>TBD</returns>
+#pragma warning disable CS0618 // Type or member is obsolete
         IStage<TIn, TOut> Create(Attributes effectiveAttributes);
+#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     /// <summary>
@@ -520,7 +524,9 @@ namespace Akka.Streams.Implementation.Stages
         /// </summary>
         /// <param name="effectiveAttributes">TBD</param>
         /// <returns>TBD</returns>
+#pragma warning disable CS0618 // Type or member is obsolete
         public abstract IStage<TIn, TOut> Create(Attributes effectiveAttributes);
+#pragma warning restore CS0618 // Type or member is obsolete
 
         /// <summary>
         /// TBD
@@ -542,7 +548,7 @@ namespace Akka.Streams.Implementation.Stages
         private sealed class Logic : InGraphStageLogic
         {
             private readonly FirstOrDefault<TIn> _stage;
-            private readonly TaskCompletionSource<TIn> _promise = new TaskCompletionSource<TIn>();
+            private readonly TaskCompletionSource<TIn> _promise = new();
 
             public Task<TIn> Task => _promise.Task;
 
@@ -581,7 +587,7 @@ namespace Akka.Streams.Implementation.Stages
         #endregion
         
         private readonly bool _throwOnDefault;
-        private readonly Inlet<TIn> _in = new Inlet<TIn>("firstOrDefault.in");
+        private readonly Inlet<TIn> _in = new("firstOrDefault.in");
 
         /// <summary>
         /// TBD
@@ -595,7 +601,7 @@ namespace Akka.Streams.Implementation.Stages
         /// <summary>
         /// TBD
         /// </summary>
-        public override SinkShape<TIn> Shape => new SinkShape<TIn>(_in);
+        public override SinkShape<TIn> Shape => new(_in);
 
         /// <summary>
         /// TBD
@@ -626,7 +632,7 @@ namespace Akka.Streams.Implementation.Stages
         private sealed class Logic : InGraphStageLogic
         {
             private readonly LastOrDefault<TIn> _stage;
-            private readonly TaskCompletionSource<TIn> _promise = new TaskCompletionSource<TIn>();
+            private readonly TaskCompletionSource<TIn> _promise = new();
             private TIn _prev;
             private bool _foundAtLeastOne;
 
@@ -669,7 +675,7 @@ namespace Akka.Streams.Implementation.Stages
         #endregion
 
         private readonly bool _throwOnDefault;
-        private readonly Inlet<TIn> _in = new Inlet<TIn>("lastOrDefault.in");
+        private readonly Inlet<TIn> _in = new("lastOrDefault.in");
 
         /// <summary>
         /// TBD
@@ -683,7 +689,7 @@ namespace Akka.Streams.Implementation.Stages
         /// <summary>
         /// TBD
         /// </summary>
-        public override SinkShape<TIn> Shape => new SinkShape<TIn>(_in);
+        public override SinkShape<TIn> Shape => new(_in);
 
         /// <summary>
         /// TBD

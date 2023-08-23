@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventStream.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,12 +31,12 @@ namespace Akka.Event
         private readonly bool _debug;
 
         // used to uniquely name unsubscribers instances, should there be more than one ActorSystem / EventStream
-        private static readonly AtomicCounter UnsubscribersCounter = new AtomicCounter(0);
-        private readonly AtomicReference<IActorRef> _unsubscriber = new AtomicReference<IActorRef>(ActorRefs.NoSender);
+        private static readonly AtomicCounter UnsubscribersCounter = new(0);
+        private readonly AtomicReference<IActorRef> _unsubscriber = new(ActorRefs.NoSender);
         
         // in the event that an actor subscribers to the EventStream prior to ActorSystemImpl.Init is called
         // we register them here and then move them all
-        private readonly ConcurrentSet<IActorRef> _pendingUnsubscribers = new ConcurrentSet<IActorRef>();
+        private readonly ConcurrentSet<IActorRef> _pendingUnsubscribers = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventStream"/> class.
@@ -146,13 +146,6 @@ namespace Akka.Event
                     }
                 }
             }
-        }
-
-        [Obsolete("Should be removed in 1.5")]
-        public bool InitUnsubscriber(IActorRef unsubscriber, ActorSystem system)
-        {
-            StartUnsubscriber((ActorSystemImpl)system);
-            return true;
         }
 
         private void RegisterWithUnsubscriber(IActorRef subscriber)

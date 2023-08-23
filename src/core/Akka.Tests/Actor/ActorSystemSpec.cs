@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ namespace Akka.Tests.Actor
 
             // Notice here we forcedly start actor system again to monitor how it processes
             var expected = "log-config-on-start : on";
-            await eventFilter.Info(contains:expected).ExpectOneAsync(async () => system.Start());
+            await eventFilter.Info(contains:expected).ExpectOneAsync(() => { system.Start(); return Task.CompletedTask; });
 
             await system.Terminate();
         }
@@ -96,7 +96,7 @@ namespace Akka.Tests.Actor
             var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
-            await eventFilter.Info().ExpectAsync(0, async () => system.Start());
+            await eventFilter.Info().ExpectAsync(0, () => { system.Start(); return Task.CompletedTask; });
 
             await system.Terminate();
         }
@@ -120,10 +120,10 @@ namespace Akka.Tests.Actor
                 var a = sys.ActorOf(Props.Create<Terminater>());
 
                 var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(sys));
-                await eventFilter.Info(contains: "not delivered").ExpectAsync(1, async () =>
-                {
+                await eventFilter.Info(contains: "not delivered").ExpectAsync(1, () => {
                     a.Tell("run");
                     a.Tell("boom");
+                    return Task.CompletedTask;
                 });
             }
             finally { Shutdown(sys); }
@@ -189,11 +189,13 @@ namespace Akka.Tests.Actor
                 callbackWasRun = true;
             });
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             new TaskFactory().StartNew(() =>
             {
                 Task.Delay(Dilated(TimeSpan.FromMilliseconds(200))).Wait();
                 actorSystem.Terminate();
             });
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
             await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(5));
             Assert.True(callbackWasRun);
@@ -324,7 +326,7 @@ namespace Akka.Tests.Actor
 
             var a = system.ActorOf(actor =>
             {
-                actor.Receive<string>((msg, context) => { throw new Exception("Boom"); });
+                actor.Receive<string>((_, _) => { throw new Exception("Boom"); });
             });
 
             var probe = CreateTestProbe(system);
@@ -350,7 +352,7 @@ namespace Akka.Tests.Actor
 
             var a = system.ActorOf(actor =>
             {
-                actor.Receive<string>((msg, context) => { throw new Exception("Boom"); });
+                actor.Receive<string>((_, _) => { throw new Exception("Boom"); });
             });
 
             a.Tell("die");
@@ -458,7 +460,7 @@ namespace Akka.Tests.Actor
     public class Wave : ReceiveActor
     {
         private IActorRef _master = Nobody.Instance;
-        private readonly HashSet<IActorRef> _terminaters = new HashSet<IActorRef>();
+        private readonly HashSet<IActorRef> _terminaters = new();
 
         public Wave()
         {
@@ -502,7 +504,7 @@ namespace Akka.Tests.Actor
     {
         public Terminater()
         {
-            Receive<string>(s => "run".Equals(s), s => Context.Stop(Self));
+            Receive<string>(s => "run".Equals(s), _ => Context.Stop(Self));
         }
     }
 
@@ -510,7 +512,7 @@ namespace Akka.Tests.Actor
     {
         public override SupervisorStrategy Create()
         {
-            return new OneForOneStrategy(ex => Directive.Escalate);
+            return new OneForOneStrategy(_ => Directive.Escalate);
         }
     }
 

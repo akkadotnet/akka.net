@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamRefsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests
                          * We write out code, knowing that the other side will stream the data into it.
                          * For them it's a Sink; for us it's a Source.
                          */
-                        var sink = StreamRefs.SinkRef<string>().To(Sink.ActorRef<string>(_probe, "<COMPLETE>"))
+                        var sink = StreamRefs.SinkRef<string>().To(Sink.ActorRef<string>(_probe, "<COMPLETE>", ex => new Status.Failure(ex)))
                             .Run(_materializer);
                         sink.PipeTo(Sender);
                         return true;
@@ -109,7 +109,7 @@ namespace Akka.Streams.Tests
                     {
                         var sink = StreamRefs.SinkRef<string>()
                             .WithAttributes(StreamRefAttributes.CreateSubscriptionTimeout(TimeSpan.FromMilliseconds(500)))
-                            .To(Sink.ActorRef<string>(_probe, "<COMPLETE>"))
+                            .To(Sink.ActorRef<string>(_probe, "<COMPLETE>", ex => new Status.Failure(ex)))
                             .Run(_materializer);
                         sink.PipeTo(Sender);
                         return true;
@@ -224,16 +224,16 @@ namespace Akka.Streams.Tests
         private readonly TestProbe _probe;
         private readonly IActorRef _remoteActor;
 
-        protected override async Task BeforeTerminationAsync()
+        protected override void BeforeTermination()
         {
-            await base.BeforeTerminationAsync();
+            base.BeforeTermination();
             Materializer.Dispose();
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(RemoteSystem);
+            Shutdown(RemoteSystem);
+            base.AfterAll();
         }
 
         [Fact]
@@ -242,7 +242,7 @@ namespace Akka.Streams.Tests
             _remoteActor.Tell("give");
             var sourceRef = ExpectMsg<ISourceRef<string>>();
 
-            sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>"), Materializer);
+            sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>", ex => new Status.Failure(ex)), Materializer);
 
             _probe.ExpectMsg("hello");
             _probe.ExpectMsg("world");
@@ -255,7 +255,7 @@ namespace Akka.Streams.Tests
             _remoteActor.Tell("give-fail");
             var sourceRef = ExpectMsg<ISourceRef<string>>();
 
-            sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>"), Materializer);
+            sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>", ex => new Status.Failure(ex)), Materializer);
 
             var f = _probe.ExpectMsg<Status.Failure>();
             f.Cause.Message.Should().Contain("Remote stream (");
@@ -269,7 +269,7 @@ namespace Akka.Streams.Tests
             _remoteActor.Tell("give-complete-asap");
             var sourceRef = ExpectMsg<ISourceRef<string>>();
 
-            sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>"), Materializer);
+            sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>", ex => new Status.Failure(ex)), Materializer);
 
             _probe.ExpectMsg("<COMPLETE>");
         }

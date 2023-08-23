@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReachabilityBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,8 +27,8 @@ namespace Akka.Benchmarks.Cluster
         [Params(100)]
         public int Iterations;
 
-        public Address Address = new Address("akka", "sys", "a", 2552);
-        public Address Node = new Address("akka", "sys", "a", 2552);
+        public Address Address = new("akka", "sys", "a", 2552);
+        public Address Node = new("akka", "sys", "a", 2552);
 
         private Reachability CreateReachabilityOfSize(Reachability baseReachability, int size)
         {
@@ -48,7 +48,7 @@ namespace Akka.Benchmarks.Cluster
             using var subjects = baseReachability.Versions.Keys.ToList().GetContinuousEnumerator();
             return observers.Aggregate(baseReachability, (r, o) =>
             {
-                return Enumerable.Range(1, 5).Aggregate(r, (r2, i) =>
+                return Enumerable.Range(1, 5).Aggregate(r, (r2, _) =>
                 {
                     subjects.MoveNext();
                     return r2.Unreachable(o, subjects.Current);

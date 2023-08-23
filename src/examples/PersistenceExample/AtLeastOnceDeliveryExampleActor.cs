@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliveryExampleActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -63,11 +63,11 @@ namespace PersistenceExample
         {
             switch (message)
             {
-                case string str when str == "start":
+                case string and "start":
                     _confirming = true;
                     break;
                 
-                case string str when str == "stop":
+                case string and "stop":
                     _confirming = false;
                     break;
                 
@@ -135,7 +135,7 @@ namespace PersistenceExample
         {
             switch (message)
             {
-                case string str when str == "boom":
+                case string and "boom":
                     throw new Exception("Controlled devastation");
                 
                 case Message msg:

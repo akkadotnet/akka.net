@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RepointableActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -326,7 +326,9 @@ namespace Akka.Actor
         /// </summary>
         public override IEnumerable<IActorRef> Children
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             get { return Lookup.GetChildren(); }
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
     }
@@ -341,10 +343,10 @@ namespace Akka.Actor
         private readonly RepointableActorRef _self;
         private readonly Props _props;
         private readonly IInternalActorRef _supervisor;
-        private readonly object _lock = new object();
+        private readonly object _lock = new();
 
         /* Both queues must be accessed via lock */
-        private readonly LinkedList<Envelope> _messageQueue = new LinkedList<Envelope>();
+        private readonly LinkedList<Envelope> _messageQueue = new();
         private LatestFirstSystemMessageList _sysMsgQueue = SystemMessageList.LNil;
 
         private readonly TimeSpan _timeout;
@@ -521,8 +523,8 @@ namespace Akka.Actor
         /// <param name="message">TBD</param>
         public void SendMessage(IActorRef sender, object message)
         {
-            if (message is ISystemMessage)
-                SendSystemMessage((ISystemMessage)message);
+            if (message is ISystemMessage systemMessage)
+                SendSystemMessage(systemMessage);
             else
                 SendMessage(message, sender);
         }

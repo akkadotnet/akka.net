@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentFSMBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -167,7 +167,7 @@ namespace Akka.Persistence.Fsm
         /// </summary>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
-        public TransformHelper Transform(StateFunction func) => new TransformHelper(func);
+        public TransformHelper Transform(StateFunction func) => new(func);
 
         /// <summary>
         /// Schedule named timer to deliver message after given delay, possibly repeating.
@@ -361,11 +361,11 @@ namespace Akka.Persistence.Fsm
 
         // Timer handling
         private readonly IDictionary<string, FSMBase.Timer> _timers = new Dictionary<string, FSMBase.Timer>();
-        private readonly AtomicCounter _timerGen = new AtomicCounter(0);
+        private readonly AtomicCounter _timerGen = new(0);
 
         // State definitions
-        private readonly Dictionary<TState, StateFunction> _stateFunctions = new Dictionary<TState, StateFunction>();
-        private readonly Dictionary<TState, TimeSpan?> _stateTimeouts = new Dictionary<TState, TimeSpan?>();
+        private readonly Dictionary<TState, StateFunction> _stateFunctions = new();
+        private readonly Dictionary<TState, TimeSpan?> _stateTimeouts = new();
 
         private void Register(TState name, StateFunction function, TimeSpan? timeout)
         {
@@ -386,7 +386,7 @@ namespace Akka.Persistence.Fsm
         {
             get
             {
-                return (@event, state) =>
+                return (@event, _) =>
                 {
                     _log.Warning("unhandled event {0} in state {1}", @event.FsmEvent, StateName);
                     return Stay();
@@ -398,12 +398,12 @@ namespace Akka.Persistence.Fsm
 
         private StateFunction HandleEvent
         {
-            get { return _handleEvent ?? (_handleEvent = HandleEventDefault); }
+            get { return _handleEvent ??= HandleEventDefault; }
             set { _handleEvent = value; }
         }
 
         // Termination handling
-        private Action<FSMBase.StopEvent<TState, TData>> _terminateEvent = @event => { };
+        private Action<FSMBase.StopEvent<TState, TData>> _terminateEvent = _ => { };
 
         // Transition handling
         private readonly IList<TransitionHandler> _transitionEvent = new List<TransitionHandler>();
@@ -419,7 +419,7 @@ namespace Akka.Persistence.Fsm
         /// <summary>
         /// Listener support
         /// </summary>
-        public ListenerSupport Listeners { get; } = new ListenerSupport();
+        public ListenerSupport Listeners { get; } = new();
 
         // **
         // Main actor Receive method
@@ -633,9 +633,9 @@ namespace Akka.Persistence.Fsm
         {
             if (reason is FSMBase.Failure failure)
             {
-                if (failure.Cause is Exception)
+                if (failure.Cause is Exception exception)
                 {
-                    _log.Error(failure.Cause.AsInstanceOf<Exception>(), "terminating due to Failure");
+                    _log.Error(exception, "terminating due to Failure");
                 }
                 else
                 {

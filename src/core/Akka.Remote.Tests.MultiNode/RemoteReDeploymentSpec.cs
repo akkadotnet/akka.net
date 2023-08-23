@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteReDeploymentSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,7 +47,6 @@ namespace Akka.Remote.Tests.MultiNode
     public abstract class RemoteReDeploymentSpec : MultiNodeSpec
     {
         private readonly RemoteReDeploymentSpecConfig _config;
-        private readonly Func<RoleName, string, IActorRef> _identify;
 
         protected RemoteReDeploymentSpec(Type type) : this(new RemoteReDeploymentSpecConfig(), type)
         {
@@ -77,12 +76,12 @@ namespace Akka.Remote.Tests.MultiNode
                 Sys.ActorOf(Props.Create(() => new Parent()), "parent")
                     .Tell(new ParentMessage(Props.Create(() => new Hello()), "hello"));
 
-                ExpectMsg<string>("HelloParent", TimeSpan.FromSeconds(15));
+                ExpectMsg("HelloParent", TimeSpan.FromSeconds(15));
             }, _config.Second);
 
             RunOn(() =>
             {
-                ExpectMsg<string>("PreStart", TimeSpan.FromSeconds(15));
+                ExpectMsg("PreStart", TimeSpan.FromSeconds(15));
                 
             }, _config.First);
 

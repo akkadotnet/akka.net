@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorGraphInterpreter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -185,11 +185,11 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public ILoggingAdapter Log => _log ?? (_log = GetLogger());
+        public ILoggingAdapter Log => _log ??= GetLogger();
         /// <summary>
         /// TBD
         /// </summary>
-        public GraphInterpreter Interpreter => _interpreter ?? (_interpreter = GetInterpreter());
+        public GraphInterpreter Interpreter => _interpreter ??= GetInterpreter();
 
         /// <summary>
         /// TBD
@@ -769,7 +769,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private class ShellRegistered
         {
-            public static readonly ShellRegistered Instance = new ShellRegistered();
+            public static readonly ShellRegistered Instance = new();
             private ShellRegistered()
             {
             }
@@ -1329,10 +1329,11 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="shell">TBD</param>
         /// <returns>TBD</returns>
-        public static Props Props(GraphInterpreterShell shell) => Actor.Props.Create(() => new ActorGraphInterpreter(shell)).WithDeploy(Deploy.Local);
+        public static Props Props(GraphInterpreterShell shell) => Actor.Props
+            .Create<ActorGraphInterpreter>(shell).WithDeploy(Deploy.Local);
 
         private ISet<GraphInterpreterShell> _activeInterpreters = new HashSet<GraphInterpreterShell>();
-        private readonly Queue<GraphInterpreterShell> _newShells = new Queue<GraphInterpreterShell>();
+        private readonly Queue<GraphInterpreterShell> _newShells = new();
         private readonly SubFusingActorMaterializerImpl _subFusingMaterializerImpl;
         private readonly GraphInterpreterShell _initial;
         private ILoggingAdapter _log;
@@ -1346,6 +1347,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <param name="shell">TBD</param>
+        /// If this ctor gets changed you -must- change <see cref="ActorGraphInterpreter.Props"/> as well!
         public ActorGraphInterpreter(GraphInterpreterShell shell)
         {
             _initial = shell;
@@ -1358,7 +1360,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        public ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         private void EnqueueToShortCircuit(object input)
         {

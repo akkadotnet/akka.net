@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase_Within.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -39,10 +39,10 @@ namespace Akka.TestKit
             WithinAsync(
                     min: TimeSpan.Zero,
                     max: max,
-                    function: async () =>
+                    function: () =>
                     {
                         action();
-                        return NotUsed.Instance;
+                        return Task.FromResult(NotUsed.Instance);
                     },
                     hint: null,
                     epsilonValue: epsilonValue,
@@ -98,10 +98,10 @@ namespace Akka.TestKit
             WithinAsync(
                     min: min, 
                     max: max, 
-                    function: async () =>
+                    function: () =>
                     {
                         action();
-                        return NotUsed.Instance;
+                        return Task.FromResult(NotUsed.Instance);
                     }, 
                     hint: hint, 
                     epsilonValue: epsilonValue, 
@@ -157,7 +157,7 @@ namespace Akka.TestKit
             return WithinAsync(
                     min: TimeSpan.Zero,
                     max: max,
-                    function: async () => function(),
+                    function: () => Task.FromResult(function()),
                     hint: null,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)
@@ -177,20 +177,19 @@ namespace Akka.TestKit
         /// <param name="epsilonValue">TBD</param>
         /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
-        public async Task<T> WithinAsync<T>(
+        public Task<T> WithinAsync<T>(
             TimeSpan max,
             Func<Task<T>> function,
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
         {
-            return await WithinAsync(
+            return WithinAsync(
                     min: TimeSpan.Zero,
                     max: max,
                     function: function, 
                     hint: null,
                     epsilonValue: epsilonValue,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                    cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -219,7 +218,7 @@ namespace Akka.TestKit
             return WithinAsync(
                     min: min,
                     max: max,
-                    function: async () => function(),
+                    function: () => Task.FromResult(function()),
                     hint: hint,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)

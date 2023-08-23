@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PublisherSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -28,25 +29,24 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_PublisherSink_must_be_unique_when_created_twice()
+        public async Task A_PublisherSink_must_be_unique_when_created_twice()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var t =
-                    RunnableGraph.FromGraph(
-                        GraphDsl.Create(Sink.AsPublisher<int>(false),
-                            Sink.AsPublisher<int>(false), Keep.Both,
-                            (b, p1, p2) =>
-                            {
-                                var broadcast = b.Add(new Broadcast<int>(2));
-                                var source =
-                                    Source.From(Enumerable.Range(0, 6))
-                                        .MapMaterializedValue(_ => default((IPublisher<int>, IPublisher<int>)));
-                                b.From(source).To(broadcast.In);
-                                b.From(broadcast.Out(0)).Via(Flow.Create<int>().Select(i => i * 2)).To(p1.Inlet);
-                                b.From(broadcast.Out(1)).To(p2.Inlet);
-                                return ClosedShape.Instance;
-                            })).Run(Materializer);
+            await this.AssertAllStagesStoppedAsync(() => {
+                var t =                                                                             
+                RunnableGraph.FromGraph(                                                                                 
+                    GraphDsl.Create(Sink.AsPublisher<int>(false),                                                                                     
+                    Sink.AsPublisher<int>(false), Keep.Both,                                                                                     
+                    (b, p1, p2) =>                                                                                     
+                    {                                                                                         
+                        var broadcast = b.Add(new Broadcast<int>(2));                                                                                         
+                        var source =                                                                                             
+                        Source.From(Enumerable.Range(0, 6))                                                                                                 
+                        .MapMaterializedValue(_ => default((IPublisher<int>, IPublisher<int>)));                                                                                         
+                        b.From(source).To(broadcast.In);                                                                                         
+                        b.From(broadcast.Out(0)).Via(Flow.Create<int>().Select(i => i * 2)).To(p1.Inlet);                                                                                         
+                        b.From(broadcast.Out(1)).To(p2.Inlet);                                                                                         
+                        return ClosedShape.Instance;                                                                                     
+                    })).Run(Materializer);
 
                 var pub1 = t.Item1;
                 var pub2 = t.Item2;
@@ -59,6 +59,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 f1.Result.Should().Be(30);
                 f2.Result.Should().Be(15);
+                return Task.CompletedTask;
             }, Materializer);
         }
 

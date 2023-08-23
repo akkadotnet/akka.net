@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FutureFlattenSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -272,11 +272,11 @@ namespace Akka.Streams.Tests.Dsl
 
         private class FailingMatGraphStage : GraphStageWithMaterializedValue<SourceShape<int>, string>
         {
-            public static readonly TestException Exception = new TestException("INNER_FAILED");
+            public static readonly TestException Exception = new("INNER_FAILED");
             
-            private readonly Outlet<int> _out = new Outlet<int>("whatever");
+            private readonly Outlet<int> _out = new("whatever");
 
-            public override SourceShape<int> Shape => new SourceShape<int>(_out);
+            public override SourceShape<int> Shape => new(_out);
 
             public override ILogicAndMaterializedValue<string> CreateLogicAndMaterializedValue(Attributes inheritedAttributes) => 
                 throw Exception;

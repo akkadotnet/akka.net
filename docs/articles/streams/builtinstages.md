@@ -231,6 +231,13 @@ Combine the elements of multiple streams into a stream of sequences using a comb
 
 **completes** when any upstream completes
 
+### Setup
+
+Defer the creation of a `Source` until materialization and access `ActorMaterializer` and `Attributes`.
+
+Typically used when access to materializer is needed to run a different stream during the construction of a source/flow.
+Can also be used to access the underlying `ActorSystem` from `ActorMaterializer`.
+
 ## Sink Stages
 
 These built-in sinks are available from ``Akka.Stream.DSL.Sink``:
@@ -295,11 +302,11 @@ if more element are emitted the sink will cancel the stream
 
 **cancels** If too many values are collected
 
-### Foreach
+### ForEach
 
 Invoke a given procedure for each element received. Note that it is not safe to mutate shared state from the procedure.
 
-The sink materializes into a  ``Task`` which completes when the
+The sink materializes into a  ``Task<Done>`` which completes when the
 stream completes, or fails if the stream fails.
 
 Note that it is not safe to mutate state from the procedure.
@@ -308,9 +315,19 @@ Note that it is not safe to mutate state from the procedure.
 
 **backpressures** when the previous procedure invocation has not yet completed
 
-### ForeachParallel
+### ForEachASync
 
-Like ``Foreach`` but allows up to ``parallellism`` procedure calls to happen in parallel.
+Invoke a given procedure asynchronously for each element received. Note that if shared state is mutated from the procedure that must be done in a thread-safe way.
+
+The sink materializes into a ``Task<Done>`` which completes when the stream completes, or fails if the stream fails.
+
+**cancels** when a ``Task`` fails
+
+**backpressures** when the number of ``Task``s reaches the configured parallelism
+
+### ForEachParallel
+
+Like ``ForEach`` but allows up to ``parallellism`` procedure calls to happen in parallel.
 
 **cancels** never
 
@@ -604,6 +621,13 @@ Just like `Scan` but receiving a function that results in a `Task` to the next v
 **backpressures** when downstream backpressures
 
 **completes** when upstream completes and the last `Task` is resolved
+
+### Setup
+
+Defer the creation of a `Flow` until materialization and access `ActorMaterializer` and `Attributes`.
+
+Typically used when access to materializer is needed to run a different stream during the construction of a source/flow.
+Can also be used to access the underlying `ActorSystem` from `ActorMaterializer`.
 
 ### Aggregate
 

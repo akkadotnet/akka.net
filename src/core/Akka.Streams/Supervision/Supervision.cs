@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Supervision.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,14 +47,14 @@ namespace Akka.Streams.Supervision
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Decider StoppingDecider = cause => Directive.Stop;
+        public static readonly Decider StoppingDecider = _ => Directive.Stop;
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Decider ResumingDecider = cause => Directive.Resume;
+        public static readonly Decider ResumingDecider = _ => Directive.Resume;
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Decider RestartingDecider = cause => Directive.Restart;
+        public static readonly Decider RestartingDecider = _ => Directive.Restart;
     }
 }

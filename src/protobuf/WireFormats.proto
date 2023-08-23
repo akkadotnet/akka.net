@@ -61,6 +61,7 @@ message DeployData {
 	string configManifest = 9;
 	int32 routerConfigSerializerId = 10;
 	string routerConfigManifest = 11;
+	int32 stashCapacity = 12;
 }
 
 /******************************************
@@ -82,7 +83,7 @@ message AkkaControlMessage {
 message AkkaHandshakeInfo {
 	AddressData origin = 1;
 	fixed64 uid = 2;
-	string cookie = 3;
+  string cookie = 3; // not used
 }
 
 // Defines the type of the AkkaControlMessage command type

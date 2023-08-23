@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadLetterListener.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -280,7 +280,7 @@ namespace Akka.Event
             /// <summary>
             /// A deadline that is due <see cref="DateTime.UtcNow"/>
             /// </summary>
-            public static Deadline Now => new Deadline(DateTime.UtcNow);
+            public static Deadline Now => new(DateTime.UtcNow);
 
             /// <summary>
             /// Adds a given <see cref="TimeSpan"/> to the due time of this <see cref="Deadline"/>

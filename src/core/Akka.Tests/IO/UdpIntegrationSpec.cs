@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpIntegrationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -344,13 +344,6 @@ namespace Akka.Tests.IO
         class AssertOpenDatagramChannel : Inet.DatagramChannelCreator
         {
             public int OpenCalled { get; set; }
-
-
-            public override Socket Create()
-            {
-                OpenCalled += 1;
-                return base.Create();
-            }
 
             public override Socket Create(AddressFamily addressFamily)
             {

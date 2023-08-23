@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemSetup.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -43,7 +43,7 @@ namespace Akka.Actor.Setup
     /// </remarks>
     public sealed class ActorSystemSetup
     {
-        public static readonly ActorSystemSetup Empty = new ActorSystemSetup(ImmutableDictionary<Type, Setup>.Empty);
+        public static readonly ActorSystemSetup Empty = new(ImmutableDictionary<Type, Setup>.Empty);
 
         public static ActorSystemSetup Create(params Setup[] setup)
         {

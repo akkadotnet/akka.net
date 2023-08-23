@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -74,7 +74,7 @@ namespace Akka.Persistence
     /// </summary>
     public abstract partial class Eventsourced : ActorBase, IPersistentIdentity, IPersistenceStash, IPersistenceRecovery
     {
-        private static readonly AtomicCounter InstanceCounter = new AtomicCounter(1);
+        private static readonly AtomicCounter InstanceCounter = new(1);
 
         private readonly int _instanceId;
         private readonly string _writerGuid;
@@ -303,7 +303,7 @@ namespace Akka.Persistence
 
             _pendingStashingPersistInvocations++;
             _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, o => handler((TEvent)o)));
-            _eventBatch.AddFirst(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
+            _eventBatch.AddLast(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
                 sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender)));
         }
 
@@ -335,7 +335,7 @@ namespace Akka.Persistence
             }
 
             if (persistents.Count > 0)
-                _eventBatch.AddFirst(new AtomicWrite(persistents.ToImmutable()));
+                _eventBatch.AddLast(new AtomicWrite(persistents.ToImmutable()));
         }
 
         /// <summary>
@@ -374,7 +374,7 @@ namespace Akka.Persistence
             }
 
             _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, o => handler((TEvent)o)));
-            _eventBatch.AddFirst(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
+            _eventBatch.AddLast(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
                 sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender)));
         }
 
@@ -400,7 +400,7 @@ namespace Akka.Persistence
                 _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, Inv));
             }
 
-            _eventBatch.AddFirst(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
+            _eventBatch.AddLast(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
                     sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender))
                 .ToImmutableList<IPersistentRepresentation>()));
         }
@@ -440,7 +440,7 @@ namespace Akka.Persistence
             else
             {
                 _pendingInvocations.AddLast(new AsyncHandlerInvocation(evt, o => handler((TEvent)o)));
-                _eventBatch.AddFirst(new NonPersistentMessage(evt, Sender));
+                _eventBatch.AddLast(new NonPersistentMessage(evt, Sender));
             }
         }
 
@@ -695,6 +695,12 @@ namespace Akka.Persistence
             {
                 _userStash.Prepend(envelopes);
             }
+
+            public int Count => _userStash.Count;
+            public bool IsEmpty => _userStash.IsEmpty;
+            public bool NonEmpty => _userStash.NonEmpty;
+            public bool IsFull => _userStash.IsFull;
+            public int Capacity => _userStash.Capacity;
         }
     }
 }

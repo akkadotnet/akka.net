@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StressSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -412,7 +412,7 @@ akka.remote.default-remote-dispatcher {
         private ImmutableDictionary<Address, PhiValue> _phiByNode = ImmutableDictionary<Address, PhiValue>.Empty;
 
         private Option<IActorRef> _reportTo = Option<IActorRef>.None;
-        private HashSet<Address> _nodes = new HashSet<Address>();
+        private HashSet<Address> _nodes = new();
 
         private ICancelable _checkPhiTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
             TimeSpan.FromSeconds(1),
@@ -495,7 +495,7 @@ akka.remote.default-remote-dispatcher {
                 _reportTo.OnSuccess(n => Context.Watch(n));
             });
 
-            Receive<Terminated>(t =>
+            Receive<Terminated>(_ =>
             {
                 if (_reportTo.HasValue)
                     _reportTo = Option<IActorRef>.None;
@@ -603,7 +603,7 @@ akka.remote.default-remote-dispatcher {
                 _reportTo.OnSuccess(n => Context.Watch(n));
             });
 
-            Receive<Terminated>(t =>
+            Receive<Terminated>(_ =>
             {
                 if (_reportTo.HasValue)
                     _reportTo = Option<IActorRef>.None;
@@ -632,31 +632,31 @@ akka.remote.default-remote-dispatcher {
 
     internal sealed class Begin
     {
-        public static readonly Begin Instance = new Begin();
+        public static readonly Begin Instance = new();
         private Begin() { }
     }
 
     internal sealed class End
     {
-        public static readonly End Instance = new End();
+        public static readonly End Instance = new();
         private End() { }
     }
 
     internal sealed class RetryTick
     {
-        public static readonly RetryTick Instance = new RetryTick();
+        public static readonly RetryTick Instance = new();
         private RetryTick() { }
     }
 
     internal sealed class ReportTick
     {
-        public static readonly ReportTick Instance = new ReportTick();
+        public static readonly ReportTick Instance = new();
         private ReportTick() { }
     }
 
     internal sealed class PhiTick
     {
-        public static readonly PhiTick Instance = new PhiTick();
+        public static readonly PhiTick Instance = new();
         private PhiTick() { }
     }
 
@@ -685,7 +685,7 @@ akka.remote.default-remote-dispatcher {
 
     internal sealed class Reset
     {
-        public static readonly Reset Instance = new Reset();
+        public static readonly Reset Instance = new();
         private Reset() { }
     }
 
@@ -914,7 +914,7 @@ akka.remote.default-remote-dispatcher {
                     CreateResultAggregator(title, expectedResults: currentRoles.Length, true);
                     RunOn(() =>
                     {
-                        ReportResult<bool>(() =>
+                        ReportResult(() =>
                         {
                             RunOn(() =>
                             {
@@ -1050,7 +1050,7 @@ akka.remote.default-remote-dispatcher {
 
                     RunOn(() =>
                     {
-                        ReportResult<bool>(() =>
+                        ReportResult(() =>
                         {
                             RunOn(() =>
                             {
@@ -1101,7 +1101,7 @@ akka.remote.default-remote-dispatcher {
 
                     RunOn(() =>
                     {
-                        ReportResult<bool>(() =>
+                        ReportResult(() =>
                         {
                             var startTime = MonotonicClock.GetTicks();
                             AwaitMembersUp(currentRoles.Length, timeout:RemainingOrDefault);

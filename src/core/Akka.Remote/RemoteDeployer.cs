@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteDeployer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -46,8 +46,7 @@ namespace Akka.Remote
 
             var remote = deploy.Config.GetString("remote", null);
 
-            ActorPath actorPath;
-            if(ActorPath.TryParse(remote, out actorPath))
+            if(ActorPath.TryParse(remote, out var actorPath))
             {
                 var address = actorPath.Address;
                 //can have remotely deployed routers that remotely deploy routees
@@ -65,9 +64,9 @@ namespace Akka.Remote
             var nodes = deploy.Config.GetStringList("target.nodes", new string[] { }).Select(Address.Parse).ToList();
             if (nodes.Any() && deploy.RouterConfig != null)
             {
-                if (deploy.RouterConfig is Pool)
+                if (deploy.RouterConfig is Pool pool)
                     return
-                        deploy.WithRouterConfig(new RemoteRouterConfig(deploy.RouterConfig.AsInstanceOf<Pool>(), nodes));
+                        deploy.WithRouterConfig(new RemoteRouterConfig(pool, nodes));
                 return deploy.WithScope(scope: Deploy.NoScopeGiven);
             }
             else

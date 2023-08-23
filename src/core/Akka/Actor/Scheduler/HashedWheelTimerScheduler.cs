@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HashedWheelTimerScheduler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -72,8 +72,8 @@ namespace Akka.Actor
         private long _startTime = 0;
         private long _tick;
         private readonly int _mask;
-        private readonly CountdownEvent _workerInitialized = new CountdownEvent(1);
-        private readonly ConcurrentQueue<SchedulerRegistration> _registrations = new ConcurrentQueue<SchedulerRegistration>();
+        private readonly CountdownEvent _workerInitialized = new(1);
+        private readonly ConcurrentQueue<SchedulerRegistration> _registrations = new();
         private readonly Bucket[] _wheel;
 
         private const int WORKER_STATE_INIT = 0;
@@ -112,8 +112,8 @@ namespace Akka.Actor
             return normalizedTicksPerWheel;
         }
 
-        private readonly HashSet<SchedulerRegistration> _unprocessedRegistrations = new HashSet<SchedulerRegistration>();
-        private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new HashSet<SchedulerRegistration>();
+        private readonly HashSet<SchedulerRegistration> _unprocessedRegistrations = new();
+        private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new();
 
         private Thread _worker;
 
@@ -233,8 +233,7 @@ namespace Akka.Actor
             // adds new timeouts in a loop.
             for (var i = 0; i < 100000; i++)
             {
-                SchedulerRegistration reg;
-                if (!_registrations.TryDequeue(out reg))
+                if (!_registrations.TryDequeue(out var reg))
                 {
                     // all processed
                     break;
@@ -352,7 +351,7 @@ namespace Akka.Actor
             InternalSchedule(initialDelay, interval, action, cancelable);
         }
 
-        private AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>> _stopped = new AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>>();
+        private AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>> _stopped = new();
 
         private static readonly Task<IEnumerable<SchedulerRegistration>> Completed = Task.FromResult((IEnumerable<SchedulerRegistration>)new List<SchedulerRegistration>());
 

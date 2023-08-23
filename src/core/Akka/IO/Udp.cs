@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Udp.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -87,7 +87,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Udp Instance = new Udp();
+        public static readonly Udp Instance = new();
 
         /// <summary>
         /// TBD
@@ -138,7 +138,7 @@ namespace Akka.IO
             /// Default <see cref="NoAck"/> instance which is used when no acknowledgment information is
             /// explicitly provided. Its "token" is <see langword="null"/>.
             /// </summary>
-            public static readonly NoAck Instance = new NoAck(null);
+            public static readonly NoAck Instance = new(null);
 
             /// <summary>
             /// TBD
@@ -176,12 +176,6 @@ namespace Akka.IO
         /// </summary>
         public sealed class Send : Command
         {
-            [Obsolete("Akka.IO.Udp.Send public constructors are obsolete. Use `Send.Create` or `Send(ByteString, EndPoint, Event)` instead.")]
-            public Send(IEnumerator<ByteBuffer> payload, EndPoint target, Event ack)
-                : this(ByteString.FromBuffers(payload), target, ack)
-            {
-            }
-
             /// <summary>
             /// Creates a new send request to be executed via UDP socket to a addressed to the provided endpoint.
             /// Once send completes, this request will acknowledged back on the sender side with an <paramref name="ack"/>
@@ -230,7 +224,7 @@ namespace Akka.IO
             /// <param name="data">Binary payload to be send.</param>
             /// <param name="target">An endpoint of the message receiver.</param>
             /// <returns>TBD</returns>
-            public static Send Create(ByteString data, EndPoint target) => new Send(data, target, NoAck.Instance);
+            public static Send Create(ByteString data, EndPoint target) => new(data, target, NoAck.Instance);
         }
 
         /// <summary>
@@ -281,7 +275,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Unbind Instance = new Unbind();
+            public static readonly Unbind Instance = new();
 
             private Unbind() { }
         }
@@ -301,7 +295,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly SimpleSender Instance = new SimpleSender();
+            public static readonly SimpleSender Instance = new();
 
             /// <summary>
             /// TBD
@@ -329,7 +323,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly SuspendReading Instance = new SuspendReading();
+            public static readonly SuspendReading Instance = new();
 
             private SuspendReading()
             { }
@@ -344,7 +338,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ResumeReading Instance = new ResumeReading();
+            public static readonly ResumeReading Instance = new();
 
             private ResumeReading()
             { }
@@ -437,7 +431,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly SimpleSenderReady Instance = new SimpleSenderReady();
+            public static readonly SimpleSenderReady Instance = new();
 
             private  SimpleSenderReady() { }
         }
@@ -451,7 +445,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Unbound Instance = new Unbound();
+            public static readonly Unbound Instance = new();
             private Unbound() { }
         }
 

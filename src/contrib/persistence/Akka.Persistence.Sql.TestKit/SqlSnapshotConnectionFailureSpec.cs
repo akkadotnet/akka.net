@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqlSnapshotConnectionFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ namespace Akka.Persistence.Sql.TestKit
         private class SaveSnapshotTestActor : NamedPersistentActor
         {
             private readonly IActorRef _probe;
-            protected LinkedList<string> _state = new LinkedList<string>();
+            protected LinkedList<string> _state = new();
 
             public SaveSnapshotTestActor(string name, IActorRef probe)
                 : base(name)
@@ -86,7 +86,7 @@ namespace Akka.Persistence.Sql.TestKit
 
         internal class TakeSnapshot
         {
-            public static readonly TakeSnapshot Instance = new TakeSnapshot();
+            public static readonly TakeSnapshot Instance = new();
             private TakeSnapshot()
             {
             }
@@ -94,7 +94,7 @@ namespace Akka.Persistence.Sql.TestKit
 
         internal sealed class GetState
         {
-            public static readonly GetState Instance = new GetState();
+            public static readonly GetState Instance = new();
             private GetState() { }
         }
 

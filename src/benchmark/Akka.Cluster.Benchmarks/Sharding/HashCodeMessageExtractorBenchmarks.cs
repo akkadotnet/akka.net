@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HashCodeMessageExtractorBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,8 +14,8 @@ namespace Akka.Cluster.Benchmarks.Sharding
     [Config(typeof(MicroBenchmarkConfig))]
     public class HashCodeMessageExtractorBenchmarks
     {
-        private ShardingEnvelope _m1 = new ShardingEnvelope("foo", 1);
-        private ShardedMessage _m2 = new ShardedMessage("foo", 1);
+        private ShardingEnvelope _m1 = new("foo", 1);
+        private ShardedMessage _m2 = new("foo", 1);
         private IMessageExtractor _extractor = new ShardMessageExtractor();
 
         [Benchmark]

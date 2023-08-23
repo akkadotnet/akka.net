@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ namespace Akka.Persistence.Tests
 
         internal class TakeSnapshot
         {
-            public static readonly TakeSnapshot Instance = new TakeSnapshot();
+            public static readonly TakeSnapshot Instance = new();
             private TakeSnapshot()
             {
             }
@@ -169,7 +169,7 @@ namespace Akka.Persistence.Tests
             {
                 switch(message)
                 {
-                    case string payload when payload == "done":
+                    case string and "done":
                         _probe.Tell("done");
                         return true;
                     case string payload:

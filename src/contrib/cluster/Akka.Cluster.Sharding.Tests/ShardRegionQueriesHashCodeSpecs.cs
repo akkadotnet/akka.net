@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="ShardRegionQueriesSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="ShardRegionQueriesHashCodeSpecs.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,7 +47,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             _clusterSharding = ClusterSharding.Get(Sys);
             _cluster = Cluster.Get(Sys);
-            _shardRegion = _clusterSharding.Start("entity", s => EchoActor.Props(this, true),
+            _shardRegion = _clusterSharding.Start("entity", _ => EchoActor.Props(this, true),
                 ClusterShardingSettings.Create(Sys).WithRole("shard"), new MessageExtractor());
 
             var proxySysConfig = ConfigurationFactory.ParseString("akka.cluster.roles = [proxy]")
@@ -63,10 +63,10 @@ namespace Akka.Cluster.Sharding.Tests
             AwaitAssert(() => { proxyCluster.SelfMember.Status.ShouldBe(MemberStatus.Up); });
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await ShutdownAsync(_proxySys);
-            await base.AfterAllAsync();
+            Shutdown(_proxySys);
+            base.AfterAll();
         }
 
         private static Config GetConfig()

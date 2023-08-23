@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncAwaitSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,11 +19,11 @@ namespace Akka.Tests.Dispatch
         private IActorRef _replyTo;
         public ReceiveTimeoutAsyncActor()
         {
-            Receive<ReceiveTimeout>(t =>
+            Receive<ReceiveTimeout>(_ =>
             {
                 _replyTo.Tell("GotIt");
             });
-            ReceiveAsync<string>(async s =>
+            ReceiveAsync<string>(async _ =>
             {
                 _replyTo = Sender;
 
@@ -86,19 +86,19 @@ namespace Akka.Tests.Dispatch
                 Sender.Tell("done");
             });
 
-            ReceiveAsync<int>(async msg =>
+            ReceiveAsync<int>(async _ =>
             {
                 await Task.Yield();
                 Sender.Tell("handled");
             }, i => i > 10);
 
-            ReceiveAsync(typeof(double), async msg =>
+            ReceiveAsync(typeof(double), async _ =>
             {
                 await Task.Yield();
                 Sender.Tell("handled");
             });
 
-            ReceiveAnyAsync(async msg =>
+            ReceiveAnyAsync(async _ =>
             {
                 await Task.Yield();
                 Sender.Tell("receiveany");
@@ -230,13 +230,13 @@ namespace Akka.Tests.Dispatch
     {
         public AsyncTplActor()
         {
-            Receive<string>(m =>
+            Receive<string>(_ =>
             {
                 //this is also safe, all tasks complete in the actor context
                 RunTask(async () =>
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1))
-                        .ContinueWith(t => { Sender.Tell("done"); });
+                        .ContinueWith(_ => { Sender.Tell("done"); });
                 });
             });
         }
@@ -249,12 +249,12 @@ namespace Akka.Tests.Dispatch
         public AsyncTplExceptionActor(IActorRef callback)
         {
             _callback = callback;
-            Receive<string>(m =>
+            Receive<string>(_ =>
             {
                 RunTask(async () =>
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1))
-                   .ContinueWith(t => { throw new Exception("foo"); });
+                   .ContinueWith(_ => { throw new Exception("foo"); });
                 });
             });
         }
@@ -429,7 +429,7 @@ namespace Akka.Tests.Dispatch
             public AsyncFailingActor()
             {
 #pragma warning disable CS1998
-                ReceiveAsync<string>(async m =>
+                ReceiveAsync<string>(async _ =>
 #pragma warning restore CS1998
                 {
                     ThrowException();
@@ -484,8 +484,7 @@ namespace Akka.Tests.Dispatch
         {
             public AsyncReentrantActor()
             {
-                ReceiveAsync<string>(async msg =>
-                {
+                ReceiveAsync<string>(msg => {
                     var sender = Sender;
 #pragma warning disable CS4014
                     Task.Run(() =>
@@ -497,6 +496,7 @@ namespace Akka.Tests.Dispatch
 #pragma warning restore CS4014
 
                     Thread.Sleep(3000);
+                    return Task.CompletedTask;
                 });
             }
             

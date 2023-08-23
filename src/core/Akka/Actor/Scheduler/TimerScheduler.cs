@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TimerScheduler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -76,8 +76,8 @@ namespace Akka.Actor.Scheduler
         }
 
         private readonly IActorContext ctx;
-        private readonly Dictionary<object, Timer> timers = new Dictionary<object, Timer>();
-        private AtomicCounter timerGen = new AtomicCounter(0);
+        private readonly Dictionary<object, Timer> timers = new();
+        private AtomicCounter timerGen = new(0);
 
 
         public TimerScheduler(IActorContext ctx)

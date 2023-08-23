@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardedDaemonProcess.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ namespace Akka.Cluster.Sharding
     {
         private sealed class Tick
         {
-            public static Tick Instance { get; } = new Tick();
+            public static Tick Instance { get; } = new();
             private Tick() { }
         }
 
@@ -71,25 +71,6 @@ namespace Akka.Cluster.Sharding
         public override string EntityId(object message) => (message as ShardingEnvelope)?.EntityId;
         public override object EntityMessage(object message) => (message as ShardingEnvelope)?.Message;
         public override string ShardId(object message) => message is ShardRegion.StartEntity se ? se.EntityId : EntityId(message);
-    }
-
-    /// <summary>
-    /// <para>Default envelope type that may be used with Cluster Sharding.</para>
-    /// <para>
-    /// The alternative way of routing messages through sharding is to not use envelopes,
-    /// and have the message types themselves carry identifiers.
-    /// </para>
-    /// </summary>
-    public sealed class ShardingEnvelope: IWrappedMessage
-    {
-        public string EntityId { get; }
-        public object Message { get; }
-
-        public ShardingEnvelope(string entityId, object message)
-        {
-            EntityId = entityId;
-            Message = message;
-        }
     }
 
     /// <summary>
@@ -189,6 +170,6 @@ namespace Akka.Cluster.Sharding
 
     public class ShardedDaemonProcessExtensionProvider : ExtensionIdProvider<ShardedDaemonProcess>
     {
-        public override ShardedDaemonProcess CreateExtension(ExtendedActorSystem system) => new ShardedDaemonProcess(system);
+        public override ShardedDaemonProcess CreateExtension(ExtendedActorSystem system) => new(system);
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ChannelSchedulerExtension.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ namespace Akka.Dispatch
         private static TaskSchedulerPriority _threadPriority = TaskSchedulerPriority.None;
 
         private readonly Task _controlTask; //the main worker
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource(); //main cancellation token
+        private readonly CancellationTokenSource _cts = new(); //main cancellation token
         private readonly Timer _timer; //timer to schedule coworkers
         private readonly Task[] _coworkers; //the coworkers
         private readonly int _maximumConcurrencyLevel; //max count of workers

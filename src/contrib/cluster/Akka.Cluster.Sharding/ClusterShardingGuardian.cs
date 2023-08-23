@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingGuardian.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -173,7 +173,7 @@ namespace Akka.Cluster.Sharding
 
         private readonly ConcurrentDictionary<string, IActorRef> _regions;
         private readonly ConcurrentDictionary<string, IActorRef> _proxies;
-        private readonly ConcurrentDictionary<IActorRef, string> _typeLookup = new ConcurrentDictionary<IActorRef, string>();
+        private readonly ConcurrentDictionary<IActorRef, string> _typeLookup = new();
 
         /// <summary>
         /// TBD
@@ -331,7 +331,7 @@ namespace Akka.Cluster.Sharding
 
         private IActorRef Replicator(ClusterShardingSettings settings)
         {
-            if (settings.StateStoreMode == StateStoreMode.DData || settings.StateStoreMode == StateStoreMode.Custom)
+            if (settings.StateStoreMode is StateStoreMode.DData or StateStoreMode.Custom)
             {
                 // one replicator per role
                 var role = settings.Role ?? string.Empty;

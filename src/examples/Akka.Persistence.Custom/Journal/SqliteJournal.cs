@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqliteJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -109,7 +109,6 @@ namespace Akka.Persistence.Custom.Journal
         private readonly string _connectionString;
         private readonly TimeSpan _timeout;
         private readonly Akka.Serialization.Serialization _serialization;
-        private readonly string _defaultSerializer;
         private readonly ILoggingAdapter _log;
         private readonly CancellationTokenSource _pendingRequestsCancellation;
 
@@ -119,7 +118,6 @@ namespace Akka.Persistence.Custom.Journal
             
             _connectionString = _settings.ConnectionString;
             _timeout = _settings.ConnectionTimeout;
-            _defaultSerializer = _settings.DefaultSerializer;
             
             _serialization = Context.System.Serialization;
             _log = Context.GetLogger();
@@ -328,11 +326,8 @@ namespace Akka.Persistence.Custom.Journal
                         var persistentMessages = payload.ToArray();
                         foreach (var @event in persistentMessages)
                         {
-                            // Get the serializer associated with the payload type,
-                            // else use a default serializer
-                            var serializer = _serialization.FindSerializerForType(
-                                @event.Payload.GetType(), 
-                                _defaultSerializer);
+                            // Get the serializer associated with the payload type
+                            var serializer = _serialization.FindSerializerForType(@event.Payload.GetType());
                             
                             // This WithTransport method call is important, it allows for proper
                             // local IActorRef serialization by switching the serialization information

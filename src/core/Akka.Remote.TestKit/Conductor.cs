@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Conductor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -242,7 +242,7 @@ namespace Akka.Remote.TestKit
     {
         private readonly ILoggingAdapter _log;
         private readonly IActorRef _controller;
-        private readonly ConcurrentDictionary<IChannel, IActorRef> _clients = new ConcurrentDictionary<IChannel, IActorRef>();
+        private readonly ConcurrentDictionary<IChannel, IActorRef> _clients = new();
 
         /// <summary>
         /// A single <see cref="ConductorHandler"/> gets shared across all of the connections between 
@@ -268,7 +268,7 @@ namespace Akka.Remote.TestKit
                 {
                     var fsm = tr.Result;
                     _log.Debug("created server FSM {0}", fsm);
-                    _clients.AddOrUpdate(channel, fsm, (connection, @ref) => fsm);
+                    _clients.AddOrUpdate(channel, fsm, (_, _) => fsm);
                     channel.Configuration.AutoRead = true;
                 });
         }
@@ -368,7 +368,7 @@ namespace Akka.Remote.TestKit
                 return null;
             });
 
-            OnTermination(@event =>
+            OnTermination(_ =>
             {
                 _controller.Tell(new Controller.ClientDisconnected(_roleName));
                 _channel.CloseAsync();

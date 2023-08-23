@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GCounter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -61,7 +61,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// TBD
         /// </summary>
-        public static GCounter Empty => new GCounter();
+        public static GCounter Empty => new();
 
         /// <summary>
         /// Current total value of the counter.
@@ -181,7 +181,7 @@ namespace Akka.DistributedData
         /// </summary>
         /// <param name="removedNode">TBD</param>
         /// <returns>TBD</returns>
-        public GCounter PruningCleanup(UniqueAddress removedNode) => new GCounter(State.Remove(removedNode));
+        public GCounter PruningCleanup(UniqueAddress removedNode) => new(State.Remove(removedNode));
 
         
         public override int GetHashCode() => State.GetHashCode();

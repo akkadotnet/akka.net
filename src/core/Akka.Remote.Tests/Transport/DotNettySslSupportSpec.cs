@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DotNettySslSupportSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -227,9 +227,9 @@ namespace Akka.Remote.Tests.Transport
             // skip this test due to linux/mono certificate issues
             if (IsMono) return;
 
-            var aggregateException = await Assert.ThrowsAsync<AggregateException>(async () =>
-            {
+            var aggregateException = await Assert.ThrowsAsync<AggregateException>(() => {
                 Setup(true, null, Password);
+                return Task.CompletedTask;
             });
 
             var realException = GetInnerMostException<ArgumentNullException>(aggregateException);
@@ -243,9 +243,9 @@ namespace Akka.Remote.Tests.Transport
             // skip this test due to linux/mono certificate issues
             if (IsMono) return;
 
-            var aggregateException = await Assert.ThrowsAsync<AggregateException>(async () =>
-            {
+            var aggregateException = await Assert.ThrowsAsync<AggregateException>(() => {
                 Setup(true, ValidCertPath, null);
+                return Task.CompletedTask;
             });
 
             var realException = GetInnerMostException<CryptographicException>(aggregateException);
@@ -267,10 +267,10 @@ namespace Akka.Remote.Tests.Transport
 
         #region helper classes / methods
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await ShutdownAsync(_sys2, TimeSpan.FromSeconds(3));
-            await base.AfterAllAsync();
+            base.AfterAll();
+            Shutdown(_sys2, TimeSpan.FromSeconds(3));
         }
 
         private void InstallCert()

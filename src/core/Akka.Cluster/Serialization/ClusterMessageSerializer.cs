@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -475,12 +475,12 @@ namespace Akka.Cluster.Serialization
         }
 
         private static Proto.Msg.HeartBeatResponse HeartbeatRspToProto(ClusterHeartbeatSender.HeartbeatRsp heartbeatRsp)
-            => new HeartBeatResponse
-                {
-                    From = UniqueAddressToProto(heartbeatRsp.From),
-                    CreationTime = heartbeatRsp.CreationTimeNanos,
-                    SequenceNr = heartbeatRsp.SequenceNr
-                };
+            => new()
+            {
+                From = UniqueAddressToProto(heartbeatRsp.From),
+                CreationTime = heartbeatRsp.CreationTimeNanos,
+                SequenceNr = heartbeatRsp.SequenceNr
+            };
 
         private static ClusterHeartbeatSender.HeartbeatRsp DeserializeHeartbeatRsp(byte[] bytes)
         {
@@ -494,7 +494,7 @@ namespace Akka.Cluster.Serialization
         }
 
         private static Proto.Msg.Heartbeat HeartbeatToProto(ClusterHeartbeatSender.Heartbeat heartbeat)
-            => new Heartbeat
+            => new()
             {
                 From = AddressToProto(heartbeat.From), 
                 CreationTime = heartbeat.CreationTimeNanos, 

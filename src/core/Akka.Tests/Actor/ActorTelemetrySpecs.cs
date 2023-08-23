@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorTelemetrySpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -50,18 +50,18 @@ namespace Akka.Tests.Actor
             public class GetTelemetryRequest
             {
                 // make singleton
-                public static readonly GetTelemetryRequest Instance = new GetTelemetryRequest();
+                public static readonly GetTelemetryRequest Instance = new();
                 private GetTelemetryRequest() { }
             }
 
             public TelemetrySubscriber()
             {
                 // Receive each type of IActorTelemetryEvent
-                Receive<ActorStarted>(e => { _actorCreated++; });
-                Receive<ActorStopped>(e => { _actorStopped++; });
-                Receive<ActorRestarted>(e => { _actorRestarted++; });
+                Receive<ActorStarted>(_ => { _actorCreated++; });
+                Receive<ActorStopped>(_ => { _actorStopped++; });
+                Receive<ActorRestarted>(_ => { _actorRestarted++; });
                 // receive a request for current counter values and return a GetTelemetry result
-                Receive<GetTelemetryRequest>(e => Sender.Tell(new GetTelemetry(_actorCreated, _actorStopped, _actorRestarted)));
+                Receive<GetTelemetryRequest>(_ => Sender.Tell(new GetTelemetry(_actorCreated, _actorStopped, _actorRestarted)));
             }
 
             protected override void PreStart()
@@ -85,7 +85,7 @@ namespace Akka.Tests.Actor
         public class RestartChildren
         {
             // make singleton
-            public static readonly RestartChildren Instance = new RestartChildren();
+            public static readonly RestartChildren Instance = new();
 
             private RestartChildren()
             {
@@ -138,7 +138,7 @@ namespace Akka.Tests.Actor
             public ChildActor()
             {
                 // handle a command that forces a restart
-                Receive<RestartChildren>(cmd => { throw new ApplicationException("Restarting"); });
+                Receive<RestartChildren>(_ => { throw new ApplicationException("Restarting"); });
                 ReceiveAny(_ => { });
             }
         }

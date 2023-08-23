@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKit.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -98,7 +98,7 @@ namespace Akka.TestKit.Xunit
         /// <summary>
         /// Commonly used assertions used throughout the testkit.
         /// </summary>
-        protected static XunitAssertions Assertions { get; } = new XunitAssertions();
+        protected static XunitAssertions Assertions { get; } = new();
 
         /// <summary>
         /// This method is called when a test ends.

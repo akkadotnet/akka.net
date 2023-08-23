@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteAskFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,20 +36,15 @@ akka.remote.dot-netty.tcp.port = {port}";
         
         public RemoteAskFailureSpec(ITestOutputHelper output) : base(Config(12552), nameof(RemoteAskFailureSpec), output)
         {
-        }
-
-        public override Task InitializeAsync()
-        {
             _sys1 = Sys;
             _sys2 = ActorSystem.Create(Sys.Name, Config(19999));
             InitializeLogger(_sys2);
-            return Task.CompletedTask;
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await ShutdownAsync(_sys2);
-            await base.AfterAllAsync();
+            Shutdown(_sys2);
+            base.AfterAll();
         }
 
         [Fact(DisplayName = "Ask operation using selector to a remote actor that expects Status.Failure should return Status.Failure")]
@@ -113,7 +108,7 @@ akka.remote.dot-netty.tcp.port = {port}";
             {
                 _log = Context.GetLogger();
                 
-                ReceiveAsync<string>(async msg =>
+                ReceiveAsync<string>(async _ =>
                 {
                     await Task.Delay(2.Seconds());
                     Sender.Tell(new Status.Failure(new TestException("BOOM")));

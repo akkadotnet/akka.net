@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ChaosJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,9 +38,9 @@ namespace Akka.Persistence.Tests.Journal
 
     public class ChaosJournal : AsyncWriteJournal, IMemoryMessages
     {
-        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
+        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new();
 
-        private readonly Random _random = new Random();
+        private readonly Random _random = new();
 
         private readonly double _writeFailureRate;
         private readonly double _deleteFailureRate;

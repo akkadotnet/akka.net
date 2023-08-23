@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliveryCrashSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,13 +47,13 @@ namespace Akka.Persistence.Tests
 
         internal class Message
         {
-            public static readonly Message Instance = new Message();
+            public static readonly Message Instance = new();
             private Message() { }
         }
 
         internal class CrashMessage
         {
-            public static readonly CrashMessage Instance = new CrashMessage();
+            public static readonly CrashMessage Instance = new();
             private CrashMessage() { }
         }
 
@@ -74,7 +74,7 @@ namespace Akka.Persistence.Tests
             private readonly IActorRef _testProbe;
             private ILoggingAdapter _adapter;
 
-            ILoggingAdapter Log { get { return _adapter ?? (_adapter = Context.GetLogger()); } }
+            ILoggingAdapter Log { get { return _adapter ??= Context.GetLogger(); } }
 
             public CrashingActor(IActorRef testProbe)
             {
@@ -104,8 +104,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is Message) Persist(message as Message, _ => Send());
-                else if (message is CrashMessage) Persist(message as CrashMessage, _ => { });
+                if (message is Message message1) Persist(message1, _ => Send());
+                else if (message is CrashMessage crashMessage) Persist(crashMessage, _ => { });
                 else return false;
                 return true;
             }

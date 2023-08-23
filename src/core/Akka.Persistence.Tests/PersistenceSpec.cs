@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistenceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ namespace Akka.Persistence.Tests
 
         internal readonly Cleanup Clean;
 
-        private readonly AtomicCounter _counter = new AtomicCounter(0);
+        private readonly AtomicCounter _counter = new(0);
 
         private readonly string _name;
 
@@ -62,9 +62,9 @@ namespace Akka.Persistence.Tests
         public string NamePrefix { get { return Sys.Name; } }
         public string Name { get { return _name; } }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
+            base.AfterAll();
             Clean.Dispose();
         }
 
@@ -93,7 +93,7 @@ namespace Akka.Persistence.Tests
     internal class Cleanup : IDisposable
     {
         internal List<DirectoryInfo> StorageLocations;
-        private static readonly object _syncRoot = new object();
+        private static readonly object _syncRoot = new();
 
         public Cleanup(AkkaSpec spec)
         {
@@ -146,7 +146,7 @@ namespace Akka.Persistence.Tests
 
     internal sealed class GetState
     {
-        public static readonly GetState Instance = new GetState();
+        public static readonly GetState Instance = new();
         private GetState() { }
     }
 

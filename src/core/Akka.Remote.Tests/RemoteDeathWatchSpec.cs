@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteDeathWatchSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -45,17 +45,16 @@ namespace Akka.Remote.Tests
                 ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port=2666").WithFallback(_config));
         }
 
-        protected override Task BeforeTerminationAsync()
+        protected override void BeforeTermination()
         {
             var mute = EventFilter.Warning(pattern: new Regex("received dead letter.*Disassociate")).Mute();
             Sys.EventStream.Publish(mute);
-            return Task.CompletedTask;
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(_other, verifySystemShutdown: true);
+            base.AfterAll();
+            Shutdown(_other, verifySystemShutdown: true);
         }
 
         [Fact]
@@ -76,7 +75,7 @@ namespace Akka.Remote.Tests
                 {
                     context.Watch(@ref);
                 };
-                dsl.Receive<Terminated>((t, ctx) =>
+                dsl.Receive<Terminated>((t, _) =>
                 {
                     TestActor.Tell(t.ActorRef);
                 });
@@ -103,7 +102,7 @@ namespace Akka.Remote.Tests
                 {
                     context.Watch(rarp.ResolveActorRef(path));
                 };
-                dsl.Receive<Terminated>((t, ctx) =>
+                dsl.Receive<Terminated>((t, _) =>
                 {
                     TestActor.Tell(t.ActorRef.Path);
                 });

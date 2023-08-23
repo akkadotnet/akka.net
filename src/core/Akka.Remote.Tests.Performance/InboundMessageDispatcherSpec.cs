@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InboundMessageDispatcherSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ namespace Akka.Remote.Tests.Performance
         private SerializedMessage _message;
 
         private Counter _inboundMessageDispatcherCounter;
-        private static readonly AtomicCounter Counter = new AtomicCounter(0);
+        private static readonly AtomicCounter Counter = new(0);
 
         private ActorSystem _actorSystem;
         private Address _systemAddress;

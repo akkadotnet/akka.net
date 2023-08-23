@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonRestart3Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -114,18 +114,18 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        protected override async Task AfterAllAsync()
+        protected override void AfterAll()
         {
-            await base.AfterAllAsync();
-            await ShutdownAsync(_sys2);
-            await ShutdownAsync(_sys3);
+            base.AfterAll();
+            Shutdown(_sys2);
+            Shutdown(_sys3);
         }
 
         public class Singleton : ReceiveActor
         {
             public Singleton()
             {
-                ReceiveAny(o =>
+                ReceiveAny(_ =>
                 {
                     Sender.Tell(Cluster.Get(Context.System).SelfMember);
                 });

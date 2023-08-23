@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ namespace Akka.Actor.Internal
     public class ActorSystemImpl : ExtendedActorSystem, ISupportSerializationConfigReload
     {
         private IActorRef _logDeadLetterListener;
-        private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
+        private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new();
 
         private ILoggingAdapter _log;
         private IActorRefProvider _provider;
@@ -140,6 +140,7 @@ namespace Akka.Actor.Internal
         public override ILoggingAdapter Log { get { return _log; } }
 
         /// <inheritdoc cref="ActorSystem"/>
+
         public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
 
         /// <inheritdoc cref="ActorSystem"/>
@@ -210,9 +211,6 @@ namespace Akka.Actor.Internal
         {
             try
             {
-                // Force TermInfoDriver to initialize in order to protect us from the issue seen in #2432
-                typeof(Console).GetProperty("BackgroundColor").GetValue(null); // HACK: Only needed for MONO
-
                 RegisterOnTermination(StopScheduler);
                 _provider.Init(this);
                 LoadExtensions();
@@ -300,7 +298,7 @@ namespace Akka.Actor.Internal
             foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions", new string[] { }))
             {
                 var extensionType = Type.GetType(extensionFqn);
-                if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.GetTypeInfo().IsAbstract || !extensionType.GetTypeInfo().IsClass)
+                if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
                 {
                     _log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
                     continue;
@@ -338,7 +336,7 @@ namespace Akka.Actor.Internal
         {
             if (extension == null) return null;
 
-            _extensions.GetOrAdd(extension.ExtensionType, t => new Lazy<object>(() => extension.CreateExtension(this), LazyThreadSafetyMode.ExecutionAndPublication));
+            _extensions.GetOrAdd(extension.ExtensionType, _ => new Lazy<object>(() => extension.CreateExtension(this), LazyThreadSafetyMode.ExecutionAndPublication));
 
             return extension.Get(this);
         }
@@ -483,7 +481,9 @@ namespace Akka.Actor.Internal
         private void ConfigureActorProducerPipeline()
         {
             // we push Log in lazy manner since it may not be configured at point of pipeline initialization
+
             _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
+
         }
 
         private void ConfigureTerminationCallbacks()

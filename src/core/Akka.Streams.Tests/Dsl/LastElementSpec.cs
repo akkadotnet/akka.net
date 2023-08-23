@@ -1,17 +1,20 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LastElementSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.Util;
+using Akka.TestKit.Extensions;
 using Akka.Util;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Streams.Tests.Dsl
@@ -19,7 +22,7 @@ namespace Akka.Streams.Tests.Dsl
     public class LastElementSpec : Akka.TestKit.Xunit2.TestKit
     {
         [Fact]
-        public void A_stream_via_LastElement_should_materialize_to_the_last_element_emitted_by_a_finite_nonempty_successful_source()
+        public async Task A_stream_via_LastElement_should_materialize_to_the_last_element_emitted_by_a_finite_nonempty_successful_source()
         {
             var t = Source.From(new[] { 1, 2, 3 })
                 .ViaMaterialized(new LastElement<int>(), Keep.Right)
@@ -30,14 +33,15 @@ namespace Akka.Streams.Tests.Dsl
             var probe = t.Item2;
 
             probe.Request(3)
-                .ExpectNext(1, 2, 3)
+                .ExpectNext( 1, 2, 3)
                 .ExpectComplete();
 
-            lastElement.AwaitResult(TimeSpan.FromSeconds(1)).Should().Be(Option<int>.Create(3));
+            var complete = await lastElement.ShouldCompleteWithin(TimeSpan.FromSeconds(1));
+            complete.Should().Be(Option<int>.Create(3));
         }
 
         [Fact]
-        public void A_stream_via_LastElement_should_materialize_to_materialize_to_None_for_an_empty_successful_source()
+        public async Task A_stream_via_LastElement_should_materialize_to_materialize_to_None_for_an_empty_successful_source()
         {
             var t = Source.From(Enumerable.Empty<int>())
                 .ViaMaterialized(new LastElement<int>(), Keep.Right)
@@ -50,7 +54,8 @@ namespace Akka.Streams.Tests.Dsl
             probe.Request(3)
                 .ExpectComplete();
 
-            lastElement.AwaitResult(TimeSpan.FromSeconds(1)).Should().Be(Option<int>.None);
+            var complete = await lastElement.ShouldCompleteWithin(1.Seconds());
+            complete.Should().Be(Option<int>.None);
         }
 
         [Fact]

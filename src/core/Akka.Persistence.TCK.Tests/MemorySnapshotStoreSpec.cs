@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MemorySnapshotStoreSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -140,7 +140,7 @@ namespace Akka.Persistence.TCK.Tests
                 {
                     _count += i;
 
-                    Persist(i, i1 =>
+                    Persist(i, _ =>
                     {
                         SaveSnapshot(i);
                     });
@@ -150,7 +150,7 @@ namespace Akka.Persistence.TCK.Tests
 
                 Command<SaveSnapshotFailure>(failure => reporter.Tell(failure));
 
-                Command<string>(str => str.Equals("get"), s =>
+                Command<string>(str => str.Equals("get"), _ =>
                 {
                     Sender.Tell(_count);
                 });

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ExternalShardAllocation.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,7 +24,7 @@ namespace Akka.Cluster.Sharding.External
         }
 
         private readonly ExtendedActorSystem _system;
-        private readonly ConcurrentDictionary<string, IExternalShardAllocationClient> _clients = new ConcurrentDictionary<ShardId, IExternalShardAllocationClient>();
+        private readonly ConcurrentDictionary<string, IExternalShardAllocationClient> _clients = new();
 
         public ExternalShardAllocation(ExtendedActorSystem system)
         {

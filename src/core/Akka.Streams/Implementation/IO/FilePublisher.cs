@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FilePublisher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -57,13 +57,13 @@ namespace Akka.Streams.Implementation.IO
             if (maxBuffer < initialBuffer)
                 throw new ArgumentException($"maxBuffer must be >= initialBuffer (was {maxBuffer})", nameof(maxBuffer));
 
-            return Actor.Props.Create(() => new FilePublisher(f, completionPromise, chunkSize, startPosition, maxBuffer))
+            return Actor.Props.Create<FilePublisher>( f, completionPromise, chunkSize, startPosition, maxBuffer)
                 .WithDeploy(Deploy.Local);
         }
 
         private struct Continue : IDeadLetterSuppression
         {
-            public static readonly Continue Instance = new Continue();
+            public static readonly Continue Instance = new();
         }
 
         private readonly FileInfo _f;
@@ -86,6 +86,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="chunkSize">TBD</param>
         /// <param name="startPosition">TBD</param>
         /// <param name="maxBuffer">TBD</param>
+        /// If this changes you must also change <see cref="FilePublisher.Props"/> as well!
         public FilePublisher(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize, long startPosition, int maxBuffer)
         {
             _f = f;

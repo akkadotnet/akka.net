@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiNodeClusterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -59,6 +59,7 @@ namespace Akka.Cluster.TestKit
                         retry-interval = 200ms
                         waiting-for-state-timeout = 200ms
                     }
+                    #downing-provider-class = """" # disable default SBR
                 }
                 akka.loglevel = INFO
                 akka.log-dead-letters = off
@@ -81,7 +82,7 @@ namespace Akka.Cluster.TestKit
             public sealed class SendEnd
             {
                 private SendEnd() { }
-                private static readonly SendEnd _instance = new SendEnd();
+                private static readonly SendEnd _instance = new();
                 public static SendEnd Instance
                 {
                     get
@@ -94,7 +95,7 @@ namespace Akka.Cluster.TestKit
             public sealed class End
             {
                 private End() { }
-                private static readonly End _instance = new End();
+                private static readonly End _instance = new();
                 public static End Instance
                 {
                     get
@@ -107,7 +108,7 @@ namespace Akka.Cluster.TestKit
             public sealed class EndAck
             {
                 private EndAck() { }
-                private static readonly EndAck _instance = new EndAck();
+                private static readonly EndAck _instance = new();
                 public static EndAck Instance
                 {
                     get
@@ -189,8 +190,7 @@ namespace Akka.Cluster.TestKit
             get { return Roles.Count; }
         }
 
-        readonly ConcurrentDictionary<RoleName, Address> _cachedAddresses =
-            new ConcurrentDictionary<RoleName, Address>();
+        readonly ConcurrentDictionary<RoleName, Address> _cachedAddresses = new();
 
         protected override void AtStartup()
         {
@@ -372,8 +372,7 @@ namespace Akka.Cluster.TestKit
             var leader = ClusterView.Leader;
             var isLeader = leader == ClusterView.SelfAddress;
             _assertions.AssertTrue(isLeader == IsNode(expectedLeader), "expected leader {0}, got leader {1}, members{2}", expectedLeader, leader, ClusterView.Members);
-            _assertions.AssertTrue(ClusterView.Status == MemberStatus.Up ||
-                                   ClusterView.Status == MemberStatus.Leaving,
+            _assertions.AssertTrue(ClusterView.Status is MemberStatus.Up or MemberStatus.Leaving,
                 "Expected cluster view status Up or Leaving but got {0}", ClusterView.Status);
         }
 

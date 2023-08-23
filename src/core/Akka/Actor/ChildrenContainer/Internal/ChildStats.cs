@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ChildStats.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class ChildNameReserved : IChildStats
     {
-        private static readonly ChildNameReserved _instance = new ChildNameReserved();
+        private static readonly ChildNameReserved _instance = new();
         private ChildNameReserved() {/* Intentionally left blank */}
 
         /// <summary>

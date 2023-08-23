@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncEnumerable.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -68,13 +68,14 @@ namespace Akka.Streams.Dsl
             _killSwitch = queueAndSwitch.killSwitch;
             _token = token;
         }
-        public async ValueTask DisposeAsync()
+        public ValueTask DisposeAsync()
         {
             //If we are disposing, let's shut down the stream
             //so that we don't have data hanging around.
             _killSwitch.Shutdown();
             _killSwitch = null;
             _sinkQueue = null;
+            return new ValueTask();
         }
 
         public async ValueTask<bool> MoveNextAsync()

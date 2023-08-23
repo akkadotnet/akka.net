@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LWWRegister.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -88,14 +88,14 @@ namespace Akka.DistributedData
         /// Default clock is using max between DateTime.UtcNow.Ticks and current timestamp + 1.
         /// </summary>
         public static readonly Clock<T> DefaultClock =
-            (timestamp, value) => Math.Max(DateTime.UtcNow.Ticks, timestamp + 1);
+            (timestamp, _) => Math.Max(DateTime.UtcNow.Ticks, timestamp + 1);
 
         /// <summary>
         /// Reverse clock can be used for first-write-wins semantics. It's counting backwards, 
         /// using min between -DateTime.UtcNow.Ticks and current timestamp - 1.
         /// </summary>
         public static readonly Clock<T> ReverseClock =
-            (timestamp, value) => Math.Min(-DateTime.UtcNow.Ticks, timestamp - 1);
+            (timestamp, _) => Math.Min(-DateTime.UtcNow.Ticks, timestamp - 1);
 
         /// <summary>
         /// TBD
@@ -198,7 +198,7 @@ namespace Akka.DistributedData
         }
 
         
-        public override bool Equals(object obj) => obj is LWWRegister<T> && Equals((LWWRegister<T>)obj);
+        public override bool Equals(object obj) => obj is LWWRegister<T> register && Equals(register);
 
         
         public override int GetHashCode()

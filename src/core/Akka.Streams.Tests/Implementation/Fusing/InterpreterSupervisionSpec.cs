@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InterpreterSupervisionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,8 +33,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
         }
 
-        private ResumeSelect<TIn, TOut> ResumingSelect<TIn, TOut>(Func<TIn, TOut> func)
-          => new ResumeSelect<TIn, TOut>(func);
+        private ResumeSelect<TIn, TOut> ResumingSelect<TIn, TOut>(Func<TIn, TOut> func) => new(func);
         
         private sealed class ResumeSelect<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
         {
@@ -79,9 +78,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             protected override Attributes InitialAttributes { get; } = DefaultAttributes.Select;
 
-            public Inlet<TIn> In { get; } = new Inlet<TIn>("Select.in");
+            public Inlet<TIn> In { get; } = new("Select.in");
 
-            public Outlet<TOut> Out { get; } = new Outlet<TOut>("Select.out");
+            public Outlet<TOut> Out { get; } = new("Select.out");
 
             public override FlowShape<TIn, TOut> Shape { get; }
 
@@ -96,7 +95,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void Interpreter_error_handling_should_handle_external_failure()
         {
             WithOneBoundedSetup(new Select<int, int>(x => x + 1),
-                (lastEvents, upstream, downstream) =>
+                (lastEvents, upstream, _) =>
                 {
                     lastEvents().Should().BeEmpty();
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReplicatorMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -35,7 +35,7 @@ namespace Akka.DistributedData.Serialization
         {
             private readonly TimeSpan _ttl;
             private readonly Func<TKey, TVal> _getOrAddFactory;
-            private readonly AtomicCounter _n = new AtomicCounter(0);
+            private readonly AtomicCounter _n = new(0);
             private readonly int _mask;
             private readonly KeyValuePair<TKey, TVal>[] _elements;
 

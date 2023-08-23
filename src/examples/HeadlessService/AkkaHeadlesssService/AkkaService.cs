@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaService.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,7 +42,7 @@ namespace AkkaHeadlesssService
             _actorSystem = ActorSystem.Create("headless-service", actorSystemSetup);
             _actorRef = _actorSystem.ActorOf(HeadlessActor.Prop());
             // add a continuation task that will guarantee shutdown of application if ActorSystem terminates
-            _actorSystem.WhenTerminated.ContinueWith(tr => {
+            _actorSystem.WhenTerminated.ContinueWith(_ => {
                 _applicationLifetime.StopApplication();
             });
             return Task.CompletedTask;

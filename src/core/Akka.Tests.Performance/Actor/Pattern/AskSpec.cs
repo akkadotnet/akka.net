@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AskSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2022 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ namespace Akka.Tests.Performance.Actor.Pattern
 
         private ActorSystem _sys;
         private IActorRef _target;
-        private static readonly Identify Msg = new Identify(null);
+        private static readonly Identify Msg = new(null);
         private static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(1);
 
         [PerfSetup]
