@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Scheduler;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;

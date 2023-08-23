@@ -56,14 +56,16 @@ namespace Akka.Actor
         /// </exception>>
         public void Invoke(Envelope envelope)
         {
-
             var message = envelope.Message;
+            if (message is IScheduledTellMsg scheduled)
+                message = scheduled.Message;
+            
             var influenceReceiveTimeout = message is not INotInfluenceReceiveTimeout;
 
             try
             {
                 // Akka JVM doesn't have these lines
-                CurrentMessage = envelope.Message;
+                CurrentMessage = message;
                 _currentEnvelopeId++;
                 if (_currentEnvelopeId == int.MaxValue) _currentEnvelopeId = 0;
 
@@ -81,7 +83,8 @@ namespace Akka.Actor
                 }
                 else
                 {
-                    ReceiveMessage(message);
+                    // Intentional, we want to preserve IScheduledMsg
+                    ReceiveMessage(envelope.Message);  
                 }
                 CurrentMessage = null;
             }
@@ -118,6 +121,8 @@ namespace Akka.Actor
         protected internal virtual void AutoReceiveMessage(Envelope envelope)
         {
             var message = envelope.Message;
+            if (message is IScheduledTellMsg scheduled)
+                message = scheduled.Message;
 
             var actor = _actor;
             var actorType = actor?.GetType();
@@ -125,8 +130,7 @@ namespace Akka.Actor
             if (System.Settings.DebugAutoReceive)
                 Publish(new Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));
 
-            var m = envelope.Message;
-            switch (m)
+            switch (message)
             {
                 case Terminated terminated:
                     ReceivedTerminated(terminated);
@@ -175,6 +179,9 @@ namespace Akka.Actor
         /// <param name="message">The message that will be sent to the actor.</param>
         protected virtual void ReceiveMessage(object message)
         {
+            if (message is IScheduledTellMsg scheduled)
+                message = scheduled.Message;
+            
             var wasHandled = _actor.AroundReceive(_state.GetCurrentBehavior(), message);
 
             if (System.Settings.AddLoggingReceive && _actor is ILogReceive)

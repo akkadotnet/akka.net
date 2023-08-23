@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Actor.Scheduler;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -59,6 +60,9 @@ namespace Akka.Actor
         /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
+            if (message is IScheduledTellMsg scheduled)
+                message = scheduled.Message;
+            
             if (message == null) throw new InvalidMessageException("Message is null");
             if (message is DeadLetter d) SpecialHandle(d.Message, d.Sender);
             else if (!SpecialHandle(message, sender))

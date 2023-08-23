@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
+using Akka.Actor.Scheduler;
 using Akka.Annotations;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -105,8 +106,10 @@ namespace Akka.Actor
         /// <param name="sender">TBD</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
+            if (message is IScheduledTellMsg scheduled)
+                message = scheduled.Message;
+            
             var handled = false;
-
             switch (message)
             {
                 case ISystemMessage msg:
@@ -991,7 +994,13 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         /// </summary>
         public bool IsWatching(IActorRef actorRef) => _watching.Contains(actorRef);
 
-        protected override void TellInternal(object message, IActorRef sender) => _tell(sender, message);
+        protected override void TellInternal(object message, IActorRef sender)
+        {
+            if (message is IScheduledTellMsg scheduled)
+                message = scheduled.Message;
+            
+            _tell(sender, message);
+        }
 
         public override void SendSystemMessage(ISystemMessage message)
         {

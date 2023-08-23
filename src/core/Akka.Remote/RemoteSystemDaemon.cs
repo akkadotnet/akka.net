@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Actor.Scheduler;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
@@ -119,6 +120,9 @@ namespace Akka.Remote
         /// <param name="sender">The sender.</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
+            if (message is IScheduledTellMsg scheduled)
+                message = scheduled.Message;
+            
             //note: RemoteDaemon does not handle ActorSelection messages - those are handled directly by the RemoteActorRefProvider.
             if (message is IDaemonMsg)
             {

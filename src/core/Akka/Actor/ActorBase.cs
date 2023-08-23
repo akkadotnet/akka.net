@@ -193,7 +193,7 @@ namespace Akka.Actor
                             // discard
                             return true;
 
-                        case object m:
+                        case var m:
                             if (this is IActorStash)
                             {
                                 var actorCell = (ActorCell)Context;
@@ -208,29 +208,6 @@ namespace Akka.Actor
                 {
                     // discard
                     return true;
-                }
-            }
-            else if(message is IScheduledTellMsg scheduled)
-            {
-                switch (scheduled.Message)
-                {
-                    case IAutoReceivedMessage m:
-                        ((ActorCell)Context).AutoReceiveMessage(new Envelope(m, Self));
-                        return true;
-
-                    case null:
-                        // discard
-                        return true;
-
-                    case var m:
-                        if (this is IActorStash)
-                        {
-                            var actorCell = (ActorCell)Context;
-                            // this is important for stash interaction, as stash will look directly at currentMessage #24557
-                            actorCell.CurrentMessage = m;
-                        }
-                        message = m;
-                        break;
                 }
             }
 

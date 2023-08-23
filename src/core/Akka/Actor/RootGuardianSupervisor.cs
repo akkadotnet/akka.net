@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Akka.Actor.Scheduler;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
@@ -52,6 +53,9 @@ namespace Akka.Actor
         {
             if (IsWalking)
             {
+                if (message is IScheduledTellMsg scheduled)
+                    message = scheduled.Message;
+            
                 if (message == null) throw new InvalidMessageException("Message is null");
                 _log.Error("{0} received unexpected message [{1}]", _path, message);
             }

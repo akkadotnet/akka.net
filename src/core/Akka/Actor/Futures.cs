@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
+using Akka.Actor.Scheduler;
 using Akka.Dispatch.SysMsg;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -531,6 +532,9 @@ namespace Akka.Actor
         /// <inheritdoc cref="ActorRefBase.TellInternal">InternalActorRefBase.TellInternal</inheritdoc>
         protected override void TellInternal(object message, IActorRef sender)
         {
+            if (message is IScheduledTellMsg scheduled)
+                message = scheduled.Message;
+            
             if (State is Stopped or StoppedWithPath) Provider.DeadLetters.Tell(message);
             else
             {
