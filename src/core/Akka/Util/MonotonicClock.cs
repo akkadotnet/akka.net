@@ -25,11 +25,26 @@ namespace Akka.Util
         private const long TicksInSecond = TimeSpan.TicksPerSecond;
         private const long NanosPerTick = 100;
 
+        /// <summary>
+        /// TickFrequency is a constant scaling value to normalize operating system reported performance counter
+        /// clock tick to .NET internal definition of a "tick".
+        /// </summary>
         private static readonly double TicksFrequency;
         
         static MonotonicClock()
         {
+            // TickFrequency is a constant scaling value to normalize operating system reported performance counter
+            // clock tick to .NET internal definition of a "tick".
+            //
+            // Stopwatch.ElapsedTicks returns the raw operating system level performance clock ticks, which is not
+            // the same definition as .NET DateTime or TimeSpan definition.
+            //
+            // .NET DateTime or TimeSpan definition of a "tick" is 100 nanosecond (sampling frequency of 10 MHz)
+            // which is true for all windows platforms that support performance counter clock (win8+); however
+            // this is not true for linux platforms, their definition of a "tick" is 1 nanosecond (sampling
+            // frequency of 1 GHz).
             TicksFrequency = (double)TicksInSecond / Stopwatch.Frequency;
+            
             Stopwatch = Stopwatch.StartNew();
         }
         
