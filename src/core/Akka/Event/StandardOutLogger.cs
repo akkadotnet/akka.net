@@ -10,7 +10,6 @@ using Akka.Actor;
 using Akka.Util;
 using System.Text;
 using System.Threading;
-using Akka.Actor.Scheduler;
 
 namespace Akka.Event
 {
@@ -32,9 +31,6 @@ namespace Akka.Event
         
         protected sealed override void TellInternal(object message, IActorRef sender)
         {
-            if (message is IScheduledTellMsg scheduled)
-                message = scheduled.Message;
-            
             switch (message)
             {
                 case null:

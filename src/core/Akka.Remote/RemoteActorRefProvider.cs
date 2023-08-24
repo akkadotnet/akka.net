@@ -12,7 +12,6 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Actor.Scheduler;
 using Akka.Annotations;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -799,8 +798,7 @@ namespace Akka.Remote
 
             protected override void TellInternal(object message, IActorRef sender)
             {
-                if (message is IScheduledTellMsg scheduled)
-                    message = scheduled.Message;
+                var deadLetter = message as DeadLetter;
             
                 if (message is EndpointManager.Send send)
                 {
@@ -809,7 +807,7 @@ namespace Akka.Remote
                         base.TellInternal(send.Message, send.SenderOption ?? ActorRefs.NoSender);
                     }
                 }
-                else if (message is DeadLetter { Message: EndpointManager.Send deadSend })
+                else if (deadLetter?.Message is EndpointManager.Send deadSend)
                 {
                     if (deadSend.Seq == null)
                     {

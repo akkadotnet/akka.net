@@ -106,10 +106,8 @@ namespace Akka.Actor
         /// <param name="sender">TBD</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if (message is IScheduledTellMsg scheduled)
-                message = scheduled.Message;
-            
             var handled = false;
+            
             switch (message)
             {
                 case ISystemMessage msg:
@@ -284,9 +282,17 @@ namespace Akka.Actor
                 sender = ActorRefs.NoSender;
             }
 
+            message = TellInterceptor(message);
             TellInternal(message, sender);
         }
 
+        /// <summary>
+        /// Transform messages after it is invoked from the Mailbox before it is passed into TellInternal
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        protected internal virtual object TellInterceptor(object message) => message;
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -546,6 +552,10 @@ namespace Akka.Actor
         public override void Suspend()
         {
         }
+
+        /// <inheritdoc cref="TellInterceptor"/>
+        protected internal sealed override object TellInterceptor(object message)
+            => message is IScheduledTellMsg scheduled ? scheduled.Message : message;
 
         /// <inheritdoc cref="InternalActorRefBase"/>
         protected override void TellInternal(object message, IActorRef sender)
@@ -994,13 +1004,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         /// </summary>
         public bool IsWatching(IActorRef actorRef) => _watching.Contains(actorRef);
 
-        protected override void TellInternal(object message, IActorRef sender)
-        {
-            if (message is IScheduledTellMsg scheduled)
-                message = scheduled.Message;
-            
-            _tell(sender, message);
-        }
+        protected override void TellInternal(object message, IActorRef sender) => _tell(sender, message);
 
         public override void SendSystemMessage(ISystemMessage message)
         {
