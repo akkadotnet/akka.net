@@ -269,7 +269,6 @@ namespace Akka.Actor
         public bool Equals(Akka.Actor.IActorRef other) { }
         public override int GetHashCode() { }
         public void Tell(object message, Akka.Actor.IActorRef sender) { }
-        protected virtual object TellInterceptor(object message) { }
         protected abstract void TellInternal(object message, Akka.Actor.IActorRef sender);
         public override string ToString() { }
         public virtual Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
@@ -1366,7 +1365,6 @@ namespace Akka.Actor
         public override void Start() { }
         public override void Stop() { }
         public override void Suspend() { }
-        protected virtual object TellInterceptor(object message) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
     public sealed class Nobody : Akka.Actor.MinimalActorRef

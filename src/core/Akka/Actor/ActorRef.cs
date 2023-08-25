@@ -282,17 +282,9 @@ namespace Akka.Actor
                 sender = ActorRefs.NoSender;
             }
 
-            message = TellInterceptor(message);
             TellInternal(message, sender);
         }
 
-        /// <summary>
-        /// Transform messages after it is invoked from the Mailbox before it is passed into TellInternal
-        /// </summary>
-        /// <param name="message"></param>
-        /// <returns></returns>
-        protected internal virtual object TellInterceptor(object message) => message;
-        
         /// <summary>
         /// TBD
         /// </summary>
@@ -552,10 +544,6 @@ namespace Akka.Actor
         public override void Suspend()
         {
         }
-
-        /// <inheritdoc cref="TellInterceptor"/>
-        protected internal sealed override object TellInterceptor(object message)
-            => message is IScheduledTellMsg scheduled ? scheduled.Message : message;
 
         /// <inheritdoc cref="InternalActorRefBase"/>
         protected override void TellInternal(object message, IActorRef sender)
