@@ -2159,6 +2159,11 @@ namespace Akka.Actor.Internal
         public override int Capacity { get; }
     }
 }
+namespace Akka.Actor.Scheduler
+{
+    [Akka.Annotations.InternalApiAttribute()]
+    public interface IScheduledTellMsg : Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.IWrappedMessage { }
+}
 namespace Akka.Actor.Setup
 {
     public sealed class ActorSystemSetup

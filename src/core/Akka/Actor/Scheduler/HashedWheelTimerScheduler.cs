@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor.Scheduler;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
@@ -548,7 +549,11 @@ namespace Akka.Actor
             public ScheduledTell(ICanTell receiver, object message, IActorRef sender)
             {
                 _receiver = receiver;
-                _message = message;
+                _message = receiver is not ActorRefWithCell 
+                    ? message 
+                    : message is INotInfluenceReceiveTimeout 
+                        ? new ScheduledTellMsgNoInfluenceReceiveTimeout(message) 
+                        : new ScheduledTellMsg(message);
                 _sender = sender;
             }
 

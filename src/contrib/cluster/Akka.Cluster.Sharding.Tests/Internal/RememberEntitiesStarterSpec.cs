@@ -6,8 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Tools.Singleton;
@@ -15,6 +17,7 @@ using Akka.Configuration;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -140,7 +143,8 @@ namespace Akka.Cluster.Sharding.Tests.Internal
             ExpectTerminated(rememberEntityStarter);
         }
 
-        [LocalFact(SkipLocal = "Racy in Azure AzDo, strict timing does not work well on AzDo")]
+        // TODO: check the timing code to make sure that this actually works, it was flaky/racy even when run locally.
+        [LocalFact(SkipLocal = "Racy unit test, suspected bad code underneath")]
         public void RememberEntitiesStarter_must_try_start_all_entities_in_a_throttled_way_with_entity_recovery_strategy_constant()
         {
             var regionProbe = CreateTestProbe();
