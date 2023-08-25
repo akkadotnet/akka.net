@@ -2,11 +2,11 @@
 
 Akka.NET v1.5.12 is a maintenance release with several performance and QOL improvements.
 
-* [DData: Log shard coordinator remember entities timeout](https://github.com/akkadotnet/akka.net/pull/6885)
-* [DData: Fix shard coordinator throwing NullReferenceException](https://github.com/akkadotnet/akka.net/pull/6892)
-* [Streams: Log errors inside SelectAsync stage](https://github.com/akkadotnet/akka.net/pull/6884)
-* [Streams: Add supervisor strategy support for Throttle stage](https://github.com/akkadotnet/akka.net/pull/6886)
-* [Core: Change HashedWheelTimerScheduler implementation to use PeriodicTimer for net6.0+ builds](https://github.com/akkadotnet/akka.net/pull/6435)
+* [Akka.Cluster.Sharding: Log shard coordinator remember entities timeout](https://github.com/akkadotnet/akka.net/pull/6885)
+* [Akka.Cluster.Sharding: Fix shard coordinator throwing NullReferenceException](https://github.com/akkadotnet/akka.net/pull/6892)
+* [Akka.Streams: Log errors inside SelectAsync stage](https://github.com/akkadotnet/akka.net/pull/6884)
+* [Akka.Streams: Add supervisor strategy support for Throttle stage](https://github.com/akkadotnet/akka.net/pull/6886)
+* [Akka: Change HashedWheelTimerScheduler implementation to use `PeriodicTimer` for net6.0+ builds](https://github.com/akkadotnet/akka.net/pull/6435)
 * Package dependency upgrades
   * [Bump Microsoft.Data.SQLite to 7.0.10](https://github.com/akkadotnet/akka.net/pull/6876)
   * [Bump Google.Protobuf tp 3.24.1](https://github.com/akkadotnet/akka.net/pull/6891)
