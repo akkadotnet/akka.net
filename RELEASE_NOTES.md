@@ -1,6 +1,114 @@
-#### 1.5.9 June 15th 2023 ####
+#### 1.5.13-beta1 August 26th 2023 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.12 is a maintenance release with several performance and QOL improvements.
+
+* [Akka.Cluster.Sharding: Log shard coordinator remember entities timeout](https://github.com/akkadotnet/akka.net/pull/6885)
+* [Akka.Cluster.Sharding: Fix shard coordinator throwing NullReferenceException](https://github.com/akkadotnet/akka.net/pull/6892)
+* [Akka.Streams: Log errors inside SelectAsync stage](https://github.com/akkadotnet/akka.net/pull/6884)
+* [Akka.Streams: Add supervisor strategy support for Throttle stage](https://github.com/akkadotnet/akka.net/pull/6886)
+* [Akka: Change HashedWheelTimerScheduler implementation to use `PeriodicTimer` for net6.0+ builds](https://github.com/akkadotnet/akka.net/pull/6435)
+* Package dependency upgrades
+  * [Bump Microsoft.Data.SQLite to 7.0.10](https://github.com/akkadotnet/akka.net/pull/6876)
+  * [Bump Google.Protobuf tp 3.24.1](https://github.com/akkadotnet/akka.net/pull/6891)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.12, click here](https://github.com/akkadotnet/akka.net/milestone/95?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 11      | 15   | 15   | dependabot[bot]     |
+| 3       | 302  | 143  | Aaron Stannard      |
+| 2       | 384  | 195  | Gregorius Soedharmo |
+| 1       | 7    | 0    | Sergey Popov        |
+| 1       | 66   | 17   | Ismael Hamed        |
+| 1       | 3    | 5    | Simon Cropp         |
+| 1       | 1    | 1    | HamzaAmjad-RG       |
+
+#### 1.5.12 August 2nd 2023 ####
+
+Akka.NET v1.5.12 is a maintenance release with a minor API change and a minor bug fix.
+
+* [Persistence.Query: Fix `ReadJournalFor()` thread safety](https://github.com/akkadotnet/akka.net/pull/6859)
+* [Persistence.Query: Expose new `Tags` property in `EventEnvelope`](https://github.com/akkadotnet/akka.net/pull/6862)
+* [Documentation: Fix typo in member-roles.md](https://github.com/akkadotnet/akka.net/pull/6784)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.12, click here](https://github.com/akkadotnet/akka.net/milestone/94?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 5       | 34   | 18   | Aaron Stannard      |
+| 2       | 150  | 51   | Gregorius Soedharmo |
+| 1       | 1    | 1    | dependabot[bot]     |
+| 1       | 1    | 1    | Jim Aho             |
+
+#### 1.5.11 July 27th 2023 ####
+
+Akka.NET v1.5.11 is a maintenance release with a minor API change and internal code modernization/cleanup.
+
+* [Remote: Modernize DotNettyTransportSettings class and add support for a SSL Setup class](https://github.com/akkadotnet/akka.net/pull/6854)
+* [PubSub: Make CountSubscriber query command public](https://github.com/akkadotnet/akka.net/pull/6856)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.11, click here](https://github.com/akkadotnet/akka.net/milestone/93?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 465  | 321  | Gregorius Soedharmo |
+| 1       | 22   | 2    | Aaron Stannard      |
+
+#### 1.5.10 July 26th 2023 ####
+
+Akka.NET v1.5.10 is a maintenance release with a minor API change.
+
+* [Persistence.TCK: Add constructor overload that takes ActorSystemSetup argument](https://github.com/akkadotnet/akka.net/pull/6850)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.10, click here](https://github.com/akkadotnet/akka.net/milestone/92?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 70   | 12   | Gregorius Soedharmo |
+
+#### 1.5.9 July 18th 2023 ####
+
+Akka.NET v1.5.9 is a maintenance release that introduces some performance improvements and internal code cleanup/modernization.
+
+__Changes:__
+* [Remoting: Make transport adapter component public](https://github.com/akkadotnet/akka.net/pull/6838)
+
+__Improvements:__
+* [Memory optimization, use `Array.Empty` instead of creating empty arrays](https://github.com/akkadotnet/akka.net/pull/6801)
+* [Remoting: Log all wrapped message layers during errors](https://github.com/akkadotnet/akka.net/pull/6818)
+* [Port #6805 and #6807, Improve Stream and Pattern.Backoff instance creation time performance](https://github.com/akkadotnet/akka.net/pull/6821)
+* [DData: Harden LWWDictionary serialization null check](https://github.com/akkadotnet/akka.net/pull/6837)
+
+__Code modernization:__ 
+* [Use C# 9.0 target-typed new()](https://github.com/akkadotnet/akka.net/pull/6798)
+* [Use C# 8.0 null-coalescing operator](https://github.com/akkadotnet/akka.net/pull/6814)
+
+__Update dependency versions:__
+* [Bump Google.Protobuf to 3.23.4](https://github.com/akkadotnet/akka.net/pull/6826)
+* [Bump Akka.MultiNode.TestAdapter to 1.5.8](https://github.com/akkadotnet/akka.net/pull/6802)
+* [Bump Microsoft.Data.SQLite to 7.0.9](https://github.com/akkadotnet/akka.net/pull/6835)
+* [Bump Microsoft.Extensions.ObjectPool to 7.0.8](https://github.com/akkadotnet/akka.net/pull/6813)
+* [Bump Xunit to 2.5.0](https://github.com/akkadotnet/akka.net/pull/6825)
+
+__Akka.TestKit.Xunit Changes__
+
+Due to breaking API change in Xunit 2.5.0, updating to Akka.NET 1.5.9 might break your unit tests. Some of the breaking change that we've noticed are:
+
+* `AkkaEqualException` constructor has been changed due to changes in Xunit API. If you're using this class, please use the `AkkaEqualException.ForMismatchedValues()` static method instead of using the constructor.
+* Testing for exception types by calling async code inside a sync delegate will not unwrap the `AggregateException` thrown. Either use async all the way or manually unwrap the exception.
+* Xunit `Asset.Equal()` does not automatically check for collection item equality anymore, that means doing `Assert.Equal()` between two dictionary or list would not work anymore.
+* Some Xunit classes have been changed from public to private. If you're using these classes, you will need to refactor your code.
+* __FsCheck.Xunit:__ Xunit Roslyn analyzer has become a bit too overzealous and insists that all unit test method can only return either void or Task and will raise a compilation error if you tried to return anything else. If you're using `FsCheck.Xunit`, you will need to use a pragma to disable this check: `#pragma warning disable xUnit1028`.
+
+If you want to see the [full set of changes made in Akka.NET v1.5.9, click here](https://github.com/akkadotnet/akka.net/milestone/91?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 12      | 171  | 155  | dependabot[bot]     |
+| 7       | 466  | 165  | Aaron Stannard      |
+| 4       | 1648 | 1725 | Simon Cropp         |
+| 1       | 9    | 4    | Gregorius Soedharmo |
+| 1       | 7    | 1    | Michael Buck        |
 
 #### 1.5.8 June 15th 2023 ####
 

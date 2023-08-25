@@ -14,13 +14,15 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
-// ReSharper disable InvokeAsExtensionMethod
+using static FluentAssertions.FluentActions;
 
+#nullable enable
 namespace Akka.Streams.Tests.Dsl
 {
     public class FlowSplitWhenSpec : AkkaSpec
@@ -53,39 +55,35 @@ namespace Akka.Streams.Tests.Dsl
             public void Request(int demand) => _subscription.Request(demand);
 
             public async Task ExpectNextAsync(int element) => await _probe.ExpectNextAsync(element);
-
-            public void ExpectNext(int element) => _probe.ExpectNext(element);
-
+            
             public async Task ExpectNoMsgAsync(TimeSpan max) => await _probe.ExpectNoMsgAsync(max);
-
-            public void ExpectNoMsg(TimeSpan max) => _probe.ExpectNoMsg(max);
-
+            
             public async Task ExpectCompleteAsync() => await _probe.ExpectCompleteAsync();
-            public void ExpectComplete() => _probe.ExpectComplete();
-
-            public void ExpectError(Exception ex) => _probe.ExpectError().Should().Be(ex);
+            
+            public async Task ExpectErrorAsync(Exception ex) => (await _probe.ExpectErrorAsync()).Should().Be(ex);
 
             public void Cancel() => _subscription.Cancel();
         }
 
-        private async Task WithSubstreamsSupportAsync(int splitWhen = 3, int elementCount = 6,
+        private async Task WithSubstreamsSupportAsync(
+            int splitWhen = 3,
+            int elementCount = 6,
             SubstreamCancelStrategy substreamCancelStrategy = SubstreamCancelStrategy.Drain,
-            Action<TestSubscriber.ManualProbe<Source<int, NotUsed>>, ISubscription, Func<Source<int, NotUsed>>> run = null)
+            Func<TestSubscriber.ManualProbe<Source<int, NotUsed>>, ISubscription, Func<Task<Source<int, NotUsed>>>, Task>? run = null)
         {
-
             var source = Source.From(Enumerable.Range(1, elementCount));
             var groupStream =
                 source.SplitWhen(substreamCancelStrategy, i => i == splitWhen)
                     .Lift()
                     .RunWith(Sink.AsPublisher<Source<int, NotUsed>>(false), Materializer);
-            var masterSubscriber = TestSubscriber.CreateManualSubscriberProbe<Source<int, NotUsed>>(this);
+            var masterSubscriber = this.CreateManualSubscriberProbe<Source<int, NotUsed>>();
             groupStream.Subscribe(masterSubscriber);
             var masterSubscription = await masterSubscriber.ExpectSubscriptionAsync();
 
-            run?.Invoke(masterSubscriber, masterSubscription, () =>
+            run?.Invoke(masterSubscriber, masterSubscription, async () =>
             {
                 masterSubscription.Request(1);
-                return masterSubscriber.ExpectNext();
+                return await masterSubscriber.ExpectNextAsync();
             });
         }
 
@@ -94,33 +92,33 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () => {
                 await WithSubstreamsSupportAsync(elementCount: 4,
-                    run: (masterSubscriber, masterSubscription, getSubFlow) =>
+                    run: async (masterSubscriber, masterSubscription, getSubFlow) =>
                     {
-                        var s1 = new StreamPuppet(getSubFlow()
+                        var s1 = new StreamPuppet((await getSubFlow())
                             .RunWith(Sink.AsPublisher<int>(false), Materializer), this);
-                        masterSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                        await masterSubscriber.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
                         s1.Request(2);
-                        s1.ExpectNext(1);
-                        s1.ExpectNext(2);
+                        await s1.ExpectNextAsync(1);
+                        await s1.ExpectNextAsync(2);
                         s1.Request(1);
-                        s1.ExpectComplete();
+                        await s1.ExpectCompleteAsync();
 
-                        var s2 = new StreamPuppet(getSubFlow()
+                        var s2 = new StreamPuppet((await getSubFlow())
                             .RunWith(Sink.AsPublisher<int>(false), Materializer), this);
-                        masterSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                        await masterSubscriber.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
                         s2.Request(1);
-                        s2.ExpectNext(3);
-                        s2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                        await s2.ExpectNextAsync(3);
+                        await s2.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
                         s2.Request(1);
-                        s2.ExpectNext(4);
+                        await s2.ExpectNextAsync(4);
                         s2.Request(1);
-                        s2.ExpectComplete();
+                        await s2.ExpectCompleteAsync();
 
                         masterSubscription.Request(1);
-                        masterSubscriber.ExpectComplete();
+                        await masterSubscriber.ExpectCompleteAsync();
                     });
             }, Materializer);
         }
@@ -128,19 +126,17 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task SplitWhen_must_not_emit_substreams_if_the_parent_stream_is_empty()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var task =
-                Source.Empty<int>()
-                .SplitWhen(_ => true)
-                .Lift()
-                .SelectAsync(1, s => s.RunWith(Sink.FirstOrDefault<int>(), Materializer))
-                .Grouped(10)
-                .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(),
-                Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(default(IEnumerable<int>));
-                return Task.CompletedTask;
-            }, Materializer);
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var result = await Source.Empty<int>()
+                    .SplitWhen(_ => true)
+                    .Lift()
+                    .SelectAsync(1, s => s.RunWith(Sink.FirstOrDefault<int>(), Materializer))
+                    .Grouped(10)
+                    .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(), Materializer);
+                result.Should().BeEquivalentTo(default(IEnumerable<int>));
+            }, Materializer)
+                .ShouldCompleteWithin(RemainingOrDefault);
         }
 
         [Fact]
@@ -150,7 +146,7 @@ namespace Akka.Streams.Tests.Dsl
                 await WithSubstreamsSupportAsync(1, 3,
                     run: async (masterSubscriber, masterSubscription, getSubFlow) =>
                     {
-                        var s1 = new StreamPuppet(getSubFlow()
+                        var s1 = new StreamPuppet((await getSubFlow())
                             .RunWith(Sink.AsPublisher<int>(false), Materializer), this);
 
                         s1.Request(5);
@@ -162,7 +158,8 @@ namespace Akka.Streams.Tests.Dsl
                         masterSubscription.Request(1);
                         await masterSubscriber.ExpectCompleteAsync();
                     });
-            }, Materializer);
+            }, Materializer)
+                .ShouldCompleteWithin(RemainingOrDefault);
         }
 
         [Fact]
@@ -172,10 +169,10 @@ namespace Akka.Streams.Tests.Dsl
                 await WithSubstreamsSupportAsync(5, 8,
                     run: async (masterSubscriber, masterSubscription, getSubFlow) =>
                     {
-                        var s1 = new StreamPuppet(getSubFlow()
+                        var s1 = new StreamPuppet((await getSubFlow())
                             .RunWith(Sink.AsPublisher<int>(false), Materializer), this);
                         s1.Cancel();
-                        var s2 = new StreamPuppet(getSubFlow()
+                        var s2 = new StreamPuppet((await getSubFlow())
                             .RunWith(Sink.AsPublisher<int>(false), Materializer), this);
 
                         s2.Request(4);
@@ -189,8 +186,8 @@ namespace Akka.Streams.Tests.Dsl
                         masterSubscription.Request(1);
                         await masterSubscriber.ExpectCompleteAsync();
                     });
-                return Task.CompletedTask;
-            }, Materializer);
+            }, Materializer)
+                .ShouldCompleteWithin(RemainingOrDefault);
         }
 
         [Fact]
@@ -259,7 +256,8 @@ namespace Akka.Streams.Tests.Dsl
 
                 masterStream3.Cancel();
                 await inputs3.ExpectCancellationAsync();
-            }, Materializer);
+            }, Materializer)
+                .ShouldCompleteWithin(RemainingOrDefault);
         }
 
         [Fact]
@@ -269,7 +267,7 @@ namespace Akka.Streams.Tests.Dsl
                 await WithSubstreamsSupportAsync(5, 8,
                     run: async (_, masterSubscription, getSubFlow) =>
                     {
-                        var s1 = new StreamPuppet(getSubFlow()
+                        var s1 = new StreamPuppet((await getSubFlow())
                             .RunWith(Sink.AsPublisher<int>(false), Materializer), this);
                         masterSubscription.Cancel();
 
@@ -281,7 +279,8 @@ namespace Akka.Streams.Tests.Dsl
                         s1.Request(1);
                         await s1.ExpectCompleteAsync();
                     });
-            }, Materializer);
+            }, Materializer)
+                .ShouldCompleteWithin(RemainingOrDefault);
         }
 
         [Fact]
@@ -317,86 +316,83 @@ namespace Akka.Streams.Tests.Dsl
 
                 upstreamSubscription.SendNext(3);
 
-                subscriber.ExpectError().Should().Be(ex);
-                substreamPuppet.ExpectError(ex);
+                (await subscriber.ExpectErrorAsync()).Should().Be(ex);
+                await substreamPuppet.ExpectErrorAsync(ex);
                 await upstreamSubscription.ExpectCancellationAsync();
-            }, Materializer);
+            }, Materializer)
+                .ShouldCompleteWithin(RemainingOrDefault);
         }
 
         [Fact]
         public async Task SplitWhen_must_work_with_single_element_splits()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var task = Source.From(Enumerable.Range(1, 100))
-                .SplitWhen(_ => true)
-                .Lift()
-                .SelectAsync(1, s => s.RunWith(Sink.First<int>(), Materializer)) // Please note that this line *also* implicitly asserts nonempty substreams                                                                             
-                .Grouped(200)
-                .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
-                return Task.CompletedTask;
-            }, Materializer);
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var result = await Source.From(Enumerable.Range(1, 100))
+                    .SplitWhen(_ => true)
+                    .Lift()
+                    .SelectAsync(1, s => s.RunWith(Sink.First<int>(), Materializer)) // Please note that this line *also* implicitly asserts nonempty substreams                                                                             
+                    .Grouped(200)
+                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+                result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
+            }, Materializer)
+                .ShouldCompleteWithin(RemainingOrDefault);
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task SplitWhen_must_fail_substream_if_materialized_twice()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var task = Source.Single(1).SplitWhen(_ => true).Lift()
-                .SelectAsync(1, source =>
+            await this.AssertAllStagesStoppedAsync(async () =>
                 {
-                    source.RunWith(Sink.Ignore<int>(), Materializer);
-                    // Sink.ignore+mapAsync pipes error back                                                                                 
-                    return Task.Run(() =>
-                    {
-                        source.RunWith(Sink.Ignore<int>(), Materializer).Wait(TimeSpan.FromSeconds(3));
-                        return 1;
-                    });
-                })
-                .RunWith(Sink.Ignore<int>(), Materializer);
-                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .Should().Throw<IllegalStateException>();
-                return Task.CompletedTask;
-            }, Materializer);
+                    await Awaiting(async () =>
+                        await Source.Single(1)
+                            .SplitWhen(_ => true)
+                            .Lift()
+                            .SelectAsync(1, source =>
+                            {
+                                source.RunWith(Sink.Ignore<int>(), Materializer);
+                                // Sink.ignore+mapAsync pipes error back                                                                                 
+                                return Task.Run(() =>
+                                {
+                                    source.RunWith(Sink.Ignore<int>(), Materializer).Wait(TimeSpan.FromSeconds(3));
+                                    return 1;
+                                });
+                            })
+                            .RunWith(Sink.Ignore<int>(), Materializer)
+                    ).Should().ThrowAsync<IllegalStateException>();
+                }, Materializer)
+                .ShouldCompleteWithin(RemainingOrDefault);
         }
 
         [Fact]
         public async Task SplitWhen_must_fail_stream_if_substream_not_materialized_in_time()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var tightTimeoutMaterializer = ActorMaterializer.Create(Sys,
                     ActorMaterializerSettings.Create(Sys)
-                    .WithSubscriptionTimeoutSettings(
-                        new StreamSubscriptionTimeoutSettings(
-                            StreamSubscriptionTimeoutTerminationMode.CancelTermination,
-                            TimeSpan.FromMilliseconds(500))));
-                var testSource =
-                    Source.Single(1)
-                        .MapMaterializedValue<TaskCompletionSource<int>>(_ => null)
-                        .Concat(Source.Maybe<int>())
-                        .SplitWhen(_ => true);
-                Action action = () =>
-                {
-                    var task =
-                        testSource.Lift()
-                            .Delay(TimeSpan.FromSeconds(1))
-                            .ConcatMany(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null))
-                            .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer);
-                    task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                };
+                        .WithSubscriptionTimeoutSettings(
+                            new StreamSubscriptionTimeoutSettings(
+                                StreamSubscriptionTimeoutTerminationMode.CancelTermination,
+                                TimeSpan.FromMilliseconds(500))));
+                var testSource = Source.Single(1)
+                    .MapMaterializedValue<TaskCompletionSource<int>>(_ => null)
+                    .Concat(Source.Maybe<int>())
+                    .SplitWhen(_ => true);
 
-                action.Should().Throw<SubscriptionTimeoutException>();
-                return Task.CompletedTask;
-            }, Materializer);
+                await Awaiting(async () =>
+                {
+                    await testSource.Lift()
+                        .Delay(TimeSpan.FromSeconds(1))
+                        .ConcatMany(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null))
+                        .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer);
+                }).Should().ThrowAsync<SubscriptionTimeoutException>();
+            }, Materializer)
+                .ShouldCompleteWithin(RemainingOrDefault);
         }
 
         [Fact(Skip = "Supervision is not supported fully by GraphStages yet")]
         public async Task SplitWhen_must_resume_stream_when_splitWhen_function_throws()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                return Task.CompletedTask;
-            }, Materializer);
+            await this.AssertAllStagesStoppedAsync(() => Task.CompletedTask, Materializer);
         }
 
         [Fact]
@@ -406,18 +402,18 @@ namespace Akka.Streams.Tests.Dsl
                 var up = this.CreateManualPublisherProbe<int>();
                 var down = this.CreateManualSubscriberProbe<Source<int, NotUsed>>();
 
-                var flowSubscriber =
-                    Source.AsSubscriber<int>()
-                        .SplitWhen(i => i % 3 == 0)
-                        .Lift()
-                        .To(Sink.FromSubscriber(down))
-                        .Run(Materializer);
+                var flowSubscriber = Source.AsSubscriber<int>()
+                    .SplitWhen(i => i % 3 == 0)
+                    .Lift()
+                    .To(Sink.FromSubscriber(down))
+                    .Run(Materializer);
                 var downstream = await down.ExpectSubscriptionAsync();
                 downstream.Cancel();
                 up.Subscribe(flowSubscriber);
                 var upSub = await up.ExpectSubscriptionAsync();
                 await upSub.ExpectCancellationAsync();
-            }, Materializer);
+            }, Materializer)
+                .ShouldCompleteWithin(RemainingOrDefault);
         }
 
         [Fact]
@@ -427,15 +423,14 @@ namespace Akka.Streams.Tests.Dsl
                 await WithSubstreamsSupportAsync(5, 8, SubstreamCancelStrategy.Propagate,
                     async (masterSubscriber, _, expectSubFlow) =>
                     {
-                        var s1 = new StreamPuppet(expectSubFlow()
+                        var s1 = new StreamPuppet((await expectSubFlow())
                             .RunWith(Sink.AsPublisher<int>(false), Materializer),
                             this);
                         s1.Cancel();
                         await masterSubscriber.ExpectCompleteAsync();
-
                     });
-                return Task.CompletedTask;
-            }, Materializer);
+            }, Materializer)
+                .ShouldCompleteWithin(RemainingOrDefault);
         }
     }
 }

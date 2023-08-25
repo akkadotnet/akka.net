@@ -200,6 +200,7 @@ namespace Akka.Cluster.Sharding
     {
         public static Akka.Cluster.Sharding.IShardAllocationStrategy LeastShardAllocationStrategy(int absoluteLimit, double relativeLimit) { }
     }
+    [Akka.Annotations.InternalStableApiAttribute()]
     public sealed class ShardRegion : Akka.Actor.ActorBase, Akka.Actor.IWithTimers
     {
         public ShardRegion(string typeName, System.Func<string, Akka.Actor.Props> entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, string coordinatorPath, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, object handOffStopMessage, Akka.Cluster.Sharding.Internal.IRememberEntitiesProvider rememberEntitiesProvider) { }

@@ -12,6 +12,7 @@ using Akka.Util;
 using FsCheck;
 using FsCheck.Xunit;
 
+#pragma warning disable xUnit1028
 namespace Akka.Tests.Util
 {
     public class StableListPriorityQueueSpec

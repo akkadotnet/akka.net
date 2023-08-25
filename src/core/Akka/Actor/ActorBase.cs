@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor.Internal;
+using Akka.Actor.Scheduler;
 using Akka.Event;
 
 namespace Akka.Actor
@@ -178,9 +179,9 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected internal virtual bool AroundReceive(Receive receive, object message)
         {
-            if (message is Scheduler.TimerScheduler.ITimerMsg tm)
+            if (message is TimerScheduler.ITimerMsg tm)
             {
-                if (this is IWithTimers withTimers && withTimers.Timers is Scheduler.TimerScheduler timers)
+                if (this is IWithTimers { Timers: TimerScheduler timers })
                 {
                     switch (timers.InterceptTimerMsg(Context.System.Log, tm))
                     {
@@ -192,7 +193,7 @@ namespace Akka.Actor
                             // discard
                             return true;
 
-                        case object m:
+                        case var m:
                             if (this is IActorStash)
                             {
                                 var actorCell = (ActorCell)Context;
@@ -242,8 +243,7 @@ namespace Akka.Actor
         /// </exception>
         protected virtual void Unhandled(object message)
         {
-            var terminatedMessage = message as Terminated;
-            if (terminatedMessage != null)
+            if (message is Terminated terminatedMessage)
             {
                 throw new DeathPactException(terminatedMessage.ActorRef);
             }

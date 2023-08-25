@@ -5,41 +5,24 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Actor;
-
 namespace ChatMessages
 {
-    public class ConnectRequest
-    {
-        public string Username { get; set; }
-    }
+    /// <summary>
+    /// Marker interface for all chat messages exchanged between client and server
+    /// </summary>
+    /// <remarks>
+    /// Currently not used for anything - can be used in the future for serialization
+    /// or routing purposes.
+    /// </remarks>
+    public interface IChatProtocol { }
+    
+    public record ConnectRequest(string Username) : IChatProtocol;
 
-    public class ConnectResponse
-    {
-        public string Message { get; set; }
-    }
+    public record ConnectResponse(string Message) : IChatProtocol;
 
-    public class NickRequest
-    {
-        public string OldUsername { get; set; }
-        public string NewUsername { get; set; }
-    }
+    public record NickRequest(string OldUsername, string NewUsername) : IChatProtocol;
+    public record NickResponse(string OldUsername, string NewUsername) : IChatProtocol;
+    public record SayRequest(string Username, string Text) : IChatProtocol;
 
-    public class NickResponse
-    {
-        public string OldUsername { get; set; }
-        public string NewUsername { get; set; }
-    }
-
-    public class SayRequest
-    {
-        public string Username { get; set; }
-        public string Text { get; set; }
-    }
-
-    public class SayResponse
-    {
-        public string Username { get; set; }
-        public string Text { get; set; }
-    }
+    public record SayResponse(string Username, string Text) : IChatProtocol;
 }
