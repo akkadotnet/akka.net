@@ -1,3 +1,28 @@
+#### 1.5.13-beta1 August 26th 2023 ####
+
+Akka.NET v1.5.12 is a maintenance release with several performance and QOL improvements.
+
+* [DData: Log shard coordinator remember entities timeout](https://github.com/akkadotnet/akka.net/pull/6885)
+* [DData: Fix shard coordinator throwing NullReferenceException](https://github.com/akkadotnet/akka.net/pull/6892)
+* [Streams: Log errors inside SelectAsync stage](https://github.com/akkadotnet/akka.net/pull/6884)
+* [Streams: Add supervisor strategy support for Throttle stage](https://github.com/akkadotnet/akka.net/pull/6886)
+* [Core: Change HashedWheelTimerScheduler implementation to use PeriodicTimer for net6.0+ builds](https://github.com/akkadotnet/akka.net/pull/6435)
+* Package dependency upgrades
+  * [Bump Microsoft.Data.SQLite to 7.0.10](https://github.com/akkadotnet/akka.net/pull/6876)
+  * [Bump Google.Protobuf tp 3.24.1](https://github.com/akkadotnet/akka.net/pull/6891)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.12, click here](https://github.com/akkadotnet/akka.net/milestone/95?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 11      | 15   | 15   | dependabot[bot]     |
+| 3       | 302  | 143  | Aaron Stannard      |
+| 2       | 384  | 195  | Gregorius Soedharmo |
+| 1       | 7    | 0    | Sergey Popov        |
+| 1       | 66   | 17   | Ismael Hamed        |
+| 1       | 3    | 5    | Simon Cropp         |
+| 1       | 1    | 1    | HamzaAmjad-RG       |
+
 #### 1.5.12 August 2nd 2023 ####
 
 Akka.NET v1.5.12 is a maintenance release with a minor API change and a minor bug fix.
