@@ -140,10 +140,8 @@ namespace Akka.Remote.Transport
         {
             get
             {
-                return _managerProps ??
-                       (_managerProps =
-                           Props.Create(() => new AkkaProtocolManager(WrappedTransport, Settings))
-                               .WithDeploy(Deploy.Local));
+                return _managerProps ??= Props.Create(() => new AkkaProtocolManager(WrappedTransport, Settings))
+                    .WithDeploy(Deploy.Local);
             }
         }
 

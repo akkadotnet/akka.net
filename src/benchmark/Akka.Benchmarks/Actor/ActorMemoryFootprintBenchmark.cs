@@ -17,7 +17,7 @@ using BenchmarkDotNet.Engines;
 namespace Akka.Benchmarks.Actor
 {
     [Config(typeof(MicroBenchmarkConfig))]
-    [SimpleJob(RunStrategy.Monitoring, targetCount: 25, warmupCount: 5)]
+    [SimpleJob(RunStrategy.Monitoring, warmupCount: 5)]
     public class ActorMemoryFootprintBenchmark
     {
         public ActorSystem Sys;

@@ -162,7 +162,7 @@ namespace Akka.Streams.Dsl
         /// <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions"/>.</para>
         /// </summary>
         /// <param name="flowFactory">A factory for producing the <see cref="Flow"/>] to wrap.</param>
-        /// <param name="settings"></param>
+        /// <param name="settings"><see cref="RestartSettings" /> defining restart configuration</param>
         public static Flow<TIn, TOut, NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory, RestartSettings settings)
             => Flow.FromGraph(new RestartWithBackoffFlow<TIn, TOut, TMat>(flowFactory, settings, onlyOnFailures: true));
     }

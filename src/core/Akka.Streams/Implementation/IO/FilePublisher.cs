@@ -57,7 +57,7 @@ namespace Akka.Streams.Implementation.IO
             if (maxBuffer < initialBuffer)
                 throw new ArgumentException($"maxBuffer must be >= initialBuffer (was {maxBuffer})", nameof(maxBuffer));
 
-            return Actor.Props.Create(() => new FilePublisher(f, completionPromise, chunkSize, startPosition, maxBuffer))
+            return Actor.Props.Create<FilePublisher>( f, completionPromise, chunkSize, startPosition, maxBuffer)
                 .WithDeploy(Deploy.Local);
         }
 
@@ -86,6 +86,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="chunkSize">TBD</param>
         /// <param name="startPosition">TBD</param>
         /// <param name="maxBuffer">TBD</param>
+        /// If this changes you must also change <see cref="FilePublisher.Props"/> as well!
         public FilePublisher(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize, long startPosition, int maxBuffer)
         {
             _f = f;

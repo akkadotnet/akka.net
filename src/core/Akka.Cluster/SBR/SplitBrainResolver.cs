@@ -99,7 +99,7 @@ namespace Akka.Cluster.SBR
 
         public DowningStrategy Strategy { get; }
 
-        public ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        public ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         public abstract UniqueAddress SelfUniqueAddress { get; }
 

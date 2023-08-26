@@ -990,13 +990,14 @@ namespace Akka.DistributedData.Serialization
         {
             switch (op)
             {
+                case null: throw new ArgumentNullException(nameof(op), $"Failed to serialize {nameof(ORDictionary.IDeltaOperation)} to protobuf");
                 case ORDictionary.IPutDeltaOp p: return ORDictionaryPutToProto(p);
                 case ORDictionary.IRemoveDeltaOp r: return ORDictionaryRemoveToProto(r);
                 case ORDictionary.IRemoveKeyDeltaOp r: return ORDictionaryRemoveKeyToProto(r);
                 case ORDictionary.IUpdateDeltaOp u: return ORDictionaryUpdateToProto(u);
                 case ORDictionary.IDeltaGroupOp g: return ORDictionaryDeltasToProto(g.OperationsSerialization.ToList());
                 default:
-                    throw new SerializationException($"Unrecognized delta operation [{op}]");
+                    throw new SerializationException($"Unrecognized delta operation [({op.GetType().Name}):{op}]");
             }
 
         }
@@ -1273,8 +1274,12 @@ namespace Akka.DistributedData.Serialization
 
         private ILWWDictionaryDeltaOperation LWWDictionaryDeltaFromProto<TKey, TValue>(ORDictionary.IDeltaOperation op)
         {
-            var casted = (ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation)op;
-            return new LWWDictionary<TKey, TValue>.LWWDictionaryDelta(casted);
+            return op switch
+            {
+                null => throw new ArgumentNullException(nameof(op), $"Failed to deserialize {nameof(ILWWDictionaryDeltaOperation)}"),
+                ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation casted => new LWWDictionary<TKey, TValue>.LWWDictionaryDelta(casted),
+                _ => throw new ArgumentException($"Failed to cast cast {op.GetType().FullName} to {typeof(ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation).FullName}")
+            };
         }
 
         #endregion

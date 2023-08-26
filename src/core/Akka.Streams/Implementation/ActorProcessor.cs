@@ -619,7 +619,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         /// <summary>
         /// TBD

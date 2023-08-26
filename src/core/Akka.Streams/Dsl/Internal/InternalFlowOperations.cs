@@ -1893,7 +1893,7 @@ namespace Akka.Streams.Dsl.Internal
             int maximumBurst, ThrottleMode mode)
         {
             if (elements <= 0) throw new ArgumentException("Throttle elements must be > 0", nameof(elements));
-            if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
+            if (per <= TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be less than or equal to zero", nameof(per));
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
             if (per.Ticks < elements)
@@ -1950,7 +1950,7 @@ namespace Akka.Streams.Dsl.Internal
             int maximumBurst, Func<T, int> calculateCost, ThrottleMode mode)
         {
             if (cost <= 0) throw new ArgumentException("cost must be > 0", nameof(cost));
-            if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
+            if (per <= TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be less than or equal to zero", nameof(per));
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
             if (per.Ticks < cost)

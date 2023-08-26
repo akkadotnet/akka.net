@@ -131,13 +131,17 @@ namespace Akka.Remote.Transport.DotNetty
             System = system;
             Config = config;
 
+            // Helios compatibility
             if (system.Settings.Config.HasPath("akka.remote.helios.tcp"))
             {
-                var heliosFallbackConfig = system.Settings.Config.GetConfig("akka.remote.helios.tcp");
+                var heliosFallbackConfig = system.Settings.Config.GetConfig("akka.remote.helios.tcp")
+                    .WithFallback("transport-class = \"Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote.Transport.Helios\"");
                 config = heliosFallbackConfig.WithFallback(config);
             }
 
-            Settings = DotNettyTransportSettings.Create(config);
+            var setup = system.Settings.Setup.Get<DotNettySslSetup>();
+            var sslSettings = setup.HasValue ? setup.Value.Settings : null;
+            Settings = DotNettyTransportSettings.Create(config, sslSettings);
             Log = Logging.GetLogger(System, GetType());
             _serverEventLoopGroup = new MultithreadEventLoopGroup(Settings.ServerSocketWorkerPoolSize);
             _clientEventLoopGroup = new MultithreadEventLoopGroup(Settings.ClientSocketWorkerPoolSize);

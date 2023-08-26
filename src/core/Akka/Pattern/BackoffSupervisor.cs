@@ -117,6 +117,10 @@ namespace Akka.Pattern
         {
         }
 
+        /// <summary>
+        /// If the arguments here change, you -must- change the invocation in <see cref="BackoffOptions"/> accordingly!
+        /// Expression based props are too slow for many scenarios, so we must drop compile time safety for that sake.  
+        /// </summary>
         public BackoffSupervisor(
             Props childProps,
             string childName,

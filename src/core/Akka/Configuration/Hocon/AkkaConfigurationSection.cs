@@ -36,7 +36,7 @@ namespace Akka.Configuration.Hocon
         /// </summary>
         public Config AkkaConfig
         {
-            get { return _akkaConfig ?? (_akkaConfig = ConfigurationFactory.ParseString(Hocon.Content)); }
+            get { return _akkaConfig ??= ConfigurationFactory.ParseString(Hocon.Content); }
         }
 
         /// <summary>

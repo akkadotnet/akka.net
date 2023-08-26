@@ -51,7 +51,7 @@ namespace Akka.Persistence.Query.InMemory
             JournalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
         }
 
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
         protected string Tag { get; }
         protected int FromOffset { get; }
         protected abstract int ToOffset { get; }
@@ -120,7 +120,8 @@ namespace Akka.Persistence.Query.InMemory
                             persistenceId: replayed.Persistent.PersistenceId,
                             sequenceNr: replayed.Persistent.SequenceNr,
                             @event: replayed.Persistent.Payload,
-                            timestamp: replayed.Persistent.Timestamp));
+                            timestamp: replayed.Persistent.Timestamp,
+                            tags: new [] { replayed.Tag }));
 
                         CurrentOffset = replayed.Offset + 1;
                         Buffer.DeliverBuffer(TotalDemand);

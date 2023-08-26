@@ -119,9 +119,13 @@ namespace Akka.Remote.Tests
                     (await associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault)).MessageId.ShouldBe("foo");
 
                     // terminate the DEPLOYED system
-                    Assert.True(await _sys2.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
-                    await ExpectTerminatedAsync(associated); // expect that the remote deployed actor is dead
-                    
+                    await WithinAsync(TimeSpan.FromSeconds(10), async () =>
+                    {
+                        var terminationTask = _sys2.Terminate(); // start termination process
+                        await ExpectTerminatedAsync(associated);  // expect that the remote deployed actor is dead
+                        Assert.True(await terminationTask.AwaitWithTimeout(RemainingOrDefault), "Expected to terminate within 10 seconds, but didn't.");
+                    });
+
                     // now terminate the DEPLOYER system
                     Assert.True(await Sys.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
                 });

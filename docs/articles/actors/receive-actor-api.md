@@ -155,7 +155,7 @@ This strategy is typically declared inside the actor in order to have access to 
 The remaining visible methods are user-overridable life-cycle hooks which are described in the following:
 
 ```csharp
-public override void PreStart()
+protected override void PreStart()
 {
 }
 

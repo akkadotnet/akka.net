@@ -87,7 +87,7 @@ namespace Akka.Coordination
 
         private ILoggingAdapter _log;
 
-        private ILoggingAdapter Log { get { return _log ?? (_log = Logging.GetLogger(_system, "LeaseProvider")); } }
+        private ILoggingAdapter Log { get { return _log ??= Logging.GetLogger(_system, "LeaseProvider"); } }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LeaseProvider"/> class.

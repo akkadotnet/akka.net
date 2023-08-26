@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Cluster.Sharding.Internal;
 using Akka.Coordination;
 using Akka.Event;
@@ -23,6 +24,13 @@ namespace Akka.Cluster.Sharding
     using EntityId = String;
     using ShardId = String;
 
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// This actor creates children entity actors on demand that it is told to be
+    /// responsible for.
+    /// </summary>
+    [InternalStableApi]
     internal sealed class Shard : ActorBase, IWithTimers, IWithUnboundedStash
     {
         #region messages
