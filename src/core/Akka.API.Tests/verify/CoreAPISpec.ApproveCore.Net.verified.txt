@@ -922,7 +922,8 @@ namespace Akka.Actor
         protected override void PreStart() { }
         protected override bool Receive(object message) { }
     }
-    public class HashedWheelTimerScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider, System.IDisposable
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class HashedWheelTimerScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider, System.IDisposable
     {
         public HashedWheelTimerScheduler(Akka.Configuration.Config scheduler, Akka.Event.ILoggingAdapter log) { }
         public override System.TimeSpan HighResMonotonicClock { get; }
@@ -2157,6 +2158,11 @@ namespace Akka.Actor.Internal
         public UnboundedStashImpl(Akka.Actor.IActorContext context) { }
         public override int Capacity { get; }
     }
+}
+namespace Akka.Actor.Scheduler
+{
+    [Akka.Annotations.InternalApiAttribute()]
+    public interface IScheduledTellMsg : Akka.Actor.INoSerializationVerificationNeeded, Akka.Actor.IWrappedMessage { }
 }
 namespace Akka.Actor.Setup
 {
