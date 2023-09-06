@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json.Bson" Version="1.0.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\contrib\serializers\Akka.Serialization.Generator.Attributes\Akka.Serialization.Generator.Attributes.csproj" />
+    <ProjectReference Include="..\..\..\contrib\serializers\Akka.Serialization.Generator\Akka.Serialization.Generator.csproj" 
+                      ReferenceOutputAssembly="false"
+                      OutputItemType="Analyzer"/>
+    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
+  </ItemGroup>
+
+</Project>
