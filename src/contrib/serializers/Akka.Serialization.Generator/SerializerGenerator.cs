@@ -134,9 +134,11 @@ public class SerializerGenerator: IIncrementalGenerator
 
             //var className = classSymbol.Name;
             var @namespace = classSymbol.ContainingNamespace;
+            var attribute = classSymbol.GetAttributes().First(a => a.AttributeClass?.Name is "AkkaSerializeAttribute");
+            var manifest = (string)attribute.ConstructorArguments[0].Value;
             
             // Create a ClassToGenerate for use in the generation phase
-            classesToGenerate.Add(new ClassToGenerate(@namespace.ToString(), @namespace.Name, classSymbol.Name));
+            classesToGenerate.Add(new ClassToGenerate(@namespace.ToString(), @namespace.Name, classSymbol.Name, manifest));
         }
 
         return classesToGenerate;
@@ -224,7 +226,7 @@ public class SerializerGenerator: IIncrementalGenerator
         {
             sb.AppendLine(
                 $"""
-                     public const string {classToGenerate.ClassName}Manifest = "{classCount.ToBase26()}";
+                     public const string {classToGenerate.ClassName}Manifest = "{classToGenerate.Manifest}";
                  """);
             classCount++;
         }

@@ -8,16 +8,18 @@ namespace Akka.Serialization.Generator
 {
     public sealed class ClassToGenerate
     {
-        public ClassToGenerate(string fullNamespace, string @namespace, string className)
+        public ClassToGenerate(string fullNamespace, string @namespace, string className, string manifest)
         {
             FullNamespace = fullNamespace;
             Namespace = @namespace;
             ClassName = className;
+            Manifest = manifest;
         }
 
         public string FullNamespace { get; }
         public string Namespace { get; }
         public string ClassName { get; }
+        public string Manifest { get; }
     }
 }
 

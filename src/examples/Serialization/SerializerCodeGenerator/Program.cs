@@ -1,6 +1,5 @@
 ﻿// -----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 // -----------------------------------------------------------------------
@@ -9,16 +8,14 @@ using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
-using Akka.Configuration;
 using Akka.Serialization;
 using Akka.Serialization.Generated;
+using SerializerCodeGenerator.CommandMessages;
 
 namespace SerializerCodeGenerator;
 
 public static class Program
 {
-    private const string Payload = "My Payload";
-    
     public static async Task Main(string[] args)
     {
         var setup = ActorSystemSetup.Empty.AddGeneratedSerializers();
@@ -26,26 +23,28 @@ public static class Program
 
         try
         {
-            var serializer = (SerializerWithStringManifest)sys.Serialization.FindSerializerForType(typeof(RemoteCommand));
+            var serializer = (SerializerWithStringManifest)sys.Serialization.FindSerializerForType(typeof(CreateProduct));
+            Console.WriteLine($"Serializer: {serializer.GetType()}");
 
-            if(serializer is not SerializerCodeGeneratorSerializer)
-                throw new Exception("NOT GENERATED SERIALIZER");
-
-            var expected = new RemoteCommand { Payload = "My Payload" };
+            var expected = new CreateProduct
+            {
+                Id = 1,
+                Name = "My Product",
+                Amount = 1000
+            };
             var serialized = serializer.ToBinary(expected);
             var manifest = serializer.Manifest(expected);
 
-            if(manifest != "A")
-                throw new Exception("INVALID MANIFEST");
+            Console.WriteLine($"Manifest for class {typeof(CreateProduct)} is {manifest}");
 
-            var deserialized = (RemoteCommand)serializer.FromBinary(serialized, manifest);
+            var deserialized = (CreateProduct)serializer.FromBinary(serialized, manifest);
 
-            if (deserialized.Payload != expected.Payload)
-                throw new Exception("FAILED");
+            Console.WriteLine($"Expected data: {expected}");
+            Console.WriteLine($"Deserialized data: {deserialized}");
         }
         finally
         {
             await sys.Terminate();
-        }
+        } 
     }
 }
