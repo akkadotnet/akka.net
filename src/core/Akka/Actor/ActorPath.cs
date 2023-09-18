@@ -92,7 +92,7 @@ namespace Akka.Actor
             #endregion
         }
 
-        private const string ValidSymbols = "\"-_.*$+:@&=,!~';()";
+        public const string ValidSymbols = "\"-_.*$+:@&=,!~';()";
 
         /// <summary>
         /// A small bool array, indexed by the ASCII code (0..127), containing <c>true</c> for valid chars
@@ -115,7 +115,7 @@ namespace Akka.Actor
         /// since we use URL Encode to create valid actor names, we must allow them.
         /// </summary>
         /// <param name="s">The string to verify for conformity</param>
-        /// <returns>True if the </returns>
+        /// <returns>True if the path element is valid</returns>
         public static bool IsValidPathElement(string s)
         {
             return !string.IsNullOrEmpty(s) && !s.StartsWith('$') && Validate(s);
