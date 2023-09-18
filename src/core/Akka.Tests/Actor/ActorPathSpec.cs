@@ -11,6 +11,7 @@ using System.Text;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Tests.Actor
 {
@@ -272,6 +273,33 @@ namespace Akka.Tests.Actor
         public void Validate_element_parts(string element, bool matches)
         {
             ActorPath.IsValidPathElement(element).ShouldBe(matches);
+        }
+
+        [Fact]
+        public void ValidateElementPartsComprehensive()
+        {
+            // NOTE: $ is not a valid starting character
+            var valid = Enumerable.Range(0, 128).Select(i => (char)i).Where(c =>
+                c is >= 'a' and <= 'z' || 
+                c is >= 'A' and <= 'Z' || 
+                c is >= '0' and <= '9' ||
+                ActorPath.ValidSymbols.Contains(c)
+                && c is not '$'
+            ).ToArray();
+
+            foreach (var c in Enumerable.Range(0, 2048).Select(i => (char)i))
+            {
+                if(valid.Contains(c))
+                    ActorPath.IsValidPathElement(new string(new[] { c })).Should().BeTrue();
+                else
+                    ActorPath.IsValidPathElement(new string(new[] { c })).Should().BeFalse();
+            }
+
+            // $ after a valid character should be valid
+            foreach (var c in valid)
+            {
+                ActorPath.IsValidPathElement(new string(new[] { c, '$' })).Should().BeTrue();
+            }
         }
 
         [Theory]
