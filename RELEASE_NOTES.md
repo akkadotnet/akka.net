@@ -1,6 +1,27 @@
+#### 1.5.13 August 26th 2023 ####
+
+Akka.NET v1.5.13 is a maintenance release with several bug fixes and also performance and QOL improvements.
+
+* [Akka: Clean up and optimize actor name validation](https://github.com/akkadotnet/akka.net/pull/6919)
+* [Akka: Wrap all scheduler Tell messages in `IScheduledMessage` envelope](https://github.com/akkadotnet/akka.net/pull/6461)
+* [Akka: Fix possible NRE bug in `Dispatchers`](https://github.com/akkadotnet/akka.net/pull/6906)
+* [Akka.Cluster.Sharding: Log shard coordinator remember entities timeout](https://github.com/akkadotnet/akka.net/pull/6885)
+* [Akka.Cluster.Sharding: Fix shard coordinator throwing NullReferenceException](https://github.com/akkadotnet/akka.net/pull/6892)
+* [Akka.Streams: Log errors inside SelectAsync stage](https://github.com/akkadotnet/akka.net/pull/6884)
+* [Akka.Streams: Add supervisor strategy support for Throttle stage](https://github.com/akkadotnet/akka.net/pull/6886)
+* [Akka: Change HashedWheelTimerScheduler implementation to use `PeriodicTimer` for net6.0+ builds](https://github.com/akkadotnet/akka.net/pull/6435)
+* Package dependency upgrades
+  * [Bump Polyfill to 1.27.1](https://github.com/akkadotnet/akka.net/pull/6899) 
+  * [Bump Microsoft.Data.SQLite to 7.0.11](https://github.com/akkadotnet/akka.net/pull/6917)
+  * [Bump Google.Protobuf tp 3.24.3](https://github.com/akkadotnet/akka.net/pull/6909)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.13, click here](https://github.com/akkadotnet/akka.net/milestone/95?closed=1).
+
+
+
 #### 1.5.13-beta1 August 26th 2023 ####
 
-Akka.NET v1.5.12 is a maintenance release with several performance and QOL improvements.
+Akka.NET v1.5.13-beta1 is a maintenance release with several performance and QOL improvements.
 
 * [Akka.Cluster.Sharding: Log shard coordinator remember entities timeout](https://github.com/akkadotnet/akka.net/pull/6885)
 * [Akka.Cluster.Sharding: Fix shard coordinator throwing NullReferenceException](https://github.com/akkadotnet/akka.net/pull/6892)
@@ -11,7 +32,7 @@ Akka.NET v1.5.12 is a maintenance release with several performance and QOL impro
   * [Bump Microsoft.Data.SQLite to 7.0.10](https://github.com/akkadotnet/akka.net/pull/6876)
   * [Bump Google.Protobuf tp 3.24.1](https://github.com/akkadotnet/akka.net/pull/6891)
 
-If you want to see the [full set of changes made in Akka.NET v1.5.12, click here](https://github.com/akkadotnet/akka.net/milestone/95?closed=1).
+If you want to see the [full set of changes made in Akka.NET v1.5.13-beta1, click here](https://github.com/akkadotnet/akka.net/milestone/95?closed=1).
 
 | COMMITS | LOC+ | LOC- | AUTHOR              |
 |---------|------|------|---------------------|
