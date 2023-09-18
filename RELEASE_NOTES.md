@@ -17,7 +17,15 @@ Akka.NET v1.5.13 is a maintenance release with several bug fixes and also perfor
 
 If you want to see the [full set of changes made in Akka.NET v1.5.13, click here](https://github.com/akkadotnet/akka.net/milestone/95?closed=1).
 
-
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 18      | 25   | 25   | dependabot[bot]     |
+| 6       | 435  | 200  | Gregorius Soedharmo |
+| 4       | 512  | 293  | Aaron Stannard      |
+| 2       | 3    | 7    | Simon Cropp         |
+| 1       | 7    | 0    | Sergey Popov        |
+| 1       | 66   | 17   | Ismael Hamed        |
+| 1       | 1    | 1    | HamzaAmjad-RG       |
 
 #### 1.5.13-beta1 August 26th 2023 ####
 
