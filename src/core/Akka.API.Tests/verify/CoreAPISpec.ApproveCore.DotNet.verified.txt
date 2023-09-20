@@ -178,6 +178,7 @@ namespace Akka.Actor
     }
     public abstract class ActorPath : Akka.Util.ISurrogated, System.IComparable<Akka.Actor.ActorPath>, System.IEquatable<Akka.Actor.ActorPath>
     {
+        public const string ValidSymbols = "\"-_.*$+:@&=,!~\';()";
         protected ActorPath(Akka.Actor.Address address, string name) { }
         protected ActorPath(Akka.Actor.ActorPath parentPath, string name, long uid) { }
         public Akka.Actor.Address Address { get; }

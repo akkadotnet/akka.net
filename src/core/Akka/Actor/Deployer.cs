@@ -97,7 +97,7 @@ namespace Akka.Actor
                     if (!ActorPath.IsValidPathElement(t))
                     {
                         throw new IllegalActorNameException(
-                            $"Illegal actor name [{t}] in deployment [${d.Path}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${new string(ActorPath.ValidSymbols)}.");
+                            $"Illegal actor name [{t}] in deployment [${d.Path}]. {ActorPath.ValidActorNameDescription}");
                     }
                 }
                 if (!_deployments.CompareAndSet(w, w.Insert(path, d))) Add(path, d);
