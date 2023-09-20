@@ -6,7 +6,11 @@
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
-    <NoWarn>$(NoWarn);CS1591;xUnit1013</NoWarn>
+    <!-- 
+      xUnit1031 is a temporary fix, we will need to pay this technical debt 
+      and make everything fully async in the future 
+    -->
+    <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031</NoWarn>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <!-- Set the language version for C# if we're not inside an F# project -->
@@ -14,8 +18,8 @@
     <LangVersion>11.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <XunitVersion>2.5.0</XunitVersion>
-    <XunitRunnerVersion>2.5.0</XunitRunnerVersion>
+    <XunitVersion>2.5.1</XunitVersion>
+    <XunitRunnerVersion>2.5.1</XunitRunnerVersion>
     <TestSdkVersion>17.7.2</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
