@@ -1421,7 +1421,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <typeparam name="TKey">TBD</typeparam>
-        internal class GroupByMergeBack<TOut, TMat, TKey> : IMergeBack<TOut, TMat>
+        internal sealed class GroupByMergeBack<TOut, TMat, TKey> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
             private readonly int _maxSubstreams;
@@ -1539,7 +1539,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
-        internal class SplitWhenMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
+        internal sealed class SplitWhenMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
             private readonly Func<TOut, bool> _predicate;
@@ -1644,7 +1644,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
-        internal class SplitAfterMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
+        internal sealed class SplitAfterMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
             private readonly Func<TOut, bool> _predicate;

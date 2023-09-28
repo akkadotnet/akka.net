@@ -19,7 +19,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class OutputStreamSubscriber : ActorSubscriber
+    internal sealed class OutputStreamSubscriber : ActorSubscriber
     {
         /// <summary>
         /// TBD

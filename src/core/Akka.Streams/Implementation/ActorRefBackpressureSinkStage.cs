@@ -17,7 +17,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
-    internal class ActorRefBackpressureSinkStage<TIn> : GraphStage<SinkShape<TIn>>
+    internal sealed class ActorRefBackpressureSinkStage<TIn> : GraphStage<SinkShape<TIn>>
     {
         #region internal classes 
 
