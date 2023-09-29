@@ -358,7 +358,7 @@ namespace Akka.DistributedData.Internal
         private ReadRepairAck() { }
 
         /// <inheritdoc/>
-        public override string ToString() => $"ReadRepairAck";
+        public override string ToString() => "ReadRepairAck";
     }
 
     /// <summary>

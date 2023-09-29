@@ -13,18 +13,18 @@ namespace Akka.Persistence.Query.InMemory.Tests
 {
     public class InMemoryCurrentEventsByTagSpec : CurrentEventsByTagSpec
     {
-        private static Config Config() => ConfigurationFactory.ParseString($@"
+        private static Config Config() => ConfigurationFactory.ParseString(@"
             akka.loglevel = INFO
             akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
             akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
-            akka.persistence.journal.inmem {{
-                event-adapters {{
+            akka.persistence.journal.inmem {
+                event-adapters {
                   color-tagger  = ""Akka.Persistence.TCK.Query.ColorFruitTagger, Akka.Persistence.TCK""
-                }}
-                event-adapter-bindings = {{
+                }
+                event-adapter-bindings = {
                   ""System.String"" = color-tagger
-                }}
-            }}")
+                }
+            }")
             .WithFallback(InMemoryReadJournal.DefaultConfiguration());
 
         public InMemoryCurrentEventsByTagSpec(ITestOutputHelper output) : 
