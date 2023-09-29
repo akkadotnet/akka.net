@@ -3812,18 +3812,19 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly Action<T> _onSuccess;
             private readonly Action<Exception> _onFailure;
             private readonly Action _onComplete;
+            private readonly CancellationTokenSource _completionCts;
             
-            private CancellationTokenSource _completionCts;
             private IAsyncEnumerator<T> _enumerator;
 
             public Logic(SourceShape<T> shape, IAsyncEnumerable<T> enumerable) : base(shape)
             {
+                
                 _enumerable = enumerable;
                 _outlet = shape.Outlet;
                 _onSuccess = GetAsyncCallback<T>(OnSuccess);
                 _onFailure = GetAsyncCallback<Exception>(OnFailure);
                 _onComplete = GetAsyncCallback(OnComplete);
-
+                _completionCts = new CancellationTokenSource();
                 SetHandler(_outlet, this);
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3838,8 +3839,28 @@ namespace Akka.Streams.Implementation.Fusing
             public override void PreStart()
             {
                 base.PreStart();
-                _completionCts = new CancellationTokenSource();
                 _enumerator = _enumerable.GetAsyncEnumerator(_completionCts.Token);
+            }
+            
+            public override void PostStop()
+            {
+                try
+                {
+                    _completionCts.Cancel();
+                    _completionCts.Dispose();
+                }
+                catch
+                {
+                }
+                try
+                {
+                    _enumerator.DisposeAsync().ConfigureAwait(false);
+                }
+                catch
+                {
+                    //intentional
+                }
+                base.PostStop();
             }
 
             public override void OnPull()
@@ -3859,26 +3880,12 @@ namespace Akka.Streams.Implementation.Fusing
                         // if result is false, it means enumerator was closed. Complete stage in that case.
                         CompleteStage();
                     }
-                } 
-                else if (vtask.IsCompleted) // IsCompleted covers Faulted, Cancelled, and RanToCompletion async state
-                {
-                    // vtask will always contains an exception because we know we're not successful and always throws
-                    try
-                    {
-                        // This does not block because we know that the task already completed
-                        // Using GetAwaiter().GetResult() to automatically unwraps AggregateException inner exception
-                        vtask.GetAwaiter().GetResult();
-                    }
-                    catch (Exception ex)
-                    {
-                        FailStage(ex);
-                        return;
-                    }
-
-                    throw new InvalidOperationException("Should never reach this code");
                 }
                 else
                 {
+                    //We immediately fall into wait case.
+                    //Unlike Task, we don't have a 'status' Enum to switch off easily,
+                    //And Error cases can just live with the small cost of async callback.
                     async Task ProcessTask()
                     {
                         // Since this Action is used as task continuation, we cannot safely call corresponding
@@ -3897,16 +3904,12 @@ namespace Akka.Streams.Implementation.Fusing
                         }
                     }
 
-#pragma warning disable CS4014
-                    ProcessTask();
-#pragma warning restore CS4014
+                    _ = ProcessTask();
                 }
             }
 
             public override void OnDownstreamFinish(Exception cause)
             {
-                _completionCts.Cancel();
-                _completionCts.Dispose();
                 CompleteStage();
                 base.OnDownstreamFinish(cause);
             }
