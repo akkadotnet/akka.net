@@ -269,6 +269,21 @@ namespace Akka.Streams.Tests.Dsl
             });
         }
 
+        [Fact]
+        public async Task AsyncEnumerableSource_Disposes_OnCancel()
+        {
+            var resource = new Resource();
+            var tcs = new System.Threading.Tasks.TaskCompletionSource<NotUsed>(TaskCreationOptions
+                .RunContinuationsAsynchronously);
+            var src = Source.From(() =>
+                CancelTestGenerator(tcs, resource, default));
+            src.To(Sink.Ignore<int>()).Run(Materializer);
+            await tcs.Task;
+            Materializer.Shutdown();
+            await Task.Delay(500);
+            Assert.False(resource.IsActive);
+        }
+
         private static async IAsyncEnumerable<int> RangeAsync(int start, int count, 
             [EnumeratorCancellation] CancellationToken token = default)
         {
@@ -306,6 +321,39 @@ namespace Akka.Streams.Tests.Dsl
                     yield break;
 
                 yield return i;
+            }
+        }
+
+        public static async IAsyncEnumerable<int> CancelTestGenerator(
+            TaskCompletionSource<NotUsed> tcs,
+            Resource resource,
+            [EnumeratorCancellation] CancellationToken token
+        )
+        {
+            await using var res = resource;
+            int i = 0;
+            bool isSet = false;
+            while (true)
+            {
+                await Task.Delay(1, token).ConfigureAwait(false);
+                yield return i++;
+                if (isSet == false)
+                {
+                    tcs.TrySetResult(NotUsed.Instance);
+                    isSet = true;
+                }
+            }
+            // ReSharper disable once IteratorNeverReturns
+        }
+
+        public class Resource : IAsyncDisposable
+        {
+            public bool IsActive = true;
+            public ValueTask DisposeAsync()
+            {
+                IsActive = false;
+                Console.WriteLine("Enumerator completed and resource disposed");
+                return new ValueTask();
             }
         }
     }
