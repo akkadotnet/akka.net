@@ -862,17 +862,7 @@ namespace Akka.Dispatch.SysMsg
     public sealed class RegisterTerminationHook
     {
         private RegisterTerminationHook() { }
-        private static readonly RegisterTerminationHook _instance = new();
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static RegisterTerminationHook Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static RegisterTerminationHook Instance { get; } = new();
 
         /// <summary>
         /// TBD
@@ -890,17 +880,7 @@ namespace Akka.Dispatch.SysMsg
     public sealed class TerminationHook
     {
         private TerminationHook() { }
-        private static readonly TerminationHook _instance = new();
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static TerminationHook Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static TerminationHook Instance { get; } = new();
 
         /// <summary>
         /// TBD
@@ -918,17 +898,7 @@ namespace Akka.Dispatch.SysMsg
     public sealed class TerminationHookDone
     {
         private TerminationHookDone() { }
-        private static readonly TerminationHookDone _instance = new();
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static TerminationHookDone Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static TerminationHookDone Instance { get; } = new();
 
         /// <summary>
         /// TBD
