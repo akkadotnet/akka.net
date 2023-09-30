@@ -25,23 +25,24 @@ namespace Akka.Persistence.TCK.Snapshot
     /// </summary>
     public abstract class SnapshotStoreSpec : PluginSpec
     {
-        private static readonly string _specConfigTemplate = @"
+        private static readonly string _specConfigTemplate = """
             akka.persistence.publish-plugin-commands = on
             akka.persistence.snapshot-store {
-                plugin = ""akka.persistence.snapshot-store.my""
+                plugin = "akka.persistence.snapshot-store.my"
                 my {
-                    class = ""TestPersistencePlugin.MySnapshotStore, TestPersistencePlugin""
-                    plugin-dispatcher = ""akka.persistence.dispatchers.default-plugin-dispatcher""
+                    class = "TestPersistencePlugin.MySnapshotStore, TestPersistencePlugin"
+                    plugin-dispatcher = "akka.persistence.dispatchers.default-plugin-dispatcher"
                 }
             }
             akka.actor{
                 serializers{
-                    persistence-tck-test=""Akka.Persistence.TCK.Serialization.TestSerializer,Akka.Persistence.TCK""
+                    persistence-tck-test="Akka.Persistence.TCK.Serialization.TestSerializer,Akka.Persistence.TCK"
                 }
                 serialization-bindings {
-                    ""Akka.Persistence.TCK.Serialization.TestPayload,Akka.Persistence.TCK"" = persistence-tck-test
+                    "Akka.Persistence.TCK.Serialization.TestPayload,Akka.Persistence.TCK" = persistence-tck-test
                 }
-            }";
+            }
+            """;
 
         protected static readonly Config Config = 
             ConfigurationFactory.ParseString(_specConfigTemplate);

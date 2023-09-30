@@ -110,45 +110,44 @@ namespace Akka.Coordination.Tests
         #region Test Config
         public static Config LeaseConfiguration
         {
-            get { return ConfigurationFactory.ParseString(@"
-
-lease-a {
-    lease-class = ""Akka.Coordination.Tests.LeaseProviderSpec+LeaseA, Akka.Coordination.Tests""
-    key1 = value1
-    heartbeat-timeout = 100s
-    heartbeat-interval = 1s
-    lease-operation-timeout = 2s
-  }
-
-  lease-b {
-    lease-class = ""Akka.Coordination.Tests.LeaseProviderSpec+LeaseB, Akka.Coordination.Tests""
-    key2 = value2
-    heartbeat-timeout = 120s
-    heartbeat-interval = 1s
-    lease-operation-timeout = 2s
-  }
-
-  lease-missing {
-  }
-
-  lease-unknown {
-    lease-class = ""foo.wrong.ClassName""
-    heartbeat-timeout = 120s
-    heartbeat-interval = 1s
-    lease-operation-timeout = 2s
-  }
-
-  lease-missing-constructor {
-    lease-class = ""Akka.Coordination.Tests.LeaseProviderSpec+LeaseC, Akka.Coordination.Tests""
-    heartbeat-timeout = 120s
-    heartbeat-interval = 1s
-    lease-operation-timeout = 2s
-  }
-
-  lease-fallback-to-defaults {
-    lease-class = ""Akka.Coordination.Tests.LeaseProviderSpec+LeaseA, Akka.Coordination.Tests""
-  }
-            "); }
+            get { return ConfigurationFactory.ParseString("""
+                lease-a {
+                    lease-class = "Akka.Coordination.Tests.LeaseProviderSpec+LeaseA, Akka.Coordination.Tests"
+                    key1 = value1
+                    heartbeat-timeout = 100s
+                    heartbeat-interval = 1s
+                    lease-operation-timeout = 2s
+                  }
+                
+                  lease-b {
+                    lease-class = "Akka.Coordination.Tests.LeaseProviderSpec+LeaseB, Akka.Coordination.Tests"
+                    key2 = value2
+                    heartbeat-timeout = 120s
+                    heartbeat-interval = 1s
+                    lease-operation-timeout = 2s
+                  }
+                
+                  lease-missing {
+                  }
+                
+                  lease-unknown {
+                    lease-class = "foo.wrong.ClassName"
+                    heartbeat-timeout = 120s
+                    heartbeat-interval = 1s
+                    lease-operation-timeout = 2s
+                  }
+                
+                  lease-missing-constructor {
+                    lease-class = "Akka.Coordination.Tests.LeaseProviderSpec+LeaseC, Akka.Coordination.Tests"
+                    heartbeat-timeout = 120s
+                    heartbeat-interval = 1s
+                    lease-operation-timeout = 2s
+                  }
+                
+                  lease-fallback-to-defaults {
+                    lease-class = "Akka.Coordination.Tests.LeaseProviderSpec+LeaseA, Akka.Coordination.Tests"
+                  }
+                """); }
         }
 
         #endregion

@@ -26,83 +26,90 @@ namespace Akka.Persistence.Custom.Journal
     public class SqliteJournal: AsyncWriteJournal, IWithUnboundedStash
     {
         // <schema>
-        private const string CreateEventsJournalSql = @"
-CREATE TABLE IF NOT EXISTS event_journal (
-    ordering INTEGER PRIMARY KEY NOT NULL,
-    persistence_id VARCHAR(255) NOT NULL,
-    sequence_nr INTEGER(8) NOT NULL,
-    is_deleted INTEGER(1) NOT NULL,
-    manifest VARCHAR(255) NULL,
-    timestamp INTEGER NOT NULL,
-    payload BLOB NOT NULL,
-    serializer_id INTEGER(4),
-    UNIQUE (persistence_id, sequence_nr));";
+        private const string CreateEventsJournalSql = """
+            CREATE TABLE IF NOT EXISTS event_journal (
+                ordering INTEGER PRIMARY KEY NOT NULL,
+                persistence_id VARCHAR(255) NOT NULL,
+                sequence_nr INTEGER(8) NOT NULL,
+                is_deleted INTEGER(1) NOT NULL,
+                manifest VARCHAR(255) NULL,
+                timestamp INTEGER NOT NULL,
+                payload BLOB NOT NULL,
+                serializer_id INTEGER(4),
+                UNIQUE (persistence_id, sequence_nr));
+            """;
 
-        private const string CreateMetaTableSql = @"
-CREATE TABLE IF NOT EXISTS journal_metadata (
-    persistence_id VARCHAR(255) NOT NULL,
-    sequence_nr INTEGER(8) NOT NULL,
-    PRIMARY KEY (persistence_id, sequence_nr));";
+        private const string CreateMetaTableSql = """
+            CREATE TABLE IF NOT EXISTS journal_metadata (
+                persistence_id VARCHAR(255) NOT NULL,
+                sequence_nr INTEGER(8) NOT NULL,
+                PRIMARY KEY (persistence_id, sequence_nr));
+            """;
         // </schema>
-        
+
         // <ByPersistenceIdSql>
-        private const string ByPersistenceIdSql = @"
-SELECT e.persistence_id as PersistenceId,
-        e.sequence_nr as SequenceNr,
-        e.timestamp as Timestamp,
-        e.is_deleted as IsDeleted,
-        e.manifest as Manifest,
-        e.payload as Payload,
-        e.serializer_id as SerializerId
-    FROM event_journal e
-    WHERE e.persistence_id = @PersistenceId
-    AND e.sequence_nr BETWEEN @FromSequenceNr AND @ToSequenceNr
-    ORDER BY sequence_nr ASC;";
+        private const string ByPersistenceIdSql = """
+            SELECT e.persistence_id as PersistenceId,
+                    e.sequence_nr as SequenceNr,
+                    e.timestamp as Timestamp,
+                    e.is_deleted as IsDeleted,
+                    e.manifest as Manifest,
+                    e.payload as Payload,
+                    e.serializer_id as SerializerId
+                FROM event_journal e
+                WHERE e.persistence_id = @PersistenceId
+                AND e.sequence_nr BETWEEN @FromSequenceNr AND @ToSequenceNr
+                ORDER BY sequence_nr ASC;
+            """;
         // </ByPersistenceIdSql>
 
         // <HighestSequenceNrSql>
-        private const string HighestSequenceNrSql = @"
-SELECT MAX(u.SeqNr) as SequenceNr 
-    FROM (
-        SELECT MAX(e.sequence_nr) as SeqNr FROM event_journal e 
-            WHERE e.persistence_id = @PersistenceId
-        UNION
-        SELECT MAX(m.sequence_nr) as SeqNr FROM journal_metadata m 
-            WHERE m.persistence_id = @PersistenceId) as u";
+        private const string HighestSequenceNrSql = """
+            SELECT MAX(u.SeqNr) as SequenceNr
+                FROM (
+                    SELECT MAX(e.sequence_nr) as SeqNr FROM event_journal e
+                        WHERE e.persistence_id = @PersistenceId
+                    UNION
+                    SELECT MAX(m.sequence_nr) as SeqNr FROM journal_metadata m
+                        WHERE m.persistence_id = @PersistenceId) as u
+            """;
         // </HighestSequenceNrSql>
 
         // <InsertEventSql>
-        private const string InsertEventSql = @"
-INSERT INTO event_journal (
-    persistence_id,
-    sequence_nr,
-    timestamp,
-    is_deleted,
-    manifest,
-    payload,
-    serializer_id)
-VALUES (
-    @PersistenceId,
-    @SequenceNr,
-    @Timestamp,
-    @IsDeleted,
-    @Manifest,
-    @Payload,
-    @SerializerId);";
+        private const string InsertEventSql = """
+            INSERT INTO event_journal (
+                persistence_id,
+                sequence_nr,
+                timestamp,
+                is_deleted,
+                manifest,
+                payload,
+                serializer_id)
+            VALUES (
+                @PersistenceId,
+                @SequenceNr,
+                @Timestamp,
+                @IsDeleted,
+                @Manifest,
+                @Payload,
+                @SerializerId);
+            """;
         // </InsertEventSql>
 
         // <DeleteBatchSql>
-        private const string DeleteBatchSql = @"
-DELETE FROM event_journal
-    WHERE persistence_id = @PersistenceId AND sequence_nr <= @ToSequenceNr;
-DELETE FROM journal_metadata
-    WHERE persistence_id = @PersistenceId AND sequence_nr <= @ToSequenceNr;";
+        private const string DeleteBatchSql = """
+            DELETE FROM event_journal
+                WHERE persistence_id = @PersistenceId AND sequence_nr <= @ToSequenceNr;
+            DELETE FROM journal_metadata
+                WHERE persistence_id = @PersistenceId AND sequence_nr <= @ToSequenceNr;
+            """;
         // </DeleteBatchSql>
 
         // <UpdateSequenceNrSql>
-        private const string UpdateSequenceNrSql = @"
-INSERT INTO journal_metadata (persistence_id, sequence_nr)
-VALUES (@PersistenceId, @SequenceNr);";
+        private const string UpdateSequenceNrSql = """
+            INSERT INTO journal_metadata (persistence_id, sequence_nr)
+            VALUES (@PersistenceId, @SequenceNr);
+            """;
         // </UpdateSequenceNrSql>
 
         private readonly JournalSettings _settings;

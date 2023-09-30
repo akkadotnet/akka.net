@@ -121,39 +121,40 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
             Node3 = Role("node-3");
         
             CommonConfig = DebugConfig(on: false)
-                .WithFallback(ConfigurationFactory.ParseString(@"
-# Enable metrics extension in akka-cluster-metrics.
-akka.extensions=[""Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics""]
+                .WithFallback(ConfigurationFactory.ParseString("""
+                    # Enable metrics extension in akka-cluster-metrics.
+                    akka.extensions=["Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics"]
 
-akka.cluster.failure-detector.acceptable-heartbeat-pause = 10s
+                    akka.cluster.failure-detector.acceptable-heartbeat-pause = 10s
 
-# Use rapid metrics collection.
-akka.cluster.metrics {
-    collector {
-        sample-interval = 1s
-        gossip-interval = 1s
-        moving-average-half-life = 2s
-    }
-}
+                    # Use rapid metrics collection.
+                    akka.cluster.metrics {
+                        collector {
+                            sample-interval = 1s
+                            gossip-interval = 1s
+                            moving-average-half-life = 2s
+                        }
+                    }
 
-# Use metrics extension routing.
-akka.actor.deployment {
-    /router3 = {
-        router = cluster-metrics-adaptive-pool
-        metrics-selector = cpu
-        nr-of-instances = 9
-    }
-    /router4 = {
-        router = cluster-metrics-adaptive-pool
-        metrics-selector = ""Akka.Cluster.Metrics.Tests.MultiNode.TestCustomMetricsSelector, Akka.Cluster.Metrics.Tests.MultiNode""
-        nr-of-instances = 10
-        cluster {
-            enabled = on
-            max-nr-of-instances-per-node = 2
-        }
-    }
-}
-"))
+                    # Use metrics extension routing.
+                    akka.actor.deployment {
+                        /router3 = {
+                            router = cluster-metrics-adaptive-pool
+                            metrics-selector = cpu
+                            nr-of-instances = 9
+                        }
+                        /router4 = {
+                            router = cluster-metrics-adaptive-pool
+                            metrics-selector = "Akka.Cluster.Metrics.Tests.MultiNode.TestCustomMetricsSelector, Akka.Cluster.Metrics.Tests.MultiNode"
+                            nr-of-instances = 10
+                            cluster {
+                                enabled = on
+                                max-nr-of-instances-per-node = 2
+                            }
+                        }
+                    }
+
+                    """))
                 .WithFallback(ClusterMetrics.DefaultConfig())
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }

@@ -30,31 +30,31 @@ namespace Akka.Coordination.Tests
         [Fact]
         public void TimeoutSettings_should_default_heartbeat_interval_to_heartbeat_timeout_div_10()
         {
-            Conf(@"
-                    heartbeat-timeout=100s
-                    heartbeat-interval=""""
-                    lease-operation-timeout=5s
-                  ").HeartbeatInterval.ShouldBe(TimeSpan.FromSeconds(10));
+            Conf("""
+                heartbeat-timeout=100s
+                heartbeat-interval=""
+                lease-operation-timeout=5s
+                """).HeartbeatInterval.ShouldBe(TimeSpan.FromSeconds(10));
         }
 
         [Fact]
         public void TimeoutSettings_should_have_a_min_of_5s_for_heartbeat_interval()
         {
-            Conf(@"
-                    heartbeat-timeout=40s
-                    heartbeat-interval=""""
-                    lease-operation-timeout=5s
-                  ").HeartbeatInterval.ShouldBe(TimeSpan.FromSeconds(5));
+            Conf("""
+                heartbeat-timeout=40s
+                heartbeat-interval=""
+                lease-operation-timeout=5s
+                """).HeartbeatInterval.ShouldBe(TimeSpan.FromSeconds(5));
         }
 
         [Fact]
         public void TimeoutSettings_should_allow_overriding_of_heartbeat_interval()
         {
-            Conf(@"
-                    heartbeat-timeout=100s
-                    heartbeat-interval=20s
-                    lease-operation-timeout=5s
-                  ").HeartbeatInterval.ShouldBe(TimeSpan.FromSeconds(20));
+            Conf("""
+                heartbeat-timeout=100s
+                heartbeat-interval=20s
+                lease-operation-timeout=5s
+                """).HeartbeatInterval.ShouldBe(TimeSpan.FromSeconds(20));
         }
 
         [Fact]
@@ -62,11 +62,11 @@ namespace Akka.Coordination.Tests
         {
             Assert.Throws<ArgumentException>(() =>
             {
-                Conf(@"
+                Conf("""
                     heartbeat-timeout=100s
                     heartbeat-interval=50s
                     lease-operation-timeout=5s
-                  ");
+                    """);
             }).Message.ShouldBe("heartbeat-interval must be less than half heartbeat-timeout");
         }
 

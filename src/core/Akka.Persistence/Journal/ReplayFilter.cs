@@ -150,9 +150,11 @@ namespace Akka.Persistence.Journal
                         // from same writer
                         if (value.Persistent.SequenceNr < _sequenceNr)
                         {
-                            var errMsg = $@"Invalid replayed event [sequenceNr={value.Persistent.SequenceNr}, writerUUID={value.Persistent.WriterGuid}] as
-                                            the sequenceNr should be equal to or greater than already-processed event [sequenceNr={_sequenceNr}, writerUUID={_writerUuid}] from the same writer, for the same persistenceId [{value.Persistent.PersistenceId}].
-                                            Perhaps, events were journaled out of sequence, or duplicate PersistentId for different entities?";
+                            var errMsg = $"""
+                                Invalid replayed event [sequenceNr={value.Persistent.SequenceNr}, writerUUID={value.Persistent.WriterGuid}] as
+                                the sequenceNr should be equal to or greater than already-processed event [sequenceNr={_sequenceNr}, writerUUID={_writerUuid}] from the same writer, for the same persistenceId [{value.Persistent.PersistenceId}].
+                                Perhaps, events were journaled out of sequence, or duplicate PersistentId for different entities?
+                                """;
                             LogIssue(errMsg);
                             switch (Mode)
                             {
@@ -214,9 +216,11 @@ namespace Akka.Persistence.Journal
                             var msg = node.Value;
                             if (msg.Persistent.SequenceNr >= _sequenceNr)
                             {
-                                var errMsg = $@"Invalid replayed event [sequenceNr=${value.Persistent.SequenceNr}, writerUUID=${value.Persistent.WriterGuid}] from a new writer.
-                                                An older writer already sent an event [sequenceNr=${msg.Persistent.SequenceNr}, writerUUID=${msg.Persistent.WriterGuid}] whose sequence number was equal or greater for the same persistenceId [${value.Persistent.PersistenceId}].
-                                                Perhaps, the new writer journaled the event out of sequence, or duplicate PersistentId for different entities?";
+                                var errMsg = $"""
+                                    Invalid replayed event [sequenceNr=${value.Persistent.SequenceNr}, writerUUID=${value.Persistent.WriterGuid}] from a new writer.
+                                    An older writer already sent an event [sequenceNr=${msg.Persistent.SequenceNr}, writerUUID=${msg.Persistent.WriterGuid}] whose sequence number was equal or greater for the same persistenceId [${value.Persistent.PersistenceId}].
+                                    Perhaps, the new writer journaled the event out of sequence, or duplicate PersistentId for different entities?
+                                    """;
                                 LogIssue(errMsg);
                                 switch (Mode)
                                 {

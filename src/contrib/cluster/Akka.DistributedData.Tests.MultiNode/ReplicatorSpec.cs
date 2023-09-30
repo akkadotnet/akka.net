@@ -34,11 +34,11 @@ namespace Akka.DistributedData.Tests.MultiNode
             Second = Role("second");
             Third = Role("third");
 
-            CommonConfig = ConfigurationFactory.ParseString(@"
+            CommonConfig = ConfigurationFactory.ParseString("""
                 akka.actor.provider = cluster
                 akka.loglevel = INFO
                 akka.log-dead-letters-during-shutdown = off
-            ").WithFallback(DistributedData.DefaultConfig()).WithFallback(DebugConfig(false));
+                """).WithFallback(DistributedData.DefaultConfig()).WithFallback(DebugConfig(false));
 
             TestTransport = true;
         }

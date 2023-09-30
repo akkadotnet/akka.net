@@ -91,17 +91,18 @@ namespace Akka.Cluster.Sharding.Tests
         };
 
         private static Config SpecConfig =>
-            ConfigurationFactory.ParseString(@"
-                akka.loglevel = DEBUG
-                akka.actor.provider = cluster
-                akka.remote.dot-netty.tcp.port = 0
+            ConfigurationFactory.ParseString("""
+                    akka.loglevel = DEBUG
+                    akka.actor.provider = cluster
+                    akka.remote.dot-netty.tcp.port = 0
 
-                akka.cluster.sharding.state-store-mode = ddata
-                akka.cluster.sharding.remember-entities = on
-                # no leaks between test runs thank you
-                akka.cluster.sharding.distributed-data.durable.keys = []
-                akka.cluster.sharding.verbose-debug-logging = on
-                akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
+                    akka.cluster.sharding.state-store-mode = ddata
+                    akka.cluster.sharding.remember-entities = on
+                    # no leaks between test runs thank you
+                    akka.cluster.sharding.distributed-data.durable.keys = []
+                    akka.cluster.sharding.verbose-debug-logging = on
+                    akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
+                    """)
                 .WithFallback(ClusterSingletonManager.DefaultConfig()
                 .WithFallback(ClusterSharding.DefaultConfig()));
 

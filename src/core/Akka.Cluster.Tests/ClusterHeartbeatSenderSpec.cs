@@ -54,12 +54,12 @@ namespace Akka.Cluster.Tests
             }
         }
 
-        private static Config Config(bool useLegacyHeartbeat) => $@"
+        private static Config Config(bool useLegacyHeartbeat) => $"""
             akka.loglevel = DEBUG
             akka.actor.provider = cluster
             akka.cluster.failure-detector.heartbeat-interval = 0.2s
             akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "false")}
-        ";
+            """;
 
         protected ClusterHeartbeatSenderBase(ITestOutputHelper output, bool useLegacyMessage)
             : base(Config(useLegacyMessage), output){ }

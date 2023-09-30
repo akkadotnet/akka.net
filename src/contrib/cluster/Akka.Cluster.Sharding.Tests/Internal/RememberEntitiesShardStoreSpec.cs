@@ -33,19 +33,19 @@ namespace Akka.Cluster.Sharding.Tests.Internal
         }
 
         private static Config SpecConfig =>
-            ConfigurationFactory.ParseString(@"
-                akka.loglevel=DEBUG
-                #akka.loggers = [""akka.testkit.SilenceAllTestEventListener""]
-                akka.actor.provider = cluster
-                akka.remote.dot-netty.tcp.port = 0
-                akka.cluster.sharding.state-store-mode = ddata
-                akka.cluster.sharding.snapshot-after = 2
-                akka.cluster.sharding.remember-entities = on
-                # no leaks between test runs thank you
-                akka.cluster.sharding.distributed-data.durable.keys = []
-                akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
-            ")
+            ConfigurationFactory.ParseString("""
+                    akka.loglevel=DEBUG
+                    #akka.loggers = ["akka.testkit.SilenceAllTestEventListener"]
+                    akka.actor.provider = cluster
+                    akka.remote.dot-netty.tcp.port = 0
+                    akka.cluster.sharding.state-store-mode = ddata
+                    akka.cluster.sharding.snapshot-after = 2
+                    akka.cluster.sharding.remember-entities = on
+                    # no leaks between test runs thank you
+                    akka.cluster.sharding.distributed-data.durable.keys = []
+                    akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
+                    akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.inmem"
+                    """)
             .WithFallback(ClusterSingletonManager.DefaultConfig())
             .WithFallback(ClusterSharding.DefaultConfig())
             .WithFallback(DistributedData.DistributedData.DefaultConfig());

@@ -24,19 +24,20 @@ namespace Akka.Persistence.Custom.Tests
 
         private static Config CreateSpecConfig(string connectionString)
         {
-            return ConfigurationFactory.ParseString($@"
-akka.persistence {{
-    publish-plugin-commands = on
-    snapshot-store {{
-        plugin = ""akka.persistence.snapshot-store.custom-sqlite""
-        custom-sqlite {{
-            class = ""Akka.Persistence.Custom.Snapshot.SqliteSnapshotStore, Akka.Persistence.Custom""
-            plugin-dispatcher = ""akka.actor.default-dispatcher""
-            auto-initialize = on
-            connection-string = ""{connectionString}""
-        }}
-    }}
-}}");
+            return ConfigurationFactory.ParseString($$"""
+                akka.persistence {
+                    publish-plugin-commands = on
+                    snapshot-store {
+                        plugin = "akka.persistence.snapshot-store.custom-sqlite"
+                        custom-sqlite {
+                            class = "Akka.Persistence.Custom.Snapshot.SqliteSnapshotStore, Akka.Persistence.Custom"
+                            plugin-dispatcher = "akka.actor.default-dispatcher"
+                            auto-initialize = on
+                            connection-string = "{{connectionString}}"
+                        }
+                    }
+                }
+                """);
         }
 
         protected override bool SupportsSerialization => true;

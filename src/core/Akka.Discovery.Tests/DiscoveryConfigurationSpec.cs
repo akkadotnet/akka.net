@@ -60,16 +60,17 @@ namespace Akka.Discovery.Tests
 
             using var sys = ActorSystem.Create(
                 "DiscoveryConfigurationSpec",
-                ConfigurationFactory.ParseString($@"            
-                    akka.discovery {{
+                ConfigurationFactory.ParseString($$"""
+                    akka.discovery {
                         method = mock1
-                        mock1 {{
-                            class = ""{className1}""
-                        }}
-                        mock2 {{
-                            class = ""{className2}""
-                        }}
-                    }}").WithFallback(ConfigurationFactory.Load()));
+                        mock1 {
+                            class = "{{className1}}"
+                        }
+                        mock2 {
+                            class = "{{className2}}"
+                        }
+                    }
+                    """).WithFallback(ConfigurationFactory.Load()));
 
             Discovery.Get(sys).Default.Should().BeAssignableTo<FakeTestDiscovery>();
             Discovery.Get(sys).LoadServiceDiscovery("mock2").Should().BeAssignableTo<FakeTestDiscovery2>();
@@ -126,10 +127,11 @@ namespace Akka.Discovery.Tests
 
             using var sys = ActorSystem.Create(
                 "DiscoveryConfigurationSpec",
-                ConfigurationFactory.ParseString($@"            
-                    akka.discovery {{
-                        method = ""{className}""
-                    }}").WithFallback(ConfigurationFactory.Load()));
+                ConfigurationFactory.ParseString($$"""
+                    akka.discovery {
+                        method = "{{className}}"
+                    }
+                    """).WithFallback(ConfigurationFactory.Load()));
 
             Assert.Throws<ArgumentException>(() => _ = Discovery.Get(sys).Default);
         }

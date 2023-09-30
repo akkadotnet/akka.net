@@ -36,32 +36,33 @@ namespace Akka.Discovery.Tests.Aggregate
 
     public class AggregateServiceDiscoverySpec : TestKit.Xunit2.TestKit
     {
-        private static Configuration.Config Config => ConfigurationFactory.ParseString(@"
+        private static Configuration.Config Config => ConfigurationFactory.ParseString("""
             akka {
                 loglevel = DEBUG
                 discovery {
                     method = aggregate
                     aggregate {
-                        discovery-methods = [""stubbed1"", ""config""]
+                        discovery-methods = ["stubbed1", "config"]
                     }
                 }
             }
             akka.discovery.stubbed1 {
-                class = ""Akka.Discovery.Tests.Aggregate.StubbedServiceDiscovery, Akka.Discovery.Tests""
+                class = "Akka.Discovery.Tests.Aggregate.StubbedServiceDiscovery, Akka.Discovery.Tests"
             }
             akka.discovery.config.services {
                 config1 {
                     endpoints = [
-                        ""cat:1233"", 
-                        ""dog:1234""
+                        "cat:1233",
+                        "dog:1234"
                     ]
                 }
                 fail {
                     endpoints = [
-                        ""from-config""
+                        "from-config"
                     ]
                 }
-            }");
+            }
+            """);
 
         private readonly ServiceDiscovery _discovery;
 

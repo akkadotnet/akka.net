@@ -72,14 +72,15 @@ namespace Akka.Cluster.Sharding.Tests
 
         static PersistentStartEntitySpec()
         {
-            SpecConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = DEBUG
-                akka.actor.provider = cluster
-                akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
-                akka.remote.dot-netty.tcp.port = 0
-                akka.cluster.sharding.verbose-debug-logging = on
-                akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
+            SpecConfig = ConfigurationFactory.ParseString("""
+                    akka.loglevel = DEBUG
+                    akka.actor.provider = cluster
+                    akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
+                    akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.inmem"
+                    akka.remote.dot-netty.tcp.port = 0
+                    akka.cluster.sharding.verbose-debug-logging = on
+                    akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
+                    """)
                 .WithFallback(ClusterSingletonManager.DefaultConfig()
                 .WithFallback(ClusterSharding.DefaultConfig()));
         }

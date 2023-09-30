@@ -19,15 +19,16 @@ namespace Akka.Persistence.Tests.Serialization
 {
     public class PersistenceMessageSerializerSpec : AkkaSpec
     {
-        public static readonly Config CustomSerializers = @"
+        public static readonly Config CustomSerializers = """
             akka.actor {
               serializers {
-                my-payload = ""Akka.Persistence.Tests.Serialization.MyPayloadSerializer, Akka.Persistence.Tests""
+                my-payload = "Akka.Persistence.Tests.Serialization.MyPayloadSerializer, Akka.Persistence.Tests"
               }
               serialization-bindings {
-                ""Akka.Persistence.Tests.Serialization.MyPayload, Akka.Persistence.Tests"" = my-payload
+                "Akka.Persistence.Tests.Serialization.MyPayload, Akka.Persistence.Tests" = my-payload
               }
-            }";
+            }
+            """;
 
         private readonly PersistenceMessageSerializer _serializer;
 

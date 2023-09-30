@@ -12,15 +12,15 @@ namespace Akka.Tests.Performance.Dispatch
 {
     public class ForkJoinDispatcherColdThroughputSpec : ColdDispatcherThroughputSpecBase
     {
-        public static Config DispatcherConfiguration => ConfigurationFactory.ParseString(@"
-                    id = PerfTest
-                    executor = fork-join-executor
-                    dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
-                        thread-count = 3 
-                        #deadlock-timeout = 3s 
-                        threadtype = background 
-                    }
-        ");
+        public static Config DispatcherConfiguration => ConfigurationFactory.ParseString("""
+            id = PerfTest
+            executor = fork-join-executor
+            dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
+                thread-count = 3
+                #deadlock-timeout = 3s
+                threadtype = background
+            }
+            """);
 
         protected override MessageDispatcherConfigurator Configurator()
         {
@@ -30,15 +30,15 @@ namespace Akka.Tests.Performance.Dispatch
 
     public class ForkJoinDispatcherWarmThroughputSpec : WarmDispatcherThroughputSpecBase
     {
-       public static Config DispatcherConfiguration => ConfigurationFactory.ParseString(@"
-                    id = PerfTest
-                    executor = fork-join-executor
-                    dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
-                        thread-count = 3 
-                        #deadlock-timeout = 3s 
-                        threadtype = background 
-                    }
-        ");
+       public static Config DispatcherConfiguration => ConfigurationFactory.ParseString("""
+           id = PerfTest
+           executor = fork-join-executor
+           dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
+               thread-count = 3
+               #deadlock-timeout = 3s
+               threadtype = background
+           }
+           """);
 
         protected override MessageDispatcherConfigurator Configurator()
         {
@@ -48,10 +48,10 @@ namespace Akka.Tests.Performance.Dispatch
 
     public class ChannelDispatcherExecutorThroughputSpec : WarmDispatcherThroughputSpecBase
     {
-        public static Config DispatcherConfiguration => ConfigurationFactory.ParseString(@"
-                    id = PerfTest
-                    executor = channel-executor
-        ");
+        public static Config DispatcherConfiguration => ConfigurationFactory.ParseString("""
+            id = PerfTest
+            executor = channel-executor
+            """);
 
         protected override MessageDispatcherConfigurator Configurator()
         {

@@ -20,11 +20,12 @@ namespace Akka.DistributedData.Tests.Serialization
     [Collection("DistributedDataSpec")]
     public class ReplicatedDataSerializerSpec : TestKit.Xunit2.TestKit
     {
-        private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
+        private static readonly Config BaseConfig = ConfigurationFactory.ParseString("""
             akka.actor {
-                provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                provider="Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
             }
-            akka.remote.dot-netty.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
+            akka.remote.dot-netty.tcp.port = 0
+            """).WithFallback(DistributedData.DefaultConfig());
 
         private readonly UniqueAddress _address1;
         private readonly UniqueAddress _address2;

@@ -38,19 +38,20 @@ namespace Akka.Persistence.Sqlite.Tests.AssemblyVersioning
 
         private static Config CreateSpecConfig(string connectionString)
         {
-            return ConfigurationFactory.ParseString(@"
-akka.persistence {
-    publish-plugin-commands = on
-    snapshot-store {
-        plugin = ""akka.persistence.snapshot-store.sqlite""
-        sqlite {
-            class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
-            plugin-dispatcher = ""akka.actor.default-dispatcher""
-            auto-initialize = on
-            connection-string = """ + connectionString + @"""
-        }
-    }
-}");
+            return ConfigurationFactory.ParseString($$"""
+                akka.persistence {
+                    publish-plugin-commands = on
+                    snapshot-store {
+                        plugin = "akka.persistence.snapshot-store.sqlite"
+                        sqlite {
+                            class = "Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite"
+                            plugin-dispatcher = "akka.actor.default-dispatcher"
+                            auto-initialize = on
+                            connection-string = "{{connectionString}}"
+                        }
+                    }
+                }
+                """);
         }
     }
 }

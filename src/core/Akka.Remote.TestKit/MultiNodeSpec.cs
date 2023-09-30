@@ -361,26 +361,28 @@ namespace Akka.Remote.TestKit
             get
             {
                 return ConfigurationFactory.ParseString(
-                      @"akka {
-                        loglevel = ""WARNING""
-                        stdout-loglevel = ""WARNING""
-                        coordinated-shutdown.terminate-actor-system = off
-                        coordinated-shutdown.run-by-actor-system-terminate = off
-                        coordinated-shutdown.run-by-clr-shutdown-hook = off
-                        log-dead-letters = off
-                        log-dead-letters-during-shutdown = on
-                        actor {
-                          default-dispatcher {
-                            executor = ""fork-join-executor""
-                            fork-join-executor {
-                              parallelism-min = 8
-                              parallelism-factor = 2.0
-                              parallelism-max = 8
-                            }
+                    """
+                    akka {
+                      loglevel = "WARNING"
+                      stdout-loglevel = "WARNING"
+                      coordinated-shutdown.terminate-actor-system = off
+                      coordinated-shutdown.run-by-actor-system-terminate = off
+                      coordinated-shutdown.run-by-clr-shutdown-hook = off
+                      log-dead-letters = off
+                      log-dead-letters-during-shutdown = on
+                      actor {
+                        default-dispatcher {
+                          executor = "fork-join-executor"
+                          fork-join-executor {
+                            parallelism-min = 8
+                            parallelism-factor = 2.0
+                            parallelism-max = 8
                           }
                         }
-                        cluster.downing-provider-class = """" #disable SBR by default
-                      }").WithFallback(TestKitBase.DefaultConfig);
+                      }
+                      cluster.downing-provider-class = "" #disable SBR by default
+                    }
+                    """).WithFallback(TestKitBase.DefaultConfig);
             }
         }
 

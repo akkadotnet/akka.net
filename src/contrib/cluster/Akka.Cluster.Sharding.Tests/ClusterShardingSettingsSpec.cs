@@ -17,8 +17,10 @@ namespace Akka.Cluster.Sharding.Tests
     public class ClusterShardingSettingsSpec : AkkaSpec
     {
         private static Config SpecConfig =>
-            ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
-                akka.remote.dot-netty.tcp.port = 0")
+            ConfigurationFactory.ParseString("""
+                    akka.actor.provider = cluster
+                    akka.remote.dot-netty.tcp.port = 0
+                    """)
                 .WithFallback(ClusterSharding.DefaultConfig())
                 .WithFallback(ClusterSingletonManager.DefaultConfig());
 

@@ -36,21 +36,20 @@ namespace Akka.Cluster.Metrics.Tests
         private readonly ActorSelectionRoutee _routeeB;
         private readonly ActorSelectionRoutee _routeeC;
         private ImmutableArray<Routee> _routees;
-        
+
         private readonly ActorRefRoutee _testActorRoutee;
-        
+
         public WeightedRouteesSpec() 
-            : base(ConfigurationFactory.ParseString(@"
-                akka.actor.provider = ""cluster""
+            : base(ConfigurationFactory.ParseString("""
+                akka.actor.provider = "cluster"
                 akka.remote.classic.netty.tcp.port = 0
                 akka.remote.artery.canonical.port = 0
-            "))
+                """))
         {
             _routeeA = new ActorSelectionRoutee(Sys.ActorSelection(new RootActorPath(_a1) / "user" / "a"));
             _routeeB = new ActorSelectionRoutee(Sys.ActorSelection(new RootActorPath(_b1) / "user" / "b"));
             _routeeC = new ActorSelectionRoutee(Sys.ActorSelection(new RootActorPath(_c1) / "user" / "c"));
             _routees = ImmutableArray.Create<Routee>(_routeeA, _routeeB, _routeeC);
-            
             _testActorRoutee = new ActorRefRoutee(TestActor);
         }
 

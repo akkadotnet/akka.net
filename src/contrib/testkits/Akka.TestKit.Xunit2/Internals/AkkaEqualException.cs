@@ -84,7 +84,7 @@ Actual:   {actualText.Replace(Environment.NewLine, NewLineAndIndent)}",
                 }
                 catch(Exception)
                 {
-                    message = $@"[Could not string.Format(""{_format}"", {string.Join(", ", _args)})]";
+                    message = $"""[Could not string.Format("{_format}", {string.Join(", ", _args)})]""";
                 }
 
                 return base.Message is not null ? $"{base.Message} {message}" : message;

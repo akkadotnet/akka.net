@@ -132,15 +132,16 @@ namespace Akka.Persistence.Tests
         }
 
         public SnapshotSerializationSpec() : base(Configuration("SnapshotSerializationSpec", serialization: "off", extraConfig:
-            @"
-    akka.actor {
-      serializers {
-        my-snapshot = ""Akka.Persistence.Tests.SnapshotSerializationSpec+MySerializer, Akka.Persistence.Tests""
-      }
-      serialization-bindings {
-        ""Akka.Persistence.Tests.SnapshotSerializationSpec+ISerializationMarker, Akka.Persistence.Tests"" = my-snapshot
-      }
-    }")) { }
+            """
+            akka.actor {
+              serializers {
+                my-snapshot = "Akka.Persistence.Tests.SnapshotSerializationSpec+MySerializer, Akka.Persistence.Tests"
+              }
+              serialization-bindings {
+                "Akka.Persistence.Tests.SnapshotSerializationSpec+ISerializationMarker, Akka.Persistence.Tests" = my-snapshot
+              }
+            }
+            """)) { }
 
         [Fact]
         public void PersistentActor_with_custom_Serializer_should_be_able_to_handle_serialization_header_of_more_than_255_bytes()

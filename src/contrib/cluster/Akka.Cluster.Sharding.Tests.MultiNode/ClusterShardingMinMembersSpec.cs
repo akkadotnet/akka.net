@@ -22,10 +22,10 @@ namespace Akka.Cluster.Sharding.Tests
         public RoleName Third { get; }
 
         public ClusterShardingMinMembersSpecConfig(StateStoreMode mode)
-            : base(mode: mode, loglevel: "DEBUG", additionalConfig: @"
+            : base(mode: mode, loglevel: "DEBUG", additionalConfig: """
             akka.cluster.sharding.rebalance-interval = 120s #disable rebalance
             akka.cluster.min-nr-of-members = 3
-            ")
+            """)
         {
             First = Role("first");
             Second = Role("second");

@@ -17,25 +17,26 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
     public class BatchingSqliteEventsByTagSpec : EventsByTagSpec
     {
         public static readonly AtomicCounter Counter = new(0);
-        public static Config Config(int id) => ConfigurationFactory.ParseString($@"
-            akka.loglevel = INFO
-            akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
-            akka.persistence.query.journal.sql.refresh-interval = 1s
-            akka.persistence.journal.sqlite {{
-                event-adapters {{
-                  color-tagger  = ""Akka.Persistence.TCK.Query.ColorFruitTagger, Akka.Persistence.TCK""
-                }}
-                event-adapter-bindings = {{
-                  ""System.String"" = color-tagger
-                }}
-                class = ""Akka.Persistence.Sqlite.Journal.BatchingSqliteJournal, Akka.Persistence.Sqlite""
-                plugin-dispatcher = ""akka.actor.default-dispatcher""
-                table-name = event_journal
-                metadata-table-name = journal_metadata
-                auto-initialize = on
-                connection-string = ""Datasource=memdb-journal-batch-eventsbytag-{id}.db;Mode=Memory;Cache=Shared""
-            }}
-            akka.test.single-expect-default = 10s")
+        public static Config Config(int id) => ConfigurationFactory.ParseString($$"""
+                akka.loglevel = INFO
+                akka.persistence.journal.plugin = "akka.persistence.journal.sqlite"
+                akka.persistence.query.journal.sql.refresh-interval = 1s
+                akka.persistence.journal.sqlite {
+                    event-adapters {
+                      color-tagger  = "Akka.Persistence.TCK.Query.ColorFruitTagger, Akka.Persistence.TCK"
+                    }
+                    event-adapter-bindings = {
+                      "System.String" = color-tagger
+                    }
+                    class = "Akka.Persistence.Sqlite.Journal.BatchingSqliteJournal, Akka.Persistence.Sqlite"
+                    plugin-dispatcher = "akka.actor.default-dispatcher"
+                    table-name = event_journal
+                    metadata-table-name = journal_metadata
+                    auto-initialize = on
+                    connection-string = "Datasource=memdb-journal-batch-eventsbytag-{{id}}.db;Mode=Memory;Cache=Shared"
+                }
+                akka.test.single-expect-default = 10s
+                """)
             .WithFallback(SqlReadJournal.DefaultConfiguration());
 
         public BatchingSqliteEventsByTagSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(BatchingSqliteEventsByTagSpec), output)

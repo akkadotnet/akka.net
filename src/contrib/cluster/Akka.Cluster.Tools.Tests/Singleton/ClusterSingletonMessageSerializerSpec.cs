@@ -16,8 +16,12 @@ namespace Akka.Cluster.Tools.Tests.Singleton
     public class ClusterSingletonMessageSerializerSpec : AkkaSpec
     {
         public ClusterSingletonMessageSerializerSpec()
-            : base(ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
-                                                      akka.remote.dot-netty.tcp.port = 0").WithFallback(ClusterSingletonManager.DefaultConfig()))
+            : base(ConfigurationFactory.ParseString(
+                """
+                akka.actor.provider = cluster
+                akka.remote.dot-netty.tcp.port = 0
+                """)
+                .WithFallback(ClusterSingletonManager.DefaultConfig()))
         {
         }
 

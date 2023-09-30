@@ -35,9 +35,9 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
             
             // this configuration will be used for all nodes
             // note that no fixed host names and ports are used
-            CommonConfig = ConfigurationFactory.ParseString(@"
+            CommonConfig = ConfigurationFactory.ParseString("""
                 # Enable metrics extension in akka-cluster-metrics.
-                akka.extensions=[""Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics""]
+                akka.extensions=["Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics"]
 
                 akka.actor.provider = cluster
                 akka.remote.classic.log-remote-lifecycle-events = off
@@ -46,16 +46,16 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 akka.actor.deployment {
                   /statsService/workerRouter {
                       router = consistent-hashing-group
-                      routees.paths = [""/user/statsWorker""]
+                      routees.paths = ["/user/statsWorker"]
                         cluster {
                             enabled = on
                             allow-local-routees = on
-                            use-roles = [""compute""]
+                            use-roles = ["compute"]
                         }
                     }
                 }
                 #//#router-lookup-config
-            ");
+                """);
         }
     }
 

@@ -36,19 +36,20 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             var tempDir = Path.Combine(Path.GetTempPath(), "target", $"DurableDataSpec-{DateTime.UtcNow.Ticks}-ddata");
             CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString($@"
-                akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.log-dead-letters-during-shutdown = off
-                akka.cluster.distributed-data.durable.keys = [""durable*""]
-                akka.cluster.distributed-data.durable.lmdb {{
-                    dir = """"""{tempDir}""""""
-                    map-size = 10 MiB
-                    write-behind-interval = {(writeBehind ? "200ms" : "off")}
-                }}
-                akka.cluster.distributed-data.durable.store-actor-class = ""Akka.DistributedData.LightningDB.LmdbDurableStore, Akka.DistributedData.LightningDB""
-                # initialization of lmdb can be very slow in CI environment
-                akka.test.single-expect-default = 15s"))
+                .WithFallback(ConfigurationFactory.ParseString($$""""
+                    akka.loglevel = INFO
+                    akka.actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+                    akka.log-dead-letters-during-shutdown = off
+                    akka.cluster.distributed-data.durable.keys = ["durable*"]
+                    akka.cluster.distributed-data.durable.lmdb {
+                        dir = """{{tempDir}}"""
+                        map-size = 10 MiB
+                        write-behind-interval = {{(writeBehind ? "200ms" : "off")}}
+                    }
+                    akka.cluster.distributed-data.durable.store-actor-class = "Akka.DistributedData.LightningDB.LmdbDurableStore, Akka.DistributedData.LightningDB"
+                    # initialization of lmdb can be very slow in CI environment
+                    akka.test.single-expect-default = 15s
+                    """"))
                 .WithFallback(DistributedData.DefaultConfig());
 
             TestTransport = true;

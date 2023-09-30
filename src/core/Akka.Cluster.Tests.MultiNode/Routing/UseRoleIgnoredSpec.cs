@@ -76,8 +76,8 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             CommonConfig = DebugConfig(false)
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
-            NodeConfig(new List<RoleName> { First }, new List<Config> { ConfigurationFactory.ParseString(@"akka.cluster.roles =[""a"", ""c""]") });
-            NodeConfig(new List<RoleName> { Second, Third }, new List<Config> { ConfigurationFactory.ParseString(@"akka.cluster.roles =[""b"", ""c""]") });
+            NodeConfig(new List<RoleName> { First }, new List<Config> { ConfigurationFactory.ParseString("""akka.cluster.roles =["a", "c"]""") });
+            NodeConfig(new List<RoleName> { Second, Third }, new List<Config> { ConfigurationFactory.ParseString("""akka.cluster.roles =["b", "c"]""") });
         }
     }
 

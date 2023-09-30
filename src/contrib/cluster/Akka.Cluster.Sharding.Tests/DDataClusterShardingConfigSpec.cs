@@ -22,10 +22,11 @@ namespace Akka.Cluster.Sharding.Tests
     public class DDataClusterShardingConfigSpec : AkkaSpec
     {
         private static Config SpecConfig =>
-            ConfigurationFactory.ParseString(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+            ConfigurationFactory.ParseString("""
+                akka.actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
                 akka.cluster.sharding.state-store-mode = ddata
                 akka.remote.dot-netty.tcp.port = 0
-            ");
+                """);
 
         public DDataClusterShardingConfigSpec(ITestOutputHelper helper) : base(SpecConfig, output: helper)
         {

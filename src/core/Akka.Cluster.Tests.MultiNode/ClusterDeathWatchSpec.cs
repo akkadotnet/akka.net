@@ -39,9 +39,13 @@ namespace Akka.Cluster.Tests.MultiNode
             _third = Role("third");
             _fourth = Role("fourth");
             _fifth = Role("fifth");
-            DeployOn(_fourth, @"/hello.remote = ""@first@""");
-            CommonConfig = ConfigurationFactory.ParseString(@"akka.cluster.publish-stats-interval = 25s
-                akka.actor.debug.lifecycle = true")
+            DeployOn(_fourth, """
+            /hello.remote = "@first@"
+            """);
+            CommonConfig = ConfigurationFactory.ParseString("""
+                    akka.cluster.publish-stats-interval = 25s
+                    akka.actor.debug.lifecycle = true
+                    """)
                 .WithFallback(MultiNodeLoggingConfig.LoggingConfig)
                 .WithFallback(DebugConfig(true))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());

@@ -24,27 +24,28 @@ namespace Akka.Persistence.Sqlite.Tests.Serialization
 
         private static Config CreateSpecConfig(string connectionString)
         {
-            return ConfigurationFactory.ParseString(@"
+            return ConfigurationFactory.ParseString($$"""
                 akka.persistence {
                     publish-plugin-commands = on
                     journal {
-                        plugin = ""akka.persistence.journal.sqlite""
+                        plugin = "akka.persistence.journal.sqlite"
                         sqlite {
                             event-adapters {
-                                custom-adapter = ""Akka.Persistence.TCK.Serialization.TestJournal+MyWriteAdapter, Akka.Persistence.TCK""
+                                custom-adapter = "Akka.Persistence.TCK.Serialization.TestJournal+MyWriteAdapter, Akka.Persistence.TCK"
                             }
                             event-adapter-bindings = {
-                                ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload3, Akka.Persistence.TCK"" = custom-adapter
+                                "Akka.Persistence.TCK.Serialization.TestJournal+MyPayload3, Akka.Persistence.TCK" = custom-adapter
                             }
-                            class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
-                            plugin-dispatcher = ""akka.actor.default-dispatcher""
+                            class = "Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite"
+                            plugin-dispatcher = "akka.actor.default-dispatcher"
                             table-name = event_journal
                             metadata-table-name = journal_metadata
                             auto-initialize = on
-                            connection-string = """ + connectionString + @"""
+                            connection-string = "{{connectionString}}"
                         }
                     }
-                }");
+                }
+                """);
         }
 
         [Fact(Skip = "Sql plugin does not support EventAdapter.Manifest")]

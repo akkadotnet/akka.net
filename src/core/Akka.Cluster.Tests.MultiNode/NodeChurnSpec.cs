@@ -31,11 +31,11 @@ namespace Akka.Cluster.Tests.MultiNode
             Third = Role("third");
 
             CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString(@"
-                  akka.cluster.auto-down-unreachable-after = 1s
-                  akka.remote.log-frame-size-exceeding = 2000b
-                  akka.remote.dot-netty.tcp.batching.enabled = false # disable batching
-                "))
+                .WithFallback(ConfigurationFactory.ParseString("""
+                    akka.cluster.auto-down-unreachable-after = 1s
+                    akka.remote.log-frame-size-exceeding = 2000b
+                    akka.remote.dot-netty.tcp.batching.enabled = false # disable batching
+                    """))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }

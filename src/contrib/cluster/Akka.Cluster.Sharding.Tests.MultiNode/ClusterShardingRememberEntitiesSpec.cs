@@ -28,21 +28,24 @@ namespace Akka.Cluster.Sharding.Tests
             bool rememberEntities,
             RememberEntitiesStore rememberEntitiesStore = RememberEntitiesStore.DData)
             : base(mode: mode, rememberEntities: rememberEntities, rememberEntitiesStore: rememberEntitiesStore,
-                  loglevel: "DEBUG", additionalConfig: @"
-              akka.testconductor.barrier-timeout = 60 s
-              akka.test.single-expect-default = 60 s
-            ")
+                loglevel: "DEBUG", additionalConfig: """
+                akka.testconductor.barrier-timeout = 60 s
+                akka.test.single-expect-default = 60 s
+                """)
         {
             First = Role("first");
             Second = Role("second");
             Third = Role("third");
 
-            NodeConfig(new[] { Third }, new[] { ConfigurationFactory.ParseString(@"
-                akka.cluster.sharding.distributed-data.durable.lmdb {
-                    # use same directory when starting new node on third (not used at same time)
-                    dir = ""target/ShardingRememberEntitiesSpec/sharding-third""
-                }
-            ") });
+            NodeConfig(new[] { Third }, new[]
+            {
+                ConfigurationFactory.ParseString("""
+                    akka.cluster.sharding.distributed-data.durable.lmdb {
+                        # use same directory when starting new node on third (not used at same time)
+                        dir = "target/ShardingRememberEntitiesSpec/sharding-third"
+                    }
+                    """)
+            });
         }
     }
 

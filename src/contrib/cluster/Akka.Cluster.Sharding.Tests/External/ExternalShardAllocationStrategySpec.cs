@@ -35,11 +35,11 @@ namespace Akka.Cluster.Sharding.Tests.External
         }
 
         private static Config SpecConfig =>
-            ConfigurationFactory.ParseString(@"
-                akka.loglevel=DEBUG
-                akka.actor.provider = cluster
-                akka.remote.dot-netty.tcp.port = 0
-            ")
+            ConfigurationFactory.ParseString("""
+                    akka.loglevel=DEBUG
+                    akka.actor.provider = cluster
+                    akka.remote.dot-netty.tcp.port = 0
+                    """)
             .WithFallback(ClusterSingletonManager.DefaultConfig())
             .WithFallback(ClusterSharding.DefaultConfig())
             .WithFallback(DistributedData.DistributedData.DefaultConfig());

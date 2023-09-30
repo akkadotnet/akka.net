@@ -13,20 +13,21 @@ using Akka.Configuration;
 using SamplePublisher;
 
 
-var config = ConfigurationFactory.ParseString(@"
-akka {
-   actor.provider = cluster
-   extensions = [""Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubExtensionProvider,Akka.Cluster.Tools""]
-   remote {
-       dot-netty.tcp {
-           port = 5800
-           hostname = localhost
+var config = ConfigurationFactory.ParseString("""
+    akka {
+       actor.provider = cluster
+       extensions = ["Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubExtensionProvider,Akka.Cluster.Tools"]
+       remote {
+           dot-netty.tcp {
+               port = 5800
+               hostname = localhost
+           }
        }
-   }
-   cluster {
-       seed-nodes = [""akka.tcp://cluster@localhost:5800""]
-   }
-}");
+       cluster {
+           seed-nodes = ["akka.tcp://cluster@localhost:5800"]
+       }
+    }
+    """);
 var actorSystem = ActorSystem.Create("cluster", config);
 
 DistributedPubSub.Get(actorSystem);

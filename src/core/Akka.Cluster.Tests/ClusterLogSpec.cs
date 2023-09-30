@@ -22,17 +22,18 @@ namespace Akka.Cluster.Tests
 {
     public abstract class ClusterLogSpec : AkkaSpec
     {
-        public const string Config = @"    
+        public const string Config = """
             akka.cluster {
               auto-down-unreachable-after = 0s
               publish-stats-interval = 0s # always, when it happens
               run-coordinated-shutdown-when-down = off
             }
-            akka.actor.provider = ""cluster""
+            akka.actor.provider = "cluster"
             akka.remote.log-remote-lifecycle-events = off
             akka.remote.dot-netty.tcp.port = 0
-            akka.loglevel = ""INFO""
-            akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]";
+            akka.loglevel = "INFO"
+            akka.loggers = ["Akka.TestKit.TestEventListener, Akka.TestKit"]
+            """;
 
         protected const string upLogMessage = " - event MemberUp";
         protected const string downLogMessage = " - event MemberDowned";

@@ -23,13 +23,13 @@ namespace DocsExamples.Delivery;
 
 public class DeliveryDocSpecs : TestKit
 {
-    private static readonly Config Config = @"
+    private static readonly Config Config = """
         akka.reliable-delivery.consumer-controller.flow-control-window = 20
-        akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
-        akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
+        akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
+        akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.inmem"
         akka.persistence.journal.inmem.test-serialization = on # NOT IMPLEMENTED
         akka.persistence.publish-plugin-commands = on
-    ";
+        """;
 
     public DeliveryDocSpecs(ITestOutputHelper output) : base(Config, output: output)
     {

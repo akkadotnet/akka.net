@@ -59,13 +59,15 @@ namespace Akka.Remote.Tests.MultiNode
                 DebugConfig(false)
                     .WithFallback(ConfigurationFactory.ParseString("akka.remote.log-remote-lifecycle-events = off"));
 
-            DeployOn(Master, @"
-                /service-hello.remote = ""@slave@""
-                /service-hello-null.remote = ""@slave@""
-                /service-hello3.remote = ""@slave@""
-            ");
+            DeployOn(Master, """
+            /service-hello.remote = "@slave@"
+            /service-hello-null.remote = "@slave@"
+            /service-hello3.remote = "@slave@"
+            """);
 
-            DeployOnAll(@"/service-hello2.remote = ""@slave@""");
+            DeployOnAll("""
+                /service-hello2.remote = "@slave@"
+                """);
         }
     }
 

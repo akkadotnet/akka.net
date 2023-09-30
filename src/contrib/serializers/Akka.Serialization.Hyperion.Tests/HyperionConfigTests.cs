@@ -143,17 +143,17 @@ namespace Akka.Serialization.Hyperion.Tests
         [Fact]
         public void Hyperion_serializer_should_allow_to_setup_custom_types_provider_with_non_default_constructor()
         {
-            var config = ConfigurationFactory.ParseString(@"
+            var config = ConfigurationFactory.ParseString("""
                 akka.actor {
-                    serializers.hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                    serializers.hyperion = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
                     serialization-bindings {
-                        ""System.Object"" = hyperion
+                        "System.Object" = hyperion
                     }
                     serialization-settings.hyperion {
-                        known-types-provider = ""Akka.Serialization.Hyperion.Tests.DummyTypesProvider, Akka.Serialization.Hyperion.Tests""
+                        known-types-provider = "Akka.Serialization.Hyperion.Tests.DummyTypesProvider, Akka.Serialization.Hyperion.Tests"
                     }
                 }
-            ");
+                """);
             using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
             {
                 var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
@@ -252,19 +252,20 @@ namespace Akka.Serialization.Hyperion.Tests
         [Fact]
         public async Task CanDeserializeANaughtyTypeWhenAllowed()
         {
-            var config = ConfigurationFactory.ParseString(@"
-akka {
-    serialize-messages = on
-    actor {
-        serializers {
-            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-        }
-        serialization-bindings {
-            ""System.Object"" = hyperion
-        }
-        serialization-settings.hyperion.disallow-unsafe-type = false
-    }
-}");
+            var config = ConfigurationFactory.ParseString("""
+                akka {
+                    serialize-messages = on
+                    actor {
+                        serializers {
+                            hyperion = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
+                        }
+                        serialization-bindings {
+                            "System.Object" = hyperion
+                        }
+                        serialization-settings.hyperion.disallow-unsafe-type = false
+                    }
+                }
+                """);
             var system = ActorSystem.Create("unsafeSystem", config);
             
             try
@@ -284,18 +285,19 @@ akka {
         [Fact]
         public async Task CantDeserializeANaughtyTypeByDefault()
         {
-            var config = ConfigurationFactory.ParseString(@"
-akka {
-    serialize-messages = on
-    actor {
-        serializers {
-            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-        }
-        serialization-bindings {
-            ""System.Object"" = hyperion
-        }
-    }
-}");
+            var config = ConfigurationFactory.ParseString("""
+                akka {
+                    serialize-messages = on
+                    actor {
+                        serializers {
+                            hyperion = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
+                        }
+                        serialization-bindings {
+                            "System.Object" = hyperion
+                        }
+                    }
+                }
+                """);
             var system = ActorSystem.Create("unsafeSystem", config);
             
             try

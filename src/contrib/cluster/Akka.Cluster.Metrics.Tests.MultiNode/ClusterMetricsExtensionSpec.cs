@@ -28,15 +28,15 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         public readonly RoleName Node4;
         public readonly RoleName Node5;
 
-        public Config EnableMetricsExtension => ConfigurationFactory.ParseString(@"
-            akka.extensions=[""Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics""]
-            akka.cluster.metrics.collector.enabled = on
-        ");
-        
-        public Config DisableMetricsExtension => ConfigurationFactory.ParseString(@"
-            akka.extensions=[""Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics""]
-            akka.cluster.metrics.collector.enabled = off
-        ");
+        public Config EnableMetricsExtension => ConfigurationFactory.ParseString("""
+                akka.extensions=["Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics"]
+                akka.cluster.metrics.collector.enabled = on
+            """);
+
+        public Config DisableMetricsExtension => ConfigurationFactory.ParseString("""
+                akka.extensions=["Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics"]
+                akka.cluster.metrics.collector.enabled = off
+            """);
 
         public ClusterMetricsCommonConfig()
         {

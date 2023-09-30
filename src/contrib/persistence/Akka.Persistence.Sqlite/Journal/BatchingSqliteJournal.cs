@@ -172,25 +172,27 @@ namespace Akka.Persistence.Sqlite.Journal
             var conventions = Setup.NamingConventions;
             Initializers = ImmutableDictionary.CreateRange(new[]
             {
-                new KeyValuePair<string, string>("CreateJournalSql", $@"
-                CREATE TABLE IF NOT EXISTS {conventions.FullJournalTableName} (
-                    {conventions.OrderingColumnName} INTEGER PRIMARY KEY NOT NULL,
-                    {conventions.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
-                    {conventions.SequenceNrColumnName} INTEGER(8) NOT NULL,
-                    {conventions.IsDeletedColumnName} INTEGER(1) NOT NULL,
-                    {conventions.ManifestColumnName} VARCHAR(255) NULL,
-                    {conventions.TimestampColumnName} INTEGER NOT NULL,
-                    {conventions.PayloadColumnName} BLOB NOT NULL,
-                    {conventions.TagsColumnName} VARCHAR(2000) NULL,
-                    {conventions.SerializerIdColumnName} INTEGER(4),
-                    UNIQUE ({conventions.PersistenceIdColumnName}, {conventions.SequenceNrColumnName})
-                );"),
-                new KeyValuePair<string, string>("CreateMetadataSql", $@"
-                CREATE TABLE IF NOT EXISTS {conventions.FullMetaTableName} (
-                    {conventions.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
-                    {conventions.SequenceNrColumnName} INTEGER(8) NOT NULL,
-                    PRIMARY KEY ({conventions.PersistenceIdColumnName}, {conventions.SequenceNrColumnName})
-                );"),
+                new KeyValuePair<string, string>("CreateJournalSql", $"""
+                    CREATE TABLE IF NOT EXISTS {conventions.FullJournalTableName} (
+                        {conventions.OrderingColumnName} INTEGER PRIMARY KEY NOT NULL,
+                        {conventions.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
+                        {conventions.SequenceNrColumnName} INTEGER(8) NOT NULL,
+                        {conventions.IsDeletedColumnName} INTEGER(1) NOT NULL,
+                        {conventions.ManifestColumnName} VARCHAR(255) NULL,
+                        {conventions.TimestampColumnName} INTEGER NOT NULL,
+                        {conventions.PayloadColumnName} BLOB NOT NULL,
+                        {conventions.TagsColumnName} VARCHAR(2000) NULL,
+                        {conventions.SerializerIdColumnName} INTEGER(4),
+                        UNIQUE ({conventions.PersistenceIdColumnName}, {conventions.SequenceNrColumnName})
+                    );
+                    """),
+                new KeyValuePair<string, string>("CreateMetadataSql", $"""
+                    CREATE TABLE IF NOT EXISTS {conventions.FullMetaTableName} (
+                        {conventions.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
+                        {conventions.SequenceNrColumnName} INTEGER(8) NOT NULL,
+                        PRIMARY KEY ({conventions.PersistenceIdColumnName}, {conventions.SequenceNrColumnName})
+                    );
+                    """),
             });
         }
 

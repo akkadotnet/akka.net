@@ -24,7 +24,9 @@ namespace Akka.Streams.TestKit
     public static class Utils
     {
         public static Config UnboundedMailboxConfig { get; } =
-            ConfigurationFactory.ParseString(@"akka.actor.default-mailbox.mailbox-type = ""Akka.Dispatch.UnboundedMailbox, Akka""");
+            ConfigurationFactory.ParseString("""
+                akka.actor.default-mailbox.mailbox-type = "Akka.Dispatch.UnboundedMailbox, Akka"
+                """);
 
         public static void AssertAllStagesStopped(
             this TestKitBase spec,

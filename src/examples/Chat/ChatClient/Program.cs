@@ -18,19 +18,19 @@ namespace ChatClient
     {
         public static async Task Main(string[] args)
         {
-            var config = ConfigurationFactory.ParseString(@"
-akka {  
-    actor {
-        provider = remote
-    }
-    remote {
-        dot-netty.tcp {
-            port = 0
-            hostname = localhost
-        }
-    }
-}
-");
+            var config = ConfigurationFactory.ParseString("""
+                akka {
+                    actor {
+                        provider = remote
+                    }
+                    remote {
+                        dot-netty.tcp {
+                            port = 0
+                            hostname = localhost
+                        }
+                    }
+                }
+                """);
 
             var system = ActorSystem.Create("MyClient", config);
             var chatClient = system.ActorOf(Props.Create<ChatClientActor>());

@@ -55,35 +55,35 @@ namespace Akka.Cluster.Sharding.Tests
             // `MultiNodeClusterShardingConfig`, we use `MultiNodeConfig.commonConfig` here,
             // and call `MultiNodeClusterShardingConfig.persistenceConfig` which does not check
             // mode, then leverage the common config and fallbacks after these specific test configs:
-            CommonConfig = ConfigurationFactory.ParseString($@"
+            CommonConfig = ConfigurationFactory.ParseString($$"""
                 akka.cluster.sharding.verbose-debug-logging = on
-                #akka.loggers = [""akka.testkit.SilenceAllTestEventListener""]
+                #akka.loggers = ["akka.testkit.SilenceAllTestEventListener"]
                 akka.cluster.auto-down-unreachable-after = 0s
-                akka.cluster.roles = [""backend""]
+                akka.cluster.roles = ["backend"]
                 akka.cluster.distributed-data.gossip-interval = 1s
                 akka.persistence.journal.sqlite-shared.timeout = 10s #the original default, base test uses 5s
-                akka.cluster.sharding {{
+                akka.cluster.sharding {
                     retry-interval = 1 s
                     handoff-timeout = 10 s
                     shard-start-timeout = 5s
                     entity-restart-backoff = 1s
                     rebalance-interval = 2 s
-                    entity-recovery-strategy = ""{entityRecoveryStrategy}""
-                    entity-recovery-constant-rate-strategy {{
+                    entity-recovery-strategy = "{{entityRecoveryStrategy}}"
+                    entity-recovery-constant-rate-strategy {
                         frequency = 1 ms
                         number-of-entities = 1
-                    }}
-                    least-shard-allocation-strategy {{
+                    }
+                    least-shard-allocation-strategy {
                         rebalance-absolute-limit = 1
                         rebalance-relative-limit = 1.0
-                    }}
-                    distributed-data.durable.lmdb {{
-                        dir = ""target/ClusterShardingSpec/sharding-ddata""
+                    }
+                    distributed-data.durable.lmdb {
+                        dir = "target/ClusterShardingSpec/sharding-ddata"
                         map-size = 10 MiB
-                    }}
-                }}
+                    }
+                }
                 akka.testconductor.barrier-timeout = 70s
-              ").WithFallback(PersistenceConfig()).WithFallback(Common);
+                """).WithFallback(PersistenceConfig()).WithFallback(Common);
 
             NodeConfig(new[] { Sixth }, new[] { ConfigurationFactory.ParseString(@"akka.cluster.roles = [""frontend""]") });
         }
@@ -432,11 +432,11 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 var allocationStrategy =
                     ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0);
-                var cfg = ConfigurationFactory.ParseString($@"
-                    handoff-timeout = 10s
-                    shard-start-timeout = 10s
-                    rebalance-interval = {(rebalanceEnabled ? "2s" : "3600s")}
-                ").WithFallback(Sys.Settings.Config.GetConfig("akka.cluster.sharding"));
+                var cfg = ConfigurationFactory.ParseString($"""
+                        handoff-timeout = 10s
+                        shard-start-timeout = 10s
+                        rebalance-interval = {(rebalanceEnabled ? "2s" : "3600s")}
+                    """).WithFallback(Sys.Settings.Config.GetConfig("akka.cluster.sharding"));
                 var settings = ClusterShardingSettings.Create(cfg, Sys.Settings.Config.GetConfig("akka.cluster.singleton"))
                     .WithRememberEntities(rememberEntities);
 
@@ -674,9 +674,10 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 RunOn(() =>
                 {
-                    var cfg = ConfigurationFactory.ParseString(@"
-                        retry-interval = 1s
-                        buffer-size = 1000")
+                    var cfg = ConfigurationFactory.ParseString("""
+                            retry-interval = 1s
+                            buffer-size = 1000
+                            """)
                         .WithFallback(Sys.Settings.Config.GetConfig("akka.cluster.sharding"));
 
                     var settings = ClusterShardingSettings.Create(cfg, Sys.Settings.Config.GetConfig("akka.cluster.singleton"));

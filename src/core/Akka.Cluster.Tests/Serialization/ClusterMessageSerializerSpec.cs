@@ -39,9 +39,10 @@ namespace Akka.Cluster.Tests.Serialization
     {
         private readonly bool _useLegacyHeartbeat;
         public ClusterMessageSerializerBase(ITestOutputHelper output, bool useLegacyHeartbeat)
-            : base($@"
-akka.actor.provider = cluster
-akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "false")}", output)
+            : base($"""
+                akka.actor.provider = cluster
+                akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "false")}
+                """, output)
         {
             _useLegacyHeartbeat = useLegacyHeartbeat;
         }

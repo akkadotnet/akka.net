@@ -30,7 +30,7 @@ namespace Akka.Persistence.Query.Tests
     public class DummyReadJournalProvider : IReadJournalProvider
     {
         public static Config Config => ConfigurationFactory.ParseString(
-            $@"{DummyReadJournal.Identifier} {{ class = ""{typeof (DummyReadJournalProvider).FullName}, Akka.Persistence.Query.Tests"" }}");
+            $$"""{{DummyReadJournal.Identifier}} { class = "{{typeof (DummyReadJournalProvider).FullName}}, Akka.Persistence.Query.Tests" }""");
 
         public IReadJournal GetReadJournal()
         {

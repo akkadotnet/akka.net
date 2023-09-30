@@ -26,11 +26,12 @@ namespace Akka.DistributedData.Tests.Serialization
     [Collection("DistributedDataSpec")]
     public class ReplicatorMessageSerializerSpec : TestKit.Xunit2.TestKit
     {
-        private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
+        private static readonly Config BaseConfig = ConfigurationFactory.ParseString("""
             akka.actor {
-                provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                provider="Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
             }
-            akka.remote.dot-netty.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
+            akka.remote.dot-netty.tcp.port = 0
+            """).WithFallback(DistributedData.DefaultConfig());
 
         private readonly ReplicatorMessageSerializer _serializer;
 

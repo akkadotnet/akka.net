@@ -26,23 +26,25 @@ namespace Akka.Persistence.Sqlite.Tests.Serialization
 
         private static Config CreateSpecConfig(string connectionString)
         {
-            return ConfigurationFactory.ParseString(@"
+            return ConfigurationFactory.ParseString($$"""
+
                 akka.persistence {
                     publish-plugin-commands = on
                     snapshot-store {
-                        plugin = ""akka.persistence.snapshot-store.sqlite""
+                        plugin = "akka.persistence.snapshot-store.sqlite"
                         sqlite {
-                            class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
-                            plugin-dispatcher = ""akka.actor.default-dispatcher""
+                            class = "Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite"
+                            plugin-dispatcher = "akka.actor.default-dispatcher"
                             table-name = snapshot_store
                             auto-initialize = on
-                            connection-string = """ + connectionString + @"""
+                            connection-string = "{{connectionString}}"
                         }
                     }
                 }
                 under-test {
                     value = true
-                }");
+                }
+                """);
         }
         
         // This is a test for SnapshotStoreSerializationSpec, not SqliteSnapshotStoreSerializationSpec

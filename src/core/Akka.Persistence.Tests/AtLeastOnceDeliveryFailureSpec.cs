@@ -323,18 +323,20 @@ namespace Akka.Persistence.Tests
         #endregion
 
         private static readonly Config FailureSpecConfig = ConfigurationFactory.ParseString(
-            @"akka.persistence.sender.chaos.live-processing-failure-rate = 0.3
-              akka.persistence.sender.chaos.replay-processing-failure-rate = 0.1
-              akka.persistence.destination.chaos.confirm-failure-rate = 0.3
-              akka.persistence.journal.plugin = ""akka.persistence.journal.chaos""
-              akka.persistence.journal.chaos.write-failure-rate = 0.3
-              akka.persistence.journal.chaos.confirm-failure-rate = 0.2
-              akka.persistence.journal.chaos.delete-failure-rate = 0.3
-              akka.persistence.journal.chaos.replay-failure-rate = 0.25
-              akka.persistence.journal.chaos.read-highest-failure-rate = 0.1
-              akka.persistence.journal.chaos.class = ""Akka.Persistence.Tests.Journal.ChaosJournal, Akka.Persistence.Tests""
-              akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
-              akka.persistence.snapshot-store.local.dir = ""target/snapshots-at-least-once-delivery-failure-spec/""");
+            """
+            akka.persistence.sender.chaos.live-processing-failure-rate = 0.3
+            akka.persistence.sender.chaos.replay-processing-failure-rate = 0.1
+            akka.persistence.destination.chaos.confirm-failure-rate = 0.3
+            akka.persistence.journal.plugin = "akka.persistence.journal.chaos"
+            akka.persistence.journal.chaos.write-failure-rate = 0.3
+            akka.persistence.journal.chaos.confirm-failure-rate = 0.2
+            akka.persistence.journal.chaos.delete-failure-rate = 0.3
+            akka.persistence.journal.chaos.replay-failure-rate = 0.25
+            akka.persistence.journal.chaos.read-highest-failure-rate = 0.1
+            akka.persistence.journal.chaos.class = "Akka.Persistence.Tests.Journal.ChaosJournal, Akka.Persistence.Tests"
+            akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
+            akka.persistence.snapshot-store.local.dir = "target/snapshots-at-least-once-delivery-failure-spec/"
+            """);
 
         internal const int NumberOfMessages = 10;
 

@@ -31,12 +31,12 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             Second = Role("second");
             Third = Role("third");
 
-            CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.remote.log-remote-lifecycle-events = off
-                akka.cluster.auto-down-unreachable-after = off
-            ")
+            CommonConfig = ConfigurationFactory.ParseString("""
+                    akka.loglevel = INFO
+                    akka.actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+                    akka.remote.log-remote-lifecycle-events = off
+                    akka.cluster.auto-down-unreachable-after = off
+                    """)
             .WithFallback(ClusterSingletonManager.DefaultConfig())
             .WithFallback(ClusterSingletonProxy.DefaultConfig())
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());

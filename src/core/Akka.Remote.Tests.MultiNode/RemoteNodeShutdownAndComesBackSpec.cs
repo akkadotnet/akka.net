@@ -24,15 +24,15 @@ namespace Akka.Remote.Tests.MultiNode
             First = Role("first");
             Second = Role("second");
 
-            CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(@"
-                  akka.loglevel = INFO
-                  akka.remote.log-remote-lifecycle-events = INFO
-                  ## Keep it tight, otherwise reestablishing a connection takes too much time
-                  akka.remote.transport-failure-detector.heartbeat-interval = 1 s
-                  akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s
-                  ## the acceptable pause is too long and therefore the test will fail, it pass when we use a lower value like the default one
-                  ## akka.remote.watch-failure-detector.acceptable-heartbeat-pause = 60 s
-            "));
+            CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString("""
+                akka.loglevel = INFO
+                akka.remote.log-remote-lifecycle-events = INFO
+                ## Keep it tight, otherwise reestablishing a connection takes too much time
+                akka.remote.transport-failure-detector.heartbeat-interval = 1 s
+                akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s
+                ## the acceptable pause is too long and therefore the test will fail, it pass when we use a lower value like the default one
+                ## akka.remote.watch-failure-detector.acceptable-heartbeat-pause = 60 s
+                """));
 
             TestTransport = true;
         }

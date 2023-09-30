@@ -193,12 +193,12 @@ namespace Akka.Cluster.Sharding.Tests
     public class PersistenceClusterShardingLeaseSpec : ClusterShardingLeaseSpec
     {
         public PersistenceClusterShardingLeaseSpec(ITestOutputHelper helper)
-            : base(ConfigurationFactory.ParseString(@"
+            : base(ConfigurationFactory.ParseString("""
                 akka.cluster.sharding {
                     state-store-mode = persistence
-                    journal-plugin-id = ""akka.persistence.journal.inmem""
+                    journal-plugin-id = "akka.persistence.journal.inmem"
                 }
-                "), true, helper)
+                """), true, helper)
         {
         }
     }
@@ -206,11 +206,11 @@ namespace Akka.Cluster.Sharding.Tests
     public class DDataClusterShardingLeaseSpec : ClusterShardingLeaseSpec
     {
         public DDataClusterShardingLeaseSpec(ITestOutputHelper helper)
-            : base(ConfigurationFactory.ParseString(@"
+            : base(ConfigurationFactory.ParseString("""
                 akka.cluster.sharding {
                     state-store-mode = ddata
                 }
-                "), true, helper)
+                """), true, helper)
         {
         }
     }

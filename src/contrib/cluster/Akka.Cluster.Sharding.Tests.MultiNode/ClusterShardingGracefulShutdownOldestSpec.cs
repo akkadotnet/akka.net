@@ -21,10 +21,10 @@ namespace Akka.Cluster.Sharding.Tests
         public RoleName Second { get; }
 
         public ClusterShardingGracefulShutdownOldestSpecConfig(StateStoreMode mode)
-            : base(mode: mode, loglevel: "DEBUG", additionalConfig: @"
+            : base(mode: mode, loglevel: "DEBUG", additionalConfig: """
             # don't leak ddata state across runs
             akka.cluster.sharding.distributed-data.durable.keys = []
-            ")
+            """)
         {
             First = Role("first");
             Second = Role("second");

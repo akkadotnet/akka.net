@@ -17,15 +17,16 @@ namespace Akka.Cluster.Tests
 {
     public class ShutdownAfterJoinSeedNodesSpec : AkkaSpec
     {
-        public static readonly Config Config = ConfigurationFactory.ParseString(@"
-            akka.actor.provider = ""cluster""
+        public static readonly Config Config = ConfigurationFactory.ParseString("""
+            akka.actor.provider = "cluster"
             akka.coordinated-shutdown.terminate-actor-system = on
             akka.remote.dot-netty.tcp.port = 0
             akka.cluster {
                 seed-node-timeout = 2s
                 retry-unsuccessful-join-after = 2s
                 shutdown-after-unsuccessful-join-seed-nodes = 5s
-            }");
+            }
+            """);
 
         private readonly ActorSystem _seed1;
         private readonly ActorSystem _seed2;

@@ -26,18 +26,19 @@ namespace Akka.Streams.Tests
         public static ActorSystem CreateActorSystem()
         {
             var address = TestUtils.TemporaryServerAddress();
-            var config = ConfigurationFactory.ParseString($@"        
-            akka {{
-              loglevel = INFO
-              actor {{
-                provider = remote
-                serialize-messages = off
-              }}
-              remote.dot-netty.tcp {{
-                port = {address.Port}
-                hostname = ""{address.Address}""
-              }}
-            }}")
+            var config = ConfigurationFactory.ParseString($$"""
+                    akka {
+                      loglevel = INFO
+                      actor {
+                        provider = remote
+                        serialize-messages = off
+                      }
+                      remote.dot-netty.tcp {
+                        port = {{address.Port}}
+                        hostname = "{{address.Address}}"
+                      }
+                    }
+                    """)
                 .WithFallback(ConfigurationFactory.Default());
 
             var system = ActorSystem.Create("remote-system-2", config);
@@ -132,18 +133,19 @@ namespace Akka.Streams.Tests
         public static Config Config()
         {
             var address = TestUtils.TemporaryServerAddress();
-            return ConfigurationFactory.ParseString($@"        
-            akka {{
-              loglevel = INFO
-              actor {{
-                provider = remote
-                serialize-messages = off
-              }}
-              remote.dot-netty.tcp {{
-                port = {address.Port}
-                hostname = ""{address.Address}""
-              }}
-            }}")
+            return ConfigurationFactory.ParseString($$"""
+                    akka {
+                      loglevel = INFO
+                      actor {
+                        provider = remote
+                        serialize-messages = off
+                      }
+                      remote.dot-netty.tcp {
+                        port = {{address.Port}}
+                        hostname = "{{address.Address}}"
+                      }
+                    }
+                    """)
             .WithFallback(ConfigurationFactory.Default());
         }
 
