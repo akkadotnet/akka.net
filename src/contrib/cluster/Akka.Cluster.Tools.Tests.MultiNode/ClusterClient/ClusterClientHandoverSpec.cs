@@ -35,18 +35,18 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             First = Role("first");
             Second = Role("second");
 
-            CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
-                akka.actor.provider = cluster
-                akka.remote.log-remote-lifecycle-events = off
-                akka.cluster.client {
-                  heartbeat-interval = 1d
-                  acceptable-heartbeat-pause = 1d
-                  reconnect-timeout = 3s
-                  refresh-contacts-interval = 1d
-                }
-                akka.test.filter-leeway = 10s
-            ")
+            CommonConfig = ConfigurationFactory.ParseString("""
+                    akka.loglevel = INFO
+                    akka.actor.provider = cluster
+                    akka.remote.log-remote-lifecycle-events = off
+                    akka.cluster.client {
+                      heartbeat-interval = 1d
+                      acceptable-heartbeat-pause = 1d
+                      reconnect-timeout = 3s
+                      refresh-contacts-interval = 1d
+                    }
+                    akka.test.filter-leeway = 10s
+                    """)
                 .WithFallback(ClusterClientReceptionist.DefaultConfig())
                 .WithFallback(DistributedPubSub.DefaultConfig())
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());

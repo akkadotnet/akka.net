@@ -39,12 +39,13 @@ namespace Akka.DistributedData.Tests
 
         static ReplicatorResiliencySpec()
         {
-            SpecConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = DEBUG
-                akka.actor.provider = cluster
-                akka.remote.dot-netty.tcp.port = 0
-                akka.cluster.distributed-data.durable.keys = [""*""]
-                akka.cluster.distributed-data.durable.store-actor-class = ""Akka.DistributedData.Tests.FakeDurableStore, Akka.DistributedData.Tests")
+            SpecConfig = ConfigurationFactory.ParseString("""
+                    akka.loglevel = DEBUG
+                    akka.actor.provider = cluster
+                    akka.remote.dot-netty.tcp.port = 0
+                    akka.cluster.distributed-data.durable.keys = ["*"]
+                    akka.cluster.distributed-data.durable.store-actor-class = "Akka.DistributedData.Tests.FakeDurableStore, Akka.DistributedData.Tests
+                    """)
                 .WithFallback(DistributedData.DefaultConfig());
         }
 

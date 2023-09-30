@@ -34,16 +34,16 @@ namespace Akka.Cluster.Sharding.Tests
 
             // we pretend node 4 and 5 are new incarnations of node 2 and 3 as they never run in parallel
             // so we can use the same lmdb store for them and have node 4 pick up the persisted data of node 2
-            var ddataNodeAConfig = ConfigurationFactory.ParseString(@"
-                akka.cluster.sharding.distributed-data.durable.lmdb {
-                    dir = ""target/ShardingRememberEntitiesNewExtractorSpec/sharding-node-a""
+            var ddataNodeAConfig = ConfigurationFactory.ParseString("""
+                                akka.cluster.sharding.distributed-data.durable.lmdb {
+                    dir = "target/ShardingRememberEntitiesNewExtractorSpec/sharding-node-a"
                 }
-                ");
-            var ddataNodeBConfig = ConfigurationFactory.ParseString(@"
+                """);
+            var ddataNodeBConfig = ConfigurationFactory.ParseString("""
                 akka.cluster.sharding.distributed-data.durable.lmdb {
-                dir = ""target/ShardingRememberEntitiesNewExtractorSpec/sharding-node-b""
+                dir = "target/ShardingRememberEntitiesNewExtractorSpec/sharding-node-b"
                 }
-                ");
+                """);
 
             NodeConfig(new[] { Second }, new[] { roleConfig.WithFallback(ddataNodeAConfig) });
             NodeConfig(new[] { Third }, new[] { roleConfig.WithFallback(ddataNodeBConfig) });

@@ -47,11 +47,12 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly ExtractShardId _extractShard = message => (MurmurHash.StringHash(message.ToString())).ToString();
 
         private static Config SpecConfig =>
-            ConfigurationFactory.ParseString(@"
-                akka.loglevel = DEBUG
-                akka.actor.provider = cluster
-                akka.remote.dot-netty.tcp.port = 0
-                akka.cluster.sharding.verbose-debug-logging = on")
+            ConfigurationFactory.ParseString("""
+                    akka.loglevel = DEBUG
+                    akka.actor.provider = cluster
+                    akka.remote.dot-netty.tcp.port = 0
+                    akka.cluster.sharding.verbose-debug-logging = on
+                    """)
                 .WithFallback(ClusterSingletonManager.DefaultConfig()
                 .WithFallback(ClusterSharding.DefaultConfig()));
 

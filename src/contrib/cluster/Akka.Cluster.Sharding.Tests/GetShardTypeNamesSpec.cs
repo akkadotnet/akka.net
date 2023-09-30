@@ -20,10 +20,11 @@ namespace Akka.Cluster.Sharding.Tests
     public class GetShardTypeNamesSpec : AkkaSpec
     {
         private static Config SpecConfig =>
-            ConfigurationFactory.ParseString(@"
-                akka.actor.provider = cluster
-                akka.remote.dot-netty.tcp.port = 0
-                akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
+            ConfigurationFactory.ParseString("""
+                    akka.actor.provider = cluster
+                    akka.remote.dot-netty.tcp.port = 0
+                    akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
+                    """)
 
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                 .WithFallback(DistributedData.DistributedData.DefaultConfig())

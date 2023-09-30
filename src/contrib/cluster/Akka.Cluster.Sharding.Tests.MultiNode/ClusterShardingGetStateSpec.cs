@@ -24,19 +24,21 @@ namespace Akka.Cluster.Sharding.Tests
         public RoleName Second { get; }
 
         public ClusterShardingGetStateSpecConfig()
-            : base(loglevel: "DEBUG", additionalConfig: @"
-            akka.cluster.sharding {
-                coordinator-failure-backoff = 3s
-                shard-failure-backoff = 3s
-            }
-            ")
+            : base(
+                loglevel: "DEBUG",
+                additionalConfig: """
+                akka.cluster.sharding {
+                    coordinator-failure-backoff = 3s
+                    shard-failure-backoff = 3s
+                }
+                """)
         {
             Controller = Role("controller");
             First = Role("first");
             Second = Role("second");
 
             NodeConfig(new RoleName[] { First, Second }, new Config[] {
-                ConfigurationFactory.ParseString(@"akka.cluster.roles=[""shard""]")
+                ConfigurationFactory.ParseString("""akka.cluster.roles=["shard"]""")
             });
         }
     }

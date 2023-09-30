@@ -27,34 +27,35 @@ namespace Akka.Persistence.Sqlite.Tests
         {
             var filename = $"AkkaSqlite-{Guid.NewGuid()}.db";
             File.Copy("./data/Sqlite.CustomObject.db", $"{filename}.db");
-            
-            ConnectionString = $"DataSource={filename}.db";
-            Config = ConfigurationFactory.ParseString($@"
-akka.actor {{
-    serializers {{
-        mySerializer = ""{typeof(MySerializer).AssemblyQualifiedName}""
-    }}
-    serialization-bindings {{
-        ""System.Object"" = mySerializer
-    }}
-}}
 
-akka.persistence {{
-    journal {{
-        plugin = ""akka.persistence.journal.sqlite""
-        sqlite {{
-            connection-string = ""{ConnectionString}""
-            auto-initialize = on
-        }}
-    }}
-    snapshot-store {{
-        plugin = ""akka.persistence.snapshot-store.sqlite""
-        sqlite {{
-            connection-string = ""{ConnectionString}""
-            auto-initialize = on
-        }}
-    }}
-}}").WithFallback(SqlitePersistence.DefaultConfiguration());
+            ConnectionString = $"DataSource={filename}.db";
+            Config = ConfigurationFactory.ParseString($$"""
+                akka.actor {
+                    serializers {
+                        mySerializer = "{{typeof(MySerializer).AssemblyQualifiedName}}"
+                    }
+                    serialization-bindings {
+                        "System.Object" = mySerializer
+                    }
+                }
+
+                akka.persistence {
+                    journal {
+                        plugin = "akka.persistence.journal.sqlite"
+                        sqlite {
+                            connection-string = "{{ConnectionString}}"
+                            auto-initialize = on
+                        }
+                    }
+                    snapshot-store {
+                        plugin = "akka.persistence.snapshot-store.sqlite"
+                        sqlite {
+                            connection-string = "{{ConnectionString}}"
+                            auto-initialize = on
+                        }
+                    }
+                }
+                """).WithFallback(SqlitePersistence.DefaultConfiguration());
         }
 
         public CustomObjectSerializerSpec(ITestOutputHelper helper) 

@@ -25,11 +25,12 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ShardEntityFailureSpec: AkkaSpec
     {
-        private static readonly Config Config = ConfigurationFactory.ParseString(@"
+        private static readonly Config Config = ConfigurationFactory.ParseString("""
                 akka.loglevel = DEBUG
                 akka.actor.provider = cluster
-                akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
-                akka.remote.dot-netty.tcp.port = 0")
+                akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
+                akka.remote.dot-netty.tcp.port = 0
+                """)
             .WithFallback(ClusterSingletonManager.DefaultConfig())
             .WithFallback(ClusterSharding.DefaultConfig());
         

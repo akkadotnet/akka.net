@@ -20,21 +20,22 @@ namespace Akka.Persistence.Sqlite.Tests
 
         private static Config CreateSpecConfig(string connectionString)
         {
-            return ConfigurationFactory.ParseString(@"
+            return ConfigurationFactory.ParseString($$"""
                 akka.persistence {
                     publish-plugin-commands = on
                     journal {
-                        plugin = ""akka.persistence.journal.sqlite""
+                        plugin = "akka.persistence.journal.sqlite"
                         sqlite {
-                            class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
-                            plugin-dispatcher = ""akka.actor.default-dispatcher""
+                            class = "Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite"
+                            plugin-dispatcher = "akka.actor.default-dispatcher"
                             table-name = event_journal
                             metadata-table-name = journal_metadata
                             auto-initialize = on
-                            connection-string = """ + connectionString + @"""
+                            connection-string = "{{connectionString}}"
                         }
                     }
-                }");
+                }
+                """);
         }
     }
 }

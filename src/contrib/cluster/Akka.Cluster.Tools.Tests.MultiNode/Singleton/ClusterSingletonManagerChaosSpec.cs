@@ -41,12 +41,12 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             Fifth = Role("fifth");
             Sixth = Role("sixth");
 
-            CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = DEBUG
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.remote.log-remote-lifecycle-events = off
-                akka.cluster.auto-down-unreachable-after = 0s
-            ")
+            CommonConfig = ConfigurationFactory.ParseString("""
+                    akka.loglevel = DEBUG
+                    akka.actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+                    akka.remote.log-remote-lifecycle-events = off
+                    akka.cluster.auto-down-unreachable-after = 0s
+                    """)
             .WithFallback(ClusterSingletonManager.DefaultConfig())
             .WithFallback(ClusterSingletonProxy.DefaultConfig())
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());

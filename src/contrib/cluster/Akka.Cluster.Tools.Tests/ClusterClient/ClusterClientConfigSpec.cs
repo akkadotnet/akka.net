@@ -26,8 +26,11 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
 
         public static Config GetConfig()
         {
-            return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
-                                                      akka.remote.dot-netty.tcp.port = 0");
+            return ConfigurationFactory.ParseString(
+                """
+                akka.actor.provider = cluster
+                akka.remote.dot-netty.tcp.port = 0
+                """);
         }
 
         [Fact]

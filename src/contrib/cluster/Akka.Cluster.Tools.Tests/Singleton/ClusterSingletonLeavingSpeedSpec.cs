@@ -51,22 +51,23 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         private readonly ActorSystem[] _systems;
         private readonly TestProbe[] _probes;
 
-        public ClusterSingletonLeavingSpeedSpec() : base(@"
-              akka.loglevel = INFO
-              akka.actor.provider = ""cluster""
-              akka.cluster.auto-down-unreachable-after = 2s
+        public ClusterSingletonLeavingSpeedSpec() : base("""
+            akka.loglevel = INFO
+            akka.actor.provider = "cluster"
+            akka.cluster.auto-down-unreachable-after = 2s
 
-              # With 10 systems and setting min-number-of-hand-over-retries to 5 and gossip-interval to 2s it's possible to
-              # reproduce the ClusterSingletonManagerIsStuck and slow hand over in issue #25639
-              # akka.cluster.singleton.min-number-of-hand-over-retries = 5
-              # akka.cluster.gossip-interval = 2s
+            # With 10 systems and setting min-number-of-hand-over-retries to 5 and gossip-interval to 2s it's possible to
+            # reproduce the ClusterSingletonManagerIsStuck and slow hand over in issue #25639
+            # akka.cluster.singleton.min-number-of-hand-over-retries = 5
+            # akka.cluster.gossip-interval = 2s
 
-              akka.remote {
-                dot-netty.tcp {
-                  hostname = ""127.0.0.1""
-                  port = 0
-                }
-              }")
+            akka.remote {
+              dot-netty.tcp {
+                hostname = "127.0.0.1"
+                port = 0
+              }
+            }
+            """)
         {
             _systems = Enumerable.Range(1, 3).Select(n =>
                 ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($"akka.cluster.roles=[role-{n % 3}]").WithFallback(Sys.Settings.Config))).ToArray();

@@ -16,21 +16,21 @@ namespace Akka.Cluster.Sharding.Tests
     {
         protected static Config PersistenceConfig()
         {
-            return ConfigurationFactory.ParseString(@"
-                akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
+            return ConfigurationFactory.ParseString("""
+                akka.persistence.journal.plugin = "akka.persistence.journal.memory-journal-shared"
                 akka.persistence.journal.memory-journal-shared {
-                    class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
-                    plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    class = "Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode"
+                    plugin-dispatcher = "akka.actor.default-dispatcher"
                     timeout = 5s
                 }
 
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.memory-snapshot-store-shared""
+                akka.persistence.snapshot-store.plugin = "akka.persistence.memory-snapshot-store-shared"
                 akka.persistence.memory-snapshot-store-shared {
-                    class = ""Akka.Cluster.Sharding.Tests.MemorySnapshotStoreShared, Akka.Cluster.Sharding.Tests.MultiNode""
-                    plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    class = "Akka.Cluster.Sharding.Tests.MemorySnapshotStoreShared, Akka.Cluster.Sharding.Tests.MultiNode"
+                    plugin-dispatcher = "akka.actor.default-dispatcher"
                     timeout = 5s
                 }
-                ");
+                """);
         }
 
         /// <summary>
@@ -56,29 +56,29 @@ namespace Akka.Cluster.Sharding.Tests
             Config persistenceConfig = (mode == StateStoreMode.DData && rememberEntitiesStore != RememberEntitiesStore.Eventsourced) ? ConfigurationFactory.Empty : PersistenceConfig();
 
             Common =
-                ConfigurationFactory.ParseString($@"
-                    akka.actor.provider = ""cluster""
-                    akka.cluster.auto-down-unreachable-after = 0s
-                    akka.cluster.sharding.state-store-mode = ""{mode}""
-                    akka.cluster.sharding.remember-entities = {rememberEntities.ToString().ToLowerInvariant()}
-                    akka.cluster.sharding.remember-entities-store = ""{rememberEntitiesStore}""
+                ConfigurationFactory.ParseString($$"""
+                        akka.actor.provider = "cluster"
+                        akka.cluster.auto-down-unreachable-after = 0s
+                        akka.cluster.sharding.state-store-mode = "{{mode}}"
+                        akka.cluster.sharding.remember-entities = {{rememberEntities.ToString().ToLowerInvariant()}}
+                        akka.cluster.sharding.remember-entities-store = "{{rememberEntitiesStore}}"
 
-                    akka.cluster.sharding.verbose-debug-logging = on
+                        akka.cluster.sharding.verbose-debug-logging = on
 
-                    akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
-                    akka.loglevel = {loglevel}
-                    akka.remote.log-remote-lifecycle-events = off
-                    akka.test.single-expect-default = 5 s
+                        akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
+                        akka.loglevel = {{loglevel}}
+                        akka.remote.log-remote-lifecycle-events = off
+                        akka.test.single-expect-default = 5 s
 
-                    akka.actor {{
-                        serializers {{
-                            hyperion = ""Akka.Cluster.Sharding.Tests.MultiNode.HyperionSerializerWrapper, Akka.Cluster.Sharding.Tests.MultiNode""
-                        }}
-                        serialization-bindings {{
-                            ""System.Object"" = hyperion
-                        }}
-                    }}
-                    ")
+                        akka.actor {
+                            serializers {
+                                hyperion = "Akka.Cluster.Sharding.Tests.MultiNode.HyperionSerializerWrapper, Akka.Cluster.Sharding.Tests.MultiNode"
+                            }
+                            serialization-bindings {
+                                "System.Object" = hyperion
+                            }
+                        }
+                        """)
                     .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                     .WithFallback(DistributedData.DistributedData.DefaultConfig())
                     .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())

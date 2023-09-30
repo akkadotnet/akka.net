@@ -31,17 +31,17 @@ namespace Akka.Serialization.Hyperion.Tests
     public class HyperionSerializerSetupSpec : AkkaSpec
     {
         private static Config Config
-         => ConfigurationFactory.ParseString(@"
-akka.actor {
-    serializers {
-        hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-    }
-
-    serialization-bindings {
-      ""System.Object"" = hyperion
-    }
-}
-");
+         => ConfigurationFactory.ParseString("""
+             akka.actor {
+                 serializers {
+                     hyperion = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
+                 }
+             
+                 serialization-bindings {
+                   "System.Object" = hyperion
+                 }
+             }
+             """);
 
         private readonly ITestOutputHelper _output;
 

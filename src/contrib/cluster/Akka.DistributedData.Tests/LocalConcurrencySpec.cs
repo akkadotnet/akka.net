@@ -37,9 +37,10 @@ namespace Akka.DistributedData.Tests
         private readonly IActorRef _replicator;
 
         public LocalConcurrencySpec(ITestOutputHelper output)
-            : base(ConfigurationFactory.ParseString(@"
-              akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-              akka.remote.dot-netty.tcp.port = 0"),
+            : base(ConfigurationFactory.ParseString("""
+                    akka.actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+                    akka.remote.dot-netty.tcp.port = 0
+                    """),
             "LocalConcurrencySpec", output)
         {
             _replicator = DistributedData.Get(Sys).Replicator;

@@ -154,14 +154,14 @@ namespace Akka.Cluster.Sharding.Tests.Internal
             var customSettings = ClusterShardingSettings.Create(
                 ConfigurationFactory.ParseString(
                     // slow constant restart
-                    @"
+                    """
                     entity-recovery-strategy = constant
                     entity-recovery-constant-rate-strategy {
                         frequency = 2 s
                         number-of-entities = 2
                     }
                     retry-interval = 1s
-                    ")
+                    """)
                     .WithFallback(Sys.Settings.Config.GetConfig("akka.cluster.sharding")), Sys.Settings.Config.GetConfig("akka.cluster.singleton"));
 
             var rememberEntityStarter = Sys.ActorOf(

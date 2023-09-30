@@ -20,32 +20,33 @@ namespace Akka.Persistence.Sqlite.Tests
 {
     public class Bugfix4360Spec : Akka.TestKit.Xunit2.TestKit
     {
-        public static Config TestConf = @"
-akka.persistence {
-  journal {
-    plugin = ""akka.persistence.journal.sqlite""
-    sqlite {
-      class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
-      plugin-dispatcher = ""akka.actor.default-dispatcher""
-      connection-string = ""DataSource=AkkaJournalfxR16.db""
-      connection-timeout = 25s
-      table-name = event_journal
-      auto-initialize = on
-    }
-  }
-  snapshot-store {
-    plugin = ""akka.persistence.snapshot-store.sqlite""
-    sqlite {
-      class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
-      plugin-dispatcher = ""akka.actor.default-dispatcher""
-      connection-string = ""DataSource=AkkaSnapShotfxR16.db""
-      connection-timeout = 25s
-      table-name = snapshot_store
-      auto-initialize = on
-    }
-  }
-  #end persistence
-}";
+        public static Config TestConf = """
+            akka.persistence {
+              journal {
+                plugin = "akka.persistence.journal.sqlite"
+                sqlite {
+                  class = "Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite"
+                  plugin-dispatcher = "akka.actor.default-dispatcher"
+                  connection-string = "DataSource=AkkaJournalfxR16.db"
+                  connection-timeout = 25s
+                  table-name = event_journal
+                  auto-initialize = on
+                }
+              }
+              snapshot-store {
+                plugin = "akka.persistence.snapshot-store.sqlite"
+                sqlite {
+                  class = "Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite"
+                  plugin-dispatcher = "akka.actor.default-dispatcher"
+                  connection-string = "DataSource=AkkaSnapShotfxR16.db"
+                  connection-timeout = 25s
+                  table-name = snapshot_store
+                  auto-initialize = on
+                }
+              }
+              #end persistence
+            }
+            """;
 
         private class RecoverActor : UntypedPersistentActor
         {

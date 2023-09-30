@@ -27,15 +27,15 @@ namespace Akka.Cluster.Sharding.Tests
         public RoleName Forth { get; }
 
         public ExternalShardAllocationSpecConfig()
-            : base(loglevel: "DEBUG", additionalConfig: @"
-            akka.cluster.sharding {
-                retry-interval = 2000ms
-                waiting-for-state-timeout = 2000ms
-                rebalance-interval = 1s
-            }
-            akka.cluster.sharding.distributed-data.durable.keys = []
-            akka.testconductor.barrier-timeout = 60s
-            ")
+            : base(loglevel: "DEBUG", additionalConfig: """
+                akka.cluster.sharding {
+                    retry-interval = 2000ms
+                    waiting-for-state-timeout = 2000ms
+                    rebalance-interval = 1s
+                }
+                akka.cluster.sharding.distributed-data.durable.keys = []
+                akka.testconductor.barrier-timeout = 60s
+                """)
         {
             First = Role("first");
             Second = Role("second");

@@ -25,11 +25,13 @@ namespace Akka.Cluster.Sharding.Tests
         public RoleName Third { get; }
 
         public ClusterShardingGetStatsSpecConfig()
-            : base(loglevel: "DEBUG", additionalConfig: @"
-            akka.log-dead-letters-during-shutdown = off
-            akka.cluster.sharding.updating-state-timeout = 2s
-            akka.cluster.sharding.waiting-for-state-timeout = 2s
-            ")
+            : base(
+                loglevel: "DEBUG",
+                additionalConfig: """
+                akka.log-dead-letters-during-shutdown = off
+                akka.cluster.sharding.updating-state-timeout = 2s
+                akka.cluster.sharding.waiting-for-state-timeout = 2s
+                """)
         {
             Controller = Role("controller");
             First = Role("first");
@@ -37,7 +39,7 @@ namespace Akka.Cluster.Sharding.Tests
             Third = Role("third");
 
             NodeConfig(new RoleName[] { First, Second, Third }, new Config[] {
-                ConfigurationFactory.ParseString(@"akka.cluster.roles=[""shard""]")
+                ConfigurationFactory.ParseString("""akka.cluster.roles=["shard"]""")
             });
         }
     }

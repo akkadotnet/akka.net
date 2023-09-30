@@ -32,14 +32,15 @@ namespace Akka.DistributedData.Tests
 
         static ReplicatorSpecs()
         {
-            SpecConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = DEBUG
-                akka.actor.provider = cluster
-                akka.remote.dot-netty.tcp.port = 0
-                akka.remote.dot-netty.tcp.send-buffer-size = 2000000
-                akka.remote.dot-netty.tcp.receive-buffer-size = 2000000
-                akka.remote.dot-netty.tcp.maximum-frame-size = 1000000
-                akka.cluster.sharding.updating-state-timeout = 15s")
+            SpecConfig = ConfigurationFactory.ParseString("""
+                    akka.loglevel = DEBUG
+                    akka.actor.provider = cluster
+                    akka.remote.dot-netty.tcp.port = 0
+                    akka.remote.dot-netty.tcp.send-buffer-size = 2000000
+                    akka.remote.dot-netty.tcp.receive-buffer-size = 2000000
+                    akka.remote.dot-netty.tcp.maximum-frame-size = 1000000
+                    akka.cluster.sharding.updating-state-timeout = 15s
+                    """)
                 .WithFallback(DistributedData.DefaultConfig());
         }
 
