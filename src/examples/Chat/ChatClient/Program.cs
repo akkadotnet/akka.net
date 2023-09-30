@@ -25,8 +25,8 @@ akka {
     }
     remote {
         dot-netty.tcp {
-		    port = 0
-		    hostname = localhost
+            port = 0
+            hostname = localhost
         }
     }
 }

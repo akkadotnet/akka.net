@@ -23,62 +23,67 @@ namespace Akka.Persistence.Custom.Snapshot
     public class SqliteSnapshotStore: SnapshotStore, IWithUnboundedStash
     {
         //<CreateSnapshotTableSql>
-        private const string CreateSnapshotTableSql = @"
-                CREATE TABLE IF NOT EXISTS snapshot (
-                    persistence_id VARCHAR(255) NOT NULL,
-                    sequence_nr INTEGER(8) NOT NULL,
-                    timestamp INTEGER(8) NOT NULL,
-                    manifest VARCHAR(255) NOT NULL,
-                    payload BLOB NOT NULL,
-                    serializer_id INTEGER(4),
-                    PRIMARY KEY (persistence_id, sequence_nr));";
+        private const string CreateSnapshotTableSql = """
+            CREATE TABLE IF NOT EXISTS snapshot (
+                persistence_id VARCHAR(255) NOT NULL,
+                sequence_nr INTEGER(8) NOT NULL,
+                timestamp INTEGER(8) NOT NULL,
+                manifest VARCHAR(255) NOT NULL,
+                payload BLOB NOT NULL,
+                serializer_id INTEGER(4),
+                PRIMARY KEY (persistence_id, sequence_nr));
+            """;
         //</CreateSnapshotTableSql>
 
         //<SelectSnapshotSql>
-        private const string SelectSnapshotSql = @"
+        private const string SelectSnapshotSql = """
             SELECT persistence_id,
-                sequence_nr, 
+                sequence_nr,
                 timestamp,
-                manifest, 
+                manifest,
                 payload,
                 serializer_id
-            FROM snapshot 
-            WHERE persistence_id = @PersistenceId 
+            FROM snapshot
+            WHERE persistence_id = @PersistenceId
                 AND sequence_nr <= @SequenceNr
                 AND timestamp <= @Timestamp
             ORDER BY sequence_nr DESC
-            LIMIT 1";
+            LIMIT 1
+            """;
         //</SelectSnapshotSql>
 
         //<DeleteSnapshotSql>
-        private const string DeleteSnapshotSql = @"
+        private const string DeleteSnapshotSql = """
             DELETE FROM snapshot
             WHERE persistence_id = @PersistenceId
-                AND sequence_nr = @SequenceNr";
+                AND sequence_nr = @SequenceNr
+            """;
         //</DeleteSnapshotSql>
 
         //<DeleteSnapshotRangeSql>
-        private const string DeleteSnapshotRangeSql = @"
+        private const string DeleteSnapshotRangeSql = """
             DELETE FROM snapshot
             WHERE persistence_id = @PersistenceId
                 AND sequence_nr <= @SequenceNr
-                AND timestamp <= @Timestamp";
+                AND timestamp <= @Timestamp
+            """;
         //</DeleteSnapshotRangeSql>
 
         //<InsertSnapshotSql>
-        private const string InsertSnapshotSql = @"
-                UPDATE snapshot
-                SET timestamp = @Timestamp, 
-                    manifest = @Manifest,
-                    payload = @Payload, 
-                    serializer_id = @SerializerId
-                WHERE persistence_id = @PersistenceId AND sequence_nr = @SequenceNr;
+        private const string InsertSnapshotSql = """
+            UPDATE snapshot
+            SET timestamp = @Timestamp,
+                manifest = @Manifest,
+                payload = @Payload,
+                serializer_id = @SerializerId
+            WHERE persistence_id = @PersistenceId AND sequence_nr = @SequenceNr;
 
-                INSERT OR IGNORE INTO snapshot 
-                    (persistence_id, sequence_nr, timestamp, manifest, payload, serializer_id)
-                VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload, @SerializerId)";
+            INSERT OR IGNORE INTO snapshot
+                (persistence_id, sequence_nr, timestamp, manifest, payload, serializer_id)
+            VALUES (@PersistenceId, @SequenceNr, @Timestamp, @Manifest, @Payload, @SerializerId)
+            """;
         //</InsertSnapshotSql>
-        
+
         private readonly SnapshotStoreSettings _settings;
         private readonly string _connectionString;
         private readonly TimeSpan _timeout;
@@ -91,12 +96,12 @@ namespace Akka.Persistence.Custom.Snapshot
             _settings = new SnapshotStoreSettings(SqlitePersistence.Get(Context.System).SnapshotConfig);
             _connectionString = _settings.ConnectionString;
             _timeout = _settings.ConnectionTimeout;
-            
+
             _serialization = Context.System.Serialization;
             _pendingRequestsCancellation = new CancellationTokenSource();
             _log = Context.GetLogger();
         }
-        
+
         public IStash Stash { get; set; }
 
         //<Startup>

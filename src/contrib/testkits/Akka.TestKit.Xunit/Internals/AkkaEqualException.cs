@@ -43,9 +43,8 @@ Expected: {expectedText.Replace(Environment.NewLine, NewLineAndIndent)}{Environm
 Actual:   {actualText.Replace(Environment.NewLine, NewLineAndIndent)}",
                 args
             );
-
         }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="AkkaEqualException"/> class.
         /// </summary>

@@ -48,16 +48,17 @@ namespace ShoppingCart
             var role = Environment.GetEnvironmentVariable("IS_FRONTEND") == "true" 
                 ? FrontEndRole : BackEndRole;
             
-            var config = ConfigurationFactory.ParseString(@$"
+            var config = ConfigurationFactory.ParseString($"""
                     # We need to tell Akka to provide us cluster enabled actors
                     akka.actor.provider = cluster
 
                     # This tells Akka which role this node belongs to
                     akka.cluster.roles=[{role}]
 
-                    # This tells Akka to wait for at least 4 nodes joining the cluster 
+                    # This tells Akka to wait for at least 4 nodes joining the cluster
                     # before signaling that it is up and ready
-                    akka.cluster.min-nr-of-members = 4")
+                    akka.cluster.min-nr-of-members = 4
+                    """)
                 .BootstrapFromDocker();
 
             var system = ActorSystem.Create("shopping-cart", config);

@@ -49,16 +49,18 @@ namespace ShoppingCart
                     _purchasedItems.Add(p.ItemName);
                     var name = Uri.UnescapeDataString(Self.Path.Name);
                     Console.WriteLine(
-                        @$"'{name}' purchased '{p.ItemName}'.
-All items: [{string.Join(", ", _purchasedItems)}]
---------------------------");
+                        $"""
+                        '{name}' purchased '{p.ItemName}'.
+                        All items: [{string.Join(", ", _purchasedItems)}]
+                        --------------------------
+                        """);
                 }
                 else
                 {
                     // unsupported message type
                     Unhandled(purchase.Message);
                 }
-                
+
                 purchase.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
             });
             // </Delivery>

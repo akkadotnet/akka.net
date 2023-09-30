@@ -31,19 +31,19 @@ namespace Akka.Persistence.Custom.Tests
 
         private static Config CreateSpecConfig(string connectionString)
         {
-            return ConfigurationFactory.ParseString(@"
-                akka.persistence {
-                    publish-plugin-commands = on
-                    journal {
-                        plugin = ""akka.persistence.journal.custom-sqlite""
-                        custom-sqlite {
-                            class = ""Akka.Persistence.Custom.Journal.SqliteJournal, Akka.Persistence.Custom""
-                            plugin-dispatcher = ""akka.actor.default-dispatcher""
-                            auto-initialize = on
-                            connection-string = """ + connectionString + @"""
-                        }
-                    }
-                }");
+            return ConfigurationFactory.ParseString($@"
+akka.persistence {{
+    publish-plugin-commands = on
+    journal {{
+        plugin = ""akka.persistence.journal.custom-sqlite""
+        custom-sqlite {{
+            class = ""Akka.Persistence.Custom.Journal.SqliteJournal, Akka.Persistence.Custom""
+            plugin-dispatcher = ""akka.actor.default-dispatcher""
+            auto-initialize = on
+            connection-string = ""{connectionString}""
+        }}
+    }}
+}}");
         }
     }
 }

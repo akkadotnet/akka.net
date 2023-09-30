@@ -22,25 +22,25 @@ namespace Akka.Persistence.Custom.Tests
         
         private static Config CreateSpecConfig(string connectionString)
         {
-            return ConfigurationFactory.ParseString(@"
-                akka.persistence {
-                    publish-plugin-commands = on
-                    journal {
-                        plugin = ""akka.persistence.journal.custom-sqlite""
-                        custom-sqlite {
-                            event-adapters {
-                                custom-adapter = ""Akka.Persistence.TCK.Serialization.TestJournal+MyWriteAdapter, Akka.Persistence.TCK""
-                            }
-                            event-adapter-bindings = {
-                                ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload3, Akka.Persistence.TCK"" = custom-adapter
-                            }
-                            class = ""Akka.Persistence.Custom.Journal.SqliteJournal, Akka.Persistence.Custom""
-                            plugin-dispatcher = ""akka.actor.default-dispatcher""
-                            auto-initialize = on
-                            connection-string = """ + connectionString + @"""
-                        }
-                    }
-                }");
+            return ConfigurationFactory.ParseString($@"
+akka.persistence {{
+    publish-plugin-commands = on
+    journal {{
+        plugin = ""akka.persistence.journal.custom-sqlite""
+        custom-sqlite {{
+            event-adapters {{
+                custom-adapter = ""Akka.Persistence.TCK.Serialization.TestJournal+MyWriteAdapter, Akka.Persistence.TCK""
+            }}
+            event-adapter-bindings = {{
+                ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload3, Akka.Persistence.TCK"" = custom-adapter
+            }}
+            class = ""Akka.Persistence.Custom.Journal.SqliteJournal, Akka.Persistence.Custom""
+            plugin-dispatcher = ""akka.actor.default-dispatcher""
+            auto-initialize = on
+            connection-string = ""{connectionString}""
+        }}
+    }}
+}}");
         }
         
 
