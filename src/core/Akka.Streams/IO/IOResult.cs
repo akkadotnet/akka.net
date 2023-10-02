@@ -14,7 +14,7 @@ namespace Akka.Streams.IO
     /// Holds a result of an IO operation.
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public struct IOResult
+    public readonly struct IOResult
     {
         private readonly Result<NotUsed> _status;
 
