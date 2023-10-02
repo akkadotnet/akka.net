@@ -190,18 +190,11 @@ namespace Akka.Remote.Transport
     {
         private ForceDisassociateAck() { }
         // ReSharper disable once InconsistentNaming
-        private static readonly ForceDisassociateAck _instance = new();
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static ForceDisassociateAck Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static ForceDisassociateAck Instance { get; } = new();
     }
 
     /// <summary>
@@ -603,18 +596,11 @@ namespace Akka.Remote.Transport
     {
         private Blackhole() { }
         // ReSharper disable once InconsistentNaming
-        private static readonly Blackhole _instance = new();
 
         /// <summary>
         /// The singleton instance
         /// </summary>
-        public static Blackhole Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static Blackhole Instance { get; } = new();
 
         /// <inheritdoc/>
         public override (ThrottleMode, bool) TryConsumeTokens(long nanoTimeOfSend, int tokens)
@@ -635,18 +621,7 @@ namespace Akka.Remote.Transport
     public class Unthrottled : ThrottleMode
     {
         private Unthrottled() { }
-        private static readonly Unthrottled _instance = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static Unthrottled Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static Unthrottled Instance { get; } = new();
 
         /// <inheritdoc/>
         public override (ThrottleMode, bool) TryConsumeTokens(long nanoTimeOfSend, int tokens)
@@ -868,17 +843,9 @@ namespace Akka.Remote.Transport
     public sealed class SetThrottleAck
     {
         private SetThrottleAck() { }
-        // ReSharper disable once InconsistentNaming
-        private static readonly SetThrottleAck _instance = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static SetThrottleAck Instance
-        {
-            get { return _instance; }
-        }
+        public static SetThrottleAck Instance { get; } = new();
     }
+
     /// <summary>
     /// INTERNAL API
     /// </summary>
@@ -1008,12 +975,7 @@ namespace Akka.Remote.Transport
         internal class Uninitialized : IThrottlerData
         {
             private Uninitialized() { }
-            // ReSharper disable once InconsistentNaming
-            private static readonly Uninitialized _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static Uninitialized Instance { get { return _instance; } }
+            public static Uninitialized Instance { get; } = new();
         }
 
         /// <summary>
