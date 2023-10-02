@@ -3852,25 +3852,36 @@ namespace Akka.Streams.Implementation.Fusing
                 catch(Exception ex)
                 {
                     // This should never happen
-                    Log.Error(ex, "AsyncEnumerable threw while cancelling CancellationTokenSource");
+                    Log.Debug(ex, "AsyncEnumerable threw while cancelling CancellationTokenSource");
                 }
+
                 try
                 {
-                    _enumerator.DisposeAsync().AsTask().ContinueWith(t =>
-                    {
-                        if (!t.IsCanceled && !t.IsFaulted)
-                            return;
-
-                        // This is best effort exception logging, this log will never appear if the ActorSystem
-                        // was shut down before we reach this code (BusEvent was not emitting new logs anymore)
-                        Log.Error(t.Exception, "Underlying async enumerator threw an exception while being disposed.");
-                    });
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                    // Intentionally creating a detached dispose task
+                    DisposeEnumeratorAsync();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 }
                 catch(Exception ex)
                 {
-                    Log.Error(ex, "Underlying async enumerator threw an exception while being disposed.");
+                    Log.Debug(ex, "Underlying async enumerator threw an exception while being disposed.");
                 }
                 base.PostStop();
+                return;
+
+                async Task DisposeEnumeratorAsync()
+                {
+                    try
+                    {
+                        await _enumerator.DisposeAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        // This is best effort exception logging, this log will never appear if the ActorSystem
+                        // was shut down before we reach this code (BusEvent was not emitting new logs anymore)
+                        Log.Debug(ex, "Underlying async enumerator threw an exception while being disposed.");
+                    }
+                }
             }
 
             public override void OnPull()
