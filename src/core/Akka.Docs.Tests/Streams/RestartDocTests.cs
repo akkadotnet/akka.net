@@ -30,6 +30,7 @@ namespace DocsExamples.Streams
         {
         }
 
+#pragma warning disable xUnit1031
         [Fact]
         public void Restart_stages_should_demonstrate_a_restart_with_backoff_source()
         {
@@ -51,6 +52,7 @@ namespace DocsExamples.Streams
                 .Select(c => c.Content.ReadAsStringAsync())
                 .Select(c => c.Result);
             }, settings);
+#pragma warning restore xUnit1031
             #endregion
 
             #region with-kill-switch

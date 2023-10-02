@@ -389,8 +389,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Limit(100)
                     .RunWith(Sink.Seq<int>(), Materializer);
 
-                await task.ShouldCompleteWithin(3.Seconds());
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1,10));
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1,10));
 
                 // Reusable:
                 task = Source.From(Enumerable.Range(1, 10))
@@ -398,8 +397,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Limit(100)
                     .RunWith(Sink.Seq<int>(), Materializer);
 
-                await task.ShouldCompleteWithin(3.Seconds());
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -682,8 +680,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Via(Flow.FromFunction<int, int>(i => i + 1))
                     .RunWith(Sink.Seq<int>(), Materializer);
                 
-                await task.ShouldCompleteWithin(3.Seconds());
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -780,8 +777,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(Sink.First<int>(), Keep.Right);
                 
                 var task = Source.Single(4711).RunWith(sink, noFusingMaterializer);
-                await task.ShouldCompleteWithin(3.Seconds());
-                task.Result.Should().Be(4712);
+                (await task.WaitAsync(3.Seconds())).Should().Be(4712);
             }, Materializer);
         }
 

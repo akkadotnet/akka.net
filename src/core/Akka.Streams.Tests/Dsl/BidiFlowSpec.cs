@@ -15,6 +15,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Streams.Tests.Dsl
@@ -66,7 +67,7 @@ namespace Akka.Streams.Tests.Dsl
 
 
         [Fact]
-        public void A_BidiFlow_must_work_top_and_bottom_in_isolation()
+        public async Task A_BidiFlow_must_work_top_and_bottom_in_isolation()
         {
             var t = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<long>(), Sink.First<string>(), Keep.Both,
                 (b, st, sb) =>
@@ -89,55 +90,49 @@ namespace Akka.Streams.Tests.Dsl
             var top = t.Item1;
             var bottom = t.Item2;
 
-            top.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue(); 
-            bottom.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue(); 
-            top.Result.Should().Be(3);
-            bottom.Result.Should().Be(String);
+            (await top.WaitAsync(3.Seconds())).Should().Be(3);
+            (await bottom.WaitAsync(3.Seconds())).Should().Be(String);
         }
 
         [Fact]
-        public void A_BidiFlow_must_work_as_a_Flow_that_is_open_to_the_left()
+        public async Task A_BidiFlow_must_work_as_a_Flow_that_is_open_to_the_left()
         {
             var f = Bidi().Join(Flow.Create<long>().Select(x => ByteString.FromString($"Hello {x}")));
-            var result = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
-            result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.Result.Should().BeEquivalentTo(new[] {"Hello 3", "Hello 4", "Hello 5"});
+            var task = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
+            (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(new[] {"Hello 3", "Hello 4", "Hello 5"});
         }
 
         [Fact]
-        public void A_BidiFlow_must_work_as_a_Flow_that_is_open_on_the_right()
+        public async Task A_BidiFlow_must_work_as_a_Flow_that_is_open_on_the_right()
         {
             var f = Flow.Create<string>().Select(int.Parse).Join(Bidi());
-            var result =
+            var task =
                 Source.From(new[] {ByteString.FromString("1"), ByteString.FromString("2")})
                     .Via(f)
                     .Limit(10)
                     .RunWith(Sink.Seq<long>(), Materializer);
-            result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.Result.Should().BeEquivalentTo(new[] {3L, 4L});
+            (await task.WaitAsync(4.Seconds())).Should().BeEquivalentTo(new[] {3L, 4L});
         }
 
         [Fact]
-        public void A_BidiFlow_must_work_when_atop_its_inverse()
+        public async Task A_BidiFlow_must_work_when_atop_its_inverse()
         {
             var f = Bidi().Atop(Inverse()).Join(Flow.Create<int>().Select(x => x.ToString()));
-            var result = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
-            result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.Result.Should().BeEquivalentTo(new[] { "5", "6", "7" });
+            var task = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
+            (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(new[] { "5", "6", "7" });
         }
 
         [Fact]
-        public void A_BidiFlow_must_work_when_reversed()
+        public async Task A_BidiFlow_must_work_when_reversed()
         {
             // just reversed from the case above; observe that Flow inverts itself automatically by being on the left side
             var f = Flow.Create<int>().Select(x => x.ToString()).Join(Inverse().Reversed()).Join(Bidi().Reversed());
-            var result = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
-            result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.Result.Should().BeEquivalentTo(new[] { "5", "6", "7" });
+            var task = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
+            (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(new[] { "5", "6", "7" });
         }
 
         [Fact]
-        public void A_BidiFlow_must_materialize_its_value()
+        public async Task A_BidiFlow_must_materialize_its_value()
         {
             var f = RunnableGraph.FromGraph(GraphDsl.Create(BidiMaterialized(), (b, bidi) =>
             {
@@ -157,14 +152,13 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            f.Result.Should().Be(42);
+            (await f.WaitAsync(3.Seconds())).Should().Be(42);
         }
 
         [Fact]
         public async Task A_BidiFlow_must_combine_materialization_values()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var left = 
                 Flow.FromGraph(GraphDsl.Create(Sink.First<int>(), 
                 (b, sink) =>                                                                        
@@ -195,10 +189,12 @@ namespace Akka.Streams.Tests.Dsl
                 var m = t.Item2;
                 var r = tt.Item2;
 
-                Task.WhenAll(l, m, r).Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                await Task.WhenAll(l, m, r).WaitAsync(3.Seconds());
+#pragma warning disable xUnit1031
                 l.Result.Should().Be(1);
                 m.Result.Should().Be(42);
                 r.Result.Should().BeEquivalentTo(new[] { 3L, 12L });
+#pragma warning restore xUnit1031
                 return Task.CompletedTask;
             }, Materializer);
         }

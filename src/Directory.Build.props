@@ -6,10 +6,6 @@
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
-    <!-- 
-      xUnit1031 is a temporary fix, we will need to pay this technical debt 
-      and make everything fully async in the future 
-    -->
     <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031</NoWarn>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

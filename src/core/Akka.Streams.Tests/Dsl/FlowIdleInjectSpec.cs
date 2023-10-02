@@ -14,6 +14,7 @@ using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -34,33 +35,29 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task KeepAlive_must_not_emit_additional_elements_if_upstream_is_fastEnough()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var result = Source.From(Enumerable.Range(1, 10))                                                                             
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var task = Source.From(Enumerable.Range(1, 10))                                                                             
                 .KeepAlive(TimeSpan.FromSeconds(1), () => 0)                                                                             
                 .Grouped(1000)                                                                             
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                result.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                return Task.CompletedTask;
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task KeepAlive_must_emit_elements_periodically_after_silent_periods()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var sourceWithIdleGap = Source.Combine(Source.From(Enumerable.Range(1, 5)),                                                                             
                     Source.From(Enumerable.Range(6, 5)).InitialDelay(TimeSpan.FromSeconds(2)),                                                                             
                     i => new Merge<int, int>(i));
-                var result = sourceWithIdleGap
+                var task = sourceWithIdleGap
                     .KeepAlive(TimeSpan.FromSeconds(0.6), () => 0)
                     .Grouped(1000)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                result.Result.Should().BeEquivalentTo(
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(
                     Enumerable.Range(1, 5).Concat(new[] { 0, 0, 0 }).Concat(Enumerable.Range(6, 5)));
-                return Task.CompletedTask;
             }, Materializer);
         }
 

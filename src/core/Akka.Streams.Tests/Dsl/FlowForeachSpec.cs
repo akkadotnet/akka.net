@@ -13,8 +13,10 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -81,18 +83,12 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Foreach_must_complete_future_with_failure_when_function_throws()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var error = new TestException("test");
-                var future = Source.Single(1).RunForeach(_ =>
-                {
-                    throw error;
-                }, Materializer);
+                var future = Source.Single(1).RunForeach(_ => throw error, Materializer);
 
-                future.Invoking(f => f.Wait(TimeSpan.FromSeconds(3)))
-                    .Should().Throw<TestException>()
-                    .And.Should()
-                    .Be(error);
-                return Task.CompletedTask;
+                (await Awaiting(() => future.WaitAsync(3.Seconds())).Should().ThrowAsync<TestException>())
+                    .And.Should().Be(error);
             }, Materializer);
         }
     }

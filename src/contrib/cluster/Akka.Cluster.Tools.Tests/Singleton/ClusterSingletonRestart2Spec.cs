@@ -70,7 +70,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
 
         [Fact]
-        public void Restarting_cluster_node_during_hand_over_must_restart_singletons_in_restarted_node()
+        public async Task Restarting_cluster_node_during_hand_over_must_restart_singletons_in_restarted_node()
         {
             Join(_sys1, _sys1);
             Join(_sys2, _sys1);
@@ -107,7 +107,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             Join(_sys4, _sys3);
 
             // let it stabilize
-            Task.Delay(TimeSpan.FromSeconds(5)).Wait();
+            await Task.Delay(TimeSpan.FromSeconds(5));
 
             Within(TimeSpan.FromSeconds(10), () =>
             {

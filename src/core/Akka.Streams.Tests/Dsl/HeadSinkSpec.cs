@@ -9,9 +9,12 @@ using System;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
+using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -34,8 +37,7 @@ namespace Akka.Streams.Tests.Dsl
                 var proc = await p.ExpectSubscriptionAsync();
                 await proc.ExpectRequestAsync();
                 proc.SendNext(42);
-                task.Wait(100);
-                task.Result.Should().Be(42);
+                (await task.WaitAsync(100.Milliseconds())).Should().Be(42);
                 await proc.ExpectCancellationAsync();
             }, Materializer);
         }
@@ -54,34 +56,33 @@ namespace Akka.Streams.Tests.Dsl
             var proc = await p.ExpectSubscriptionAsync();
             await proc.ExpectRequestAsync();
             proc.SendNext(42);
-            future.Wait(100);
-            future.Result.Should().Be(42);
+            (await future.WaitAsync(100.Milliseconds())).Should().Be(42);
             await proc.ExpectCancellationAsync();
         }
 
         [Fact]
         public async Task A_FLow_with_a_Sink_Head_must_yield_the_first_error()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.Failed<int>(new Exception("ex"))                                                                             
-                .Invoking(s => s.RunWith(Sink.First<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))                                                                             
-                .Should().Throw<AggregateException>()                                                                             
-                .WithInnerException<Exception>()                                                                            
-                .WithMessage("ex");
-                return Task.CompletedTask;
+            await this.AssertAllStagesStoppedAsync(async () => {
+                (await Awaiting(() => 
+                            Source.Failed<int>(new Exception("ex"))
+                                .RunWith(Sink.First<int>(), Materializer)
+                                .WaitAsync(1.Seconds()))
+                    .Should().ThrowAsync<Exception>())
+                    .WithMessage("ex");
             }, Materializer);
         }
 
         [Fact]
         public async Task A_FLow_with_a_Sink_Head_must_yield_NoSuchElementException_for_empty_stream()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.Empty<int>()                                                                             
-                .Invoking(s => s.RunWith(Sink.First<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))                                                                             
-                .Should().Throw<AggregateException>()                                                                             
-                .WithInnerException<NoSuchElementException>()                                                                             
-                .WithMessage("First of empty stream");
-                return Task.CompletedTask;
+            await this.AssertAllStagesStoppedAsync(async () => {
+                (await Awaiting(() => 
+                        Source.Empty<int>()
+                            .RunWith(Sink.First<int>(), Materializer)
+                            .WaitAsync(1.Seconds()))
+                        .Should().ThrowAsync<NoSuchElementException>())
+                    .WithMessage("First of empty stream");
             }, Materializer);
         }
 
@@ -96,8 +97,7 @@ namespace Akka.Streams.Tests.Dsl
                 var proc = await p.ExpectSubscriptionAsync();
                 await proc.ExpectRequestAsync();
                 proc.SendNext(42);
-                task.Wait(100);
-                task.Result.Should().Be(42);
+                (await task.WaitAsync(100.Milliseconds())).Should().Be(42);
                 await proc.ExpectCancellationAsync();
             }, Materializer);
         }
@@ -105,29 +105,27 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_FLow_with_a_Sink_HeadOption_must_yield_the_first_error()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.Failed<int>(new Exception("ex"))                                                                             
-                .Invoking(s => s.RunWith(Sink.FirstOrDefault<int>(), Materializer).Wait(TimeSpan.FromSeconds(1)))                                                                             
-                .Should().Throw<AggregateException>()                                                                             
-                .WithInnerException<Exception>()                                                                             
-                .WithMessage("ex");
-                return Task.CompletedTask;
-            }, Materializer);
+            await this.AssertAllStagesStoppedAsync(async () => 
+                (await Awaiting(() => 
+                        Source.Failed<int>(new Exception("ex"))
+                            .RunWith(Sink.FirstOrDefault<int>(), Materializer)
+                            .WaitAsync(1.Seconds()))
+                        .Should().ThrowAsync<Exception>())
+                    .WithMessage("ex")
+            , Materializer);
         }
 
         [Fact]
         public async Task A_FLow_with_a_Sink_HeadOption_must_yield_default_for_empty_stream()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var task = Source.Empty<int>().RunWith(Sink.FirstOrDefault<int>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-                task.Result.Should().Be(0);
-                return Task.CompletedTask;
+                (await task.WaitAsync(1.Seconds())).Should().Be(0);
             }, Materializer);
         }
 
         [Fact]
-        public void A_FLow_with_a_Sink_HeadOption_must_fail_on_abrupt_termination()
+        public async Task A_FLow_with_a_Sink_HeadOption_must_fail_on_abrupt_termination()
         {
             var materializer = ActorMaterializer.Create(Sys);
             var source = this.CreatePublisherProbe<int>();
@@ -137,8 +135,8 @@ namespace Akka.Streams.Tests.Dsl
 
             // this one always fails with the AbruptTerminationException rather than the
             // AbruptStageTerminationException for some reason
-            Action a = () => task.Wait(TimeSpan.FromSeconds(3));
-            a.Should().Throw<AbruptTerminationException>();
+            await Awaiting(() => task.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<AbruptTerminationException>();
         }
     }
 }

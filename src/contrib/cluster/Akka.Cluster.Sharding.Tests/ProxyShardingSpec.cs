@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -76,10 +77,10 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void ProxyShardingSpec_Proxy_should_be_found()
+        public async Task ProxyShardingSpec_Proxy_should_be_found()
         {
-            IActorRef proxyActor = Sys.ActorSelection("akka://test/system/sharding/myTypeProxy")
-                    .ResolveOne(TimeSpan.FromSeconds(5)).Result;
+            IActorRef proxyActor = await Sys.ActorSelection("akka://test/system/sharding/myTypeProxy")
+                    .ResolveOne(TimeSpan.FromSeconds(5));
 
             proxyActor.Path.Should().NotBeNull();
             proxyActor.Path.ToString().Should().EndWith("Proxy");
@@ -95,12 +96,12 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void ProxyShardingSpec_Shard_coordinator_should_be_found()
+        public async Task ProxyShardingSpec_Shard_coordinator_should_be_found()
         {
             var shardRegion = clusterSharding.Start("myType", SimpleEchoActor.Props(), shardingSettings, messageExtractor);
 
-            IActorRef shardCoordinator = Sys.ActorSelection("akka://test/system/sharding/myTypeCoordinator")
-                    .ResolveOne(TimeSpan.FromSeconds(5)).Result;
+            IActorRef shardCoordinator = await Sys.ActorSelection("akka://test/system/sharding/myTypeCoordinator")
+                    .ResolveOne(TimeSpan.FromSeconds(5));
 
             shardCoordinator.Path.Should().NotBeNull();
             shardCoordinator.Path.ToString().Should().EndWith("Coordinator");

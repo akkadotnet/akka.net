@@ -202,11 +202,11 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Resolve_does_not_deadlock_GuiApplication()
         {
-            AsyncContext.Run(() =>
+            AsyncContext.Run(async () =>
             {
                 // here is really an ActorSelection
                 var actorSelection = (ActorSelection)_here;
-                var actorRef = actorSelection.ResolveOne(TimeSpan.FromSeconds(10)).Result;
+                var actorRef = await actorSelection.ResolveOne(TimeSpan.FromSeconds(10));
                 // the only test is that the ResolveOne works, so if we got here, the test passes
                 return Task.Delay(0);
             });

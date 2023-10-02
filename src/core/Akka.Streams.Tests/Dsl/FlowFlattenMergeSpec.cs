@@ -19,6 +19,7 @@ using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Internal;
 using FluentAssertions;
 using FluentAssertions.Extensions;
+using Nito.AsyncEx;
 using Xunit;
 using Xunit.Abstractions;
 using static FluentAssertions.FluentActions;
@@ -55,8 +56,7 @@ namespace Akka.Streams.Tests.Dsl
                 var task = Source.From(new[] {Src10(0), Src10(10), Src10(20), Src10(30)})
                     .MergeMany(4, s => s)
                     .RunWith(ToSet, Materializer);
-                await task.ShouldCompleteWithin(1.Seconds());
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(0, 40));
+                (await task.WaitAsync(1.Seconds())).Should().BeEquivalentTo(Enumerable.Range(0, 40));
             }, Materializer);
         }
 
@@ -69,8 +69,7 @@ namespace Akka.Streams.Tests.Dsl
                     .MergeMany(3, s => s)
                     .Take(40)
                     .RunWith(ToSet, Materializer);
-                await task.ShouldCompleteWithin(1.Seconds());
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(0, 40));
+                (await task.WaitAsync(1.Seconds())).Should().BeEquivalentTo(Enumerable.Range(0, 40));
             }, Materializer);
         }
 
@@ -84,10 +83,10 @@ namespace Akka.Streams.Tests.Dsl
                     .Take(40)
                     .RunWith(ToSeq, Materializer);
 
-                await task.ShouldCompleteWithin(1.Seconds());
+                var result = await task.ShouldCompleteWithin(1.Seconds());
 
-                task.Result.Take(30).Should().BeEquivalentTo(Enumerable.Range(0, 30));
-                task.Result.Drop(30).Should().BeEquivalentTo(Enumerable.Range(30, 10));
+                result.Take(30).Should().BeEquivalentTo(Enumerable.Range(0, 30));
+                result.Drop(30).Should().BeEquivalentTo(Enumerable.Range(30, 10));
             }, Materializer);
         }
 

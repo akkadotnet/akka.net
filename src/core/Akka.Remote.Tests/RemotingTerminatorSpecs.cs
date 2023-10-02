@@ -89,7 +89,7 @@ namespace Akka.Remote.Tests
             Watch(associated);
 
             // verify that the association is open (don't terminate until handshake is finished)
-            associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault).Result.MessageId.ShouldBe("foo");
+            (await associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault)).MessageId.ShouldBe("foo");
             
             
             // terminate the DEPLOYED system

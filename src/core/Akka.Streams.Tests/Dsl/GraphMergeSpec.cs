@@ -14,6 +14,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
@@ -88,7 +89,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Merge_must_work_with_one_way_merge()
+        public async Task A_Merge_must_work_with_one_way_merge()
         {
             var task = Source.FromGraph(GraphDsl.Create(b =>
             {
@@ -104,8 +105,7 @@ namespace Akka.Streams.Tests.Dsl
                 return list;
             }, Materializer);
 
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 3));
+            (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 3));
         }
 
         [Fact]

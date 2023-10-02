@@ -24,6 +24,7 @@ using Xunit.Abstractions;
 using System.Threading.Tasks;
 using FluentAssertions.Extensions;
 using Akka.Streams.Tests.Actor;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -447,11 +448,11 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_fail_on_too_large_initial_object()
+        public async Task Collecting_multiple_json_should_fail_on_too_large_initial_object()
         {
             var input = @"{ ""name"": ""john"" },{ ""name"": ""jack"" }";
 
-            var result = Source.Single(ByteString.FromString(input))
+            var task = Source.Single(ByteString.FromString(input))
                 .Via(JsonFraming.ObjectScanner(5))
                 .Select(b => b.ToString())
                 .RunAggregate(new List<string>(), (list, s) =>
@@ -460,7 +461,8 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Framing.FramingException>();
+            await Awaiting(() => task.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<Framing.FramingException>();
         }
 
         [Fact]

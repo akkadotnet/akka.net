@@ -24,8 +24,8 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions.Extensions;
+using static FluentAssertions.FluentActions;
 
-// ReSharper disable InvokeAsExtensionMethod
 #pragma warning disable 162
 
 namespace Akka.Streams.Tests.Dsl
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Flow_with_SelectAsyncUnordered_must_signal_task_failure_asap()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var latch = CreateTestLatch();
                 var done = Source.From(Enumerable.Range(1, 5))
                     .Select(n =>
@@ -165,9 +165,9 @@ namespace Akka.Streams.Tests.Dsl
                         return Task.FromResult(n);
                     }).RunWith(Sink.Ignore<int>(), Materializer);
 
-                done.Invoking(d => d.Wait(RemainingOrDefault)).Should().Throw<Exception>().WithMessage("err1");
+                await Awaiting(() => done.WaitAsync(RemainingOrDefault))
+                    .Should().ThrowAsync<Exception>().WithMessage("err1");
                 latch.CountDown();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -247,7 +247,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Flow_with_SelectAsyncUnordered_must_finish_after_task_failure()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var t = Source.From(Enumerable.Range(1, 3))                                                                             
                 .SelectAsyncUnordered(1, n => Task.Run(() =>                                                                             
                 {                                                                                 
@@ -258,9 +258,7 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))                                                                             
                 .Grouped(10)                                                                             
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                t.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-                t.Result.Should().BeEquivalentTo(new[] { 1, 2 });
-                return Task.CompletedTask;
+                (await t.WaitAsync(1.Seconds())).Should().BeEquivalentTo(new[] { 1, 2 });
             }, Materializer);
         }
 

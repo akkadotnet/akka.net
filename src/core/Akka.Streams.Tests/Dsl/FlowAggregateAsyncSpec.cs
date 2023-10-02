@@ -22,6 +22,7 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -103,7 +104,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_AggregateAsync_must_propagate_an_error()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var error = new TestException("buh");
                 var future = InputSource.Select(x =>
                 {
@@ -112,17 +113,15 @@ namespace Akka.Streams.Tests.Dsl
                     return x;
                 }).RunAggregateAsync(NotUsed.Instance, (notused, _) => Task.FromResult(notused), Materializer);
 
-                future.Invoking(f => f.Wait(TimeSpan.FromSeconds(3)))
-                    .Should().Throw<TestException>()
+                (await Awaiting(() => future.WaitAsync(RemainingOrDefault)).Should().ThrowAsync<TestException>())
                     .And.Should().Be(error);
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task A_AggregateAsync_must_complete_task_with_failure_when_Aggregating_functions_throws()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var error = new TestException("buh");
                 var future = InputSource.RunAggregateAsync(0, (x, y) =>
                 {
@@ -135,10 +134,8 @@ namespace Akka.Streams.Tests.Dsl
                     return Task.Run(() => x + y);
                 }, Materializer);
 
-                future.Invoking(f => f.Wait(TimeSpan.FromSeconds(3)))
-                    .Should().Throw<TestException>()
+                (await Awaiting(() => future.WaitAsync(RemainingOrDefault)).Should().ThrowAsync<TestException>())
                     .And.Should().Be(error);
-                return Task.CompletedTask;
             }, Materializer);
         }
 

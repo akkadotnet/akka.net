@@ -9,12 +9,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -120,7 +122,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Conflate_must_work_on_a_variable_rate_chain()
+        public async Task Conflate_must_work_on_a_variable_rate_chain()
         {
             var future = Source.From(Enumerable.Range(1, 1000)).ConflateWithSeed(i => i, (sum, i) => sum + i).Select(i =>
             {
@@ -128,12 +130,11 @@ namespace Akka.Streams.Tests.Dsl
                     Thread.Sleep(10);
                 return i;
             }).RunAggregate(0, (sum, i) => sum + i, Materializer);
-            future.Wait();
-            future.Result.Should().Be(500500);
+            (await future.WaitAsync(20.Seconds())).Should().Be(500500);
         }
 
         [Fact]
-        public void Conflate_must_work_on_a_variable_rate_chain_simple_conflate()
+        public async Task Conflate_must_work_on_a_variable_rate_chain_simple_conflate()
         {
             var future = Source.From(Enumerable.Range(1, 1000)).Conflate((sum, i) => sum + i).Select(i =>
             {
@@ -141,8 +142,7 @@ namespace Akka.Streams.Tests.Dsl
                     Thread.Sleep(10);
                 return i;
             }).RunAggregate(0, (sum, i) => sum + i, Materializer);
-            future.Wait();
-            future.Result.Should().Be(500500);
+            (await future.WaitAsync(20.Seconds())).Should().Be(500500);
         }
 
         [Fact]
@@ -179,15 +179,14 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Conflate_must_work_with_a_buffer_and_aggregate()
+        public async Task Conflate_must_work_with_a_buffer_and_aggregate()
         {
             var future =
                 Source.From(Enumerable.Range(1, 50))
                     .ConflateWithSeed(i => i, (sum, i) => sum + i)
                     .Buffer(50, OverflowStrategy.Backpressure)
                     .RunAggregate(0, (sum, i) => sum + i, Materializer);
-            future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            future.Result.Should().Be(Enumerable.Range(1, 50).Sum());
+            (await future.WaitAsync(3.Seconds())).Should().Be(Enumerable.Range(1, 50).Sum());
         }
 
         [Fact]

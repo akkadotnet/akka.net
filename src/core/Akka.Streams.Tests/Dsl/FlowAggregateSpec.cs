@@ -18,6 +18,7 @@ using Akka.TestKit.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions.Extensions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -95,7 +96,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Aggregate_must_propagate_an_error()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var error = new TestException("buh");
                 var future = InputSource.Select(x =>
                 {
@@ -104,19 +105,15 @@ namespace Akka.Streams.Tests.Dsl
                     return x;
                 }).RunAggregate(NotUsed.Instance, Keep.None, Materializer);
 
-                future.Invoking(f => f.Wait(TimeSpan.FromSeconds(3)))
-                    .Should().Throw<TestException>()
-                    .And.Should()
-                    .Be(error);
-                return Task.CompletedTask;
+                (await Awaiting(() => future.WaitAsync(RemainingOrDefault)).Should().ThrowAsync<TestException>())
+                    .And.Should().Be(error);
             }, Materializer);
         }
 
         [Fact]
-        public async Task
-            A_Aggregate_must_complete_task_with_failure_when_the_aggregateing_function_throws_and_the_supervisor_strategy_decides_to_stop()
+        public async Task A_Aggregate_must_complete_task_with_failure_when_the_aggregateing_function_throws_and_the_supervisor_strategy_decides_to_stop()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var error = new TestException("buh");
                 var future = InputSource.RunAggregate(0, (x, y) =>
                 {
@@ -124,11 +121,9 @@ namespace Akka.Streams.Tests.Dsl
                         throw error;
                     return x + y;
                 }, Materializer);
-
-                future.Invoking(f => f.Wait(TimeSpan.FromSeconds(3)))
-                    .Should().Throw<TestException>()
-                    .And.Should()
-                    .Be(error);
+                
+                (await Awaiting(() => future.WaitAsync(RemainingOrDefault)).Should().ThrowAsync<TestException>())
+                    .And.Should().Be(error);
                 return Task.CompletedTask;
             }, Materializer);
         }

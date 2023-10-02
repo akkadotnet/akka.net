@@ -180,13 +180,12 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_ActorRefSource_must_complete_and_materialize_the_stream_after_receiving_Status_Success()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var (actorRef, done) = Source.ActorRef<int>(3, OverflowStrategy.DropBuffer)                                                                             
                 .ToMaterialized(Sink.Ignore<int>(), Keep.Both)                                                                             
                 .Run(Materializer);
                 actorRef.Tell(new Status.Success("ok"));
-                done.ContinueWith(_ => Done.Instance).Result.Should().Be(Done.Instance);
-                return Task.CompletedTask;
+                (await done.WaitAsync(RemainingOrDefault)).Should().Be(Done.Instance);
             }, Materializer);
         }
 

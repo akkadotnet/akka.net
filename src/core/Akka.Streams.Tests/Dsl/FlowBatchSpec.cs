@@ -126,15 +126,14 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Batch_must_work_with_a_buffer_and_aggregate()
+        public async Task Batch_must_work_with_a_buffer_and_aggregate()
         {
             var future =
                 Source.From(Enumerable.Range(1, 50))
                     .Batch(long.MaxValue, i => i, (sum, i) => sum + i)
                     .Buffer(50, OverflowStrategy.Backpressure)
                     .RunAggregate(0, (sum, i) => sum + i, Materializer);
-            future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            future.Result.Should().Be(Enumerable.Range(1, 50).Sum());
+            (await future.WaitAsync(3.Seconds())).Should().Be(Enumerable.Range(1, 50).Sum());
         }
     }
 }

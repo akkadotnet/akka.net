@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
+using Nito.AsyncEx;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GraphDSLs_Partial_must_be_able_to_build_and_reuse_simple_partial_graphs()
+        public async Task GraphDSLs_Partial_must_be_able_to_build_and_reuse_simple_partial_graphs()
         {
             var doubler = GraphDsl.Create(b =>
             {
@@ -57,12 +59,11 @@ namespace Akka.Streams.Tests.Dsl
                         return ClosedShape.Instance;
                     })).Run(Materializer).Item3;
 
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] {4, 8, 12});
+            (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(new[] {4, 8, 12});
         }
 
         [Fact]
-        public void GraphDSLs_Partial_must_be_able_to_build_and_reuse_simple_materializing_partial_graphs()
+        public async Task GraphDSLs_Partial_must_be_able_to_build_and_reuse_simple_materializing_partial_graphs()
         {
             var doubler = GraphDsl.Create(Sink.First<IEnumerable<int>>(), (b, sink) =>
             {
@@ -91,15 +92,14 @@ namespace Akka.Streams.Tests.Dsl
                         return ClosedShape.Instance;
                     })).Run(Materializer);
 
-            var task = Task.WhenAll(t.Item1, t.Item2, t.Item3);
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result[0].Should().BeEquivalentTo(new[] {1, 2, 3});
-            task.Result[1].Should().BeEquivalentTo(new[] {2, 4, 6});
-            task.Result[2].Should().BeEquivalentTo(new[] { 4, 8, 12 });
+            var result = await Task.WhenAll(t.Item1, t.Item2, t.Item3).WaitAsync(3.Seconds());
+            result[0].Should().BeEquivalentTo(new[] {1, 2, 3});
+            result[1].Should().BeEquivalentTo(new[] {2, 4, 6});
+            result[2].Should().BeEquivalentTo(new[] { 4, 8, 12 });
         }
 
         [Fact]
-        public void GraphDSLs_Partial_must_be_able_to_build_and_reuse_complex_materializing_partial_graphs()
+        public async Task GraphDSLs_Partial_must_be_able_to_build_and_reuse_complex_materializing_partial_graphs()
         {
             var summer = Sink.Aggregate<int, int>(0, (i, i1) => i + i1);
 
@@ -134,15 +134,14 @@ namespace Akka.Streams.Tests.Dsl
                         return ClosedShape.Instance;
                     })).Run(Materializer);
 
-            var task = Task.WhenAll(t.Item1.Item1, t.Item1.Item2, t.Item2.Item1, t.Item2.Item2);
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] {6, 12, 12, 24});
-            t.Item3.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            t.Item3.Result.Should().BeEquivalentTo(new [] {4, 8, 12});
+            var result = await Task.WhenAll(t.Item1.Item1, t.Item1.Item2, t.Item2.Item1, t.Item2.Item2).WaitAsync(3.Seconds());
+            result.Should().BeEquivalentTo(new[] {6, 12, 12, 24});
+            var result2 = await t.Item3.WaitAsync(3.Seconds());
+            result2.Should().BeEquivalentTo(new [] {4, 8, 12});
         }
 
         [Fact]
-        public void GraphDSLs_Partial_must_be_able_to_expose_the_ports_of_imported_graphs()
+        public async Task GraphDSLs_Partial_must_be_able_to_expose_the_ports_of_imported_graphs()
         {
             var p = GraphDsl.Create(Flow.Create<int>().Select(x => x + 1),
                 (_, flow) => new FlowShape<int, int>(flow.Inlet, flow.Outlet));
@@ -158,8 +157,7 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().Be(1);
+            (await task.WaitAsync(3.Seconds())).Should().Be(1);
         }
     }
 }

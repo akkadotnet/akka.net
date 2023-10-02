@@ -13,6 +13,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using static FluentAssertions.FluentActions;
@@ -33,10 +34,11 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_wireTap_must_call_the_procedure_for_each_element()
         {
-            await this.AssertAllStagesStoppedAsync(async () => {
-                Source.From(Enumerable.Range(1, 100))                                                                             
-                .WireTap(i => TestActor.Tell(i))                                                                             
-                .RunWith(Sink.Ignore<int>(), Materializer).Wait();
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                _ = Source.From(Enumerable.Range(1, 100))
+                    .WireTap(i => TestActor.Tell(i))
+                    .RunWith(Sink.Ignore<int>(), Materializer).WaitAsync(3.Seconds());
                 foreach (var i in Enumerable.Range(1, 100))
                     await ExpectMsgAsync(i);
             }, Materializer);
@@ -78,11 +80,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_wireTap_must_no_cause_subsequent_stages_to_be_failed_if_throws()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var error = new TestException("Boom!");
                 var future = Source.Single(1).WireTap(_ => throw error).RunWith(Sink.Ignore<int>(), Materializer);
-                Invoking(() => future.Wait()).Should().NotThrow();
-                return Task.CompletedTask;
+                await Awaiting(() => future.WaitAsync(3.Seconds())).Should().NotThrowAsync();
             }, Materializer);
         }
     }

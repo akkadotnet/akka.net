@@ -13,6 +13,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
@@ -177,14 +178,13 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Concat_for_Flow_must_work_with_Source_DSL()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var testSource =                                                                             
                 Source.From(Enumerable.Range(1, 5))                                                                                 
                 .ConcatMaterialized(Source.From(Enumerable.Range(6, 5)), Keep.Both)                                                                                 
                 .Grouped(1000);
                 var task = testSource.RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
 
                 var runnable = testSource.ToMaterialized(Sink.Ignore<IEnumerable<int>>(), Keep.Left);
                 var t = runnable.Run(Materializer);
@@ -199,15 +199,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Concat_for_Flow_must_work_with_Flow_DSL()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var testFlow = Flow.Create<int>()                                                                             
                 .ConcatMaterialized(Source.From(Enumerable.Range(6, 5)), Keep.Both)                                                                             
                 .Grouped(1000);
                 var task = Source.From(Enumerable.Range(1, 5))
                     .ViaMaterialized(testFlow, Keep.Both)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
 
                 var runnable =
                     Source.From(Enumerable.Range(1, 5))
@@ -223,15 +222,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact(Skip = "ConcatMaterialized type conflict")]
         public async Task A_Concat_for_Flow_must_work_with_Flow_DSL2()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var testFlow = Flow.Create<int>()                                                                             
                 .ConcatMaterialized(Source.From(Enumerable.Range(6, 5)), Keep.Both)                                                                             
                 .Grouped(1000);
                 var task = Source.From(Enumerable.Range(1, 5))
                     .ViaMaterialized(testFlow, Keep.Both)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 return Task.CompletedTask;
             }, Materializer);
         }

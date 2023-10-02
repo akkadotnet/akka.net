@@ -101,8 +101,8 @@ namespace Akka.Streams.Tests.Dsl
                     ((Source<IEnumerable<IEnumerable<string>>, NotUsed>)source).RunWith(
                         Sink.First<IEnumerable<IEnumerable<string>>>(), Materializer);
 
-                await task.ShouldCompleteWithin(3.Seconds());
-                task.Result.OrderBy(e => e.First())
+                var result = await task.ShouldCompleteWithin(3.Seconds());
+                result.OrderBy(e => e.First())
                     .Should().BeEquivalentTo(new[] { "Aaa", "Abb" }, new[] { "Bcc" }, new[] { "Cdd", "Cee" });
             }, Materializer);
         }
@@ -402,9 +402,9 @@ namespace Akka.Streams.Tests.Dsl
                     .PrefixAndTail(0)
                     .Select(t => t.Item2)
                     .ConcatSubstream();
-                var futureGroupSource = source.RunWith(Sink.First<Source<int, NotUsed>>(), Materializer);
-                await futureGroupSource.ShouldCompleteWithin(3.Seconds());
-                var publisher = futureGroupSource.Result.RunWith(Sink.AsPublisher<int>(false), Materializer);
+                var futureGroupSourceTask = source.RunWith(Sink.First<Source<int, NotUsed>>(), Materializer);
+                var futureGroupSource = await futureGroupSourceTask.ShouldCompleteWithin(3.Seconds());
+                var publisher = futureGroupSource.RunWith(Sink.AsPublisher<int>(false), Materializer);
                 
                 var probe = this.CreateSubscriberProbe<int>();
                 publisher.Subscribe(probe);

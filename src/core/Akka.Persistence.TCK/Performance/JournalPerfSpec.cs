@@ -139,17 +139,17 @@ namespace Akka.Persistence.TestKit.Performance
         /// <param name="block">Block to Measure</param>
         /// <param name="numMsg">Messages per Group worker</param>
         /// <param name="numGroup">Number of workers in Group being measured</param>
-        internal void MeasureGroup(Func<TimeSpan, string> msg, Action block, int numMsg,int numGroup)
+        internal async Task MeasureGroupAsync(Func<TimeSpan, string> msg, Func<Task> block, int numMsg,int numGroup)
         {
             var measurements = new List<TimeSpan>(MeasurementIterations);
 
-            block(); //warm-up
+            await block(); //warm-up
 
             int i = 0;
             while (i < MeasurementIterations)
             {
                 var sw = Stopwatch.StartNew();
-                block();
+                await block();
                 sw.Stop();
                 measurements.Add(sw.Elapsed);
                 Output.WriteLine(msg(sw.Elapsed));
@@ -162,11 +162,11 @@ namespace Akka.Persistence.TestKit.Performance
             Output.WriteLine($"Workers: {numGroup} , Average time: {avgTime} ms, {msgPerSec} msg/sec/actor, {msgPerSecTotal} total msg/sec.");
         }
         
-        private void RunPersistGroupBenchmark(int numGroup, int numCommands)
+        private async Task RunPersistGroupBenchmark(int numGroup, int numCommands)
         {
             var p1 = BenchActorNewProbeGroup("GroupPersistPid" + numGroup, numGroup,
                 numCommands);
-            MeasureGroup(
+            await MeasureGroupAsync(
                 d =>
                     $"Persist()-ing {numCommands} * {numGroup} took {d.TotalMilliseconds} ms",
                 () =>
@@ -175,6 +175,7 @@ namespace Akka.Persistence.TestKit.Performance
                         Commands.Take(numCommands).ToImmutableList(),
                         numGroup);
                     p1.aut.Tell(new Broadcast(ResetCounter.Instance));
+                    return Task.CompletedTask;
                 }, numCommands, numGroup
             );
         }
@@ -277,13 +278,13 @@ namespace Akka.Persistence.TestKit.Performance
         }
         
         [Fact]
-        public void PersistenceActor_performance_must_measure_RecoveringTwo()
+        public async Task PersistenceActor_performance_must_measure_RecoveringTwo()
         {
             var p1 = BenchActorNewProbe("DoublePersistRecoverPid1", EventsCount);
             var p2 = BenchActorNewProbe("DoublePersistRecoverPid2", EventsCount);
             FeedAndExpectLastSpecific(p1, "p", Commands);
             FeedAndExpectLastSpecific(p2, "p", Commands);
-            MeasureGroup(d => $"Recovering {EventsCount} took {d.TotalMilliseconds} ms", () =>
+            await MeasureGroupAsync(d => $"Recovering {EventsCount} took {d.TotalMilliseconds} ms", async () =>
             {
                var task1 = Task.Run(()=>
                {
@@ -296,12 +297,12 @@ namespace Akka.Persistence.TestKit.Performance
                    var refAndProbe =BenchActorNewProbe("DoublePersistRecoverPid2", EventsCount);
                    refAndProbe.probe.ExpectMsg(Commands.Last(), ExpectDuration);
                });
-               Task.WaitAll(new[] {task1, task2});
+               await Task.WhenAll(task1, task2);
 
             },EventsCount,2);
         }
         [Fact]
-        public void PersistenceActor_performance_must_measure_RecoveringFour()
+        public async Task PersistenceActor_performance_must_measure_RecoveringFour()
         {
             var p1 = BenchActorNewProbe("QuadPersistRecoverPid1", EventsCount);
             var p2 = BenchActorNewProbe("QuadPersistRecoverPid2", EventsCount);
@@ -311,7 +312,7 @@ namespace Akka.Persistence.TestKit.Performance
             FeedAndExpectLastSpecific(p2, "p", Commands);
             FeedAndExpectLastSpecific(p3, "p", Commands);
             FeedAndExpectLastSpecific(p4, "p", Commands);
-            MeasureGroup(d => $"Recovering {EventsCount} took {d.TotalMilliseconds} ms", () =>
+            await MeasureGroupAsync(d => $"Recovering {EventsCount} took {d.TotalMilliseconds} ms", async () =>
             {
                 var task1 = Task.Run(()=>
                 {
@@ -334,7 +335,7 @@ namespace Akka.Persistence.TestKit.Performance
                     var refAndProbe =BenchActorNewProbe("QuadPersistRecoverPid4", EventsCount);
                     refAndProbe.probe.ExpectMsg(Commands.Last(), ExpectDuration);
                 });
-                Task.WaitAll(new[] {task1, task2,task3,task4});
+                await Task.WhenAll(task1, task2, task3, task4);
 
             },EventsCount,4);
         }

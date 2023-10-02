@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -57,24 +58,26 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void ShardsQueryResult_must_partition_failures_and_responses_by_type_and_by_convention_failed_Left_T_Right()
+        public async Task ShardsQueryResult_must_partition_failures_and_responses_by_type_and_by_convention_failed_Left_T_Right()
         {
-            void Assert<T>(ImmutableHashSet<(string shard, Task<T> task)> responses)
+            async Task AssertAsync<T>(ImmutableHashSet<(string shard, Task<T> task)> responses)
             {
                 var results = responses.Union(failures.Select(i => (i, Task.FromException<T>(new AskTimeoutException("failed"))))).ToImmutableList();
                 var qr = ShardsQueryResult<T>.Create(results, shards.Count, timeout);
                 qr.Failed.Should().BeEquivalentTo(failures);
-                qr.Responses.Should().BeEquivalentTo(responses.Select(i => i.task.Result));
+                var responsesResult = await Task.WhenAll(responses.Select(i => i.task))
+                    .ShouldCompleteWithin(RemainingOrDefault);
+                qr.Responses.Should().BeEquivalentTo(responsesResult);
                 IsTotalFailed(qr).Should().BeFalse();
                 IsAllSubsetFailed(qr).Should().BeFalse();
                 qr.ToString().Should().Be($"Queried [3] shards: [2] responsive, [1] failed after {timeout}.");
             }
 
-            Assert(ImmutableHashSet.Create<(string shard, Task<ShardStats> task)>(
+            await AssertAsync(ImmutableHashSet.Create<(string shard, Task<ShardStats> task)>(
                 ("a", Task.FromResult(new ShardStats("a", 1))),
                 ("b", Task.FromResult(new ShardStats("b", 1)))));
 
-            Assert(ImmutableHashSet.Create<(string shard, Task<CurrentShardState> task)>(
+            await AssertAsync(ImmutableHashSet.Create<(string shard, Task<CurrentShardState> task)>(
                 ("a", Task.FromResult(new CurrentShardState("a", ImmutableHashSet.Create("a1")))),
                 ("b", Task.FromResult(new CurrentShardState("b", ImmutableHashSet.Create("b1"))))));
         }

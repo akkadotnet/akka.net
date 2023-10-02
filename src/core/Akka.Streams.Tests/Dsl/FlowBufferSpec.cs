@@ -14,6 +14,7 @@ using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,33 +31,31 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Buffer_must_pass_elements_through_normally_in_backpressured_mode()
+        public async Task Buffer_must_pass_elements_through_normally_in_backpressured_mode()
         {
             var future = Source.From(Enumerable.Range(1, 1000))
                 .Buffer(100, OverflowStrategy.Backpressure)
                 .Grouped(1001)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(Enumerable.Range(1,1000));
+            (await future.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1,1000));
         }
 
         [Fact]
-        public void Buffer_must_pass_elements_through_normally_in_backpressured_mode_with_buffer_size_one()
+        public async Task Buffer_must_pass_elements_through_normally_in_backpressured_mode_with_buffer_size_one()
         {
             var future = Source.From(Enumerable.Range(1, 1000))
                 .Buffer(1, OverflowStrategy.Backpressure)
                 .Grouped(1001)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(Enumerable.Range(1, 1000));
+            (await future.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 1000));
         }
 
         [Fact]
         public async Task Buffer_must_pass_elements_through_a_chain_of_backpressured_buffers_of_different_size()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var future = Source.From(Enumerable.Range(1, 1000))                                                                             
                 .Buffer(1, OverflowStrategy.Backpressure)                                                                             
                 .Buffer(10, OverflowStrategy.Backpressure)                                                                             
@@ -66,9 +65,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Buffer(128, OverflowStrategy.Backpressure)                                                                             
                 .Grouped(1001)                                                                             
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                future.Result.Should().BeEquivalentTo(Enumerable.Range(1, 1000));
-                return Task.CompletedTask;
+                (await future.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 1000));
             }, Materializer);
         }
 

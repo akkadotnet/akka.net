@@ -14,6 +14,7 @@ using Akka.Streams.TestKit;
 using Akka.Util.Internal;
 using Akka.Util.Internal.Collections;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using static Akka.Streams.Tests.Dsl.TestConfig;
@@ -262,15 +263,14 @@ namespace Akka.Streams.Tests.Dsl
                 .Select(async _ => await RunScriptAsync(script(), Settings, flow => flow.GroupedWithin(3, TimeSpan.FromMinutes(10))));
         }
 
-        [Fact(Skip = "Skipped for async_testkit conversion build")]
-        public void A_GroupedWithin_must_group_with_small_groups_with_backpressure()
+        [Fact]
+        public async Task A_GroupedWithin_must_group_with_small_groups_with_backpressure()
         {
             var t = Source.From(Enumerable.Range(1, 10))
                 .GroupedWithin(1, TimeSpan.FromDays(1))
                 .Throttle(1, TimeSpan.FromMilliseconds(110), 0, ThrottleMode.Shaping)
                 .RunWith(Sink.Seq<IEnumerable<int>>(), Materializer);
-            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            t.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10).Select(i => new List<int> { i }));
+            (await t.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10).Select(i => new List<int> { i }));
         }
     }
 

@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -196,7 +197,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void StartEntity_while_the_entity_is_queued_remember_stop_should_start_it_again_when_that_is_done()
+        public async Task StartEntity_while_the_entity_is_queued_remember_stop_should_start_it_again_when_that_is_done()
         {
             // this is hard to do deterministically
             var sharding = ClusterSharding.Get(Sys).Start(
@@ -211,7 +212,7 @@ namespace Akka.Cluster.Sharding.Tests
             Watch(entity);
 
             // resolve before passivation to save some time
-            var shard = Sys.ActorSelection(entity.Path.Parent).ResolveOne(TimeSpan.FromSeconds(3)).Result;
+            var shard = await Sys.ActorSelection(entity.Path.Parent).ResolveOne(TimeSpan.FromSeconds(3));
 
             // stop passivation
             entity.Tell("passivate");

@@ -15,6 +15,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -90,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GraphDSLs_must_support_broadcast_merge_layouts()
+        public async Task GraphDSLs_must_support_broadcast_merge_layouts()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<IEnumerable<int>>(), (b, sink) =>
             {
@@ -106,12 +107,11 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 6));
+            (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 6));
         }
 
         [Fact]
-        public void GraphDSLs_must_support_balance_merge_parallelization_layouts()
+        public async Task GraphDSLs_must_support_balance_merge_parallelization_layouts()
         {
             var elements = Enumerable.Range(0, 11).ToList();
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<IEnumerable<int>>(), (b, sink) =>
@@ -130,12 +130,11 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(elements);
+            (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(elements);
         }
 
         [Fact]
-        public void GraphDSLs_must_support_wikipedia_Topological_sorting_2()
+        public async Task GraphDSLs_must_support_wikipedia_Topological_sorting_2()
         {
             Func<int, Source<int, (Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)>> source =
                 i =>
@@ -184,16 +183,15 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            var task = Task.WhenAll(t.Item1, t.Item2, t.Item3);
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            var result = await Task.WhenAll(t.Item1, t.Item2, t.Item3).WaitAsync(3.Seconds());
 
-            task.Result[0].Should().BeEquivalentTo(new[] {5, 7});
-            task.Result[1].Should().BeEquivalentTo(new[] { 3, 5, 7, 7 });
-            task.Result[2].Should().BeEquivalentTo(new[] { 3, 5, 7 });
+            result[0].Should().BeEquivalentTo(new[] {5, 7});
+            result[1].Should().BeEquivalentTo(new[] { 3, 5, 7, 7 });
+            result[2].Should().BeEquivalentTo(new[] { 3, 5, 7 });
         }
 
         [Fact]
-        public void GraphDSLs_must_allow_adding_of_flows_to_sources_and_sinks_to_flows()
+        public async Task GraphDSLs_must_allow_adding_of_flows_to_sources_and_sinks_to_flows()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<IEnumerable<int>>(), (b, sink) =>
             {
@@ -209,8 +207,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] {2, 4, 6, 5, 7, 9});
+            (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(new[] {2, 4, 6, 5, 7, 9});
         }
 
         [Fact]
@@ -232,7 +229,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void GraphDSLs_must_be_possible_to_use_as_lego_bricks()
+        public async Task GraphDSLs_must_be_possible_to_use_as_lego_bricks()
         {
             Func<int, Source<int, (NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>)>> source =
                 i =>
@@ -264,8 +261,7 @@ namespace Akka.Streams.Tests.Dsl
                         return ClosedShape.Instance;
                     })).Run(Materializer).Item4;
 
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] {4, 5, 6, 13, 14, 15});
+            (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(new[] {4, 5, 6, 13, 14, 15});
         }
     }
 }

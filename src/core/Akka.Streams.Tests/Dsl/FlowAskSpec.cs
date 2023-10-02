@@ -150,8 +150,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Flow_with_ask_must_produce_asked_elements() => await this.AssertAllStagesStoppedAsync(() => {
             var replyOnInts =
-                                                                                                                                      Sys.ActorOf(Props.Create(() => new Replier()).WithDispatcher("akka.test.stream-dispatcher"),
-                                                                                                                                          "replyOnInts");
+                Sys.ActorOf(Props.Create(() => new Replier()).WithDispatcher("akka.test.stream-dispatcher"), "replyOnInts");
             var c = this.CreateManualSubscriberProbe<Reply>();
 
             var p = Source.From(Enumerable.Range(1, 3))
@@ -274,7 +273,7 @@ namespace Akka.Streams.Tests.Dsl
         }, _materializer);
 
         [Fact]
-        public async Task Flow_with_ask_a_failure_mid_stream_must_skip_element_with_resume_strategy() => await this.AssertAllStagesStoppedAsync(() => {
+        public async Task Flow_with_ask_a_failure_mid_stream_must_skip_element_with_resume_strategy() => await this.AssertAllStagesStoppedAsync(async () => {
             var p = CreateTestProbe();
             var input = new[] { "a", "b", "c", "d", "e", "f" };
             var elements = Source.From(input)
@@ -302,8 +301,7 @@ namespace Akka.Streams.Tests.Dsl
             p.LastSender.Tell("f");
 
             cSender.Tell(new Status.Failure(new Exception("Boom!")));
-            elements.Result.Should().BeEquivalentTo(new[] { "a", "b", /*no c*/ "d", "e", "f" });
-            return Task.CompletedTask;
+            (await elements).Should().BeEquivalentTo("a", "b", /*no c*/ "d", "e", "f");
         }, _materializer);
 
         [Fact]
@@ -328,16 +326,14 @@ namespace Akka.Streams.Tests.Dsl
         }, _materializer);
 
         [Fact]
-        public async Task Flow_with_ask_must_resume_after_multiple_failures() => await this.AssertAllStagesStoppedAsync(() => {
+        public async Task Flow_with_ask_must_resume_after_multiple_failures() => await this.AssertAllStagesStoppedAsync(async () => {
             var aref = ReplierFailAllExceptOn(6);
             var t = Source.From(Enumerable.Range(1, 6))
                 .Ask<Reply>(aref, _timeout, 2)
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Supervision.Deciders.ResumingDecider))
                 .RunWith(Sink.First<Reply>(), _materializer);
 
-            t.Wait(3.Seconds()).Should().BeTrue();
-            t.Result.Should().Be(new Reply(6));
-            return Task.CompletedTask;
+            (await t.WaitAsync(3.Seconds())).Should().Be(new Reply(6));
         }, _materializer);
 
         [Fact]
