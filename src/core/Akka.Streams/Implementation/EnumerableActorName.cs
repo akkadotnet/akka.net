@@ -41,7 +41,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// TBD
     /// </summary>
-    internal class EnumerableActorNameImpl : EnumerableActorName
+    internal sealed class EnumerableActorNameImpl : EnumerableActorName
     {
         /// <summary>
         /// TBD

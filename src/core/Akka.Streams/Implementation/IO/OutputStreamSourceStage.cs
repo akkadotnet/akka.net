@@ -23,7 +23,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class OutputStreamSourceStage : GraphStageWithMaterializedValue<SourceShape<ByteString>, Stream>
+    internal sealed class OutputStreamSourceStage : GraphStageWithMaterializedValue<SourceShape<ByteString>, Stream>
     {
         #region internal classes
 
@@ -37,7 +37,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Flush : IAdapterToStageMessage
+        internal sealed class Flush : IAdapterToStageMessage
         {
             /// <summary>
             /// TBD
@@ -52,7 +52,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Close : IAdapterToStageMessage
+        internal sealed class Close : IAdapterToStageMessage
         {
             /// <summary>
             /// TBD
@@ -74,7 +74,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Ok : IDownstreamStatus
+        internal sealed class Ok : IDownstreamStatus
         {
             /// <summary>
             /// TBD
@@ -89,7 +89,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Canceled : IDownstreamStatus
+        internal sealed class Canceled : IDownstreamStatus
         {
             /// <summary>
             /// TBD
@@ -315,7 +315,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// TBD
     /// </summary>
-    internal class OutputStreamAdapter : Stream
+    internal sealed class OutputStreamAdapter : Stream
     {
         #region not supported
 
