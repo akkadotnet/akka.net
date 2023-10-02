@@ -3856,9 +3856,15 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 try
                 {
-                    var disposed = _enumerator.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(10));
-                    if(!disposed)
-                        Log.Error("Failed to dispose underlying async enumerator. DisposeAsync timed out after 10 seconds.");
+                    _enumerator.DisposeAsync().AsTask().ContinueWith(t =>
+                    {
+                        if (!t.IsCanceled && !t.IsFaulted)
+                            return;
+
+                        // This is best effort exception logging, this log will never appear if the ActorSystem
+                        // was shut down before we reach this code (BusEvent was not emitting new logs anymore)
+                        Log.Error(t.Exception, "Underlying async enumerator threw an exception while being disposed.");
+                    });
                 }
                 catch(Exception ex)
                 {

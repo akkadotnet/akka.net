@@ -279,7 +279,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var probe = CreateTestProbe();
-                var enumerable = new TestAsyncEnumerable();
+                var enumerable = new TestAsyncEnumerable(500.Milliseconds());
                 var src = Source.From(() => enumerable)
                     .ViaMaterialized(KillSwitches.Single<int>(), Keep.Right)
                     .ToMaterialized(Sink.ActorRefWithAck<int>(probe, "init", "ack", "complete"), Keep.Left);
@@ -306,11 +306,53 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
         
+        [Fact(DisplayName = "AsyncEnumerable Source should dispose underlying async enumerator on kill switch signal even after ActorSystem termination")]
+        public async Task AsyncEnumerableSource_Disposes_On_KillSwitch2()
+        {
+            var probe = CreateTestProbe();
+            // A long disposing enumerable source
+            var enumerable = new TestAsyncEnumerable(2.Seconds());
+            var src = Source.From(() => enumerable)
+                .ViaMaterialized(KillSwitches.Single<int>(), Keep.Right)
+                .ToMaterialized(Sink.ActorRefWithAck<int>(probe, "init", "ack", "complete"), Keep.Left);
+            var killSwitch = src.Run(Materializer);
+                
+            // assert init was sent
+            await probe.ExpectMsgAsync<string>(msg => msg == "init");
+            probe.Sender.Tell("ack");
+                
+            // assert enumerator is working
+            foreach (var i in Enumerable.Range(0, 5))
+            {
+                await probe.ExpectMsgAsync<int>(msg => msg == i);
+                probe.Sender.Tell("ack");
+            }
+                
+            // last message was not ack-ed
+            await probe.ExpectMsgAsync<int>(msg => msg == 5);
+                
+            killSwitch.Shutdown();
+
+            await Sys.Terminate();
+
+            // enumerable was not disposed even after system termination
+            enumerable.Disposed.Should().BeFalse();
+            
+            // assert that enumerable resource can still be disposed even after system termination
+            // (Not guaranteed if process was already killed)
+            await AwaitConditionAsync(() => enumerable.Disposed);
+        }
+        
         private class TestAsyncEnumerable: IAsyncEnumerable<int>
         {
-            private readonly AsyncEnumerator _enumerator = new();
+            private readonly AsyncEnumerator _enumerator;
 
             public bool Disposed => _enumerator.Disposed;
+
+            public TestAsyncEnumerable(TimeSpan shutdownDelay)
+            {
+                _enumerator = new AsyncEnumerator(shutdownDelay);
+            }
             
             public IAsyncEnumerator<int> GetAsyncEnumerator(CancellationToken token = default)
             {
@@ -320,13 +362,19 @@ namespace Akka.Streams.Tests.Dsl
 
             private sealed class AsyncEnumerator: IAsyncEnumerator<int>
             {
+                private readonly TimeSpan _shutdownDelay;
                 private int _current = -1;
-                
+
+                public AsyncEnumerator(TimeSpan shutdownDelay)
+                {
+                    _shutdownDelay = shutdownDelay;
+                }
+
                 public bool Disposed { get; private set; }
                 
                 public async ValueTask DisposeAsync()
                 {
-                    await Task.Delay(100);
+                    await Task.Delay(_shutdownDelay);
                     Disposed = true;
                 }
 
