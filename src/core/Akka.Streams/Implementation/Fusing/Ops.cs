@@ -3849,16 +3849,20 @@ namespace Akka.Streams.Implementation.Fusing
                     _completionCts.Cancel();
                     _completionCts.Dispose();
                 }
-                catch
+                catch(Exception ex)
                 {
+                    // This should never happen
+                    Log.Error(ex, "AsyncEnumerable threw while cancelling CancellationTokenSource");
                 }
                 try
                 {
-                    _enumerator.DisposeAsync().ConfigureAwait(false);
+                    var disposed = _enumerator.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(10));
+                    if(!disposed)
+                        Log.Error("Failed to dispose underlying async enumerator. DisposeAsync timed out after 10 seconds.");
                 }
-                catch
+                catch(Exception ex)
                 {
-                    //intentional
+                    Log.Error(ex, "Underlying async enumerator threw an exception while being disposed.");
                 }
                 base.PostStop();
             }
