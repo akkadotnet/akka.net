@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
@@ -38,9 +37,9 @@ namespace Akka.Remote
     {
         private readonly double _threshold;
         private readonly int _maxSampleSize;
-        private TimeSpan _minStdDeviation;
-        private TimeSpan _acceptableHeartbeatPause;
-        private TimeSpan _firstHeartbeatEstimate;
+        private readonly TimeSpan _minStdDeviation;
+        private readonly TimeSpan _acceptableHeartbeatPause;
+        private readonly TimeSpan _firstHeartbeatEstimate;
         private readonly Clock _clock;
 
         /// <summary>
@@ -128,7 +127,7 @@ namespace Akka.Remote
         /// <summary>
         /// Uses volatile memory and immutability for lockless concurrency.
         /// </summary>
-        internal class AccrualState
+        internal sealed class AccrualState
         {
             /// <summary>
             /// TBD
