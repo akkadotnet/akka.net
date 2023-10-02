@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -267,6 +268,87 @@ namespace Akka.Streams.Tests.Dsl
                 // The cancellation token inside the IAsyncEnumerable should be cancelled
                 await task;
             });
+        }
+
+        /// <summary>
+        /// Reproduction for https://github.com/akkadotnet/akka.net/issues/6903
+        /// </summary>
+        [Fact(DisplayName = "AsyncEnumerable Source should dispose underlying async enumerator on kill switch signal")]
+        public async Task AsyncEnumerableSource_Disposes_On_KillSwitch()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var probe = CreateTestProbe();
+                var enumerable = new TestAsyncEnumerable();
+                var src = Source.From(() => enumerable)
+                    .ViaMaterialized(KillSwitches.Single<int>(), Keep.Right)
+                    .ToMaterialized(Sink.ActorRefWithAck<int>(probe, "init", "ack", "complete"), Keep.Left);
+                var killSwitch = src.Run(Materializer);
+                
+                // assert init was sent
+                await probe.ExpectMsgAsync<string>(msg => msg == "init");
+                probe.Sender.Tell("ack");
+                
+                // assert enumerator is working
+                foreach (var i in Enumerable.Range(0, 5))
+                {
+                    await probe.ExpectMsgAsync<int>(msg => msg == i);
+                    probe.Sender.Tell("ack");
+                }
+                
+                // last message was not ack-ed
+                await probe.ExpectMsgAsync<int>(msg => msg == 5);
+                
+                killSwitch.Shutdown();
+                
+                // assert that enumerable resource was disposed
+                await AwaitConditionAsync(() => enumerable.Disposed);
+            }, Materializer);
+        }
+        
+        private class TestAsyncEnumerable: IAsyncEnumerable<int>
+        {
+            private readonly AsyncEnumerator _enumerator = new();
+
+            public bool Disposed => _enumerator.Disposed;
+            
+            public IAsyncEnumerator<int> GetAsyncEnumerator(CancellationToken token = default)
+            {
+                token.ThrowIfCancellationRequested();
+                return _enumerator;
+            }
+
+            private sealed class AsyncEnumerator: IAsyncEnumerator<int>
+            {
+                private int _current = -1;
+                
+                public bool Disposed { get; private set; }
+                
+                public async ValueTask DisposeAsync()
+                {
+                    await Task.Delay(100);
+                    Disposed = true;
+                }
+
+                public async ValueTask<bool> MoveNextAsync()
+                {
+                    await Task.Delay(100);
+                    _current++;
+                    return true;
+                }
+
+                public int Current
+                {
+                    get
+                    {
+                        if (_current == -1)
+                            throw new IndexOutOfRangeException("MoveNextAsync has not been called");
+                        if (Disposed)
+                            throw new ObjectDisposedException("Enumerator already disposed");
+                        return _current;
+                    }
+                }
+            }
         }
 
         [Fact]
