@@ -446,17 +446,7 @@ namespace Akka.Cluster
         internal class GossipTick : ITick
         {
             private GossipTick() { }
-            private static readonly GossipTick _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static GossipTick Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
+            public static GossipTick Instance { get; } = new();
         }
 
         /// <summary>
@@ -465,17 +455,7 @@ namespace Akka.Cluster
         internal class GossipSpeedupTick : ITick
         {
             private GossipSpeedupTick() { }
-            private static readonly GossipSpeedupTick _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static GossipSpeedupTick Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
+            public static GossipSpeedupTick Instance { get; } = new();
         }
 
         /// <summary>
@@ -484,17 +464,7 @@ namespace Akka.Cluster
         internal class ReapUnreachableTick : ITick
         {
             private ReapUnreachableTick() { }
-            private static readonly ReapUnreachableTick _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static ReapUnreachableTick Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
+            public static ReapUnreachableTick Instance { get; }  = new();
         }
 
         /// <summary>
@@ -503,17 +473,7 @@ namespace Akka.Cluster
         internal class MetricsTick : ITick
         {
             private MetricsTick() { }
-            private static readonly MetricsTick _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static MetricsTick Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
+            public static MetricsTick Instance { get; } = new();
         }
 
         /// <summary>
@@ -522,17 +482,7 @@ namespace Akka.Cluster
         internal class LeaderActionsTick : ITick
         {
             private LeaderActionsTick() { }
-            private static readonly LeaderActionsTick _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static LeaderActionsTick Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
+            public static LeaderActionsTick Instance { get; } = new();
         }
 
         /// <summary>
@@ -541,17 +491,7 @@ namespace Akka.Cluster
         internal class PublishStatsTick : ITick
         {
             private PublishStatsTick() { }
-            private static readonly PublishStatsTick _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static PublishStatsTick Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
+            public static PublishStatsTick Instance { get; } = new();
         }
 
         /// <summary>
@@ -559,34 +499,29 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class SendGossipTo
         {
-            private readonly Address _address;
-
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="address">TBD</param>
             public SendGossipTo(Address address)
             {
-                _address = address;
+                Address = address;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public Address Address { get { return _address; } }
+            public Address Address { get; }
 
             /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 var other = obj as SendGossipTo;
                 if (other == null) return false;
-                return _address.Equals(other._address);
+                return Address.Equals(other.Address);
             }
 
             /// <inheritdoc/>
             public override int GetHashCode()
             {
-                return _address.GetHashCode();
+                return Address.GetHashCode();
             }
         }
 

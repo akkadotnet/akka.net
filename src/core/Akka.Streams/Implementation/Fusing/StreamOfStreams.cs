@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Actors;
@@ -1000,7 +999,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// Not yet materialized and no command has been scheduled
         /// </summary>
-        internal class Uninitialized : IState
+        internal sealed class Uninitialized : IState
         {
             public static readonly Uninitialized Instance = new();
 
@@ -1025,7 +1024,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// A RequestOne command was scheduled before materialization
         /// </summary>
-        internal class RequestOneScheduledBeforeMaterialization : CommandScheduledBeforeMaterialization
+        internal sealed class RequestOneScheduledBeforeMaterialization : CommandScheduledBeforeMaterialization
         {
             public static readonly RequestOneScheduledBeforeMaterialization Instance = new(RequestOne.Instance);
 
@@ -1054,7 +1053,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
         }
 
-        internal class RequestOne : ICommand
+        internal sealed class RequestOne : ICommand
         {
             public static readonly RequestOne Instance = new();
 

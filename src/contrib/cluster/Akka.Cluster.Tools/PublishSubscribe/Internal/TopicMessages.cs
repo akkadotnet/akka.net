@@ -312,11 +312,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     [Serializable]
     internal sealed class GossipTick
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static GossipTick Instance { get; } = new();
-
         private GossipTick() { }
     }
 

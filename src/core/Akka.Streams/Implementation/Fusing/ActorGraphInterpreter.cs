@@ -1149,7 +1149,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
-        internal class ActorOutputBoundary<T> : DownstreamBoundaryStageLogic, IActorOutputBoundary
+        internal sealed class ActorOutputBoundary<T> : DownstreamBoundaryStageLogic, IActorOutputBoundary
         {
             #region InHandler
             private sealed class InHandler : Stage.InHandler

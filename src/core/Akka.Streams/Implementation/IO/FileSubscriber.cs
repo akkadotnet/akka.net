@@ -20,7 +20,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class FileSubscriber : ActorSubscriber
+    internal sealed class FileSubscriber : ActorSubscriber
     {
         /// <summary>
         /// TBD
@@ -208,7 +208,7 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
-        internal class FlushSignal
+        internal sealed class FlushSignal
         {
             public static readonly FlushSignal Instance = new();
             private FlushSignal() { }

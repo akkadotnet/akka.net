@@ -53,15 +53,10 @@ namespace Akka.Actor
     {
         private NoScopeGiven() { }
 
-        private static readonly NoScopeGiven _instance = new();
-
         /// <summary>
         /// The singleton instance of this scope.
         /// </summary>
-        public static NoScopeGiven Instance
-        {
-            get { return _instance; }
-        }
+        public static NoScopeGiven Instance { get; } = new();
 
         /// <summary>
         /// Creates a new <see cref="Akka.Actor.Scope" /> from this scope using another <see cref="Akka.Actor.Scope" />

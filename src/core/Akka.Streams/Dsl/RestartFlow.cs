@@ -454,13 +454,13 @@ namespace Akka.Streams.Dsl
         public override string ToString() => $"Duration({Duration})";
     }
     }
-    
+
     /// <summary>
     /// Returns a flow that is almost identical but delays propagation of cancellation from downstream to upstream.
     /// Once the down stream is finished calls to onPush are ignored
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    internal class DelayCancellationStage<T> : SimpleLinearGraphStage<T>
+    internal sealed class DelayCancellationStage<T> : SimpleLinearGraphStage<T>
     {
         private readonly TimeSpan _delay;
 

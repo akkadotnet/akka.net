@@ -747,7 +747,7 @@ namespace Akka.Streams.Actors
     /// <summary>
     /// TBD
     /// </summary>
-    internal class ActorPublisherState : ExtensionIdProvider<ActorPublisherState>, IExtension
+    internal sealed class ActorPublisherState : ExtensionIdProvider<ActorPublisherState>, IExtension
     {
         /// <summary>
         /// TBD
