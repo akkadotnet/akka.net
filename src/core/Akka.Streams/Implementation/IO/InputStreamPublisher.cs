@@ -13,14 +13,13 @@ using Akka.Event;
 using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.IO;
-using Akka.Util;
 
 namespace Akka.Streams.Implementation.IO
 {
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class InputStreamPublisher : Actors.ActorPublisher<ByteString>
+    internal sealed class InputStreamPublisher : Actors.ActorPublisher<ByteString>
     {
         /// <summary>
         /// TBD

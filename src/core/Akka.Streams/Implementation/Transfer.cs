@@ -303,7 +303,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// TBD
     /// </summary>
-    internal class WaitingForUpstreamSubscription : TransferState
+    internal sealed class WaitingForUpstreamSubscription : TransferState
     {
         /// <summary>
         /// TBD
