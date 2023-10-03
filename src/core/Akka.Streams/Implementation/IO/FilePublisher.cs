@@ -23,7 +23,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class FilePublisher : Actors.ActorPublisher<ByteString>
+    internal sealed class FilePublisher : Actors.ActorPublisher<ByteString>
     {
         /// <summary>
         /// TBD

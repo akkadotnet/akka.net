@@ -1753,11 +1753,7 @@ namespace Akka.Remote
         public sealed class BackoffTimer
         {
             private BackoffTimer() { }
-            private static readonly BackoffTimer _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static BackoffTimer Instance { get { return _instance; } }
+            public static BackoffTimer Instance { get; } = new();
         }
 
         /// <summary>
@@ -1766,11 +1762,7 @@ namespace Akka.Remote
         public sealed class FlushAndStop
         {
             private FlushAndStop() { }
-            private static readonly FlushAndStop _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static FlushAndStop Instance { get { return _instance; } }
+            public static FlushAndStop Instance { get; } = new();
         }
 
         /// <summary>
@@ -1779,18 +1771,13 @@ namespace Akka.Remote
         public sealed class AckIdleCheckTimer
         {
             private AckIdleCheckTimer() { }
-            private static readonly AckIdleCheckTimer _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static AckIdleCheckTimer Instance { get { return _instance; } }
+            public static AckIdleCheckTimer Instance { get; } = new();
         }
 
         private sealed class FlushAndStopTimeout
         {
             private FlushAndStopTimeout() { }
-            private static readonly FlushAndStopTimeout _instance = new();
-            public static FlushAndStopTimeout Instance { get { return _instance; } }
+            public static FlushAndStopTimeout Instance { get; } = new();
         }
 
         /// <summary>

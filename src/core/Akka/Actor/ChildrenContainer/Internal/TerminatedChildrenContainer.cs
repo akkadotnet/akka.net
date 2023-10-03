@@ -17,8 +17,6 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class TerminatedChildrenContainer : EmptyChildrenContainer
     {
-        private static readonly IChildrenContainer _instance = new TerminatedChildrenContainer();
-
         private TerminatedChildrenContainer()
         {
             //Intentionally left blank
@@ -27,11 +25,8 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public new static IChildrenContainer Instance
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _instance;
-        }
+        public new static IChildrenContainer Instance { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
+            = new TerminatedChildrenContainer();
 
         /// <summary>
         /// TBD
