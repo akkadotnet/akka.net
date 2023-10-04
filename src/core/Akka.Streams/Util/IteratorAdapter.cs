@@ -34,7 +34,7 @@ namespace Akka.Streams.Util
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    internal class IteratorAdapter<T> : IIterator<T>
+    internal sealed class IteratorAdapter<T> : IIterator<T>
     {
         private readonly IEnumerator<T> _enumerator;
         private bool? _hasNext;

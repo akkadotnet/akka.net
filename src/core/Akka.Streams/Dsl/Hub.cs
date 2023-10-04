@@ -87,7 +87,7 @@ namespace Akka.Streams.Dsl
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">The type of element emitted by the MergeHub</typeparam>
-    internal class MergeHub<T> : GraphStageWithMaterializedValue<SourceShape<T>, Sink<T, NotUsed>>
+    internal sealed class MergeHub<T> : GraphStageWithMaterializedValue<SourceShape<T>, Sink<T, NotUsed>>
     {
         #region Internal classes
 
@@ -526,7 +526,7 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class BroadcastHub<T> : GraphStageWithMaterializedValue<SinkShape<T>, Source<T, NotUsed>>
+    internal sealed class BroadcastHub<T> : GraphStageWithMaterializedValue<SinkShape<T>, Source<T, NotUsed>>
     {
         #region internal classes
 
@@ -1296,7 +1296,7 @@ namespace Akka.Streams.Dsl
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class PartitionHub<T> : GraphStageWithMaterializedValue<SinkShape<T>, Source<T, NotUsed>>
+    internal sealed class PartitionHub<T> : GraphStageWithMaterializedValue<SinkShape<T>, Source<T, NotUsed>>
     {
         #region queue implementation
 

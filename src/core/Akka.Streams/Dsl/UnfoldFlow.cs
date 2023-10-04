@@ -75,7 +75,7 @@ namespace Akka.Streams.Dsl
     }
 
     [InternalApi]
-    internal class FanOut2UnfoldingStage<TIn, TState, TOut> : GraphStage<FanOutShape<TIn, TState, TOut>>
+    internal sealed class FanOut2UnfoldingStage<TIn, TState, TOut> : GraphStage<FanOutShape<TIn, TState, TOut>>
     {
         private readonly Func<FanOutShape<TIn, TState, TOut>, UnfoldFlowGraphStageLogic<TIn, TState, TOut>> _generateGraphStageLogic;
 

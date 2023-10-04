@@ -19,7 +19,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ByteString>, Stream>
+    internal sealed class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ByteString>, Stream>
     {
         #region internal classes
 
@@ -33,7 +33,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal class ReadElementAcknowledgement : IAdapterToStageMessage
+        internal sealed class ReadElementAcknowledgement : IAdapterToStageMessage
         {
             /// <summary>
             /// TBD
@@ -49,7 +49,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Close : IAdapterToStageMessage
+        internal sealed class Close : IAdapterToStageMessage
         {
             /// <summary>
             /// TBD
@@ -92,7 +92,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Finished : IStreamToAdapterMessage
+        internal sealed class Finished : IStreamToAdapterMessage
         {
             /// <summary>
             /// TBD
@@ -108,7 +108,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Initialized : IStreamToAdapterMessage
+        internal sealed class Initialized : IStreamToAdapterMessage
         {
             /// <summary>
             /// TBD
@@ -272,7 +272,7 @@ namespace Akka.Streams.Implementation.IO
     /// INTERNAL API
     /// InputStreamAdapter that interacts with InputStreamSinkStage
     /// </summary>
-    internal class InputStreamAdapter : Stream
+    internal sealed class InputStreamAdapter : Stream
     {
 #region not supported 
 
