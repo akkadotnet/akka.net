@@ -85,7 +85,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Tail_chopping_group_router_must_deliver_a_broadcast_message_using_tell()
+        public async Task Tail_chopping_group_router_must_deliver_a_broadcast_message_using_tell()
         {
             var doneLatch = new TestLatch(2);
 
@@ -101,7 +101,7 @@ namespace Akka.Tests.Routing
             routedActor.Tell(new Broadcast(1));
             routedActor.Tell(new Broadcast("end"));
 
-            doneLatch.Ready(TestKitSettings.DefaultTimeout);
+            await doneLatch.ReadyAsync(TestKitSettings.DefaultTimeout);
 
             counter1.Current.Should().Be(1);
             counter2.Current.Should().Be(1);

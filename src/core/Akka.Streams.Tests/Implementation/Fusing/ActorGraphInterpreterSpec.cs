@@ -273,7 +273,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public async Task ActorGraphInterpreter_should_trigger_PostStop_in_all_stages_when_abruptly_terminated_and_no_upstream_boundaries()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 // force the system to create a new materializer
                 var materializer = ActorMaterializer.Create(Sys, ActorMaterializerSettings.Create(Sys));
                 var gotStop = new TestLatch(1);
@@ -283,12 +283,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(new PostStopSnitchFlow(gotStop))
                     .To(Sink.FromSubscriber(downstream)).Run(materializer);
 
-                downstream.RequestNext();
+                await downstream.RequestNextAsync();
 
                 materializer.Shutdown();
-                gotStop.Ready(RemainingOrDefault);
+                await gotStop.ReadyAsync(RemainingOrDefault);
 
-                downstream.ExpectError().Should().BeOfType<AbruptTerminationException>();
+                (await downstream.ExpectErrorAsync()).Should().BeOfType<AbruptTerminationException>();
                 return Task.CompletedTask;
             }, Materializer);
         }

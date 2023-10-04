@@ -215,7 +215,7 @@ namespace Akka.Tests.Routing
             router.Tell(latch);
             router.Tell(latch);
 
-            latch.Ready(RemainingOrDefault);
+            await latch.ReadyAsync(RemainingOrDefault);
 
             // MessagesPerResize is 10 so there is no risk of additional resize
             (await RouteeSize(router)).Should().Be(2);
@@ -231,7 +231,7 @@ namespace Akka.Tests.Routing
             router.Tell(latch);
             router.Tell(latch);
 
-            latch.Ready(RemainingOrDefault);
+            await latch.ReadyAsync(RemainingOrDefault);
 
             (await RouteeSize(router)).Should().Be(2);
         }

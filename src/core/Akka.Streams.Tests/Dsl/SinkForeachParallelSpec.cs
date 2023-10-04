@@ -20,6 +20,8 @@ using System.Threading;
 using Akka.Streams.TestKit;
 using Akka.TestKit.Xunit2.Attributes;
 using System.Threading.Tasks;
+using Akka.TestKit.Extensions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -44,7 +46,7 @@ namespace Akka.Streams.Tests.Dsl
 #pragma warning disable CS0618 // Type or member is obsolete
                 var p = Source.From(Enumerable.Range(1, 4)).RunWith(Sink.ForEachParallel<int>(4, n =>
                 {
-                    latch[n].Ready(TimeSpan.FromSeconds(5));
+                    latch[n].ReadyAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
                     probe.Ref.Tell(n);
                 }), Materializer);
 #pragma warning restore CS0618 // Type or member is obsolete
@@ -60,8 +62,7 @@ namespace Akka.Streams.Tests.Dsl
                 latch[1].CountDown();
                 await probe.ExpectMsgAsync(1, TimeSpan.FromSeconds(5));
 
-                p.Wait(TimeSpan.FromSeconds(4)).Should().BeTrue();
-                p.IsCompleted.Should().BeTrue();
+                await p.ShouldCompleteWithin(4.Seconds());
             }, Materializer);
         }
 
@@ -77,7 +78,7 @@ namespace Akka.Streams.Tests.Dsl
                 var p = Source.From(Enumerable.Range(1, 5)).RunWith(Sink.ForEachParallel<int>(4, n =>
                 {
                     probe.Ref.Tell(n);
-                    latch[n].Ready(TimeSpan.FromSeconds(5));
+                    latch[n].ReadyAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
                 }), Materializer);
 #pragma warning restore CS0618 // Type or member is obsolete
 
@@ -91,15 +92,14 @@ namespace Akka.Streams.Tests.Dsl
                 latch[5].CountDown();
                 await probe.ExpectMsgAsync(5);
 
-                p.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
-                p.IsCompleted.Should().BeTrue();
+                await p.ShouldCompleteWithin(5.Seconds());
             }, Materializer);
         }
 
         [Fact]
         public async Task A_ForeachParallel_must_resume_after_function_failure()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var probe = CreateTestProbe();
                 var latch = new TestLatch(1);
 
@@ -110,15 +110,14 @@ namespace Akka.Streams.Tests.Dsl
                         throw new TestException("err1");
 
                     probe.Ref.Tell(n);
-                    latch.Ready(TimeSpan.FromSeconds(10));
+                    latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
                 }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider)), Materializer);
 #pragma warning restore CS0618 // Type or member is obsolete
 
                 latch.CountDown();
                 probe.ExpectMsgAllOf(new[] { 1, 2, 4, 5 });
 
-                p.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
-                return Task.CompletedTask;
+                await p.ShouldCompleteWithin(5.Seconds());
             }, Materializer);
         }
 
@@ -136,7 +135,7 @@ namespace Akka.Streams.Tests.Dsl
                         throw new TestException("err2");
 
                     probe.Ref.Tell(n);
-                    latch.Ready(TimeSpan.FromSeconds(10));
+                    latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
                 }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.StoppingDecider)), Materializer);
 #pragma warning restore CS0618 // Type or member is obsolete
 

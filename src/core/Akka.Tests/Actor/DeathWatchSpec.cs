@@ -240,7 +240,7 @@ namespace Akka.Tests.Actor
 
             w.Tell(new W(p.Ref));
             w.Tell(new Latches(t1, t2));
-            t1.Ready(TimeSpan.FromSeconds(3));
+            await t1.ReadyAsync(TimeSpan.FromSeconds(3));
             Watch(p.Ref);
             Sys.Stop(p.Ref);
             await ExpectTerminatedAsync(p.Ref);
@@ -385,7 +385,8 @@ namespace Akka.Tests.Actor
                 Receive<Latches>(x =>
                     {
                         x.T1.CountDown();
-                        x.T2.Ready(TimeSpan.FromSeconds(3));
+                        // Could not use ReceiveAsync here, no idea why.
+                        x.T2.ReadyAsync(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
                     });
             }
         }

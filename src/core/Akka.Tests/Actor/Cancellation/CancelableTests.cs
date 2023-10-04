@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -100,33 +101,33 @@ namespace Akka.Tests.Actor.Cancellation
         }
 
         [Fact]
-        public void Should_be_possible_to_call_CancelAfterMs()
+        public async Task Should_be_possible_to_call_CancelAfterMs()
         {
             var c = new Cancelable(Sys.Scheduler);
             var latch = CreateTestLatch();
             c.Token.Register(() => latch.CountDown());
             c.CancelAfter(50);
             c.IsCancellationRequested.ShouldBeFalse();
-            latch.Ready();
+            await latch.ReadyAsync();
             c.IsCancellationRequested.ShouldBeTrue();
             c.Token.IsCancellationRequested.ShouldBeTrue();
         }
 
         [Fact]
-        public void Should_be_possible_to_call_CancelAfterTimespan()
+        public async Task Should_be_possible_to_call_CancelAfterTimespan()
         {
             var c = new Cancelable(Sys.Scheduler);
             var latch = CreateTestLatch();
             c.Token.Register(() => latch.CountDown());
             c.CancelAfter(TimeSpan.FromMilliseconds(50));
             c.IsCancellationRequested.ShouldBeFalse();
-            latch.Ready();
+            await latch.ReadyAsync();
             c.IsCancellationRequested.ShouldBeTrue();
             c.Token.IsCancellationRequested.ShouldBeTrue();
         }
 
         [Fact]
-        public void Given_linked_Cancelable_When_canceling_underlying_Then_linked_should_be_canceled()
+        public async Task Given_linked_Cancelable_When_canceling_underlying_Then_linked_should_be_canceled()
         {
             var underlying = new Cancelable(Sys.Scheduler);
             var linked = Cancelable.CreateLinkedCancelable(Sys.Scheduler, underlying);
@@ -136,7 +137,7 @@ namespace Akka.Tests.Actor.Cancellation
             underlying.Cancel();
             underlying.IsCancellationRequested.ShouldBeTrue();
             underlying.Token.IsCancellationRequested.ShouldBeTrue();
-            latch.Ready();
+            await latch.ReadyAsync();
 
             linked.IsCancellationRequested.ShouldBeTrue();
             linked.Token.IsCancellationRequested.ShouldBeTrue();

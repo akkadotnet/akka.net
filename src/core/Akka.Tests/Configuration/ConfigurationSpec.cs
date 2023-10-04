@@ -98,6 +98,7 @@ namespace Akka.Tests.Configuration
 #else
             // Skip this test for Linux targets
             Output.WriteLine("This test is skipped.");
+            await Task.CompletedTask;
 #endif
         }
     }

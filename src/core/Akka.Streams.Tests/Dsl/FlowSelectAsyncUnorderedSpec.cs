@@ -47,9 +47,9 @@ namespace Akka.Streams.Tests.Dsl
                 var c = this.CreateManualSubscriberProbe<int>();
                 var latch = Enumerable.Range(0, 4).Select(_ => new TestLatch(1)).ToArray();
 
-                Source.From(Enumerable.Range(0, 4)).SelectAsyncUnordered(4, n => Task.Run(() =>
+                Source.From(Enumerable.Range(0, 4)).SelectAsyncUnordered(4, n => Task.Run(async () =>
                 {
-                    latch[n].Ready(TimeSpan.FromSeconds(5));
+                    await latch[n].ReadyAsync(TimeSpan.FromSeconds(5));
                     return n;
                 })).To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
@@ -122,18 +122,18 @@ namespace Akka.Streams.Tests.Dsl
                 var latch = new TestLatch(1);
                 var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 5))
-                    .SelectAsyncUnordered(4, n => Task.Run(() =>
+                    .SelectAsyncUnordered(4, n => Task.Run(async () =>
                     {
                         if (n == 3)
                             throw new TestException("err1");
 
-                        latch.Ready(TimeSpan.FromSeconds(10));
+                        await latch.ReadyAsync(TimeSpan.FromSeconds(10));
                         return n;
                     }))
                     .To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(10);
-                c.ExpectError().InnerException.Message.Should().Be("err1");
+                (await c.ExpectErrorAsync()).InnerException!.Message.Should().Be("err1");
                 latch.CountDown();
             }, Materializer);
         }
@@ -149,7 +149,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         if (n != 1)
                             // slow upstream should not block the error
-                            latch.Ready(TimeSpan.FromSeconds(10));
+                            latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
 
                         return n;
                     })
@@ -183,16 +183,16 @@ namespace Akka.Streams.Tests.Dsl
                         if (n == 3)
                             throw new TestException("err2");
 
-                        return Task.Run(() =>
+                        return Task.Run(async () =>
                         {
-                            latch.Ready(TimeSpan.FromSeconds(10));
+                            await latch.ReadyAsync(TimeSpan.FromSeconds(10));
                             return n;
                         });
                     })
                     .RunWith(Sink.FromSubscriber(c), Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(10);
-                c.ExpectError().Message.Should().Be("err2");
+                (await c.ExpectErrorAsync()).Message.Should().Be("err2");
                 latch.CountDown();
             }, Materializer);
         }

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -80,9 +81,9 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void Cluster_leader_must_wait_with_moving_members_to_up_until_minimum_number_of_members_have_joined()
+        public async Task Cluster_leader_must_wait_with_moving_members_to_up_until_minimum_number_of_members_have_joined()
         {
-            TestWaitMovingMembersToUp();
+            await TestWaitMovingMembersToUp();
         }
     }
 
@@ -127,9 +128,9 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void Cluster_leader_must_wait_with_moving_members_to_up_until_minimum_number_of_members_have_joined_with_WeaklyUp_enabled()
+        public async Task Cluster_leader_must_wait_with_moving_members_to_up_until_minimum_number_of_members_have_joined_with_WeaklyUp_enabled()
         {
-            TestWaitMovingMembersToUp();
+            await TestWaitMovingMembersToUp();
         }
     }
 
@@ -149,9 +150,9 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void Cluster_leader_must_wait_with_moving_members_to_up_until_minimum_number_of_members_with_specific_role_have_joined()
+        public async Task Cluster_leader_must_wait_with_moving_members_to_up_until_minimum_number_of_members_with_specific_role_have_joined()
         {
-            TestWaitMovingMembersToUp();
+            await TestWaitMovingMembersToUp();
         }
     }
 
@@ -165,7 +166,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
         }
 
-        protected void TestWaitMovingMembersToUp()
+        protected async Task TestWaitMovingMembersToUp()
         {
             var onUpLatch = new TestLatch(1);
             Cluster.RegisterOnMemberUp(() =>
@@ -216,7 +217,7 @@ namespace Akka.Cluster.Tests.MultiNode
             }, Third);
             AwaitClusterUp(First, Second, Third);
 
-            onUpLatch.Ready(TestKitSettings.DefaultTimeout);
+            await onUpLatch.ReadyAsync(TestKitSettings.DefaultTimeout);
             EnterBarrier("after-1");
         }
     }

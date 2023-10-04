@@ -161,7 +161,7 @@ namespace Akka.Tests.Routing
             });
 
             Sys.Stop(actor);
-            testLatch.Ready(5.Seconds());
+            await testLatch.ReadyAsync(5.Seconds());
         }
 
         [Fact]
@@ -193,7 +193,7 @@ namespace Akka.Tests.Routing
             counter.Current.ShouldBe(connectionCount);
 
             actor.Tell(new Broadcast("end"));
-            doneLatch.Ready(TimeSpan.FromSeconds(5));
+            await doneLatch.ReadyAsync(TimeSpan.FromSeconds(5));
 
             replies.Values.ForEach(c => c.Should().BeGreaterThan(0));
             replies.Values.Any(c => c != iterationCount).ShouldBeTrue();
@@ -201,7 +201,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Random_pool_must_deliver_a_broadcast_message_using_the_Tell()
+        public async Task Random_pool_must_deliver_a_broadcast_message_using_the_Tell()
         {
             const int routeeCount = 6;
             var helloLatch = new TestLatch(routeeCount);
@@ -211,10 +211,10 @@ namespace Akka.Tests.Routing
                 .Props(Props.Create(() => new RandomBroadcastActor(helloLatch, stopLatch))), "random-broadcast");
 
             actor.Tell(new Broadcast("hello"));
-            helloLatch.Ready(5.Seconds());
+            await helloLatch.ReadyAsync(5.Seconds());
 
             Sys.Stop(actor);
-            stopLatch.Ready(5.Seconds());
+            await stopLatch.ReadyAsync(5.Seconds());
         }
 
         [Fact]
@@ -267,7 +267,7 @@ namespace Akka.Tests.Routing
             }
 
             actor.Tell(new Broadcast("end"));
-            doneLatch.Ready(5.Seconds());
+            await doneLatch.ReadyAsync(5.Seconds());
 
             replies.Values.ForEach(c => c.Should().BeGreaterThan(0));
             replies.Values.Any(c => c != iterationCount).ShouldBeTrue();

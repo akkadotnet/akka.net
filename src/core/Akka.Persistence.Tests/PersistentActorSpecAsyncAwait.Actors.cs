@@ -953,15 +953,14 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is LatchCmd)
+                if (message is LatchCmd latchCmd)
                 {
                     RunTask(async () =>
                     {
                         await Task.Yield();
                         await Task.Delay(100);
-                        var latchCmd = message as LatchCmd;
                         Sender.Tell(latchCmd.Data);
-                        latchCmd.Latch.Ready(TimeSpan.FromSeconds(5));
+                        await latchCmd.Latch.ReadyAsync(TimeSpan.FromSeconds(5));
                         PersistAsync(latchCmd.Data, _ => { });
                     });
                 }

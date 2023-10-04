@@ -147,7 +147,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Round_robin_pool_must_be_able_to_shut_down_its_instance()
+        public async Task Round_robin_pool_must_be_able_to_shut_down_its_instance()
         {
             const int routeeCount = 5;
 
@@ -163,10 +163,10 @@ namespace Akka.Tests.Routing
             actor.Tell("hello", TestActor);
             actor.Tell("hello", TestActor);
 
-            helloLatch.Ready(5.Seconds());
+            await helloLatch.ReadyAsync(5.Seconds());
 
             Sys.Stop(actor);
-            stopLatch.Ready(5.Seconds());
+            await stopLatch.ReadyAsync(5.Seconds());
         }
 
         [Fact]
@@ -198,13 +198,13 @@ namespace Akka.Tests.Routing
 
             counter.Current.Should().Be(connectionCount);
             actor.Tell(new Broadcast("end"));
-            doneLatch.Ready(5.Seconds());
+            await doneLatch.ReadyAsync(5.Seconds());
 
             replies.Values.ForEach(c => c.Should().Be(iterationCount));
         }
 
         [Fact]
-        public void Round_robin_pool_must_deliver_deliver_a_broadcast_message_using_Tell()
+        public async Task Round_robin_pool_must_deliver_deliver_a_broadcast_message_using_Tell()
         {
             const int routeeCount = 5;
             var helloLatch = new TestLatch(routeeCount);
@@ -214,10 +214,10 @@ namespace Akka.Tests.Routing
                 .Props(Props.Create(() => new RoundRobinPoolBroadcastActor(helloLatch, stopLatch))), "round-robin-broadcast");
 
             actor.Tell(new Broadcast("hello"));
-            helloLatch.Ready(5.Seconds());
+            await helloLatch.ReadyAsync(5.Seconds());
 
             Sys.Stop(actor);
-            stopLatch.Ready(5.Seconds());
+            await stopLatch.ReadyAsync(5.Seconds());
         }
 
         [Fact]
@@ -270,7 +270,7 @@ namespace Akka.Tests.Routing
             }
 
             actor.Tell(new Broadcast("end"));
-            doneLatch.Ready(5.Seconds());
+            await doneLatch.ReadyAsync(5.Seconds());
 
             replies.Values.ForEach(c => c.Should().Be(iterationCount));
         }

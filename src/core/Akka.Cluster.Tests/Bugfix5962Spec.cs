@@ -80,7 +80,7 @@ akka {
             // There should be no TimerMsg being sent to dead letter, this signals that the downing provider is dead
             await EventFilter.DeadLetter(_timerMsgType).ExpectAsync(0, async () =>
             {
-                latch.Ready(1.Seconds());
+                await latch.ReadyAsync(1.Seconds());
                 await Task.Delay(2.Seconds());
             });
         }

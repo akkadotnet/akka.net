@@ -190,17 +190,17 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Conflate_must_restart_when_seed_throws_and_a_RestartDescider_is_used()
+        public async Task Conflate_must_restart_when_seed_throws_and_a_RestartDecider_is_used()
         {
             var sourceProbe = this.CreatePublisherProbe<int>();
             var sinkProbe = this.CreateManualSubscriberProbe<int>();
-            var exceptionlath = new TestLatch();
+            var exceptionlatch = new TestLatch();
 
             Source.FromPublisher(sourceProbe).ConflateWithSeed(i =>
                 {
                     if (i%2 == 0)
                     {
-                        exceptionlath.Open();
+                        exceptionlatch.Open();
                         throw new TestException("I hate even seed numbers");
                     }
                     return i;
@@ -210,11 +210,11 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(Attributes.CreateInputBuffer(1, 1))
                 .Run(Materializer);
 
-            var sub = sourceProbe.ExpectSubscription();
-            var sinkSub = sinkProbe.ExpectSubscription();
+            var sub = await sourceProbe.ExpectSubscriptionAsync();
+            var sinkSub = await sinkProbe.ExpectSubscriptionAsync();
 
             // push the first value
-            sub.ExpectRequest(1);
+            await sub.ExpectRequestAsync(1);
             sub.SendNext(1);
 
             // and consume it, so that the next element
@@ -222,14 +222,14 @@ namespace Akka.Streams.Tests.Dsl
             sinkSub.Request(1);
             sinkProbe.ExpectNext(1);
 
-            sub.ExpectRequest(1);
+            await sub.ExpectRequestAsync(1);
             sub.SendNext(2);
 
             // make sure the seed exception happened
             // before going any further
-            exceptionlath.Ready(TimeSpan.FromSeconds(3));
+            await exceptionlatch.ReadyAsync(TimeSpan.FromSeconds(3));
 
-            sub.ExpectRequest(1);
+            await sub.ExpectRequestAsync(1);
             sub.SendNext(3);
 
             // now we should have lost the 2 and the accumulated state
@@ -238,7 +238,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Conflate_must_restart_when_aggregate_throws_and_a_RestartingDecider_is_used()
+        public async Task Conflate_must_restart_when_aggregate_throws_and_a_RestartingDecider_is_used()
         {
             var sourceProbe = this.CreatePublisherProbe<string>();
             var sinkProbe = this.CreateSubscriberProbe<string>();
@@ -261,21 +261,21 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(Attributes.CreateInputBuffer(4, 4))
                 .Run(Materializer);
 
-            var sub = sourceProbe.ExpectSubscription();
+            var sub = await sourceProbe.ExpectSubscriptionAsync();
 
-            sub.ExpectRequest(4);
+            await sub.ExpectRequestAsync(4);
             sub.SendNext("one");
             sub.SendNext("two");
             sub.SendNext("three");
             sub.SendComplete();
 
             //"one" should be lost
-            latch.Ready(TimeSpan.FromSeconds(3));
+            await latch.ReadyAsync(TimeSpan.FromSeconds(3));
             sinkProbe.RequestNext("three");
         }
 
         [Fact]
-        public void Conflate_must_restart_when_aggregate_throws_and_a_ResumingDecider_is_used()
+        public async Task Conflate_must_restart_when_aggregate_throws_and_a_ResumingDecider_is_used()
         {
             var sourceProbe = this.CreatePublisherProbe<int>();
             var sinkProbe = this.CreateManualSubscriberProbe<List<int>>();
@@ -298,30 +298,30 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(Attributes.CreateInputBuffer(1, 1))
                 .Run(Materializer);
 
-            var sub = sourceProbe.ExpectSubscription();
-            var sinkSub = sinkProbe.ExpectSubscription();
+            var sub = await sourceProbe.ExpectSubscriptionAsync();
+            var sinkSub = await sinkProbe.ExpectSubscriptionAsync();
 
             // push the first three values, the third will trigger
             // the exception
-            sub.ExpectRequest(1);
+            await sub.ExpectRequestAsync(1);
             sub.SendNext(1);
 
             // causing the 1 to get thrown away
-            sub.ExpectRequest(1);
+            await sub.ExpectRequestAsync(1);
             sub.SendNext(2);
 
-            sub.ExpectRequest(1);
+            await sub.ExpectRequestAsync(1);
             sub.SendNext(3);
 
-            sub.ExpectRequest(1);
+            await sub.ExpectRequestAsync(1);
             sub.SendNext(4);
 
             // and consume it, so that the next element
             // will trigger seed
-            saw4Latch.Ready(TimeSpan.FromSeconds(3));
+            await saw4Latch.ReadyAsync(TimeSpan.FromSeconds(3));
             sinkSub.Request(1);
 
-            sinkProbe.ExpectNext().Should().BeEquivalentTo(new [] {1, 3, 4});
+            (await sinkProbe.ExpectNextAsync()).Should().BeEquivalentTo(new [] {1, 3, 4});
         }
     }
 }

@@ -170,7 +170,7 @@ namespace Akka.Tests.Actor
             }
 
             await actorSystem.Terminate();
-            latch.Ready();
+            await latch.ReadyAsync();
 
             expected.Reverse();
 
@@ -538,7 +538,7 @@ namespace Akka.Tests.Actor
             protected override void ExecuteTask(IRunnable run)
             {
                 run.Run();
-                _latch.Ready(TimeSpan.FromSeconds(1));
+                _latch.ReadyAsync(TimeSpan.FromSeconds(1)).GetAwaiter().GetResult();
             }
 
             protected override void Shutdown()

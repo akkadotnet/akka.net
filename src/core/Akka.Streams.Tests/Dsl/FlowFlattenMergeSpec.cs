@@ -227,7 +227,7 @@ namespace Akka.Streams.Tests.Dsl
                     if (i == 1)
                         return Source.FromPublisher(p);
 
-                    latch.Ready(TimeSpan.FromSeconds(3));
+                    latch.ReadyAsync(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
                     throw ex;
                 }).RunWith(Sink.First<int>(), materializer);
                 

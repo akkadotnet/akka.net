@@ -9,6 +9,7 @@ using Akka.Actor;
 using Akka.TestKit;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -32,13 +33,13 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Props_must_create_actor_by_producer()
+        public async Task Props_must_create_actor_by_producer()
         {
-            TestLatch latchProducer = new TestLatch();
-            TestLatch latchActor = new TestLatch();
+            var latchProducer = new TestLatch();
+            var latchActor = new TestLatch();
             var props = Props.CreateBy(new TestProducer(latchProducer, latchActor));
-            IActorRef actor = Sys.ActorOf(props);
-            latchActor.Ready(TimeSpan.FromSeconds(1));
+            var actor = Sys.ActorOf(props);
+            await latchActor.ReadyAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]

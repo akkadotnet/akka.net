@@ -53,12 +53,12 @@ namespace Akka.Tests.Actor.Stash
         }
 
         [Fact]
-        public void An_actor_Must_throw_an_exception_if_the_same_message_is_stashed_twice()
+        public async Task An_actor_Must_throw_an_exception_if_the_same_message_is_stashed_twice()
         {
             _state.ExpectedException = new TestLatch();
             var stasher = ActorOf<StashingTwiceActor>("stashing-actor");
             stasher.Tell("hello");
-            _state.ExpectedException.Ready(TimeSpan.FromSeconds(3));
+            await _state.ExpectedException.ReadyAsync(TimeSpan.FromSeconds(3));
         }
 
         [Fact]
@@ -110,8 +110,8 @@ namespace Akka.Tests.Actor.Stash
 
             //During preRestart restartLatch is opened
             //After that the cell will unstash "stashme", it should be received by the slave and open hasMsgLatch
-            restartLatch.Ready(TimeSpan.FromSeconds(10));
-            hasMsgLatch.Ready(TimeSpan.FromSeconds(10));
+            await restartLatch.ReadyAsync(TimeSpan.FromSeconds(10));
+            await hasMsgLatch.ReadyAsync(TimeSpan.FromSeconds(10));
         }
 
         [Fact]
@@ -140,7 +140,7 @@ namespace Akka.Tests.Actor.Stash
             //After that the cell will clear the stash
             //So when the cell tries to unstash, it will not unstash messages. If it would TestActor
             //would receive all stashme messages instead of "this should bounce back"
-            restartLatch.Ready(TimeSpan.FromSeconds(1110));
+            await restartLatch.ReadyAsync(TimeSpan.FromSeconds(1110));
             await ExpectMsgAsync("this should bounce back");
         }
 

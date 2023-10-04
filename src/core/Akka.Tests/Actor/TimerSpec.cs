@@ -411,7 +411,7 @@ namespace Akka.Tests.Actor
                         return true;
 
                     case SlowThenBump m:
-                        m.Latch.Ready(TimeSpan.FromSeconds(10));
+                        m.Latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
                         Bump();
                         return true;
 
@@ -427,7 +427,7 @@ namespace Akka.Tests.Actor
                         throw m.E;
 
                     case SlowThenThrow m:
-                        m.Latch.Ready(TimeSpan.FromSeconds(10));
+                        m.Latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
                         throw m.E;
 
                     case AutoReceive _:
@@ -505,7 +505,7 @@ namespace Akka.Tests.Actor
                             return Bump(e.StateData);
 
                         case SlowThenBump m:
-                            m.Latch.Ready(TimeSpan.FromSeconds(10));
+                            m.Latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
                             return Bump(e.StateData);
 
                         case End _:
@@ -519,7 +519,7 @@ namespace Akka.Tests.Actor
                             throw m.E;
 
                         case SlowThenThrow m:
-                            m.Latch.Ready(TimeSpan.FromSeconds(10));
+                            m.Latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
                             throw m.E;
 
                         case AutoReceive _:

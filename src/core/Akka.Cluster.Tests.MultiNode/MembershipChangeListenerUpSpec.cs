@@ -7,6 +7,7 @@
 
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.MultiNode.TestAdapter;
@@ -72,17 +73,17 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void MembershipChangeListenerUpSpecs()
+        public async Task MembershipChangeListenerUpSpecs()
         {
-            Set_of_connected_cluster_systems_must_when_two_nodes_after_cluster_convergence_updates_membership_table_then_all_MembershipChangeListeners_should_be_triggered();
-            Set_of_connected_cluster_systems_must_when_three_nodes_after_cluster_convergence_updates_membership_table_then_all_MembershipChangeListeners_should_be_triggered();
+            await Set_of_connected_cluster_systems_must_when_two_nodes_after_cluster_convergence_updates_membership_table_then_all_MembershipChangeListeners_should_be_triggered();
+            await Set_of_connected_cluster_systems_must_when_three_nodes_after_cluster_convergence_updates_membership_table_then_all_MembershipChangeListeners_should_be_triggered();
         }
 
-        public void Set_of_connected_cluster_systems_must_when_two_nodes_after_cluster_convergence_updates_membership_table_then_all_MembershipChangeListeners_should_be_triggered()
+        public async Task Set_of_connected_cluster_systems_must_when_two_nodes_after_cluster_convergence_updates_membership_table_then_all_MembershipChangeListeners_should_be_triggered()
         {
             AwaitClusterUp(_config.First);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var latch = new TestLatch();
                 var expectedAddresses = ImmutableList.Create(GetAddress(_config.First), GetAddress(_config.Second));
@@ -90,7 +91,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 Cluster.Subscribe(listener, new[] { typeof(ClusterEvent.IMemberEvent) });
                 EnterBarrier("listener-1-registered");
                 Cluster.Join(GetAddress(_config.First));
-                latch.Ready();
+                await latch.ReadyAsync();
             }, _config.First, _config.Second);
 
             RunOn(() =>
@@ -101,7 +102,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("after-1");
         }
 
-        public void Set_of_connected_cluster_systems_must_when_three_nodes_after_cluster_convergence_updates_membership_table_then_all_MembershipChangeListeners_should_be_triggered()
+        public async Task Set_of_connected_cluster_systems_must_when_three_nodes_after_cluster_convergence_updates_membership_table_then_all_MembershipChangeListeners_should_be_triggered()
         {
             var latch = new TestLatch();
             var expectedAddresses = ImmutableList.Create(GetAddress(_config.First), GetAddress(_config.Second), GetAddress(_config.Third));
@@ -114,7 +115,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 Cluster.Join(GetAddress(_config.First));
             }, _config.Third);
 
-            latch.Ready();
+            await latch.ReadyAsync();
 
             EnterBarrier("after-2");
         }

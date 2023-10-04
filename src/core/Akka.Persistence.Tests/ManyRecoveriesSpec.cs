@@ -35,9 +35,9 @@ namespace Akka.Persistence.Tests
 
             protected override void OnRecover(object message)
             {
-                if (message is Evt)
+                if (message is Evt && Latch is not null)
                 {
-                    Latch?.Ready(TimeSpan.FromSeconds(10));
+                    Latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
                 }
             }
 

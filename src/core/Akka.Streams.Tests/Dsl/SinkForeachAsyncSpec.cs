@@ -48,11 +48,10 @@ namespace Akka.Streams.Tests.Dsl
                 .Select(i => (i, new TestLatch(1)))
                 .ToDictionary(t => t.i, t => t.Item2);
 
-            var sink = Sink.ForEachAsync<int>(4, n =>
+            var sink = Sink.ForEachAsync<int>(4, async n =>
             {
-                latch[n].Ready(RemainingOrDefault);
+                await latch[n].ReadyAsync(RemainingOrDefault);
                 probe.Ref.Tell(n);
-                return Task.CompletedTask;
             });
 
             var p = Source.From(Enumerable.Range(1, 4)).RunWith(sink, Materializer);
@@ -79,7 +78,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var sink = Sink.ForEachAsync<Func<int>>(1, async n =>
             {
-                latch[n()].Ready(RemainingOrDefault);
+                await latch[n()].ReadyAsync(RemainingOrDefault);
                 probe.Ref.Tell(n());
                 await Task.Delay(2000);
             });

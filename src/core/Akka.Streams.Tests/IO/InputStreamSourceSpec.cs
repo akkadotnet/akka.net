@@ -139,7 +139,7 @@ namespace Akka.Streams.Tests.IO
                     return 1;
                 }
 
-                _latch.Ready();
+                _latch.ReadyAsync().GetAwaiter().GetResult();
                 return 0;
             }
 

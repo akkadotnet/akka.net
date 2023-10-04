@@ -204,7 +204,7 @@ namespace Akka.Tests.Routing
             var resizer = new TestResizer(latch);
             var router = Sys.ActorOf(new RoundRobinPool(0, resizer).Props(Props.Create<BlackHoleActor>()));
             Watch(router);
-            latch.Ready(RemainingOrDefault);
+            await latch.ReadyAsync(RemainingOrDefault);
 
             router.Tell(new GetRoutees());
             var routees = (await ExpectMsgAsync<Routees>()).Members.ToList();
@@ -242,7 +242,7 @@ namespace Akka.Tests.Routing
             var latch = new TestLatch(1);
             var resizer = new TestResizer2(latch);
             var router = Sys.ActorOf(new RoundRobinPool(0, resizer).Props(Props.Create<BlackHoleActor>()), "router3");
-            latch.Ready(RemainingOrDefault);
+            await latch.ReadyAsync(RemainingOrDefault);
             router.Tell(new GetRoutees());
             (await ExpectMsgAsync<Routees>()).Members.Count().Should().Be(3);
             Sys.Stop(router);

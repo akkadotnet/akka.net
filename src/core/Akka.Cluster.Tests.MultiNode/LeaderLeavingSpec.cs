@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.MultiNode.TestAdapter;
@@ -66,7 +67,7 @@ akka.cluster.publish-stats-interval = 25 s")
             }
 
             [MultiNodeFact]
-            public void
+            public async Task
                 A_leader_that_is_leaving_must_be_moved_to_leaving_then_exiting_then_removed_then_be_shut_down_and_then_a_new_leader_should_be_elected
                 ()
             {
@@ -74,7 +75,7 @@ akka.cluster.publish-stats-interval = 25 s")
 
                 var oldLeaderAddress = ClusterView.Leader;
 
-                Within(TimeSpan.FromSeconds(30), () =>
+                await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
                     if (ClusterView.IsLeader)
                     {
@@ -84,7 +85,7 @@ akka.cluster.publish-stats-interval = 25 s")
                         EnterBarrier("leader-left");
 
                         // verify that the LEADER is shut down
-                        AwaitCondition(() => Cluster.IsTerminated);
+                        await AwaitConditionAsync(() => Cluster.IsTerminated);
                         EnterBarrier("leader-shutdown");
                     }
                     else
@@ -100,19 +101,19 @@ akka.cluster.publish-stats-interval = 25 s")
                         EnterBarrier("leader-left");
 
                         // verify that the LEADER is EXITING
-                        exitingLatch.Ready(TestKitSettings.DefaultTimeout);
+                        await exitingLatch.ReadyAsync(TestKitSettings.DefaultTimeout);
 
                         EnterBarrier("leader-shutdown");
                         MarkNodeAsUnavailable(oldLeaderAddress);
 
                         // verify that the LEADER is no longer part of the 'members' set
-                        AwaitAssert(() => ClusterView.Members.Select(m => m.Address).Contains(oldLeaderAddress).ShouldBeFalse());
+                        await AwaitAssertAsync(() => ClusterView.Members.Select(m => m.Address).Contains(oldLeaderAddress).ShouldBeFalse());
 
                         // verify that the LEADER is not part of the 'unreachable' set
-                        AwaitAssert(() => ClusterView.UnreachableMembers.Select(m => m.Address).Contains(oldLeaderAddress).ShouldBeFalse());
+                        await AwaitAssertAsync(() => ClusterView.UnreachableMembers.Select(m => m.Address).Contains(oldLeaderAddress).ShouldBeFalse());
 
                         // verify that we have a new LEADER
-                        AwaitAssert(() => ClusterView.Leader.ShouldNotBe(oldLeaderAddress));
+                        await AwaitAssertAsync(() => ClusterView.Leader.ShouldNotBe(oldLeaderAddress));
                     }
 
                     EnterBarrier("finished");

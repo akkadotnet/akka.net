@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.MultiNode.TestAdapter;
@@ -79,12 +80,12 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void MembershipChangeListenerExitingSpecs()
+        public async Task MembershipChangeListenerExitingSpecs()
         {
-            Registered_MembershipChangeListener_must_be_notified_when_new_node_is_exiting();
+            await Registered_MembershipChangeListener_must_be_notified_when_new_node_is_exiting();
         }
 
-        public void Registered_MembershipChangeListener_must_be_notified_when_new_node_is_exiting()
+        public async Task Registered_MembershipChangeListener_must_be_notified_when_new_node_is_exiting()
         {
             AwaitClusterUp(_config.First, _config.Second, _config.Third);
 
@@ -94,7 +95,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 Cluster.Leave(GetAddress(_config.Second));
             }, _config.First);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var exitingLatch = new TestLatch();
                 var removedLatch = new TestLatch();
@@ -103,11 +104,11 @@ namespace Akka.Cluster.Tests.MultiNode
                                .WithDeploy(Deploy.Local));
                 Cluster.Subscribe(watcher, new[] { typeof(ClusterEvent.IMemberEvent) });
                 EnterBarrier("registered-listener");
-                exitingLatch.Ready();
-                removedLatch.Ready();
+                await exitingLatch.ReadyAsync();
+                await removedLatch.ReadyAsync();
             }, _config.Second);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var exitingLatch = new TestLatch();
                 var secondAddress = GetAddress(_config.Second);
@@ -115,7 +116,7 @@ namespace Akka.Cluster.Tests.MultiNode
                                .WithDeploy(Deploy.Local));
                 Cluster.Subscribe(watcher, new[] { typeof(ClusterEvent.IMemberEvent) });
                 EnterBarrier("registered-listener");
-                exitingLatch.Ready();
+                await exitingLatch.ReadyAsync();
             }, _config.Third);
 
             EnterBarrier("finished");

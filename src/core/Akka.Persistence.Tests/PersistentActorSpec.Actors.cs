@@ -821,7 +821,7 @@ namespace Akka.Persistence.Tests
                 if (message is LatchCmd latchCmd)
                 {
                     Sender.Tell(latchCmd.Data);
-                    latchCmd.Latch.Ready(TimeSpan.FromSeconds(5));
+                    latchCmd.Latch.ReadyAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
                     PersistAsync(latchCmd.Data, _ => { });
                 }
                 else if (message is Cmd cmd)

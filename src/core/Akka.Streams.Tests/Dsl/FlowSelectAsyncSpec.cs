@@ -184,7 +184,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         if (n != 1)
                             // slow upstream should not block the error
-                            latch.Ready(TimeSpan.FromSeconds(10));
+                            latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
 
                         return n;
                     })

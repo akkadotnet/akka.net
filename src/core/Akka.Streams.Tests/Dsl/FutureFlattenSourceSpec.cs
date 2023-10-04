@@ -160,7 +160,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(_materializer);
 
                 // we don't know that materialization completed yet
-                materializationLatch.Ready(RemainingOrDefault);                
+                await materializationLatch.ReadyAsync(RemainingOrDefault);                
                 sourcePromise.SetException(failure);
                 
                 // wait until the underlying tasks are completed

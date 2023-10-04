@@ -125,7 +125,7 @@ namespace Akka.Tests.Pattern
 
             protected override void PostStop()
             {
-                _latch.Ready(3.Seconds());
+                _latch.ReadyAsync(3.Seconds()).GetAwaiter().GetResult();
             }
 
             public static Props Props(TestLatch latch)
