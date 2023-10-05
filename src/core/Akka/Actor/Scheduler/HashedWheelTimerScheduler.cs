@@ -153,9 +153,7 @@ namespace Akka.Actor
                     var t = TimeSpan.FromTicks(_tickDuration);
                     _timer = new PeriodicTimer(t);
                     
-#pragma warning disable CS4014 // Intentional, running detached async Task
-                    RunAsync(_cts.Token); // start the clock
-#pragma warning restore CS4014 // Intentional, running detached async Task
+                    Task.Run(() => RunAsync(_cts.Token)); // start the clock
                 }
             }
             else if (_workerState == WORKER_STATE_SHUTDOWN)
@@ -502,39 +500,46 @@ namespace Akka.Actor
 
         public void Dispose()
         {
+            try
+            {
+                var stopped = Stop();
+                if (!stopped.Wait(_shutdownTimeout))
+                {
+                    Log.Warning("Failed to shutdown scheduler within {0}", _shutdownTimeout);
+                    return;
+                }
+
+                // Execute all outstanding work items
+                foreach (var task in stopped.Result)
+                {
+                    try
+                    {
+                        task.Action.Run();
+                    }
+                    catch (SchedulerException)
+                    {
+                        // ignore, this is from terminated actors
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Exception while executing timer task.");
+                    }
+                    finally
+                    {
+                        // free the object from bucket
+                        task.Reset();
+                    }
+                }
+            }
+            finally
+            {
+                _unprocessedRegistrations.Clear();
+                
 #if NET6_0_OR_GREATER
-            _timer?.Dispose();
+                _timer?.Dispose();
+                _cts.Dispose();
 #endif
-            var stopped = Stop();
-            if (!stopped.Wait(_shutdownTimeout))
-            {
-                Log.Warning("Failed to shutdown scheduler within {0}", _shutdownTimeout);
-                return;
             }
-
-            // Execute all outstanding work items
-            foreach (var task in stopped.Result)
-            {
-                try
-                {
-                    task.Action.Run();
-                }
-                catch (SchedulerException)
-                {
-                    // ignore, this is from terminated actors
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "Exception while executing timer task.");
-                }
-                finally
-                {
-                    // free the object from bucket
-                    task.Reset();
-                }
-            }
-
-            _unprocessedRegistrations.Clear();
         }
 
         /// <summary>
