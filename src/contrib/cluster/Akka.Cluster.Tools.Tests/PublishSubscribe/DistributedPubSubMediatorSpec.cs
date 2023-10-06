@@ -71,16 +71,16 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             // act
             // create a topic
             mediator.Tell(new Subscribe("pub-sub", actor));
-            _ = ExpectMsg<SubscribeAck>();
+            _ = await ExpectMsgAsync<SubscribeAck>();
 
             // all subscribers should be removed from this topic
             // topic actor will still be alive for default value of 120s
             mediator.Tell(new Unsubscribe("pub-sub", actor));
-            _ = ExpectMsg<UnsubscribeAck>();
+            _ = await ExpectMsgAsync<UnsubscribeAck>();
 
             // assert
-            await EventFilter.DeadLetter<object>().ExpectAsync(1,
-                () => { mediator.Tell(new Publish("pub-sub", "hit")); return Task.CompletedTask; });
+            EventFilter.DeadLetter<object>().Expect(1,
+                () => { mediator.Tell(new Publish("pub-sub", "hit")); });
         }
     }
 

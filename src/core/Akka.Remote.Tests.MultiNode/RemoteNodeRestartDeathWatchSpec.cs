@@ -7,6 +7,7 @@
 
 using System;
 using System.Text;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -47,10 +48,10 @@ namespace Akka.Remote.Tests.MultiNode
 
 
         [MultiNodeFact]
-        public void Must_receive_terminated_when_remote_actor_system_is_restarted()
+        public async Task Must_receive_terminated_when_remote_actor_system_is_restarted()
         {
             
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var secondAddress = Node(_specConfig.Second).Address;
                 EnterBarrier("actors-started");
@@ -62,11 +63,9 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("watch-established");
                 
                 // simulate a hard shutdown, nothing sent from the shutdown node
-                TestConductor.Blackhole(_specConfig.Second, _specConfig.First, ThrottleTransportAdapter.Direction.Send)
-                    .GetAwaiter()
-                    .GetResult();
-                TestConductor.Shutdown(_specConfig.Second).GetAwaiter().GetResult();
-                ExpectTerminated(subject, TimeSpan.FromSeconds(15));
+                await TestConductor.Blackhole(_specConfig.Second, _specConfig.First, ThrottleTransportAdapter.Direction.Send);
+                await TestConductor.Shutdown(_specConfig.Second);
+                await ExpectTerminatedAsync(subject, TimeSpan.FromSeconds(15));
                 Within(TimeSpan.FromSeconds(5), () =>
                 {
                     // retry because the Subject actor might not be started yet

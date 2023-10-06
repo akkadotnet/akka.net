@@ -115,8 +115,7 @@ namespace Akka.Streams.Tests.Dsl
                 Watch(actorRef);
                 var sub = await s.ExpectSubscriptionAsync();
                 sub.Cancel();
-                ExpectTerminated(actorRef);
-                return Task.CompletedTask;
+                await ExpectTerminatedAsync(actorRef);
             }, Materializer);
         }
 

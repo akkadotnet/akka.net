@@ -230,7 +230,6 @@ namespace Akka.Streams.Tests.Dsl
                     .ViaMaterialized(testFlow, Keep.Both)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                return Task.CompletedTask;
             }, Materializer);
         }
 

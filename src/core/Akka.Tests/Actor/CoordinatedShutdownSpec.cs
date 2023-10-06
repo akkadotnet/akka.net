@@ -288,11 +288,11 @@ namespace Akka.Tests.Actor
                 return TaskEx.FromException<Done>(new Exception("boom"));
             });
 
-            co.AddTask("a", "a2", () =>
+            co.AddTask("a", "a2", async () =>
             {
-                Task.Delay(TimeSpan.FromMilliseconds(100)).Wait();
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
                 TestActor.Tell("A");
-                return TaskEx.Completed;
+                return Done.Instance;
             });
 
             co.AddTask("b", "b1", () =>

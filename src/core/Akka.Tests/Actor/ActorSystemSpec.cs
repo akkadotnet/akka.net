@@ -23,6 +23,7 @@ using Akka.Event;
 using Akka.TestKit.Extensions;
 using FluentAssertions.Execution;
 using Akka.Tests.Util;
+using FluentAssertions.Extensions;
 
 namespace Akka.Tests.Actor
 {
@@ -163,7 +164,9 @@ namespace Akka.Tests.Actor
                 var value = i;
                 actorSystem.RegisterOnTermination(() =>
                 {
+#pragma warning disable xUnit1031
                     Task.Delay(Dilated(TimeSpan.FromMilliseconds(value % 3))).Wait();
+#pragma warning restore xUnit1031
                     result.Add(value);
                     latch.CountDown();
                 });
@@ -185,14 +188,18 @@ namespace Akka.Tests.Actor
 
             actorSystem.RegisterOnTermination(() =>
             {
+#pragma warning disable xUnit1031
                 Task.Delay(Dilated(TimeSpan.FromMilliseconds(50))).Wait();
+#pragma warning restore xUnit1031
                 callbackWasRun = true;
             });
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             new TaskFactory().StartNew(() =>
             {
+#pragma warning disable xUnit1031
                 Task.Delay(Dilated(TimeSpan.FromMilliseconds(200))).Wait();
+#pragma warning restore xUnit1031
                 actorSystem.Terminate();
             });
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -221,9 +228,9 @@ namespace Akka.Tests.Actor
                 Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000),
                 Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000));
 
-            await waves.AwaitWithTimeout(timeout.Duration() + TimeSpan.FromSeconds(5));
+            var result = await waves.WaitAsync(timeout.Duration() + TimeSpan.FromSeconds(5));
 
-            Assert.Equal(new[] { "done", "done", "done" }, waves.Result);
+            Assert.Equal(new[] { "done", "done", "done" }, result);
         }
 
         [Fact]
@@ -343,7 +350,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Shutdown_when_userguardian_escalates()
+        public async Task Shutdown_when_userguardian_escalates()
         {
             var config = ConfigurationFactory.ParseString("akka.actor.guardian-supervisor-strategy=\"Akka.Tests.Actor.TestStrategy, Akka.Tests\"")
                 .WithFallback(DefaultConfig);
@@ -357,7 +364,7 @@ namespace Akka.Tests.Actor
 
             a.Tell("die");
 
-            Assert.True(system.WhenTerminated.Wait(1000));
+            await system.WhenTerminated.WaitAsync(1.Seconds());
         }
     }
 
@@ -538,7 +545,7 @@ namespace Akka.Tests.Actor
             protected override void ExecuteTask(IRunnable run)
             {
                 run.Run();
-                _latch.ReadyAsync(TimeSpan.FromSeconds(1)).GetAwaiter().GetResult();
+                _latch.Ready(TimeSpan.FromSeconds(1));
             }
 
             protected override void Shutdown()

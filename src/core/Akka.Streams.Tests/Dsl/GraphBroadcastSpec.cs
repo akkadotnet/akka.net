@@ -113,7 +113,6 @@ namespace Akka.Streams.Tests.Dsl
                 var result = await task.WaitAsync(3.Seconds());
                 foreach (var list in result)
                     list.Should().BeEquivalentTo(new[] { 1, 2, 3 });
-                return Task.CompletedTask;
             }, Materializer);
         }
 

@@ -91,7 +91,6 @@ namespace Akka.Streams.Tests.Dsl
 
                 var t = flow1.Join(Flow.Create<string>()).Run(Materializer);
                 (await t.WaitAsync(3.Seconds())).Should().Be("lonely traveler");
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -115,7 +114,6 @@ namespace Akka.Streams.Tests.Dsl
 
                 var t = flow1.Join(Flow.Create<string>()).Run(Materializer);
                 (await t.WaitAsync(3.Seconds())).Should().Be("lonely traveler");
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -176,7 +174,6 @@ namespace Akka.Streams.Tests.Dsl
                 probe.SendNext("lonely traveler");
                 (await t.WaitAsync(3.Seconds())).Should().Be("lonely traveler");
                 probe.SendComplete();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -198,7 +195,6 @@ namespace Akka.Streams.Tests.Dsl
 
                 var t = flow.Join(Flow.Create<string>()).Run(Materializer);
                 (await t.WaitAsync(3.Seconds())).Should().Be("lonely traveler");
-                return Task.CompletedTask;
             }, Materializer);
         }
     }

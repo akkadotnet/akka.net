@@ -7,11 +7,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -23,89 +25,91 @@ namespace Akka.Streams.Tests.Dsl
             : base(helper) => Materializer = ActorMaterializer.Create(Sys);
 
         [Fact]
-        public void SourceSetup_should_expose_materializer()
+        public async Task SourceSetup_should_expose_materializer()
         {
             var source = Source.Setup((mat, _) => Source.Single(mat.IsShutdown));
-            source.RunWith(Sink.First<bool>(), Materializer).Result.Should().BeFalse();
+            (await source.RunWith(Sink.First<bool>(), Materializer)).Should().BeFalse();
         }
 
         [Fact]
-        public void SourceSetup_should_expose_attributes()
+        public async Task SourceSetup_should_expose_attributes()
         {
             var source = Source.Setup((_, attr) => Source.Single(attr.AttributeList));
-            source.RunWith(Sink.First<IEnumerable<Attributes.IAttribute>>(), Materializer).Result.Should().NotBeEmpty();
+            (await source.RunWith(Sink.First<IEnumerable<Attributes.IAttribute>>(), Materializer))
+                .Should().NotBeEmpty();
         }
 
         [Fact]
-        public void SourceSetup_should_propagate_materialized_value()
+        public async Task SourceSetup_should_propagate_materialized_value()
         {
             var source = Source.Setup((_, _) => Source.Maybe<NotUsed>());
 
             var (completion, element) = source.ToMaterialized(Sink.First<NotUsed>(), Keep.Both).Run(Materializer);
-            completion.Result.TrySetResult(NotUsed.Instance);
-            element.Result.ShouldBe(NotUsed.Instance);
+            
+            (await completion).TrySetResult(NotUsed.Instance);
+            (await element).ShouldBe(NotUsed.Instance);
         }
 
         [Fact]
-        public void SourceSetup_should_propagate_attributes()
+        public async Task SourceSetup_should_propagate_attributes()
         {
             var source = Source.Setup((_, attr) => Source.Single(attr.GetNameLifted)).Named("my-name");
-            source.RunWith(Sink.First<Func<string>>(), Materializer).Result.Invoke().ShouldBe("setup-my-name");
+            (await source.RunWith(Sink.First<Func<string>>(), Materializer)).Invoke().ShouldBe("setup-my-name");
         }
 
         [Fact]
-        public void SourceSetup_should_propagate_attributes_when_nested()
+        public async Task SourceSetup_should_propagate_attributes_when_nested()
         {
             var source = Source.Setup((_, _) => Source.Setup((_, attr) => Source.Single(attr.GetNameLifted))).Named("my-name");
-            source.RunWith(Sink.First<Func<string>>(), Materializer).Result.Invoke().ShouldBe("setup-my-name-setup");
+            (await source.RunWith(Sink.First<Func<string>>(), Materializer)).Invoke().ShouldBe("setup-my-name-setup");
         }
 
         [Fact]
-        public void SourceSetup_should_handle_factory_failure()
+        public async Task SourceSetup_should_handle_factory_failure()
         {
             var error = new ApplicationException("boom");
             var source = Source.Setup<NotUsed, NotUsed>((_, _) => throw error);
 
             var (materialized, completion) = source.ToMaterialized(Sink.First<NotUsed>(), Keep.Both).Run(Materializer);
 
-            Assert.Throws<AggregateException>(() => materialized.Result).InnerException?.Should().BeOfType<ApplicationException>();
-            Assert.Throws<AggregateException>(() => completion.Result).InnerException?.Should().BeOfType<ApplicationException>();
+            await Assert.ThrowsAsync<ApplicationException>(() => materialized);
+            await Assert.ThrowsAsync<ApplicationException>(() => completion);
         }
 
         [Fact]
-        public void SourceSetup_should_handle_materialization_failure()
+        public async Task SourceSetup_should_handle_materialization_failure()
         {
             var error = new ApplicationException("boom");
             var source = Source.Setup((_, _) => Source.Empty<NotUsed>().MapMaterializedValue<NotUsed>(_ => throw error));
 
             var (materialized, completion) = source.ToMaterialized(Sink.First<NotUsed>(), Keep.Both).Run(Materializer);
 
-            Assert.Throws<AggregateException>(() => materialized.Result).InnerException?.Should().BeOfType<ApplicationException>();
-            Assert.Throws<AggregateException>(() => completion.Result).InnerException?.Should().BeOfType<ApplicationException>();
+            await Assert.ThrowsAsync<ApplicationException>(() => materialized);
+            await Assert.ThrowsAsync<ApplicationException>(() => completion);
         }
 
         [Fact]
-        public void FlowSetup_should_expose_materializer()
+        public async Task FlowSetup_should_expose_materializer()
         {
             var flow = Flow.Setup((mat, _) => Flow.FromSinkAndSource(
                 Sink.Ignore<object>().MapMaterializedValue(_ => NotUsed.Instance),
                 Source.Single(mat.IsShutdown)));
 
-            Source.Empty<object>().Via(flow).RunWith(Sink.First<bool>(), Materializer).Result.Should().BeFalse();
+            (await Source.Empty<object>().Via(flow).RunWith(Sink.First<bool>(), Materializer)).Should().BeFalse();
         }
 
         [Fact]
-        public void FlowSetup_should_expose_attributes()
+        public async Task FlowSetup_should_expose_attributes()
         {
             var flow = Flow.Setup((_, attr) => Flow.FromSinkAndSource(
                 Sink.Ignore<object>().MapMaterializedValue(_ => NotUsed.Instance),
                 Source.Single(attr.AttributeList)));
 
-            Source.Empty<object>().Via(flow).RunWith(Sink.First<IEnumerable<Attributes.IAttribute>>(), Materializer).Result.Should().NotBeEmpty();
+            (await Source.Empty<object>().Via(flow).RunWith(Sink.First<IEnumerable<Attributes.IAttribute>>(), Materializer)).Should().NotBeEmpty();
         }
 
         [Fact]
-        public void FlowSetup_should_propagate_materialized_value()
+        public async Task FlowSetup_should_propagate_materialized_value()
         {
             var flow = Flow.Setup((_, _) => Flow.FromSinkAndSource(
                 Sink.Ignore<object>().MapMaterializedValue(_ => NotUsed.Instance),
@@ -115,32 +119,32 @@ namespace Akka.Streams.Tests.Dsl
                 .ViaMaterialized(flow, Keep.Right)
                 .ToMaterialized(Sink.First<NotUsed>(), Keep.Both).Run(Materializer);
 
-            completion.Result.TrySetResult(NotUsed.Instance);
-            element.Result.ShouldBe(NotUsed.Instance);
+            (await completion).TrySetResult(NotUsed.Instance);
+            (await element).ShouldBe(NotUsed.Instance);
         }
 
         [Fact]
-        public void FlowSetup_should_propagate_attributes()
+        public async Task FlowSetup_should_propagate_attributes()
         {
             var flow = Flow.Setup((_, attr) => Flow.FromSinkAndSource(
                 Sink.Ignore<object>().MapMaterializedValue(_ => NotUsed.Instance),
                 Source.Single(attr.GetNameLifted))).Named("my-name");
 
-            Source.Empty<object>().Via(flow).RunWith(Sink.First<Func<string>>(), Materializer).Result.Invoke().ShouldBe("setup-my-name");
+            (await Source.Empty<object>().Via(flow).RunWith(Sink.First<Func<string>>(), Materializer)).Invoke().ShouldBe("setup-my-name");
         }
 
         [Fact]
-        public void FlowSetup_should_propagate_attributes_when_nested()
+        public async Task FlowSetup_should_propagate_attributes_when_nested()
         {
             var flow = Flow.Setup((_, _) => Flow.Setup((_, attr) => Flow.FromSinkAndSource(
                 Sink.Ignore<object>().MapMaterializedValue(_ => NotUsed.Instance),
                 Source.Single(attr.GetNameLifted)))).Named("my-name");
 
-            Source.Empty<object>().Via(flow).RunWith(Sink.First<Func<string>>(), Materializer).Result.Invoke().ShouldBe("setup-my-name-setup");
+            (await Source.Empty<object>().Via(flow).RunWith(Sink.First<Func<string>>(), Materializer)).Invoke().ShouldBe("setup-my-name-setup");
         }
 
         [Fact]
-        public void FlowSetup_should_handle_factory_failure()
+        public async Task FlowSetup_should_handle_factory_failure()
         {
             var error = new ApplicationException("boom");
             var flow = Flow.Setup<NotUsed, NotUsed, NotUsed>((_, _) => throw error);
@@ -150,12 +154,12 @@ namespace Akka.Streams.Tests.Dsl
                 .ToMaterialized(Sink.First<NotUsed>(), Keep.Both)
                 .Run(Materializer);
 
-            Assert.Throws<AggregateException>(() => materialized.Result).InnerException?.Should().BeOfType<ApplicationException>();
-            Assert.Throws<AggregateException>(() => completion.Result).InnerException?.Should().BeOfType<ApplicationException>();
+            await Assert.ThrowsAsync<ApplicationException>(() => materialized);
+            await Assert.ThrowsAsync<ApplicationException>(() => completion);
         }
 
         [Fact]
-        public void FlowSetup_should_handle_materialization_failure()
+        public async Task FlowSetup_should_handle_materialization_failure()
         {
             var error = new ApplicationException("boom");
             var flow = Flow.Setup((_, _) => Flow.Create<NotUsed>().MapMaterializedValue<NotUsed>(_ => throw error));
@@ -165,8 +169,8 @@ namespace Akka.Streams.Tests.Dsl
                 .ToMaterialized(Sink.First<NotUsed>(), Keep.Both)
                 .Run(Materializer);
 
-            Assert.Throws<AggregateException>(() => materialized.Result).InnerException?.Should().BeOfType<ApplicationException>();
-            Assert.Throws<AggregateException>(() => completion.Result).InnerException?.Should().BeOfType<ApplicationException>();
+            await Assert.ThrowsAsync<ApplicationException>(() => materialized);
+            await Assert.ThrowsAsync<ApplicationException>(() => completion);
         }
     }
 }

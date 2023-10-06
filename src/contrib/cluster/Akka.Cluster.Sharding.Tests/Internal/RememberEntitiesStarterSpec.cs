@@ -143,8 +143,8 @@ namespace Akka.Cluster.Sharding.Tests.Internal
             ExpectTerminated(rememberEntityStarter);
         }
 
-        // TODO: check the timing code to make sure that this actually works, it was flaky/racy even when run locally.
-        [LocalFact(SkipLocal = "Racy unit test, suspected bad code underneath")]
+        // TODO: check the timing code to make sure that this actually works, it was failing even when run locally.
+        [LocalFact(SkipLocal = "Failing unit test, suspected bad code underneath")]
         public void RememberEntitiesStarter_must_try_start_all_entities_in_a_throttled_way_with_entity_recovery_strategy_constant()
         {
             var regionProbe = CreateTestProbe();

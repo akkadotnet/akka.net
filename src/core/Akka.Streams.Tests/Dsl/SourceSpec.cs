@@ -19,8 +19,10 @@ using Akka.Util;
 using Akka.Util.Extensions;
 using FluentAssertions;
 using FluentAssertions.Extensions;
+using Nito.AsyncEx;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -158,20 +160,17 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Maybe_Source_must_allow_external_triggering_of_OnError()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var neverSource = Source.Maybe<int>();
                 var counterSink = Sink.First<int>();
 
-                var t = neverSource.ToMaterialized(counterSink, Keep.Both).Run(Materializer);
-                var neverPromise = t.Item1;
-                var counterFuture = t.Item2;
+                var (neverPromise, counterFuture) = neverSource.ToMaterialized(counterSink, Keep.Both).Run(Materializer);
 
                 //external cancellation
-                neverPromise.SetException(new Exception("Boom"));
+                neverPromise.SetException(new TestException("Boom"));
 
-                counterFuture.Invoking(f => f.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>()
-                    .WithMessage("Boom");
-                return Task.CompletedTask;
+                await Awaiting(() => counterFuture.WaitAsync(3.Seconds()))
+                    .Should().ThrowAsync<TestException>().WithMessage("Boom");
             }, Materializer);
         }
 
@@ -310,10 +309,10 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Repeat_Source_must_repeat_as_long_as_it_takes()
+        public async Task Repeat_Source_must_repeat_as_long_as_it_takes()
         {
             var f = Source.Repeat(42).Grouped(1000).RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-            f.Result.Should().HaveCount(1000).And.Match(x => x.All(i => i == 42));
+            (await f.WaitAsync(3.Seconds())).Should().HaveCount(1000).And.Match(x => x.All(i => i == 42));
         }
 
         private static readonly int[] Expected = {
@@ -322,9 +321,9 @@ namespace Akka.Streams.Tests.Dsl
         };
 
         [Fact]
-        public void Unfold_Source_must_generate_a_finite_fibonacci_sequence()
+        public async Task Unfold_Source_must_generate_a_finite_fibonacci_sequence()
         {
-            Source.Unfold((0, 1), tuple =>
+            (await Source.Unfold((0, 1), tuple =>
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
@@ -336,13 +335,13 @@ namespace Akka.Streams.Tests.Dsl
             {
                 ints.AddFirst(i);
                 return ints;
-            }, Materializer).Result.Should().Equal(Expected);
+            }, Materializer)).Should().Equal(Expected);
         }
 
         [Fact]
-        public void Unfold_Source_must_terminate_with_a_failure_if_there_is_an_exception_thrown()
+        public async Task Unfold_Source_must_terminate_with_a_failure_if_there_is_an_exception_thrown()
         {
-            EventFilter.Exception<Exception>(message: "expected").ExpectOne(() =>
+            await EventFilter.Exception<Exception>(message: "expected").ExpectOneAsync(async () =>
             {
                 var task = Source.Unfold((0, 1), tuple =>
                 {
@@ -357,16 +356,16 @@ namespace Akka.Streams.Tests.Dsl
                     ints.AddFirst(i);
                     return ints;
                 }, Materializer);
-                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .Should().Throw<Exception>()
+                await Awaiting(() => task.WaitAsync(3.Seconds()))
+                    .Should().ThrowAsync<Exception>()
                     .WithMessage("expected");
             });
         }
 
         [Fact]
-        public void Unfold_Source_must_generate_a_finite_fibonacci_sequence_asynchronously()
+        public async Task Unfold_Source_must_generate_a_finite_fibonacci_sequence_asynchronously()
         {
-            Source.UnfoldAsync((0, 1), tuple =>
+            (await Source.UnfoldAsync((0, 1), tuple =>
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
@@ -378,13 +377,13 @@ namespace Akka.Streams.Tests.Dsl
             {
                 ints.AddFirst(i);
                 return ints;
-            }, Materializer).Result.Should().Equal(Expected);
+            }, Materializer)).Should().Equal(Expected);
         }
 
         [Fact]
-        public void Unfold_Source_must_generate_a_unboundeed_fibonacci_sequence()
+        public async Task Unfold_Source_must_generate_a_unboundeed_fibonacci_sequence()
         {
-            Source.Unfold((0, 1), tuple =>
+            (await Source.Unfold((0, 1), tuple =>
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
@@ -395,18 +394,17 @@ namespace Akka.Streams.Tests.Dsl
             {
                 ints.AddFirst(i);
                 return ints;
-            }, Materializer).Result.Should().Equal(Expected);
+            }, Materializer)).Should().Equal(Expected);
         }
 
         [Fact]
-        public void Iterator_Source_must_properly_iterate()
+        public async Task Iterator_Source_must_properly_iterate()
         {
             var expected = new[] {false, true, false, true, false, true, false, true, false, true }.ToList();
-            Source.FromEnumerator(() => expected.GetEnumerator())
+            (await Source.FromEnumerator(() => expected.GetEnumerator())
                 .Grouped(10)
-                .RunWith(Sink.First<IEnumerable<bool>>(), Materializer)
-                .Result.Should()
-                .Equal(expected);
+                .RunWith(Sink.First<IEnumerable<bool>>(), Materializer))
+                .Should().Equal(expected);
         }
 
         [Fact]
@@ -422,15 +420,16 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Cycle_Source_must_throw_an_exception_in_case_of_empty_Enumerator()
+        public async Task Cycle_Source_must_throw_an_exception_in_case_of_empty_Enumerator()
         {
             var empty = Enumerable.Empty<int>().GetEnumerator();
             var task = Source.Cycle(()=>empty).RunWith(Sink.First<int>(), Materializer);
-            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<ArgumentException>();
+            await Awaiting(() => task.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<ArgumentException>();
         }
 
         [Fact]
-        public void Cycle_Source_must_throw_an_exception_in_case_of_empty_Enumerator2()
+        public async Task Cycle_Source_must_throw_an_exception_in_case_of_empty_Enumerator2()
         {
             var b = false;
             var single = Enumerable.Repeat(1, 1).GetEnumerator();
@@ -442,7 +441,8 @@ namespace Akka.Streams.Tests.Dsl
                 b = true;
                 return single;
             }).RunWith(Sink.Last<int>(), Materializer);
-            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<ArgumentException>();
+            await Awaiting(() => task.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<ArgumentException>();
         }
 
         [Fact]

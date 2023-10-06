@@ -222,7 +222,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Cancel()
                     .ExecuteAsync();
 
-                tcs.Task.Result.Should().BeSameAs(Done.Instance);
+                (await tcs.Task.WaitAsync(3.Seconds())).Should().Be(Done.Instance);
 
                 // Wait to ensure it isn't restarted
                 await Task.Delay(200);
@@ -422,7 +422,9 @@ namespace Akka.Streams.Tests.Dsl
                     created.IncrementAndGet();
                     return Sink.Seq<string>().MapMaterializedValue(task =>
                     {
+#pragma warning disable xUnit1031
                         task.ContinueWith(c => tcs.SetResult(c.Result));
+#pragma warning restore xUnit1031
                         return Done.Instance;
                     });
                 }, _shortRestartSettings), Keep.Left).Run(Materializer);
@@ -435,7 +437,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExecuteAsync();
 
                 await tcs.Task.ShouldCompleteWithin(3.Seconds());
-                tcs.Task.Result.Should().ContainInOrder("a", "b", "c");
+                (await tcs.Task).Should().ContainInOrder("a", "b", "c");
                 created.Current.Should().Be(1);
             }, Materializer);
         }

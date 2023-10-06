@@ -6,7 +6,7 @@
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
-    <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;xUnit1013</NoWarn>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <!-- Set the language version for C# if we're not inside an F# project -->

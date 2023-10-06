@@ -22,6 +22,7 @@ using Akka.TestKit.Xunit2.Attributes;
 using System.Threading.Tasks;
 using Akka.TestKit.Extensions;
 using FluentAssertions.Extensions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -46,7 +47,7 @@ namespace Akka.Streams.Tests.Dsl
 #pragma warning disable CS0618 // Type or member is obsolete
                 var p = Source.From(Enumerable.Range(1, 4)).RunWith(Sink.ForEachParallel<int>(4, n =>
                 {
-                    latch[n].ReadyAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
+                    latch[n].Ready(TimeSpan.FromSeconds(5));
                     probe.Ref.Tell(n);
                 }), Materializer);
 #pragma warning restore CS0618 // Type or member is obsolete
@@ -78,7 +79,7 @@ namespace Akka.Streams.Tests.Dsl
                 var p = Source.From(Enumerable.Range(1, 5)).RunWith(Sink.ForEachParallel<int>(4, n =>
                 {
                     probe.Ref.Tell(n);
-                    latch[n].ReadyAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
+                    latch[n].Ready(TimeSpan.FromSeconds(5));
                 }), Materializer);
 #pragma warning restore CS0618 // Type or member is obsolete
 
@@ -110,7 +111,7 @@ namespace Akka.Streams.Tests.Dsl
                         throw new TestException("err1");
 
                     probe.Ref.Tell(n);
-                    latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
+                    latch.Ready(TimeSpan.FromSeconds(10));
                 }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider)), Materializer);
 #pragma warning restore CS0618 // Type or member is obsolete
 
@@ -135,7 +136,7 @@ namespace Akka.Streams.Tests.Dsl
                         throw new TestException("err2");
 
                     probe.Ref.Tell(n);
-                    latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
+                    latch.Ready(TimeSpan.FromSeconds(10));
                 }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.StoppingDecider)), Materializer);
 #pragma warning restore CS0618 // Type or member is obsolete
 
@@ -144,23 +145,22 @@ namespace Akka.Streams.Tests.Dsl
                 latch.CountDown();
                 probe.ExpectMsgAllOf(new[] { 1, 2 });
 
-                var ex = p.Invoking(t => t.Wait(TimeSpan.FromSeconds(1))).Should().Throw<AggregateException>().Which;
-                ex.Flatten().InnerException.Should().BeOfType<TestException>();
-                ex.Flatten().InnerException.Message.Should().Be("err2");
-
-                p.IsCompleted.Should().BeTrue();
+                var ex = (await Awaiting(() => p.WaitAsync(1.Seconds()))
+                        .Should().ThrowAsync<AggregateException>())
+                    .And.Flatten().InnerException;
+                ex.Should().BeOfType<TestException>();
+                ex.Message.Should().Be("err2");
             }, Materializer);
         }
 
         [Fact]
         public async Task A_ForeachParallel_must_handle_empty_source()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
 #pragma warning disable CS0618 // Type or member is obsolete
                 var p = Source.From(new List<int>()).RunWith(Sink.ForEachParallel<int>(3, _ => { }), Materializer);
 #pragma warning restore CS0618 // Type or member is obsolete
-                p.Wait(TimeSpan.FromSeconds(2)).Should().BeTrue();
-                return Task.CompletedTask;
+                await p.WaitAsync(2.Seconds());
             }, Materializer);
         }
     }

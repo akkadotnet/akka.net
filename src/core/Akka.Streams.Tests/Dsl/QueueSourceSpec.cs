@@ -14,8 +14,10 @@ using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 using Dropped = Akka.Streams.QueueOfferResult.Dropped;
 using Enqueued = Akka.Streams.QueueOfferResult.Enqueued;
 using QueueClosed = Akka.Streams.QueueOfferResult.QueueClosed;
@@ -56,20 +58,21 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void QueueSource_should_be_reusable()
+        public async Task QueueSource_should_be_reusable()
         {
             var source = Source.Queue<int>(0, OverflowStrategy.Backpressure);
             var q1 = source.To(Sink.Ignore<int>()).Run(_materializer);
             q1.Complete();
             var task = q1.WatchCompletionAsync();
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            await task.WaitAsync(3.Seconds());
             var q2 = source.To(Sink.Ignore<int>()).Run(_materializer);
             task = q2.WatchCompletionAsync();
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeFalse();
+            await Awaiting(() => task.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<TimeoutException>();
         }
 
         [Fact]
-        public void QueueSource_should_reject_elements_when_backpressuring_with_maxBuffer_0()
+        public async Task QueueSource_should_reject_elements_when_backpressuring_with_maxBuffer_0()
         {
             var t =
                 Source.Queue<int>(0, OverflowStrategy.Backpressure)
@@ -79,14 +82,14 @@ namespace Akka.Streams.Tests.Dsl
             var probe = t.Item2;
             var task = source.OfferAsync(42);
             var ex = source.OfferAsync(43);
-            ex.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3)))
-                .Should().Throw<IllegalStateException>()
+            (await Awaiting(() => ex.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<IllegalStateException>())
                 .And.Message.Should()
                 .Contain("have to wait");
 
-            probe.RequestNext().Should().Be(42);
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().Be(Enqueued.Instance);
+            (await probe.RequestNextAsync()).Should().Be(42);
+            (await task.WaitAsync(3.Seconds()))
+                .Should().Be(Enqueued.Instance);
 
         }
 
@@ -350,8 +353,8 @@ namespace Akka.Streams.Tests.Dsl
                 sub.Cancel();
                 await ExpectMsgAsync(Done.Instance);
 
-                var exception = Record.ExceptionAsync(async () => await queue.OfferAsync(1)).Result;
-                exception.Should().BeOfType<StreamDetachedException>();
+                await Awaiting(() => queue.OfferAsync(1).WaitAsync(3.Seconds()))
+                    .Should().ThrowAsync<StreamDetachedException>();
             }, _materializer);
         }
 
@@ -390,7 +393,7 @@ namespace Akka.Streams.Tests.Dsl
 
             source.Complete();
             var task = source.WatchCompletionAsync();
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            await task.WaitAsync(TimeSpan.FromSeconds(3));
 
             await probe.EnsureSubscription().ExpectCompleteAsync();
         }
@@ -409,7 +412,7 @@ namespace Akka.Streams.Tests.Dsl
             source.Complete();
             await probe.RequestNext(1).ExpectCompleteAsync();
             var task = source.WatchCompletionAsync();
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            await task.WaitAsync(TimeSpan.FromSeconds(3));
         }
 
         [Fact]
@@ -433,7 +436,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RequestNext(2)
                 .ExpectCompleteAsync();
             var task = source.WatchCompletionAsync();
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            await task.WaitAsync(TimeSpan.FromSeconds(3));
 
         }
 
@@ -449,7 +452,7 @@ namespace Akka.Streams.Tests.Dsl
 
             source.Complete();
             var task = source.WatchCompletionAsync();
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            await task.WaitAsync(TimeSpan.FromSeconds(3));
 
             await probe.EnsureSubscription().ExpectCompleteAsync();
         }
@@ -470,25 +473,23 @@ namespace Akka.Streams.Tests.Dsl
             source.Complete();
             await probe.RequestNext(1).ExpectCompleteAsync();
             var task = source.WatchCompletionAsync();
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            await task.WaitAsync(TimeSpan.FromSeconds(3));
         }
 
-        private static readonly Exception Ex = new("BUH");
+        private static readonly TestException Ex = new("BUH");
 
         [Fact]
-        public void QueueSource_should_fail_the_stream_when_buffer_is_empty()
+        public async Task QueueSource_should_fail_the_stream_when_buffer_is_empty()
         {
-            var tuple =
-                Source.Queue<int>(1, OverflowStrategy.Fail)
-                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
-                    .Run(_materializer);
-            var source = tuple.Item1;
-            var probe = tuple.Item2;
+            var (source, probe) = Source.Queue<int>(1, OverflowStrategy.Fail)
+                .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                .Run(_materializer);
 
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
-            probe.EnsureSubscription().ExpectError().Should().Be(Ex);
+            (await Awaiting(() => task.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<TestException>()).And.Should().Be(Ex);
+            (await probe.EnsureSubscription().ExpectErrorAsync()).Should().Be(Ex);
         }
 
         [Fact]
@@ -504,12 +505,13 @@ namespace Akka.Streams.Tests.Dsl
             await source.OfferAsync(1);
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
-            probe.EnsureSubscription().ExpectError().Should().Be(Ex);
+            (await Awaiting(() => task.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<TestException>()).And.Should().Be(Ex);
+            (await probe.EnsureSubscription().ExpectErrorAsync()).Should().Be(Ex);
         }
 
         [Fact]
-        public void QueueSource_should_fail_the_stream_when_buffer_is_full_and_element_is_pending()
+        public async Task QueueSource_should_fail_the_stream_when_buffer_is_full_and_element_is_pending()
         {
             var tuple =
                 Source.Queue<int>(1, OverflowStrategy.Backpressure)
@@ -522,13 +524,13 @@ namespace Akka.Streams.Tests.Dsl
             source.OfferAsync(2);
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
-            probe.EnsureSubscription().ExpectError().Should().Be(Ex);
-
+            (await Awaiting(() => task.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<TestException>()).And.Should().Be(Ex);
+            (await probe.EnsureSubscription().ExpectErrorAsync()).Should().Be(Ex);
         }
 
         [Fact]
-        public void QueueSource_should_fail_the_stream_when_no_buffer_is_used()
+        public async Task QueueSource_should_fail_the_stream_when_no_buffer_is_used()
         {
             var tuple =
                 Source.Queue<int>(0, OverflowStrategy.Fail)
@@ -539,12 +541,13 @@ namespace Akka.Streams.Tests.Dsl
 
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
-            probe.EnsureSubscription().ExpectError().Should().Be(Ex);
+            (await Awaiting(() => task.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<TestException>()).And.Should().Be(Ex);
+            (await probe.EnsureSubscription().ExpectErrorAsync()).Should().Be(Ex);
         }
 
         [Fact]
-        public void QueueSource_should_fail_the_stream_when_no_buffer_is_used_and_element_is_pending()
+        public async Task QueueSource_should_fail_the_stream_when_no_buffer_is_used_and_element_is_pending()
         {
             var tuple =
                 Source.Queue<int>(0, OverflowStrategy.Fail)
@@ -556,8 +559,9 @@ namespace Akka.Streams.Tests.Dsl
             source.OfferAsync(1);
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
-            probe.EnsureSubscription().ExpectError().Should().Be(Ex);
+            (await Awaiting(() => task.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<TestException>()).And.Should().Be(Ex);
+            (await probe.EnsureSubscription().ExpectErrorAsync()).Should().Be(Ex);
         }
     }
 }

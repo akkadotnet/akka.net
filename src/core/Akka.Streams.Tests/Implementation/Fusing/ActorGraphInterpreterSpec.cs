@@ -144,13 +144,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_report_errors_if_an_error_happens_for_an_already_completed_stage()
+        public async Task ActorGraphInterpreter_should_be_able_to_report_errors_if_an_error_happens_for_an_already_completed_stage()
         {
             var failyStage = new FailyGraphStage();
 
-            EventFilter.Exception<ArgumentException>(new Regex("Error in stage.*")).ExpectOne(() =>
+            await EventFilter.Exception<ArgumentException>(new Regex("Error in stage.*")).ExpectOneAsync(async () =>
             {
-                Source.FromGraph(failyStage).RunWith(Sink.Ignore<int>(), Materializer).Wait(TimeSpan.FromSeconds(3));
+                await Source.FromGraph(failyStage).RunWith(Sink.Ignore<int>(), Materializer).WaitAsync(TimeSpan.FromSeconds(3));
             });
         }
 
@@ -289,7 +289,6 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 await gotStop.ReadyAsync(RemainingOrDefault);
 
                 (await downstream.ExpectErrorAsync()).Should().BeOfType<AbruptTerminationException>();
-                return Task.CompletedTask;
             }, Materializer);
         }
 

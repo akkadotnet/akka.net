@@ -195,7 +195,6 @@ namespace Akka.Streams.Tests.Dsl
                 m.Result.Should().Be(42);
                 r.Result.Should().BeEquivalentTo(new[] { 3L, 12L });
 #pragma warning restore xUnit1031
-                return Task.CompletedTask;
             }, Materializer);
         }
 

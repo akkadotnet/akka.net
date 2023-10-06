@@ -40,8 +40,8 @@ namespace Akka.Streams.Tests.Implementation
                     .InitialTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                await t.ShouldCompleteWithin(3.Seconds());
-                t.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
+                (await t.WaitAsync(3.Seconds()))
+                    .Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
         
@@ -88,8 +88,8 @@ namespace Akka.Streams.Tests.Implementation
                     .CompletionTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                await t.ShouldCompleteWithin(3.Seconds());
-                t.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
+                (await t.WaitAsync(3.Seconds()))
+                    .Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
@@ -148,8 +148,8 @@ namespace Akka.Streams.Tests.Implementation
                     .IdleTimeout(TimeSpan.FromSeconds(2)).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                await t.ShouldCompleteWithin(3.Seconds());
-                t.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
+                (await t.WaitAsync(3.Seconds()))
+                    .Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
@@ -207,8 +207,8 @@ namespace Akka.Streams.Tests.Implementation
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                await task.ShouldCompleteWithin(3.Seconds());
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
+                (await task.WaitAsync(3.Seconds()))
+                    .Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
@@ -368,8 +368,8 @@ namespace Akka.Streams.Tests.Implementation
                     .Via(timeoutIdentity).Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                await t.ShouldCompleteWithin(3.Seconds());
-                t.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
+                (await t.WaitAsync(3.Seconds()))
+                    .Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
 

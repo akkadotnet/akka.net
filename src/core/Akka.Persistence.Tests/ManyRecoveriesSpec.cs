@@ -37,7 +37,7 @@ namespace Akka.Persistence.Tests
             {
                 if (message is Evt && Latch is not null)
                 {
-                    Latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
+                    Latch.Ready(TimeSpan.FromSeconds(10));
                 }
             }
 

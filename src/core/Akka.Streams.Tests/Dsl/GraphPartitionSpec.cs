@@ -179,7 +179,6 @@ namespace Akka.Streams.Tests.Dsl
                 })).Run(Materializer);
 
                 (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(input);
-                return Task.CompletedTask;
             }, Materializer);
         }
 

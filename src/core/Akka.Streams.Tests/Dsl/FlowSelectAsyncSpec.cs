@@ -184,7 +184,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         if (n != 1)
                             // slow upstream should not block the error
-                            latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
+                            latch.Ready(TimeSpan.FromSeconds(10));
 
                         return n;
                     })
@@ -303,7 +303,6 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.First<string>(), Materializer);
 
                 (await t.WaitAsync(3.Seconds())).Should().Be("happy");
-                return Task.CompletedTask;
             }, Materializer);
         }
 

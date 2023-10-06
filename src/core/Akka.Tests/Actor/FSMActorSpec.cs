@@ -439,7 +439,6 @@ namespace Akka.Tests.Actor
             await EventFilter.Warning("unhandled event").ExpectOneAsync(async () => {
                 lockFsm.Tell("not_handled");
                 await latches.UnhandledLatch.ReadyAsync(timeout);
-                return Task.CompletedTask;
             });
 
             var answerLatch = new TestLatch();

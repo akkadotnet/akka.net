@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
@@ -16,6 +17,7 @@ using Akka.TestKit;
 using Akka.TestKit.Configs;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -110,7 +112,7 @@ namespace Akka.Tests.Serialization
         }
 
         [Fact]
-        public void SerializationSettingsShouldOverrideHoconSettings()
+        public async Task SerializationSettingsShouldOverrideHoconSettings()
         {
             var serializationSettings = new SerializationSetup(_ => 
                 ImmutableHashSet<SerializerDetails>.Empty
@@ -138,7 +140,7 @@ namespace Akka.Tests.Serialization
             var serializer = sys2.Serialization.FindSerializerFor(new ProgammaticDummy());
             serializer.Should().BeOfType<TestSerializer>();
 
-            sys2.Terminate().Wait();
+            await sys2.Terminate().WaitAsync(3.Seconds());
         }
     }
 }

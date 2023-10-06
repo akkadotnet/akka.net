@@ -16,6 +16,7 @@ using Xunit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using System.Threading.Tasks;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Tests.Actor
 {
@@ -42,17 +43,15 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void IgnoreActorRef_should_make_a_Future_timeout_when_used_in_a_ask()
+        public async Task IgnoreActorRef_should_make_a_Future_timeout_when_used_in_a_ask()
         {
             // this is kind of obvious, the Future won't complete because the ignoreRef is used
 
             var timeout = TimeSpan.FromMilliseconds(500);
             var askMeRef = Sys.ActorOf(Props.Create(() => new AskMeActor()));
 
-            Assert.Throws<AskTimeoutException>(() =>
-            {
-                _ = askMeRef.Ask(new Request(Sys.IgnoreRef), timeout).GetAwaiter().GetResult();
-            });
+            await Awaiting(() => askMeRef.Ask(new Request(Sys.IgnoreRef), timeout))
+                .Should().ThrowAsync<AskTimeoutException>();
         }
 
         [Fact]

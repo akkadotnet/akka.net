@@ -149,7 +149,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         if (n != 1)
                             // slow upstream should not block the error
-                            latch.ReadyAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
+                            latch.Ready(TimeSpan.FromSeconds(10));
 
                         return n;
                     })
@@ -330,7 +330,7 @@ namespace Akka.Streams.Tests.Dsl
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_configured()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
                 var queue = new BlockingQueue<(TaskCompletionSource<int>, long)>();
@@ -361,7 +361,7 @@ namespace Akka.Streams.Tests.Dsl
                     }
                 }, cancellation.Token);
 
-                Func<Task<int>> deferred = () =>
+                var deferred = () =>
                 {
                     var promise = new TaskCompletionSource<int>();
                     if (counter.IncrementAndGet() > parallelism)
@@ -378,15 +378,13 @@ namespace Akka.Streams.Tests.Dsl
                         .SelectAsyncUnordered(parallelism, _ => deferred())
                         .RunAggregate(0, (c, _) => c + 1, Materializer);
 
-                    task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                    task.Result.Should().Be(n);
+                    (await task.WaitAsync(TimeSpan.FromSeconds(3)))
+                        .Should().Be(n);
                 }
                 finally
                 {
                     cancellation.Cancel(false);
                 }
-
-                return Task.CompletedTask;
             }, Materializer);
         }
     }

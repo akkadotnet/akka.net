@@ -162,7 +162,6 @@ namespace Akka.Streams.Tests.Dsl
                     return list;                                                                         
                 }, Materializer);
                 (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(new[] { 1, 2, 3 });
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -187,7 +186,6 @@ namespace Akka.Streams.Tests.Dsl
 
                 (await Task.WhenAll(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5).WaitAsync(3.Seconds()))
                     .SelectMany(l => l).Should().BeEquivalentTo(Enumerable.Range(0, 15));
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -215,7 +213,6 @@ namespace Akka.Streams.Tests.Dsl
                 var result = await Task.WhenAll(t.Item1, t.Item2, t.Item3).WaitAsync(3.Seconds());
                 result.Should().NotContain(0);
                 result.Sum().Should().Be(numElementsForSink * 3);
-                return Task.CompletedTask;
             }, Materializer);
         }
 

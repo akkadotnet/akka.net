@@ -172,8 +172,8 @@ namespace Akka.Tests.Actor
             f.IsCompleted.Should().Be(false);
             a.IsTerminated.Should().Be(false);
             a.Tell(42);
-            await AwaitAssertAsync(() => f.IsCompleted.Should().Be(true));
-            await AwaitAssertAsync(() => f.Result.Should().Be(42));
+
+            (await f.WaitAsync(3.Seconds())).Should().Be(42);
         }
 
         /*

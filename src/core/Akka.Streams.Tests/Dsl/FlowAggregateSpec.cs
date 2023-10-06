@@ -124,7 +124,6 @@ namespace Akka.Streams.Tests.Dsl
                 
                 (await Awaiting(() => future.WaitAsync(RemainingOrDefault)).Should().ThrowAsync<TestException>())
                     .And.Should().Be(error);
-                return Task.CompletedTask;
             }, Materializer);
         }
 

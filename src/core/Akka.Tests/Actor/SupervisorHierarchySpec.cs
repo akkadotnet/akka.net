@@ -227,7 +227,7 @@ namespace Akka.Tests.Actor
             {
                 c.Strategy = new OneForOneStrategy(_ =>
                 {
-                    latch.ReadyAsync(Dilated(TimeSpan.FromSeconds(4))).GetAwaiter().GetResult(); 
+                    latch.Ready(Dilated(TimeSpan.FromSeconds(4))); 
                     return Directive.Resume;
                 });
                 c.Receive<string>(s => s.StartsWith("spawn:"), (s, ctx) => ctx.Sender.Tell(ctx.ActorOf<Resumer>(s.Substring(6))));

@@ -40,7 +40,6 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(100)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 (await task.WaitAsync(1.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -55,7 +54,6 @@ namespace Akka.Streams.Tests.Dsl
                 
                 await Awaiting(() => task.WaitAsync(2.Seconds()))
                     .Should().ThrowAsync<TimeoutException>();
-                return Task.CompletedTask;
             }, Materializer);
         }
 

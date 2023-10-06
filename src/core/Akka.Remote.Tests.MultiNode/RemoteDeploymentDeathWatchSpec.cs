@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -53,7 +54,7 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void An_actor_system_that_deploys_actors_on_another_node_must_be_able_to_shutdown_when_remote_node_crash()
+        public async Task An_actor_system_that_deploys_actors_on_another_node_must_be_able_to_shutdown_when_remote_node_crash()
         {
             RunOn(() =>
             {
@@ -83,15 +84,15 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("third-crashed");
             }, _specConfig.Third);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 EnterBarrier("hello-deployed");
                 Sleep();
-                TestConductor.Exit(_specConfig.Third, 0).GetAwaiter().GetResult();
+                await TestConductor.Exit(_specConfig.Third, 0);
                 EnterBarrier("third-crashed");
 
                 //second system will be shutdown
-                TestConductor.Shutdown(_specConfig.Second).GetAwaiter().GetResult();
+                await TestConductor.Shutdown(_specConfig.Second);
 
                 EnterBarrier("after-3");
             }, _specConfig.First);

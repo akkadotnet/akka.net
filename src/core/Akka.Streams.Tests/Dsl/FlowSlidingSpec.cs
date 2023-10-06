@@ -147,7 +147,6 @@ namespace Akka.Streams.Tests.Dsl
                         TestActor.Tell("done");                                                                             
                 });
                 await ExpectMsgAsync("done");
-                return Task.CompletedTask;
             }, Materializer);
         }
     }

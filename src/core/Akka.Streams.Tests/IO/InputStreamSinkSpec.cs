@@ -20,6 +20,7 @@ using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.IO
 {
@@ -94,7 +95,7 @@ namespace Akka.Streams.Tests.IO
         [WindowsFact(Skip ="Racy in Linux")]
         public async Task InputStreamSink_should_block_read_until_get_requested_number_of_bytes_from_upstream()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var run =                                                                             
                 this.SourceProbe<ByteString>()                                                                                 
                 .ToMaterialized(StreamConverters.AsInputStream(), Keep.Both)                                                                                 
@@ -106,13 +107,12 @@ namespace Akka.Streams.Tests.IO
                 f.Wait(Timeout).Should().BeFalse();
 
                 probe.SendNext(_byteString);
-                f.Wait(RemainingOrDefault).Should().BeTrue();
-                f.Result.Should().Be(_byteString.Count);
+                (await f.WaitAsync(RemainingOrDefault))
+                    .Should().Be(_byteString.Count);
 
                 probe.SendComplete();
                 inputStream.ReadByte().Should().Be(-1);
                 inputStream.Dispose();
-                return Task.CompletedTask;
             }, _materializer);
         }
 
@@ -266,12 +266,12 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public async Task InputStreamSink_should_return_Exception_when_stream_is_failed()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var sinkProbe = CreateTestProbe();
                 var t = this.SourceProbe<ByteString>().ToMaterialized(TestSink(sinkProbe), Keep.Both).Run(_materializer);
                 var probe = t.Item1;
                 var inputStream = t.Item2;
-                var ex = new Exception("Stream failed.");
+                var ex = new TestException("Stream failed.");
 
                 probe.SendNext(_byteString);
                 sinkProbe.ExpectMsg<GraphStageMessages.Push>();
@@ -285,35 +285,28 @@ namespace Akka.Streams.Tests.IO
 
                 var task = Task.Run(() => inputStream.ReadByte());
 
-                Action block = () => task.Wait(Timeout);
-                block.Should().Throw<Exception>();
-
-                task.Exception.InnerException.Should().Be(ex);
-                return Task.CompletedTask;
+                (await Awaiting(() => task.WaitAsync(Timeout))
+                    .Should().ThrowAsync<TestException>()).And.Should().Be(ex);
             }, _materializer);
         }
 
         [Fact]
-        public async Task InputStreamSink_should_use_dedicated_default_blocking_io_dispatcher_by_default()
+        public void InputStreamSink_should_use_dedicated_default_blocking_io_dispatcher_by_default()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var sys = ActorSystem.Create("InputStreamSink-testing", Utils.UnboundedMailboxConfig);
-                var materializer = ActorMaterializer.Create(sys);
-                try
-                {
-                    this.SourceProbe<ByteString>().RunWith(StreamConverters.AsInputStream(), materializer);
-                    (materializer as ActorMaterializerImpl).Supervisor.Tell(StreamSupervisor.GetChildren.Instance, TestActor);
-                    var children = ExpectMsg<StreamSupervisor.Children>().Refs;
-                    var actorRef = children.First(c => c.Path.ToString().Contains("inputStreamSink"));
-                    Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
-                }
-                finally
-                {
-                    Shutdown(sys);
-                }
-
-                return Task.CompletedTask;
-            }, _materializer);
+            var sys = ActorSystem.Create("InputStreamSink-testing", Utils.UnboundedMailboxConfig);
+            var materializer = ActorMaterializer.Create(sys);
+            try
+            {
+                this.SourceProbe<ByteString>().RunWith(StreamConverters.AsInputStream(), materializer);
+                (materializer as ActorMaterializerImpl).Supervisor.Tell(StreamSupervisor.GetChildren.Instance, TestActor);
+                var children = ExpectMsg<StreamSupervisor.Children>().Refs;
+                var actorRef = children.First(c => c.Path.ToString().Contains("inputStreamSink"));
+                Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
+            }
+            finally
+            {
+                Shutdown(sys);
+            }
         }
 
         [Fact]

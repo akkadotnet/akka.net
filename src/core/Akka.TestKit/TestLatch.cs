@@ -153,6 +153,16 @@ namespace Akka.TestKit
             }
         }
 
+        public void Ready(CancellationToken token = default)
+        {
+            ReadyAsync(token).GetAwaiter().GetResult();
+        }
+        
+        public void Ready(TimeSpan timeout, CancellationToken token = default)
+        {
+            ReadyAsync(timeout, token).GetAwaiter().GetResult();
+        }
+        
         /// <summary>
         /// Expects the latch to become open within the specified timeout. If the timeout is reached, a
         /// <see cref="TimeoutException"/> is thrown.

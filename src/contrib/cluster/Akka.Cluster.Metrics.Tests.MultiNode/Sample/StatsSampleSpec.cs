@@ -87,10 +87,10 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
 
         private async Task Should_startup_cluster()
         {
-            await WithinAsync(15.Seconds(), () => {
+            await WithinAsync(15.Seconds(), async () => {
                 var cluster = Cluster.Get(Sys);
                 cluster.Subscribe(TestActor, typeof(ClusterEvent.MemberUp));
-                ExpectMsg<ClusterEvent.CurrentClusterState>();
+                await ExpectMsgAsync<ClusterEvent.CurrentClusterState>();
 
                 var firstAddress = Node(_config.First).Address;
                 var secondAddress = Node(_config.Second).Address;
@@ -101,13 +101,12 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 Sys.ActorOf(Props.Create<StatsWorker>(), "statsWorker");
                 Sys.ActorOf(Props.Create<StatsService>(), "statsService");
 
-                ReceiveN(3).Select(m => (m as ClusterEvent.MemberUp).Member.Address).Distinct()
+                (await ReceiveNAsync(3).Select(m => (m as ClusterEvent.MemberUp).Member.Address).Distinct().ToListAsync())
                     .Should().BeEquivalentTo(firstAddress, secondAddress, thirdAddress);
 
                 cluster.Unsubscribe(TestActor);
 
                 EnterBarrier("all-up");
-                return Task.CompletedTask;
             });
         }
 
@@ -130,10 +129,10 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
             var service = Sys.ActorSelection(Node(_config.Third) / "user" / "statsService");
             // eventually the service should be ok,
             // first attempts might fail because worker actors not started yet
-            await AwaitAssertAsync(() =>
+            await AwaitAssertAsync(async () =>
             {
                service.Tell(new StatsJob("this is the text that will be analyzed"));
-               ExpectMsg<StatsResult>(1.Seconds()).MeanWordLength.Should().BeApproximately(3.875, 0.001);
+               (await ExpectMsgAsync<StatsResult>(1.Seconds())).MeanWordLength.Should().BeApproximately(3.875, 0.001);
             });
         }
     }

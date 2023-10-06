@@ -189,7 +189,6 @@ namespace Akka.Streams.Tests.Dsl
                     .Via(killSwitch.Flow<int>())
                     .RunWith(Sink.Seq<int>(), Materializer);
                 (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 100));
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -380,7 +379,6 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.Seq<int>(), Materializer);
                 (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 killSwitch.Shutdown();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -400,7 +398,6 @@ namespace Akka.Streams.Tests.Dsl
                 killSwitch2.Shutdown();
                 await completion.WaitAsync(3.Seconds());
                 completion.IsFaulted.Should().BeFalse();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -548,7 +545,6 @@ namespace Akka.Streams.Tests.Dsl
                     .Via(cancel.Token.AsFlow<int>())
                     .RunWith(Sink.Seq<int>(), Materializer);
                 (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 100));
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -705,7 +701,6 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.Seq<int>(), Materializer);
                 (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 cancel.Cancel();
-                return Task.CompletedTask;
             }, Materializer);
         }
 

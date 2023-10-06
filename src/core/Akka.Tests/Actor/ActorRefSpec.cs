@@ -169,7 +169,6 @@ namespace Akka.Tests.Actor
 
                 boss.Tell("send kill");
                 await latch.ReadyAsync(TimeSpan.FromSeconds(5));
-                return Task.CompletedTask;
             });
         }
 
@@ -267,13 +266,11 @@ namespace Akka.Tests.Actor
             var t2 = actorRef.Ask(0, timeout);
             actorRef.Tell(PoisonPill.Instance);
 
-            Func<Task> f1 = async () => await t1;
-            await f1.Should().CompleteWithinAsync(timeout);
-            Func<Task> f2 = async () => await t2;
-            await f2.Should().CompleteWithinAsync(timeout);
+            var r1 = await t1.WaitAsync(timeout);
+            var r2 = await t2.WaitAsync(timeout);
             
-            t1.Result.ShouldBe("five");
-            t2.Result.ShouldBe("zero");
+            r1.ShouldBe("five");
+            r2.ShouldBe("zero");
 
             await VerifyActorTermination(actorRef);
         }

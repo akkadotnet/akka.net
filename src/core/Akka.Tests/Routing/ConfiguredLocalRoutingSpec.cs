@@ -286,7 +286,8 @@ namespace Akka.Tests.Routing
 
             var received = Enumerable.Range(1, 3).Select(_ => ExpectMsg<IActorRef>()).ToList();
             // TODO: wrong actor names
-            var expected = new List<string> { "a", "b", "c" }.Select( i => Sys.ActorSelection("/user/weird/$" + i).ResolveOne(RemainingOrDefault).Result).ToList();
+            var expected = (await Task.WhenAll(new List<string> { "a", "b", "c" }
+                .Select( i => Sys.ActorSelection("/user/weird/$" + i).ResolveOne(RemainingOrDefault)))).ToList();
 
             received.Should().BeEquivalentTo(expected);
             await ExpectNoMsgAsync(1.Seconds());

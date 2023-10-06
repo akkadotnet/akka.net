@@ -13,6 +13,7 @@ using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable MemberHidesStaticFromOuterClass
@@ -202,11 +203,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public async Task A_stage_with_keep_going_must_still_be_alive_after_all_ports_have_been_closed_until_explicity_closed()
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var t = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
                 var maybePromise = t.Item1;
                 var pingerFuture = t.Item2;
-                pingerFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                await pingerFuture.WaitAsync(3.Seconds());
                 var pinger = await pingerFuture;
 
                 pinger.Register(TestActor);
@@ -240,7 +241,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var t = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
                 var maybePromise = t.Item1;
                 var pingerFuture = t.Item2;
-                pingerFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                await pingerFuture.WaitAsync(3.Seconds());
                 var pinger = await pingerFuture;
 
                 pinger.Register(TestActor);
@@ -277,7 +278,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var t = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
                 var maybePromise = t.Item1;
                 var pingerFuture = t.Item2;
-                pingerFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                await pingerFuture.WaitAsync(3.Seconds());
                 var pinger = await pingerFuture;
 
                 pinger.Register(TestActor);
@@ -316,7 +317,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var t = Source.Maybe<int>().ToMaterialized(new PingableSink(false), Keep.Both).Run(Materializer);
                 var maybePromise = t.Item1;
                 var pingerFuture = t.Item2;
-                pingerFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                await pingerFuture.WaitAsync(3.Seconds());
                 var pinger = await pingerFuture;
 
                 pinger.Register(TestActor);

@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.TestKit;
@@ -93,7 +94,7 @@ namespace Akka.Tests.Actor.Setup
         }
 
         [Fact]
-        public void ActorSystemSettingsShouldBeAvailableFromExtendedActorSystem()
+        public async Task ActorSystemSettingsShouldBeAvailableFromExtendedActorSystem()
         {
             ActorSystem system = null;
             try
@@ -105,7 +106,8 @@ namespace Akka.Tests.Actor.Setup
             }
             finally
             {
-                system?.Terminate().Wait(TimeSpan.FromSeconds(5));
+                if(system is not null)
+                    await system.Terminate().WaitAsync(TimeSpan.FromSeconds(5));
             }
         }
 

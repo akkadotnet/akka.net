@@ -22,6 +22,8 @@ using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
+using FluentAssertions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Tests.Actor.Dispatch
 {
@@ -615,10 +617,10 @@ namespace Akka.Tests.Actor.Dispatch
         /* @Aaronontheweb: Left out the thread interrupt specs, because I don't think they behave the same way in .NET / Windows */
 
         [Fact]
-        public void A_dispatcher_must_continue_to_process_messages_when_exception_is_thrown()
+        public async Task A_dispatcher_must_continue_to_process_messages_when_exception_is_thrown()
         {
-            EventFilter.Exception<IndexOutOfRangeException>().And.Exception<InvalidComObjectException>().Expect(2,
-                () =>
+            await EventFilter.Exception<IndexOutOfRangeException>().And.Exception<InvalidComObjectException>().ExpectAsync(2,
+                async () =>
                 {
                     var dispatcher = InterceptedDispatcher();
                     var a = NewTestActor(dispatcher.Id);
@@ -629,14 +631,10 @@ namespace Akka.Tests.Actor.Dispatch
                     var f5 = a.Ask(new ThrowException(new InvalidComObjectException("InvalidComObjectException")));
                     var f6 = a.Ask(new Reply("bar2"));
 
-                    Assert.True(f1.Wait(GetTimeoutOrDefault(null)));
-                    f1.Result.ShouldBe("foo");
-                    Assert.True(f2.Wait(GetTimeoutOrDefault(null)));
-                    f2.Result.ShouldBe("bar");
-                    Assert.True(f4.Wait(GetTimeoutOrDefault(null)));
-                    f4.Result.ShouldBe("foo2");
-                    Assert.True(f6.Wait(GetTimeoutOrDefault(null)));
-                    f6.Result.ShouldBe("bar2");
+                    (await f1.WaitAsync(GetTimeoutOrDefault(null))).Should().Be("foo");
+                    (await f2.WaitAsync(GetTimeoutOrDefault(null))).Should().Be("bar");
+                    (await f4.WaitAsync(GetTimeoutOrDefault(null))).Should().Be("foo2");
+                    (await f6.WaitAsync(GetTimeoutOrDefault(null))).Should().Be("bar2");
                     Assert.False(f3.IsCompleted);
                     Assert.False(f5.IsCompleted);
                 });

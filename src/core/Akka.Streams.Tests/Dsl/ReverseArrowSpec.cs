@@ -40,27 +40,27 @@ namespace Akka.Streams.Tests.Dsl
             Flow.Create<int>().Limit(10).ToMaterialized(Streams.Dsl.Sink.Seq<int>(), Keep.Right);
         
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_work_from_Inlets()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_work_from_Inlets()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 b.To(s.Inlet).From(Source);
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] {1, 2, 3});
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] {1, 2, 3});
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_work_from_SinkShape()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_work_from_SinkShape()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 b.To(s).From(Source);
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
@@ -116,7 +116,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_work_from_FlowShape()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_work_from_FlowShape()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
@@ -125,12 +125,12 @@ namespace Akka.Streams.Tests.Dsl
                 b.From(f).To(s);
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_work_from_UniformFanInShape()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_work_from_UniformFanInShape()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
@@ -140,12 +140,12 @@ namespace Akka.Streams.Tests.Dsl
                 b.From(f).To(s);
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_work_from_UniformFanOutShape()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_work_from_UniformFanOutShape()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
@@ -155,12 +155,12 @@ namespace Akka.Streams.Tests.Dsl
                 b.From(f).To(s);
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_work_towards_Outlets()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_work_towards_Outlets()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
@@ -168,12 +168,12 @@ namespace Akka.Streams.Tests.Dsl
                 b.To(s).From(o);
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_work_towards_SourceShape()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_work_towards_SourceShape()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
@@ -181,24 +181,24 @@ namespace Akka.Streams.Tests.Dsl
                 b.To(s).From(o);
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_work_towards_Source()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_work_towards_Source()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 b.To(s).From(Source);
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_work_towards_FlowShape()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_work_towards_FlowShape()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
@@ -207,12 +207,12 @@ namespace Akka.Streams.Tests.Dsl
                 b.From(Source).To(f);
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_work_towards_UniformFanInShape()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_work_towards_UniformFanInShape()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
@@ -222,12 +222,12 @@ namespace Akka.Streams.Tests.Dsl
                 b.From(Source).To(f);
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_fail_towards_already_full_UniformFanInShape()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_fail_towards_already_full_UniformFanInShape()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
@@ -242,12 +242,12 @@ namespace Akka.Streams.Tests.Dsl
 
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_work_towards_UniformFanOutShape()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_work_towards_UniformFanOutShape()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
@@ -257,12 +257,12 @@ namespace Akka.Streams.Tests.Dsl
                 b.From(Source).To(f);
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_fail_towards_already_full_UniformFanOutShape()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_fail_towards_already_full_UniformFanOutShape()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
@@ -278,24 +278,24 @@ namespace Akka.Streams.Tests.Dsl
 
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_work_across_a_Flow()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_work_across_a_Flow()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
                 b.To(s).Via(Flow.Create<int>().MapMaterializedValue(_ => MaterializedValue)).From(Source);
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
-        public void Reverse_Arrows_in_the_GraphDsl_must_work_across_a_FlowShape()
+        public async Task Reverse_Arrows_in_the_GraphDsl_must_work_across_a_FlowShape()
         {
             var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink, (b, s) =>
             {
@@ -303,8 +303,8 @@ namespace Akka.Streams.Tests.Dsl
                 
                 return ClosedShape.Instance;
             })).Run(Materializer);
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+            (await task.WaitAsync(TimeSpan.FromSeconds(1)))
+                .Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
     }
 }
