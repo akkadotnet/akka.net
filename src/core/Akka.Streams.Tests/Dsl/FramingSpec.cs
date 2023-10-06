@@ -23,6 +23,7 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions.Extensions;
+using Nito.AsyncEx;
 using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
@@ -265,7 +266,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Length_field_based_framing_must_work_with_various_byte_orders_frame_lengths_and_offsets()
         {
-            async IAsyncEnumerable<(IEnumerable<ByteString>, List<ByteString>, (ByteOrder, int, int))> GetFutureResults()
+            IEnumerable<(Task<IEnumerable<ByteString>>, List<ByteString>, (ByteOrder, int, int))> GetFutureResults()
             {
                 foreach (var byteOrder in ByteOrders)
                 foreach (var fieldOffset in FieldOffsets)
@@ -277,27 +278,28 @@ namespace Akka.Streams.Tests.Dsl
                         return Encode(payload, fieldOffset, fieldLength, byteOrder);
                     }).ToList();
 
-                    var result = await Source.From(encodedFrames)
+                    var task = Source.From(encodedFrames)
                         .Via(Rechunk)
                         .Via(Framing.LengthField(fieldLength, int.MaxValue, fieldOffset, byteOrder))
                         .Grouped(10000)
                         .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer);
                     
-                    yield return (result, encodedFrames, (byteOrder, fieldOffset, fieldLength));
+                    yield return (task, encodedFrames, (byteOrder, fieldOffset, fieldLength));
                 }
             }
 
-            var results = await GetFutureResults().ToListAsync().AsTask().WaitAsync(3.Seconds());
-            foreach (var (result, encodedFrames, (byteOrder, fieldOffset, fieldLength)) in results)
+            var results = GetFutureResults().ToList();
+            await Task.WhenAll(results.Select(r => r.Item1)).WaitAsync(3.Seconds());
+            foreach (var (task, encodedFrames, (byteOrder, fieldOffset, fieldLength)) in results)
             {
-                result.ShouldBeSame(encodedFrames, $"byteOrder: {byteOrder}, fieldOffset: {fieldOffset}, fieldLength: {fieldLength}");
+                (await task).ShouldBeSame(encodedFrames, $"byteOrder: {byteOrder}, fieldOffset: {fieldOffset}, fieldLength: {fieldLength}");
             }
         }
 
         [Fact]
         public async Task Length_field_based_framing_must_work_with_various_byte_orders_frame_lengths_and_offsets_using_ComputeFrameSize()
         {
-            async IAsyncEnumerable<(IEnumerable<ByteString>, List<ByteString>, (ByteOrder, int, int))> GetFutureResults()
+            IEnumerable<(Task<IEnumerable<ByteString>>, List<ByteString>, (ByteOrder, int, int))> GetFutureResults()
             {
                 foreach (var byteOrder in ByteOrders)
                 foreach (var fieldOffset in FieldOffsets)
@@ -325,20 +327,21 @@ namespace Akka.Streams.Tests.Dsl
                         return EncodeComplexFrame(payload, fieldLength, byteOrder, ByteString.FromBytes(offsetBytes), ByteString.FromBytes(tailBytes));
                     }).ToList();
 
-                    var result = await Source.From(encodedFrames)
+                    var task = Source.From(encodedFrames)
                         .Via(Rechunk)
                         .Via(Framing.LengthField(fieldLength, fieldOffset, int.MaxValue, byteOrder, ComputeFrameSize))
                         .Grouped(10000)
                         .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer);
                     
-                    yield return (result, encodedFrames, (byteOrder, fieldOffset, fieldLength));
+                    yield return (task, encodedFrames, (byteOrder, fieldOffset, fieldLength));
                 }
             }
 
-            var results = await GetFutureResults().ToListAsync().AsTask().ShouldCompleteWithin(3.Seconds());
-            foreach (var (result, encodedFrames, (byteOrder, fieldOffset, fieldLength)) in results)
+            var results = GetFutureResults().ToList();
+            await Task.WhenAll(results.Select(r => r.Item1)).WaitAsync(3.Seconds());
+            foreach (var (task, encodedFrames, (byteOrder, fieldOffset, fieldLength)) in results)
             {
-                result.ShouldBeSame(encodedFrames, $"byteOrder: {byteOrder}, fieldOffset: {fieldOffset}, fieldLength: {fieldLength}");
+                (await task).ShouldBeSame(encodedFrames, $"byteOrder: {byteOrder}, fieldOffset: {fieldOffset}, fieldLength: {fieldLength}");
             }
         }
 
