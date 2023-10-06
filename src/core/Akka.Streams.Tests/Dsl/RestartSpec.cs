@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
         private readonly RestartSettings _restartSettings;
 
         public RestartSpec(ITestOutputHelper output)
-            : base("{}", output)
+            : base("akka.loglevel = DEBUG", output)
         {
             Materializer = Sys.Materializer();
 

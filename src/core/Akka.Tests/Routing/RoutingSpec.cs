@@ -21,18 +21,20 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Routing
 {
     public class RoutingSpec : AkkaSpec
     {
-        public RoutingSpec() : base(GetConfig())
+        public RoutingSpec(ITestOutputHelper output) : base(GetConfig(), output)
         {
         }
 
         private static string GetConfig()
         {
             return @"
+                akka.loglevel = DEBUG
                 akka.actor.serialize-messages = off
                 akka.actor.deployment {
                   /router1 {
@@ -170,6 +172,7 @@ namespace Akka.Tests.Routing
 
             var c1 = await ExpectMsgAsync<IActorRef>();
             var c2 = await ExpectMsgAsync<IActorRef>();
+            c1.Should().NotBe(c2);
 
             Watch(router);
             Watch(c2);

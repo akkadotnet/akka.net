@@ -34,7 +34,7 @@ namespace Akka.Streams.Tests.Dsl
             return new TestException("boom");
         }
 
-        public QueueSinkSpec(ITestOutputHelper output) : base(output)
+        public QueueSinkSpec(ITestOutputHelper output) : base("akka.loglevel = DEBUG", output)
         {
             _materializer = Sys.Materializer();
         }
