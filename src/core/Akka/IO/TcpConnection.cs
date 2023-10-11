@@ -620,8 +620,8 @@ namespace Akka.IO
 
         protected void AcquireSocketAsyncEventArgs()
         {
-            if (ReceiveArgs != null) throw new InvalidOperationException($"Cannot acquire receive SocketAsyncEventArgs. It's already has been initialized");
-            if (SendArgs != null) throw new InvalidOperationException($"Cannot acquire send SocketAsyncEventArgs. It's already has been initialized");
+            if (ReceiveArgs != null) throw new InvalidOperationException("Cannot acquire receive SocketAsyncEventArgs. It's already has been initialized");
+            if (SendArgs != null) throw new InvalidOperationException("Cannot acquire send SocketAsyncEventArgs. It's already has been initialized");
 
             ReceiveArgs = CreateSocketEventArgs(Self);
             var buffer = Tcp.BufferPool.Rent();
