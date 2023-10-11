@@ -405,6 +405,9 @@ This example demonstrates `Ask` together with the `Pipe` Pattern on tasks, becau
 
 Using `Ask` will send a message to the receiving Actor as with `Tell`, and the receiving actor must reply with `Sender.Tell(reply, Self)` in order to complete the returned `Task` with a value. The `Ask` operation involves creating an internal actor for handling this reply, which needs to have a timeout after which it is destroyed in order not to leak resources; see more below.
 
+> [!NOTE]
+> While `Ask` waits for a response, that does not ensure it receives any kind of priority. Messages sent via `Ask` queue in actor mailboxes the same way that messages sent via `Tell` do. You may need to adapt your actor hierarchy if `Ask` messages might be impeded by a large mailbox size.
+
 > [!WARNING]
 > To complete the `Task` with an exception you need send a `Failure` message to the sender. This is not done automatically when an actor throws an exception while processing a message.
 
