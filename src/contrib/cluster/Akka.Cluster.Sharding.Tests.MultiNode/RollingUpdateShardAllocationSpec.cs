@@ -252,10 +252,10 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 AwaitAssert(() =>
                 {
-                    shardRegion.Value.Tell(new GiveMeYourHome.Get($"id1"));
+                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id1"));
                     ExpectMsg<GiveMeYourHome.Home>();
 
-                    shardRegion.Value.Tell(new GiveMeYourHome.Get($"id2"));
+                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id2"));
                     ExpectMsg<GiveMeYourHome.Home>();
                 });
             }, config.Second, config.Third, config.Fourth);
@@ -282,11 +282,11 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 AwaitAssert(() =>
                 {
-                    shardRegion.Value.Tell(new GiveMeYourHome.Get($"id1"));
+                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id1"));
                     var address1 = ExpectMsg<GiveMeYourHome.Home>().Address;
                     UpMembers.Select(i => i.Address).Should().Contain(address1);
 
-                    shardRegion.Value.Tell(new GiveMeYourHome.Get($"id2"));
+                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id2"));
                     var address2 = ExpectMsg<GiveMeYourHome.Home>().Address;
                     UpMembers.Select(i => i.Address).Should().Contain(address2);
                 });

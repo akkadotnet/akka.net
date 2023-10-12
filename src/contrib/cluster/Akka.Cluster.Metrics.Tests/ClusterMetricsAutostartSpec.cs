@@ -24,18 +24,18 @@ namespace Akka.Cluster.Metrics.Tests
         /// <summary>
         /// This is a single node test.
         /// </summary>
-        private static readonly Config Config = ConfigurationFactory.ParseString($$"""
-            akka {
-                extensions = ["Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics"]
-                actor.provider = "cluster"
-                cluster.metrics.collector {
-                    provider = ["Akka.Cluster.Metrics.Collectors.DefaultCollector, Akka.Cluster.Metrics"]
-                    sample-interval = 200ms
-                    gossip-interval = 200ms
-                }
-            }
-            """);
-
+        private static readonly Config Config = ConfigurationFactory.ParseString(@"
+akka {
+    extensions = [""Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics""]
+    actor.provider = ""cluster""
+    cluster.metrics.collector {
+        provider = [""Akka.Cluster.Metrics.Collectors.DefaultCollector, Akka.Cluster.Metrics""]
+        sample-interval = 200ms
+        gossip-interval = 200ms
+    }
+}
+");
+        
         public ClusterMetricsAutostartSpec(ITestOutputHelper output)
             : base(Config, output)
         {
