@@ -226,7 +226,7 @@ namespace Akka.Cluster.Sharding
             }
 
             /// <inheritdoc/>
-            public override string ToString() => $"GetShardStats";
+            public override string ToString() => "GetShardStats";
         }
 
         /// <summary>
@@ -486,7 +486,7 @@ namespace Akka.Cluster.Sharding
             }
 
             /// <inheritdoc/>
-            public override string ToString() => $"NoState";
+            public override string ToString() => "NoState";
         }
 
         /// <summary>
@@ -516,7 +516,7 @@ namespace Akka.Cluster.Sharding
             }
 
             /// <inheritdoc/>
-            public override string ToString() => $"RememberedButNotCreated";
+            public override string ToString() => "RememberedButNotCreated";
         }
 
         /// <summary>
@@ -627,7 +627,7 @@ namespace Akka.Cluster.Sharding
             }
 
             /// <inheritdoc/>
-            public override string ToString() => $"RememberingStop";
+            public override string ToString() => "RememberingStop";
         }
 
         internal abstract class WithRef : EntityState, IEquatable<WithRef>
@@ -733,7 +733,7 @@ namespace Akka.Cluster.Sharding
             }
 
             /// <inheritdoc/>
-            public override string ToString() => $"WaitingForRestart";
+            public override string ToString() => "WaitingForRestart";
         }
 
         internal sealed class Entities
