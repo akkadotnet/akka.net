@@ -37,6 +37,11 @@ namespace Akka.Persistence.Query
         /// </summary>
         /// <param name="other">The other offset to compare.</param>
         public abstract int CompareTo(Offset other);
+
+        /// <summary>
+        /// Used to log offset's value
+        /// </summary>
+        public abstract override string ToString();
     }
 
     /// <summary>
@@ -83,6 +88,8 @@ namespace Akka.Persistence.Query
 
             throw new InvalidOperationException($"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
         }
+
+        public override string ToString() => Value.ToString();
     }
 
     /// <summary>
@@ -123,6 +130,8 @@ namespace Akka.Persistence.Query
                 ? CompareTo(seq)
                 : throw new InvalidOperationException($"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
         }
+
+        public override string ToString() => Value.ToString();
     }
 
     /// <summary>
@@ -145,5 +154,7 @@ namespace Akka.Persistence.Query
 
             throw new InvalidOperationException($"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
         }
+
+        public override string ToString() => "0";
     }
 }
