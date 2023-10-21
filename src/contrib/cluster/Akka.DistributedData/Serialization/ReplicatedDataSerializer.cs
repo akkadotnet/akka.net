@@ -11,6 +11,7 @@ using Akka.Serialization;
 using Google.Protobuf;
 using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -19,13 +20,16 @@ using System.Runtime.Serialization;
 using Akka.DistributedData.Serialization.Proto.Msg;
 using Akka.Util;
 using Akka.Util.Internal;
+using Google.Protobuf.Collections;
+using Microsoft.Extensions.ObjectPool;
 using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
 using IActorRef = Akka.Actor.IActorRef;
+using UniqueAddress = Akka.Cluster.UniqueAddress;
 
 
 namespace Akka.DistributedData.Serialization
 {
-    public sealed class ReplicatedDataSerializer : SerializerWithStringManifest
+    public sealed partial class ReplicatedDataSerializer : SerializerWithStringManifest
     {
 
         private const string DeletedDataManifest = "A";
@@ -81,13 +85,13 @@ namespace Akka.DistributedData.Serialization
         {
             switch (obj)
             {
-                case IORSet o: return SerializationSupport.Compress(ToProto(o));
-                case ORSet.IAddDeltaOperation o: return ToProto(o.UnderlyingSerialization).ToByteArray();
-                case ORSet.IRemoveDeltaOperation o: return ToProto(o.UnderlyingSerialization).ToByteArray();
+                case IORSet o: return SerializationSupport.Compress(ORSetToProto(o));
+                case ORSet.IAddDeltaOperation o: return ORSetToProto(o.UnderlyingSerialization).ToByteArray();
+                case ORSet.IRemoveDeltaOperation o: return ORSetToProto(o.UnderlyingSerialization).ToByteArray();
                 case IGSet g: return ToProto(g).ToByteArray();
                 case GCounter g: return ToProto(g).ToByteArray();
                 case PNCounter p: return ToProto(p).ToByteArray();
-                case Flag f: return ToProto(f).ToByteArray();
+                case Flag f: return GetFlagBytes(f);//ToProto(f).ToByteArray();
                 case ILWWRegister l: return ToProto(l).ToByteArray();
                 case IORDictionary o: return SerializationSupport.Compress(ToProto(o));
                 case ORDictionary.IDeltaOperation p: return ToProto(p).ToByteArray();
@@ -102,8 +106,8 @@ namespace Akka.DistributedData.Serialization
                 // key types
                 case IKey k: return ToProto(k).ToByteArray();
                 // less common delta types
-                case ORSet.IDeltaGroupOperation o: return ToProto(o).ToByteArray();
-                case ORSet.IFullStateDeltaOperation o: return ToProto(o.UnderlyingSerialization).ToByteArray();
+                case ORSet.IDeltaGroupOperation o: return ORDeltaGroupOpToProto(o).ToByteArray();
+                case ORSet.IFullStateDeltaOperation o: return ORSetToProto(o.UnderlyingSerialization).ToByteArray();
                 default:
                     throw new ArgumentException($"Can't serialize object of type [{obj.GetType().FullName}] in [{GetType().FullName}]");
             }
@@ -205,7 +209,20 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
+        private static readonly ConcurrentDictionary<Type, TypeDescriptor>
+            _typeDescriptorCache = new();
         private static TypeDescriptor GetTypeDescriptor(Type t)
+        {
+            if (_typeDescriptorCache.TryGetValue(t, out var item) == false)
+            {
+                item = _typeDescriptorCache.GetOrAdd(t,
+                    static k => _getTypeDescriptorImpl(k));   
+            }
+
+            return item;
+        }
+
+        private static TypeDescriptor _getTypeDescriptorImpl(Type t)
         {
             var typeInfo = new TypeDescriptor();
             if (t == typeof(string))
@@ -233,6 +250,8 @@ namespace Akka.DistributedData.Serialization
             return typeInfo;
         }
 
+        private static readonly ConcurrentDictionary<string, Type>
+            _otherTypeCache = new();
         private static Type GetTypeFromDescriptor(TypeDescriptor t)
         {
             switch (t.Type)
@@ -246,10 +265,18 @@ namespace Akka.DistributedData.Serialization
                 case ValType.ActorRef:
                     return typeof(IActorRef);
                 case ValType.Other:
+                {
+                    if (_otherTypeCache.TryGetValue(t.TypeName, out var type) ==
+                        false)
                     {
-                        var type = Type.GetType(t.TypeName);
-                        return type;
+                        type= _otherTypeCache.GetOrAdd(t.TypeName,
+                            static (k) => Type.GetType(k));   
                     }
+
+                    return type;
+                    //var type = Type.GetType(t.TypeName);
+                    //return type;
+                }
                 default:
                     throw new SerializationException($"Unknown ValType of [{t.Type}] detected");
             }
@@ -261,23 +288,20 @@ namespace Akka.DistributedData.Serialization
             using (bytes)
             {
                 var p = Proto.Msg.ORSet.Parser.ParseFrom(bytes.Memory.Span);
-                return FromProto(p);   
+                return ORSetFromProto(p);   
             }
         }
 
-        private Proto.Msg.ORSet ToProto(IORSet orset)
+        private Proto.Msg.ORSet ORSetToProto(IORSet orset)
         {
-            var b = new Proto.Msg.ORSet
-            {
-                TypeInfo = new TypeDescriptor()
-            };
+            var b = new Proto.Msg.ORSet();
 
             switch (orset)
             {
                 case ORSet<int> ints:
-                    {
+                {
+                    b.TypeInfo = GetTypeDescriptor(typeof(int));
                         b.Vvector =  SerializationSupport.VersionVectorToProto(ints.VersionVector);
-                        b.TypeInfo.Type = ValType.Int;
                         var intElements = new List<int>(ints.ElementsMap.Keys);
                         intElements.Sort();
                         foreach (var val in intElements)
@@ -289,8 +313,9 @@ namespace Akka.DistributedData.Serialization
                     }
                 case ORSet<long> longs:
                     {
+                        
+                        b.TypeInfo = GetTypeDescriptor(typeof(long));
                         b.Vvector =  SerializationSupport.VersionVectorToProto(longs.VersionVector);
-                        b.TypeInfo.Type = ValType.Long;
                         var longElements = new List<long>(longs.ElementsMap.Keys);
                         longElements.Sort();
                         foreach (var val in longElements)
@@ -302,8 +327,9 @@ namespace Akka.DistributedData.Serialization
                     }
                 case ORSet<string> strings:
                     {
+                        
+                        b.TypeInfo = GetTypeDescriptor(typeof(string));
                         b.Vvector =  SerializationSupport.VersionVectorToProto(strings.VersionVector);
-                        b.TypeInfo.Type = ValType.String;
                         var stringElements = new List<string>(strings.ElementsMap.Keys);
                         stringElements.Sort();
                         foreach (var val in stringElements)
@@ -315,8 +341,8 @@ namespace Akka.DistributedData.Serialization
                     }
                 case ORSet<IActorRef> refs:
                     {
+                        b.TypeInfo = GetTypeDescriptor(typeof(IActorRef));
                         b.Vvector =  SerializationSupport.VersionVectorToProto(refs.VersionVector);
-                        b.TypeInfo.Type = ValType.ActorRef;
                         var actorRefElements = new List<IActorRef>(refs.ElementsMap.Keys);
                         actorRefElements.Sort();
                         foreach (var val in actorRefElements)
@@ -327,43 +353,56 @@ namespace Akka.DistributedData.Serialization
                         return b;
                     }
                 default: // unknown type
-                    {
+                {
+                    return SerDeserGenericCache.ORSetUnknownToProto(orset.SetType,
+                        this, orset, b);
                         // runtime type - enter horrible dynamic serialization stuff
-                        var makeProto = ORSetUnknownMaker.MakeGenericMethod(orset.SetType);
-                        return (Proto.Msg.ORSet)makeProto.Invoke(this, new object[] { orset, b });
+                        //var makeProto = ORSetUnknownMaker.MakeGenericMethod(orset.SetType);
+                        //return (Proto.Msg.ORSet)makeProto.Invoke(this, new object[] { orset, b });
                     }
             }
         }
 
-        private IORSet FromProto(Proto.Msg.ORSet orset)
+        private IORSet ORSetFromProto(Proto.Msg.ORSet orset)
         {
-            var dots = orset.Dots.Select(x => _ser.VersionVectorFromProto(x));
+            //var dots = orset.Dots.Select(x => _ser.VersionVectorFromProto(x));
             var vector = _ser.VersionVectorFromProto(orset.Vvector);
 
             if (orset.IntElements.Count > 0 || orset.TypeInfo.Type == ValType.Int)
             {
-                var eInt = orset.IntElements.Zip(dots, (i, versionVector) => (i, versionVector))
-                    .ToImmutableDictionary(x => x.i, y => y.versionVector);
+                var eInt = ImmutableDictionary.CreateRange(
+                    ZipSetStatic<int>(orset.IntElements, orset.Dots));
+                //var eInt = orset.IntElements.Zip(dots, (i, versionVector) => (i, versionVector))
+                //    .ToImmutableDictionary(x => x.i, y => y.versionVector);
 
                 return new ORSet<int>(eInt, vector);
             }
 
             if (orset.LongElements.Count > 0 || orset.TypeInfo.Type == ValType.Long)
             {
-                var eLong = orset.LongElements.Zip(dots, (i, versionVector) => (i, versionVector))
-                    .ToImmutableDictionary(x => x.i, y => y.versionVector);
+                var eLong =
+                    ImmutableDictionary.CreateRange(
+                        ZipSetStatic(orset.LongElements, orset.Dots));
+                //var eLong = orset.LongElements.Zip(dots, (i, versionVector) => (i, versionVector))
+                //    .ToImmutableDictionary(x => x.i, y => y.versionVector);
                 return new ORSet<long>(eLong, vector);
             }
 
             if (orset.StringElements.Count > 0 || orset.TypeInfo.Type == ValType.String)
             {
-                var eStr = orset.StringElements.Zip(dots, (i, versionVector) => (i, versionVector))
-                    .ToImmutableDictionary(x => x.i, y => y.versionVector);
+                var eStr =
+                    ImmutableDictionary.CreateRange(
+                        ZipSetStatic(orset.StringElements, orset.Dots));
+                //var eStr = orset.StringElements.Zip(dots, (i, versionVector) => (i, versionVector))
+                //    .ToImmutableDictionary(x => x.i, y => y.versionVector);
                 return new ORSet<string>(eStr, vector);
             }
 
             if (orset.ActorRefElements.Count > 0 || orset.TypeInfo.Type == ValType.ActorRef)
             {
+                //TODO: This is the odd duck of odd ducks to optimize.
+                var dots =
+                    orset.Dots.Select(x => _ser.VersionVectorFromProto(x));
                 var eRef = orset.ActorRefElements.Zip(dots, (i, versionVector) => (i, versionVector))
                     .ToImmutableDictionary(x => _ser.ResolveActorRef(x.i), y => y.versionVector);
                 return new ORSet<IActorRef>(eRef, vector);
@@ -371,76 +410,148 @@ namespace Akka.DistributedData.Serialization
 
             // runtime type - enter horrible dynamic serialization stuff
 
-            var setContentType = Type.GetType(orset.TypeInfo.TypeName);
-
-            var eOther = orset.OtherElements.Zip(dots,
-                (i, versionVector) => (_ser.OtherMessageFromProto(i), versionVector))
-                .ToImmutableDictionary(x => x.Item1, x => x.versionVector);
-
-            var setType = ORSetMaker.MakeGenericMethod(setContentType);
-            return (IORSet)setType.Invoke(this, new object[] { eOther, vector });
+            var setContentType = _otherTypeCache.GetOrAdd(orset.TypeInfo.TypeName, static tn=> Type.GetType(tn));
+            return SerDeserGenericCache.ToGenericORSet(setContentType, this,
+                orset, vector);
+            //var eOther = orset.OtherElements.Zip(dots,
+            //    (i, versionVector) => (_ser.OtherMessageFromProto(i), versionVector))
+            //    .ToImmutableDictionary(x => x.Item1, x => x.versionVector);
+            //var setType = ORSetMaker.MakeGenericMethod(setContentType);
+            //return (IORSet)setType.Invoke(this, new object[] { eOther, vector });
         }
 
         private static readonly MethodInfo ORSetMaker =
-            typeof(ReplicatedDataSerializer).GetMethod(nameof(ToGenericORSet), BindingFlags.Static | BindingFlags.NonPublic);
-
-        private static ORSet<T> ToGenericORSet<T>(ImmutableDictionary<object, VersionVector> elems, VersionVector vector)
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(ToGenericORSet), BindingFlags.Instance| BindingFlags.NonPublic);
+        
+        private IEnumerable<KeyValuePair<T, VersionVector>> ZipSetStatic<T>(
+            RepeatedField<T> fields, RepeatedField<Proto.Msg.VersionVector> dots)
         {
-            var finalInput = elems.ToImmutableDictionary(x => (T)x.Key, v => v.Value);
-
-            return new ORSet<T>(finalInput, vector);
+            int i = 0;
+            while(i<fields.Count && i< dots.Count)
+            {
+                    yield return new(fields[i],
+                        _ser.VersionVectorFromProto(dots[i]));
+                    i++;
+            }
+        }
+        private static IEnumerable<TOut> StatefulIterateTransform<TIn,TState,TOut>(
+            IEnumerable<TIn> fields, TState state, Func<TState,TIn,TOut> func)
+        {
+            foreach (var f in fields)
+            {
+                yield return func(state, f);
+            }
+        }
+        private IEnumerable<KeyValuePair<T, VersionVector>> ZipSet<T>(
+            RepeatedField<OtherMessage> fields, RepeatedField<Proto.Msg.VersionVector> dots)
+        {
+            //TODO: Generalize this and ORSet to save on code size.
+            int i = 0;
+            while(i<fields.Count && i< dots.Count)
+            {
+                yield return new((T)_ser.OtherMessageFromProto(fields[i]),
+                    _ser.VersionVectorFromProto(dots[i]));
+                i++;
+            }
+        }
+        private ORSet<T> ToGenericORSet<T>(Proto.Msg.ORSet set, VersionVector vector)
+        {
+            return new ORSet<T>(
+                ImmutableDictionary<T, VersionVector>.Empty.AddRange(
+                    ZipSet<T>(set.OtherElements, set.Dots)), vector);
         }
 
         private static readonly MethodInfo ORSetUnknownMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(ORSetUnknownToProto), BindingFlags.Instance | BindingFlags.NonPublic);
 
-        /// <summary>
-        /// Called when we're serializing none of the standard object types with ORSet
-        /// </summary>
-        private Proto.Msg.ORSet ORSetUnknownToProto<T>(IORSet o, Proto.Msg.ORSet b)
+        private class SortingListObjectPool 
+            : IPooledObjectPolicy<List<(OtherMessage, Proto.Msg.VersionVector)>>
         {
-            var orset = (ORSet<T>)o;
-            b.Vvector =  SerializationSupport.VersionVectorToProto(orset.VersionVector);
-            b.TypeInfo.Type = ValType.Other;
-            b.TypeInfo.TypeName = typeof(T).TypeQualifiedName();
+            public static readonly SortingListObjectPool Instance = new();
+            public List<(OtherMessage, Proto.Msg.VersionVector)> Create()
+            {
+                return new List<(OtherMessage, Proto.Msg.VersionVector)>(32);
+            }
 
-            var otherElements = new List<OtherMessage>();
-            var otherElementsDict = new Dictionary<OtherMessage, Proto.Msg.VersionVector>();
-            foreach (var kvp in orset.ElementsMap)
+            public bool Return(List<(OtherMessage, Proto.Msg.VersionVector)> obj)
             {
-                var otherElement = _ser.OtherMessageToProto(kvp.Key);
-                otherElements.Add(otherElement);
-                otherElementsDict[otherElement] = SerializationSupport.VersionVectorToProto(kvp.Value);
+                if (obj.Count <= 128)
+                {
+                    obj.Clear();
+                    return true;
+                }
+
+                return false;
             }
-            otherElements.Sort(OtherMessageComparer.Instance);
-            
-            foreach (var val in otherElements)
-            {
-                b.OtherElements.Add(val);
-                b.Dots.Add(otherElementsDict[val]);
-            }
-            return b;
         }
 
-        private ORSet.IAddDeltaOperation ORAddDeltaOperationFromBinary(byte[] bytes)
+        private static readonly
+            ObjectPool<List<ValueTuple<OtherMessage, Proto.Msg.VersionVector>>>
+            _orSetPool =
+                new DefaultObjectPool<
+                    List<(OtherMessage, Proto.Msg.VersionVector)>>(
+                    SortingListObjectPool.Instance);
+                
+            //LazyPool<List<ValueTuple<OtherMessage, Proto.Msg.VersionVector>>>
+            //_orSetPool =
+                //new LazyPool<List<(OtherMessage, Proto.Msg.VersionVector)>>(32);
+                /// <summary>
+                /// Called when we're serializing none of the standard object types with ORSet
+                /// </summary>
+                private Proto.Msg.ORSet ORSetUnknownToProto<T>(IORSet o,
+                    Proto.Msg.ORSet b)
+                {
+                    var orset = (ORSet<T>)o;
+                    b.Vvector =
+                        SerializationSupport.VersionVectorToProto(
+                            orset.VersionVector);
+                    b.TypeInfo = GetTypeDescriptor(typeof(T));
+                    //b.TypeInfo.Type = ValType.Other;
+                    //b.TypeInfo.TypeName = typeof(T).TypeQualifiedName();
+
+                    var otherElements = _orSetPool.Get();
+
+                    //var otherElementsDict = new Dictionary<OtherMessage, Proto.Msg.VersionVector>();
+                    foreach (var kvp in orset.ElementsMap)
+                    {
+                        //var otherElement = ;
+                        otherElements.Add(new(_ser.OtherMessageToProto(kvp.Key),
+                            SerializationSupport
+                                .VersionVectorToProto(kvp.Value)));
+                        //otherElementsDict[otherElement] = SerializationSupport.VersionVectorToProto(kvp.Value);
+                    }
+
+                    otherElements.Sort(OtherMessageAndVersionComparer.Instance);
+
+                    foreach (var val in otherElements)
+                    {
+                        b.OtherElements.Add(val.Item1);
+                        b.Dots.Add(val.Item2);
+                    }
+
+                    _orSetPool.Return(otherElements);
+                    return b;
+                }
+
+                private ORSet.IAddDeltaOperation ORAddDeltaOperationFromBinary(byte[] bytes)
         {
-            var set = FromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
+            var set = ORSetFromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
             return set.ToAddDeltaOperation();
         }
 
         private ORSet.IRemoveDeltaOperation ORRemoveOperationFromBinary(byte[] bytes)
         {
-            var set = FromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
+            var set = ORSetFromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
             return set.ToRemoveDeltaOperation();
         }
 
         private ORSet.IFullStateDeltaOperation ORFullStateDeltaOperationFromBinary(byte[] bytes)
         {
-            var set = FromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
+            var set = ORSetFromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
             return set.ToFullStateDeltaOperation();
         }
 
-        private Proto.Msg.ORSetDeltaGroup ToProto(ORSet.IDeltaGroupOperation orset)
+        private Proto.Msg.ORSetDeltaGroup ORDeltaGroupOpToProto(ORSet.IDeltaGroupOperation orset)
         {
             var deltaGroup = new Proto.Msg.ORSetDeltaGroup();
 
@@ -460,15 +571,15 @@ namespace Akka.DistributedData.Serialization
                 switch (op)
                 {
                     case ORSet.IAddDeltaOperation add:
-                        deltaGroup.Entries.Add(new ORSetDeltaGroup.Types.Entry() { Operation = ORSetDeltaOp.Add, Underlying = ToProto(add.UnderlyingSerialization) });
+                        deltaGroup.Entries.Add(new ORSetDeltaGroup.Types.Entry() { Operation = ORSetDeltaOp.Add, Underlying = ORSetToProto(add.UnderlyingSerialization) });
                         SetType(add.UnderlyingSerialization);
                         break;
                     case ORSet.IRemoveDeltaOperation remove:
-                        deltaGroup.Entries.Add(new ORSetDeltaGroup.Types.Entry() { Operation = ORSetDeltaOp.Remove, Underlying = ToProto(remove.UnderlyingSerialization) });
+                        deltaGroup.Entries.Add(new ORSetDeltaGroup.Types.Entry() { Operation = ORSetDeltaOp.Remove, Underlying = ORSetToProto(remove.UnderlyingSerialization) });
                         SetType(remove.UnderlyingSerialization);
                         break;
                     case ORSet.IFullStateDeltaOperation full:
-                        deltaGroup.Entries.Add(new ORSetDeltaGroup.Types.Entry() { Operation = ORSetDeltaOp.Full, Underlying = ToProto(full.UnderlyingSerialization) });
+                        deltaGroup.Entries.Add(new ORSetDeltaGroup.Types.Entry() { Operation = ORSetDeltaOp.Full, Underlying = ORSetToProto(full.UnderlyingSerialization) });
                         SetType(full.UnderlyingSerialization);
                         break;
                     default: throw new ArgumentException($"{op} should not be nested");
@@ -488,13 +599,13 @@ namespace Akka.DistributedData.Serialization
                 switch (op.Operation)
                 {
                     case ORSetDeltaOp.Add:
-                        ops.Add(FromProto(op.Underlying).ToAddDeltaOperation());
+                        ops.Add(ORSetFromProto(op.Underlying).ToAddDeltaOperation());
                         break;
                     case ORSetDeltaOp.Remove:
-                        ops.Add(FromProto(op.Underlying).ToRemoveDeltaOperation());
+                        ops.Add(ORSetFromProto(op.Underlying).ToRemoveDeltaOperation());
                         break;
                     case ORSetDeltaOp.Full:
-                        ops.Add(FromProto(op.Underlying).ToFullStateDeltaOperation());
+                        ops.Add(ORSetFromProto(op.Underlying).ToFullStateDeltaOperation());
                         break;
                     default:
                         throw new SerializationException($"Unknown ORSet delta operation ${op.Operation}");
@@ -519,9 +630,11 @@ namespace Akka.DistributedData.Serialization
             // if we made it this far, we're working with an object type
             // enter reflection magic
 
-            var type = Type.GetType(deltaGroup.TypeInfo.TypeName);
-            var orDeltaGroupType = typeof(ORSet<>.DeltaGroup).MakeGenericType(type);
-            return (ORSet.IDeltaGroupOperation)Activator.CreateInstance(orDeltaGroupType, arr);
+            var type = _otherTypeCache.GetOrAdd(deltaGroup.TypeInfo.TypeName,
+                static t => Type.GetType(t));
+            return SerDeserGenericCache.CreateDeltaGroup(type, arr);
+            //var orDeltaGroupType = typeof(ORSet<>.DeltaGroup).MakeGenericType(type);
+            //return (ORSet.IDeltaGroupOperation)Activator.CreateInstance(orDeltaGroupType, arr);
         }
 
         #endregion
@@ -538,7 +651,13 @@ namespace Akka.DistributedData.Serialization
         private Proto.Msg.GSet GSetToProtoUnknown<T>(IGSet g)
         {
             var gset = (GSet<T>)g;
-            var otherElements = new List<OtherMessage>(gset.Select(x => _ser.OtherMessageToProto(x)));
+            //TODO: Pool?
+            var otherElements = new List<OtherMessage>(gset.Count);
+            foreach (var otherElement in gset)
+            {
+                otherElements.Add(_ser.OtherMessageToProto(otherElement));
+            }
+            //var otherElements = new List<OtherMessage>(gset.Select(x => _ser.OtherMessageToProto(x)));
             otherElements.Sort(OtherMessageComparer.Instance);
 
             var p = new Proto.Msg.GSet
@@ -589,9 +708,11 @@ namespace Akka.DistributedData.Serialization
                         return p;
                     }
                 default: // unknown type
-                    {
-                        var protoMaker = GSetUnknownToProtoMaker.MakeGenericMethod(gset.SetType);
-                        return (Proto.Msg.GSet)protoMaker.Invoke(this, new object[] { gset });
+                {
+                    return SerDeserGenericCache.GSetToProto(gset.SetType, this,
+                        gset);
+                        //var protoMaker = GSetUnknownToProtoMaker.MakeGenericMethod(gset.SetType);
+                        //return (Proto.Msg.GSet)protoMaker.Invoke(this, new object[] { gset });
                     }
             }
         }
@@ -630,10 +751,12 @@ namespace Akka.DistributedData.Serialization
 
                         var setContentType = Type.GetType(gset.TypeInfo.TypeName);
 
-                        var eOther = gset.OtherElements.Select(x => _ser.OtherMessageFromProto(x));
-
-                        var setType = GSetMaker.MakeGenericMethod(setContentType);
-                        return (IGSet)setType.Invoke(this, new object[] { eOther });
+                        return SerDeserGenericCache.ToGenericGSet(
+                            setContentType, this, gset.OtherElements);
+                        
+                        //var eOther = gset.OtherElements.Select(x => _ser.OtherMessageFromProto(x));
+                        //var setType = GSetMaker.MakeGenericMethod(setContentType);
+                        //return (IGSet)setType.Invoke(this, new object[] { eOther });
                     }
                 default:
                     throw new SerializationException($"Unknown ValType of [{gset.TypeInfo.Type}] detected while deserializing GSet");
@@ -643,9 +766,19 @@ namespace Akka.DistributedData.Serialization
         private static readonly MethodInfo GSetMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(ToGenericGSet), BindingFlags.Static | BindingFlags.NonPublic);
 
-        private static GSet<T> ToGenericGSet<T>(IEnumerable<object> items)
+        private IEnumerable<T> DeserializeRepeatedFieldEnum<T>(
+            RepeatedField<OtherMessage> msg)
         {
-            return new GSet<T>(items.Cast<T>().ToImmutableHashSet());
+            for (int i = 0; i < msg.Count; i++)
+            {
+                yield return (T)_ser.OtherMessageFromProto(msg[i]);
+            }
+        }
+        private GSet<T> ToGenericGSet<T>(RepeatedField<OtherMessage> items)
+        {
+            return new GSet<T>(
+                ImmutableHashSet.CreateRange(
+                    DeserializeRepeatedFieldEnum<T>(items)));
         }
 
         #endregion
@@ -670,8 +803,16 @@ namespace Akka.DistributedData.Serialization
 
         private GCounter GCounterFromProto(Proto.Msg.GCounter gProto)
         {
-            var entries = gProto.Entries.ToImmutableDictionary(k => _ser.UniqueAddressFromProto(k.Node),
-                v => BitConverter.ToUInt64(v.Value.ToByteArray(), 0));
+            var entries =
+                ImmutableDictionary<UniqueAddress, ulong>.Empty.AddRange(
+                    StatefulIterateTransform(gProto.Entries, _ser,
+                        static (ss, kv) =>
+                        {
+                            return new KeyValuePair<UniqueAddress, ulong>(
+                                ss.UniqueAddressFromProto(kv.Node),
+                                BitConverter.ToUInt64(kv.Value.ToByteArray(),
+                                    0));
+                        }));
 
             return new GCounter(entries);
         }
@@ -713,6 +854,18 @@ namespace Akka.DistributedData.Serialization
             return pFlag;
         }
 
+        private static byte[] GetFlagBytes(Flag flag)
+        {
+            return flag.Enabled ? FlagYes : FlagNo;
+        }
+
+        //FUTURE: We should be able to keep the raw proto as readonlymemory if we get to that point.
+        private static readonly byte[] FlagYes =
+            new Proto.Msg.Flag() { Enabled = true }.ToByteArray();
+
+        private static readonly byte[] FlagNo =
+            new Proto.Msg.Flag() { Enabled = false }.ToByteArray();
+
         private Flag FlagFromProto(Proto.Msg.Flag flag)
         {
             return flag.Enabled ? Flag.True : Flag.False;
@@ -729,8 +882,10 @@ namespace Akka.DistributedData.Serialization
 
         private Proto.Msg.LWWRegister ToProto(ILWWRegister register)
         {
-            var protoMaker = LWWProtoMaker.MakeGenericMethod(register.RegisterType);
-            return (Proto.Msg.LWWRegister)protoMaker.Invoke(this, new object[] { register });
+            return SerDeserGenericCache.GenericLwwRegisterToProto(
+                register.RegisterType, this, register);
+            //var protoMaker = LWWProtoMaker.MakeGenericMethod(register.RegisterType);
+            //return (Proto.Msg.LWWRegister)protoMaker.Invoke(this, new object[] { register });
         }
 
         private static readonly MethodInfo LWWProtoMaker =
@@ -786,10 +941,11 @@ namespace Akka.DistributedData.Serialization
                             typeName = "Akka.Cluster.Sharding.ShardCoordinator+CoordinatorState, Akka.Cluster.Sharding";
                         
                         // runtime type - enter horrible dynamic serialization stuff
-                        var setContentType = Type.GetType(typeName);
-
-                        var setType = LWWRegisterMaker.MakeGenericMethod(setContentType);
-                        return (ILWWRegister)setType.Invoke(this, new object[] { proto });
+                        var setContentType = _otherTypeCache.GetOrAdd(typeName,static (t)=>Type.GetType(t));
+                        return SerDeserGenericCache.GenericLwwRegisterFromProto(
+                            setContentType, this, proto);
+                        //var setType = LWWRegisterMaker.MakeGenericMethod(setContentType);
+                        //return (ILWWRegister)setType.Invoke(this, new object[] { proto });
                     }
                 default:
                     throw new SerializationException($"Unknown ValType of [{proto.TypeInfo.Type}] detected while deserializing LWWRegister");
@@ -813,8 +969,10 @@ namespace Akka.DistributedData.Serialization
 
         private Proto.Msg.ORMap ToProto(IORDictionary ormap)
         {
-            var protoMaker = ORDictProtoMaker.MakeGenericMethod(ormap.KeyType, ormap.ValueType);
-            return (Proto.Msg.ORMap)protoMaker.Invoke(this, new object[] { ormap });
+            return SerDeserGenericCache.ORDictionaryToProto(ormap.KeyType,
+                ormap.ValueType, this, ormap);
+            //var protoMaker = ORDictProtoMaker.MakeGenericMethod(ormap.KeyType, ormap.ValueType);
+            //return (Proto.Msg.ORMap)protoMaker.Invoke(this, new object[] { ormap });
         }
 
         private static readonly MethodInfo ORDictProtoMaker =
@@ -825,37 +983,40 @@ namespace Akka.DistributedData.Serialization
             var ormap = (ORDictionary<TKey, TValue>)o;
             var proto = new Proto.Msg.ORMap();
             ToORMapEntries(ormap.Entries, proto);
-            proto.Keys = ToProto(ormap.KeySet);
+            proto.Keys = ORSetToProto(ormap.KeySet);
             proto.ValueTypeInfo = GetTypeDescriptor(typeof(TValue));
             return proto;
         }
 
         private void ToORMapEntries<TKey, TValue>(IImmutableDictionary<TKey, TValue> ormapEntries, ORMap proto) where TValue : IReplicatedData<TValue>
         {
-            var entries = new List<ORMap.Types.Entry>();
+            EnsureRepeatedFieldSize(proto.Entries,ormapEntries.Count);
+            //proto.Entries.Capacity = proto.Entries.Count + ormapEntries.Count;
+            //var entries = new List<ORMap.Types.Entry>(ormapEntries.Count);
             foreach (var e in ormapEntries)
             {
                 var entry = new ORMap.Types.Entry();
-                switch (e.Key)
+                if (typeof(TKey) == typeof(int))
                 {
-                    case int i:
-                        entry.IntKey = i;
-                        break;
-                    case long l:
-                        entry.LongKey = l;
-                        break;
-                    case string str:
-                        entry.StringKey = str;
-                        break;
-                    default:
-                        entry.OtherKey = _ser.OtherMessageToProto(e.Key);
-                        break;
+                    entry.IntKey = (int)(object)e.Key;
+                }
+                else if (typeof(TKey) == typeof(long))
+                {
+                    entry.LongKey = (long)(object)e.Key;
+                }
+                else if (typeof(TKey) == typeof(string))
+                {
+                    entry.StringKey = (string)(object)e.Key;
+                }
+                else
+                {
+                    entry.OtherKey = _ser.OtherMessageToProto(e.Key);
                 }
 
                 entry.Value = _ser.OtherMessageToProto(e.Value);
-                entries.Add(entry);
+                proto.Entries.Add(entry);
             }
-            proto.Entries.Add(entries);
+            //proto.Entries.Add(entries);
         }
 
         private static readonly MethodInfo ORDictMaker =
@@ -874,40 +1035,44 @@ namespace Akka.DistributedData.Serialization
         {
             var keyType = GetTypeFromDescriptor(proto.Keys.TypeInfo);
             var valueType = GetTypeFromDescriptor(proto.ValueTypeInfo);
-            var protoMaker = ORDictMaker.MakeGenericMethod(keyType, valueType);
-            return (IORDictionary)protoMaker.Invoke(this, new object[] { proto });
+            return SerDeserGenericCache.ORDictionaryFromProto(keyType,
+                valueType, this, proto);
+            //var protoMaker = ORDictMaker.MakeGenericMethod(keyType, valueType);
+            //return (IORDictionary)protoMaker.Invoke(this, new object[] { proto });
         }
 
         private IORDictionary GenericORDictionaryFromProto<TKey, TValue>(Proto.Msg.ORMap proto) where TValue : IReplicatedData<TValue>
         {
-            var keys = FromProto(proto.Keys);
-            switch (proto.Keys.TypeInfo.Type)
+            var keys = ORSetFromProto(proto.Keys);
+            if (typeof(TKey) == typeof(int))
             {
-                case ValType.Int:
+                var entries = proto.Entries.ToImmutableDictionary(x => x.IntKey,
+                    v => (TValue)_ser.OtherMessageFromProto(v.Value));
+                return new ORDictionary<int, TValue>((ORSet<int>)keys, entries);                
+            }
+            else if (typeof(TKey) == typeof(long))
+            {
+                var entries = proto.Entries.ToImmutableDictionary(x => x.LongKey,
+                    v => (TValue)_ser.OtherMessageFromProto(v.Value));
+                return new ORDictionary<long, TValue>((ORSet<long>)keys, entries);                
+            }
+            else if (typeof(TKey) == typeof(string))
+            {
+                var entries = proto.Entries.ToImmutableDictionary(x => x.StringKey,
+                    v => (TValue)_ser.OtherMessageFromProto(v.Value));
+                return new ORDictionary<string, TValue>((ORSet<string>)keys, entries);
+            }
+            else
+            {
+                
+                var entries = ImmutableDictionary<TKey, TValue>.Empty.AddRange(
+                    StatefulIterateTransform(proto.Entries, _ser, static (ss, kv) =>
                     {
-                        var entries = proto.Entries.ToImmutableDictionary(x => x.IntKey,
-                            v => (TValue)_ser.OtherMessageFromProto(v.Value));
-                        return new ORDictionary<int, TValue>((ORSet<int>)keys, entries);
-                    }
-                case ValType.Long:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => x.LongKey,
-                            v => (TValue)_ser.OtherMessageFromProto(v.Value));
-                        return new ORDictionary<long, TValue>((ORSet<long>)keys, entries);
-                    }
-                case ValType.String:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => x.StringKey,
-                            v => (TValue)_ser.OtherMessageFromProto(v.Value));
-                        return new ORDictionary<string, TValue>((ORSet<string>)keys, entries);
-                    }
-                default:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => (TKey)_ser.OtherMessageFromProto(x.OtherKey),
-                            v => (TValue)_ser.OtherMessageFromProto(v.Value));
-
-                        return new ORDictionary<TKey, TValue>((ORSet<TKey>)keys, entries);
-                    }
+                        return new KeyValuePair<TKey, TValue>(
+                            (TKey)ss.OtherMessageFromProto(kv.OtherKey),
+                            (TValue)ss.OtherMessageFromProto(kv.Value));
+                    }));
+                return new ORDictionary<TKey, TValue>((ORSet<TKey>)keys, entries);
             }
         }
 
@@ -916,9 +1081,10 @@ namespace Akka.DistributedData.Serialization
         {
             var keyType = deltaGroupOps[0].KeyType;
             var valueType = deltaGroupOps[0].ValueType;
-
-            var protoMaker = ORDeltaGroupProtoMaker.MakeGenericMethod(keyType, valueType);
-            return (Proto.Msg.ORMapDeltaGroup)protoMaker.Invoke(this, new object[] { deltaGroupOps });
+            return SerDeserGenericCache.ORDictionaryDeltasToProto(keyType,
+                valueType, this, deltaGroupOps);
+            //var protoMaker = ORDeltaGroupProtoMaker.MakeGenericMethod(keyType, valueType);
+            //return (Proto.Msg.ORMapDeltaGroup)protoMaker.Invoke(this, new object[] { deltaGroupOps });
         }
 
         private static readonly MethodInfo ORDeltaGroupProtoMaker =
@@ -962,24 +1128,29 @@ namespace Akka.DistributedData.Serialization
                 {
                     case ORDictionary<TKey, TValue>.PutDeltaOperation putDelta:
                         entry.Operation = ORMapDeltaOp.OrmapPut;
-                        entry.Underlying = ToProto(putDelta.Underlying.AsInstanceOf<ORSet.IDeltaOperation>()
+                        entry.Underlying = ORSetToProto(putDelta.Underlying.AsInstanceOf<ORSet.IDeltaOperation>()
                             .UnderlyingSerialization);
                         entry.EntryData.Add(CreateMapEntry(putDelta.Key, putDelta.Value));
                         break;
                     case ORDictionary<TKey, TValue>.UpdateDeltaOperation upDelta:
                         entry.Operation = ORMapDeltaOp.OrmapUpdate;
-                        entry.Underlying = ToProto(upDelta.Underlying.AsInstanceOf<ORSet.IDeltaOperation>()
+                        entry.Underlying = ORSetToProto(upDelta.Underlying.AsInstanceOf<ORSet.IDeltaOperation>()
                             .UnderlyingSerialization);
-                        entry.EntryData.AddRange(upDelta.Values.Select(x => CreateMapEntry(x.Key, x.Value)).ToList());
+                        entry.EntryData.Capacity = entry.EntryData.Count +
+                                                   upDelta.Values.Count;
+                        foreach (var x in upDelta.Values)
+                        {
+                            entry.EntryData.Add(CreateMapEntry(x.Key,x.Value));
+                        }
                         break;
                     case ORDictionary<TKey, TValue>.RemoveDeltaOperation removeDelta:
                         entry.Operation = ORMapDeltaOp.OrmapRemove;
-                        entry.Underlying = ToProto(removeDelta.Underlying.AsInstanceOf<ORSet.IDeltaOperation>()
+                        entry.Underlying = ORSetToProto(removeDelta.Underlying.AsInstanceOf<ORSet.IDeltaOperation>()
                             .UnderlyingSerialization);
                         break;
                     case ORDictionary<TKey, TValue>.RemoveKeyDeltaOperation removeKeyDelta:
                         entry.Operation = ORMapDeltaOp.OrmapRemoveKey;
-                        entry.Underlying = ToProto(removeKeyDelta.Underlying.AsInstanceOf<ORSet.IDeltaOperation>()
+                        entry.Underlying = ORSetToProto(removeKeyDelta.Underlying.AsInstanceOf<ORSet.IDeltaOperation>()
                             .UnderlyingSerialization);
                         entry.EntryData.Add(CreateMapEntry(removeKeyDelta.Key));
                         break;
@@ -1035,8 +1206,8 @@ namespace Akka.DistributedData.Serialization
             var keyType = GetTypeFromDescriptor(deltaGroup.KeyTypeInfo);
             var valueType = GetTypeFromDescriptor(deltaGroup.ValueTypeInfo);
 
-            var groupMaker = ORDeltaGroupMaker.MakeGenericMethod(keyType, valueType);
-            return (ORDictionary.IDeltaGroupOp)groupMaker.Invoke(this, new object[] { deltaGroup });
+            return SerDeserGenericCache.ORDictionaryDeltaGroupFromProto(keyType,
+                valueType, this, deltaGroup);
         }
 
         private static readonly MethodInfo ORDeltaGroupMaker =
@@ -1076,7 +1247,7 @@ namespace Akka.DistributedData.Serialization
 
             foreach (var entry in deltaGroup.Entries)
             {
-                var underlying = FromProto(entry.Underlying);
+                var underlying = ORSetFromProto(entry.Underlying);
                 switch (entry.Operation)
                 {
                     case ORMapDeltaOp.OrmapPut:
@@ -1164,52 +1335,65 @@ namespace Akka.DistributedData.Serialization
 
         #region LWWDictionary
 
+        
         private Proto.Msg.LWWMap ToProto(ILWWDictionary lwwDictionary)
         {
-            var protoMaker = LWWDictProtoMaker.MakeGenericMethod(lwwDictionary.KeyType, lwwDictionary.ValueType);
-            return (Proto.Msg.LWWMap)protoMaker.Invoke(this, new object[] { lwwDictionary });
+            return SerDeserGenericCache.LWWDictionaryToProto(
+                lwwDictionary.KeyType, lwwDictionary.ValueType, this,
+                lwwDictionary);
+            //var protoMaker = LWWDictProtoMaker.MakeGenericMethod(lwwDictionary.KeyType, lwwDictionary.ValueType);
+            //return (Proto.Msg.LWWMap)protoMaker.Invoke(this, new object[] { lwwDictionary });
         }
 
         private static readonly MethodInfo LWWDictProtoMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(LWWDictToProto), BindingFlags.Instance | BindingFlags.NonPublic);
 
-        private Proto.Msg.LWWMap LWWDictToProto<TKey, TValue>(ILWWDictionary o)
+        private Proto.Msg.LWWMap LWWDictToProto<TKey, TValue>(ILWWDictionary o, Proto.Msg.TypeDescriptor td)
         {
             var lwwmap = (LWWDictionary<TKey, TValue>)o;
             var proto = new Proto.Msg.LWWMap();
             ToLWWMapEntries(lwwmap.Underlying.Entries, proto);
-            proto.Keys = ToProto(lwwmap.Underlying.KeySet);
-            proto.ValueTypeInfo = GetTypeDescriptor(typeof(TValue));
+            proto.Keys = ORSetToProto(lwwmap.Underlying.KeySet);
+            proto.ValueTypeInfo = td;// GetTypeDescriptor(typeof(TValue));
             return proto;
         }
 
+        private static void EnsureRepeatedFieldSize<TEntry>(
+            RepeatedField<TEntry> item, int forAtLeast)
+        {
+            var current = item.Count;
+            if (current + forAtLeast < item.Capacity)
+            {
+                item.Capacity = (current + forAtLeast);
+            }
+        }
         private void ToLWWMapEntries<TKey, TValue>(IImmutableDictionary<TKey, LWWRegister<TValue>> underlyingEntries, LWWMap proto)
         {
-            var entries = new List<LWWMap.Types.Entry>();
+            EnsureRepeatedFieldSize(proto.Entries,underlyingEntries.Count);
+            //var entries = new List<LWWMap.Types.Entry>(underlyingEntries.Count);
             foreach (var e in underlyingEntries)
             {
                 var thisEntry = new LWWMap.Types.Entry();
-                switch (e.Key)
+                if (typeof(TKey) == typeof(int))
                 {
-                    case int i:
-                        thisEntry.IntKey = i;
-                        break;
-                    case long l:
-                        thisEntry.LongKey = l;
-                        break;
-                    case string str:
-                        thisEntry.StringKey = str;
-                        break;
-                    default:
-                        thisEntry.OtherKey = _ser.OtherMessageToProto(e.Key);
-                        break;
+                    thisEntry.IntKey = (int)(object)e.Key;
+                }
+                else if (typeof(TKey) == typeof(long))
+                {
+                    thisEntry.LongKey = (long)(object)e.Key;
+                }
+                else if (typeof(TKey) == typeof(string))
+                {
+                    thisEntry.StringKey = (string)(object)e.Key;
+                }
+                else
+                {
+                    thisEntry.OtherKey = _ser.OtherMessageToProto(e.Key);
                 }
 
                 thisEntry.Value = LWWToProto<TValue>(e.Value);
-                entries.Add(thisEntry);
+                proto.Entries.Add(thisEntry);
             }
-
-            proto.Entries.Add(entries);
         }
 
         private static readonly MethodInfo LWWDictMaker =
@@ -1220,44 +1404,80 @@ namespace Akka.DistributedData.Serialization
             var keyType = GetTypeFromDescriptor(proto.Keys.TypeInfo);
             var valueType = GetTypeFromDescriptor(proto.ValueTypeInfo);
 
-            var dictMaker = LWWDictMaker.MakeGenericMethod(keyType, valueType);
-            return (ILWWDictionary)dictMaker.Invoke(this, new object[] { proto });
+            return SerDeserGenericCache.LWWDictionaryFromProto(keyType,
+                valueType, this, proto);
+            //var dictMaker = LWWDictMaker.MakeGenericMethod(keyType, valueType);
+            //return (ILWWDictionary)dictMaker.Invoke(this, new object[] { proto });
         }
 
-        private ILWWDictionary GenericLWWDictFromProto<TKey, TValue>(Proto.Msg.LWWMap proto)
+        private ILWWDictionary GenericLWWDictFromProto<TKey, TValue>(
+            Proto.Msg.LWWMap proto)
         {
-            var keys = FromProto(proto.Keys);
-            switch (proto.Keys.TypeInfo.Type)
+            var keys = ORSetFromProto(proto.Keys);
+            if (typeof(TKey) == typeof(int))
             {
-                case ValType.Int:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => x.IntKey,
-                            v => GenericLWWRegisterFromProto<TValue>(v.Value));
-                        var orDict = new ORDictionary<int, LWWRegister<TValue>>((ORSet<int>)keys, entries);
-                        return new LWWDictionary<int, TValue>(orDict);
-                    }
-                case ValType.Long:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => x.LongKey,
-                            v => GenericLWWRegisterFromProto<TValue>(v.Value));
-                        var orDict = new ORDictionary<long, LWWRegister<TValue>>((ORSet<long>)keys, entries);
-                        return new LWWDictionary<long, TValue>(orDict);
-                    }
-                case ValType.String:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => x.StringKey,
-                            v => GenericLWWRegisterFromProto<TValue>(v.Value));
-                        var orDict = new ORDictionary<string, LWWRegister<TValue>>((ORSet<string>)keys, entries);
-                        return new LWWDictionary<string, TValue>(orDict);
-                    }
-                default:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => (TKey)_ser.OtherMessageFromProto(x.OtherKey),
-                            v => GenericLWWRegisterFromProto<TValue>(v.Value));
-                        var orDict = new ORDictionary<TKey, LWWRegister<TValue>>((ORSet<TKey>)keys, entries);
-                        return new LWWDictionary<TKey, TValue>(orDict);
-                    }
+                var entries = ImmutableDictionary.CreateRange(
+                    StatefulIterateTransform(proto.Entries, this,
+                        static (s, x) =>
+                        {
+                            return new KeyValuePair<int, LWWRegister<TValue>>(
+                                x.IntKey,
+                                s.GenericLWWRegisterFromProto<TValue>(x.Value));
+                        }));
+                var orDict =
+                    new ORDictionary<int, LWWRegister<TValue>>((ORSet<int>)keys,
+                        entries);
+                return new LWWDictionary<int, TValue>(orDict);
             }
+            else if (typeof(TKey) == typeof(long))
+            {
+                var entries = ImmutableDictionary.CreateRange(
+                    StatefulIterateTransform(proto.Entries, this,
+                        static (s, x) =>
+                        {
+                            return new KeyValuePair<long, LWWRegister<TValue>>(
+                                x.LongKey,
+                                s.GenericLWWRegisterFromProto<TValue>(x.Value));
+                        }));
+                var orDict =
+                    new ORDictionary<long, LWWRegister<TValue>>(
+                        (ORSet<long>)keys, entries);
+                return new LWWDictionary<long, TValue>(orDict);
+            }
+            else if (typeof(TKey) == typeof(string))
+            {
+                var entries = ImmutableDictionary.CreateRange(
+                    StatefulIterateTransform(proto.Entries, this,
+                        static (s, x) =>
+                        {
+                            return new KeyValuePair<string, LWWRegister<TValue>>(
+                                x.StringKey,
+                                s.GenericLWWRegisterFromProto<TValue>(x.Value));
+                        }));
+                var orDict =
+                    new ORDictionary<string, LWWRegister<TValue>>(
+                        (ORSet<string>)keys, entries);
+                return new LWWDictionary<string, TValue>(orDict);
+            }
+            else
+            {
+                var entries = ImmutableDictionary<TKey, LWWRegister<TValue>>
+                    .Empty.AddRange(
+                        StatefulIterateTransform(proto.Entries, this,
+                            static (t, a) =>
+                                new KeyValuePair<TKey, LWWRegister<TValue>>(
+                                    (TKey)t._ser.OtherMessageFromProto(
+                                        a.OtherKey),
+                                    t.GenericLWWRegisterFromProto<TValue>(
+                                        a.Value))));
+                //proto.Entries.ToImmutableDictionary(x => (TKey)_ser.OtherMessageFromProto(x.OtherKey),
+                //    v => GenericLWWRegisterFromProto<TValue>(v.Value));
+                var orDict =
+                    new ORDictionary<TKey, LWWRegister<TValue>>(
+                        (ORSet<TKey>)keys, entries);
+                return new LWWDictionary<TKey, TValue>(orDict);
+            }
+
         }
 
         private ILWWDictionary LWWDictionaryFromBinary(IMemoryOwner<byte> bytes)
@@ -1276,8 +1496,10 @@ namespace Akka.DistributedData.Serialization
             var orDictOp = ORDictionaryDeltaGroupFromProto(proto);
 
             var orSetType = orDictOp.ValueType.GenericTypeArguments[0];
-            var maker = LWWDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType, orSetType);
-            return (ILWWDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp });
+            return SerDeserGenericCache.LWWDictionaryDeltaFromProto(
+                orDictOp.KeyType, orSetType, this, orDictOp);
+            //var maker = LWWDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType, orSetType);
+            //return (ILWWDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp });
         }
 
         private static readonly MethodInfo LWWDictionaryDeltaMaker =
@@ -1299,8 +1521,10 @@ namespace Akka.DistributedData.Serialization
 
         private Proto.Msg.PNCounterMap ToProto(IPNCounterDictionary pnCounterDictionary)
         {
-            var protoMaker = PNCounterDictProtoMaker.MakeGenericMethod(pnCounterDictionary.KeyType);
-            return (Proto.Msg.PNCounterMap)protoMaker.Invoke(this, new object[] { pnCounterDictionary });
+            return SerDeserGenericCache.PNCounterDictionaryToProto(
+                pnCounterDictionary.KeyType, this, pnCounterDictionary);
+            //var protoMaker = PNCounterDictProtoMaker.MakeGenericMethod(pnCounterDictionary.KeyType);
+            //return (Proto.Msg.PNCounterMap)protoMaker.Invoke(this, new object[] { pnCounterDictionary });
         }
 
         private static readonly MethodInfo PNCounterDictProtoMaker =
@@ -1311,7 +1535,7 @@ namespace Akka.DistributedData.Serialization
         {
             var pnDict = (PNCounterDictionary<TKey>)pnCounterDictionary;
             var proto = new Proto.Msg.PNCounterMap();
-            proto.Keys = ToProto(pnDict.Underlying.KeySet);
+            proto.Keys = ORSetToProto(pnDict.Underlying.KeySet);
             ToPNCounterEntries(pnDict.Underlying.Entries, proto);
             return proto;
         }
@@ -1322,20 +1546,21 @@ namespace Akka.DistributedData.Serialization
             foreach (var e in underlyingEntries)
             {
                 var thisEntry = new PNCounterMap.Types.Entry();
-                switch (e.Key)
+                if (typeof(TKey) == typeof(int))
                 {
-                    case int i:
-                        thisEntry.IntKey = i;
-                        break;
-                    case long l:
-                        thisEntry.LongKey = l;
-                        break;
-                    case string str:
-                        thisEntry.StringKey = str;
-                        break;
-                    default:
-                        thisEntry.OtherKey = _ser.OtherMessageToProto(e.Key);
-                        break;
+                    thisEntry.IntKey = (int)(object)(e.Key);
+                }
+                else if (typeof(TKey) == typeof(long))
+                {
+                    thisEntry.LongKey = (long)(object)(e.Key);
+                }
+                else if (typeof(TKey) == typeof(string))
+                {
+                    thisEntry.StringKey = (string)(object)(e.Key);
+                }
+                else
+                {
+                    thisEntry.OtherKey = _ser.OtherMessageToProto(e.Key);
                 }
 
                 thisEntry.Value = ToProto(e.Value);
@@ -1357,55 +1582,77 @@ namespace Akka.DistributedData.Serialization
         private IPNCounterDictionary PNCounterDictionaryFromProto(Proto.Msg.PNCounterMap proto)
         {
             var keyType = GetTypeFromDescriptor(proto.Keys.TypeInfo);
-            var dictMaker = PNCounterDictMaker.MakeGenericMethod(keyType);
-            return (IPNCounterDictionary)dictMaker.Invoke(this, new object[] { proto });
+            return SerDeserGenericCache.PNCounterDictionaryFromProto(keyType, this,
+                proto);
+            //var dictMaker = PNCounterDictMaker.MakeGenericMethod(keyType);
+            //return (IPNCounterDictionary)dictMaker.Invoke(this, new object[] { proto });
         }
 
         private static readonly MethodInfo PNCounterDictMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(GenericPNCounterDictionaryFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
 
-        private IPNCounterDictionary GenericPNCounterDictionaryFromProto<TKey>(Proto.Msg.PNCounterMap proto)
+        private IPNCounterDictionary GenericPNCounterDictionaryFromProto<TKey>(
+            Proto.Msg.PNCounterMap proto)
         {
-            var keys = FromProto(proto.Keys);
-            switch (proto.Keys.TypeInfo.Type)
+            var keys = ORSetFromProto(proto.Keys);
+            if (typeof(TKey) == typeof(int))
             {
-                case ValType.Int:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => x.IntKey,
-                            v => PNCounterFromProto(v.Value));
-                        var orDict = new ORDictionary<int, PNCounter>((ORSet<int>)keys, entries);
-                        return new PNCounterDictionary<int>(orDict);
-                    }
-                case ValType.Long:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => x.LongKey,
-                            v => PNCounterFromProto(v.Value));
-                        var orDict = new ORDictionary<long, PNCounter>((ORSet<long>)keys, entries);
-                        return new PNCounterDictionary<long>(orDict);
-                    }
-                case ValType.String:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => x.StringKey,
-                            v => PNCounterFromProto(v.Value));
-                        var orDict = new ORDictionary<string, PNCounter>((ORSet<string>)keys, entries);
-                        return new PNCounterDictionary<string>(orDict);
-                    }
-                default:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => (TKey)_ser.OtherMessageFromProto(x.OtherKey),
-                            v => PNCounterFromProto(v.Value));
-                        var orDict = new ORDictionary<TKey, PNCounter>((ORSet<TKey>)keys, entries);
-                        return new PNCounterDictionary<TKey>(orDict);
-                    }
+                var entries = proto.Entries.ToImmutableDictionary(x => x.IntKey,
+                    v => PNCounterFromProto(v.Value));
+                var orDict =
+                    new ORDictionary<int, PNCounter>((ORSet<int>)keys, entries);
+                return new PNCounterDictionary<int>(orDict);
             }
+            else if (typeof(TKey) == typeof(long))
+            {
+                var entries = proto.Entries.ToImmutableDictionary(
+                    x => x.LongKey,
+                    v => PNCounterFromProto(v.Value));
+                var orDict =
+                    new ORDictionary<long, PNCounter>((ORSet<long>)keys,
+                        entries);
+                return new PNCounterDictionary<long>(orDict);
+            }
+            else if (typeof(TKey) == typeof(string))
+            {
+                var entries = proto.Entries.ToImmutableDictionary(
+                    x => x.StringKey,
+                    v => PNCounterFromProto(v.Value));
+                var orDict =
+                    new ORDictionary<string, PNCounter>((ORSet<string>)keys,
+                        entries);
+                return new PNCounterDictionary<string>(orDict);
+            }
+            else
+            {
+                
+                //TODO: Use StatefulIterateTransform() here and above to optimize code paths
+                var entries = ImmutableDictionary.CreateRange(
+                    StatefulIterateTransform(proto.Entries, this,
+                        (t, xv) =>
+                            new KeyValuePair<TKey, PNCounter>(
+                                (TKey)t._ser.OtherMessageFromProto(xv.OtherKey),
+                                t.PNCounterFromProto(xv.Value)))
+                );
+                //var entries = proto.Entries.ToImmutableDictionary(
+                //    x => (TKey)_ser.OtherMessageFromProto(x.OtherKey),
+                //    v => PNCounterFromProto(v.Value));
+                var orDict =
+                    new ORDictionary<TKey, PNCounter>((ORSet<TKey>)keys,
+                        entries);
+                return new PNCounterDictionary<TKey>(orDict);
+            }
+
         }
 
         private IPNCounterDictionaryDeltaOperation PNCounterDeltaFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes);
             var orDictOp = ORDictionaryDeltaGroupFromProto(proto);
-            var maker = PNCounterDeltaMaker.MakeGenericMethod(orDictOp.KeyType);
-            return (IPNCounterDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp });
+            return SerDeserGenericCache.PnCounterDictionaryDeltaFromProto(
+                orDictOp.KeyType, this, orDictOp);
+            //var maker = PNCounterDeltaMaker.MakeGenericMethod(orDictOp.KeyType);
+            //return (IPNCounterDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp });
         }
 
         private static readonly MethodInfo PNCounterDeltaMaker =
@@ -1424,8 +1671,11 @@ namespace Akka.DistributedData.Serialization
 
         private Proto.Msg.ORMultiMap ToProto(IORMultiValueDictionary multi)
         {
-            var protoMaker = MultiMapProtoMaker.MakeGenericMethod(multi.KeyType, multi.ValueType);
-            return (Proto.Msg.ORMultiMap)protoMaker.Invoke(this, new object[] { multi });
+            return SerDeserGenericCache
+                .IORMultiValueDictionaryToProtoORMultiMap(multi.KeyType,
+                    multi.ValueType, this, multi);
+            //var protoMaker = MultiMapProtoMaker.MakeGenericMethod(multi.KeyType, multi.ValueType);
+            //return (Proto.Msg.ORMultiMap)protoMaker.Invoke(this, new object[] { multi });
         }
 
         private static readonly MethodInfo MultiMapProtoMaker =
@@ -1448,38 +1698,36 @@ namespace Akka.DistributedData.Serialization
                 proto.WithValueDeltas = true;
             }
 
-            proto.Keys = ToProto(ormm.Underlying.KeySet);
+            proto.Keys = ORSetToProto(ormm.Underlying.KeySet);
             ToORMultiMapEntries(ormm.Underlying.Entries, proto);
             return proto;
         }
 
         private void ToORMultiMapEntries<TKey, TValue>(IImmutableDictionary<TKey, ORSet<TValue>> underlyingEntries, ORMultiMap proto)
         {
-            var entries = new List<ORMultiMap.Types.Entry>();
+            EnsureRepeatedFieldSize(proto.Entries, underlyingEntries.Count);
             foreach (var e in underlyingEntries)
             {
                 var thisEntry = new ORMultiMap.Types.Entry();
-                switch (e.Key)
+                if (typeof(TKey) == typeof(int))
                 {
-                    case int i:
-                        thisEntry.IntKey = i;
-                        break;
-                    case long l:
-                        thisEntry.LongKey = l;
-                        break;
-                    case string str:
-                        thisEntry.StringKey = str;
-                        break;
-                    default:
-                        thisEntry.OtherKey = _ser.OtherMessageToProto(e.Key);
-                        break;
+                    thisEntry.IntKey = (int)(object)e.Key;
                 }
-
-                thisEntry.Value = ToProto(e.Value);
-                entries.Add(thisEntry);
+                else if (typeof(TKey) == typeof(long))
+                {
+                    thisEntry.LongKey = (long)(object)e.Key;
+                }
+                else if (typeof(TKey) == typeof(string))
+                {
+                    thisEntry.StringKey = (string)(object)e.Key;
+                }
+                else
+                {
+                    thisEntry.OtherKey = _ser.OtherMessageToProto(e.Key);
+                }
+                thisEntry.Value = ORSetToProto(e.Value);
+                proto.Entries.Add(thisEntry);
             }
-
-            proto.Entries.Add(entries);
         }
 
         private IORMultiValueDictionary ORMultiDictionaryFromBinary(IMemoryOwner<byte> bytes)
@@ -1496,8 +1744,11 @@ namespace Akka.DistributedData.Serialization
             var keyType = GetTypeFromDescriptor(proto.Keys.TypeInfo);
             var valueType = GetTypeFromDescriptor(proto.ValueTypeInfo);
 
-            var dictMaker = MultiDictMaker.MakeGenericMethod(keyType, valueType);
-            return (IORMultiValueDictionary)dictMaker.Invoke(this, new object[] { proto });
+            return SerDeserGenericCache
+                .ProtoORMultiMapToIORMultiValueDictionary(keyType, valueType,
+                    this, proto);
+            //var dictMaker = MultiDictMaker.MakeGenericMethod(keyType, valueType);
+            //return (IORMultiValueDictionary)dictMaker.Invoke(this, new object[] { proto });
         }
 
         private static readonly MethodInfo MultiDictMaker =
@@ -1505,37 +1756,40 @@ namespace Akka.DistributedData.Serialization
 
         private IORMultiValueDictionary GenericORMultiDictionaryFromProto<TKey, TValue>(ORMultiMap proto)
         {
-            var keys = FromProto(proto.Keys);
-            switch (proto.Keys.TypeInfo.Type)
+            var keys = ORSetFromProto(proto.Keys);
+            if (typeof(TKey) == typeof(int))
             {
-                case ValType.Int:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => x.IntKey,
-                            v => (ORSet<TValue>)FromProto(v.Value));
-                        var orDict = new ORDictionary<int, ORSet<TValue>>((ORSet<int>)keys, entries);
-                        return new ORMultiValueDictionary<int, TValue>(orDict, proto.WithValueDeltas);
-                    }
-                case ValType.Long:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => x.LongKey,
-                            v => (ORSet<TValue>)FromProto(v.Value));
-                        var orDict = new ORDictionary<long, ORSet<TValue>>((ORSet<long>)keys, entries);
-                        return new ORMultiValueDictionary<long, TValue>(orDict, proto.WithValueDeltas);
-                    }
-                case ValType.String:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => x.StringKey,
-                            v => (ORSet<TValue>)FromProto(v.Value));
-                        var orDict = new ORDictionary<string, ORSet<TValue>>((ORSet<string>)keys, entries);
-                        return new ORMultiValueDictionary<string, TValue>(orDict, proto.WithValueDeltas);
-                    }
-                default:
-                    {
-                        var entries = proto.Entries.ToImmutableDictionary(x => (TKey)_ser.OtherMessageFromProto(x.OtherKey),
-                            v => (ORSet<TValue>)FromProto(v.Value));
-                        var orDict = new ORDictionary<TKey, ORSet<TValue>>((ORSet<TKey>)keys, entries);
-                        return new ORMultiValueDictionary<TKey, TValue>(orDict, proto.WithValueDeltas);
-                    }
+                var entries = proto.Entries.ToImmutableDictionary(x => x.IntKey,
+                    v => (ORSet<TValue>)ORSetFromProto(v.Value));
+                var orDict = new ORDictionary<int, ORSet<TValue>>((ORSet<int>)keys, entries);
+                return new ORMultiValueDictionary<int, TValue>(orDict, proto.WithValueDeltas);
+            }
+            else if (typeof(TKey) == typeof(long))
+            {
+                var entries = proto.Entries.ToImmutableDictionary(x => x.LongKey,
+                    v => (ORSet<TValue>)ORSetFromProto(v.Value));
+                var orDict = new ORDictionary<long, ORSet<TValue>>((ORSet<long>)keys, entries);
+                return new ORMultiValueDictionary<long, TValue>(orDict, proto.WithValueDeltas);
+            }
+            else if (typeof(TKey) == typeof(string))
+            {
+                var entries = proto.Entries.ToImmutableDictionary(x => x.StringKey,
+                    v => (ORSet<TValue>)ORSetFromProto(v.Value));
+                var orDict = new ORDictionary<string, ORSet<TValue>>((ORSet<string>)keys, entries);
+                return new ORMultiValueDictionary<string, TValue>(orDict, proto.WithValueDeltas);
+            }
+            else
+            {
+                var entries = ImmutableDictionary.CreateRange(
+                    StatefulIterateTransform(proto.Entries, this,
+                        (ss, x) =>
+                            new KeyValuePair<TKey, ORSet<TValue>>(
+                                (TKey)ss._ser.OtherMessageFromProto(x.OtherKey),
+                                (ORSet<TValue>)ss.ORSetFromProto(x.Value))));
+                var orDict =
+                    new ORDictionary<TKey, ORSet<TValue>>((ORSet<TKey>)keys,
+                        entries);
+                return new ORMultiValueDictionary<TKey, TValue>(orDict, proto.WithValueDeltas);                
             }
         }
 
@@ -1545,8 +1799,11 @@ namespace Akka.DistributedData.Serialization
             var orDictOp = ORDictionaryDeltaGroupFromProto(proto.Delta);
 
             var orSetType = orDictOp.ValueType.GenericTypeArguments[0];
-            var maker = ORMultiDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType, orSetType);
-            return (IORMultiValueDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp, proto.WithValueDeltas });
+            return SerDeserGenericCache.ToOrMultiDictionaryDelta(
+                orDictOp.KeyType, orSetType, this, orDictOp,
+                proto.WithValueDeltas);
+            //var maker = ORMultiDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType, orSetType);
+            //return (IORMultiValueDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp, proto.WithValueDeltas });
         }
 
         private static readonly MethodInfo ORMultiDictionaryDeltaMaker =
@@ -1642,24 +1899,28 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = KeyFromBinary(bytes);
             var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
-            var genType = typeof(ORSetKey<>).MakeGenericType(keyType);
-            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+            return SerDeserGenericCache.GetORSetKey(keyType, proto.KeyId);
+            //var genType = typeof(ORSetKey<>).MakeGenericType(keyType);
+            //return (IKey)Activator.CreateInstance(genType, proto.KeyId);
         }
 
         private IKey GSetKeyFromBinary(byte[] bytes)
         {
             var proto = KeyFromBinary(bytes);
             var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
-            var genType = typeof(GSetKey<>).MakeGenericType(keyType);
-            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+            return SerDeserGenericCache.GetGSetKey(keyType, proto.KeyId);
+            //var genType = typeof(GSetKey<>).MakeGenericType(keyType);
+            //return (IKey)Activator.CreateInstance(genType, proto.KeyId);
         }
 
         private IKey LWWRegisterKeyFromBinary(byte[] bytes)
         {
             var proto = KeyFromBinary(bytes);
             var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
-            var genType = typeof(LWWRegisterKey<>).MakeGenericType(keyType);
-            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+            return SerDeserGenericCache.GetLWWRegisterKeyValue(keyType,
+                proto.KeyId);
+            //var genType = typeof(LWWRegisterKey<>).MakeGenericType(keyType);
+            //return (IKey)Activator.CreateInstance(genType, proto.KeyId);
         }
 
         private IKey GCounterKeyFromBinary(byte[] bytes)
@@ -1686,8 +1947,8 @@ namespace Akka.DistributedData.Serialization
             var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
             var valueType = GetTypeFromDescriptor(proto.ValueTypeInfo);
 
-            var genType = typeof(ORDictionaryKey<,>).MakeGenericType(keyType, valueType);
-            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+            return SerDeserGenericCache.GetORDictionaryKey(keyType, valueType,
+                proto.KeyId);
         }
 
         private IKey LWWDictionaryKeyFromBinary(byte[] bytes)
@@ -1695,18 +1956,19 @@ namespace Akka.DistributedData.Serialization
             var proto = KeyFromBinary(bytes);
             var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
             var valueType = GetTypeFromDescriptor(proto.ValueTypeInfo);
-
-            var genType = typeof(LWWDictionaryKey<,>).MakeGenericType(keyType, valueType);
-            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+            return SerDeserGenericCache.GetLWWDictionaryKey(keyType, valueType,proto.KeyId);
+            //var genType = typeof(LWWDictionaryKey<,>).MakeGenericType(keyType, valueType);
+            //return (IKey)Activator.CreateInstance(genType, proto.KeyId);
         }
 
         private IKey PNCounterDictionaryKeyFromBinary(byte[] bytes)
         {
             var proto = KeyFromBinary(bytes);
             var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
-
-            var genType = typeof(PNCounterDictionaryKey<>).MakeGenericType(keyType);
-            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+            return SerDeserGenericCache.GetPNCounterDictionaryKeyValue(keyType,
+                proto.KeyId);
+            //var genType = typeof(PNCounterDictionaryKey<>).MakeGenericType(keyType);
+            //return (IKey)Activator.CreateInstance(genType, proto.KeyId);
         }
 
         private IKey ORMultiValueDictionaryKeyFromBinary(byte[] bytes)
@@ -1714,9 +1976,10 @@ namespace Akka.DistributedData.Serialization
             var proto = KeyFromBinary(bytes);
             var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
             var valueType = GetTypeFromDescriptor(proto.ValueTypeInfo);
-
-            var genType = typeof(ORMultiValueDictionaryKey<,>).MakeGenericType(keyType, valueType);
-            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+            return SerDeserGenericCache.GetORMultiValueDictionaryKey(keyType,
+                valueType, proto.KeyId);
+            //var genType = typeof(ORMultiValueDictionaryKey<,>).MakeGenericType(keyType, valueType);
+            //return (IKey)Activator.CreateInstance(genType, proto.KeyId);
         }
 
         #endregion
