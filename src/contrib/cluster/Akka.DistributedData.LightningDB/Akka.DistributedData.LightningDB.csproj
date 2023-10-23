@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <AssemblyTitle>Akka.DistributedData.LightningDB</AssemblyTitle>
@@ -14,7 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="LightningDB" Version="0.15.0"/>
+        <PackageReference Include="LightningDB" Version="0.16.0"/>
     </ItemGroup>
 
 </Project>
