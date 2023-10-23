@@ -6,7 +6,7 @@
 
     <ItemGroup>
         <PackageReference Include="BenchmarkDotNet" Version="$(BenchmarkDotNetVersion)" />
-        <PackageReference Include="BenchmarkDotNet.Diagnostics.dotTrace" Version="0.13.8" />
+        <PackageReference Include="BenchmarkDotNet.Diagnostics.dotTrace" Version="0.13.9" />
     </ItemGroup>
 
     <ItemGroup>
