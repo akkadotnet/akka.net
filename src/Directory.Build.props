@@ -24,7 +24,7 @@
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
-    <ProtobufVersion>3.24.3</ProtobufVersion>
+    <ProtobufVersion>3.24.4</ProtobufVersion>
     <BenchmarkDotNetVersion>0.13.9</BenchmarkDotNetVersion>
     <NetTestVersion>net7.0</NetTestVersion>
     <FsharpVersion>6.0.5</FsharpVersion>
