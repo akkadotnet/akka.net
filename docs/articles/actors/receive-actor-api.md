@@ -403,6 +403,9 @@ Task.WhenAll(tasks).PipeTo(actorC, Self);
 
 This example demonstrates `Ask` together with the `Pipe` Pattern on tasks, because this is likely to be a common combination. Please note that all of the above is completely non-blocking and asynchronous: `Ask` produces a `Task`, two of which are awaited until both are completed, and when that happens, a new `Result` object is forwarded to another actor.
 
+> [!NOTE]
+> While `Ask` waits for a response, that does not ensure it receives any kind of priority. Messages sent via `Ask` queue in actor mailboxes the same way that messages sent via `Tell` do. You may need to adapt your actor hierarchy if `Ask` messages might be impeded by a large queue in an actor's mailbox.
+
 Using `Ask` will send a message to the receiving Actor as with `Tell`, and the receiving actor must reply with `Sender.Tell(reply, Self)` in order to complete the returned `Task` with a value. The `Ask` operation involves creating an internal actor for handling this reply, which needs to have a timeout after which it is destroyed in order not to leak resources; see more below.
 
 > [!WARNING]
