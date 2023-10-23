@@ -14,7 +14,7 @@
 
   <ItemGroup>
       <PackageReference Include="Polyfill" Version="1.28.0" PrivateAssets="all" />
-      <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="7.0.10" />
+      <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="7.0.12" />
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
       <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />     
       <PackageReference Include="System.Collections.Immutable" Version="$(MicrosoftLibVersion)" />
