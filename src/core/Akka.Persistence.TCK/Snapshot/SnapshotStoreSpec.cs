@@ -20,7 +20,7 @@ using Xunit.Abstractions;
 namespace Akka.Persistence.TCK.Snapshot
 {
     /// <summary>
-    /// This spec aims to verify custom <see cref="SnapshotStore"/> implementations. 
+    /// This spec aims to verify custom <see cref="Akka.Persistence.Snapshot.SnapshotStore"/> implementations. 
     /// Every custom authors snapshot store spec should have it's spec suite included.
     /// </summary>
     public abstract class SnapshotStoreSpec : PluginSpec
