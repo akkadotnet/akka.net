@@ -1415,10 +1415,13 @@ namespace Akka.Cluster.Sharding
             }
             else
             {
+                // TODO: remove this in v1.6 and force all users to use only the new strategy going forward
                 // old algorithm
                 var threshold = settings.TuningParameters.LeastShardAllocationRebalanceThreshold;
                 var maxSimultaneousRebalance = settings.TuningParameters.LeastShardAllocationMaxSimultaneousRebalance;
+#pragma warning disable CS0618 // Type or member is obsolete
                 return new LeastShardAllocationStrategy(threshold, maxSimultaneousRebalance);
+#pragma warning restore CS0618 // Type or member is obsolete
             }
         }
     }
