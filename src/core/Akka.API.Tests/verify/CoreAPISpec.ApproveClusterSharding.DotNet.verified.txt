@@ -180,6 +180,8 @@ namespace Akka.Cluster.Sharding
     {
         void Start();
     }
+    [System.ObsoleteAttribute("Use ShardAllocationStrategy.LeastShardAllocationStrategy instead. This will be re" +
+        "moved in v1.6.")]
     public class LeastShardAllocationStrategy : Akka.Cluster.Sharding.Internal.AbstractLeastShardAllocationStrategy
     {
         public LeastShardAllocationStrategy(int rebalanceThreshold, int maxSimultaneousRebalance) { }
