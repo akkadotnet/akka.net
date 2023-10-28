@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -14,6 +16,8 @@ using System.Text;
 using Akka.Actor;
 using Akka.DistributedData.Serialization.Proto.Msg;
 using Akka.Serialization;
+using CommunityToolkit.HighPerformance;
+using CommunityToolkit.HighPerformance.Buffers;
 using Google.Protobuf;
 using Address = Akka.Actor.Address;
 using MemoryStream = System.IO.MemoryStream;
@@ -83,40 +87,45 @@ namespace Akka.DistributedData.Serialization
 
         public static byte[] Compress(IMessage msg)
         {
-            using (var memStream = new MemoryStream(BufferSize))
+            using (var compressedBuffer = new ArrayPoolBufferWriter<byte>(1024))
             {
-                using (var gzip = new GZipStream(memStream, CompressionMode.Compress))
+                using (var memStream = compressedBuffer.AsStream())
                 {
-                    msg.WriteTo(gzip);
+                    using (var gzip = new GZipStream(memStream,
+                               CompressionMode.Compress))
+                    {
+                        msg.WriteTo(gzip);
+                    }
                 }
 
-                return memStream.ToArray();
+                return compressedBuffer.WrittenMemory.ToArray();
             }
         }
-
+        
         public static byte[] Decompress(byte[] input)
         {
-            using (var memStream = new MemoryStream())
+            using (var decompressedBufferWriter = new ArrayPoolBufferWriter<byte>(4096))
             {
                 using(var inputStr = new MemoryStream(input))
-                using (var gzipStream = new GZipStream(inputStr, CompressionMode.Decompress))
+                using (var gzipStream =
+                       new GZipStream(inputStr, CompressionMode.Decompress))
                 {
-                    var buf = new byte[BufferSize];
                     while (gzipStream.CanRead)
                     {
-                        var read = gzipStream.Read(buf, 0, BufferSize);
+                        var read = gzipStream.Read(decompressedBufferWriter.GetSpan(4096));
                         if (read > 0)
                         {
-                            memStream.Write(buf, 0, read);
+                            decompressedBufferWriter.Advance(read);
                         }
                         else
                         {
                             break;
                         }
                     }
+
                 }
 
-                return memStream.ToArray();
+                return decompressedBufferWriter.WrittenMemory.ToArray();
             }
            
         }
@@ -187,6 +196,8 @@ namespace Akka.DistributedData.Serialization
             return System.Provider.ResolveActorRef(path);
         }
 
+        private static readonly ConcurrentDictionary<string, ByteString>
+            _manifestBsCache = new();
         public Proto.Msg.OtherMessage OtherMessageToProto(object msg)
         {
             Proto.Msg.OtherMessage BuildOther()
@@ -194,11 +205,15 @@ namespace Akka.DistributedData.Serialization
                 var m = new OtherMessage();
                 var msgSerializer = Serialization.FindSerializerFor(msg);
                 m.SerializerId = msgSerializer.Identifier;
-                m.EnclosedMessage = ByteString.CopyFrom(msgSerializer.ToBinary(msg));
+
+                m.EnclosedMessage =
+                    UnsafeByteOperations.UnsafeWrap(
+                        msgSerializer.ToBinary(msg)); //ByteString.CopyFrom(msgSerializer.ToBinary(msg));
 
                 var ms = Akka.Serialization.Serialization.ManifestFor(msgSerializer, msg);
                 if (!string.IsNullOrEmpty(ms))
-                    m.MessageManifest = ByteString.CopyFromUtf8(ms);
+                    m.MessageManifest = _manifestBsCache.GetOrAdd(ms,
+                        static k => ByteString.CopyFromUtf8(k)); 
                 return m;
             }
 
