@@ -1,6 +1,31 @@
 #### 1.5.14 September 24th 2023 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.14 is a maintenance release with several bug fixes.
+
+* [Streams: Ensure stream are closed on shutdown](https://github.com/akkadotnet/akka.net/pull/6935)
+* [Akka: Fix PeriodicTimer HashWheelTimerScheduler deadlock during start](https://github.com/akkadotnet/akka.net/pull/6949)
+* [Cluster: Old version of LeastShardAllocationStrategy is now deprecated](https://github.com/akkadotnet/akka.net/pull/6975)
+* [Query: Add a more descriptive ToString() values to Offset types](https://github.com/akkadotnet/akka.net/pull/6978)
+* Package dependency upgrades
+  * [MNTR: Bump Akka.Multinode.TestAdapter to 1.5.13](https://github.com/akkadotnet/akka.net/pull/6926)
+  * [Akka: Bump Polyfill to 1.28](https://github.com/akkadotnet/akka.net/pull/6936)
+  * [Akka: Bump Google.Protobuf to 3.24.4](https://github.com/akkadotnet/akka.net/pull/6951)
+  * [DData: Bump LightningDB to 0.16.0](https://github.com/akkadotnet/akka.net/pull/6960)
+  * [Persistence: Bump Microsoft.Data.SQLite to 7.0.13](https://github.com/akkadotnet/akka.net/pull/6969)
+
+If you want to see the [full set of changes made in Akka.NET v1.5.14, click here](https://github.com/akkadotnet/akka.net/milestone/96?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 11      | 25   | 21   | dependabot[bot]     |
+| 3       | 14   | 2    | Aaron Stannard      |
+| 3       | 114  | 369  | Simon Cropp         |
+| 2       | 36   | 31   | Gregorius Soedharmo |
+| 1       | 41   | 43   | Lehonti Ramos       |
+| 1       | 38   | 0    | Yaroslav Paslavskiy |
+| 1       | 3    | 0    | Sean Killeen        |
+| 1       | 227  | 25   | Drew                |
+| 1       | 1    | 1    | szaliszali          |
 
 #### 1.5.13 August 26th 2023 ####
 
