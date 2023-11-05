@@ -46,6 +46,7 @@ namespace Akka.DistributedData.Tests.LightningDb
                 var di = new DirectoryInfo(DDataDir);
                 di.Delete(true);
             }
+
             Directory.CreateDirectory(DDataDir);
             var lmdb = ActorOf(LmdbDurableStore.Props(LmdbDefaultConfig));
             lmdb.Tell(LoadAll.Instance);
@@ -70,7 +71,7 @@ namespace Akka.DistributedData.Tests.LightningDb
         }
 
         [Fact]
-        public void Lmdb_logs_meaningful_error_on_invalid_path()
+        public void Lmdb_logs_meaningful_error_for_invalid_dir_path()
         {
             // Try to create a directory with a path exceeding allowed length 
             string invalidName = new string('A', 247);           

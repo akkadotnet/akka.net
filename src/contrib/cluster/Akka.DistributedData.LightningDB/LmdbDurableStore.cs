@@ -107,10 +107,8 @@ namespace Akka.DistributedData.LightningDB
         private LightningEnvironment GetLightningEnvironment()
         {
             var t0 = Stopwatch.StartNew();      
-          if (!Directory.Exists(_dir))
-            {
+            if (!Directory.Exists(_dir))
                 Directory.CreateDirectory(_dir);
-            }
          
             var env = new LightningEnvironment(_dir)
             {
