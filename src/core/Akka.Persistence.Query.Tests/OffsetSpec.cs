@@ -38,5 +38,24 @@ namespace Akka.Persistence.Query.Tests
             var shuffledSequenceBasedList = sequenceBasedList.OrderBy(_ => Guid.NewGuid());
             shuffledSequenceBasedList.Should().BeEquivalentTo(sequenceBasedList);
         }
+
+        [Fact]
+        public void Sequence_must_log_value_correctly()
+        {
+            Assert.Equal("7", new Sequence(7).ToString());
+        }
+
+        [Fact]
+        public void TimeBasedUuid_must_log_value_correctly()
+        {
+            var timeBasedUuid = new TimeBasedUuid(new Guid("49225740-2019-11ea-a6f0-a0a60c2ef4ff"));
+            Assert.Equal("49225740-2019-11ea-a6f0-a0a60c2ef4ff", timeBasedUuid.ToString());
+        }
+
+        [Fact]
+        public void NoOffset_must_log_zero()
+        {
+            Assert.Equal("0", NoOffset.Instance.ToString());
+        }
     }
 }
