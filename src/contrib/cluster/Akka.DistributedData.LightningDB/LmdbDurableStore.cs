@@ -86,11 +86,7 @@ namespace Akka.DistributedData.LightningDB
                 ? Path.GetFullPath($"{path}-{Context.System.Name}-{Self.Path.Parent.Name}-{Cluster.Cluster.Get(Context.System).SelfAddress.Port}")
                 : Path.GetFullPath(path);
 
-            if (!Directory.Exists(_dir))
-            {
-                Directory.CreateDirectory(_dir);
-            }
-            
+         
             _log.Info($"Using durable data in LMDB directory [{_dir}]");
             Init();
         }
@@ -110,7 +106,12 @@ namespace Akka.DistributedData.LightningDB
 
         private LightningEnvironment GetLightningEnvironment()
         {
-            var t0 = Stopwatch.StartNew();
+            var t0 = Stopwatch.StartNew();      
+          if (!Directory.Exists(_dir))
+            {
+                Directory.CreateDirectory(_dir);
+            }
+         
             var env = new LightningEnvironment(_dir)
             {
                 MapSize = _mapSize,
@@ -181,13 +182,6 @@ namespace Akka.DistributedData.LightningDB
         {
             Receive<LoadAll>(_ =>
             {
-                if(_dir.Length == 0 || !Directory.Exists(_dir))
-                {
-                    // no files to load
-                    Sender.Tell(LoadAllCompleted.Instance);
-                    Become(Active);
-                    return;
-                }
 
                 var t0 = Stopwatch.StartNew();
                 
