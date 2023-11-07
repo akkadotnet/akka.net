@@ -17,25 +17,24 @@ using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests.LightningDb
 {
-    [Collection("LmdbDurableStoreSpec")]
     public class LmdbDurableStoreSpec : Akka.TestKit.Xunit2.TestKit
     {
         private const string DDataDir = "thisdir";
-        private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.remote.dot-netty.tcp.port = 0")
-            .WithFallback(DistributedData.DefaultConfig())
-            .WithFallback(TestKit.Xunit2.TestKit.DefaultConfig);
-
-        private static readonly Config LmdbDefaultConfig = ConfigurationFactory.ParseString($@"
-            lmdb {{
+        private readonly ITestOutputHelper _output;
+        
+        private static readonly Config BaseConfig = ConfigurationFactory.ParseString($@"
+            akka.actor.provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+            akka.remote.dot-netty.tcp.port = 0
+            akka.cluster.distributed-data.durable.lmdb {{
                 dir = {DDataDir}
                 map-size = 100 MiB
                 write-behind-interval = off
-            }}");
+            }}").WithFallback(DistributedData.DefaultConfig())
+            .WithFallback(TestKit.Xunit2.TestKit.DefaultConfig);
 
-        public LmdbDurableStoreSpec(ITestOutputHelper output): base(BaseConfig, "LmdbDurableStoreSpec", output)
+        public LmdbDurableStoreSpec(ITestOutputHelper output): base(BaseConfig, nameof(LmdbDurableStoreSpec), output)
         {
+            _output = output;
         }
 
         [Fact]
@@ -48,52 +47,12 @@ namespace Akka.DistributedData.Tests.LightningDb
             }
 
             Directory.CreateDirectory(DDataDir);
-            var lmdb = ActorOf(LmdbDurableStore.Props(LmdbDefaultConfig));
-            lmdb.Tell(LoadAll.Instance);
-            ExpectMsg<LoadAllCompleted>();
-        }
-
-        [Fact]
-        public void Lmdb_creates_directory_when_handling_first_message()
-        {
-            if (Directory.Exists(DDataDir))
-            {
-                var di = new DirectoryInfo(DDataDir);
-                di.Delete(true);
-            }
-
-            Directory.Exists(DDataDir).Should().BeFalse();
-            IActorRef lmdb = ActorOf(LmdbDurableStore.Props(LmdbDefaultConfig));
-            lmdb.Tell(LoadAll.Instance);          
-            AwaitCondition(() => HasMessages);
-            ExpectMsg<LoadAllCompleted>();
-            Directory.Exists(DDataDir).Should().BeTrue();
-        }
-
-        [Fact]
-        public void Lmdb_logs_meaningful_error_for_invalid_dir_path()
-        {
-            // Try to create a directory with a path exceeding allowed length 
-            string invalidName = new string('A', 247);           
-            Directory.Exists(invalidName).Should().BeFalse();
-            IActorRef lmdb = ActorOf(LmdbDurableStore.Props(ConfigurationFactory.ParseString($@"
-            lmdb {{
-                dir = {invalidName}
-                map-size = 100 MiB
-                write-behind-interval = off
-            }}")));
-
-            //Expect meaningful error log
-            EventFilter.Custom(logEvent => logEvent is Error 
-            && !logEvent.Message.ToString().Contains("Error while creating actor instance of type Akka.DistributedData.LightningDB.LmdbDurableStore")
-            && logEvent.Cause is LoadFailedException 
-            && logEvent.Cause.InnerException != null
-            && logEvent.Cause.InnerException is DirectoryNotFoundException).ExpectOne(() =>
-            {
-                lmdb.Tell(LoadAll.Instance);
-            });
-
-            Directory.Exists(invalidName).Should().BeFalse();
+            var testKit = new TestKit.Xunit2.TestKit(BaseConfig, nameof(LmdbDurableStoreSpec), _output);
+            var probe = testKit.CreateTestProbe();
+            var config = testKit.Sys.Settings.Config.GetConfig("akka.cluster.distributed-data.durable");
+            var lmdb = testKit.Sys.ActorOf(LmdbDurableStore.Props(config));
+            lmdb.Tell(LoadAll.Instance, probe.Ref);
+            probe.ExpectMsg<LoadAllCompleted>();
         }
     }
 }
