@@ -56,7 +56,8 @@ namespace Akka.DistributedData.LightningDB
         private readonly long _mapSize;
 
         private readonly TimeSpan _writeBehindInterval;
-        private readonly string _dir;
+        private readonly string _path;
+        private string _dir;
 
         private readonly Dictionary<string, DurableDataEnvelope> _pending = new();
         private readonly ILoggingAdapter _log;
@@ -81,17 +82,8 @@ namespace Akka.DistributedData.LightningDB
 
             _mapSize = _config.GetByteSize("map-size") ?? 100 * 1024 * 1024;
 
-            var path = _config.GetString("dir");
-            _dir = path.EndsWith(DatabaseName)
-                ? Path.GetFullPath($"{path}-{Context.System.Name}-{Self.Path.Parent.Name}-{Cluster.Cluster.Get(Context.System).SelfAddress.Port}")
-                : Path.GetFullPath(path);
+            _path = _config.GetString("dir");
 
-            if (!Directory.Exists(_dir))
-            {
-                Directory.CreateDirectory(_dir);
-            }
-            
-            _log.Info($"Using durable data in LMDB directory [{_dir}]");
             Init();
         }
 
@@ -108,9 +100,23 @@ namespace Akka.DistributedData.LightningDB
             DoWriteBehind();
         }
 
+        protected override void PreStart()
+        {
+            base.PreStart();
+
+            _dir = _path.EndsWith(DatabaseName)
+                ? Path.GetFullPath($"{_path}-{Context.System.Name}-{Self.Path.Parent.Name}-{Cluster.Cluster.Get(Context.System).SelfAddress.Port}")
+                : Path.GetFullPath(_path);
+            if (!Directory.Exists(_dir))
+                Directory.CreateDirectory(_dir);
+            
+            _log.Info($"Using durable data in LMDB directory [{_dir}]");
+        }
+
         private LightningEnvironment GetLightningEnvironment()
         {
-            var t0 = Stopwatch.StartNew();
+            var t0 = Stopwatch.StartNew();      
+         
             var env = new LightningEnvironment(_dir)
             {
                 MapSize = _mapSize,
@@ -181,13 +187,6 @@ namespace Akka.DistributedData.LightningDB
         {
             Receive<LoadAll>(_ =>
             {
-                if(_dir.Length == 0 || !Directory.Exists(_dir))
-                {
-                    // no files to load
-                    Sender.Tell(LoadAllCompleted.Instance);
-                    Become(Active);
-                    return;
-                }
 
                 var t0 = Stopwatch.StartNew();
                 
