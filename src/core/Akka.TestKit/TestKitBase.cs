@@ -230,6 +230,7 @@ namespace Akka.TestKit
         }
 
         private TimeSpan SingleExpectDefaultTimeout { get { return _testState.TestKitSettings.SingleExpectDefault; } }
+        private TimeSpan ExpectNoMessageDefaultTimeout { get { return _testState.TestKitSettings.ExpectNoMessageDefault; } }
 
         /// <summary>
         /// The <see cref="ActorSystem"/> that is recreated and used for each test.
@@ -401,6 +402,20 @@ namespace Akka.TestKit
         public TimeSpan RemainingOrDefault
         {
             get { return RemainingOr(Dilated(SingleExpectDefaultTimeout)); }
+        }
+
+        /// <summary>
+        /// <para>
+        /// Retrieves the time remaining for execution of the innermost enclosing
+        /// <see cref="Within(TimeSpan, Action, TimeSpan?, CancellationToken)">Within</see> block.
+        /// If missing that, then it returns the properly dilated default for this
+        /// case from settings (key: "akka.test.expect-no-message-default").
+        /// </para>
+        /// <remarks>The returned value is always finite.</remarks>
+        /// </summary>
+        public TimeSpan NoMessageRemainingOrDefault
+        {
+            get { return RemainingOr(Dilated(ExpectNoMessageDefaultTimeout)); }
         }
 
         /// <summary>

@@ -18,6 +18,7 @@ namespace Akka.TestKit
     {
         private readonly TimeSpan _defaultTimeout;
         private readonly TimeSpan _singleExpectDefault;
+        private readonly TimeSpan _expectNoMessageDefault;
         private readonly TimeSpan _testEventFilterLeeway;
         private readonly double _timefactor;
         private readonly bool _logTestKitCalls;
@@ -36,6 +37,7 @@ namespace Akka.TestKit
 
             _defaultTimeout = config.GetTimeSpan("akka.test.default-timeout", null, allowInfinite:false);
             _singleExpectDefault = config.GetTimeSpan("akka.test.single-expect-default", null, allowInfinite: false);
+            _expectNoMessageDefault = config.GetTimeSpan("akka.test.expect-no-message-default", null, allowInfinite: false);
             _testEventFilterLeeway = config.GetTimeSpan("akka.test.filter-leeway", null, allowInfinite: false);
             _timefactor = config.GetDouble("akka.test.timefactor", 0);
             _logTestKitCalls = config.GetBoolean("akka.test.testkit.debug", false);
@@ -53,6 +55,9 @@ namespace Akka.TestKit
 
         /// <summary>Gets the config value "akka.test.single-expect-default". It is always finite.</summary>
         public TimeSpan SingleExpectDefault { get { return _singleExpectDefault; } }
+
+        /// <summary>Gets the config value "akka.test.expect-no-message-default". It is always finite.</summary>
+        public TimeSpan ExpectNoMessageDefault { get { return _expectNoMessageDefault; } }
 
         /// <summary>Gets the config value "akka.test.filter-leeway".  It is always finite.</summary>
         public TimeSpan TestEventFilterLeeway { get { return _testEventFilterLeeway; } }
