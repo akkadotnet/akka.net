@@ -2,7 +2,7 @@
   
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetTestVersion);net6.0</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

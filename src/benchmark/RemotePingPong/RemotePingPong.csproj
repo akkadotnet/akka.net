@@ -5,7 +5,7 @@
   <AssemblyTitle>RemotePingPong</AssemblyTitle>
   <AssemblyName>RemotePingPong</AssemblyName>
   <Authors>Akka.NET Team</Authors>
-  <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+  <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);net6.0</TargetFrameworks>
   <OutputType>Exe</OutputType>
 </PropertyGroup>
 
