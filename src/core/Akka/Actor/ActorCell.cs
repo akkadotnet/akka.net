@@ -518,9 +518,12 @@ namespace Akka.Actor
 
         private Envelope SerializeAndDeserialize(Envelope envelope)
         {
-            DeadLetter deadLetter;
-            var unwrapped = (deadLetter = envelope.Message as DeadLetter) != null ? deadLetter.Message : envelope.Message;
+            var unwrapped = envelope.Message;
+            
+            if(envelope.Message is IWrappedMessage wrapped)
+                unwrapped = wrapped.Message;
 
+            // don't do serialization verification if the underlying type doesn't require it
             if (unwrapped is INoSerializationVerificationNeeded)
                 return envelope;
 
@@ -534,7 +537,8 @@ namespace Akka.Actor
                 throw new SerializationException($"Failed to serialize and deserialize payload object [{unwrapped.GetType()}]. Envelope: [{envelope}], Actor type: [{Actor.GetType()}]", e);
             }
 
-            if (deadLetter != null)
+            // special case handling for DeadLetters
+            if (envelope.Message is DeadLetter deadLetter)
                 return new Envelope(new DeadLetter(deserializedMsg, deadLetter.Sender, deadLetter.Recipient), envelope.Sender);
             return new Envelope(deserializedMsg, envelope.Sender);
 
