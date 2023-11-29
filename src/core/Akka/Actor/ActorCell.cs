@@ -521,7 +521,7 @@ namespace Akka.Actor
             var unwrapped = envelope.Message;
             
             if(envelope.Message is IWrappedMessage wrapped)
-                unwrapped = wrapped.Message;
+                unwrapped = WrappedMessage.Unwrap(wrapped); // recursively unwraps message
 
             // don't do serialization verification if the underlying type doesn't require it
             if (unwrapped is INoSerializationVerificationNeeded)
