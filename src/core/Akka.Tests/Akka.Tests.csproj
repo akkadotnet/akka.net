@@ -5,6 +5,7 @@
     <AssemblyTitle>Akka.Tests</AssemblyTitle>
     <TargetFrameworks Condition=" '$(OS)' == 'Windows_NT' ">$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
     <TargetFrameworks Condition=" '$(OS)' != 'Windows_NT' ">$(NetTestVersion)</TargetFrameworks>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
