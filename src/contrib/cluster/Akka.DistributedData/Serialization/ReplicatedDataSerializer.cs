@@ -10,6 +10,7 @@ using Akka.DistributedData.Internal;
 using Akka.Serialization;
 using Google.Protobuf;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -112,7 +113,7 @@ namespace Akka.DistributedData.Serialization
         {
             switch (manifest)
             {
-                case ORSetManifest: return ORSetFromBinary(SerializationSupport.Decompress(bytes));
+                case ORSetManifest: return ORSetFromBinary(SerializationSupport.DecompressWithRentedPool(bytes));
                 case ORSetAddManifest: return ORAddDeltaOperationFromBinary(bytes);
                 case ORSetRemoveManifest: return ORRemoveOperationFromBinary(bytes);
                 case GSetManifest: return GSetFromBinary(bytes);
@@ -120,18 +121,18 @@ namespace Akka.DistributedData.Serialization
                 case PNCounterManifest: return PNCounterFromBytes(bytes);
                 case FlagManifest: return FlagFromBinary(bytes);
                 case LWWRegisterManifest: return LWWRegisterFromBinary(bytes);
-                case ORMapManifest: return ORDictionaryFromBinary(SerializationSupport.Decompress(bytes));
+                case ORMapManifest: return ORDictionaryFromBinary(SerializationSupport.DecompressWithRentedPool(bytes));
                 case ORMapPutManifest: return ORDictionaryPutFromBinary(bytes);
                 case ORMapRemoveManifest: return ORDictionaryRemoveFromBinary(bytes);
                 case ORMapRemoveKeyManifest: return ORDictionaryRemoveKeyFromBinary(bytes);
                 case ORMapUpdateManifest: return ORDictionaryUpdateFromBinary(bytes);
                 case ORMapDeltaGroupManifest: return ORDictionaryDeltaGroupFromBinary(bytes);
-                case LWWMapManifest: return LWWDictionaryFromBinary(SerializationSupport.Decompress(bytes));
+                case LWWMapManifest: return LWWDictionaryFromBinary(SerializationSupport.DecompressWithRentedPool(bytes));
                 case LWWMapDeltaGroupManifest:
                     return LWWDictionaryDeltaGroupFromBinary(bytes);
-                case PNCounterMapManifest: return PNCounterDictionaryFromBinary(SerializationSupport.Decompress(bytes));
+                case PNCounterMapManifest: return PNCounterDictionaryFromBinary(SerializationSupport.DecompressWithRentedPool(bytes));
                 case PNCounterMapDeltaOperationManifest: return PNCounterDeltaFromBinary(bytes);
-                case ORMultiMapManifest: return ORMultiDictionaryFromBinary(SerializationSupport.Decompress(bytes));
+                case ORMultiMapManifest: return ORMultiDictionaryFromBinary(SerializationSupport.DecompressWithRentedPool(bytes));
                 case ORMultiMapDeltaOperationManifest: return ORMultiDictionaryDeltaFromBinary(bytes);
                 case DeletedDataManifest: return DeletedData.Instance;
                 case VersionVectorManifest: return _ser.VersionVectorFromBinary(bytes);
@@ -255,9 +256,13 @@ namespace Akka.DistributedData.Serialization
         }
 
         #region ORSet
-        private IORSet ORSetFromBinary(byte[] bytes)
+        private IORSet ORSetFromBinary(IMemoryOwner<byte> bytes)
         {
-            return FromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
+            using (bytes)
+            {
+                var p = Proto.Msg.ORSet.Parser.ParseFrom(bytes.Memory.Span);
+                return FromProto(p);   
+            }
         }
 
         private Proto.Msg.ORSet ToProto(IORSet orset)
@@ -856,10 +861,13 @@ namespace Akka.DistributedData.Serialization
         private static readonly MethodInfo ORDictMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(GenericORDictionaryFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
 
-        private IORDictionary ORDictionaryFromBinary(byte[] bytes)
+        private IORDictionary ORDictionaryFromBinary(IMemoryOwner<byte> bytes)
         {
-            var proto = Proto.Msg.ORMap.Parser.ParseFrom(bytes);
-            return ORDictionaryFromProto(proto);
+            using (bytes)
+            {
+                var proto = Proto.Msg.ORMap.Parser.ParseFrom(bytes.Memory.Span);
+                return ORDictionaryFromProto(proto);
+            }
         }
 
         private IORDictionary ORDictionaryFromProto(Proto.Msg.ORMap proto)
@@ -1252,10 +1260,13 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
-        private ILWWDictionary LWWDictionaryFromBinary(byte[] bytes)
+        private ILWWDictionary LWWDictionaryFromBinary(IMemoryOwner<byte> bytes)
         {
-            var proto = Proto.Msg.LWWMap.Parser.ParseFrom(bytes);
-            return LWWDictFromProto(proto);
+            using (bytes)
+            {
+                var proto = Proto.Msg.LWWMap.Parser.ParseFrom(bytes.Memory.Span);
+                return LWWDictFromProto(proto);
+            }
         }
 
 
@@ -1334,10 +1345,13 @@ namespace Akka.DistributedData.Serialization
             proto.Entries.Add(entries);
         }
 
-        private IPNCounterDictionary PNCounterDictionaryFromBinary(byte[] bytes)
+        private IPNCounterDictionary PNCounterDictionaryFromBinary(IMemoryOwner<byte> bytes)
         {
-            var proto = Proto.Msg.PNCounterMap.Parser.ParseFrom(bytes);
-            return PNCounterDictionaryFromProto(proto);
+            using (bytes)
+            {
+                var proto = Proto.Msg.PNCounterMap.Parser.ParseFrom(bytes.Memory.Span);
+                return PNCounterDictionaryFromProto(proto);
+            }
         }
 
         private IPNCounterDictionary PNCounterDictionaryFromProto(Proto.Msg.PNCounterMap proto)
@@ -1468,10 +1482,13 @@ namespace Akka.DistributedData.Serialization
             proto.Entries.Add(entries);
         }
 
-        private IORMultiValueDictionary ORMultiDictionaryFromBinary(byte[] bytes)
+        private IORMultiValueDictionary ORMultiDictionaryFromBinary(IMemoryOwner<byte> bytes)
         {
-            var ormm = Proto.Msg.ORMultiMap.Parser.ParseFrom(bytes);
-            return ORMultiDictionaryFromProto(ormm);
+            using (bytes)
+            {
+                var ormm = Proto.Msg.ORMultiMap.Parser.ParseFrom(bytes.Memory.Span);
+                return ORMultiDictionaryFromProto(ormm);
+            }
         }
 
         private IORMultiValueDictionary ORMultiDictionaryFromProto(ORMultiMap proto)

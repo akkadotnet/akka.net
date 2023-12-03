@@ -104,15 +104,29 @@ namespace Akka.DistributedData.Serialization
         
         public static byte[] Decompress(byte[] input)
         {
-            using (var decompressedBufferWriter = new ArrayPoolBufferWriter<byte>(4096))
+            using (var buf = DecompressWithRentedPool(input))
             {
-                using(var inputStr = new MemoryStream(input))
+                return buf.Memory.ToArray();
+            }
+        }
+        
+        public static IMemoryOwner<byte> DecompressWithRentedPool(ReadOnlyMemory<byte> input)
+        {
+            ArrayPoolBufferWriter<byte> decompressedBufferWriter = null;
+            bool failed = true;
+            try
+            {
+                decompressedBufferWriter =
+                    new ArrayPoolBufferWriter<byte>(4096);
+                using (var inputStr = input.AsStream())
                 using (var gzipStream =
                        new GZipStream(inputStr, CompressionMode.Decompress))
                 {
                     while (gzipStream.CanRead)
                     {
-                        var read = gzipStream.Read(decompressedBufferWriter.GetSpan(4096));
+                        var read =
+                            gzipStream.Read(
+                                decompressedBufferWriter.GetSpan(4096));
                         if (read > 0)
                         {
                             decompressedBufferWriter.Advance(read);
@@ -122,10 +136,15 @@ namespace Akka.DistributedData.Serialization
                             break;
                         }
                     }
-
                 }
 
-                return decompressedBufferWriter.WrittenMemory.ToArray();
+                failed = false;
+                return decompressedBufferWriter;
+            }
+            finally
+            {
+                if (failed)
+                    decompressedBufferWriter?.Dispose();
             }
            
         }
