@@ -215,27 +215,10 @@ namespace Akka.DistributedData.Serialization
             return System.Provider.ResolveActorRef(path);
         }
 
-        private static readonly ConcurrentDictionary<string, ByteString>
+        private static readonly NonBlocking.ConcurrentDictionary<string, ByteString>
             _manifestBsCache = new();
         public Proto.Msg.OtherMessage OtherMessageToProto(object msg)
         {
-            Proto.Msg.OtherMessage BuildOther()
-            {
-                var m = new OtherMessage();
-                var msgSerializer = Serialization.FindSerializerFor(msg);
-                m.SerializerId = msgSerializer.Identifier;
-
-                m.EnclosedMessage =
-                    UnsafeByteOperations.UnsafeWrap(
-                        msgSerializer.ToBinary(msg)); //ByteString.CopyFrom(msgSerializer.ToBinary(msg));
-
-                var ms = Akka.Serialization.Serialization.ManifestFor(msgSerializer, msg);
-                if (!string.IsNullOrEmpty(ms))
-                    m.MessageManifest = _manifestBsCache.GetOrAdd(ms,
-                        static k => ByteString.CopyFromUtf8(k)); 
-                return m;
-            }
-
             // Serialize actor references with full address information (defaultAddress).
             // When sending remote messages currentTransportInformation is already set,
             // but when serializing for digests or DurableStore it must be set here.
@@ -245,12 +228,30 @@ namespace Akka.DistributedData.Serialization
                 if (oldInfo == null)
                     Akka.Serialization.Serialization.CurrentTransportInformation =
                         System.Provider.SerializationInformation;
-                return BuildOther();
+                return BuildOtherImpl(msg,Serialization);
             }
             finally
             {
                 Akka.Serialization.Serialization.CurrentTransportInformation = oldInfo;
             }
+        }
+
+        private static OtherMessage BuildOtherImpl(object msg,
+            Akka.Serialization.Serialization serialization)
+        {
+            var m = new OtherMessage();
+            var msgSerializer = serialization.FindSerializerFor(msg);
+            m.SerializerId = msgSerializer.Identifier;
+
+            m.EnclosedMessage =
+                UnsafeByteOperations.UnsafeWrap(
+                    msgSerializer.ToBinary(msg)); //ByteString.CopyFrom(msgSerializer.ToBinary(msg));
+
+            var ms = Akka.Serialization.Serialization.ManifestFor(msgSerializer, msg);
+            if (!string.IsNullOrEmpty(ms))
+                m.MessageManifest = _manifestBsCache.GetOrAdd(ms,
+                    static k => ByteString.CopyFromUtf8(k)); 
+            return m;
         }
 
         public object OtherMessageFromBytes(byte[] other)
