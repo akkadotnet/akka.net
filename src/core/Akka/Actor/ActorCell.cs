@@ -519,10 +519,8 @@ namespace Akka.Actor
         #nullable enable
         private Envelope SerializeAndDeserialize(Envelope envelope)
         {
-            var deadLetter = envelope.Message as DeadLetter;
-            
-            // recursively unwraps message
-            var unwrapped = WrappedMessage.Unwrap(deadLetter is not null ? deadLetter.Message : envelope.Message);
+            // recursively unwraps message, no need to check for DeadLetter because DeadLetter inherits IWrappedMessage
+            var unwrapped = WrappedMessage.Unwrap(envelope.Message);
             
             // don't do serialization verification if the underlying type doesn't require it
             if (unwrapped is INoSerializationVerificationNeeded)
@@ -539,7 +537,7 @@ namespace Akka.Actor
             }
 
             // special case handling for DeadLetters
-            return deadLetter is not null 
+            return envelope.Message is DeadLetter deadLetter 
                 ? new Envelope(new DeadLetter(deserializedMsg, deadLetter.Sender, deadLetter.Recipient), envelope.Sender) 
                 : new Envelope(deserializedMsg, envelope.Sender);
         }
