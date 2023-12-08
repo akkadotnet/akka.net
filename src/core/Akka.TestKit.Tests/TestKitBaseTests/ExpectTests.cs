@@ -7,10 +7,12 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Sdk;
 using static FluentAssertions.FluentActions;
@@ -161,6 +163,51 @@ namespace Akka.TestKit.Tests.TestKitBaseTests
                     })
                     .ToListAsync();
             }).Should().ThrowAsync<XunitException>().WithMessage("Timeout (*");
+        }
+
+        // We're testing the sync version of ExpectMsg, never change this to async
+        [Fact(DisplayName = "#6990 ExpectMsg should respect timeout args")]
+        public void ExpectMsgRespectsTimeout()
+        {
+            var bridge = Sys.ActorOf(Props.Create<BridgeActor<Message>>());
+            bridge.Tell(Props.Create<DelayedPingActor>(), TestActor);
+            var response = ExpectMsg<TestMessage<Message>>(100.Seconds());
+            response.Message.Payload.Should().Be("PING");
+        }
+
+        private record Message
+        {
+            public string Payload { get; init; }
+        }
+        private record TestMessage<T>(T Message);
+        
+        private class BridgeActor<T>: ReceiveActor where T: Message, new()
+        {
+            public BridgeActor()
+            {
+                ReceiveAsync<Props>(async props =>
+                {
+                    var sender = Sender;
+                    var childActor = Context.ActorOf(props);
+                    var response = await childActor.Ask<string>("PING");
+                    response.Should().Be("PING");
+                    sender.Tell(new TestMessage<T>(new T{ Payload = response }));
+                });
+            }
+        }
+        
+        private class DelayedPingActor: ReceiveActor
+        {
+            public DelayedPingActor()
+            {
+                ReceiveAsync<string>(async msg =>
+                {
+                    var sender = Sender;
+                    await Task.Delay(6.Seconds());
+                    sender.Tell(msg);
+                });
+            }
+            
         }
     }
 }
