@@ -127,7 +127,7 @@ namespace Akka.Streams.TestKit.Tests
                     .AsyncBuilder()
                     .Request(1)
                     .ExpectErrorAsync();
-            }).Should().ThrowAsync<TrueException>().WithMessage("*OnNext(1)*");
+            }).Should().ThrowAsync<FailException>().WithMessage("*OnNext(1)*");
         }
 
         [Fact]
@@ -140,7 +140,7 @@ namespace Akka.Streams.TestKit.Tests
                     .Request(1)
                     .ExpectComplete()
                     .ExecuteAsync();
-            }).Should().ThrowAsync<TrueException>().WithMessage("*OnError(Boom!)*");
+            }).Should().ThrowAsync<FailException>().WithMessage("*OnError(Boom!)*");
         }
 
         [Fact]
@@ -153,7 +153,7 @@ namespace Akka.Streams.TestKit.Tests
                     .Request(1)
                     .ExpectComplete()
                     .ExecuteAsync();
-            }).Should().ThrowAsync<TrueException>().WithMessage("*OnNext(1)*");
+            }).Should().ThrowAsync<FailException>().WithMessage("*OnNext(1)*");
         }
 
         [Fact]
