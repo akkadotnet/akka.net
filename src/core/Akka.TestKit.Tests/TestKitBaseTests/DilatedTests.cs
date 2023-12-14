@@ -40,7 +40,7 @@ namespace Akka.TestKit.Tests.TestKitBaseTests
         {
             var stopwatch = Stopwatch.StartNew();
             await Awaiting(() => AwaitConditionAsync(() => Task.FromResult(false), TimeSpan.FromMilliseconds(Timeout)))
-                .Should().ThrowAsync<TrueException>();
+                .Should().ThrowAsync<FailException>();
             stopwatch.Stop();
             AssertDilated(stopwatch.ElapsedMilliseconds, $"Expected the timeout to be {ExpectedTimeout} but in fact it was {stopwatch.ElapsedMilliseconds}.");
         }
@@ -50,7 +50,7 @@ namespace Akka.TestKit.Tests.TestKitBaseTests
         {
             var stopwatch = Stopwatch.StartNew();
             await Awaiting(async () => await ReceiveNAsync(42, TimeSpan.FromMilliseconds(Timeout)).ToListAsync())
-                .Should().ThrowAsync<TrueException>();
+                .Should().ThrowAsync<FailException>();
             stopwatch.Stop();
             AssertDilated(stopwatch.ElapsedMilliseconds, $"Expected the timeout to be {ExpectedTimeout} but in fact it was {stopwatch.ElapsedMilliseconds}.");
         }
@@ -60,7 +60,7 @@ namespace Akka.TestKit.Tests.TestKitBaseTests
         {
             var stopwatch = Stopwatch.StartNew();
             await Awaiting(async () => await ExpectMsgAllOfAsync(TimeSpan.FromMilliseconds(Timeout), new []{ "1", "2" }).ToListAsync())
-                .Should().ThrowAsync<TrueException>();
+                .Should().ThrowAsync<FailException>();
             stopwatch.Stop();
             AssertDilated(stopwatch.ElapsedMilliseconds, $"Expected the timeout to be {ExpectedTimeout} but in fact it was {stopwatch.ElapsedMilliseconds}.");
         }
@@ -70,7 +70,7 @@ namespace Akka.TestKit.Tests.TestKitBaseTests
         {
             var stopwatch = Stopwatch.StartNew();
             await Awaiting(async () => await FishForMessageAsync(_=>false, TimeSpan.FromMilliseconds(Timeout)))
-                .Should().ThrowAsync<TrueException>();
+                .Should().ThrowAsync<FailException>();
             stopwatch.Stop();
             AssertDilated(stopwatch.ElapsedMilliseconds, $"Expected the timeout to be {ExpectedTimeout} but in fact it was {stopwatch.ElapsedMilliseconds}.");
         }
