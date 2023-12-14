@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
@@ -56,11 +57,11 @@ namespace Akka.Streams.TestKit.Tests
                         .ToStrictAsync(TimeSpan.FromMilliseconds(300))
                         .ToListAsync();
                 })
-                .Should().ThrowAsync<ArgumentException>();
+                .Should().ThrowAsync<FailException>();
 
             var error = err.Subject.First();
             var aggregateException = error.InnerException;
-            aggregateException.InnerException.Message.Should().Contain("Boom!");
+            aggregateException!.InnerException!.Message.Should().Contain("Boom!");
             error.Message.Should().Contain("1, 2");
         }
 
