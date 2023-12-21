@@ -70,7 +70,7 @@ namespace Akka.Streams.TestKit
         {
             timeout ??= 20.Seconds();
             var result = await block().ShouldCompleteWithin(timeout.Value);
-            if (!(materializer is ActorMaterializerImpl impl))
+            if (materializer is not ActorMaterializerImpl impl)
                 return result;
 
             var probe = spec.CreateTestProbe(impl.System);
