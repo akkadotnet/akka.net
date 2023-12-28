@@ -127,7 +127,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
                         return Task.CompletedTask;
                     });                    
                 })
-                .Should().ThrowAsync<TrueException>().WithMessage("Received 1 message too many.*");
+                .Should().ThrowAsync<FailException>().WithMessage("Received 1 message too many.*");
         }
 
         [Fact]
