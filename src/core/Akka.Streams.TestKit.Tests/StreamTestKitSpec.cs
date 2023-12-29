@@ -57,7 +57,7 @@ namespace Akka.Streams.TestKit.Tests
                         .ToStrictAsync(TimeSpan.FromMilliseconds(300))
                         .ToListAsync();
                 })
-                .Should().ThrowAsync<FailException>();
+                .Should().ThrowAsync<ArgumentException>();
 
             var error = err.Subject.First();
             var aggregateException = error.InnerException;
@@ -106,7 +106,7 @@ namespace Akka.Streams.TestKit.Tests
                     .Request(4)
                     .ExpectNextOrError(100, Ex())
                     .ExecuteAsync();
-            }).Should().ThrowAsync<FailException>().WithMessage("*OnNext(100)*");
+            }).Should().ThrowAsync<TrueException>().WithMessage("*OnNext(100)*");
         }
 
         [Fact]
@@ -197,7 +197,7 @@ namespace Akka.Streams.TestKit.Tests
                     .AsyncBuilder()
                     .Request(1)
                     .ExpectNextAsync<int>(i => i == 2);
-            }).Should().ThrowAsync<FailException>().WithMessage("Got a message of the expected type*");
+            }).Should().ThrowAsync<TrueException>().WithMessage("Got a message of the expected type*");
         }
 
         [Fact]
@@ -231,7 +231,7 @@ namespace Akka.Streams.TestKit.Tests
                     .Request(1)
                     .MatchNext<int>(i => i == 2)
                     .ExecuteAsync();
-            }).Should().ThrowAsync<FailException>().WithMessage("Got a message of the expected type*");
+            }).Should().ThrowAsync<TrueException>().WithMessage("Got a message of the expected type*");
         }
 
         [Fact]
