@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Pattern;
@@ -778,6 +779,8 @@ namespace Akka.Streams.Implementation
             private readonly Lazy<Decider> _decider;
             private Option<TSource> _state = Option<TSource>.None;
 
+            private readonly PooledValueTaskContinuationHelper<Option<TOut>>
+                _pooledContinuation;
             public Logic(UnfoldResourceSourceValueTaskAsync<TOut, TCreateState, TSource> stage, Attributes inheritedAttributes)
                 : base(stage.Shape)
             {
@@ -787,7 +790,9 @@ namespace Akka.Streams.Implementation
                     var strategy = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                     return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
                 });
-
+                _pooledContinuation =
+                    new PooledValueTaskContinuationHelper<Option<TOut>>(
+                        ReadCallback);
                 SetHandler(_stage.Out, this);
             }
 
@@ -889,8 +894,9 @@ namespace Akka.Streams.Implementation
                         }
                         else
                         {
-                            vt.AsTask().OnComplete(ReadCallback);
+                            _pooledContinuation.AttachAwaiter(vt);
                         }
+
                         
                     }
                     catch (Exception ex)
