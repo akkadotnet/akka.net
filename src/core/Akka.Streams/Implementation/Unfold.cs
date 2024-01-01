@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
 using Akka.Annotations;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
@@ -88,6 +90,116 @@ namespace Akka.Streams.Implementation
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
+        /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <typeparam name="TState">TBD</typeparam>
+    /// <typeparam name="TElement">TBD</typeparam>
+    [InternalApi]
+    public class UnfoldValueTaskAsync<TState, TElement> : GraphStage<SourceShape<TElement>>
+    {
+        #region stage logic
+        private sealed class Logic : OutGraphStageLogic
+        {
+            private readonly UnfoldValueTaskAsync<TState, TElement> _stage;
+            private TState _state;
+            private Action<Result<Option<(TState, TElement)>>> _asyncHandler;
+            private ValueTask<Option<(TState, TElement)>> _currentTask;
+            public Logic(UnfoldValueTaskAsync<TState, TElement> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                _state = _stage.State;
+
+                SetHandler(_stage.Out, this);
+            }
+
+            public override void OnPull()
+            {
+                var vt = _stage.UnfoldFunc(_state);
+                    var peeker = Unsafe.As<ValueTask<Option<(TState,TElement)>>,ValueTaskCheatingPeeker<Option<(TState,TElement)>>>(ref vt);
+                    if (peeker._obj == null)
+                    {
+                        _asyncHandler(Result.Success<Option<(TState, TElement)>>(peeker._result));
+                    }
+                    else
+                    {
+                        _currentTask = vt;
+                        vt.GetAwaiter().OnCompleted(CompletionAction);
+                    } 
+            }
+            private void CompletionAction()
+            {
+                if (_currentTask.IsCompletedSuccessfully)
+                {
+                    _asyncHandler.Invoke(Result.Success(_currentTask.Result));
+                }
+                else
+                {
+                    _asyncHandler.Invoke(
+                        Result.FromTask(_currentTask.AsTask()));
+                }
+            }
+            public override void PreStart()
+            {
+                var ac = GetAsyncCallback<Result<Option<(TState, TElement)>>>(result =>
+                {
+                    if (!result.IsSuccess)
+                        Fail(_stage.Out, result.Exception);
+                    else
+                    {
+                        var option = result.Value;
+                        if (!option.HasValue)
+                            Complete(_stage.Out);
+                        else
+                        {
+                            Push(_stage.Out, option.Value.Item2);
+                            _state = option.Value.Item1;
+                        }
+                    }
+                });
+                _asyncHandler = ac;
+            }
+        }
+        #endregion
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly TState State;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly Func<TState, ValueTask<Option<(TState, TElement)>>> UnfoldFunc;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly Outlet<TElement> Out = new("UnfoldValueTaskAsync.out");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="state">TBD</param>
+        /// <param name="unfoldFunc">TBD</param>
+        public UnfoldValueTaskAsync(TState state, Func<TState, ValueTask<Option<(TState, TElement)>>> unfoldFunc)
+        {
+            State = state;
+            UnfoldFunc = unfoldFunc;
+            Shape = new SourceShape<TElement>(Out);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override SourceShape<TElement> Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+    }
+    
     /// <summary>
     /// INTERNAL API
     /// </summary>

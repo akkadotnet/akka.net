@@ -2703,29 +2703,34 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 catch (Exception e)
                 {
-                    var strategy = _decider(e);
-                    Log.Error(e,
-                        "An exception occured inside SelectAsync while processing message [{0}]. Supervision strategy: {1}",
-                        message, strategy);
-                    switch (strategy)
-                    {
-                        case Directive.Stop:
-                            FailStage(e);
-                            break;
-
-                        case Directive.Resume:
-                        case Directive.Restart:
-                            break;
-
-                        default:
-                            throw new AggregateException(
-                                $"Unknown SupervisionStrategy directive: {strategy}",
-                                e);
-                    }
+                    onPushErrorDecider(e, message);
                 }
 
                 if (Todo < _stage._parallelism && !HasBeenPulled(_stage.In))
                     TryPull(_stage.In);
+            }
+
+            private void onPushErrorDecider(Exception e, TIn message)
+            {
+                var strategy = _decider(e);
+                Log.Error(e,
+                    "An exception occured inside SelectAsync while processing message [{0}]. Supervision strategy: {1}",
+                    message, strategy);
+                switch (strategy)
+                {
+                    case Directive.Stop:
+                        FailStage(e);
+                        break;
+
+                    case Directive.Resume:
+                    case Directive.Restart:
+                        break;
+
+                    default:
+                        throw new AggregateException(
+                            $"Unknown SupervisionStrategy directive: {strategy}",
+                            e);
+                }
             }
 
             public override void OnUpstreamFinish()
@@ -2828,7 +2833,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<TOut> Out = new("SelectAsync.out");
+        public readonly Outlet<TOut> Out = new("SelectValueTaskAsync.out");
 
         /// <summary>
         /// TBD
