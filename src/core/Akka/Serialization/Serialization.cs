@@ -400,7 +400,7 @@ namespace Akka.Serialization
         /// <param name="type">The <see cref="Type"/> that will be removed from the serializer mapping</param>
         /// <exception cref="InvalidOperationException">>Thrown when <paramref name="type"/> is of type <see cref="Object"/></exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void RemoveSerializationMap(Type type)
+        internal void RemoveSerializationMap(Type type)
         {
             if (type == typeof(object))
                 throw new InvalidOperationException("Could not remove the default object type serializer.");
@@ -408,9 +408,6 @@ namespace Akka.Serialization
             if(!_serializerMap.ContainsKey(type))
                 return;
             
-            if(_logSerializerOverrideOnStart)
-                LogWarning($"Serializer for type [{type}] are being removed. Did you mean to do this?");
-
             if (!_serializerMap.TryRemove(type, out _))
             {
                 LogWarning($"Failed to remove serializer for type [{type}]");
@@ -422,7 +419,7 @@ namespace Akka.Serialization
                 {
                     if (!_serializerMap.TryRemove(serializerType, out _))
                     {
-                        
+                        LogWarning($"Failed to remove serializer for type [{serializerType}] which derives from type [{type}]");
                     }
                 }
             }
