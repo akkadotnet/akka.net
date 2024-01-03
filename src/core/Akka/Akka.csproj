@@ -22,10 +22,6 @@
       <PackageReference Include="System.Configuration.ConfigurationManager" Version="$(ConfigurationManagerVersion)"/>
   </ItemGroup>
   
-  <ItemGroup Label="Analyzers">
-    <PackageReference Include="Akka.Analyzers" Version="0.1.0" PrivateAssets="all" />
-  </ItemGroup>
-
   <ItemGroup>
     <None Update="Util\MatchHandler\PartialHandlerArgumentsCapture.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
