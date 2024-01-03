@@ -21,12 +21,12 @@ namespace Samples.Cluster.Metrics.Common
             Receive<int>(n =>
             {
                 log.Info($"{Self.Path} received factorial job [{n}]");
-
-                Factorial(n).PipeTo(Sender);
+                var sender = Sender;
+                Factorial(n).PipeTo(sender);
             });
         }
 
-        private async Task<(int, BigInteger)> Factorial(int n)
+        private static async Task<(int, BigInteger)> Factorial(int n)
         {
             var i = n;
             var accumulator = new BigInteger(1);

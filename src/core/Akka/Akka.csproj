@@ -21,7 +21,7 @@
       <PackageReference Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
       <PackageReference Include="System.Configuration.ConfigurationManager" Version="$(ConfigurationManagerVersion)"/>
   </ItemGroup>
-
+  
   <ItemGroup>
     <None Update="Util\MatchHandler\PartialHandlerArgumentsCapture.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
