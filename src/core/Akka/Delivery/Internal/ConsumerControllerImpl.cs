@@ -57,7 +57,11 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
     {
         // TESTING PURPOSES ONLY - used to simulate network failures.
         if (_fuzzingControl != null && ThreadLocalRandom.Current.NextDouble() < _fuzzingControl(message))
+        {
+            _log.Debug("[Testing] dropping message [{0}] due to fuzzing factor", message);
             return true;
+        }
+            
         return base.AroundReceive(receive, message);
     }
 
@@ -281,38 +285,6 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
             if (_log.IsDebugEnabled)
                 _log.Debug("Received Confirmed seqNr [{0}] from consumer, stashed size [{1}].", seqNr, Stash.Count);
 
-            long ComputeNextSeqNr()
-            {
-                if (sequencedMessage.First)
-                {
-                    // confirm the first message immediately to cancel resending of first
-                    var newRequestedSeqNr = seqNr - 1 + Settings.FlowControlWindow;
-                    _log.Debug("Sending Request after first with confirmedSeqNr [{0}], requestUpToSeqNr [{1}]", seqNr,
-                        newRequestedSeqNr);
-                    CurrentState.ProducerController.Tell(new Request(seqNr, newRequestedSeqNr, ResendLost, false));
-                    return newRequestedSeqNr;
-                }
-
-                if (CurrentState.RequestedSeqNr - seqNr == Settings.FlowControlWindow / 2)
-                {
-                    var newRequestedSeqNr = CurrentState.RequestedSeqNr + Settings.FlowControlWindow / 2;
-                    _log.Debug("Sending Request with confirmedSeqNr [{0}], requestUpToSeqNr [{1}]", seqNr,
-                        newRequestedSeqNr);
-                    CurrentState.ProducerController.Tell(new Request(seqNr, newRequestedSeqNr, ResendLost, false));
-                    _retryTimer.Start(); // reset interval since Request was just sent
-                    return newRequestedSeqNr;
-                }
-
-                if (sequencedMessage.Ack)
-                {
-                    if (_log.IsDebugEnabled)
-                        _log.Debug("Sending Ack seqNr [{0}]", seqNr);
-                    CurrentState.ProducerController.Tell(new Ack(seqNr));
-                }
-
-                return CurrentState.RequestedSeqNr;
-            }
-
             var requestedSeqNr = ComputeNextSeqNr();
             if (CurrentState.Stopping && Stash.IsEmpty)
             {
@@ -350,6 +322,40 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
                 CurrentState = CurrentState.Copy(confirmedSeqNr: seqNr, requestedSeqNr: requestedSeqNr);
                 Stash.Unstash();
                 Become(Active);
+            }
+
+            return;
+
+            long ComputeNextSeqNr()
+            {
+                if (sequencedMessage.First)
+                {
+                    // confirm the first message immediately to cancel resending of first
+                    var newRequestedSeqNr = seqNr - 1 + Settings.FlowControlWindow;
+                    _log.Debug("Sending Request after first with confirmedSeqNr [{0}], requestUpToSeqNr [{1}]", seqNr,
+                        newRequestedSeqNr);
+                    CurrentState.ProducerController.Tell(new Request(seqNr, newRequestedSeqNr, ResendLost, false));
+                    return newRequestedSeqNr;
+                }
+
+                if (CurrentState.RequestedSeqNr - seqNr == Settings.FlowControlWindow / 2)
+                {
+                    var newRequestedSeqNr = CurrentState.RequestedSeqNr + Settings.FlowControlWindow / 2;
+                    _log.Debug("Sending Request with confirmedSeqNr [{0}], requestUpToSeqNr [{1}]", seqNr,
+                        newRequestedSeqNr);
+                    CurrentState.ProducerController.Tell(new Request(seqNr, newRequestedSeqNr, ResendLost, false));
+                    _retryTimer.Start(); // reset interval since Request was just sent
+                    return newRequestedSeqNr;
+                }
+
+                if (sequencedMessage.Ack)
+                {
+                    if (_log.IsDebugEnabled)
+                        _log.Debug("Sending Ack seqNr [{0}]", seqNr);
+                    CurrentState.ProducerController.Tell(new Ack(seqNr));
+                }
+
+                return CurrentState.RequestedSeqNr;
             }
         });
 
