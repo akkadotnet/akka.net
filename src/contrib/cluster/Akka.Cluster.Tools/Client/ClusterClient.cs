@@ -17,6 +17,13 @@ using Akka.Util.Internal;
 namespace Akka.Cluster.Tools.Client
 {
     /// <summary>
+    /// Marker interface for all ClusterClient message types
+    /// </summary>
+    public interface IClusterClientProtocolMessage
+    {
+    }
+        
+    /// <summary>
     /// This actor is intended to be used on an external node that is not member
     /// of the cluster. It acts like a gateway for sending messages to actors
     /// somewhere in the cluster. From the initial contact points it will establish
@@ -39,7 +46,7 @@ namespace Akka.Cluster.Tools.Client
         /// matching entry.
         /// </summary>
         [Serializable]
-        public sealed class Send
+        public sealed class Send: IClusterClientProtocolMessage
         {
             /// <summary>
             /// TBD
@@ -72,7 +79,7 @@ namespace Akka.Cluster.Tools.Client
         /// The message will be delivered to all recipients with a matching path.
         /// </summary>
         [Serializable]
-        public sealed class SendToAll
+        public sealed class SendToAll: IClusterClientProtocolMessage
         {
             /// <summary>
             /// TBD
@@ -100,7 +107,7 @@ namespace Akka.Cluster.Tools.Client
         /// to the named topic.
         /// </summary>
         [Serializable]
-        public sealed class Publish
+        public sealed class Publish: IClusterClientProtocolMessage
         {
             /// <summary>
             /// TBD
@@ -127,7 +134,7 @@ namespace Akka.Cluster.Tools.Client
         /// TBD
         /// </summary>
         [Serializable]
-        internal sealed class RefreshContactsTick
+        internal sealed class RefreshContactsTick: IClusterClientProtocolMessage
         {
             /// <summary>
             /// TBD
@@ -140,7 +147,7 @@ namespace Akka.Cluster.Tools.Client
         /// TBD
         /// </summary>
         [Serializable]
-        internal sealed class HeartbeatTick
+        internal sealed class HeartbeatTick: IClusterClientProtocolMessage
         {
             /// <summary>
             /// TBD
@@ -153,7 +160,7 @@ namespace Akka.Cluster.Tools.Client
         /// TBD
         /// </summary>
         [Serializable]
-        internal sealed class ReconnectTimeout
+        internal sealed class ReconnectTimeout: IClusterClientProtocolMessage
         {
             /// <summary>
             /// TBD
@@ -207,6 +214,12 @@ namespace Akka.Cluster.Tools.Client
             }
 
             _settings = settings;
+
+            if (_settings.UseLegacySerialization)
+            {
+                Context.System.Serialization.RemoveSerializationMap(typeof(IClusterClientProtocolMessage));
+            }
+            
             _failureDetector = new DeadlineFailureDetector(_settings.AcceptableHeartbeatPause, _settings.HeartbeatInterval);
 
             _contactPaths = settings.InitialContacts.ToImmutableHashSet();
@@ -285,68 +298,65 @@ namespace Akka.Cluster.Tools.Client
                     Self);
             }
 
-            if (message is ClusterReceptionist.Contacts contacts)
+            switch (message)
             {
-                if (contacts.ContactPoints.Count > 0)
+                case ClusterReceptionist.Contacts contacts:
                 {
-                    _contactPaths = contacts.ContactPoints.Select(ActorPath.Parse).ToImmutableHashSet();
-                    _contacts = _contactPaths.Select(Context.ActorSelection).ToArray();
-                    _contacts.ForEach(c => c.Tell(new Identify(null)));
+                    if (contacts.ContactPoints.Count > 0)
+                    {
+                        _contactPaths = contacts.ContactPoints.Select(ActorPath.Parse).ToImmutableHashSet();
+                        _contacts = _contactPaths.Select(Context.ActorSelection).ToArray();
+                        _contacts.ForEach(c => c.Tell(new Identify(null)));
+                    }
+
+                    PublishContactPoints();
+                    break;
                 }
-
-                PublishContactPoints();
-            }
-            else if (message is ActorIdentity actorIdentify)
-            {
-                var receptionist = actorIdentify.Subject;
-
-                if (receptionist != null)
+                case ActorIdentity actorIdentify:
                 {
-                    _log.Info("Connected to [{0}]", receptionist.Path);
-                    ScheduleRefreshContactsTick(_settings.RefreshContactsInterval);
-                    SendBuffered(receptionist);
-                    Context.Become(Active(receptionist));
-                    connectTimerCancelable?.Cancel();
+                    var receptionist = actorIdentify.Subject;
+
+                    if (receptionist != null)
+                    {
+                        _log.Info("Connected to [{0}]", receptionist.Path);
+                        ScheduleRefreshContactsTick(_settings.RefreshContactsInterval);
+                        SendBuffered(receptionist);
+                        Context.Become(Active(receptionist));
+                        connectTimerCancelable?.Cancel();
+                        _failureDetector.HeartBeat();
+                        Self.Tell(HeartbeatTick.Instance); // will register us as active client of the selected receptionist
+                    }
+                    else
+                    {
+                        // ok, use another instead
+                    }
+
+                    break;
+                }
+                case HeartbeatTick:
                     _failureDetector.HeartBeat();
-                    Self.Tell(HeartbeatTick.Instance); // will register us as active client of the selected receptionist
-                }
-                else
-                {
-                    // ok, use another instead
-                }
-            }
-            else if (message is HeartbeatTick)
-            {
-                _failureDetector.HeartBeat();
-            }
-            else if (message is RefreshContactsTick)
-            {
-                SendGetContacts();
-            }
-            else if (message is Send send)
-            {
-                Buffer(new PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity));
-            }
-            else if (message is SendToAll sendToAll)
-            {
-                Buffer(new PublishSubscribe.SendToAll(sendToAll.Path, sendToAll.Message));
-            }
-            else if (message is Publish publish)
-            {
-                Buffer(new PublishSubscribe.Publish(publish.Topic, publish.Message));
-            }
-            else if (message is ReconnectTimeout)
-            {
-                _log.Warning("Receptionist reconnect not successful within {0} stopping cluster client", _settings.ReconnectTimeout);
-                Context.Stop(Self);
-            }
-            else if(message is ClusterReceptionist.ReceptionistShutdown)
-            {
-                // ok, haven't chosen a receptionist yet
-            }
-            else
-            {
-                return ContactPointMessages(message);
+                    break;
+                case RefreshContactsTick:
+                    SendGetContacts();
+                    break;
+                case Send send:
+                    Buffer(new PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity));
+                    break;
+                case SendToAll sendToAll:
+                    Buffer(new PublishSubscribe.SendToAll(sendToAll.Path, sendToAll.Message));
+                    break;
+                case Publish publish:
+                    Buffer(new PublishSubscribe.Publish(publish.Topic, publish.Message));
+                    break;
+                case ReconnectTimeout:
+                    _log.Warning("Receptionist reconnect not successful within {0} stopping cluster client", _settings.ReconnectTimeout);
+                    Context.Stop(Self);
+                    break;
+                case ClusterReceptionist.ReceptionistShutdown:
+                    // ok, haven't chosen a receptionist yet
+                    break;
+                default:
+                    return ContactPointMessages(message);
             }
 
             return true;
@@ -356,63 +366,56 @@ namespace Akka.Cluster.Tools.Client
         {
             return message =>
             {
-                if (message is Send send)
+                switch (message)
                 {
-                    receptionist.Forward(new PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity));
-                }
-                else if (message is SendToAll sendToAll)
-                {
-                    receptionist.Forward(new PublishSubscribe.SendToAll(sendToAll.Path, sendToAll.Message));
-                }
-                else if (message is Publish publish)
-                {
-                    receptionist.Forward(new PublishSubscribe.Publish(publish.Topic, publish.Message));
-                }
-                else if (message is HeartbeatTick)
-                {
-                    if (!_failureDetector.IsAvailable)
-                    {
+                    case Send send:
+                        receptionist.Forward(new PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity));
+                        break;
+                    case SendToAll sendToAll:
+                        receptionist.Forward(new PublishSubscribe.SendToAll(sendToAll.Path, sendToAll.Message));
+                        break;
+                    case Publish publish:
+                        receptionist.Forward(new PublishSubscribe.Publish(publish.Topic, publish.Message));
+                        break;
+                    case HeartbeatTick when !_failureDetector.IsAvailable:
                         _log.Info("Lost contact with [{0}], reestablishing connection", receptionist);
                         Reestablish();
-                    }
-                    else
-                    {
+                        break;
+                    case HeartbeatTick:
                         receptionist.Tell(ClusterReceptionist.Heartbeat.Instance);
-                    }
-                }
-                else if (message is ClusterReceptionist.HeartbeatRsp)
-                {
-                    _failureDetector.HeartBeat();
-                }
-                else if (message is RefreshContactsTick)
-                {
-                    receptionist.Tell(ClusterReceptionist.GetContacts.Instance);
-                }
-                else if (message is ClusterReceptionist.Contacts contacts)
-                {
-                    // refresh of contacts
-                    if (contacts.ContactPoints.Count > 0)
+                        break;
+                    case ClusterReceptionist.HeartbeatRsp:
+                        _failureDetector.HeartBeat();
+                        break;
+                    case RefreshContactsTick:
+                        receptionist.Tell(ClusterReceptionist.GetContacts.Instance);
+                        break;
+                    case ClusterReceptionist.Contacts contacts:
                     {
-                        _contactPaths = contacts.ContactPoints.Select(ActorPath.Parse).ToImmutableHashSet();
-                        _contacts = _contactPaths.Select(Context.ActorSelection).ToArray();
+                        // refresh of contacts
+                        if (contacts.ContactPoints.Count > 0)
+                        {
+                            _contactPaths = contacts.ContactPoints.Select(ActorPath.Parse).ToImmutableHashSet();
+                            _contacts = _contactPaths.Select(Context.ActorSelection).ToArray();
+                        }
+                        PublishContactPoints();
+                        break;
                     }
-                    PublishContactPoints();
-                }
-                else if (message is ActorIdentity)
-                {
-                    // ok, from previous establish, already handled
-                }
-                else if (message is ClusterReceptionist.ReceptionistShutdown)
-                {
-                    if (receptionist.Equals(Sender))
+                    case ActorIdentity:
+                        // ok, from previous establish, already handled
+                        break;
+                    case ClusterReceptionist.ReceptionistShutdown:
                     {
-                        _log.Info("Receptionist [{0}] is shutting down, reestablishing connection", receptionist);
-                        Reestablish();
+                        if (receptionist.Equals(Sender))
+                        {
+                            _log.Info("Receptionist [{0}] is shutting down, reestablishing connection", receptionist);
+                            Reestablish();
+                        }
+
+                        break;
                     }
-                }
-                else
-                {
-                    return ContactPointMessages(message);
+                    default:
+                        return ContactPointMessages(message);
                 }
 
                 return true;

@@ -393,6 +393,41 @@ namespace Akka.Serialization
             _serializerMap[type] = serializer;
         }
 
+        /// <summary>
+        /// Remove the serializer mapping for <see cref="Type"/> <paramref name="type"/> and all other types
+        /// that were derived from it.
+        /// </summary>
+        /// <param name="type">The <see cref="Type"/> that will be removed from the serializer mapping</param>
+        /// <exception cref="InvalidOperationException">>Thrown when <paramref name="type"/> is of type <see cref="Object"/></exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void RemoveSerializationMap(Type type)
+        {
+            if (type == typeof(object))
+                throw new InvalidOperationException("Could not remove the default object type serializer.");
+            
+            if(!_serializerMap.ContainsKey(type))
+                return;
+            
+            if(_logSerializerOverrideOnStart)
+                LogWarning($"Serializer for type [{type}] are being removed. Did you mean to do this?");
+
+            if (!_serializerMap.TryRemove(type, out _))
+            {
+                LogWarning($"Failed to remove serializer for type [{type}]");
+            }
+            
+            foreach (var serializerType in _serializerMap.Keys)
+            {
+                if (serializerType.IsAssignableFrom(type) && serializerType != _objectType)
+                {
+                    if (!_serializerMap.TryRemove(serializerType, out _))
+                    {
+                        
+                    }
+                }
+            }
+        }
+
         private void LogWarning(string str)
         {
             // Logging.StandardOutLogger is a MinimalActorRef, i.e. not a "real" actor
