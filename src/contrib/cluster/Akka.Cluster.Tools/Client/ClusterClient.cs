@@ -46,7 +46,7 @@ namespace Akka.Cluster.Tools.Client
         /// matching entry.
         /// </summary>
         [Serializable]
-        public sealed class Send: IClusterClientProtocolMessage
+        public sealed class Send: IClusterClientProtocolMessage, IEquatable<Send>
         {
             /// <summary>
             /// TBD
@@ -73,13 +73,36 @@ namespace Akka.Cluster.Tools.Client
                 Message = message;
                 LocalAffinity = localAffinity;
             }
+
+            public bool Equals(Send other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Path == other.Path && Equals(Message, other.Message) && LocalAffinity == other.LocalAffinity;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return ReferenceEquals(this, obj) || obj is Send other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = (Path != null ? Path.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (Message != null ? Message.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ LocalAffinity.GetHashCode();
+                    return hashCode;
+                }
+            }
         }
 
         /// <summary>
         /// The message will be delivered to all recipients with a matching path.
         /// </summary>
         [Serializable]
-        public sealed class SendToAll: IClusterClientProtocolMessage
+        public sealed class SendToAll: IClusterClientProtocolMessage, IEquatable<SendToAll>
         {
             /// <summary>
             /// TBD
@@ -100,6 +123,26 @@ namespace Akka.Cluster.Tools.Client
                 Path = path;
                 Message = message;
             }
+
+            public bool Equals(SendToAll other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Path == other.Path && Equals(Message, other.Message);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return ReferenceEquals(this, obj) || obj is SendToAll other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return ((Path != null ? Path.GetHashCode() : 0) * 397) ^ (Message != null ? Message.GetHashCode() : 0);
+                }
+            }
         }
 
         /// <summary>
@@ -107,7 +150,7 @@ namespace Akka.Cluster.Tools.Client
         /// to the named topic.
         /// </summary>
         [Serializable]
-        public sealed class Publish: IClusterClientProtocolMessage
+        public sealed class Publish: IClusterClientProtocolMessage, IEquatable<Publish>
         {
             /// <summary>
             /// TBD
@@ -128,45 +171,92 @@ namespace Akka.Cluster.Tools.Client
                 Topic = topic;
                 Message = message;
             }
+
+            public bool Equals(Publish other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Topic == other.Topic && Equals(Message, other.Message);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return ReferenceEquals(this, obj) || obj is Publish other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return ((Topic != null ? Topic.GetHashCode() : 0) * 397) ^ (Message != null ? Message.GetHashCode() : 0);
+                }
+            }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         [Serializable]
-        internal sealed class RefreshContactsTick: IClusterClientProtocolMessage
+        internal sealed class RefreshContactsTick: IClusterClientProtocolMessage, IEquatable<RefreshContactsTick>
         {
             /// <summary>
             /// TBD
             /// </summary>
             public static RefreshContactsTick Instance { get; } = new();
             private RefreshContactsTick() { }
+            
+            public bool Equals(RefreshContactsTick other) => other != null;
+
+            public override bool Equals(object obj)
+            {
+                return ReferenceEquals(this, obj) || obj is RefreshContactsTick;
+            }
+
+            public override int GetHashCode() => 0;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         [Serializable]
-        internal sealed class HeartbeatTick: IClusterClientProtocolMessage
+        internal sealed class HeartbeatTick: IClusterClientProtocolMessage, IEquatable<HeartbeatTick>
         {
             /// <summary>
             /// TBD
             /// </summary>
             public static HeartbeatTick Instance { get; } = new();
             private HeartbeatTick() { }
+
+            public bool Equals(HeartbeatTick other) => other != null;
+
+            public override bool Equals(object obj)
+            {
+                return ReferenceEquals(this, obj) || obj is HeartbeatTick;
+            }
+
+            public override int GetHashCode() => 0;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         [Serializable]
-        internal sealed class ReconnectTimeout: IClusterClientProtocolMessage
+        internal sealed class ReconnectTimeout: IClusterClientProtocolMessage, IEquatable<ReconnectTimeout>
         {
             /// <summary>
             /// TBD
             /// </summary>
             public static ReconnectTimeout Instance { get; } = new();
             private ReconnectTimeout() { }
+
+            public bool Equals(ReconnectTimeout other) => other != null;
+
+            public override bool Equals(object obj)
+            {
+                return ReferenceEquals(this, obj) || obj is ReconnectTimeout;
+            }
+
+            public override int GetHashCode() => 0;
         }
 
         #endregion

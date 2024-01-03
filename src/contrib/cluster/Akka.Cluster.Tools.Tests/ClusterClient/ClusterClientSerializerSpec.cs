@@ -6,6 +6,8 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -107,4 +109,39 @@ akka.cluster.client.use-legacy-serialization = {(useLegacy ? "on" : "off")}
         }
     }
     
+    [Theory(DisplayName = "ClusterClient messages should be serialized properly")]
+    [MemberData(nameof(MessageGenerator))]
+    public void SerializeMessageTypeType(IClusterClientProtocolMessage message)
+    {
+        var settings = ClusterClientSettings.Create(Sys)
+            .WithInitialContacts(new []{_actorPath}.ToImmutableHashSet());
+        var clusterClient = Sys.ActorOf(Client.ClusterClient.Props(settings));
+        
+        var serializer = Sys.Serialization.FindSerializerFor(message);
+        var serialized = serializer.ToBinary(message);
+        
+        IClusterClientProtocolMessage deserialized;
+        if (_useLegacy)
+        {
+            deserialized = serializer.FromBinary<IClusterClientProtocolMessage>(serialized);
+        }
+        else
+        {
+            var manifestSerializer = (SerializerWithStringManifest)serializer;
+            var manifest = manifestSerializer.Manifest(message);
+            deserialized = (IClusterClientProtocolMessage) manifestSerializer.FromBinary(serialized, manifest);
+        }
+
+        deserialized.Should().Be(message);
+    }
+
+    public static IEnumerable<object[]> MessageGenerator()
+    {
+        yield return new object[] { new Client.ClusterClient.Send("path", "message") };
+        yield return new object[] { new Client.ClusterClient.SendToAll("path", "message") };
+        yield return new object[] { new Client.ClusterClient.Publish("topic", "message") };
+        yield return new object[] { Client.ClusterClient.RefreshContactsTick.Instance };
+        yield return new object[] { Client.ClusterClient.HeartbeatTick.Instance };
+        yield return new object[] { Client.ClusterClient.ReconnectTimeout.Instance };
+    }
 }

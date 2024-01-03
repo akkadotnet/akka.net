@@ -12,24 +12,33 @@ namespace Akka.Cluster.Tools.Client
         protected override void PostStop() { }
         public static Akka.Actor.Props Props(Akka.Cluster.Tools.Client.ClusterClientSettings settings) { }
         protected override bool Receive(object message) { }
-        public sealed class Publish : Akka.Cluster.Tools.Client.IClusterClientProtocolMessage
+        public sealed class Publish : Akka.Cluster.Tools.Client.IClusterClientProtocolMessage, System.IEquatable<Akka.Cluster.Tools.Client.ClusterClient.Publish>
         {
             public Publish(string topic, object message) { }
             public object Message { get; }
             public string Topic { get; }
+            public bool Equals(Akka.Cluster.Tools.Client.ClusterClient.Publish other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
         }
-        public sealed class Send : Akka.Cluster.Tools.Client.IClusterClientProtocolMessage
+        public sealed class Send : Akka.Cluster.Tools.Client.IClusterClientProtocolMessage, System.IEquatable<Akka.Cluster.Tools.Client.ClusterClient.Send>
         {
             public Send(string path, object message, bool localAffinity = False) { }
             public bool LocalAffinity { get; }
             public object Message { get; }
             public string Path { get; }
+            public bool Equals(Akka.Cluster.Tools.Client.ClusterClient.Send other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
         }
-        public sealed class SendToAll : Akka.Cluster.Tools.Client.IClusterClientProtocolMessage
+        public sealed class SendToAll : Akka.Cluster.Tools.Client.IClusterClientProtocolMessage, System.IEquatable<Akka.Cluster.Tools.Client.ClusterClient.SendToAll>
         {
             public SendToAll(string path, object message) { }
             public object Message { get; }
             public string Path { get; }
+            public bool Equals(Akka.Cluster.Tools.Client.ClusterClient.SendToAll other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
         }
     }
     public sealed class ClusterClientReceptionist : Akka.Actor.IExtension
