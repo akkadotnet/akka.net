@@ -117,12 +117,14 @@ namespace Akka.Cluster.Sharding
     {
         public static System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<T>> Grouped<T>(this System.Collections.Generic.IEnumerable<T> items, int size) { }
     }
+    [System.ObsoleteAttribute("Use HashCodeMessageExtractor or IMessageExtractor instead.")]
     [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
             0,
             0,
             1,
             1})]
     public delegate Akka.Util.Option<System.ValueTuple<string, object>> ExtractEntityId(object message);
+    [System.ObsoleteAttribute("Use HashCodeMessageExtractor or IMessageExtractor instead.")]
     public delegate string ExtractShardId(object message);
     public sealed class GetClusterShardingStats : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery, System.IEquatable<Akka.Cluster.Sharding.GetClusterShardingStats>
     {

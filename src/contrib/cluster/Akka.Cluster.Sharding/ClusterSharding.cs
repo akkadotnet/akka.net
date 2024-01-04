@@ -36,15 +36,10 @@ namespace Akka.Cluster.Sharding
     public interface IClusterShardingSerializable { }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     public sealed class ClusterShardingExtensionProvider : ExtensionIdProvider<ClusterSharding>
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
         public override ClusterSharding CreateExtension(ExtendedActorSystem system)
         {
             var extension = new ClusterSharding(system);
@@ -67,7 +62,7 @@ namespace Akka.Cluster.Sharding
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string? EntityId(object message)
+        public string? EntityId(Msg message)
         {
             return message switch
             {
@@ -77,7 +72,7 @@ namespace Akka.Cluster.Sharding
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public object? EntityMessage(object message)
+        public Msg? EntityMessage(Msg message)
         {
             return message switch
             {
@@ -87,13 +82,13 @@ namespace Akka.Cluster.Sharding
         }
 
         [Obsolete("Use ShardId(EntityId, object) instead.")]
-        public string? ShardId(object message)
+        public string? ShardId(Msg message)
         {
            return _underlying.ShardId(message);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string ShardId(string entityId, object? messageHint = null)
+        public string ShardId(string entityId, Msg? messageHint = null)
         {
             return _underlying.ShardId(entityId, messageHint);
         }
@@ -108,18 +103,18 @@ namespace Akka.Cluster.Sharding
     {
         private sealed class Implementation : HashCodeMessageExtractor
         {
-            private readonly Func<object, string> _entityIdExtractor;
-            private readonly Func<object, object>? _messageExtractor;
-            public Implementation(int maxNumberOfShards, Func<object, string> entityIdExtractor, Func<object, object>? messageExtractor = null) : base(maxNumberOfShards)
+            private readonly Func<Msg, string> _entityIdExtractor;
+            private readonly Func<Msg, Msg>? _messageExtractor;
+            public Implementation(int maxNumberOfShards, Func<Msg, string> entityIdExtractor, Func<Msg, Msg>? messageExtractor = null) : base(maxNumberOfShards)
             {
                 _entityIdExtractor = entityIdExtractor ?? throw new NullReferenceException(nameof(entityIdExtractor));
                 _messageExtractor = messageExtractor;
             }
 
-            public override string EntityId(object message)
+            public override string EntityId(Msg message)
                 => _entityIdExtractor.Invoke(message);
 
-            public override object EntityMessage(object message)
+            public override Msg EntityMessage(Msg message)
                 => _messageExtractor?.Invoke(message) ?? base.EntityMessage(message);
         }
 
@@ -130,7 +125,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="entityIdExtractor"></param>
         /// <param name="messageExtractor"></param>
         /// <returns></returns>
-        public static HashCodeMessageExtractor Create(int maxNumberOfShards, Func<object, string> entityIdExtractor, Func<object, object>? messageExtractor = null)
+        public static HashCodeMessageExtractor Create(int maxNumberOfShards, Func<Msg, string> entityIdExtractor, Func<Msg, Msg>? messageExtractor = null)
             => new Implementation(maxNumberOfShards, entityIdExtractor, messageExtractor);
 
         /// <summary>
@@ -160,7 +155,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public abstract string EntityId(object message);
+        public abstract string EntityId(Msg message);
 
         /// <summary>
         /// Default implementation pass on the message as is.
@@ -168,7 +163,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual object EntityMessage(object message)
+        public virtual Msg EntityMessage(Msg message)
         {
             return message;
         }
@@ -180,7 +175,7 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [Obsolete("Use ShardId(string, object?) instead")]
-        public virtual string ShardId(object message)
+        public virtual string ShardId(Msg message)
         {
             EntityId id;
             if (message is ShardRegion.StartEntity se)
@@ -192,7 +187,7 @@ namespace Akka.Cluster.Sharding
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual string ShardId(string entityId, object? messageHint = null)
+        public virtual string ShardId(string entityId, Msg? messageHint = null)
         {
             return _cachedIds[(Math.Abs(MurmurHash.StringHash(entityId)) % MaxNumberOfShards)];
         }
@@ -425,7 +420,7 @@ namespace Akka.Cluster.Sharding
             ExtractEntityId extractEntityId,
             ExtractShardId extractShardId,
             IShardAllocationStrategy allocationStrategy,
-            object handOffStopMessage)
+            Msg handOffStopMessage)
         {
             return InternalStart(
                 typeName,
@@ -479,7 +474,7 @@ namespace Akka.Cluster.Sharding
             ExtractEntityId extractEntityId,
             ExtractShardId extractShardId,
             IShardAllocationStrategy allocationStrategy,
-            object handOffStopMessage)
+            Msg handOffStopMessage)
         {
             return InternalStartAsync(
                 typeName,
@@ -620,7 +615,7 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor messageExtractor,
             IShardAllocationStrategy allocationStrategy,
-            object handOffStopMessage)
+            Msg handOffStopMessage)
         {
             return InternalStart(
                 typeName,
@@ -667,7 +662,7 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor messageExtractor,
             IShardAllocationStrategy allocationStrategy,
-            object handOffStopMessage)
+            Msg handOffStopMessage)
         {
             return InternalStartAsync(
                 typeName,
@@ -800,7 +795,7 @@ namespace Akka.Cluster.Sharding
             ExtractEntityId extractEntityId,
             ExtractShardId extractShardId,
             IShardAllocationStrategy allocationStrategy,
-            object handOffStopMessage)
+            Msg handOffStopMessage)
         {
             return InternalStart(
                 typeName,
@@ -854,7 +849,7 @@ namespace Akka.Cluster.Sharding
             ExtractEntityId extractEntityId,
             ExtractShardId extractShardId,
             IShardAllocationStrategy allocationStrategy,
-            object handOffStopMessage)
+            Msg handOffStopMessage)
         {
             return InternalStartAsync(
                 typeName,
@@ -871,7 +866,7 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor extractor,
             IShardAllocationStrategy allocationStrategy,
-            object handOffStopMessage)
+            Msg handOffStopMessage)
         {
             if (settings.ShouldHostShard(_cluster))
             {
@@ -923,7 +918,7 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor extractor,
             IShardAllocationStrategy allocationStrategy,
-            object handOffStopMessage)
+            Msg handOffStopMessage)
         {
             if (settings.ShouldHostShard(_cluster))
             {
@@ -1099,7 +1094,7 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor messageExtractor,
             IShardAllocationStrategy allocationStrategy,
-            object handOffStopMessage)
+            Msg handOffStopMessage)
         {
             return InternalStart(
                 typeName,
@@ -1146,7 +1141,7 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor messageExtractor,
             IShardAllocationStrategy allocationStrategy,
-            object handOffStopMessage)
+            Msg handOffStopMessage)
         {
             return InternalStartAsync(
                 typeName,
@@ -1476,6 +1471,7 @@ namespace Akka.Cluster.Sharding
     /// Only messages that passed the <see cref="ExtractEntityId"/> will be used
     /// as input to this function.
     /// </summary>
+    [Obsolete("Use HashCodeMessageExtractor or IMessageExtractor instead.")]
     public delegate ShardId ExtractShardId(Msg message);
 
     /// <summary>
@@ -1488,6 +1484,7 @@ namespace Akka.Cluster.Sharding
     /// message to support wrapping in message envelope that is unwrapped before
     /// sending to the entity actor.
     /// </summary>
+    [Obsolete("Use HashCodeMessageExtractor or IMessageExtractor instead.")]
     public delegate Option<(EntityId, Msg)> ExtractEntityId(Msg message);
 
     /// <summary>
@@ -1503,7 +1500,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        EntityId? EntityId(object message);
+        EntityId? EntityId(Msg message);
 
         /// <summary>
         /// Extract the message to send to the entity from an incoming <paramref name="message"/>.
@@ -1513,7 +1510,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        object? EntityMessage(object message);
+        Msg? EntityMessage(Msg message);
 
         /// <summary>
         /// Extract the shard id from an incoming <paramref name="message"/>. Only messages that
@@ -1522,7 +1519,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="message">The message being delivered to the entity actor.</param>
         /// <returns>The ShardId.</returns>
         [Obsolete("Use ShardId(EntityId, object) instead.")]
-        ShardId? ShardId(object message);
+        ShardId? ShardId(Msg message);
         
         /// <summary>
         /// More performant overload of <see cref="EntityId(object)"/> that accepts an entity id in order to
@@ -1531,7 +1528,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="entityId">Should always be populated with a non-null value.</param>
         /// <param name="messageHint">The message - FOR BACKWARDS COMPATIBILITY ONLY.</param>
         /// <returns>The ShardId.</returns>
-        ShardId ShardId(EntityId entityId, object? messageHint = null);
+        ShardId ShardId(EntityId entityId, Msg? messageHint = null);
     }
 
     /// <summary>
@@ -1541,6 +1538,7 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     internal sealed class DeprecatedHandlerExtractorAdapter : IMessageExtractor
     {
+#pragma warning disable CS0618 // Type or member is obsolete
         private readonly ExtractEntityId _extractEntityId;
         private readonly ExtractShardId _extractShardId;
 
@@ -1550,28 +1548,29 @@ namespace Akka.Cluster.Sharding
             _extractShardId = extractShardId;
         }
 
-        public string? EntityId(object message)
+        public string? EntityId(Msg message)
         {
             var entityId = _extractEntityId(message);
             return entityId.HasValue ? entityId.Value.Item1 : null;
         }
 
-        public object? EntityMessage(object message)
+        public Msg? EntityMessage(Msg message)
         {
             var entityId = _extractEntityId(message);
             return entityId.HasValue ? entityId.Value.Item2 : null;
         }
 
-        public string? ShardId(object message)
+        public string? ShardId(Msg message)
         {
             return _extractShardId(message);
         }
 
-        public string ShardId(string entityId, object? messageHint = null)
+        public string ShardId(string entityId, Msg? messageHint = null)
         {
             if(messageHint is null)
                 throw new ArgumentNullException(nameof(messageHint), "DeprecatedHandlerExtractorAdapter: Message hint must be provided when using the ShardId(EntityId, object) overload.");
             return _extractShardId(messageHint);
         }
+#pragma warning restore CS0618 // Type or member is obsolete
     }
 }
