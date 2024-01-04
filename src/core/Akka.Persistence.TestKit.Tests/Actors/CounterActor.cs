@@ -17,7 +17,7 @@ namespace Akka.Persistence.TestKit.Tests
     {
         public CounterActor(string id)
         {
-            this.PersistenceId = id;
+            PersistenceId = id;
         }
 
         private int _value = 0;
@@ -68,9 +68,9 @@ namespace Akka.Persistence.TestKit.Tests
     public class CounterActorTests : PersistenceTestKit
     {
         [Fact]
-        public async Task CounterActor_internal_state_will_be_lost_if_underlying_persistence_store_is_not_available()
+        public Task CounterActor_internal_state_will_be_lost_if_underlying_persistence_store_is_not_available()
         {
-            await WithJournalWrite(write => write.Fail(), async () => 
+            return WithJournalWrite(write => write.Fail(), async () => 
             {
                 var counterProps = Props.Create(() => new CounterActor("test"));
                 var actor = ActorOf(counterProps, "counter");

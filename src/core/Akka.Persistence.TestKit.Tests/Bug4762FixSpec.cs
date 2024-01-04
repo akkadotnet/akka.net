@@ -65,10 +65,10 @@ namespace Akka.Persistence.TestKit.Tests
         }
 
         [Fact]
-        public async Task TestJournal_PersistAll_should_only_count_each_event_exceptions_once()
+        public Task TestJournal_PersistAll_should_only_count_each_event_exceptions_once()
         {
             var probe = CreateTestProbe();
-            await WithJournalWrite(write => write.Pass(), async () =>
+            return WithJournalWrite(write => write.Pass(), async () =>
             {
                 var actor = ActorOf(() => new TestActor2(probe));
                 Watch(actor);
