@@ -176,11 +176,11 @@ namespace Akka.TestKit
             // Wait for the testactor to start
             WaitUntilTestActorIsReady(testActor);
 
-            if (!(this is INoImplicitSender))
+            if (this is not INoImplicitSender)
             {
                 InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)testActor).Underlying;
             }
-            else if (!(this is TestProbe))
+            else if (this is not TestProbe)
             //HACK: we need to clear the current context when running a No Implicit Sender test as sender from an async test may leak
             //but we should not clear the current context when creating a testprobe from a test
             {
@@ -548,7 +548,7 @@ namespace Akka.TestKit
             SupervisorStrategy supervisorStrategy,
             CancellationToken cancellationToken = default)
             => ChildActorOfAsync(props, name, supervisorStrategy, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .Result;
 
         /// <summary>
         /// Spawns an actor as a child of this test actor, and returns the child's IActorRef
@@ -566,7 +566,7 @@ namespace Akka.TestKit
         {
             TestActor.Tell(new TestActor.Spawn(props, name, supervisorStrategy));
             return await ExpectMsgAsync<IActorRef>(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -579,7 +579,7 @@ namespace Akka.TestKit
         public IActorRef ChildActorOf(
             Props props, SupervisorStrategy supervisorStrategy, CancellationToken cancellationToken = default)
             => ChildActorOfAsync(props, supervisorStrategy, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .Result;
 
         /// <summary>
         /// Spawns an actor as a child of this test actor with an auto-generated name, and returns the child's ActorRef.
@@ -593,7 +593,7 @@ namespace Akka.TestKit
         {
             TestActor.Tell(new TestActor.Spawn(props, Option<string>.None, supervisorStrategy));
             return await ExpectMsgAsync<IActorRef>(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -605,7 +605,7 @@ namespace Akka.TestKit
         /// <returns></returns>
         public IActorRef ChildActorOf(Props props, string name, CancellationToken cancellationToken = default)
             => ChildActorOfAsync(props, name, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .Result;
         
         /// <summary>
         /// Spawns an actor as a child of this test actor with a stopping supervisor strategy, and returns the child's ActorRef.
@@ -619,7 +619,7 @@ namespace Akka.TestKit
         {
             TestActor.Tell(new TestActor.Spawn(props, name, Option<SupervisorStrategy>.None));
             return await ExpectMsgAsync<IActorRef>(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
         
         /// <summary>
@@ -630,7 +630,7 @@ namespace Akka.TestKit
         /// <returns></returns>
         public IActorRef ChildActorOf(Props props, CancellationToken cancellationToken = default)
             => ChildActorOfAsync(props, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .Result;
 
         /// <summary>
         /// Spawns an actor as a child of this test actor with an auto-generated name and stopping supervisor strategy, returning the child's ActorRef.
@@ -642,7 +642,7 @@ namespace Akka.TestKit
         {
             TestActor.Tell(new TestActor.Spawn(props, Option<string>.None, Option<SupervisorStrategy>.None));
             return await ExpectMsgAsync<IActorRef>(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>

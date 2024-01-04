@@ -67,7 +67,7 @@ namespace Akka.TestKit.Internal
             }
 
             await ExpectOneAsync(Wrapped, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -83,7 +83,7 @@ namespace Akka.TestKit.Internal
                     expectedCount: 1,
                     timeout: null,
                     cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -116,7 +116,7 @@ namespace Akka.TestKit.Internal
                     expectedCount: 1,
                     timeout: timeout,
                     cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -147,7 +147,7 @@ namespace Akka.TestKit.Internal
                     expectedCount: expectedCount,
                     timeout: null,
                     cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
 
         /// <summary>
         /// Async version of Expect
@@ -164,7 +164,7 @@ namespace Akka.TestKit.Internal
                     expectedCount: expectedCount,
                     timeout: timeout,
                     cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -199,7 +199,7 @@ namespace Akka.TestKit.Internal
                     expectedCount: expectedCount,
                     timeout: timeout,
                     cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         public async Task ExpectAsync(int expectedCount, TimeSpan timeout, Action action, CancellationToken cancellationToken = default)
@@ -401,7 +401,7 @@ namespace Akka.TestKit.Internal
                     expectedOccurrences: null,
                     matchedEventHandler: null,
                     cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         public async Task MuteAsync(Action action, CancellationToken cancellationToken = default)
@@ -600,7 +600,7 @@ namespace Akka.TestKit.Internal
                         await actionAsync();
                         return NotUsed.Instance;
                     }, actorSystem, timeout, expectedCount, cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
         
         /// <summary>

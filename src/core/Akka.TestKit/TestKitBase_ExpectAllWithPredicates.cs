@@ -21,7 +21,7 @@ public abstract partial class TestKitBase
     {
         return ExpectMsgAllOfMatchingPredicatesAsync(predicates, cancellationToken)
             .ToListAsync(cancellationToken)
-            .ConfigureAwait(false).GetAwaiter().GetResult();
+            .Result;
     }
 
     public async IAsyncEnumerable<object> ExpectMsgAllOfMatchingPredicatesAsync(
@@ -30,7 +30,7 @@ public abstract partial class TestKitBase
     {
         var enumerable = InternalExpectMsgAllOfMatchingPredicatesAsync(new TimeSpan(0, 0, 60), predicates,
                 cancellationToken: cancellationToken)
-            .ConfigureAwait(false).WithCancellation(cancellationToken);
+            .WithCancellation(cancellationToken);
         await foreach (var item in enumerable)
         {
             yield return item;
@@ -48,7 +48,7 @@ public abstract partial class TestKitBase
     {
         return ExpectMsgAllOfMatchingPredicatesAsync(max, predicates, cancellationToken)
             .ToListAsync(cancellationToken)
-            .ConfigureAwait(false).GetAwaiter().GetResult();
+            .Result;
     }
 
     public async IAsyncEnumerable<object> ExpectMsgAllOfMatchingPredicatesAsync(
@@ -58,7 +58,7 @@ public abstract partial class TestKitBase
     {
         max.EnsureIsPositiveFinite("max");
         var enumerable = InternalExpectMsgAllOfAsync(Dilated(max), predicates, cancellationToken: cancellationToken)
-            .ConfigureAwait(false).WithCancellation(cancellationToken);
+            .WithCancellation(cancellationToken);
         await foreach (var item in enumerable)
         {
             yield return item;
@@ -78,7 +78,7 @@ public abstract partial class TestKitBase
 
         var unexpectedMessages = new List<object>();
         var receivedMessages = InternalReceiveNAsync(predicateInfos.Count, max, shouldLog, cancellationToken)
-            .ConfigureAwait(false).WithCancellation(cancellationToken);
+            .WithCancellation(cancellationToken);
         await foreach (var msg in receivedMessages)
         {
             var foundPredicateInfo = predicateInfoList.FirstOrDefault(p =>
