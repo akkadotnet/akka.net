@@ -263,7 +263,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
-                // start it with a new shard id extractor, which will put the entities
+                // start it with a new shard id messageExtractor, which will put the entities
                 // on different shards
 
                 RunOn(() =>

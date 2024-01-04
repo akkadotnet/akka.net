@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -17,6 +18,7 @@ using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
 using Akka.Util.Internal;
+using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Cluster.Sharding
 {
@@ -38,7 +40,9 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// A Shard command
         /// </summary>
-        public interface IRememberEntityCommand { }
+        public interface IRememberEntityCommand
+        {
+        }
 
         /// <summary>
         /// When remembering entities and the entity stops without issuing a `Passivate`, we
@@ -56,12 +60,12 @@ namespace Akka.Cluster.Sharding
             #region Equals
 
             /// <inheritdoc/>
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 return Equals(obj as RestartTerminatedEntity);
             }
 
-            public bool Equals(RestartTerminatedEntity other)
+            public bool Equals(RestartTerminatedEntity? other)
             {
                 if (ReferenceEquals(other, null)) return false;
                 if (ReferenceEquals(other, this)) return true;
@@ -82,7 +86,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// If the shard id extractor is changed, remembered entities will start in a different shard
+        /// If the shard id messageExtractor is changed, remembered entities will start in a different shard
         /// and this message is sent to the shard to not leak `entityId -> RememberedButNotStarted` entries
         /// </summary>
         public sealed class EntitiesMovedToOtherShard : IRememberEntityCommand, IEquatable<EntitiesMovedToOtherShard>
@@ -97,12 +101,12 @@ namespace Akka.Cluster.Sharding
             #region Equals
 
             /// <inheritdoc/>
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 return Equals(obj as EntitiesMovedToOtherShard);
             }
 
-            public bool Equals(EntitiesMovedToOtherShard other)
+            public bool Equals(EntitiesMovedToOtherShard? other)
             {
                 if (ReferenceEquals(other, null)) return false;
                 if (ReferenceEquals(other, this)) return true;
@@ -131,7 +135,9 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// A query for information about the shard
         /// </summary>
-        public interface IShardQuery { }
+        public interface IShardQuery
+        {
+        }
 
         /// <summary>
         /// TBD
@@ -159,6 +165,7 @@ namespace Akka.Cluster.Sharding
             /// TBD
             /// </summary>
             public readonly ShardId ShardId;
+
             /// <summary>
             /// TBD
             /// </summary>
@@ -178,18 +185,18 @@ namespace Akka.Cluster.Sharding
             #region Equals
 
             /// <inheritdoc/>
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 return Equals(obj as CurrentShardState);
             }
 
-            public bool Equals(CurrentShardState other)
+            public bool Equals(CurrentShardState? other)
             {
                 if (ReferenceEquals(other, null)) return false;
                 if (ReferenceEquals(other, this)) return true;
 
                 return ShardId.Equals(other.ShardId)
-                    && EntityIds.SetEquals(other.EntityIds);
+                       && EntityIds.SetEquals(other.EntityIds);
             }
 
             /// <inheritdoc/>
@@ -205,7 +212,8 @@ namespace Akka.Cluster.Sharding
             }
 
             /// <inheritdoc/>
-            public override string ToString() => $"CurrentShardState(shardId:{ShardId}, entityIds:{string.Join(", ", EntityIds)})";
+            public override string ToString() =>
+                $"CurrentShardState(shardId:{ShardId}, entityIds:{string.Join(", ", EntityIds)})";
 
             #endregion
         }
@@ -239,6 +247,7 @@ namespace Akka.Cluster.Sharding
             /// TBD
             /// </summary>
             public readonly ShardId ShardId;
+
             /// <summary>
             /// TBD
             /// </summary>
@@ -258,18 +267,18 @@ namespace Akka.Cluster.Sharding
             #region Equals
 
             /// <inheritdoc/>
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 return Equals(obj as ShardStats);
             }
 
-            public bool Equals(ShardStats other)
+            public bool Equals(ShardStats? other)
             {
                 if (ReferenceEquals(other, null)) return false;
                 if (ReferenceEquals(other, this)) return true;
 
                 return ShardId.Equals(other.ShardId)
-                    && EntityCount.Equals(other.EntityCount);
+                       && EntityCount.Equals(other.EntityCount);
             }
 
             /// <inheritdoc/>
@@ -294,9 +303,9 @@ namespace Akka.Cluster.Sharding
         {
             public readonly bool Acquired;
 
-            public readonly Exception Reason;
+            public readonly Exception? Reason;
 
-            public LeaseAcquireResult(bool acquired, Exception reason)
+            public LeaseAcquireResult(bool acquired, Exception? reason)
             {
                 Acquired = acquired;
                 Reason = reason;
@@ -318,7 +327,10 @@ namespace Akka.Cluster.Sharding
         public sealed class LeaseRetry : IDeadLetterSuppression, INoSerializationVerificationNeeded
         {
             public static readonly LeaseRetry Instance = new();
-            private LeaseRetry() { }
+
+            private LeaseRetry()
+            {
+            }
         }
 
 
@@ -329,18 +341,16 @@ namespace Akka.Cluster.Sharding
             ShardId shardId,
             Func<string, Props> entityProps,
             ClusterShardingSettings settings,
-            ExtractEntityId extractEntityId,
-            ExtractShardId extractShardId,
+            IMessageExtractor extractor,
             object handOffStopMessage,
-             IRememberEntitiesProvider rememberEntitiesProvider)
+            IRememberEntitiesProvider? rememberEntitiesProvider)
         {
             return Actor.Props.Create(() => new Shard(
                 typeName,
                 shardId,
                 entityProps,
                 settings,
-                extractEntityId,
-                extractShardId,
+                extractor,
                 handOffStopMessage,
                 rememberEntitiesProvider)).WithDeploy(Deploy.Local);
         }
@@ -349,7 +359,10 @@ namespace Akka.Cluster.Sharding
         public sealed class PassivateIdleTick : INoSerializationVerificationNeeded
         {
             public static readonly PassivateIdleTick Instance = new();
-            private PassivateIdleTick() { }
+
+            private PassivateIdleTick()
+            {
+            }
         }
 
         private sealed class EntityTerminated
@@ -394,12 +407,11 @@ namespace Akka.Cluster.Sharding
             public RememberEntitiesShardStore.ICommand Operation { get; }
         }
 
-
         #endregion
 
         //
         // State machine for an entity:
-        //                                                                       Started on another shard bc. shard id extractor changed (we need to store that)
+        //                                                                       Started on another shard bc. shard id messageExtractor changed (we need to store that)
         //                                                                +------------------------------------------------------------------+
         //                                                                |                                                                  |
         //              Entity id remembered on shard start     +-------------------------+    StartEntity or early message for entity       |
@@ -437,7 +449,9 @@ namespace Akka.Cluster.Sharding
 
             protected EntityState InvalidTransition(EntityState to, Entities entities)
             {
-                var exception = new ArgumentException($"Transition from {this} to {to} not allowed, remember entities: {entities.RememberingEntities}");
+                var exception =
+                    new ArgumentException(
+                        $"Transition from {this} to {to} not allowed, remember entities: {entities.RememberingEntities}");
                 if (entities.FailOnIllegalTransition)
                 {
                     // crash shard
@@ -528,7 +542,7 @@ namespace Akka.Cluster.Sharding
         {
             private static readonly RememberingStart Empty = new(ImmutableHashSet<IActorRef>.Empty);
 
-            public static RememberingStart Create(IActorRef ackTo)
+            public static RememberingStart Create(IActorRef? ackTo)
             {
                 if (ackTo == null)
                     return Empty;
@@ -571,12 +585,12 @@ namespace Akka.Cluster.Sharding
             #region Equals
 
             /// <inheritdoc/>
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 return Equals(obj as RememberingStart);
             }
 
-            public bool Equals(RememberingStart other)
+            public bool Equals(RememberingStart? other)
             {
                 if (ReferenceEquals(other, null)) return false;
                 if (ReferenceEquals(other, this)) return true;
@@ -642,12 +656,12 @@ namespace Akka.Cluster.Sharding
             #region Equals
 
             /// <inheritdoc/>
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 return Equals(obj as WithRef);
             }
 
-            public bool Equals(WithRef other)
+            public bool Equals(WithRef? other)
             {
                 if (ReferenceEquals(other, null)) return false;
                 if (ReferenceEquals(other, this)) return true;
@@ -739,8 +753,10 @@ namespace Akka.Cluster.Sharding
         internal sealed class Entities
         {
             private readonly Dictionary<EntityId, EntityState> _entities = new();
+
             // needed to look up entity by ref when a Passivating is received
             private readonly Dictionary<IActorRef, EntityId> _byRef = new();
+
             // optimization to not have to go through all entities to find batched writes
             private readonly HashSet<EntityId> _remembering = new();
 
@@ -774,7 +790,7 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
-            public void RememberingStart(EntityId entityId, IActorRef ackTo)
+            public void RememberingStart(EntityId entityId, IActorRef? ackTo)
             {
                 var newState = Shard.RememberingStart.Create(ackTo);
                 var state = EntityState(entityId).Transition(newState, this);
@@ -821,13 +837,11 @@ namespace Akka.Cluster.Sharding
                     _remembering.Remove(entityId);
             }
 
-            public IActorRef Entity(EntityId entityId)
+            public IActorRef? Entity(EntityId entityId)
             {
-                if (_entities.TryGetValue(entityId, out var state))
-                {
-                    if (state is WithRef wr)
-                        return wr.Ref;
-                }
+                if (!_entities.TryGetValue(entityId, out var state)) return null;
+                if (state is WithRef wr)
+                    return wr.Ref;
                 return null;
             }
 
@@ -838,7 +852,7 @@ namespace Akka.Cluster.Sharding
                 return NoState.Instance;
             }
 
-            public EntityId EntityId(IActorRef @ref)
+            public EntityId? EntityId(IActorRef @ref)
             {
                 if (_byRef.TryGetValue(@ref, out var entityId))
                     return entityId;
@@ -862,7 +876,8 @@ namespace Akka.Cluster.Sharding
                 }
                 else
                 {
-                    throw new IllegalStateException($"Tried to passivate entity without an actor ref {entityId}. Current state {oldState}");
+                    throw new IllegalStateException(
+                        $"Tried to passivate entity without an actor ref {entityId}. Current state {oldState}");
                 }
             }
 
@@ -880,13 +895,15 @@ namespace Akka.Cluster.Sharding
             // only called for getting shard stats
             public IImmutableSet<EntityId> ActiveEntityIds => _byRef.Values.ToImmutableHashSet();
 
-            public (IImmutableDictionary<EntityId, RememberingStart> Start, IImmutableSet<EntityId> Stop) PendingRememberEntities
+            public (IImmutableDictionary<EntityId, RememberingStart> Start, IImmutableSet<EntityId> Stop)
+                PendingRememberEntities
             {
                 get
                 {
                     if (_remembering.Count == 0)
                     {
-                        return (ImmutableDictionary<EntityId, RememberingStart>.Empty, ImmutableHashSet<EntityId>.Empty);
+                        return (ImmutableDictionary<EntityId, RememberingStart>.Empty,
+                            ImmutableHashSet<EntityId>.Empty);
                     }
                     else
                     {
@@ -903,9 +920,11 @@ namespace Akka.Cluster.Sharding
                                     stops.Add(entityId);
                                     break;
                                 case var state:
-                                    throw new IllegalStateException($"{entityId} was in the remembering set but has state {state}");
+                                    throw new IllegalStateException(
+                                        $"{entityId} was in the remembering set but has state {state}");
                             }
                         }
+
                         return (starts.ToImmutable(), stops.ToImmutable());
                     }
                 }
@@ -928,49 +947,47 @@ namespace Akka.Cluster.Sharding
         private readonly string _shardId;
         private readonly Func<string, Props> _entityProps;
         private readonly ClusterShardingSettings _settings;
-        private readonly ExtractEntityId _extractEntityId;
-        private readonly ExtractShardId _extractShardId;
+        private readonly IMessageExtractor _extractor;
         private readonly object _handOffStopMessage;
 
         private readonly bool _verboseDebug;
-        private readonly IActorRef _rememberEntitiesStore;
+        private readonly IActorRef? _rememberEntitiesStore;
         private readonly bool _rememberEntities;
         private readonly Entities _entities;
         private readonly Dictionary<EntityId, DateTime> _lastMessageTimestamp = new();
         private readonly MessageBufferMap<EntityId> _messageBuffers = new();
 
-        private IActorRef _handOffStopper;
-        private readonly ICancelable _passivateIdleTask;
-        private readonly Lease _lease;
+        private IActorRef? _handOffStopper;
+        private readonly ICancelable? _passivateIdleTask;
+        private readonly Lease? _lease;
         private readonly TimeSpan _leaseRetryInterval = TimeSpan.FromSeconds(5); // won't be used
 
         public ILoggingAdapter Log { get; } = Context.GetLogger();
-        public IStash Stash { get; set; }
-        public ITimerScheduler Timers { get; set; }
+        public IStash Stash { get; set; } = null!;
+        public ITimerScheduler Timers { get; set; } = null!;
 
         public Shard(
             string typeName,
             string shardId,
             Func<string, Props> entityProps,
             ClusterShardingSettings settings,
-            ExtractEntityId extractEntityId,
-            ExtractShardId extractShardId,
+            IMessageExtractor extractor,
             object handOffStopMessage,
-            IRememberEntitiesProvider rememberEntitiesProvider)
+            IRememberEntitiesProvider? rememberEntitiesProvider)
         {
             _typeName = typeName;
             _shardId = shardId;
             _entityProps = entityProps;
             _settings = settings;
-            _extractEntityId = extractEntityId;
-            _extractShardId = extractShardId;
+            _extractor = extractor;
             _handOffStopMessage = handOffStopMessage;
 
             _verboseDebug = Context.System.Settings.Config.GetBoolean("akka.cluster.sharding.verbose-debug-logging");
 
             if (rememberEntitiesProvider != null)
             {
-                var store = Context.ActorOf(rememberEntitiesProvider.ShardStoreProps(shardId).WithDeploy(Deploy.Local), "RememberEntitiesStore");
+                var store = Context.ActorOf(rememberEntitiesProvider.ShardStoreProps(shardId).WithDeploy(Deploy.Local),
+                    "RememberEntitiesStore");
                 Context.WatchWith(store, new RememberEntityStoreCrashed(store));
                 _rememberEntitiesStore = store;
             }
@@ -980,12 +997,14 @@ namespace Akka.Cluster.Sharding
             //private val flightRecorder = ShardingFlightRecorder(context.system)
 
             var failOnInvalidStateTransition =
-                Context.System.Settings.Config.GetBoolean("akka.cluster.sharding.fail-on-invalid-entity-state-transition");
+                Context.System.Settings.Config.GetBoolean(
+                    "akka.cluster.sharding.fail-on-invalid-entity-state-transition");
             _entities = new Entities(Log, settings.RememberEntities, _verboseDebug, failOnInvalidStateTransition);
 
             var idleInterval = TimeSpan.FromTicks(_settings.PassivateIdleEntityAfter.Ticks / 2);
             _passivateIdleTask = _settings.ShouldPassivateIdleEntities
-                ? Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(idleInterval, idleInterval, Self, PassivateIdleTick.Instance, Self)
+                ? Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(idleInterval, idleInterval, Self,
+                    PassivateIdleTick.Instance, Self)
                 : null;
 
             if (settings.LeaseSettings != null)
@@ -1039,7 +1058,8 @@ namespace Akka.Cluster.Sharding
                     if (r.IsFaulted || r.IsCanceled)
                     {
                         Log.Error(r.Exception,
-                            "{0}: Failed to release lease of shardId [{1}]. Shard may not be able to run on another node until lease timeout occurs.", _typeName, _shardId);
+                            "{0}: Failed to release lease of shardId [{1}]. Shard may not be able to run on another node until lease timeout occurs.",
+                            _typeName, _shardId);
                     }
                     else if (r.Result)
                     {
@@ -1048,7 +1068,8 @@ namespace Akka.Cluster.Sharding
                     else
                     {
                         Log.Error(
-                            "{0}: Failed to release lease of shardId [{1}]. Shard may not be able to run on another node until lease timeout occurs.", _typeName, _shardId);
+                            "{0}: Failed to release lease of shardId [{1}]. Shard may not be able to run on another node until lease timeout occurs.",
+                            _typeName, _shardId);
                     }
                 });
             }
@@ -1082,13 +1103,15 @@ namespace Akka.Cluster.Sharding
                     return true;
 
                 case LeaseRetry _:
-                    TryGetLease(_lease);
+                    Debug.Assert(_lease != null, nameof(_lease) + " != null");
+                    TryGetLease(_lease!);
                     return true;
 
                 case LeaseLost ll:
                     ReceiveLeaseLost(ll);
                     return true;
             }
+
             if (_verboseDebug)
                 Log.Debug("{0}: Got msg of type [{1}] from [{2}] while waiting for lease, stashing",
                     _typeName,
@@ -1103,10 +1126,7 @@ namespace Akka.Cluster.Sharding
             Log.Info("{0}: Acquiring lease {1}", _typeName, lease.Settings);
 
             var self = Self;
-            lease.Acquire(reason =>
-            {
-                self.Tell(new LeaseLost(reason));
-            }).ContinueWith(r =>
+            lease.Acquire(reason => { self.Tell(new LeaseLost(reason)); }).ContinueWith(r =>
             {
                 if (r.IsFaulted || r.IsCanceled)
                     return new LeaseAcquireResult(false, r.Exception);
@@ -1120,7 +1140,8 @@ namespace Akka.Cluster.Sharding
         {
             if (_rememberEntitiesStore != null)
             {
-                Log.Debug("{0}: Waiting for load of entity ids using [{1}] to complete", _typeName, _rememberEntitiesStore);
+                Log.Debug("{0}: Waiting for load of entity ids using [{1}] to complete", _typeName,
+                    _rememberEntitiesStore);
                 _rememberEntitiesStore.Tell(RememberEntitiesShardStore.GetEntities.Instance);
                 Timers.StartSingleTimer(
                     RememberEntityTimeoutKey,
@@ -1144,6 +1165,7 @@ namespace Akka.Cluster.Sharding
                     LoadingEntityIdsFailed();
                     return true;
             }
+
             if (_verboseDebug)
                 Log.Debug("{0}: Got msg of type [{1}] from [{2}] while waiting for remember entities, stashing",
                     _typeName,
@@ -1156,7 +1178,8 @@ namespace Akka.Cluster.Sharding
 
         private void LoadingEntityIdsFailed()
         {
-            Log.Error("{0}: Failed to load initial entity ids from remember entities store within [{1}], stopping shard for backoff and restart",
+            Log.Error(
+                "{0}: Failed to load initial entity ids from remember entities store within [{1}], stopping shard for backoff and restart",
                 _typeName,
                 _settings.TuningParameters.UpdatingStateTimeout);
             // parent ShardRegion supervisor will notice that it terminated and will start it again, after backoff
@@ -1170,9 +1193,10 @@ namespace Akka.Cluster.Sharding
                 _entities.AlreadyRemembered(ids);
                 Log.Debug("{0}: Restarting set of [{1}] entities", _typeName, ids.Count);
                 Context.ActorOf(
-                  RememberEntityStarter.Props(Context.Parent, Self, _shardId, ids, _settings),
-                  "RememberEntitiesStarter");
+                    RememberEntityStarter.Props(Context.Parent, Self, _shardId, ids, _settings),
+                    "RememberEntitiesStarter");
             }
+
             ShardInitialized();
         }
 
@@ -1221,18 +1245,26 @@ namespace Akka.Cluster.Sharding
                 case RememberEntityStoreCrashed msg:
                     ReceiveRememberEntityStoreCrashed(msg);
                     return true;
-                case var msg when _extractEntityId(msg).HasValue:
-                    DeliverMessage(msg, Sender);
+                default:
+                    var entityId = _extractor.EntityId(message);
+                    if (string.IsNullOrEmpty(entityId))
+                    {
+                        Log.Warning("{0}: Id must not be empty, dropping message [{1}]", _typeName,
+                            message.GetType().Name);
+                        Context.System.DeadLetters.Tell(new Dropped(message, "No recipient entity id", Sender, Self));
+                        return true;
+                    }
+
+                    DeliverMessage(entityId!, message, Sender);
                     return true;
             }
-            return false;
         }
 
 
-        private void RememberUpdate(IImmutableSet<EntityId> add = null, IImmutableSet<EntityId> remove = null)
+        private void RememberUpdate(IImmutableSet<EntityId>? add = null, IImmutableSet<EntityId>? remove = null)
         {
-            add = add ?? ImmutableHashSet<EntityId>.Empty;
-            remove = remove ?? ImmutableHashSet<EntityId>.Empty;
+            add ??= ImmutableHashSet<EntityId>.Empty;
+            remove ??= ImmutableHashSet<EntityId>.Empty;
             if (_rememberEntitiesStore == null)
                 OnUpdateDone(add, remove);
             else
@@ -1240,7 +1272,8 @@ namespace Akka.Cluster.Sharding
         }
 
 
-        private void SendToRememberStore(IActorRef store, IImmutableSet<EntityId> storingStarts, IImmutableSet<EntityId> storingStops)
+        private void SendToRememberStore(IActorRef store, IImmutableSet<EntityId> storingStarts,
+            IImmutableSet<EntityId> storingStops)
         {
             if (_verboseDebug)
                 Log.Debug("{0}: Remember update [{1}] and stops [{2}] triggered",
@@ -1290,7 +1323,8 @@ namespace Akka.Cluster.Sharding
                         return true;
                     case RememberEntityTimeout t:
                         Log.Error("{0}: Remember entity store did not respond, restarting shard", _typeName);
-                        throw new InvalidOperationException($"Async write timed out after {_settings.TuningParameters.UpdatingStateTimeout}");
+                        throw new InvalidOperationException(
+                            $"Async write timed out after {_settings.TuningParameters.UpdatingStateTimeout}");
                     case ShardRegion.StartEntity se:
                         StartEntity(se.EntityId, Sender);
                         return true;
@@ -1325,20 +1359,26 @@ namespace Akka.Cluster.Sharding
                     case RememberEntityStoreCrashed msg:
                         ReceiveRememberEntityStoreCrashed(msg);
                         return true;
-                    case var msg when _extractEntityId(msg).HasValue:
-                        DeliverMessage(msg, Sender);
-                        return true;
-                    case var msg:
-                        // shouldn't be any other message types, but just in case
-                        Log.Warning("{0}: Stashing unexpected message [{1}] while waiting for remember entities update of starts [{2}], stops [{3}]",
-                            _typeName,
-                            msg.GetType().Name,
-                            string.Join(", ", update.Started),
-                            string.Join(", ", update.Stopped));
-                        Stash.Stash();
+                    default:
+                        var entityId = _extractor.EntityId(message);
+                        if (string.IsNullOrEmpty(entityId))
+                        {
+                            // shouldn't be any other message types, but just in case
+                            Log.Warning(
+                                "{0}: Stashing unexpected message [{1}] while waiting for remember entities update of starts [{2}], stops [{3}]",
+                                _typeName,
+                                message.GetType().Name,
+                                string.Join(", ", update.Started),
+                                string.Join(", ", update.Stopped));
+                            Stash.Stash();
+                            return true;
+                        }
+
+                        DeliverMessage(entityId!, message, Sender);
                         return true;
                 }
             }
+
             return WaitingForRememberEntitiesStore;
         }
 
@@ -1357,8 +1397,10 @@ namespace Akka.Cluster.Sharding
                     foreach (var a in rs.AckTo)
                         a.Tell(new ShardRegion.StartEntityAck(entityId, _shardId));
                 }
+
                 TouchLastMessageTimestamp(entityId);
             }
+
             foreach (var entityId in stops)
             {
                 var state = _entities.EntityState(entityId);
@@ -1369,8 +1411,8 @@ namespace Akka.Cluster.Sharding
                 }
                 else
                 {
-                    throw new IllegalStateException($"Unexpected state [{state}] when storing stop completed for entity id [{entityId}]");
-
+                    throw new IllegalStateException(
+                        $"Unexpected state [{state}] when storing stop completed for entity id [{entityId}]");
                 }
             }
 
@@ -1415,21 +1457,27 @@ namespace Akka.Cluster.Sharding
                     switch (_entities.EntityState(r.Entity))
                     {
                         case WaitingForRestart _:
-                            if (_verboseDebug) Log.Debug("{0}: Restarting entity unexpectedly terminated entity [{1}]", _typeName, r.Entity);
+                            if (_verboseDebug)
+                                Log.Debug("{0}: Restarting entity unexpectedly terminated entity [{1}]", _typeName,
+                                    r.Entity);
                             GetOrCreateEntity(r.Entity);
                             break;
                         case Active _:
                             // it up could already have been started, that's fine
                             if (_verboseDebug)
-                                Log.Debug("{0}: Got RestartTerminatedEntity for [{1}] but it is already running", _typeName, r.Entity);
+                                Log.Debug("{0}: Got RestartTerminatedEntity for [{1}] but it is already running",
+                                    _typeName, r.Entity);
                             break;
                         case var other:
-                            throw new IllegalStateException($"Unexpected state for [{r.Entity}] when getting RestartTerminatedEntity: [{other}]");
+                            throw new IllegalStateException(
+                                $"Unexpected state for [{r.Entity}] when getting RestartTerminatedEntity: [{other}]");
                     }
+
                     break;
 
                 case EntitiesMovedToOtherShard m:
-                    Log.Info("{0}: Clearing [{1}] remembered entities started elsewhere because of changed shard id extractor",
+                    Log.Info(
+                        "{0}: Clearing [{1}] remembered entities started elsewhere because of changed shard id messageExtractor",
                         _typeName,
                         m.Ids.Count);
 
@@ -1441,9 +1489,11 @@ namespace Akka.Cluster.Sharding
                                 _entities.RememberingStop(entityId);
                                 break;
                             case var other:
-                                throw new IllegalStateException($"Unexpected state for [{entityId}] when getting ShardIdsMoved: [{other}]");
+                                throw new IllegalStateException(
+                                    $"Unexpected state for [{entityId}] when getting ShardIdsMoved: [{other}]");
                         }
                     }
+
                     RememberUpdate(remove: m.Ids);
                     break;
             }
@@ -1479,7 +1529,8 @@ namespace Akka.Cluster.Sharding
                 case Passivating _:
                     // since StartEntity is handled in deliverMsg we can buffer a StartEntity to handle when
                     // passivation completes (triggering an immediate restart)
-                    _messageBuffers.Append(entityId, new ShardRegion.StartEntity(entityId), ackTo ?? ActorRefs.NoSender);
+                    _messageBuffers.Append(entityId, new ShardRegion.StartEntity(entityId),
+                        ackTo ?? ActorRefs.NoSender);
                     break;
 
                 case RememberingStop _:
@@ -1488,7 +1539,7 @@ namespace Akka.Cluster.Sharding
                     Stash.Stash();
                     break;
                 case NoState _:
-                    // started manually from the outside, or the shard id extractor was changed since the entity was remembered
+                    // started manually from the outside, or the shard id messageExtractor was changed since the entity was remembered
                     // we need to store that it was started
                     Log.Debug("{0}: Request to start entity [{1}] and ack to [{2}]", _typeName, entityId, ackTo);
                     _entities.RememberingStart(entityId, ackTo);
@@ -1505,7 +1556,8 @@ namespace Akka.Cluster.Sharding
                     HandOff(Sender);
                     break;
                 case HandOff ho:
-                    Log.Warning("{0}: Shard [{1}] can not hand off for another Shard [{2}]", _typeName, _shardId, ho.Shard);
+                    Log.Warning("{0}: Shard [{1}] can not hand off for another Shard [{2}]", _typeName, _shardId,
+                        ho.Shard);
                     break;
                 default:
                     Unhandled(msg);
@@ -1543,7 +1595,9 @@ namespace Akka.Cluster.Sharding
                 var activeEntities = _entities.ActiveEntities;
                 if (activeEntities.Count > 0)
                 {
-                    var entityHandOffTimeout = (_settings.TuningParameters.HandOffTimeout - TimeSpan.FromSeconds(5)).Max(TimeSpan.FromSeconds(1));
+                    var entityHandOffTimeout =
+                        (_settings.TuningParameters.HandOffTimeout - TimeSpan.FromSeconds(5)).Max(
+                            TimeSpan.FromSeconds(1));
                     Log.Debug("{0}: Starting HandOffStopper for shard [{1}] to terminate [{2}] entities.",
                         _typeName,
                         _shardId,
@@ -1551,7 +1605,8 @@ namespace Akka.Cluster.Sharding
                     foreach (var e in activeEntities)
                         Context.Unwatch(e);
                     _handOffStopper = Context.Watch(Context.ActorOf(
-                        ShardRegion.HandOffStopper.Props(_typeName, _shardId, replyTo, activeEntities, _handOffStopMessage, entityHandOffTimeout),
+                        ShardRegion.HandOffStopper.Props(_typeName, _shardId, replyTo, activeEntities,
+                            _handOffStopMessage, entityHandOffTimeout),
                         "HandOffStopper"));
 
                     //During hand off we only care about watching for termination of the hand off stopper
@@ -1563,6 +1618,7 @@ namespace Akka.Cluster.Sharding
                                 ReceiveTerminated(t.ActorRef);
                                 return true;
                         }
+
                         return false;
                     });
                 }
@@ -1594,12 +1650,14 @@ namespace Akka.Cluster.Sharding
                 {
                     case RememberingStop _:
                         if (_verboseDebug)
-                            Log.Debug("{0}: Stop of [{1}] arrived, already is among the pending stops", _typeName, entityId);
+                            Log.Debug("{0}: Stop of [{1}] arrived, already is among the pending stops", _typeName,
+                                entityId);
                         break;
                     case Active _:
                         if (_rememberEntitiesStore != null)
                         {
-                            Log.Debug("{0}: Entity [{1}] stopped without passivating, will restart after backoff", _typeName, entityId);
+                            Log.Debug("{0}: Entity [{1}] stopped without passivating, will restart after backoff",
+                                _typeName, entityId);
                             _entities.WaitingForRestart(entityId);
                             var msg = new RestartTerminatedEntity(entityId);
                             Timers.StartSingleTimer(msg, msg, _settings.TuningParameters.EntityRestartBackoff);
@@ -1609,6 +1667,7 @@ namespace Akka.Cluster.Sharding
                             Log.Debug("{0}: Entity [{1}] terminated", _typeName, entityId);
                             _entities.RemoveEntity(entityId);
                         }
+
                         break;
 
                     case Passivating _:
@@ -1618,7 +1677,8 @@ namespace Akka.Cluster.Sharding
                             {
                                 // will go in next batch update
                                 if (_verboseDebug)
-                                    Log.Debug("{0}: [{1}] terminated after passivating, arrived while updating, adding it to batch of pending stops",
+                                    Log.Debug(
+                                        "{0}: [{1}] terminated after passivating, arrived while updating, adding it to batch of pending stops",
                                         _typeName,
                                         entityId);
                                 _entities.RememberingStop(entityId);
@@ -1634,7 +1694,8 @@ namespace Akka.Cluster.Sharding
                             if (_messageBuffers.GetOrEmpty(entityId).NonEmpty)
                             {
                                 if (_verboseDebug)
-                                    Log.Debug("{0}: [{1}] terminated after passivating, buffered messages found, restarting",
+                                    Log.Debug(
+                                        "{0}: [{1}] terminated after passivating, buffered messages found, restarting",
                                         _typeName,
                                         entityId);
                                 _entities.RemoveEntity(entityId);
@@ -1648,9 +1709,11 @@ namespace Akka.Cluster.Sharding
                                 _entities.RemoveEntity(entityId);
                             }
                         }
+
                         break;
                     case var unexpected:
-                        Log.Warning("{0}: Got a terminated for [{1}], entityId [{2}] which is in unexpected state [{3}]",
+                        Log.Warning(
+                            "{0}: Got a terminated for [{1}], entityId [{2}] which is in unexpected state [{3}]",
                             _typeName,
                             _entities.Entity(entityId),
                             entityId,
@@ -1677,7 +1740,8 @@ namespace Akka.Cluster.Sharding
                 }
                 else if (_messageBuffers.GetOrEmpty(entityId).NonEmpty)
                 {
-                    Log.Debug("{0}: Passivation when there are buffered messages for [{2}], ignoring passivation", _typeName, entityId);
+                    Log.Debug("{0}: Passivation when there are buffered messages for [{2}], ignoring passivation",
+                        _typeName, entityId);
                 }
                 else
                 {
@@ -1690,7 +1754,8 @@ namespace Akka.Cluster.Sharding
             }
             else
             {
-                Log.Debug("{0}: Unknown entity passivating [{1}]. Not sending stopMessage back to entity", _typeName, entity);
+                Log.Debug("{0}: Unknown entity passivating [{1}]. Not sending stopMessage back to entity", _typeName,
+                    entity);
             }
         }
 
@@ -1706,12 +1771,15 @@ namespace Akka.Cluster.Sharding
         {
             var deadline = DateTime.UtcNow - _settings.PassivateIdleEntityAfter;
 
-            var refsToPassivate = _lastMessageTimestamp.Where(i => i.Value < deadline).Select(i => _entities.Entity(i.Key)).Where(i => i != null).ToList();
+            var refsToPassivate = _lastMessageTimestamp
+                .Where(i => i.Value < deadline)
+                .Select(i => _entities.Entity(i.Key))
+                .Where(i => i != null).ToList();
             if (refsToPassivate.Count > 0)
             {
                 Log.Debug("{0}: Passivating [{1}] idle entities", _typeName, refsToPassivate.Count);
                 foreach (var r in refsToPassivate)
-                    Passivate(r, _handOffStopMessage);
+                    Passivate(r!, _handOffStopMessage);
             }
         }
 
@@ -1725,7 +1793,8 @@ namespace Akka.Cluster.Sharding
             _entities.RemoveEntity(entityId);
             if (hasBufferedMessages)
             {
-                Log.Debug("{0}: Entity stopped after passivation [{1}], but will be started again due to buffered messages",
+                Log.Debug(
+                    "{0}: Entity stopped after passivation [{1}], but will be started again due to buffered messages",
                     _typeName,
                     entityId);
                 //flightRecorder.entityPassivateRestart(entityId)
@@ -1748,102 +1817,95 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private void DeliverMessage(object msg, IActorRef snd)
+        private void DeliverMessage(string entityId, object msg, IActorRef snd)
         {
-            var t = _extractEntityId(msg);
-            var entityId = t.Value.Item1;
-            var payload = t.Value.Item2;
+            var payload = _extractor.EntityMessage(msg)!; // payload can't be null unless dev really screwed up
 
-            if (string.IsNullOrEmpty(entityId))
+            if (payload is ShardRegion.StartEntity start)
             {
-                Log.Warning("{0}: Id must not be empty, dropping message [{1}]", _typeName, msg.GetType().Name);
-                Context.System.DeadLetters.Tell(new Dropped(msg, "No recipient entity id", snd, Self));
-            }
-            else
-            {
-                switch (payload)
+                // Handling StartEntity both here and in the receives allows for sending it both as is and in an envelope
+                // to be extracted by the entity id messageExtractor.
+
+                // we can only start a new entity if we are not currently waiting for another write
+                if (_entities.PendingRememberedEntitiesExist)
                 {
-                    case ShardRegion.StartEntity start:
-                        // Handling StartEntity both here and in the receives allows for sending it both as is and in an envelope
-                        // to be extracted by the entity id extractor.
+                    if (_verboseDebug)
+                        Log.Debug("{0}: StartEntity({1}) from [{2}], adding to batch", _typeName,
+                            start.EntityId, snd);
+                    _entities.RememberingStart(entityId, ackTo: snd);
+                }
+                else
+                {
+                    if (_verboseDebug)
+                        Log.Debug("{0}: StartEntity({1}) from [{2}], starting", _typeName, start.EntityId, snd);
+                    StartEntity(start.EntityId, snd);
+                }
 
-                        // we can only start a new entity if we are not currently waiting for another write
+                return;
+            }
+
+            switch (_entities.EntityState(entityId))
+            {
+                case Active a:
+                    if (_verboseDebug)
+                        Log.Debug("{0}: Delivering message of type [{1}] to [{2}]", _typeName,
+                            payload.GetType().Name, entityId);
+                    TouchLastMessageTimestamp(entityId);
+                    a.Ref.Tell(payload, snd);
+                    break;
+                case RememberingStart:
+                case RememberingStop:
+                case Passivating:
+                    AppendToMessageBuffer(entityId, msg, snd);
+                    break;
+                case { } state and (WaitingForRestart or RememberedButNotCreated):
+                    if (_verboseDebug)
+                        Log.Debug("{0}: Delivering message of type [{1}] to [{2}] (starting because [{3}])",
+                            _typeName,
+                            payload.GetType().Name,
+                            entityId,
+                            state);
+                    var actor = GetOrCreateEntity(entityId);
+                    TouchLastMessageTimestamp(entityId);
+                    actor.Tell(payload, snd);
+                    break;
+                case NoState:
+                    if (!_rememberEntities)
+                    {
+                        // don't buffer if remember entities not enabled
+                        GetOrCreateEntity(entityId).Tell(payload, snd);
+                        TouchLastMessageTimestamp(entityId);
+                    }
+                    else
+                    {
                         if (_entities.PendingRememberedEntitiesExist)
                         {
+                            // No actor running and write in progress for some other entity id (can only happen with remember entities enabled)
                             if (_verboseDebug)
-                                Log.Debug("{0}: StartEntity({1}) from [{2}], adding to batch", _typeName, start.EntityId, snd);
-                            _entities.RememberingStart(entityId, ackTo: snd);
+                                Log.Debug(
+                                    "{0}: Buffer message [{1}] to [{2}] (which is not started) because of write in progress for [{3}]",
+                                    _typeName,
+                                    payload.GetType().Name,
+                                    entityId,
+                                    _entities.PendingRememberEntities);
+                            AppendToMessageBuffer(entityId, msg, snd);
+                            _entities.RememberingStart(entityId, ackTo: null);
                         }
                         else
                         {
+                            // No actor running and no write in progress, start actor and deliver message when started
                             if (_verboseDebug)
-                                Log.Debug("{0}: StartEntity({1}) from [{2}], starting", _typeName, start.EntityId, snd);
-                            StartEntity(start.EntityId, snd);
+                                Log.Debug("{0}: Buffering message [{1}] to [{2}] and starting actor",
+                                    _typeName,
+                                    payload.GetType().Name,
+                                    entityId);
+                            AppendToMessageBuffer(entityId, msg, snd);
+                            _entities.RememberingStart(entityId, ackTo: null);
+                            RememberUpdate(add: ImmutableHashSet.Create(entityId));
                         }
-                        break;
-                    case var _:
-                        switch (_entities.EntityState(entityId))
-                        {
-                            case Active a:
-                                if (_verboseDebug)
-                                    Log.Debug("{0}: Delivering message of type [{1}] to [{2}]", _typeName, payload.GetType().Name, entityId);
-                                TouchLastMessageTimestamp(entityId);
-                                a.Ref.Tell(payload, snd);
-                                break;
-                            case RememberingStart _:
-                            case RememberingStop _:
-                            case Passivating _:
-                                AppendToMessageBuffer(entityId, msg, snd);
-                                break;
-                            case EntityState state and (WaitingForRestart or RememberedButNotCreated):
-                                if (_verboseDebug)
-                                    Log.Debug("{0}: Delivering message of type [{1}] to [{2}] (starting because [{3}])",
-                                        _typeName,
-                                        payload.GetType().Name,
-                                        entityId,
-                                        state);
-                                var actor = GetOrCreateEntity(entityId);
-                                TouchLastMessageTimestamp(entityId);
-                                actor.Tell(payload, snd);
-                                break;
-                            case NoState _:
-                                if (!_rememberEntities)
-                                {
-                                    // don't buffer if remember entities not enabled
-                                    GetOrCreateEntity(entityId).Tell(payload, snd);
-                                    TouchLastMessageTimestamp(entityId);
-                                }
-                                else
-                                {
-                                    if (_entities.PendingRememberedEntitiesExist)
-                                    {
-                                        // No actor running and write in progress for some other entity id (can only happen with remember entities enabled)
-                                        if (_verboseDebug)
-                                            Log.Debug("{0}: Buffer message [{1}] to [{2}] (which is not started) because of write in progress for [{3}]",
-                                                _typeName,
-                                                payload.GetType().Name,
-                                                entityId,
-                                                _entities.PendingRememberEntities);
-                                        AppendToMessageBuffer(entityId, msg, snd);
-                                        _entities.RememberingStart(entityId, ackTo: null);
-                                    }
-                                    else
-                                    {
-                                        // No actor running and no write in progress, start actor and deliver message when started
-                                        if (_verboseDebug)
-                                            Log.Debug("{0}: Buffering message [{1}] to [{2}] and starting actor",
-                                                _typeName,
-                                                payload.GetType().Name,
-                                                entityId);
-                                        AppendToMessageBuffer(entityId, msg, snd);
-                                        _entities.RememberingStart(entityId, ackTo: null);
-                                        RememberUpdate(add: ImmutableHashSet.Create(entityId));
-                                    }
-                                }
-                                break;
-                        }
-                        break;
-                }
+                    }
+
+                    break;
             }
         }
 
@@ -1887,7 +1949,8 @@ namespace Akka.Cluster.Sharding
             else
             {
                 if (Log.IsDebugEnabled)
-                    Log.Debug("{0}: Message of type [{1}] for entity [{2}] buffered", _typeName, msg.GetType().Name, id);
+                    Log.Debug("{0}: Message of type [{1}] for entity [{2}] buffered", _typeName, msg.GetType().Name,
+                        id);
                 _messageBuffers.Append(id, msg, snd);
             }
         }
@@ -1905,16 +1968,18 @@ namespace Akka.Cluster.Sharding
             if (messages.NonEmpty)
             {
                 GetOrCreateEntity(entityId);
-                Log.Debug("{0}: Sending message buffer for entity [{1}] ([{2}] messages)", _typeName, entityId, messages.Count);
+                Log.Debug("{0}: Sending message buffer for entity [{1}] ([{2}] messages)", _typeName, entityId,
+                    messages.Count);
                 // Now there is no deliveryBuffer we can try to redeliver
                 // and as the child exists, the message will be directly forwarded
-                foreach (var (Message, Ref) in messages)
+                foreach (var (message, @ref) in messages)
                 {
-                    if (Message is ShardRegion.StartEntity se)
-                        StartEntity(se.EntityId, Ref);
+                    if (message is ShardRegion.StartEntity se)
+                        StartEntity(se.EntityId, @ref);
                     else
-                        DeliverMessage(Message, Ref);
+                        DeliverMessage(entityId, message, @ref);
                 }
+
                 TouchLastMessageTimestamp(entityId);
             }
         }
@@ -1924,7 +1989,8 @@ namespace Akka.Cluster.Sharding
             var count = _messageBuffers.Drop(entityId, reason, Context.System.DeadLetters);
             if (Log.IsDebugEnabled && count > 0)
             {
-                Log.Debug("{0}: Dropping [{1}] buffered messages for [{2}] because {3}", _typeName, count, entityId, reason);
+                Log.Debug("{0}: Dropping [{1}] buffered messages for [{2}] because {3}", _typeName, count, entityId,
+                    reason);
             }
         }
 
