@@ -18,7 +18,7 @@ namespace Akka.Persistence.TestKit
     {
         internal JournalRecoveryBehaviorSetter(IActorRef journal)
         {
-            _journal = journal;
+            this._journal = journal;
         }
 
         private readonly IActorRef _journal;
