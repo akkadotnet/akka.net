@@ -11,7 +11,6 @@ Akka.Analyzer is a [Roslyn Analysis and Code Fix](https://learn.microsoft.com/en
 
 ## Supported Rules
 
-
 | Id     | Title                                                  | Severity | Category     |
 |--------|--------------------------------------------------------|----------|--------------|
 | [AK1000](xref:AK1000) | Do not use `new` to create actors.                     | Error    | Actor Design |

@@ -1,2 +1,4 @@
 - name: Akka.NET Roslyn Analyzers
   href: akka-analyzers.md
+- name: Analysis Rules
+  href: rules/toc.yml
