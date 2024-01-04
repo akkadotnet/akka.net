@@ -301,7 +301,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal class AkkaPduProtobuffCodec : AkkaPduCodec
+    internal sealed class AkkaPduProtobuffCodec : AkkaPduCodec
     {
         /// <summary>
         /// TBD
