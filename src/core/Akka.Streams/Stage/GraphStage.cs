@@ -46,7 +46,7 @@ namespace Akka.Streams.Stage
     /// TBD
     /// </summary>
     /// <typeparam name="TMaterialized">TBD</typeparam>
-    public struct LogicAndMaterializedValue<TMaterialized> : ILogicAndMaterializedValue<TMaterialized>
+    public readonly struct LogicAndMaterializedValue<TMaterialized> : ILogicAndMaterializedValue<TMaterialized>
     {
         /// <summary>
         /// TBD

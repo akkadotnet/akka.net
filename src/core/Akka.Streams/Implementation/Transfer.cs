@@ -362,7 +362,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// TBD
     /// </summary>
-    public struct TransferPhase
+    public readonly struct TransferPhase
     {
         /// <summary>
         /// TBD

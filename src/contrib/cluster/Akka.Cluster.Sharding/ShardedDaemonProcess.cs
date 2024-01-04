@@ -70,7 +70,10 @@ namespace Akka.Cluster.Sharding
 
         public override string EntityId(object message) => (message as ShardingEnvelope)?.EntityId;
         public override object EntityMessage(object message) => (message as ShardingEnvelope)?.Message;
-        public override string ShardId(object message) => message is ShardRegion.StartEntity se ? se.EntityId : EntityId(message);
+        public override string ShardId(string entityId, object messageHint = null)
+        {
+            return entityId;
+        }
     }
 
     /// <summary>

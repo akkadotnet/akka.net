@@ -187,7 +187,7 @@ namespace Akka.Streams
     /// <summary>
     /// Context parameter to the create methods of sources and sinks.
     /// </summary>
-    public struct MaterializationContext
+    public readonly struct MaterializationContext
     {
         /// <summary>
         /// TBD

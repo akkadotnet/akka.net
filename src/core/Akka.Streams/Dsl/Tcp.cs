@@ -33,7 +33,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Represents a successful TCP server binding.
         /// </summary>
-        public struct ServerBinding
+        public readonly struct ServerBinding
         {
             private readonly Func<Task> _unbindAction;
 
@@ -63,7 +63,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Represents an accepted incoming TCP connection.
         /// </summary>
-        public struct IncomingConnection
+        public readonly struct IncomingConnection
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="IncomingConnection"/> class.
@@ -110,7 +110,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Represents a prospective outgoing TCP connection.
         /// </summary>
-        public struct OutgoingConnection
+        public readonly struct OutgoingConnection
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="OutgoingConnection"/> class.

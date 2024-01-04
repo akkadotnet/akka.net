@@ -21,7 +21,7 @@ using Xunit.Abstractions;
 namespace Akka.Cluster.Sharding.Tests
 {
     /// <summary>
-    /// Covers that remembered entities is correctly migrated when used and the shard id extractor
+    /// Covers that remembered entities is correctly migrated when used and the shard id messageExtractor
     /// is changed so that entities should live on other shards after a full restart of the cluster.
     /// </summary>
     public class RememberEntitiesShardIdExtractorChangeSpec : AkkaSpec

@@ -7,6 +7,7 @@
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.Cluster.Sharding
 {
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class ClusterSharding : Akka.Actor.IExtension
     {
         public ClusterSharding(Akka.Actor.ExtendedActorSystem system) { }
@@ -38,7 +39,10 @@ namespace Akka.Cluster.Sharding
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartProxyAsync(string typeName, string role, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartProxyAsync(string typeName, string role, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
     }
-    public class ClusterShardingExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Sharding.ClusterSharding>
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1})]
+    public sealed class ClusterShardingExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Sharding.ClusterSharding>
     {
         public ClusterShardingExtensionProvider() { }
         public override Akka.Cluster.Sharding.ClusterSharding CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
@@ -113,7 +117,14 @@ namespace Akka.Cluster.Sharding
     {
         public static System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<T>> Grouped<T>(this System.Collections.Generic.IEnumerable<T> items, int size) { }
     }
+    [System.ObsoleteAttribute("Use HashCodeMessageExtractor or IMessageExtractor instead.")]
+    [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            0,
+            1,
+            1})]
     public delegate Akka.Util.Option<System.ValueTuple<string, object>> ExtractEntityId(object message);
+    [System.ObsoleteAttribute("Use HashCodeMessageExtractor or IMessageExtractor instead.")]
     public delegate string ExtractShardId(object message);
     public sealed class GetClusterShardingStats : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery, System.IEquatable<Akka.Cluster.Sharding.GetClusterShardingStats>
     {
@@ -149,14 +160,20 @@ namespace Akka.Cluster.Sharding
     {
         public static readonly Akka.Cluster.Sharding.GracefulShutdown Instance;
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public abstract class HashCodeMessageExtractor : Akka.Cluster.Sharding.IMessageExtractor
     {
         public readonly int MaxNumberOfShards;
         protected HashCodeMessageExtractor(int maxNumberOfShards) { }
-        public static Akka.Cluster.Sharding.HashCodeMessageExtractor Create(int maxNumberOfShards, System.Func<object, string> entityIdExtractor, System.Func<object, object> messageExtractor = null) { }
+        public static Akka.Cluster.Sharding.HashCodeMessageExtractor Create(int maxNumberOfShards, System.Func<object, string> entityIdExtractor, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1,
+                1})] System.Func<object, object> messageExtractor = null) { }
         public abstract string EntityId(object message);
         public virtual object EntityMessage(object message) { }
+        [System.ObsoleteAttribute("Use ShardId(string, object?) instead")]
         public virtual string ShardId(object message) { }
+        public virtual string ShardId(string entityId, [System.Runtime.CompilerServices.NullableAttribute(2)] object messageHint = null) { }
     }
     public interface IActorSystemDependentAllocationStrategy : Akka.Actor.INoSerializationVerificationNeeded, Akka.Cluster.Sharding.IShardAllocationStrategy
     {
@@ -165,9 +182,14 @@ namespace Akka.Cluster.Sharding
     public interface IClusterShardingSerializable { }
     public interface IMessageExtractor
     {
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
         string EntityId(object message);
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
         object EntityMessage(object message);
+        [System.ObsoleteAttribute("Use ShardId(EntityId, object) instead.")]
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
         string ShardId(object message);
+        string ShardId(string entityId, [System.Runtime.CompilerServices.NullableAttribute(2)] object messageHint = null);
     }
     public interface IShardAllocationStrategy : Akka.Actor.INoSerializationVerificationNeeded
     {
@@ -203,13 +225,18 @@ namespace Akka.Cluster.Sharding
         public static Akka.Cluster.Sharding.IShardAllocationStrategy LeastShardAllocationStrategy(int absoluteLimit, double relativeLimit) { }
     }
     [Akka.Annotations.InternalStableApiAttribute()]
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class ShardRegion : Akka.Actor.ActorBase, Akka.Actor.IWithTimers
     {
-        public ShardRegion(string typeName, System.Func<string, Akka.Actor.Props> entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, string coordinatorPath, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, object handOffStopMessage, Akka.Cluster.Sharding.Internal.IRememberEntitiesProvider rememberEntitiesProvider) { }
+        public ShardRegion(string typeName, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1,
+                1})] System.Func<string, Akka.Actor.Props> entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, string coordinatorPath, Akka.Cluster.Sharding.IMessageExtractor messageExtractor, object handOffStopMessage, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Cluster.Sharding.Internal.IRememberEntitiesProvider rememberEntitiesProvider) { }
         public Akka.Actor.ITimerScheduler Timers { get; set; }
         protected override void PostStop() { }
         protected override void PreStart() { }
         protected override bool Receive(object message) { }
+        [System.Runtime.CompilerServices.NullableAttribute(0)]
         public sealed class StartEntity : Akka.Cluster.Sharding.IClusterShardingSerializable, System.IEquatable<Akka.Cluster.Sharding.ShardRegion.StartEntity>
         {
             public readonly string EntityId;
