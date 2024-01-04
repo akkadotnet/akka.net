@@ -394,7 +394,7 @@ namespace Akka.Remote
     /// 
     /// Used for publishing remote lifecycle events to the <see cref="EventStream"/> of the provided <see cref="ActorSystem"/>.
     /// </summary>
-    internal class EventPublisher
+    internal sealed class EventPublisher
     {
         /// <summary>
         /// TBD

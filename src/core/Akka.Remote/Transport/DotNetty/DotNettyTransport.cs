@@ -481,7 +481,7 @@ namespace Akka.Remote.Transport.DotNetty
         #endregion
     }
 
-    internal class HeliosBackwardsCompatabilityLengthFramePrepender : LengthFieldPrepender
+    internal sealed class HeliosBackwardsCompatabilityLengthFramePrepender : LengthFieldPrepender
     {
         private readonly List<object> _temporaryOutput = new(2);
 

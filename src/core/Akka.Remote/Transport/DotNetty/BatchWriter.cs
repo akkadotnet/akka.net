@@ -34,7 +34,7 @@ namespace Akka.Remote.Transport.DotNetty
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class FlushConsolidationHandler : ChannelDuplexHandler
+    internal sealed class FlushConsolidationHandler : ChannelDuplexHandler
     {
         /// <summary>
         /// The default number of flushes after which a flush will be forwarded to downstream handlers (whether while in a
@@ -209,7 +209,7 @@ namespace Akka.Remote.Transport.DotNetty
     ///
     /// Configuration object for <see cref="BatchWriter"/>
     /// </summary>
-    internal class BatchWriterSettings
+    internal sealed class BatchWriterSettings
     {
         public const int DefaultMaxPendingWrites = 30;
         public const long DefaultMaxPendingBytes = 16 * 1024L;
