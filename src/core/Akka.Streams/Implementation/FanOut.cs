@@ -415,7 +415,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         [Serializable]
-        public struct SubstreamRequestMore : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct SubstreamRequestMore : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -442,7 +442,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         [Serializable]
-        public struct SubstreamCancel : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct SubstreamCancel : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -463,7 +463,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         [Serializable]
-        public struct SubstreamSubscribePending : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct SubstreamSubscribePending : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -519,7 +519,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         [Serializable]
-        public struct ExposedPublishers<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct ExposedPublishers<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD

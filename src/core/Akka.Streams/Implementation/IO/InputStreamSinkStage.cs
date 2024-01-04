@@ -72,7 +72,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal struct Data : IStreamToAdapterMessage
+        internal readonly struct Data : IStreamToAdapterMessage
         {
             /// <summary>
             /// TBD
@@ -124,7 +124,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal struct Failed : IStreamToAdapterMessage
+        internal readonly struct Failed : IStreamToAdapterMessage
         {
             /// <summary>
             /// TBD
