@@ -12,4 +12,8 @@ Akka.Analyzer is a [Roslyn Analysis and Code Fix](https://learn.microsoft.com/en
 ## Supported Rules
 
 
-
+| Id     | Title                                                  | Severity | Category     |
+|--------|--------------------------------------------------------|----------|--------------|
+| [AK1000](xref:AK1000) | Do not use `new` to create actors.                     | Error    | Actor Design |
+| [AK1001](xref:AK1001) | Should always close over `Sender` when using `PipeTo`. | Error    | Actor Design |
+| [AK2000](xref:AK2000) | Do not use `Ask` with `TimeSpan.Zero` for timeout.     | Error    | API Usage    |
