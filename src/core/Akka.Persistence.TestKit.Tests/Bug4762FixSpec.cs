@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TestKit.Tests
 {
@@ -21,6 +22,11 @@ namespace Akka.Persistence.TestKit.Tests
     /// </summary>
     public class Bug4762FixSpec : PersistenceTestKit
     {
+        public Bug4762FixSpec(ITestOutputHelper outputHelper) : base(output: outputHelper)
+        {
+            
+        }
+        
         private class WriteMessage
         { }
 
@@ -65,10 +71,10 @@ namespace Akka.Persistence.TestKit.Tests
         }
 
         [Fact]
-        public async Task TestJournal_PersistAll_should_only_count_each_event_exceptions_once()
+        public Task TestJournal_PersistAll_should_only_count_each_event_exceptions_once()
         {
             var probe = CreateTestProbe();
-            await WithJournalWrite(write => write.Pass(), async () =>
+            return WithJournalWrite(write => write.Pass(), async () =>
             {
                 var actor = ActorOf(() => new TestActor2(probe));
                 Watch(actor);
