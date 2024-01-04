@@ -33,7 +33,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
+    internal sealed class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
     {
         /// <inheritdoc cref="ExtensionIdProvider{T}"/>
         public override TransportAdapters CreateExtension(ExtendedActorSystem system)
@@ -61,7 +61,7 @@ namespace Akka.Remote.Transport
     /// 
     /// Extension that allows us to look up transport adapters based upon the settings provided inside <see cref="RemoteSettings"/>
     /// </summary>
-    internal class TransportAdapters : IExtension
+    internal sealed class TransportAdapters : IExtension
     {
         /// <summary>
         /// TBD
@@ -81,7 +81,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// The Akka.Remote settings
         /// </summary>
-        protected RemoteSettings Settings;
+        private readonly RemoteSettings Settings;
 
         private Dictionary<string, ITransportAdapterProvider> _adaptersTable;
 
