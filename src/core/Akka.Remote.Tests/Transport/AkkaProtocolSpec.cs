@@ -111,19 +111,17 @@ namespace Akka.Remote.Tests.Transport
 
         private class TestFailureDetector : FailureDetector
         {
-#pragma warning disable CS0420
             private volatile bool _isAvailable = true;
-            public override bool IsAvailable => Volatile.Read(ref _isAvailable);
+            public override bool IsAvailable => _isAvailable;
             public void SetAvailable(bool available) => Volatile.Write(ref _isAvailable, available);
             
             private volatile bool _called;
-            public override bool IsMonitoring => Volatile.Read(ref _called);
+            public override bool IsMonitoring => _called;
 
             public override void HeartBeat()
             {
                 Volatile.Write(ref _called, true);
             }
-#pragma warning restore CS0420
         }
 
         private readonly Config _config;
