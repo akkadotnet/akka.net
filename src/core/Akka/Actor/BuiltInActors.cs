@@ -191,8 +191,10 @@ namespace Akka.Actor
     {
         public static object Unwrap(object message)
         {
-            if (message is IWrappedMessage wm)
-                return Unwrap(wm.Message);
+            while (message is IWrappedMessage wm)
+            {
+                message = wm.Message;
+            }
             return message;
         }
     }

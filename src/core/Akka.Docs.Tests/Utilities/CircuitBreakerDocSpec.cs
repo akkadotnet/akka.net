@@ -51,7 +51,8 @@ namespace DocsExamples.Utilities.CircuitBreakers
 
             Receive<string>(str => str.Equals("is my middle name"), _ =>
             {
-                breaker.WithCircuitBreaker(() => Task.FromResult(dangerousCall)).PipeTo(Sender);
+                var sender = this.Sender;
+                breaker.WithCircuitBreaker(() => Task.FromResult(dangerousCall)).PipeTo(sender);
             });
 
             Receive<string>(str => str.Equals("block for me"), _ =>

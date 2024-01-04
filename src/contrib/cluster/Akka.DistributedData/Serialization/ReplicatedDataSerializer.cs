@@ -1075,7 +1075,7 @@ namespace Akka.DistributedData.Serialization
                         {
                             if (entry.EntryData.Count > 1)
                                 throw new ArgumentOutOfRangeException(
-                                    $"Can't deserialize key/value pair in ORDictionary delta - too many pairs on the wire");
+                                    "Can't deserialize key/value pair in ORDictionary delta - too many pairs on the wire");
                             var (key, value) = MapEntryFromProto(entry.EntryData[0]);
 
                             deltaOps.Add(new ORDictionary<TKey, TValue>.PutDeltaOperation(new ORSet<TKey>.AddDeltaOperation((ORSet<TKey>)underlying), (TKey)key, (TValue)value));
@@ -1090,7 +1090,7 @@ namespace Akka.DistributedData.Serialization
                         {
                             if (entry.EntryData.Count > 1)
                                 throw new ArgumentOutOfRangeException(
-                                    $"Can't deserialize key/value pair in ORDictionary delta - too many pairs on the wire");
+                                    "Can't deserialize key/value pair in ORDictionary delta - too many pairs on the wire");
                             var (key, value) = MapEntryFromProto(entry.EntryData[0]);
                             deltaOps.Add(new ORDictionary<TKey, TValue>.RemoveKeyDeltaOperation(new ORSet<TKey>.RemoveDeltaOperation((ORSet<TKey>)underlying), (TKey)key));
                         }
@@ -1122,7 +1122,7 @@ namespace Akka.DistributedData.Serialization
             if (groupOp.OperationsSerialization.Count == 1 &&
                 groupOp.OperationsSerialization.First() is ORDictionary.IPutDeltaOp put)
                 return put;
-            throw new SerializationException($"Improper ORDictionary delta put operation size or kind");
+            throw new SerializationException("Improper ORDictionary delta put operation size or kind");
         }
 
         private ORDictionary.IRemoveDeltaOp ORDictionaryRemoveFromBinary(byte[] bytes)
@@ -1131,7 +1131,7 @@ namespace Akka.DistributedData.Serialization
             if (groupOp.OperationsSerialization.Count == 1 &&
                 groupOp.OperationsSerialization.First() is ORDictionary.IRemoveDeltaOp remove)
                 return remove;
-            throw new SerializationException($"Improper ORDictionary delta remove operation size or kind");
+            throw new SerializationException("Improper ORDictionary delta remove operation size or kind");
         }
 
         private ORDictionary.IRemoveKeyDeltaOp ORDictionaryRemoveKeyFromBinary(byte[] bytes)
@@ -1140,7 +1140,7 @@ namespace Akka.DistributedData.Serialization
             if (groupOp.OperationsSerialization.Count == 1 &&
                 groupOp.OperationsSerialization.First() is ORDictionary.IRemoveKeyDeltaOp removeKey)
                 return removeKey;
-            throw new SerializationException($"Improper ORDictionary delta remove key operation size or kind");
+            throw new SerializationException("Improper ORDictionary delta remove key operation size or kind");
         }
 
         private ORDictionary.IUpdateDeltaOp ORDictionaryUpdateFromBinary(byte[] bytes)
@@ -1149,7 +1149,7 @@ namespace Akka.DistributedData.Serialization
             if (groupOp.OperationsSerialization.Count == 1 &&
                 groupOp.OperationsSerialization.First() is ORDictionary.IUpdateDeltaOp update)
                 return update;
-            throw new SerializationException($"Improper ORDictionary delta update operation size or kind");
+            throw new SerializationException("Improper ORDictionary delta update operation size or kind");
         }
 
         #endregion

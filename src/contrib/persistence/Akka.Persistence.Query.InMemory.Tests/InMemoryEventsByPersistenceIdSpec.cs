@@ -13,7 +13,7 @@ namespace Akka.Persistence.Query.InMemory.Tests
 {
     public class InMemoryEventsByPersistenceIdSpec : EventsByPersistenceIdSpec
     {
-        private static Config Config() => ConfigurationFactory.ParseString($@"
+        private static Config Config() => ConfigurationFactory.ParseString(@"
             akka.loglevel = INFO
             akka.persistence.query.journal.inmem.refresh-interval = 1s
             akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""

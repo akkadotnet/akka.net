@@ -21,9 +21,7 @@ namespace Akka.DistributedData.Tests.LightningDb
         private readonly ITestOutputHelper _output;
         
         private static readonly Config BaseConfig = ConfigurationFactory.ParseString($@"
-            akka.actor {{
-                provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-            }}
+            akka.actor.provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             akka.remote.dot-netty.tcp.port = 0
             akka.cluster.distributed-data.durable.lmdb {{
                 dir = {DDataDir}
@@ -46,14 +44,12 @@ namespace Akka.DistributedData.Tests.LightningDb
                 di.Delete(true);
             }
             Directory.CreateDirectory(DDataDir);
-
             var testKit = new TestKit.Xunit2.TestKit(BaseConfig, nameof(LmdbDurableStoreSpec), _output);
             var probe = testKit.CreateTestProbe();
-
             var config = testKit.Sys.Settings.Config.GetConfig("akka.cluster.distributed-data.durable");
             var lmdb = testKit.Sys.ActorOf(LmdbDurableStore.Props(config));
             lmdb.Tell(LoadAll.Instance, probe.Ref);
-
+            
             probe.ExpectMsg<LoadAllCompleted>();
         }
     }

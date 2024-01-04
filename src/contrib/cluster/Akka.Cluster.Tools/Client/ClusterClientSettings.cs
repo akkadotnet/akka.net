@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Cluster.Tools.Client.Serialization;
 using Akka.Configuration;
 using Akka.Remote;
 
@@ -34,6 +35,11 @@ namespace Akka.Cluster.Tools.Client
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ClusterClientSettings>("akka.cluster.client");//($"Failed to create {nameof(ClusterClientSettings)}: Actor system [{system.Name}] doesn't have `akka.cluster.client` config set up");
 
+            if (config.GetBoolean("use-legacy-serialization"))
+            {
+                system.Serialization.RemoveSerializationMap(typeof(IClusterClientProtocolMessage));
+            }
+            
             return Create(config);
         }
 
@@ -63,6 +69,7 @@ namespace Akka.Cluster.Tools.Client
                 config.GetTimeSpan("heartbeat-interval"),
                 config.GetTimeSpan("acceptable-heartbeat-pause"),
                 config.GetInt("buffer-size"),
+                config.GetBoolean("use-legacy-serialization"),
                 reconnectTimeout);
         }
 
@@ -109,6 +116,13 @@ namespace Akka.Cluster.Tools.Client
         public TimeSpan? ReconnectTimeout { get; }
 
         /// <summary>
+        /// If set to true, will cause all ClusterClient message to be serialized using the default <see cref="object"/>
+        /// serializer.
+        /// If set to false, will cause all ClusterClient message to be serialized using <see cref="ClusterClientMessageSerializer"/>
+        /// </summary>
+        public bool UseLegacySerialization { get; }
+        
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="initialContacts">TBD</param>
@@ -119,6 +133,7 @@ namespace Akka.Cluster.Tools.Client
         /// <param name="bufferSize">TBD</param>
         /// <param name="reconnectTimeout">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
+        [Obsolete("Use constructor with useLegacySerialization argument instead. Since 1.5.15")]
         public ClusterClientSettings(
             IImmutableSet<ActorPath> initialContacts,
             TimeSpan establishingGetContactsInterval,
@@ -126,6 +141,39 @@ namespace Akka.Cluster.Tools.Client
             TimeSpan heartbeatInterval,
             TimeSpan acceptableHeartbeatPause,
             int bufferSize,
+            TimeSpan? reconnectTimeout = null)
+            : this(
+                initialContacts: initialContacts,
+                establishingGetContactsInterval: establishingGetContactsInterval,
+                refreshContactsInterval: refreshContactsInterval,
+                heartbeatInterval: heartbeatInterval,
+                acceptableHeartbeatPause: acceptableHeartbeatPause,
+                bufferSize: bufferSize,
+                useLegacySerialization: true,
+                reconnectTimeout: reconnectTimeout)
+        {
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialContacts">TBD</param>
+        /// <param name="establishingGetContactsInterval">TBD</param>
+        /// <param name="refreshContactsInterval">TBD</param>
+        /// <param name="heartbeatInterval">TBD</param>
+        /// <param name="acceptableHeartbeatPause">TBD</param>
+        /// <param name="bufferSize">TBD</param>
+        /// <param name="reconnectTimeout">TBD</param>
+        /// <param name="useLegacySerialization">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        public ClusterClientSettings(
+            IImmutableSet<ActorPath> initialContacts,
+            TimeSpan establishingGetContactsInterval,
+            TimeSpan refreshContactsInterval,
+            TimeSpan heartbeatInterval,
+            TimeSpan acceptableHeartbeatPause,
+            int bufferSize,
+            bool useLegacySerialization,
             TimeSpan? reconnectTimeout = null)
         {
             if (bufferSize is < 0 or > 10000)
@@ -140,8 +188,9 @@ namespace Akka.Cluster.Tools.Client
             AcceptableHeartbeatPause = acceptableHeartbeatPause;
             BufferSize = bufferSize;
             ReconnectTimeout = reconnectTimeout;
+            UseLegacySerialization = useLegacySerialization;
         }
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -208,6 +257,9 @@ namespace Akka.Cluster.Tools.Client
             return Copy(reconnectTimeout: reconnectTimeout);
         }
 
+        public ClusterClientSettings WithUseLegacySerialization(bool useLegacySerialization)
+            => Copy(useLegacySerialization: useLegacySerialization);
+
         private ClusterClientSettings Copy(
             IImmutableSet<ActorPath> initialContacts = null,
             TimeSpan? establishingGetContactsInterval = null,
@@ -215,6 +267,7 @@ namespace Akka.Cluster.Tools.Client
             TimeSpan? heartbeatInterval = null,
             TimeSpan? acceptableHeartbeatPause = null,
             int? bufferSize = null,
+            bool? useLegacySerialization = null,
             TimeSpan? reconnectTimeout = null)
         {
             return new ClusterClientSettings(
@@ -224,6 +277,7 @@ namespace Akka.Cluster.Tools.Client
                 heartbeatInterval ?? HeartbeatInterval,
                 acceptableHeartbeatPause ?? AcceptableHeartbeatPause,
                 bufferSize ?? BufferSize,
+                useLegacySerialization ?? UseLegacySerialization,
                 reconnectTimeout ?? ReconnectTimeout);
         }
     }
