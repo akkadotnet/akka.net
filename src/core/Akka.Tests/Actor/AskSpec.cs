@@ -214,7 +214,7 @@ namespace Akka.Tests.Actor
             try
             {
                 await actor.Ask<string>("timeout");
-                Assert.True(false, "the ask should have timed out with default timeout");
+                Assert.Fail("the ask should have timed out with default timeout");
             }
             catch (AskTimeoutException e)
             {

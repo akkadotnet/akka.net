@@ -13,7 +13,7 @@
     </ItemGroup>
     <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
         <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="7.0.0" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftLibVersion)" />
     </ItemGroup>
     <ItemGroup>
         <None Update="CodeGen\Dsl\GraphApply.tt">

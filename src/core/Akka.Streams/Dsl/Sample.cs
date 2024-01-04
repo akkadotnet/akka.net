@@ -69,7 +69,7 @@ namespace Akka.Streams.Dsl
         public static Sample<T> Random(int maxStep = 1000)
         {
             if (maxStep <= 0)
-                throw new ArgumentException($"Max step for a random sampling must > 0", nameof(maxStep));
+                throw new ArgumentException("Max step for a random sampling must > 0", nameof(maxStep));
 
             return new Sample<T>(() => ThreadLocalRandom.Current.Next(maxStep) + 1);
         }

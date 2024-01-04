@@ -210,7 +210,7 @@ namespace Akka.Serialization.Hyperion.Tests
 #elif NETCOREAPP3_1
                 Assert.Equal("dff", @override("def"));
                 Assert.Equal("efg", @override("efg"));
-#elif NET7_0
+#elif NET6_0_OR_GREATER
                 Assert.Equal("gii", @override("ghi"));
                 Assert.Equal("hij", @override("hij"));
 #else

@@ -23,7 +23,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="args">An optional object array that contains zero or more objects to format.</param>
         public void Fail(string format = "", params object[] args)
         {
-            Assert.True(false, string.Format(format, args));
+            Assert.Fail(string.Format(format, args));
         }
 
         /// <summary>

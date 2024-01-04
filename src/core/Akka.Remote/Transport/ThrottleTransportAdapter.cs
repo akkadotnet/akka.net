@@ -200,7 +200,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class ThrottlerManager : ActorTransportAdapterManager
+    internal sealed class ThrottlerManager : ActorTransportAdapterManager
     {
         #region Internal message classes
 
@@ -330,10 +330,10 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        protected readonly Transport WrappedTransport;
-        private Dictionary<Address, (ThrottleMode, ThrottleTransportAdapter.Direction)> _throttlingModes = new();
+        private readonly Transport WrappedTransport;
+        private readonly Dictionary<Address, (ThrottleMode, ThrottleTransportAdapter.Direction)> _throttlingModes = new();
 
-        private List<(Address, ThrottlerHandle)> _handleTable = new();
+        private readonly List<(Address, ThrottlerHandle)> _handleTable = new();
 
         /// <summary>
         /// TBD
@@ -913,7 +913,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class ThrottledAssociation : FSM<ThrottledAssociation.ThrottlerState, ThrottledAssociation.IThrottlerData>, ILoggingFSM
+    internal sealed class ThrottledAssociation : FSM<ThrottledAssociation.ThrottlerState, ThrottledAssociation.IThrottlerData>, ILoggingFSM
     {
         #region ThrottledAssociation FSM state and data classes
 
@@ -972,7 +972,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Uninitialized : IThrottlerData
+        internal sealed class Uninitialized : IThrottlerData
         {
             private Uninitialized() { }
             public static Uninitialized Instance { get; } = new();
@@ -1023,32 +1023,32 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        protected IActorRef Manager;
+        private readonly IActorRef Manager;
         /// <summary>
         /// TBD
         /// </summary>
-        protected IAssociationEventListener AssociationHandler;
+        private readonly IAssociationEventListener AssociationHandler;
         /// <summary>
         /// TBD
         /// </summary>
-        protected AssociationHandle OriginalHandle;
+        private readonly AssociationHandle OriginalHandle;
         /// <summary>
         /// TBD
         /// </summary>
-        protected bool Inbound;
+        private readonly bool Inbound;
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected ThrottleMode InboundThrottleMode;
+        private ThrottleMode InboundThrottleMode;
         /// <summary>
         /// TBD
         /// </summary>
-        protected Queue<ByteString> ThrottledMessages = new();
+        private Queue<ByteString> ThrottledMessages = new();
         /// <summary>
         /// TBD
         /// </summary>
-        protected IHandleEventListener UpstreamListener;
+        private IHandleEventListener UpstreamListener;
 
         /// <summary>
         /// Used for decoding certain types of throttled messages on-the-fly
