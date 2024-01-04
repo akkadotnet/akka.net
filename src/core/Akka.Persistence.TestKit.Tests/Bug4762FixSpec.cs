@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TestKit.Tests
 {
@@ -21,6 +22,11 @@ namespace Akka.Persistence.TestKit.Tests
     /// </summary>
     public class Bug4762FixSpec : PersistenceTestKit
     {
+        public Bug4762FixSpec(ITestOutputHelper outputHelper) : base(output: outputHelper)
+        {
+            
+        }
+        
         private class WriteMessage
         { }
 
