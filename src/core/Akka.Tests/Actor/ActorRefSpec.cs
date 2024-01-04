@@ -179,7 +179,7 @@ namespace Akka.Tests.Actor
             var a = Sys.ActorOf(Props.Create(() => new NestingActor(Sys)));
             a.Should().NotBeNull();
             
-            Func<Task> t1 = async () =>
+            var t1 = async () =>
             {
                 var nested = (IActorRef) await a.Ask("any");
                 nested.Should().NotBeNull();
@@ -523,15 +523,6 @@ namespace Akka.Tests.Actor
             }
         }
 
-        private class FailingChildInnerActor : FailingInnerActor
-        {
-            public FailingChildInnerActor(ActorBase fail)
-                : base(fail)
-            {
-                Fail = new InnerActor();
-            }
-        }
-
         private class OuterActor : ActorBase
         {
             private readonly IActorRef _inner;
@@ -552,39 +543,6 @@ namespace Akka.Tests.Actor
                     _inner.Forward(message);
                 }
                 return true;
-            }
-        }
-
-        private class FailingOuterActor : ActorBase
-        {
-            private readonly IActorRef _inner;
-            protected ActorBase Fail;
-
-            public FailingOuterActor(IActorRef inner)
-            {
-                _inner = inner;
-                Fail = new InnerActor();
-            }
-            protected override bool Receive(object message)
-            {
-                if (message.ToString() == "self")
-                {
-                    Sender.Tell(Self);
-                }
-                else
-                {
-                    _inner.Forward(message);
-                }
-                return true;
-            }
-        }
-
-        private class FailingChildOuterActor : FailingOuterActor
-        {
-            public FailingChildOuterActor(IActorRef inner)
-                : base(inner)
-            {
-                Fail = new InnerActor();
             }
         }
 
