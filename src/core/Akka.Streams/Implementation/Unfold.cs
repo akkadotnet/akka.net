@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Sources;
 using Akka.Annotations;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
 using Akka.Util;
@@ -103,7 +104,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly UnfoldValueTaskAsync<TState, TElement> _stage;
             private TState _state;
-            private Action<Result<Option<(TState, TElement)>>> _asyncHandler;
+            private Action<SlimResult<Option<(TState, TElement)>>> _asyncHandler;
             private ValueTask<Option<(TState, TElement)>> _currentTask;
             public Logic(UnfoldValueTaskAsync<TState, TElement> stage) : base(stage.Shape)
             {
@@ -116,38 +117,42 @@ namespace Akka.Streams.Implementation
             public override void OnPull()
             {
                 var vt = _stage.UnfoldFunc(_state);
-                    var peeker = Unsafe.As<ValueTask<Option<(TState,TElement)>>,ValueTaskCheatingPeeker<Option<(TState,TElement)>>>(ref vt);
-                    if (peeker._obj == null)
-                    {
-                        _asyncHandler(Result.Success<Option<(TState, TElement)>>(peeker._result));
-                    }
-                    else
-                    {
-                        _currentTask = vt;
-                        vt.GetAwaiter().OnCompleted(CompletionAction);
-                    } 
+                if (vt.IsCompletedSuccessfully)
+                {
+                    _asyncHandler(
+                        new SlimResult<Option<(TState, TElement)>>(default,
+                            vt.Result));
+                }
+                else
+                {
+                    _currentTask = vt;
+                    vt.GetAwaiter().OnCompleted(CompletionAction);
+                }
             }
             private void CompletionAction()
             {
                 if (_currentTask.IsCompletedSuccessfully)
                 {
-                    _asyncHandler.Invoke(Result.Success(_currentTask.Result));
+                    _asyncHandler.Invoke(
+                        new SlimResult<Option<(TState, TElement)>>(default,
+                            _currentTask.Result));
                 }
                 else
                 {
                     _asyncHandler.Invoke(
-                        Result.FromTask(_currentTask.AsTask()));
+                        SlimResult<Option<(TState, TElement)>>.FromTask(
+                            _currentTask.AsTask()));
                 }
             }
             public override void PreStart()
             {
-                var ac = GetAsyncCallback<Result<Option<(TState, TElement)>>>(result =>
+                var ac = GetAsyncCallback<SlimResult<Option<(TState, TElement)>>>(result =>
                 {
-                    if (!result.IsSuccess)
-                        Fail(_stage.Out, result.Exception);
+                    if (!result.IsSuccess())
+                        Fail(_stage.Out, result.Error);
                     else
                     {
-                        var option = result.Value;
+                        var option = result.Result;
                         if (!option.HasValue)
                             Complete(_stage.Out);
                         else
