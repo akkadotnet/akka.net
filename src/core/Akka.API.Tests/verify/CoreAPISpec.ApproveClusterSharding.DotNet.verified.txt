@@ -169,9 +169,12 @@ namespace Akka.Cluster.Sharding
                 2,
                 1,
                 1})] System.Func<object, object> messageExtractor = null) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
         public abstract string EntityId(object message);
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
         public virtual object EntityMessage(object message) { }
         [System.ObsoleteAttribute("Use ShardId(string, object?) instead")]
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
         public virtual string ShardId(object message) { }
         public virtual string ShardId(string entityId, [System.Runtime.CompilerServices.NullableAttribute(2)] object messageHint = null) { }
     }

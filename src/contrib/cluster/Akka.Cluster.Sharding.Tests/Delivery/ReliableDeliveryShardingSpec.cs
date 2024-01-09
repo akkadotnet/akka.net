@@ -395,17 +395,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         Props.Create(() => new ProbeWrapper(consumerEndProbe, c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var shardingProducerSettings = ShardingProducerController.Settings.Create(Sys) with
         {
