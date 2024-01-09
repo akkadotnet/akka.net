@@ -62,9 +62,9 @@ namespace Akka.Cluster.Sharding.Tests
             Within(TimeSpan.FromSeconds(30), () =>
             {
                 // second should be oldest
-                Join(config.Second, config.Second);
-                Join(config.First, config.Second);
-                Join(config.Third, config.Second);
+                Join(Config.Second, Config.Second);
+                Join(Config.First, Config.Second);
+                Join(Config.Third, Config.Second);
 
                 AwaitAssert(() =>
                 {
@@ -83,7 +83,7 @@ namespace Akka.Cluster.Sharding.Tests
                         csTaskDone.Ref.Tell(Done.Instance);
                         return Task.FromResult(Done.Instance);
                     });
-                }, config.Third);
+                }, Config.Third);
 
                 StartSharding(
                     Sys,
@@ -98,14 +98,14 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     CoordinatedShutdown.Get(Sys).Run(CoordinatedShutdown.UnknownReason.Instance);
                     AwaitCondition(() => Cluster.IsTerminated);
-                }, config.Second);
+                }, Config.Second);
 
                 RunOn(() =>
                 {
                     CoordinatedShutdown.Get(Sys).Run(CoordinatedShutdown.UnknownReason.Instance);
                     AwaitCondition(() => Cluster.IsTerminated);
                     csTaskDone.ExpectMsg<Done>();
-                }, config.Third);
+                }, Config.Third);
 
                 EnterBarrier("after-shutdown");
 
@@ -114,7 +114,7 @@ namespace Akka.Cluster.Sharding.Tests
                     _region.Value.Tell(2);
                     ExpectMsg(2);
                     LastSender.Path.Address.HasLocalScope.Should().BeTrue();
-                }, config.First);
+                }, Config.First);
 
                 EnterBarrier("after-1");
             });
