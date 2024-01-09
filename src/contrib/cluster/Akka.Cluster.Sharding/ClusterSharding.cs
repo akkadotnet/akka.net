@@ -16,7 +16,6 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 
 using Akka.Actor;
-using Akka.Cluster.Sharding.Serialization.Proto.Msg;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -62,7 +61,7 @@ namespace Akka.Cluster.Sharding
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string? EntityId(Msg message)
+        public EntityId? EntityId(Msg message)
         {
             return message switch
             {
@@ -82,17 +81,14 @@ namespace Akka.Cluster.Sharding
         }
 
         [Obsolete("Use ShardId(EntityId, object) instead.")]
-        public string? ShardId(Msg message)
+        public ShardId? ShardId(Msg message)
         {
            return _underlying.ShardId(message);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string ShardId(string entityId, Msg? messageHint = null)
+        public ShardId ShardId(string entityId, Msg? messageHint = null)
         {
-            // BUGFIX for https://github.com/akkadotnet/akka.net/pull/7051 here
-            if (messageHint is ShardRegion.StartEntity se)
-                return _underlying.ShardId(se.EntityId, se); 
             return _underlying.ShardId(entityId, messageHint);
         }
     }
@@ -114,7 +110,7 @@ namespace Akka.Cluster.Sharding
                 _messageExtractor = messageExtractor;
             }
 
-            public override string? EntityId(Msg message)
+            public override EntityId? EntityId(Msg message)
                 => _entityIdExtractor.Invoke(message);
 
             public override Msg? EntityMessage(Msg message)
@@ -158,7 +154,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public abstract string? EntityId(Msg message);
+        public abstract EntityId? EntityId(Msg message);
 
         /// <summary>
         /// Default implementation pass on the message as is.
@@ -178,7 +174,7 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [Obsolete("Use ShardId(string, object?) instead")]
-        public virtual string? ShardId(Msg message)
+        public virtual ShardId? ShardId(Msg message)
         {
             EntityId? id;
             if (message is ShardRegion.StartEntity se)
@@ -190,7 +186,7 @@ namespace Akka.Cluster.Sharding
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual string ShardId(string entityId, Msg? messageHint = null)
+        public virtual ShardId ShardId(string entityId, Msg? messageHint = null)
         {
             return _cachedIds[(Math.Abs(MurmurHash.StringHash(entityId)) % MaxNumberOfShards)];
         }
@@ -1561,7 +1557,7 @@ namespace Akka.Cluster.Sharding
             _extractShardId = extractShardId;
         }
 
-        public string? EntityId(Msg message)
+        public EntityId? EntityId(Msg message)
         {
             var entityId = _extractEntityId(message);
             return entityId.HasValue ? entityId.Value.Item1 : null;
@@ -1573,12 +1569,12 @@ namespace Akka.Cluster.Sharding
             return entityId.HasValue ? entityId.Value.Item2 : null;
         }
 
-        public string? ShardId(Msg message)
+        public ShardId? ShardId(Msg message)
         {
             return _extractShardId(message);
         }
 
-        public string ShardId(string entityId, Msg? messageHint = null)
+        public ShardId ShardId(string entityId, Msg? messageHint = null)
         {
             if(messageHint is null)
                 throw new ArgumentNullException(nameof(messageHint), "DeprecatedHandlerExtractorAdapter: Message hint must be provided when using the ShardId(EntityId, object) overload.");
