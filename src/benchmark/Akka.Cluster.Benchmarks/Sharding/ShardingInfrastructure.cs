@@ -4,7 +4,6 @@
 //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Sharding;
@@ -41,7 +40,7 @@ namespace Akka.Cluster.Benchmarks.Sharding
                 Sender.Tell(new ResolveResp(e.EntityId, Cluster.Get(Context.System).SelfAddress));
             });
             
-            ReceiveAny(_ => Sender.Tell(_));
+            ReceiveAny(o => Sender.Tell(o));
         }
     }
 
@@ -51,10 +50,6 @@ namespace Akka.Cluster.Benchmarks.Sharding
     {
         private IActorRef _shardRegion;
         private IActorRef _sender;
-
-        
-
-      
 
         public ShardedProxyEntityActor(IActorRef shardRegion)
         {
@@ -198,11 +193,6 @@ namespace Akka.Cluster.Benchmarks.Sharding
             if(message is ShardedMessage sharded)
             {
                 return sharded.EntityId;
-            }
-
-            if (message is ShardingEnvelope e)
-            {
-                return e.EntityId;
             }
 
             return null;

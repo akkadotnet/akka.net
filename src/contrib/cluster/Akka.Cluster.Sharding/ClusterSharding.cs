@@ -111,10 +111,10 @@ namespace Akka.Cluster.Sharding
                 _messageExtractor = messageExtractor;
             }
 
-            public override string EntityId(Msg message)
+            public override string? EntityId(Msg message)
                 => _entityIdExtractor.Invoke(message);
 
-            public override Msg EntityMessage(Msg message)
+            public override Msg? EntityMessage(Msg message)
                 => _messageExtractor?.Invoke(message) ?? base.EntityMessage(message);
         }
 
@@ -155,7 +155,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public abstract string EntityId(Msg message);
+        public abstract string? EntityId(Msg message);
 
         /// <summary>
         /// Default implementation pass on the message as is.
@@ -163,7 +163,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual Msg EntityMessage(Msg message)
+        public virtual Msg? EntityMessage(Msg message)
         {
             return message;
         }
@@ -175,15 +175,15 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [Obsolete("Use ShardId(string, object?) instead")]
-        public virtual string ShardId(Msg message)
+        public virtual string? ShardId(Msg message)
         {
-            EntityId id;
+            EntityId? id;
             if (message is ShardRegion.StartEntity se)
                 id = se.EntityId;
             else
                 id = EntityId(message);
-
-            return _cachedIds[(Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards)];
+            
+            return id is null ? null : _cachedIds[(Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards)];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

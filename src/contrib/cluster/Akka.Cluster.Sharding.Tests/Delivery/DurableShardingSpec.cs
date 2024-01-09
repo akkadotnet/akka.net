@@ -68,15 +68,12 @@ public class DurableShardingSpec : AkkaSpec
             HashCodeMessageExtractor.Create(10,
                 o =>
                 {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
+                    // ShardingEnvelope is what is used by Akka.Cluster.Sharding.Delivery, and that msg is
+                    // automatically handled by the ShardRegion, so we don't need to explicitly handle it here
+                    if(o is string str)
+                        return str;
                     return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                }, o => o));
         // </SpawnDurableConsumer>
 
         // <SpawnDurableProducer>
