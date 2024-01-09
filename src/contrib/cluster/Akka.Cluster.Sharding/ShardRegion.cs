@@ -717,9 +717,10 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private void DeliverMessage(string entityId, object message, IActorRef sender)
+        private void DeliverMessage(string entityId, Msg message, IActorRef sender)
         {
             var shardId = _messageExtractor.ShardId(entityId, message);
+            
             if (_regionByShard.TryGetValue(shardId!, out var region))
             {
                 if (region.Equals(Self))
