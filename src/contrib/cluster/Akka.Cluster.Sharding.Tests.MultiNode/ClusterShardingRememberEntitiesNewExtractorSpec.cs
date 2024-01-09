@@ -162,7 +162,7 @@ namespace Akka.Cluster.Sharding.Tests
                 Sys,
                 typeName: TypeName,
                 entityProps: Props.Create(() => new TestEntity(null)),
-                settings: settings.Value.WithRole("sharding"),
+                settings: Settings.Value.WithRole("sharding"),
                 extractEntityId: extractEntityId,
                 extractShardId: extractShardId1);
         }
@@ -173,7 +173,7 @@ namespace Akka.Cluster.Sharding.Tests
                 sys,
                 typeName: TypeName,
                 entityProps: Props.Create(() => new TestEntity(probe)),
-                settings: ClusterShardingSettings.Create(sys).WithRememberEntities(config.RememberEntities).WithRole("sharding"),
+                settings: ClusterShardingSettings.Create(sys).WithRememberEntities(Config.RememberEntities).WithRole("sharding"),
                 extractEntityId: extractEntityId,
                 extractShardId: extractShardId2);
         }
@@ -198,11 +198,11 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(15), () =>
             {
-                StartPersistenceIfNeeded(startOn: config.First, config.Second, config.Third);
+                StartPersistenceIfNeeded(startOn: Config.First, Config.Second, Config.Third);
 
-                Join(config.First, config.First);
-                Join(config.Second, config.First);
-                Join(config.Third, config.First);
+                Join(Config.First, Config.First);
+                Join(Config.Second, Config.First);
+                Join(Config.Third, Config.First);
 
                 RunOn(() =>
                 {
@@ -213,12 +213,12 @@ namespace Akka.Cluster.Sharding.Tests
                             Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(3);
                         });
                     });
-                }, config.First, config.Second, config.Third);
+                }, Config.First, Config.Second, Config.Third);
 
                 RunOn(() =>
                 {
                     StartShardingWithExtractor1();
-                }, config.Second, config.Third);
+                }, Config.Second, Config.Third);
                 EnterBarrier("first-cluster-up");
 
                 RunOn(() =>
@@ -229,7 +229,7 @@ namespace Akka.Cluster.Sharding.Tests
                         Region().Tell(n);
                         ExpectMsg(n);
                     }
-                }, config.Second, config.Third);
+                }, Config.Second, Config.Third);
                 EnterBarrier("first-cluster-entities-up");
             });
         }
@@ -240,9 +240,9 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 RunOn(() =>
                 {
-                    TestConductor.Exit(config.Second, 0).Wait();
-                    TestConductor.Exit(config.Third, 0).Wait();
-                }, config.First);
+                    TestConductor.Exit(Config.Second, 0).Wait();
+                    TestConductor.Exit(Config.Third, 0).Wait();
+                }, Config.First);
 
                 RunOn(() =>
                 {
@@ -253,7 +253,7 @@ namespace Akka.Cluster.Sharding.Tests
                             Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(1);
                         });
                     });
-                }, config.First);
+                }, Config.First);
 
             });
             EnterBarrier("first-sharding-cluster-stopped");
@@ -276,7 +276,7 @@ namespace Akka.Cluster.Sharding.Tests
                         Cluster.Get(Sys).IsTerminated.Should().BeTrue();
                     });
 
-                }, config.Second, config.Third);
+                }, Config.Second, Config.Third);
                 EnterBarrier("first-cluster-terminated");
 
                 // no sharding nodes left of the original cluster, start a new nodes
@@ -287,16 +287,16 @@ namespace Akka.Cluster.Sharding.Tests
 
                     if (PersistenceIsNeeded)
                     {
-                        SetStore(sys2, storeOn: config.First);
+                        SetStore(sys2, storeOn: Config.First);
 
                         ////Persistence.Persistence.Instance.Apply(sys2);
-                        //sys2.ActorSelection(Node(config.First) / "system" / "akka.persistence.journal.sqlite").Tell(new Identify(null), probe2.Ref);
+                        //sys2.ActorSelection(Node(_config.First) / "system" / "akka.persistence.journal.sqlite").Tell(new Identify(null), probe2.Ref);
                         //var sharedStore = probe2.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
                         //sharedStore.Should().NotBeNull();
                         //SqliteJournalShared.SetStore(sharedStore, sys2);
                     }
 
-                    Cluster.Get(sys2).Join(Node(config.First).Address);
+                    Cluster.Get(sys2).Join(Node(Config.First).Address);
                     StartShardingWithExtractor2(sys2, probe2.Ref);
                     probe2.ExpectMsg<Started>(TimeSpan.FromSeconds(20));
 
@@ -323,12 +323,12 @@ namespace Akka.Cluster.Sharding.Tests
 
                     EnterBarrier("verified");
                     Shutdown(sys2);
-                }, config.Second, config.Third);
+                }, Config.Second, Config.Third);
 
                 RunOn(() =>
                 {
                     EnterBarrier("verified");
-                }, config.First);
+                }, Config.First);
 
                 EnterBarrier("done");
             });
