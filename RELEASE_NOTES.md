@@ -1,3 +1,5 @@
+#### 1.5.15 January 9th 2024 ####
+
 #### 1.5.14 September 24th 2023 ####
 
 Akka.NET v1.5.14 is a maintenance release with several bug fixes.
