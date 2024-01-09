@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Threading;
 using Akka.Actor;
@@ -114,28 +114,35 @@ namespace Akka.Cluster.Sharding.Tests
     {
         #region setup
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MyMessageExtractor : IMessageExtractor
         {
-            switch (message)
+            public string? EntityId(object message)
             {
-                case int id:
-                    return (id.ToString(), id);
+                switch(message)
+                {
+                    case int id:
+                        return id.ToString();
+                    default:
+                        return null;
+                }
             }
-            return Option<(string, object)>.None;
-        };
 
-        private ExtractShardId extractShardId = message =>
-        {
-            switch (message)
+            public object? EntityMessage(object message)
             {
-                case int id:
-                    return id.ToString();
-                case ShardRegion.StartEntity msg:
-                    return msg.EntityId;
+                return message;
             }
-            return null;
-        };
 
+            public string? ShardId(object message)
+            {
+                throw new NotImplementedException();
+            }
+
+            public string ShardId(string entityId, object? messageHint = null)
+            {
+                return entityId;
+            }
+        }
+        
         private const string dataType = "Entity";
 
         private readonly Lazy<IActorRef> _region;
@@ -152,10 +159,9 @@ namespace Akka.Cluster.Sharding.Tests
             return StartSharding(
                 sys,
                 typeName: dataType,
+                new MyMessageExtractor(),
                 entityProps: Props.Create(() => new EntityActor(probe)),
-                settings: ClusterShardingSettings.Create(sys).WithRememberEntities(config.RememberEntities),
-                extractEntityId: extractEntityId,
-                extractShardId: extractShardId);
+                settings: ClusterShardingSettings.Create(sys).WithRememberEntities(Config.RememberEntities));
         }
 
         private EntityActor.Started ExpectEntityRestarted(
@@ -164,7 +170,7 @@ namespace Akka.Cluster.Sharding.Tests
             TestProbe probe,
             TestProbe entityProbe)
         {
-            if (!config.RememberEntities)
+            if (!Config.RememberEntities)
             {
                 probe.Send(ClusterSharding.Get(sys).ShardRegion(dataType), @event);
                 probe.ExpectMsg(1);
@@ -189,25 +195,25 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
-                StartPersistenceIfNeeded(startOn: config.First, config.First, config.Second, config.Third);
+                StartPersistenceIfNeeded(startOn: Config.First, Config.First, Config.Second, Config.Third);
 
                 var entityProbe = CreateTestProbe();
                 var probe = CreateTestProbe();
-                Join(config.Second, config.Second);
+                Join(Config.Second, Config.Second);
                 RunOn(() =>
                 {
                     StartSharding(Sys, entityProbe.Ref);
                     probe.Send(_region.Value, 1);
                     probe.ExpectMsg(1);
                     entityProbe.ExpectMsg<EntityActor.Started>();
-                }, config.Second);
+                }, Config.Second);
                 EnterBarrier("second-started");
 
-                Join(config.Third, config.Second);
+                Join(Config.Third, Config.Second);
                 RunOn(() =>
                 {
                     StartSharding(Sys, entityProbe.Ref);
-                }, config.Third);
+                }, Config.Third);
 
                 RunOn(() =>
                 {
@@ -219,7 +225,7 @@ namespace Akka.Cluster.Sharding.Tests
                             Cluster.State.Members.Should().OnlyContain(i => i.Status == MemberStatus.Up);
                         });
                     });
-                }, config.Second, config.Third);
+                }, Config.Second, Config.Third);
                 EnterBarrier("all-up");
 
                 RunOn(() =>
@@ -231,15 +237,15 @@ namespace Akka.Cluster.Sharding.Tests
                         // gossip. So we must give that a chance to replicate before shutting down second.
                         Thread.Sleep(5000);
                     }
-                    TestConductor.Exit(config.Second, 0).Wait();
-                }, config.First);
+                    TestConductor.Exit(Config.Second, 0).Wait();
+                }, Config.First);
 
                 EnterBarrier("crash-second");
 
                 RunOn(() =>
                 {
                     ExpectEntityRestarted(Sys, 1, probe, entityProbe);
-                }, config.Third);
+                }, Config.Third);
 
                 EnterBarrier("after-2");
             });
@@ -266,7 +272,7 @@ namespace Akka.Cluster.Sharding.Tests
                     var probe2 = CreateTestProbe(sys2);
 
                     if (PersistenceIsNeeded)
-                        SetStore(sys2, storeOn: config.First);
+                        SetStore(sys2, storeOn: Config.First);
 
                     Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
 
@@ -275,7 +281,7 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectEntityRestarted(sys2, 1, probe2, entityProbe2);
 
                     Shutdown(sys2);
-                }, config.Third);
+                }, Config.Third);
                 EnterBarrier("after-3");
             });
         }

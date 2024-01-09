@@ -210,9 +210,9 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
-                StartPersistenceIfNeeded(startOn: config.First, config.First, config.Second);
+                StartPersistenceIfNeeded(startOn: Config.First, Config.First, Config.Second);
 
-                Join(config.First, config.First);
+                Join(Config.First, Config.First);
 
                 RunOn(() =>
                 {
@@ -221,30 +221,30 @@ namespace Akka.Cluster.Sharding.Tests
                     _region.Value.Tell(1);
                     ExpectMsg(1);
                     LastSender.Path.Should().Be(_region.Value.Path / "1" / "1");
-                }, config.First);
+                }, Config.First);
                 EnterBarrier("first-started");
 
-                Join(config.Second, config.First);
+                Join(Config.Second, Config.First);
 
                 _region.Value.Tell(2);
                 ExpectMsg(2);
                 RunOn(() =>
                 {
                     LastSender.Path.Should().Be(_region.Value.Path / "2" / "2");
-                }, config.First);
+                }, Config.First);
                 RunOn(() =>
                 {
-                    LastSender.Path.Should().Be(Node(config.First) / "system" / "sharding" / "Entity" / "2" / "2");
-                }, config.Second);
+                    LastSender.Path.Should().Be(Node(Config.First) / "system" / "sharding" / "Entity" / "2" / "2");
+                }, Config.Second);
                 EnterBarrier("second-started");
 
                 RunOn(() =>
                 {
-                    Sys.ActorSelection(Node(config.Second) / "system" / "sharding" / "Entity").Tell(new Identify(null));
+                    Sys.ActorSelection(Node(Config.Second) / "system" / "sharding" / "Entity").Tell(new Identify(null));
                     var secondRegion = ExpectMsg<ActorIdentity>().Subject;
                     _allocator.Value.Tell(new UseRegion(secondRegion));
                     ExpectMsg<UseRegionAck>();
-                }, config.First);
+                }, Config.First);
                 EnterBarrier("second-active");
 
                 _region.Value.Tell(3);
@@ -252,12 +252,12 @@ namespace Akka.Cluster.Sharding.Tests
                 RunOn(() =>
                 {
                     LastSender.Path.Should().Be(_region.Value.Path / "3" / "3");
-                }, config.Second);
+                }, Config.Second);
 
                 RunOn(() =>
                 {
-                    LastSender.Path.Should().Be(Node(config.Second) / "system" / "sharding" / "Entity" / "3" / "3");
-                }, config.First);
+                    LastSender.Path.Should().Be(Node(Config.Second) / "system" / "sharding" / "Entity" / "3" / "3");
+                }, Config.First);
 
                 EnterBarrier("after-2");
             });
@@ -278,13 +278,13 @@ namespace Akka.Cluster.Sharding.Tests
                         _region.Value.Tell(2, p.Ref);
                         p.ExpectMsg(2, TimeSpan.FromSeconds(2));
 
-                        p.LastSender.Path.Should().Be(Node(config.Second) / "system" / "sharding" / "Entity" / "2" / "2");
+                        p.LastSender.Path.Should().Be(Node(Config.Second) / "system" / "sharding" / "Entity" / "2" / "2");
                     });
 
                     _region.Value.Tell(1);
                     ExpectMsg(1);
                     LastSender.Path.Should().Be(_region.Value.Path / "1" / "1");
-                }, config.First);
+                }, Config.First);
                 EnterBarrier("after-2");
             });
         }

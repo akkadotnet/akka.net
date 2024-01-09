@@ -150,35 +150,35 @@ namespace Akka.Cluster.Sharding.Tests
             return null;
         };
 
-        protected readonly TConfig config;
+        protected readonly TConfig Config;
 
-        protected readonly Lazy<ClusterShardingSettings> settings;
+        protected readonly Lazy<ClusterShardingSettings> Settings;
 
-        private readonly Lazy<IShardAllocationStrategy> defaultShardAllocationStrategy;
+        private readonly Lazy<IShardAllocationStrategy> _defaultShardAllocationStrategy;
 
         protected MultiNodeClusterShardingSpec(TConfig config, Type type)
             : base(config, type)
         {
-            this.config = config;
+            this.Config = config;
             ClearStorage();
             EnterBarrier("startup");
 
-            settings = new Lazy<ClusterShardingSettings>(() =>
+            Settings = new Lazy<ClusterShardingSettings>(() =>
             {
                 return ClusterShardingSettings.Create(Sys).WithRememberEntities(config.RememberEntities);
             });
-            defaultShardAllocationStrategy = new Lazy<IShardAllocationStrategy>(() =>
+            _defaultShardAllocationStrategy = new Lazy<IShardAllocationStrategy>(() =>
             {
-                return ClusterSharding.Get(Sys).DefaultShardAllocationStrategy(settings.Value);
+                return ClusterSharding.Get(Sys).DefaultShardAllocationStrategy(Settings.Value);
             });
         }
 
         protected override int InitialParticipantsValueFactory => Roles.Count;
 
 
-        protected bool IsDdataMode => config.Mode == StateStoreMode.DData;
+        protected bool IsDdataMode => Config.Mode == StateStoreMode.DData;
 
-        protected bool PersistenceIsNeeded => config.Mode == StateStoreMode.Persistence
+        protected bool PersistenceIsNeeded => Config.Mode == StateStoreMode.Persistence
             || Sys.Settings.Config.GetString("akka.cluster.sharding.remember-entities-store").Equals(RememberEntitiesStore.Eventsourced.ToString(), StringComparison.InvariantCultureIgnoreCase);
 
         private void ClearStorage()
@@ -236,6 +236,24 @@ namespace Akka.Cluster.Sharding.Tests
             }, from);
             EnterBarrier(from.Name + "-joined");
         }
+        
+        protected IActorRef StartSharding(
+            ActorSystem sys,
+            string typeName,
+            IMessageExtractor messageExtractor,
+            Props entityProps = null,
+            ClusterShardingSettings settings = null,
+            IShardAllocationStrategy allocationStrategy = null,
+            object handOffStopMessage = null)
+        {
+            return ClusterSharding.Get(sys).Start(
+                typeName,
+                entityProps ?? SimpleEchoActor.Props(),
+                settings ?? Settings.Value,
+                messageExtractor,
+                allocationStrategy ?? _defaultShardAllocationStrategy.Value,
+                handOffStopMessage ?? PoisonPill.Instance);
+        }
 
         protected IActorRef StartSharding(
             ActorSystem sys,
@@ -250,10 +268,10 @@ namespace Akka.Cluster.Sharding.Tests
             return ClusterSharding.Get(sys).Start(
                 typeName,
                 entityProps ?? SimpleEchoActor.Props(),
-                settings ?? this.settings.Value,
+                settings ?? this.Settings.Value,
                 extractEntityId ?? IntExtractEntityId,
                 extractShardId ?? IntExtractShardId,
-                allocationStrategy ?? defaultShardAllocationStrategy.Value,
+                allocationStrategy ?? _defaultShardAllocationStrategy.Value,
                 handOffStopMessage ?? PoisonPill.Instance);
         }
 
