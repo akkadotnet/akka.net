@@ -70,7 +70,7 @@ If you want to see the [full set of changes made in Akka.NET v1.5.14, click here
 | 1       | 1    | 1    | szaliszali          |</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers">
-    <PackageReference Include="Akka.Analyzers" Version="0.1.2" PrivateAssets="all" />
+    <PackageReference Include="Akka.Analyzers" Version="0.2.0" PrivateAssets="all" />
   </ItemGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
