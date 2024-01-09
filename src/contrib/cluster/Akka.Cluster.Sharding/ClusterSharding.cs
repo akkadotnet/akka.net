@@ -92,7 +92,7 @@ namespace Akka.Cluster.Sharding
         {
             // BUGFIX for https://github.com/akkadotnet/akka.net/pull/7051 here
             if (messageHint is ShardRegion.StartEntity se)
-                return _underlying.ShardId(se.EntityId); 
+                return _underlying.ShardId(se.EntityId, se); 
             return _underlying.ShardId(entityId, messageHint);
         }
     }
