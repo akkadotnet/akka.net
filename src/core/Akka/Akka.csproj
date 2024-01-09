@@ -20,6 +20,11 @@
       <PackageReference Include="System.Collections.Immutable" Version="$(MicrosoftLibVersion)" />
       <PackageReference Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
       <PackageReference Include="System.Configuration.ConfigurationManager" Version="$(ConfigurationManagerVersion)"/>
+      
+  </ItemGroup>
+  
+  <ItemGroup Label="PublicAnalyzers">
+    <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" />
   </ItemGroup>
   
   <ItemGroup>
