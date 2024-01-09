@@ -11,6 +11,13 @@ This document contains specific upgrade suggestions, warnings, and notices that 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/-UPestlIw4k" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 <!-- markdownlint-enable MD033 -->
 
+## Upgrading to Akka.NET v1.5.15
+
+Akka.NET v1.5.15 introduces several major changes:
+
+* [Introducing `Akka.Analyzers` - Roslyn Analysis for Akka.NET](xref:akka-analyzers)
+* [Akka.Cluster.Sharding: ]()
+
 ## Upgrading to Akka.NET v1.5.2
 
 Akka.NET v1.5.2 introduces two important behavioral changes:
