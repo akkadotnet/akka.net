@@ -66,17 +66,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var producerController =
             Sys.ActorOf(
@@ -101,17 +91,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var shardingController1 =
             Sys.ActorOf(
@@ -149,17 +129,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         PropsFor(DefaultConsumerDelay, 3, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var producerController =
             Sys.ActorOf(
@@ -342,17 +312,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         Props.Create(() => new ProbeWrapper(consumerProbes[consumerIncarnation.GetAndIncrement()], c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var shardingProducerSettings = ShardingProducerController.Settings.Create(Sys) with
         {
@@ -512,17 +472,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         Props.Create(() => new ProbeWrapper(consumerEndProbe, c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var shardingProducerController1 =
             Sys.ActorOf(

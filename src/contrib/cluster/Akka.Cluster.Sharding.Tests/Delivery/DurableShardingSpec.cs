@@ -171,17 +171,7 @@ public class DurableShardingSpec : AkkaSpec
                         Props.Create(() => new Consumer(c, consumerProbe)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var durableQueueProps = EventSourcedProducerQueue.Create<Job>(ProducerId, Sys);
         var shardingProducerController =
