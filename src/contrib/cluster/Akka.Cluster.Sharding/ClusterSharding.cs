@@ -90,7 +90,8 @@ namespace Akka.Cluster.Sharding
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public string ShardId(string entityId, Msg? messageHint = null)
         {
-            if (messageHint is StartEntity se) // need to handle StartEntity here
+            // BUGFIX for https://github.com/akkadotnet/akka.net/pull/7051 here
+            if (messageHint is ShardRegion.StartEntity se)
                 return _underlying.ShardId(se.EntityId); 
             return _underlying.ShardId(entityId, messageHint);
         }
