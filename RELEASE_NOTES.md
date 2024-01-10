@@ -1,5 +1,52 @@
 #### 1.5.15 January 9th 2024 ####
 
+Akka.NET v1.5.15 is a significant release for Akka.NET with some major feature additions and changes.
+
+* [Introducing `Akka.Analyzers` - Roslyn Analysis for Akka.NET](https://getakka.net/articles/debugging/akka-analyzers.html)
+* [Akka.Cluster.Sharding: perf optimize message extraction, automate `StartEntity` and `ShardEnvelope` handling](https://github.com/akkadotnet/akka.net/pull/6863)
+* [Akka.Cluster.Tools: Make `ClusterClient` messages be serialized using `ClusterClientMessageSerializer`](https://github.com/akkadotnet/akka.net/pull/7032)
+* [Akka.Persistence: Fix `LocalSnapshotStore` Metadata Fetch to ensure persistenceid match.](https://github.com/akkadotnet/akka.net/pull/7040)
+* [Akka.Delivery: Fix `ProducerControllerImpl<T>` state bug](https://github.com/akkadotnet/akka.net/pull/7034)
+* [Change MS.EXT and System package versioning to range](https://github.com/akkadotnet/akka.net/pull/7029) - we now support all Microsoft.Extensions packages from `(6.0,]`.
+* [Akka.Serialization: `INoSerializationVerificationNeeded` does not handle `IWrappedMessage` correctly](https://github.com/akkadotnet/akka.net/pull/7010)
+
+**Akka.Analyzers**
+
+The core Akka NuGet package now references [Akka.Analyzers](https://github.com/akkadotnet/akka.analyzers), a new set of Roslyn Code Analysis and Code Fix Providers that we distribute via NuGet. You can [see the full set of supported Akka.Analyzers rules here](https://getakka.net/articles/debugging/akka-analyzers.html).
+
+**Akka.Cluster.Sharding Changes**
+
+In [#6863](https://github.com/akkadotnet/akka.net/pull/6863) we made some major changes to the Akka.Cluster.Sharding API aimed at helping improve Cluster.Sharding's performance _and_ ease of use. However, these changes _may require some effort on the part of the end user_ in order to take full advantage:
+
+* [`ExtractEntityId`](https://getakka.net/api/Akka.Cluster.Sharding.ExtractEntityId.html) and [`ExtractShardId`](https://getakka.net/api/Akka.Cluster.Sharding.ExtractShardId.html) have been deprecated as they _fundamentally can't be extended and can't benefit from the performance improvements introduced into Akka.NET v1.5.15_. It is **imperative** that you migrate to using the [`HashCodeMessageExtractor`](https://getakka.net/api/Akka.Cluster.Sharding.HashCodeMessageExtractor.html) instead.
+* You no longer need to handle [`ShardRegion.StartEntity`](https://getakka.net/api/Akka.Cluster.Sharding.ShardRegion.StartEntity.html) or [`ShardingEnvelope`](https://getakka.net/api/Akka.Cluster.Sharding.ShardingEnvelope.html) inside your `IMessageExtractor` implementations, and in fact [`AK2001`](https://getakka.net/articles/debugging/rules/AK2001.html) (part of Akka.Analyzers) will automatically detect this and remove those handlers for you. Akka.NET automatically handles these two message types internally now.
+
+**ClusterClient Serialization Changes**
+
+In [#7032](https://github.com/akkadotnet/akka.net/pull/7032) we solved a long-standing serialization problem with the [`ClusterClient`](https://getakka.net/api/Akka.Cluster.Tools.Client.ClusterClient.html) where  `Send`, `SendToAll`, and `Publish` were not handled by the correct internal serializer. This has been fixed by default in Akka.NET v1.5.15, but this can potentially cause wire compatibility problems during upgrades - therefore we have introduced a configuration setting to toggle this:
+
+```hocon
+# re-enable legacy serialization
+akka.cluster.client.use-legacy-serialization = on
+```
+
+That setting is currently set to `on` by default, so v1.5.15 will still behave like previous versions of Akka.NET. However, if you have been affected by serialization issues with the `ClusterClient` (such as [#6803](https://github.com/akkadotnet/akka.net/issues/6803)) you should toggle this setting to `off`.
+
+See "[Akka.NET v1.5.15 Upgrade Advisories](https://getakka.net/community/whats-new/akkadotnet-v1.5-upgrade-advisories.html)" for full details on some of the things you might need to do while upgrading to this version of Akka.NET.
+
+You can [see the full set of changes for Akka.NET v1.5.15 here](https://github.com/akkadotnet/akka.net/milestones/1.5.15).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |       
+| --- | --- | --- | --- |                
+| 16 | 2228 | 1490 | Aaron Stannard |    
+| 9 | 9 | 9 | dependabot[bot] |          
+| 2 | 610 | 173 | Gregorius Soedharmo |  
+| 2 | 337 | 0 | Drew |                   
+| 2 | 124 | 118 | Lehonti Ramos |        
+| 1 | 2 | 2 | Sergey Popov |             
+| 1 | 108 | 25 | Yaroslav Paslavskiy |   
+| 1 | 1 | 1 | Bert Lamb |                
+
 #### 1.5.14 September 24th 2023 ####
 
 Akka.NET v1.5.14 is a maintenance release with several bug fixes.
