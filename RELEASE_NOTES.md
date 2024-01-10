@@ -1,3 +1,7 @@
+#### 1.5.16 January 9th 2024 ####
+
+*Placeholder for nightlies*
+
 #### 1.5.15 January 9th 2024 ####
 
 Akka.NET v1.5.15 is a significant release for Akka.NET with some major feature additions and changes.
