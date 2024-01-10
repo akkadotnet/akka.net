@@ -16,7 +16,30 @@ This document contains specific upgrade suggestions, warnings, and notices that 
 Akka.NET v1.5.15 introduces several major changes:
 
 * [Introducing `Akka.Analyzers` - Roslyn Analysis for Akka.NET](xref:akka-analyzers)
-* [Akka.Cluster.Sharding: ]()
+* [Akka.Cluster.Sharding: perf optimize message extraction, automate `StartEntity` and `ShardEnvelope` handling](https://github.com/akkadotnet/akka.net/pull/6863)
+* [Akka.Cluster.Tools: Make `ClusterClient` messages be serialized using `ClusterClientMessageSerializer`](https://github.com/akkadotnet/akka.net/pull/7032)
+
+### Akka.Analyzers
+
+The core Akka NuGet package now references [Akka.Analyzers](https://github.com/akkadotnet/akka.analyzers), a new set of Roslyn Code Analysis and Code Fix Providers that we distribute via NuGet. You can [see the full set of supported Akka.Analyzers rules here](xref:akka-analyzers).
+
+### Akka.Cluster.Sharding Changes
+
+In [#6863](https://github.com/akkadotnet/akka.net/pull/6863) we made some major changes to the Akka.Cluster.Sharding API aimed at helping improve Cluster.Sharding's performance _and_ ease of use. However, these changes _may require some effort on the part of the end user_ in order to take full advantage:
+
+* [`ExtractEntityId`](xref:Akka.Cluster.Sharding.ExtractEntityId) and [`ExtractShardId`](xref:Akka.Cluster.Sharding.ExtractShardId) have been deprecated as they _fundamentally can't be extended and can't benefit from the performance improvements introduced into Akka.NET v1.5.15_. It is **imperative** that you migrate to using the [`HashCodeMessageExtractor`](xref:Akka.Cluster.Sharding.HashCodeMessageExtractor) instead.
+* You no longer need to handle [`ShardRegion.StartEntity`](xref:Akka.Cluster.Sharding.ShardRegion.StartEntity) or [`ShardingEnvelope`](xref:Akka.Cluster.Sharding.ShardingEnvelope) inside your `IMessageExtractor` implementations, and in fact [`AK2001`](xref:AK2001) (part of Akka.Analyzers) will automatically detect this and remove those handlers for you. Akka.NET automatically handles these two message types internally now.
+
+### ClusterClient Serialization Changes
+
+In [#7032](https://github.com/akkadotnet/akka.net/pull/7032) we solved a long-standing serialization problem with the [`ClusterClient`](xref:Akka.Cluster.Tools.Client.ClusterClient) where  `Send`, `SendToAll`, and `Publish` were not handled by the correct internal serializer. This has been fixed by default in Akka.NET v1.5.15, but this can potentially cause wire compatibility problems during upgrades - therefore we have introduced a configuration setting to toggle this:
+
+```hocon
+# re-enable legacy serialization
+akka.cluster.client.use-legacy-serialization = on
+```
+
+That setting is currently set to `on` by default, so v1.5.15 will still behave like previous versions of Akka.NET. However, if you have been affected by serialization issues with the `ClusterClient` (such as [#6803](https://github.com/akkadotnet/akka.net/issues/6803)) you should toggle this setting to `off`.
 
 ## Upgrading to Akka.NET v1.5.2
 
