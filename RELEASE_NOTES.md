@@ -36,6 +36,17 @@ See "[Akka.NET v1.5.15 Upgrade Advisories](https://getakka.net/community/whats-n
 
 You can [see the full set of changes for Akka.NET v1.5.15 here](https://github.com/akkadotnet/akka.net/milestones/1.5.15).
 
+| COMMITS | LOC+ | LOC- | AUTHOR |       
+| --- | --- | --- | --- |                
+| 16 | 2228 | 1490 | Aaron Stannard |    
+| 9 | 9 | 9 | dependabot[bot] |          
+| 2 | 610 | 173 | Gregorius Soedharmo |  
+| 2 | 337 | 0 | Drew |                   
+| 2 | 124 | 118 | Lehonti Ramos |        
+| 1 | 2 | 2 | Sergey Popov |             
+| 1 | 108 | 25 | Yaroslav Paslavskiy |   
+| 1 | 1 | 1 | Bert Lamb |                
+
 #### 1.5.14 September 24th 2023 ####
 
 Akka.NET v1.5.14 is a maintenance release with several bug fixes.
