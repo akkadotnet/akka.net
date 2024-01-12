@@ -102,9 +102,9 @@ namespace Akka.Cluster.Sharding
     {
         private sealed class Implementation : HashCodeMessageExtractor
         {
-            private readonly Func<Msg, string> _entityIdExtractor;
+            private readonly Func<Msg, string?> _entityIdExtractor;
             private readonly Func<Msg, Msg>? _messageExtractor;
-            public Implementation(int maxNumberOfShards, Func<Msg, string> entityIdExtractor, Func<Msg, Msg>? messageExtractor = null) : base(maxNumberOfShards)
+            public Implementation(int maxNumberOfShards, Func<Msg, string?> entityIdExtractor, Func<Msg, Msg>? messageExtractor = null) : base(maxNumberOfShards)
             {
                 _entityIdExtractor = entityIdExtractor ?? throw new NullReferenceException(nameof(entityIdExtractor));
                 _messageExtractor = messageExtractor;
@@ -124,7 +124,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="entityIdExtractor"></param>
         /// <param name="messageExtractor"></param>
         /// <returns></returns>
-        public static HashCodeMessageExtractor Create(int maxNumberOfShards, Func<Msg, string> entityIdExtractor, Func<Msg, Msg>? messageExtractor = null)
+        public static HashCodeMessageExtractor Create(int maxNumberOfShards, Func<Msg, string?> entityIdExtractor, Func<Msg, Msg>? messageExtractor = null)
             => new Implementation(maxNumberOfShards, entityIdExtractor, messageExtractor);
 
         /// <summary>
@@ -173,7 +173,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [Obsolete("Use ShardId(string, object?) instead")]
+        [Obsolete("Use ShardId(string, object?) instead. Since v1.5.15")]
         public virtual ShardId? ShardId(Msg message)
         {
             EntityId? id;
@@ -182,7 +182,7 @@ namespace Akka.Cluster.Sharding
             else
                 id = EntityId(message);
             
-            return id is null ? null : _cachedIds[(Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards)];
+            return string.IsNullOrEmpty(id) ? null : _cachedIds[(Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards)];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
