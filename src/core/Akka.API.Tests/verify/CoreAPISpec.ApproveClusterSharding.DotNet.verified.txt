@@ -175,7 +175,10 @@ namespace Akka.Cluster.Sharding
     {
         public readonly int MaxNumberOfShards;
         protected HashCodeMessageExtractor(int maxNumberOfShards) { }
-        public static Akka.Cluster.Sharding.HashCodeMessageExtractor Create(int maxNumberOfShards, System.Func<object, string> entityIdExtractor, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+        public static Akka.Cluster.Sharding.HashCodeMessageExtractor Create(int maxNumberOfShards, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                1,
+                1,
+                2})] System.Func<object, string> entityIdExtractor, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
                 1,
                 1})] System.Func<object, object> messageExtractor = null) { }
@@ -183,7 +186,7 @@ namespace Akka.Cluster.Sharding
         public abstract string EntityId(object message);
         [return: System.Runtime.CompilerServices.NullableAttribute(2)]
         public virtual object EntityMessage(object message) { }
-        [System.ObsoleteAttribute("Use ShardId(string, object?) instead")]
+        [System.ObsoleteAttribute("Use ShardId(string, object?) instead. Since v1.5.15")]
         [return: System.Runtime.CompilerServices.NullableAttribute(2)]
         public virtual string ShardId(object message) { }
         public virtual string ShardId(string entityId, [System.Runtime.CompilerServices.NullableAttribute(2)] object messageHint = null) { }
