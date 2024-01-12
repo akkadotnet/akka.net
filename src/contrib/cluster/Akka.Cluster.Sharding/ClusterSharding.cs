@@ -182,7 +182,7 @@ namespace Akka.Cluster.Sharding
             else
                 id = EntityId(message);
             
-            return id is null ? null : _cachedIds[(Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards)];
+            return string.IsNullOrEmpty(id) ? null : _cachedIds[(Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards)];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
