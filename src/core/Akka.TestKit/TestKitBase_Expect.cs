@@ -458,7 +458,7 @@ namespace Akka.TestKit
         /// 
         /// Wait time is bounded by remaining time for execution of the innermost enclosing 'within'
         /// block, if inside a 'within' block; otherwise by the config value 
-        /// "akka.test.single-expect-default".
+        /// "akka.test.expect-no-message-default".
         /// </summary>
         public void ExpectNoMsg(CancellationToken cancellationToken = default)
         {
@@ -469,7 +469,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ExpectNoMsg(CancellationToken)"/>
         public async ValueTask ExpectNoMsgAsync(CancellationToken cancellationToken = default)
         {
-            await InternalExpectNoMsgAsync(RemainingOrDefault, cancellationToken)
+            await InternalExpectNoMsgAsync(NoMessageRemainingOrDefault, cancellationToken)
                 .ConfigureAwait(false);
         }
 

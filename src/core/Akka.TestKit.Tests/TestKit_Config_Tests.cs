@@ -19,6 +19,7 @@ namespace Akka.TestKit.Tests.Xunit2
         {
             TestKitSettings.DefaultTimeout.ShouldBe(TimeSpan.FromSeconds(5));
             TestKitSettings.SingleExpectDefault.ShouldBe(TimeSpan.FromSeconds(3));
+            TestKitSettings.ExpectNoMessageDefault.ShouldBe(TimeSpan.FromSeconds(3));
             TestKitSettings.TestEventFilterLeeway.ShouldBe(TimeSpan.FromSeconds(3));
             TestKitSettings.TestTimeFactor.ShouldBe(1);
             var callingThreadDispatcherTypeName = typeof(CallingThreadDispatcherConfigurator).FullName + ", " + typeof(CallingThreadDispatcher).Assembly.GetName().Name;
