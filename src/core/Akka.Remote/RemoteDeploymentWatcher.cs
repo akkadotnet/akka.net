@@ -16,7 +16,7 @@ namespace Akka.Remote
     /// Responsible for cleaning up child references of remote deployed actors when remote node
     /// goes down (crash, network failure), i.e. triggered by Akka.Actor.Terminated.AddressTerminated
     /// </summary>
-    internal class RemoteDeploymentWatcher : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    internal sealed class RemoteDeploymentWatcher : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
 
         private readonly IDictionary<IActorRef, IInternalActorRef> _supervisors =
@@ -48,7 +48,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        internal class WatchRemote
+        internal sealed class WatchRemote
         {
             /// <summary>
             /// TBD

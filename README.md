@@ -85,7 +85,7 @@ dotnet new install "Akka.Templates::*"
 This will make our templates available via `dotnet new` on the CLI _and_ as new project templates inside any .NET IDE such as Visual Studio or JetBrains Rider. You can view the full list of templates included in our package here: https://github.com/akkadotnet/akkadotnet-templates#available-templates
 
 ## Builds
-Please see [Building Akka.NET](http://getakka.net/community/building-akka-net.html).
+Please see [Building Akka.NET](https://getakka.net/community/contributing/build-process.html).
 
 To access nightly Akka.NET builds, please [see the instructions here](http://getakka.net/community/getting-access-to-nightly-builds.html).
 

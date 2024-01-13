@@ -92,25 +92,36 @@ namespace Akka.Actor
             #endregion
         }
 
+        public const string ValidSymbols = "\"-_.*$+:@&=,!~';()";
+
         /// <summary>
-        /// INTERNAL API
+        /// A small bool array, indexed by the ASCII code (0..127), containing <c>true</c> for valid chars
+        /// and <c>false</c> for invalid characters.
         /// </summary>
-        internal static readonly char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
+        private static readonly bool[] ValidAscii = Enumerable.Range(0, 128).Select(c => (c >= 'a' && c <= 'z')
+                || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || ValidSymbols.Contains((char)c))
+            .ToArray();
+
+        /// <summary>
+        /// A human readable description of a valid actor name. This is used in several places to throw
+        /// exceptions when the caller supplies invalid actor names.
+        /// </summary>
+        internal const string ValidActorNameDescription=
+            $"Actor paths MUST: not start with `$`, not be empty, and only contain ASCII letters, digits and these special characters: `{ValidSymbols}`";
 
         /// <summary>
         /// Method that checks if actor name conforms to RFC 2396, http://www.ietf.org/rfc/rfc2396.txt
         /// Note that AKKA JVM does not allow parenthesis ( ) but, according to RFC 2396 those are allowed, and
         /// since we use URL Encode to create valid actor names, we must allow them.
         /// </summary>
-        /// <param name="s">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="s">The string to verify for conformity</param>
+        /// <returns>True if the path element is valid</returns>
         public static bool IsValidPathElement(string s)
         {
             return !string.IsNullOrEmpty(s) && !s.StartsWith('$') && Validate(s);
         }
 
-        private static bool IsValidChar(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                                                   (c >= '0' && c <= '9') || ValidSymbols.Contains(c);
+        private static bool IsValidChar(char c) => c < 128 && ValidAscii[c];
 
         private static bool IsHexChar(char c) => (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') ||
                                                  (c >= '0' && c <= '9');
@@ -584,24 +595,24 @@ namespace Akka.Actor
                     totalLength += p._name.Length + 1;
                     p = p._parent;
                 }
-                
+
                 // UID calculation
                 var uidSizeHint = 0;
                 if (uid != null)
                 {
                     // 1 extra character for the '#'
                     uidSizeHint = SpanHacks.Int64SizeInCharacters(uid.Value) + 1;
-                    totalLength += uidSizeHint; 
+                    totalLength += uidSizeHint;
                 }
 
-                // Concatenate segments (in reverse order) into buffer with '/' prefixes                
+                // Concatenate segments (in reverse order) into buffer with '/' prefixes
                 Span<char> buffer = totalLength < 1024 ? stackalloc char[totalLength] : new char[totalLength];
                 prefix.CopyTo(buffer);
 
                 var offset = buffer.Length - uidSizeHint;
                 // append UID span first
                 AppendUidSpan(ref buffer, offset, uidSizeHint-1); // -1 for the '#'
-                
+
                 p = this;
                 while (p._depth > 0)
                 {
@@ -752,11 +763,11 @@ namespace Akka.Actor
                 // we never change address for IgnoreActorRef
                 return ToString();
             }
-            
+
             long? uid = null;
             if (includeUid && _uid != ActorCell.UndefinedUid)
                 uid = _uid;
-            
+
             if (_address.Host != null && _address.Port.HasValue)
                 return Join(_address.ToString().AsSpan(), uid);
 

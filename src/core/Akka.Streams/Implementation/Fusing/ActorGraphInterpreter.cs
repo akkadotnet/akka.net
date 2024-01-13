@@ -454,7 +454,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct OnError : IBoundaryEvent
+        public readonly struct OnError : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -486,7 +486,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct OnComplete : IBoundaryEvent
+        public readonly struct OnComplete : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -512,7 +512,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct OnNext : IBoundaryEvent
+        public readonly struct OnNext : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -544,7 +544,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct OnSubscribe : IBoundaryEvent
+        public readonly struct OnSubscribe : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -576,7 +576,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct RequestMore : IBoundaryEvent
+        public readonly struct RequestMore : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -608,7 +608,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct Cancel : IBoundaryEvent
+        public readonly struct Cancel : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -639,7 +639,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct SubscribePending : IBoundaryEvent
+        public readonly struct SubscribePending : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -665,7 +665,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct ExposedPublisher : IBoundaryEvent
+        public readonly struct ExposedPublisher : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -697,7 +697,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct AsyncInput : IBoundaryEvent
+        public readonly struct AsyncInput : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -736,7 +736,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct Resume : IBoundaryEvent
+        public readonly struct Resume : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -753,7 +753,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct Abort : IBoundaryEvent
+        public readonly struct Abort : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -1149,7 +1149,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
-        internal class ActorOutputBoundary<T> : DownstreamBoundaryStageLogic, IActorOutputBoundary
+        internal sealed class ActorOutputBoundary<T> : DownstreamBoundaryStageLogic, IActorOutputBoundary
         {
             #region InHandler
             private sealed class InHandler : Stage.InHandler

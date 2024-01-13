@@ -16,7 +16,7 @@ namespace Akka.Streams.Stage
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
-    internal class PushPullGraphLogic<TIn, TOut> : GraphStageLogic, IDetachedContext<TOut>
+    internal sealed class PushPullGraphLogic<TIn, TOut> : GraphStageLogic, IDetachedContext<TOut>
     {
 #pragma warning disable CS0618 // Type or member is obsolete
         private AbstractStage<TIn, TOut> _currentStage;

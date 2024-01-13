@@ -38,7 +38,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// </summary>
         /// <param name="mode">mode the state store mode</param>
         /// <param name="rememberEntities">rememberEntities defaults to off</param>
-        /// <param name="additionalConfig">additionalConfig additional config</param>
+        /// <param name="additionalConfig">additionalConfig additional _config</param>
         /// <param name="loglevel">loglevel defaults to INFO</param>
         protected MultiNodeClusterShardingConfig(
             StateStoreMode mode = StateStoreMode.DData,

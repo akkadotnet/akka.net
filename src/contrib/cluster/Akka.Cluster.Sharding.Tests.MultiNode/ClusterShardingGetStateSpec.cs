@@ -91,9 +91,9 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void Inspecting_cluster_sharding_state_must_join_cluster()
         {
-            Join(config.Controller, config.Controller);
-            Join(config.First, config.Controller);
-            Join(config.Second, config.Controller);
+            Join(Config.Controller, Config.Controller);
+            Join(Config.First, Config.Controller);
+            Join(Config.Second, Config.Controller);
 
             // make sure all nodes are up
             AwaitAssert(() =>
@@ -110,7 +110,7 @@ namespace Akka.Cluster.Sharding.Tests
                     role: "shard",
                     extractEntityId: extractEntityId,
                     extractShardId: extractShardId);
-            }, config.Controller);
+            }, Config.Controller);
 
             RunOn(() =>
             {
@@ -118,10 +118,10 @@ namespace Akka.Cluster.Sharding.Tests
                     Sys,
                     typeName: ShardTypeName,
                     entityProps: Props.Create(() => new PingPongActor()),
-                    settings: settings.Value.WithRole("shard"),
+                    settings: Settings.Value.WithRole("shard"),
                     extractEntityId: extractEntityId,
                     extractShardId: extractShardId);
-            }, config.First, config.Second);
+            }, Config.First, Config.Second);
 
             EnterBarrier("sharding started");
         }
@@ -158,7 +158,7 @@ namespace Akka.Cluster.Sharding.Tests
                         pingProbe.ReceiveWhile(null, m => (PingPongActor.Pong)m, 4);
                     });
                 });
-            }, config.Controller);
+            }, Config.Controller);
 
             EnterBarrier("sharded actors started");
         }

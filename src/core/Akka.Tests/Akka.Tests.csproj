@@ -2,9 +2,8 @@
   <Import Project="..\..\xunitSettings.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Tests</AssemblyTitle>
     <TargetFrameworks Condition=" '$(OS)' == 'Windows_NT' ">$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
-    <TargetFrameworks Condition=" '$(OS)' != 'Windows_NT' ">$(NetTestVersion)</TargetFrameworks>
+    <TargetFramework Condition=" '$(OS)' != 'Windows_NT' ">$(NetTestVersion)</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>

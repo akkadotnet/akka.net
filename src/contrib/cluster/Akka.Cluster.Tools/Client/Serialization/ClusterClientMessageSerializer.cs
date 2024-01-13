@@ -6,10 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Remote.Serialization;
 using Akka.Serialization;
 using Google.Protobuf;
 
@@ -29,8 +29,15 @@ namespace Akka.Cluster.Tools.Client.Serialization
         private const string HeartbeatRspManifest = "D";
         private const string ReceptionistShutdownManifest = "E";
 
-        private static readonly byte[] EmptyBytes = {};
-        private readonly IDictionary<string, Func<byte[], IClusterClientMessage>> _fromBinaryMap;
+        private const string SendManifest = "AA";
+        private const string SendToAllManifest = "AB";
+        private const string PublishManifest = "AC";
+        private const string RefreshContactsTickManifest = "AD";
+        private const string HeartbeatTickManifest = "AE";
+        private const string ReconnectTimeoutManifest = "AF";
+        
+        private static readonly byte[] EmptyBytes = Array.Empty<byte>();
+        private readonly WrappedPayloadSupport _payloadSupport;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterClientMessageSerializer"/> class.
@@ -38,14 +45,7 @@ namespace Akka.Cluster.Tools.Client.Serialization
         /// <param name="system">The actor system to associate with this serializer.</param>
         public ClusterClientMessageSerializer(ExtendedActorSystem system) : base(system)
         {
-            _fromBinaryMap = new Dictionary<string, Func<byte[], IClusterClientMessage>>
-            {
-                {ContactsManifest, ContactsFromBinary},
-                {GetContactsManifest, _ => ClusterReceptionist.GetContacts.Instance},
-                {HeartbeatManifest, _ => ClusterReceptionist.Heartbeat.Instance},
-                {HeartbeatRspManifest, _ => ClusterReceptionist.HeartbeatRsp.Instance},
-                {ReceptionistShutdownManifest, _ => ClusterReceptionist.ReceptionistShutdown.Instance }
-            };
+            _payloadSupport = new WrappedPayloadSupport(system);
         }
 
         /// <summary>
@@ -60,13 +60,24 @@ namespace Akka.Cluster.Tools.Client.Serialization
         /// <returns>A byte array containing the serialized object</returns>
         public override byte[] ToBinary(object obj)
         {
-            if (obj is ClusterReceptionist.Contacts message) return ContactsToProto(message);
-            if (obj is ClusterReceptionist.GetContacts) return EmptyBytes;
-            if (obj is ClusterReceptionist.Heartbeat) return EmptyBytes;
-            if (obj is ClusterReceptionist.HeartbeatRsp) return EmptyBytes;
-            if (obj is ClusterReceptionist.ReceptionistShutdown) return EmptyBytes;
+            return obj switch
+            {
+                ClusterReceptionist.Contacts message => ContactsToProto(message),
+                ClusterReceptionist.GetContacts => EmptyBytes,
+                ClusterReceptionist.Heartbeat => EmptyBytes,
+                ClusterReceptionist.HeartbeatRsp => EmptyBytes,
+                ClusterReceptionist.ReceptionistShutdown => EmptyBytes,
 
-            throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{nameof(ClusterClientMessageSerializer)}]");
+                ClusterClient.Send message => SendToProto(message),
+                ClusterClient.SendToAll message => SendToAllToProto(message),
+                ClusterClient.Publish message => PublishToProto(message),
+                ClusterClient.RefreshContactsTick => EmptyBytes,
+                ClusterClient.HeartbeatTick => EmptyBytes,
+                ClusterClient.ReconnectTimeout => EmptyBytes,
+                
+                _ => throw new ArgumentException(
+                    $"Can't serialize object of type [{obj.GetType()}] in [{nameof(ClusterClientMessageSerializer)}]")
+            };
         }
 
         /// <summary>
@@ -80,10 +91,23 @@ namespace Akka.Cluster.Tools.Client.Serialization
         /// <returns>The object contained in the array</returns>
         public override object FromBinary(byte[] bytes, string manifest)
         {
-            if (_fromBinaryMap.TryGetValue(manifest, out var deserializer))
-                return deserializer(bytes);
-
-            throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in serializer {nameof(ClusterClientMessageSerializer)}");
+            return manifest switch
+            {
+                ContactsManifest => ContactsFromBinary(bytes),
+                GetContactsManifest => ClusterReceptionist.GetContacts.Instance,
+                HeartbeatManifest => ClusterReceptionist.Heartbeat.Instance,
+                HeartbeatRspManifest => ClusterReceptionist.HeartbeatRsp.Instance,
+                ReceptionistShutdownManifest => ClusterReceptionist.ReceptionistShutdown.Instance,
+                
+                SendManifest => SendFrom(bytes),
+                SendToAllManifest => SendToAllFrom(bytes),
+                PublishManifest => PublishFrom(bytes),
+                RefreshContactsTickManifest => ClusterClient.RefreshContactsTick.Instance,
+                HeartbeatTickManifest => ClusterClient.HeartbeatTick.Instance,
+                ReconnectTimeoutManifest => ClusterClient.ReconnectTimeout.Instance,
+                
+                _ => throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in serializer {nameof(ClusterClientMessageSerializer)}")
+            };
         }
 
         /// <summary>
@@ -99,13 +123,24 @@ namespace Akka.Cluster.Tools.Client.Serialization
         /// <returns>The manifest needed for the deserialization of the specified <paramref name="o" />.</returns>
         public override string Manifest(object o)
         {
-            if (o is ClusterReceptionist.Contacts) return ContactsManifest;
-            if (o is ClusterReceptionist.GetContacts) return GetContactsManifest;
-            if (o is ClusterReceptionist.Heartbeat) return HeartbeatManifest;
-            if (o is ClusterReceptionist.HeartbeatRsp) return HeartbeatRspManifest;
-            if (o is ClusterReceptionist.ReceptionistShutdown) return ReceptionistShutdownManifest;
-
-            throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{nameof(ClusterClientMessageSerializer)}]");
+            return o switch
+            {
+                ClusterReceptionist.Contacts => ContactsManifest,
+                ClusterReceptionist.GetContacts => GetContactsManifest,
+                ClusterReceptionist.Heartbeat => HeartbeatManifest,
+                ClusterReceptionist.HeartbeatRsp => HeartbeatRspManifest,
+                ClusterReceptionist.ReceptionistShutdown => ReceptionistShutdownManifest,
+                
+                ClusterClient.Send => SendManifest,
+                ClusterClient.SendToAll => SendToAllManifest,
+                ClusterClient.Publish => PublishManifest,
+                ClusterClient.RefreshContactsTick => RefreshContactsTickManifest,
+                ClusterClient.HeartbeatTick => HeartbeatTickManifest,
+                ClusterClient.ReconnectTimeout => ReconnectTimeoutManifest,
+                
+                _ => throw new ArgumentException(
+                    $"Can't serialize object of type [{o.GetType()}] in [{nameof(ClusterClientMessageSerializer)}]")
+            };
         }
 
         private static byte[] ContactsToProto(ClusterReceptionist.Contacts message)
@@ -123,5 +158,50 @@ namespace Akka.Cluster.Tools.Client.Serialization
             var proto = Proto.Msg.Contacts.Parser.ParseFrom(binary);
             return new ClusterReceptionist.Contacts(proto.ContactPoints.ToImmutableList());
         }
+        
+        private byte[] SendToProto(ClusterClient.Send send)
+        {
+            var protoMessage = new PublishSubscribe.Serialization.Proto.Msg.Send();
+            protoMessage.Path = send.Path;
+            protoMessage.LocalAffinity = send.LocalAffinity;
+            protoMessage.Payload = _payloadSupport.PayloadToProto(send.Message);
+            return protoMessage.ToByteArray();
+        }
+
+        private ClusterClient.Send SendFrom(byte[] bytes)
+        {
+            var sendProto = PublishSubscribe.Serialization.Proto.Msg.Send.Parser.ParseFrom(bytes);
+            return new ClusterClient.Send(sendProto.Path, _payloadSupport.PayloadFrom(sendProto.Payload), sendProto.LocalAffinity);
+        }
+
+        private byte[] SendToAllToProto(ClusterClient.SendToAll sendToAll)
+        {
+            var protoMessage = new PublishSubscribe.Serialization.Proto.Msg.SendToAll();
+            protoMessage.Path = sendToAll.Path;
+            protoMessage.AllButSelf = false;
+            protoMessage.Payload = _payloadSupport.PayloadToProto(sendToAll.Message);
+            return protoMessage.ToByteArray();
+        }
+
+        private ClusterClient.SendToAll SendToAllFrom(byte[] bytes)
+        {
+            var sendToAllProto = PublishSubscribe.Serialization.Proto.Msg.SendToAll.Parser.ParseFrom(bytes);
+            return new ClusterClient.SendToAll(sendToAllProto.Path, _payloadSupport.PayloadFrom(sendToAllProto.Payload));
+        }
+
+        private byte[] PublishToProto(ClusterClient.Publish publish)
+        {
+            var protoMessage = new PublishSubscribe.Serialization.Proto.Msg.Publish();
+            protoMessage.Topic = publish.Topic;
+            protoMessage.Payload = _payloadSupport.PayloadToProto(publish.Message);
+            return protoMessage.ToByteArray();
+        }
+
+        private ClusterClient.Publish PublishFrom(byte[] bytes)
+        {
+            var publishProto = PublishSubscribe.Serialization.Proto.Msg.Publish.Parser.ParseFrom(bytes);
+            return new ClusterClient.Publish(publishProto.Topic, _payloadSupport.PayloadFrom(publishProto.Payload));
+        }
+        
     }
 }

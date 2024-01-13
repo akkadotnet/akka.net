@@ -15,8 +15,6 @@ namespace Akka.Actor
     /// </summary>
     internal sealed class AlreadyCanceledCancelable : ICancelable
     {
-        private static readonly AlreadyCanceledCancelable _instance = new();
-
         private AlreadyCanceledCancelable() { }
 
         /// <inheritdoc/>
@@ -31,7 +29,7 @@ namespace Akka.Actor
         /// <summary>
         /// Gets an instance of an already canceled <see cref="ICancelable"/>.
         /// </summary>
-        public static ICancelable Instance => _instance;
+        public static ICancelable Instance { get; } = new AlreadyCanceledCancelable();
 
         /// <inheritdoc/>
         public CancellationToken Token => new(true);
