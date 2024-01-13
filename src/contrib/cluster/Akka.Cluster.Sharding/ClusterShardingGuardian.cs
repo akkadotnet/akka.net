@@ -62,14 +62,9 @@ namespace Akka.Cluster.Sharding
             /// TBD
             /// </summary>
             public readonly ClusterShardingSettings Settings;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly ExtractEntityId ExtractEntityId;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly ExtractShardId ExtractShardId;
+            
+            public readonly IMessageExtractor MessageExtractor;
+            
             /// <summary>
             /// TBD
             /// </summary>
@@ -85,8 +80,7 @@ namespace Akka.Cluster.Sharding
             /// <param name="typeName">TBD</param>
             /// <param name="entityProps">TBD</param>
             /// <param name="settings">TBD</param>
-            /// <param name="extractEntityId">TBD</param>
-            /// <param name="extractShardId">TBD</param>
+            /// <param name="extractor"></param>
             /// <param name="allocationStrategy">TBD</param>
             /// <param name="handOffStopMessage">TBD</param>
             /// <exception cref="ArgumentNullException">
@@ -96,8 +90,7 @@ namespace Akka.Cluster.Sharding
                 string typeName,
                 Func<string, Props> entityProps,
                 ClusterShardingSettings settings,
-                ExtractEntityId extractEntityId,
-                ExtractShardId extractShardId,
+                IMessageExtractor extractor,
                 IShardAllocationStrategy allocationStrategy,
                 object handOffStopMessage)
             {
@@ -107,8 +100,7 @@ namespace Akka.Cluster.Sharding
                 TypeName = typeName;
                 EntityProps = entityProps;
                 Settings = settings;
-                ExtractEntityId = extractEntityId;
-                ExtractShardId = extractShardId;
+                MessageExtractor = extractor;
                 AllocationStrategy = allocationStrategy;
                 HandOffStopMessage = handOffStopMessage;
             }
@@ -128,37 +120,28 @@ namespace Akka.Cluster.Sharding
             /// TBD
             /// </summary>
             public readonly ClusterShardingSettings Settings;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly ExtractEntityId ExtractEntityId;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly ExtractShardId ExtractShardId;
+
+            public IMessageExtractor MessageExtractor;
 
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="typeName">TBD</param>
             /// <param name="settings">TBD</param>
-            /// <param name="extractEntityId">TBD</param>
-            /// <param name="extractShardId">TBD</param>
+            /// <param name="messageExtractor"></param>
             /// <exception cref="ArgumentException">
             /// This exception is thrown when the specified <paramref name="typeName"/> is undefined.
             /// </exception>
             public StartProxy(
                 string typeName,
                 ClusterShardingSettings settings,
-                ExtractEntityId extractEntityId,
-                ExtractShardId extractShardId)
+               IMessageExtractor messageExtractor)
             {
                 if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException(nameof(typeName), "ClusterSharding start proxy requires type name to be provided");
 
                 TypeName = typeName;
                 Settings = settings;
-                ExtractEntityId = extractEntityId;
-                ExtractShardId = extractShardId;
+                MessageExtractor = messageExtractor;
             }
         }
 
@@ -247,8 +230,7 @@ namespace Akka.Cluster.Sharding
                             entityProps: start.EntityProps,
                             settings: settings,
                             coordinatorPath: coordinatorPath,
-                            extractEntityId: start.ExtractEntityId,
-                            extractShardId: start.ExtractShardId,
+                            messageExtractor: start.MessageExtractor,
                             handOffStopMessage: start.HandOffStopMessage,
                             rememberEntitiesStoreProvider)
                             .WithDispatcher(Context.Props.Dispatcher), encName);
@@ -280,8 +262,7 @@ namespace Akka.Cluster.Sharding
                         typeName: startProxy.TypeName,
                         settings: settings,
                         coordinatorPath: coordinatorPath,
-                        extractEntityId: startProxy.ExtractEntityId,
-                        extractShardId: startProxy.ExtractShardId)
+                        messageExtractor: startProxy.MessageExtractor)
                         .WithDispatcher(Context.Props.Dispatcher), encName));
 
                     _proxies.TryAdd(startProxy.TypeName, shardRegion);

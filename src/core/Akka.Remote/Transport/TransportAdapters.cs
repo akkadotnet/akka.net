@@ -33,7 +33,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
+    internal sealed class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
     {
         /// <inheritdoc cref="ExtensionIdProvider{T}"/>
         public override TransportAdapters CreateExtension(ExtendedActorSystem system)
@@ -61,7 +61,7 @@ namespace Akka.Remote.Transport
     /// 
     /// Extension that allows us to look up transport adapters based upon the settings provided inside <see cref="RemoteSettings"/>
     /// </summary>
-    internal class TransportAdapters : IExtension
+    internal sealed class TransportAdapters : IExtension
     {
         /// <summary>
         /// TBD
@@ -81,7 +81,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// The Akka.Remote settings
         /// </summary>
-        protected RemoteSettings Settings;
+        private readonly RemoteSettings Settings;
 
         private Dictionary<string, ITransportAdapterProvider> _adaptersTable;
 
@@ -303,7 +303,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal abstract class AbstractTransportAdapterHandle : AssociationHandle
+    public abstract class AbstractTransportAdapterHandle : AssociationHandle
     {
         /// <summary>
         /// TBD
@@ -385,7 +385,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Marker interface for all transport operations
     /// </summary>
-    internal abstract class TransportOperation : INoSerializationVerificationNeeded
+    public abstract class TransportOperation : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// TBD
@@ -396,7 +396,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class ListenerRegistered : TransportOperation
+    public sealed class ListenerRegistered : TransportOperation
     {
         /// <summary>
         /// TBD
@@ -416,7 +416,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class AssociateUnderlying : TransportOperation
+    public sealed class AssociateUnderlying : TransportOperation
     {
         /// <summary>
         /// TBD
@@ -443,7 +443,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class ListenUnderlying : TransportOperation
+    public sealed class ListenUnderlying : TransportOperation
     {
         /// <summary>
         /// TBD
@@ -470,7 +470,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class DisassociateUnderlying : TransportOperation, IDeadLetterSuppression
+    public sealed class DisassociateUnderlying : TransportOperation, IDeadLetterSuppression
     {
         /// <summary>
         /// TBD
@@ -556,7 +556,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal abstract class ActorTransportAdapterManager : UntypedActor
+    public abstract class ActorTransportAdapterManager : UntypedActor
     {
         /// <summary>
         /// Lightweight Stash implementation

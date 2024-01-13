@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.TestKit.Xunit</AssemblyTitle>
         <Description>TestKit for writing tests for Akka.NET using xUnit.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);testkit;xunit</PackageTags>
@@ -9,8 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\core\Akka.TestKit\Akka.TestKit.csproj"/>
-        <PackageReference Include="xunit" Version="$(XunitVersion)"/>
+        <ProjectReference Include="..\..\..\core\Akka.TestKit\Akka.TestKit.csproj" />
+        <PackageReference Include="xunit" Version="$(XunitVersion)" />
     </ItemGroup>
 
     <PropertyGroup>

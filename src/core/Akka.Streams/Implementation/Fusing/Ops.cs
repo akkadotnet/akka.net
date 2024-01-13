@@ -2571,9 +2571,10 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPush()
             {
+                var message = Grab(_stage.In);
                 try
                 {
-                    var task = _stage._mapFunc(Grab(_stage.In));
+                    var task = _stage._mapFunc(message);
                     var holder = new Holder<TOut>(NotYetThere, _taskCallback);
                     _buffer.Enqueue(holder);
 
@@ -2590,8 +2591,21 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 catch (Exception e)
                 {
-                    if (_decider(e) == Directive.Stop)
-                        FailStage(e);
+                    var strategy = _decider(e);
+                    Log.Error(e, "An exception occured inside SelectAsync while processing message [{0}]. Supervision strategy: {1}", message, strategy);
+                    switch (strategy)
+                    {
+                        case Directive.Stop:
+                            FailStage(e);
+                            break;
+                        
+                        case Directive.Resume:
+                        case Directive.Restart:
+                            break;
+                        
+                        default:
+                            throw new AggregateException($"Unknown SupervisionStrategy directive: {strategy}", e);
+                    }
                 }
                 if (Todo < _stage._parallelism && !HasBeenPulled(_stage.In))
                     TryPull(_stage.In);
@@ -2644,10 +2658,31 @@ namespace Akka.Streams.Implementation.Fusing
             private void HolderCompleted(Holder<TOut> holder)
             {
                 var element = holder.Element;
-                if (!element.IsSuccess && _decider(element.Exception) == Directive.Stop)
-                    FailStage(element.Exception);
-                else if (IsAvailable(_stage.Out))
-                    PushOne();
+                if (element.IsSuccess)
+                {
+                    if (IsAvailable(_stage.Out))
+                        PushOne();
+                    return;
+                }
+                
+                var exception = element.Exception;
+                var strategy = _decider(exception);
+                Log.Error(exception, "An exception occured inside SelectAsync while executing Task. Supervision strategy: {0}", strategy);
+                switch (strategy)
+                {
+                    case Directive.Stop:
+                        FailStage(exception);
+                        break;
+                    
+                    case Directive.Resume:
+                    case Directive.Restart:
+                        if (IsAvailable(_stage.Out))
+                            PushOne();
+                        break;
+                    
+                    default:
+                        throw new AggregateException($"Unknown SupervisionStrategy directive: {strategy}", exception);
+                }
             }
 
             public override string ToString() => $"SelectAsync.Logic(buffer={_buffer})";
@@ -3777,18 +3812,19 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly Action<T> _onSuccess;
             private readonly Action<Exception> _onFailure;
             private readonly Action _onComplete;
+            private readonly CancellationTokenSource _completionCts;
             
-            private CancellationTokenSource _completionCts;
             private IAsyncEnumerator<T> _enumerator;
 
             public Logic(SourceShape<T> shape, IAsyncEnumerable<T> enumerable) : base(shape)
             {
+                
                 _enumerable = enumerable;
                 _outlet = shape.Outlet;
                 _onSuccess = GetAsyncCallback<T>(OnSuccess);
                 _onFailure = GetAsyncCallback<Exception>(OnFailure);
                 _onComplete = GetAsyncCallback(OnComplete);
-
+                _completionCts = new CancellationTokenSource();
                 SetHandler(_outlet, this);
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3803,8 +3839,49 @@ namespace Akka.Streams.Implementation.Fusing
             public override void PreStart()
             {
                 base.PreStart();
-                _completionCts = new CancellationTokenSource();
                 _enumerator = _enumerable.GetAsyncEnumerator(_completionCts.Token);
+            }
+            
+            public override void PostStop()
+            {
+                try
+                {
+                    _completionCts.Cancel();
+                    _completionCts.Dispose();
+                }
+                catch(Exception ex)
+                {
+                    // This should never happen
+                    Log.Debug(ex, "AsyncEnumerable threw while cancelling CancellationTokenSource");
+                }
+
+                try
+                {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                    // Intentionally creating a detached dispose task
+                    DisposeEnumeratorAsync();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                }
+                catch(Exception ex)
+                {
+                    Log.Debug(ex, "Underlying async enumerator threw an exception while being disposed.");
+                }
+                base.PostStop();
+                return;
+
+                async Task DisposeEnumeratorAsync()
+                {
+                    try
+                    {
+                        await _enumerator.DisposeAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        // This is best effort exception logging, this log will never appear if the ActorSystem
+                        // was shut down before we reach this code (BusEvent was not emitting new logs anymore)
+                        Log.Debug(ex, "Underlying async enumerator threw an exception while being disposed.");
+                    }
+                }
             }
 
             public override void OnPull()
@@ -3824,26 +3901,12 @@ namespace Akka.Streams.Implementation.Fusing
                         // if result is false, it means enumerator was closed. Complete stage in that case.
                         CompleteStage();
                     }
-                } 
-                else if (vtask.IsCompleted) // IsCompleted covers Faulted, Cancelled, and RanToCompletion async state
-                {
-                    // vtask will always contains an exception because we know we're not successful and always throws
-                    try
-                    {
-                        // This does not block because we know that the task already completed
-                        // Using GetAwaiter().GetResult() to automatically unwraps AggregateException inner exception
-                        vtask.GetAwaiter().GetResult();
-                    }
-                    catch (Exception ex)
-                    {
-                        FailStage(ex);
-                        return;
-                    }
-
-                    throw new InvalidOperationException("Should never reach this code");
                 }
                 else
                 {
+                    //We immediately fall into wait case.
+                    //Unlike Task, we don't have a 'status' Enum to switch off easily,
+                    //And Error cases can just live with the small cost of async callback.
                     async Task ProcessTask()
                     {
                         // Since this Action is used as task continuation, we cannot safely call corresponding
@@ -3862,16 +3925,12 @@ namespace Akka.Streams.Implementation.Fusing
                         }
                     }
 
-#pragma warning disable CS4014
-                    ProcessTask();
-#pragma warning restore CS4014
+                    _ = ProcessTask();
                 }
             }
 
             public override void OnDownstreamFinish(Exception cause)
             {
-                _completionCts.Cancel();
-                _completionCts.Dispose();
                 CompleteStage();
                 base.OnDownstreamFinish(cause);
             }

@@ -77,12 +77,13 @@ namespace Akka.Streams.Tests
             _data = data;
             Receive<RequestStream>(_ =>
             {
+                var sender = this.Sender;
                 // create a source
                 StreamLogs()
                     // materialize it using stream refs
                     .RunWith(StreamRefs.SourceRef<string>(), Context.System.Materializer())
                     // and send to sender
-                    .PipeTo(Sender, success: sourceRef => new EnvelopedStream(sourceRef));
+                    .PipeTo(sender, success: sourceRef => new EnvelopedStream(sourceRef));
             });
 
             Receive<string>(_ => Sender.Tell("pong"));

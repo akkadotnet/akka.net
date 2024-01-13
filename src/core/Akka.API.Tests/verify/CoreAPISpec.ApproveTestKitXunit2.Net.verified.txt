@@ -1,0 +1,77 @@
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
+[assembly: System.Runtime.InteropServices.GuidAttribute("a48eb1da-be56-4078-a5f7-29d8e2bcd590")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
+namespace Akka.TestKit.Xunit2.Attributes
+{
+    public class LocalFactAttribute : Xunit.FactAttribute
+    {
+        public LocalFactAttribute() { }
+        public override string Skip { get; set; }
+        public string SkipLocal { get; set; }
+    }
+    [System.AttributeUsageAttribute(System.AttributeTargets.Method | System.AttributeTargets.All, AllowMultiple=false)]
+    [Xunit.Sdk.XunitTestCaseDiscovererAttribute("Xunit.Sdk.TheoryDiscoverer", "xunit.execution.{Platform}")]
+    public class LocalTheoryAttribute : Xunit.TheoryAttribute
+    {
+        public LocalTheoryAttribute() { }
+        public override string Skip { get; set; }
+        public string SkipLocal { get; set; }
+    }
+    public class WindowsFactAttribute : Xunit.FactAttribute
+    {
+        public WindowsFactAttribute() { }
+        public override string Skip { get; set; }
+        public string SkipUnix { get; set; }
+    }
+}
+namespace Akka.TestKit.Xunit2.Internals
+{
+    public class AkkaAssertEqualityComparer<T> : System.Collections.Generic.IEqualityComparer<T>
+    {
+        public AkkaAssertEqualityComparer(bool skipTypeCheck = False, System.Collections.IEqualityComparer innerComparer = null) { }
+        public bool Equals(T x, T y) { }
+        public int GetHashCode(T obj) { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class AkkaEqualException : Xunit.Sdk.XunitException
+    {
+        public AkkaEqualException(string format = "", params object[] args) { }
+        protected AkkaEqualException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public override string Message { get; }
+        [return: System.Runtime.CompilerServices.NullableAttribute(1)]
+        public static Akka.TestKit.Xunit2.Internals.AkkaEqualException ForMismatchedValues(object expected, object actual, string format = null, [System.Runtime.CompilerServices.NullableAttribute(1)] params object[] args) { }
+    }
+    public class TestOutputLogger : Akka.Actor.ReceiveActor
+    {
+        public TestOutputLogger(Xunit.Abstractions.ITestOutputHelper output) { }
+    }
+}
+namespace Akka.TestKit.Xunit2
+{
+    public class TestKit : Akka.TestKit.TestKitBase, System.IDisposable
+    {
+        protected readonly Xunit.Abstractions.ITestOutputHelper Output;
+        public TestKit(Akka.Actor.ActorSystem system = null, Xunit.Abstractions.ITestOutputHelper output = null) { }
+        public TestKit(Akka.Actor.Setup.ActorSystemSetup config, string actorSystemName = null, Xunit.Abstractions.ITestOutputHelper output = null) { }
+        public TestKit(Akka.Configuration.Config config, string actorSystemName = null, Xunit.Abstractions.ITestOutputHelper output = null) { }
+        public TestKit(string config, Xunit.Abstractions.ITestOutputHelper output = null) { }
+        protected static Akka.TestKit.Xunit2.XunitAssertions Assertions { get; }
+        public new static Akka.Configuration.Config DefaultConfig { get; }
+        public new static Akka.Configuration.Config FullDebugConfig { get; }
+        protected virtual void AfterAll() { }
+        protected virtual void Dispose(bool disposing) { }
+        public void Dispose() { }
+        protected void InitializeLogger(Akka.Actor.ActorSystem system) { }
+        protected void InitializeLogger(Akka.Actor.ActorSystem system, string prefix) { }
+    }
+    public class XunitAssertions : Akka.TestKit.ITestKitAssertions
+    {
+        public XunitAssertions() { }
+        public void AssertEqual<T>(T expected, T actual, string format = "", params object[] args) { }
+        public void AssertEqual<T>(T expected, T actual, System.Func<T, T, bool> comparer, string format = "", params object[] args) { }
+        public void AssertFalse(bool condition, string format = "", params object[] args) { }
+        public void AssertTrue(bool condition, string format = "", params object[] args) { }
+        public void Fail(string format = "", params object[] args) { }
+    }
+}

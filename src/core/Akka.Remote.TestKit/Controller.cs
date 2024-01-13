@@ -110,29 +110,13 @@ namespace Akka.Remote.TestKit
         public class GetNodes
         {
             private GetNodes() { }
-            private static readonly GetNodes _instance = new();
-
-            public static GetNodes Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
+            public static GetNodes Instance { get; } = new();
         }
 
         public class GetSockAddr
         {
             private GetSockAddr() { }
-            private static readonly GetSockAddr _instance = new();
-
-            public static GetSockAddr Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
+            public static GetSockAddr Instance { get; } = new();
         }
 
         /// <summary>

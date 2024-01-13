@@ -38,7 +38,7 @@ namespace Akka.Util
             if (int.TryParse(str, out var i))
                 return i;
 #endif
-            throw new FormatException($"[{str.ToString()}] is now a valid numeric format");
+            throw new FormatException($"[{str.ToString()}] is not a valid numeric format");
         }
         
         private const char Negative = '-';

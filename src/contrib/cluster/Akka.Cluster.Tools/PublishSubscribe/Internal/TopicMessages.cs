@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Event;
 using Akka.Routing;
 
@@ -41,9 +42,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// Get all subscribers for a given topic.
     /// </summary>
-    internal sealed class CountSubscribers
+    [ApiMayChange]
+    public sealed class CountSubscribers
     {
         public string Topic { get; }
 
@@ -309,11 +311,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     [Serializable]
     internal sealed class GossipTick
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static GossipTick Instance { get; } = new();
-
         private GossipTick() { }
     }
 

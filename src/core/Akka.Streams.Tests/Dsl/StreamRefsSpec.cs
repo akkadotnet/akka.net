@@ -55,27 +55,31 @@ namespace Akka.Streams.Tests
                          */
                         var source = Source.From(new[] { "hello", "world" });
                         var aref = source.RunWith(StreamRefs.SourceRef<string>(), _materializer);
-                        aref.PipeTo(Sender);
+                        var sender = this.Sender;
+                        aref.PipeTo(sender);
                         return true;
                     }
                 case "give-infinite":
                     {
                         var source = Source.From(Enumerable.Range(1, int.MaxValue).Select(i => "ping-" + i));
                         var t = source.ToMaterialized(StreamRefs.SourceRef<string>(), Keep.Right).Run(_materializer);
-                        t.PipeTo(Sender);
+                        var sender = this.Sender;
+                        t.PipeTo(sender);
                         return true;
                     }
                 case "give-fail":
                     {
                         var r = Source.Failed<string>(new Exception("Boom!"))
                             .RunWith(StreamRefs.SourceRef<string>(), _materializer);
-                        r.PipeTo(Sender);
+                        var sender = this.Sender;
+                        r.PipeTo(sender);
                         return true;
                     }
                 case "give-complete-asap":
                     {
                         var r = Source.Empty<string>().RunWith(StreamRefs.SourceRef<string>(), _materializer);
-                        r.PipeTo(Sender);
+                        var sender = this.Sender;
+                        r.PipeTo(sender);
                         return true;
                     }
                 case "give-subscribe-timeout":
@@ -84,7 +88,8 @@ namespace Akka.Streams.Tests
                             .ToMaterialized(StreamRefs.SourceRef<string>(), Keep.Right)
                             .WithAttributes(StreamRefAttributes.CreateSubscriptionTimeout(TimeSpan.FromMilliseconds(500)))
                             .Run(_materializer);
-                        r.PipeTo(Sender);
+                        var sender = this.Sender;
+                        r.PipeTo(sender);
                         return true;
                     }
                 case "receive":
@@ -95,13 +100,15 @@ namespace Akka.Streams.Tests
                          */
                         var sink = StreamRefs.SinkRef<string>().To(Sink.ActorRef<string>(_probe, "<COMPLETE>", ex => new Status.Failure(ex)))
                             .Run(_materializer);
-                        sink.PipeTo(Sender);
+                        var sender = this.Sender;
+                        sink.PipeTo(sender);
                         return true;
                     }
                 case "receive-ignore":
                     {
                         var sink = StreamRefs.SinkRef<string>().To(Sink.Ignore<string>()).Run(_materializer);
-                        sink.PipeTo(Sender);
+                        var sender = Sender;
+                        sink.PipeTo(sender);
                         return true;
                     }
                 case "receive-subscribe-timeout":
@@ -110,7 +117,8 @@ namespace Akka.Streams.Tests
                             .WithAttributes(StreamRefAttributes.CreateSubscriptionTimeout(TimeSpan.FromMilliseconds(500)))
                             .To(Sink.ActorRef<string>(_probe, "<COMPLETE>", ex => new Status.Failure(ex)))
                             .Run(_materializer);
-                        sink.PipeTo(Sender);
+                        var sender = this.Sender;
+                        sink.PipeTo(sender);
                         return true;
                     }
                 case "receive-32":

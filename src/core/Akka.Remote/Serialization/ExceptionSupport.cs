@@ -17,7 +17,7 @@ using Akka.Remote.Serialization.Proto.Msg;
 
 namespace Akka.Remote.Serialization
 {
-    internal class ExceptionSupport
+    internal sealed class ExceptionSupport
     {
         private readonly WrappedPayloadSupport _wrappedPayloadSupport;
         private const BindingFlags All = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;

@@ -489,10 +489,10 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             : newRequestedSeqNr;
 
         if (newRequestedSeqNr2 != newRequestedSeqNr)
-            _log.Debug("Expanded requestedSeqNr from [{0}] to [{1}], because current [{3}] and all were probably lost.",
+            _log.Debug("Expanded requestedSeqNr from [{0}] to [{1}], because current [{2}] and all were probably lost.",
                 newRequestedSeqNr, newRequestedSeqNr2, stateAfterAck.CurrentSeqNr);
 
-        if (newRequestedSeqNr > CurrentState.RequestedSeqNr)
+        if (newRequestedSeqNr2 > CurrentState.RequestedSeqNr)
         {
             bool newRequested;
             if (CurrentState.StoreMessageSentInProgress != 0)

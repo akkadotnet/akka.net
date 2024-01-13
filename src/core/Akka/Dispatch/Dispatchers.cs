@@ -372,10 +372,10 @@ namespace Akka.Dispatch
         public Dispatchers(ActorSystem system, IDispatcherPrerequisites prerequisites, ILoggingAdapter logger)
         {
             _system = system;
+            _logger = logger;
             Prerequisites = prerequisites;
             _cachingConfig = new CachingConfig(prerequisites.Settings.Config);
             _defaultGlobalDispatcher = Lookup(DefaultDispatcherId);
-            _logger = logger;
 
             InternalDispatcher = Lookup(InternalDispatcherId);
         }

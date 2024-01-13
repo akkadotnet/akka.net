@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Journal;
@@ -230,6 +231,7 @@ namespace Akka.Persistence
         /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
         /// </exception>
         /// <returns>TBD</returns>
+        [InternalStableApi]
         public IActorRef JournalFor(string journalPluginId)
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
@@ -248,6 +250,7 @@ namespace Akka.Persistence
         /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
         /// </exception>
         /// <returns>TBD</returns>
+        [InternalStableApi]
         public IActorRef SnapshotStoreFor(string snapshotPluginId)
         {
             var configPath = string.IsNullOrEmpty(snapshotPluginId) ? _defaultSnapshotPluginId.Value : snapshotPluginId;

@@ -164,8 +164,8 @@ namespace Akka.Streams.Tests.Implementation
                     buf.Dequeue().Should().Be(elem);
             }
         }
-        
-        private class CheatPowerOfTwoFixedSizeBuffer : PowerOfTwoFixedSizeBuffer<int>
+
+        private sealed class CheatPowerOfTwoFixedSizeBuffer : PowerOfTwoFixedSizeBuffer<int>
         {
             public CheatPowerOfTwoFixedSizeBuffer(int size) : base(size)
             {
@@ -174,7 +174,7 @@ namespace Akka.Streams.Tests.Implementation
             }
         }
 
-        private class CheatModuloFixedSizeBuffer : ModuloFixedSizeBuffer<int>
+        private sealed class CheatModuloFixedSizeBuffer : ModuloFixedSizeBuffer<int>
         {
             public CheatModuloFixedSizeBuffer(int size) : base(size)
             {

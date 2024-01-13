@@ -196,10 +196,10 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(20), () =>
             {
-                StartPersistenceIfNeeded(startOn: config.Controller, config.First, config.Second);
+                StartPersistenceIfNeeded(startOn: Config.Controller, Config.First, Config.Second);
 
-                Join(config.First, config.First);
-                Join(config.Second, config.First);
+                Join(Config.First, Config.First);
+                Join(Config.Second, Config.First);
 
                 RunOn(() =>
                 {
@@ -213,7 +213,7 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectMsg<Value>(v => v.Id == "20" && v.N == 2);
                     region.Tell(new Get("21"));
                     ExpectMsg<Value>(v => v.Id == "21" && v.N == 3);
-                }, config.First);
+                }, Config.First);
                 EnterBarrier("after-2");
             });
         }
@@ -226,14 +226,14 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     if (PersistenceIsNeeded)
                     {
-                        TestConductor.Blackhole(config.Controller, config.First, ThrottleTransportAdapter.Direction.Both).Wait();
-                        TestConductor.Blackhole(config.Controller, config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                        TestConductor.Blackhole(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both).Wait();
+                        TestConductor.Blackhole(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
                     }
                     else
                     {
-                        TestConductor.Blackhole(config.First, config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                        TestConductor.Blackhole(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
                     }
-                }, config.Controller);
+                }, Config.Controller);
                 EnterBarrier("journal-backholded");
 
                 RunOn(() =>
@@ -244,21 +244,21 @@ namespace Akka.Cluster.Sharding.Tests
                     var probe = CreateTestProbe();
                     region.Tell(new Get("40"), probe.Ref);
                     probe.ExpectNoMsg(TimeSpan.FromSeconds(1));
-                }, config.First);
+                }, Config.First);
                 EnterBarrier("first-delayed");
 
                 RunOn(() =>
                 {
                     if (PersistenceIsNeeded)
                     {
-                        TestConductor.PassThrough(config.Controller, config.First, ThrottleTransportAdapter.Direction.Both).Wait();
-                        TestConductor.PassThrough(config.Controller, config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                        TestConductor.PassThrough(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both).Wait();
+                        TestConductor.PassThrough(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
                     }
                     else
                     {
-                        TestConductor.PassThrough(config.First, config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                        TestConductor.PassThrough(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
                     }
-                }, config.Controller);
+                }, Config.Controller);
                 EnterBarrier("journal-ok");
 
                 RunOn(() =>
@@ -304,7 +304,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     region.Tell(new Get("40"));
                     ExpectMsg<Value>(v => v.Id == "40" && v.N == 4);
-                }, config.First);
+                }, Config.First);
                 EnterBarrier("verified-first");
 
                 RunOn(() =>
@@ -322,7 +322,7 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectMsg<Value>(v => v.Id == "20" && v.N == 4);
                     region.Tell(new Get("30"));
                     ExpectMsg<Value>(v => v.Id == "30" && v.N == 6);
-                }, config.Second);
+                }, Config.Second);
                 EnterBarrier("after-3");
             });
         }

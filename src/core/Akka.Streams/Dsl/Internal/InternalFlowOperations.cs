@@ -1419,7 +1419,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <typeparam name="TKey">TBD</typeparam>
-        internal class GroupByMergeBack<TOut, TMat, TKey> : IMergeBack<TOut, TMat>
+        internal sealed class GroupByMergeBack<TOut, TMat, TKey> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
             private readonly int _maxSubstreams;
@@ -1537,7 +1537,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
-        internal class SplitWhenMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
+        internal sealed class SplitWhenMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
             private readonly Func<TOut, bool> _predicate;
@@ -1642,7 +1642,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
-        internal class SplitAfterMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
+        internal sealed class SplitAfterMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
             private readonly Func<TOut, bool> _predicate;
@@ -1891,7 +1891,7 @@ namespace Akka.Streams.Dsl.Internal
             int maximumBurst, ThrottleMode mode)
         {
             if (elements <= 0) throw new ArgumentException("Throttle elements must be > 0", nameof(elements));
-            if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
+            if (per <= TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be less than or equal to zero", nameof(per));
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
             if (per.Ticks < elements)
@@ -1948,7 +1948,7 @@ namespace Akka.Streams.Dsl.Internal
             int maximumBurst, Func<T, int> calculateCost, ThrottleMode mode)
         {
             if (cost <= 0) throw new ArgumentException("cost must be > 0", nameof(cost));
-            if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
+            if (per <= TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be less than or equal to zero", nameof(per));
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
             if (per.Ticks < cost)

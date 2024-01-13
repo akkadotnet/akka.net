@@ -23,7 +23,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class EndpointManager : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    internal sealed class EndpointManager : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
 
         #region Policy definitions
@@ -700,7 +700,7 @@ namespace Akka.Remote
         /// Message-processing behavior when the <see cref="EndpointManager"/> is able to accept
         /// inbound association requests.
         /// </summary>
-        protected void Accepting()
+        private void Accepting()
         {
             Receive<ManagementCommand>(mc =>
                 {
@@ -928,7 +928,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        protected void Flushing()
+        private void Flushing()
         {
             Receive<Send>(send => Context.System.DeadLetters.Tell(send));
             Receive<InboundAssociation>(

@@ -23,7 +23,7 @@ namespace Akka.Remote.Transport.DotNetty
     /// 
     /// Used for adding additional debug logging to the DotNetty transport
     /// </summary>
-    internal class AkkaLoggingHandler : ChannelHandlerAdapter
+    internal sealed class AkkaLoggingHandler : ChannelHandlerAdapter
     {
         private readonly ILoggingAdapter _log;
         
@@ -125,7 +125,7 @@ namespace Akka.Remote.Transport.DotNetty
             ctx.Flush();
         }
         
-        protected string Format(IChannelHandlerContext ctx, string eventName)
+        private string Format(IChannelHandlerContext ctx, string eventName)
         {
             string chStr = ctx.Channel.ToString();
             return new StringBuilder(chStr.Length + 1 + eventName.Length)
@@ -135,7 +135,7 @@ namespace Akka.Remote.Transport.DotNetty
                 .ToString();
         }
         
-        protected string Format(IChannelHandlerContext ctx, string eventName, object arg)
+        private string Format(IChannelHandlerContext ctx, string eventName, object arg)
         {
             if (arg is IByteBuffer buffer)
             {
@@ -151,7 +151,7 @@ namespace Akka.Remote.Transport.DotNetty
             }
         }
         
-        protected string Format(IChannelHandlerContext ctx, string eventName, object firstArg, object secondArg)
+        private string Format(IChannelHandlerContext ctx, string eventName, object firstArg, object secondArg)
         {
             if (secondArg == null)
             {

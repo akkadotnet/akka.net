@@ -128,7 +128,8 @@ namespace Akka.Tests.Routing
                 ReceiveAsync<string>(s => s == "start", async _ =>
                 {
                     var actor = Context.ActorOf(new RoundRobinPool(2).Props(Props.Create<InlineReceiverActor>()));
-                    await actor.Ask("hello").PipeTo(Sender);
+                    var sender = this.Sender;
+                    await actor.Ask("hello").PipeTo(sender);
                 });
             }
         }

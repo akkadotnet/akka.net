@@ -45,7 +45,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class DefaultMessageDispatcher : IInboundMessageDispatcher
+    internal sealed class DefaultMessageDispatcher : IInboundMessageDispatcher
     {
         private readonly ExtendedActorSystem _system;
         private readonly IRemoteActorRefProvider _provider;
@@ -394,7 +394,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class ReliableDeliverySupervisor : ReceiveActor
+    internal sealed class ReliableDeliverySupervisor : ReceiveActor
     {
         #region Internal message classes
 
@@ -443,7 +443,7 @@ namespace Akka.Remote
         private readonly int? _refuseUid;
         private readonly AkkaProtocolTransport _transport;
         private readonly RemoteSettings _settings;
-        private AkkaPduCodec _codec;
+        private readonly AkkaPduCodec _codec;
         private AkkaProtocolHandle _currentHandle;
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
 
@@ -595,7 +595,7 @@ namespace Akka.Remote
         /// TBD
         /// </summary>
         /// <exception cref="HopelessAssociation">TBD</exception>
-        protected void Receiving()
+        private void Receiving()
         {
             Receive<EndpointWriter.FlushAndStop>(_ =>
             {
@@ -676,7 +676,7 @@ namespace Akka.Remote
         /// <param name="writerTerminated">TBD</param>
         /// <param name="earlyUngateRequested">TBD</param>
         /// <exception cref="HopelessAssociation">TBD</exception>
-        protected void Gated(bool writerTerminated, bool earlyUngateRequested)
+        private void Gated(bool writerTerminated, bool earlyUngateRequested)
         {
             Receive<Terminated>(_ =>
             {
@@ -736,7 +736,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        protected void IdleBehavior()
+        private void IdleBehavior()
         {
             Receive<IsIdle>(_ => Sender.Tell(Idle.Instance));
             Receive<EndpointManager.Send>(send =>
@@ -768,7 +768,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        protected void FlushWait()
+        private void FlushWait()
         {
             Receive<IsIdle>(_ => { }); // Do not reply, we will Terminate soon, which will do the inbound connection unstashing
             Receive<Terminated>(_ =>
@@ -1011,7 +1011,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class EndpointWriter : EndpointActor
+    internal sealed class EndpointWriter : EndpointActor
     {
         /// <summary>
         /// TBD
@@ -1749,11 +1749,7 @@ namespace Akka.Remote
         public sealed class BackoffTimer
         {
             private BackoffTimer() { }
-            private static readonly BackoffTimer _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static BackoffTimer Instance { get { return _instance; } }
+            public static BackoffTimer Instance { get; } = new();
         }
 
         /// <summary>
@@ -1762,11 +1758,7 @@ namespace Akka.Remote
         public sealed class FlushAndStop
         {
             private FlushAndStop() { }
-            private static readonly FlushAndStop _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static FlushAndStop Instance { get { return _instance; } }
+            public static FlushAndStop Instance { get; } = new();
         }
 
         /// <summary>
@@ -1775,18 +1767,13 @@ namespace Akka.Remote
         public sealed class AckIdleCheckTimer
         {
             private AckIdleCheckTimer() { }
-            private static readonly AckIdleCheckTimer _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static AckIdleCheckTimer Instance { get { return _instance; } }
+            public static AckIdleCheckTimer Instance { get; } = new();
         }
 
         private sealed class FlushAndStopTimeout
         {
             private FlushAndStopTimeout() { }
-            private static readonly FlushAndStopTimeout _instance = new();
-            public static FlushAndStopTimeout Instance { get { return _instance; } }
+            public static FlushAndStopTimeout Instance { get; } = new();
         }
 
         /// <summary>
@@ -1885,7 +1872,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class EndpointReader : EndpointActor
+    internal sealed class EndpointReader : EndpointActor
     {
         /// <summary>
         /// TBD

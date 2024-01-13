@@ -319,15 +319,7 @@ namespace Akka.Remote.TestKit
         internal class Disconnected
         {
             private Disconnected() { }
-            private static readonly Disconnected _instance = new();
-
-            public static Disconnected Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }            
+            public static Disconnected Instance { get; }  = new();
         }
 
         private readonly ILoggingAdapter _log = Context.GetLogger();

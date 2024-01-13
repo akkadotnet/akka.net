@@ -19,7 +19,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class InputStreamPublisher : Actors.ActorPublisher<ByteString>
+    internal sealed class InputStreamPublisher : Actors.ActorPublisher<ByteString>
     {
         /// <summary>
         /// TBD
@@ -39,7 +39,7 @@ namespace Akka.Streams.Implementation.IO
             return Actor.Props.Create<InputStreamPublisher>(inputstream, completionSource, chunkSize).WithDeploy(Deploy.Local);
         }
 
-        private struct Continue : IDeadLetterSuppression
+        private readonly struct Continue : IDeadLetterSuppression
         {
             public static Continue Instance { get; } = new();
         }

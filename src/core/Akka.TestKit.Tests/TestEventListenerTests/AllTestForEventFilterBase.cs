@@ -264,7 +264,7 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
                     LogMessage("whatever");
                     return Task.CompletedTask;
                 });
-            }).Should().ThrowAsync<TrueException>().WithMessage("Timeout (*");
+            }).Should().ThrowAsync<FailException>().WithMessage("Timeout (*");
         }
 
         [Fact]

@@ -12,24 +12,33 @@ namespace Akka.Cluster.Tools.Client
         protected override void PostStop() { }
         public static Akka.Actor.Props Props(Akka.Cluster.Tools.Client.ClusterClientSettings settings) { }
         protected override bool Receive(object message) { }
-        public sealed class Publish
+        public sealed class Publish : Akka.Cluster.Tools.Client.IClusterClientProtocolMessage, System.IEquatable<Akka.Cluster.Tools.Client.ClusterClient.Publish>
         {
             public Publish(string topic, object message) { }
             public object Message { get; }
             public string Topic { get; }
+            public bool Equals(Akka.Cluster.Tools.Client.ClusterClient.Publish other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
         }
-        public sealed class Send
+        public sealed class Send : Akka.Cluster.Tools.Client.IClusterClientProtocolMessage, System.IEquatable<Akka.Cluster.Tools.Client.ClusterClient.Send>
         {
             public Send(string path, object message, bool localAffinity = False) { }
             public bool LocalAffinity { get; }
             public object Message { get; }
             public string Path { get; }
+            public bool Equals(Akka.Cluster.Tools.Client.ClusterClient.Send other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
         }
-        public sealed class SendToAll
+        public sealed class SendToAll : Akka.Cluster.Tools.Client.IClusterClientProtocolMessage, System.IEquatable<Akka.Cluster.Tools.Client.ClusterClient.SendToAll>
         {
             public SendToAll(string path, object message) { }
             public object Message { get; }
             public string Path { get; }
+            public bool Equals(Akka.Cluster.Tools.Client.ClusterClient.SendToAll other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
         }
     }
     public sealed class ClusterClientReceptionist : Akka.Actor.IExtension
@@ -51,7 +60,9 @@ namespace Akka.Cluster.Tools.Client
     }
     public sealed class ClusterClientSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
+        [System.ObsoleteAttribute("Use constructor with useLegacySerialization argument instead. Since 1.5.15")]
         public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize, System.Nullable<System.TimeSpan> reconnectTimeout = null) { }
+        public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize, bool useLegacySerialization, System.Nullable<System.TimeSpan> reconnectTimeout = null) { }
         public System.TimeSpan AcceptableHeartbeatPause { get; }
         public int BufferSize { get; }
         public System.TimeSpan EstablishingGetContactsInterval { get; }
@@ -59,6 +70,7 @@ namespace Akka.Cluster.Tools.Client
         public System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> InitialContacts { get; }
         public System.Nullable<System.TimeSpan> ReconnectTimeout { get; }
         public System.TimeSpan RefreshContactsInterval { get; }
+        public bool UseLegacySerialization { get; }
         public static Akka.Cluster.Tools.Client.ClusterClientSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Tools.Client.ClusterClientSettings Create(Akka.Configuration.Config config) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithBufferSize(int bufferSize) { }
@@ -67,6 +79,7 @@ namespace Akka.Cluster.Tools.Client
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithInitialContacts(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithReconnectTimeout(System.Nullable<System.TimeSpan> reconnectTimeout) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithRefreshContactsInterval(System.TimeSpan value) { }
+        public Akka.Cluster.Tools.Client.ClusterClientSettings WithUseLegacySerialization(bool useLegacySerialization) { }
     }
     public sealed class ClusterClientUnreachable : Akka.Cluster.Tools.Client.IClusterClientInteraction
     {
@@ -136,6 +149,7 @@ namespace Akka.Cluster.Tools.Client
         Akka.Actor.IActorRef ClusterClient { get; }
     }
     public interface IClusterClientMessage { }
+    public interface IClusterClientProtocolMessage { }
     public interface IContactPointChange
     {
         Akka.Actor.ActorPath ContactPoint { get; }
@@ -316,6 +330,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
+    }
+}
+namespace Akka.Cluster.Tools.PublishSubscribe.Internal
+{
+    [Akka.Annotations.ApiMayChangeAttribute()]
+    public sealed class CountSubscribers
+    {
+        public CountSubscribers(string topic) { }
+        public string Topic { get; }
     }
 }
 namespace Akka.Cluster.Tools.PublishSubscribe.Serialization

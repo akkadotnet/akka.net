@@ -272,6 +272,7 @@ namespace Akka.Persistence.Snapshot
             var snapshots = GetSnapshotDir()
                 .EnumerateFiles("snapshot-" + Uri.EscapeDataString(persistenceId) + "-*", SearchOption.TopDirectoryOnly)
                 .Select(ExtractSnapshotMetadata)
+                .Where(m=>m.PersistenceId == persistenceId)
                 .Where(metadata => metadata != null && criteria.IsMatch(metadata) && !_saving.Contains(metadata)).ToList();
 
             snapshots.Sort(SnapshotMetadata.Comparer);

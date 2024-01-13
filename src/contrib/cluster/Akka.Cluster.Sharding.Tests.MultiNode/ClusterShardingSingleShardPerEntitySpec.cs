@@ -75,7 +75,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(10), () =>
             {
-                Join(node, config.First);
+                Join(node, Config.First);
                 RunOn(() =>
                 {
                     _region.Value.Tell(entityId);
@@ -99,18 +99,18 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void Cluster_sharding_with_single_shard_per_entity_must_use_specified_region()
         {
-            JoinAndAllocate(config.First, 1);
-            JoinAndAllocate(config.Second, 2);
-            JoinAndAllocate(config.Third, 3);
-            JoinAndAllocate(config.Fourth, 4);
-            JoinAndAllocate(config.Fifth, 5);
+            JoinAndAllocate(Config.First, 1);
+            JoinAndAllocate(Config.Second, 2);
+            JoinAndAllocate(Config.Third, 3);
+            JoinAndAllocate(Config.Fourth, 4);
+            JoinAndAllocate(Config.Fifth, 5);
 
             RunOn(() =>
             {
                 // coordinator is on 'first', blackhole 3 other means that it can't update with WriteMajority
-                TestConductor.Blackhole(config.First, config.Third, ThrottleTransportAdapter.Direction.Both).Wait();
-                TestConductor.Blackhole(config.First, config.Fourth, ThrottleTransportAdapter.Direction.Both).Wait();
-                TestConductor.Blackhole(config.First, config.Fifth, ThrottleTransportAdapter.Direction.Both).Wait();
+                TestConductor.Blackhole(Config.First, Config.Third, ThrottleTransportAdapter.Direction.Both).Wait();
+                TestConductor.Blackhole(Config.First, Config.Fourth, ThrottleTransportAdapter.Direction.Both).Wait();
+                TestConductor.Blackhole(Config.First, Config.Fifth, ThrottleTransportAdapter.Direction.Both).Wait();
 
                 // shard 6 not allocated yet and due to the blackhole it will not be completed
                 _region.Value.Tell(6);
@@ -123,13 +123,13 @@ namespace Akka.Cluster.Sharding.Tests
                 // be able to answer GetShardHome even though previous request for shard 4 has not completed yet
                 _region.Value.Tell(2);
                 ExpectMsg(2);
-                LastSender.Path.Should().Be(Node(config.Second) / "system" / "sharding" / "Entity" / "2" / "2");
+                LastSender.Path.Should().Be(Node(Config.Second) / "system" / "sharding" / "Entity" / "2" / "2");
 
-                TestConductor.PassThrough(config.First, config.Third, ThrottleTransportAdapter.Direction.Both).Wait();
-                TestConductor.PassThrough(config.First, config.Fourth, ThrottleTransportAdapter.Direction.Both).Wait();
-                TestConductor.PassThrough(config.First, config.Fifth, ThrottleTransportAdapter.Direction.Both).Wait();
+                TestConductor.PassThrough(Config.First, Config.Third, ThrottleTransportAdapter.Direction.Both).Wait();
+                TestConductor.PassThrough(Config.First, Config.Fourth, ThrottleTransportAdapter.Direction.Both).Wait();
+                TestConductor.PassThrough(Config.First, Config.Fifth, ThrottleTransportAdapter.Direction.Both).Wait();
                 ExpectMsg(6, TimeSpan.FromSeconds(10));
-            }, config.First);
+            }, Config.First);
 
             EnterBarrier("after-1");
         }

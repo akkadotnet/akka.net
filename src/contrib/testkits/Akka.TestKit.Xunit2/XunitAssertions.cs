@@ -23,7 +23,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="args">An optional object array that contains zero or more objects to format.</param>
         public void Fail(string format = "", params object[] args)
         {
-            Assert.True(false, string.Format(format, args));
+            Assert.Fail(string.Format(format, args));
         }
 
         /// <summary>
@@ -64,7 +64,7 @@ namespace Akka.TestKit.Xunit2
         {
             var comparer = new AkkaAssertEqualityComparer<T>();
             if(!comparer.Equals(expected, actual))
-                throw new AkkaEqualException(expected, actual, format, args);
+                throw AkkaEqualException.ForMismatchedValues(expected, actual, format, args);
         }
 
         /// <summary>
@@ -83,7 +83,7 @@ namespace Akka.TestKit.Xunit2
         public void AssertEqual<T>(T expected, T actual, Func<T, T, bool> comparer, string format = "", params object[] args)
         {
             if(!comparer(expected, actual))
-                throw new AkkaEqualException(expected, actual, format, args);
+                throw AkkaEqualException.ForMismatchedValues(expected, actual, format, args);
         }
     }
 }

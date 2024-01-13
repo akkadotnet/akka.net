@@ -24,5 +24,7 @@
   href: configuration/toc.yml
 - name: Serialization
   href: serialization/toc.yml
+- name: Debugging Akka.NET
+  href: debugging/toc.yml
 - name: Examples
   href: examples.md

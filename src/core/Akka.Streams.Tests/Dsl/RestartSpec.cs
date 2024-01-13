@@ -798,7 +798,7 @@ namespace Akka.Streams.Tests.Dsl
                             {
                                 if (i == 6)
                                 {
-                                    throw new ArgumentException($"BOOM");
+                                    throw new ArgumentException("BOOM");
                                 }
 
                                 return i;

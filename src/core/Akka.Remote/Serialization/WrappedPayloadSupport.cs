@@ -10,7 +10,7 @@ using Google.Protobuf;
 
 namespace Akka.Remote.Serialization
 {
-    internal class WrappedPayloadSupport
+    internal sealed class WrappedPayloadSupport
     {
         private readonly ExtendedActorSystem _system;
 

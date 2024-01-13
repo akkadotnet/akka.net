@@ -178,7 +178,7 @@ namespace Akka.Cluster.Sharding.Tests
               typeName: E1.TypeKey,
               entityProps: SimpleEchoActor.Props(),
               // nodes 1,2,3: role R1, shard region E1, proxy region E2
-              settings: settings.Value.WithRole("R1"),
+              settings: Settings.Value.WithRole("R1"),
               extractEntityId: E1.ExtractEntityId,
               extractShardId: E1.ExtractShardId);
 
@@ -188,11 +188,11 @@ namespace Akka.Cluster.Sharding.Tests
                 typeName: E2.TypeKey,
                 entityProps: SimpleEchoActor.Props(),
                 // nodes 4,5: role R2, shard region E2, proxy region E1
-                settings: settings.Value.WithRole("R2"),
+                settings: Settings.Value.WithRole("R2"),
                 extractEntityId: E2.ExtractEntityId,
                 extractShardId: E2.ExtractShardId);
 
-            AwaitClusterUp(config.First, config.Second, config.Third, config.Fourth, config.Fifth);
+            AwaitClusterUp(Config.First, Config.Second, Config.Third, Config.Fourth, Config.Fifth);
 
             RunOn(() =>
             {
@@ -209,7 +209,7 @@ namespace Akka.Cluster.Sharding.Tests
                     region.Tell(GetCurrentRegions.Instance);
                     ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(2);
                 });
-            }, config.Fourth);
+            }, Config.Fourth);
 
             EnterBarrier($"{Roles.Count}-up");
         }
@@ -233,7 +233,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                 stats.Regions.Keys.Should().BeEquivalentTo(fourthAddress, fifthAddress);
                 stats.Regions.Values.SelectMany(i => i.Stats.Values).Count().Should().Be(20);
-            }, config.First);
+            }, Config.First);
             EnterBarrier("proxy-node-other-role-to-shard");
         }
     }

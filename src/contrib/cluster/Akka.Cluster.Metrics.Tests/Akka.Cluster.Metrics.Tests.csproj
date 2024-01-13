@@ -2,9 +2,7 @@
     <Import Project="..\..\..\xunitSettings.props" />
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.Cluster.Metrics.Tests</AssemblyTitle>
         <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
-        <LangVersion>8.0</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>

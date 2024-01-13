@@ -15,7 +15,7 @@ namespace Akka.Remote
     /// <summary>
     /// Not threadsafe - only to be used in HeadActor
     /// </summary>
-    internal class EndpointRegistry
+    internal sealed class EndpointRegistry
     {
         private Dictionary<Address, (int, Deadline)> _addressToRefuseUid = new();
         private readonly Dictionary<Address, (IActorRef, int)> _addressToReadonly = new();

@@ -49,12 +49,13 @@ namespace DocsExamples.Streams
             {
                 Receive<RequestLogs>(request =>
                 {
+                    var sender = Sender;
                     // create a source
                     StreamLogs(request.StreamId)
                         // materialize it using stream refs
                         .RunWith(StreamRefs.SourceRef<string>(), Context.System.Materializer())
                         // and send to sender
-                        .PipeTo(Sender, success: sourceRef => new LogsOffer(request.StreamId, sourceRef));
+                        .PipeTo(sender, success: sourceRef => new LogsOffer(request.StreamId, sourceRef));
                 });
             }
 
@@ -92,12 +93,13 @@ namespace DocsExamples.Streams
                 {
                     // obtain a source you want to offer
                     var sink = LogsSinksFor(prepare.Id);
+                    var sender = this.Sender;
 
                     // materialize sink ref (remote is source data for us)
                     StreamRefs.SinkRef<string>()
                         .To(sink)
                         .Run(Context.System.Materializer())
-                        .PipeTo(Sender, success: sinkRef => new MeasurementsSinkReady(prepare.Id, sinkRef));
+                        .PipeTo(sender, success: sinkRef => new MeasurementsSinkReady(prepare.Id, sinkRef));
                 });
             }
 
