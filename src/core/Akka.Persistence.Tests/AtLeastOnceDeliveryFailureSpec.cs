@@ -134,7 +134,7 @@ namespace Akka.Persistence.Tests
             private readonly double _replayProcessingFailureRate;
             private ILoggingAdapter _log;
 
-            public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); }}
+            public ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); }}
 
             public ChaosSender(IActorRef destination, IActorRef probe) 
                 : base(x => x.WithRedeliverInterval(TimeSpan.FromMilliseconds(500)))
@@ -242,7 +242,7 @@ namespace Akka.Persistence.Tests
             private readonly double _confirmFailureRate;
             private ILoggingAdapter _log;
 
-            public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+            public ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
 
             public ChaosDestination(IActorRef probe)
             {

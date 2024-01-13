@@ -377,8 +377,10 @@ namespace Akka.Persistence
         public Akka.Persistence.IStashOverflowStrategy DefaultInternalStashOverflowStrategy { get; }
         public Akka.Persistence.PersistenceSettings Settings { get; }
         public Akka.Persistence.Journal.EventAdapters AdaptersFor(string journalPluginId) { }
+        [Akka.Annotations.InternalStableApiAttribute()]
         public Akka.Actor.IActorRef JournalFor(string journalPluginId) { }
         public string PersistenceId(Akka.Actor.IActorRef actor) { }
+        [Akka.Annotations.InternalStableApiAttribute()]
         public Akka.Actor.IActorRef SnapshotStoreFor(string snapshotPluginId) { }
     }
     public sealed class PersistenceSettings : Akka.Actor.Settings

@@ -23,7 +23,7 @@ namespace Akka.Cluster.Benchmarks.Sharding
         {
             _extractor.EntityId(_m1);
             _extractor.EntityMessage(_m1);
-            _extractor.ShardId(_m1);
+            _extractor.ShardId(_m1.EntityId);
         }
         
         [Benchmark]
@@ -31,7 +31,7 @@ namespace Akka.Cluster.Benchmarks.Sharding
         {
             _extractor.EntityId(_m2);
             _extractor.EntityMessage(_m2);
-            _extractor.ShardId(_m2);
+            _extractor.ShardId(_m2.EntityId);
         }
     }
 }

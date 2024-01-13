@@ -35,18 +35,18 @@ namespace Akka.DistributedData.Tests
         public void ORMultiDictionary_must_be_able_to_add_entries()
         {
             var m = ORMultiValueDictionary<string, string>.Empty.AddItem(_node1, "a", "A").AddItem(_node1, "b", "B");
-            Assert.Equal(ImmutableDictionary.CreateRange(new[]
+            m.Entries.Should().BeEquivalentTo(new[]
             {
                 new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A")),
                 new KeyValuePair<string, IImmutableSet<string>>("b", ImmutableHashSet.Create("B"))
-            }), m.Entries);
+            });
 
             var m2 = m.AddItem(_node1, "a", "C");
-            Assert.Equal(ImmutableDictionary.CreateRange(new[]
+            m2.Entries.Should().BeEquivalentTo(new[]
             {
                 new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A", "C")),
                 new KeyValuePair<string, IImmutableSet<string>>("b", ImmutableHashSet.Create("B"))
-            }), m2.Entries);
+            });
         }
 
         [Fact]
@@ -57,10 +57,10 @@ namespace Akka.DistributedData.Tests
                 .AddItem(_node1, "b", "B")
                 .RemoveItem(_node1, "a", "A");
 
-            Assert.Equal(ImmutableDictionary.CreateRange(new[]
+            m.Entries.Should().BeEquivalentTo(ImmutableDictionary.CreateRange(new[]
             {
                 new KeyValuePair<string, IImmutableSet<string>>("b", ImmutableHashSet.Create("B"))
-            }), m.Entries);
+            }));
         }
 
         [Fact]
@@ -70,10 +70,10 @@ namespace Akka.DistributedData.Tests
                 .AddItem(_node1, "a", "A")
                 .ReplaceItem(_node1, "a", "A", "B");
 
-            Assert.Equal(ImmutableDictionary.CreateRange(new[]
+            m.Entries.Should().BeEquivalentTo(new[]
             {
                 new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("B"))
-            }), m.Entries);
+            });
         }
 
         [Fact]
@@ -95,10 +95,10 @@ namespace Akka.DistributedData.Tests
             });
 
             var merged1 = m1.Merge(m2);
-            Assert.Equal(expected, merged1.Entries);
+            merged1.Entries.Should().BeEquivalentTo(expected);
 
             var merged2 = m2.Merge(m1);
-            Assert.Equal(expected, merged2.Entries);
+            merged2.Entries.Should().BeEquivalentTo(expected);
         }
 
         [Fact]
@@ -183,14 +183,14 @@ namespace Akka.DistributedData.Tests
                 .AddItem(_node1, "b", "B1");
 
             m.TryGetValue("a", out var a);
-            Assert.Equal(ImmutableHashSet.Create("A1", "A2"), a);
+            a.Should().BeEquivalentTo(ImmutableHashSet.Create("A1", "A2"));
 
             var m2 = m.SetItems(_node1, "a", a.Remove("A1"));
-            Assert.Equal(ImmutableDictionary.CreateRange(new[]
+            m2.Entries.Should().BeEquivalentTo(new[]
             {
                 new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A2")),
                 new KeyValuePair<string, IImmutableSet<string>>("b", ImmutableHashSet.Create("B1"))
-            }), m2.Entries);
+            });
         }
 
         [Fact]
@@ -214,10 +214,10 @@ namespace Akka.DistributedData.Tests
                 .AddItem(_node1, "b", "B1");
 
             var m2 = m.Remove(_node1, "a");
-            Assert.Equal(ImmutableDictionary.CreateRange(new[]
+            m2.Entries.Should().BeEquivalentTo(new[]
             {
                 new KeyValuePair<string, IImmutableSet<string>>("b", ImmutableHashSet.Create("B1"))
-            }), m2.Entries);
+            });
         }
 
         [Fact]

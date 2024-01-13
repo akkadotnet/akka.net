@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\xunitSettings.props" />
   <PropertyGroup>
-    <AssemblyName>Akka.Streams.Tests.TCK</AssemblyName>
     <!-- Reactive.Streams.TCK isn't compatible with .NET Core -->
     <!--UNit.Framework does not yet support .NET 5 - build will fail-->
     <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>

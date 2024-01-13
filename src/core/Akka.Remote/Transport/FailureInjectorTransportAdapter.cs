@@ -139,16 +139,7 @@ namespace Akka.Remote.Transport
         public sealed class PassThru : IGremlinMode
         {
             private PassThru() { }
-// ReSharper disable once InconsistentNaming
-            private static readonly PassThru _instance = new();
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static PassThru Instance
-            {
-                get { return _instance; }
-            }
+            public static PassThru Instance { get; } = new();
         }
 
         /// <summary>

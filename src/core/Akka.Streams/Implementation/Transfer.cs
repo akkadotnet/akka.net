@@ -303,7 +303,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// TBD
     /// </summary>
-    internal class WaitingForUpstreamSubscription : TransferState
+    internal sealed class WaitingForUpstreamSubscription : TransferState
     {
         /// <summary>
         /// TBD
@@ -362,7 +362,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// TBD
     /// </summary>
-    public struct TransferPhase
+    public readonly struct TransferPhase
     {
         /// <summary>
         /// TBD

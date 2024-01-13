@@ -157,7 +157,7 @@ namespace Akka.Cluster.Sharding
         {
         }
         
-        public override string ToString() => $"GetCurrentRegions";
+        public override string ToString() => "GetCurrentRegions";
     }
 
     /// <summary>
@@ -405,7 +405,7 @@ namespace Akka.Cluster.Sharding
         {
         }
         
-        public override string ToString() => $"GetShardRegionStats";
+        public override string ToString() => "GetShardRegionStats";
     }
 
     /// <summary>
@@ -499,7 +499,7 @@ namespace Akka.Cluster.Sharding
         {
         }
         
-        public override string ToString() => $"GetShardRegionState";
+        public override string ToString() => "GetShardRegionState";
     }
 
     /// <summary>

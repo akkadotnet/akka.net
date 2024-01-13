@@ -25,7 +25,7 @@ namespace Akka.Remote.Transport
     /// this system over the network.
     /// </para>
     /// </summary>
-    internal class ProtocolTransportAddressPair
+    internal sealed class ProtocolTransportAddressPair
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ProtocolTransportAddressPair"/> class.
@@ -140,10 +140,8 @@ namespace Akka.Remote.Transport
         {
             get
             {
-                return _managerProps ??
-                       (_managerProps =
-                           Props.Create(() => new AkkaProtocolManager(WrappedTransport, Settings))
-                               .WithDeploy(Deploy.Local));
+                return _managerProps ??= Props.Create(() => new AkkaProtocolManager(WrappedTransport, Settings))
+                    .WithDeploy(Deploy.Local);
             }
         }
 
@@ -186,7 +184,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal class AkkaProtocolManager : ActorTransportAdapterManager
+    internal sealed class AkkaProtocolManager : ActorTransportAdapterManager
     {
         /// <summary>
         /// TBD
@@ -292,7 +290,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal class AssociateUnderlyingRefuseUid : INoSerializationVerificationNeeded
+    internal sealed class AssociateUnderlyingRefuseUid : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// TBD
@@ -375,7 +373,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal class AkkaProtocolHandle : AbstractTransportAdapterHandle
+    internal sealed class AkkaProtocolHandle : AbstractTransportAdapterHandle
     {
         /// <summary>
         /// TBD
@@ -446,7 +444,7 @@ namespace Akka.Remote.Transport
         }
 
         /// <inheritdoc/>
-        protected bool Equals(AkkaProtocolHandle other)
+        private bool Equals(AkkaProtocolHandle other)
         {
             return base.Equals(other) && Equals(HandshakeInfo, other.HandshakeInfo) && Equals(StateActor, other.StateActor);
         }
@@ -486,9 +484,9 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal class HeartbeatTimer : INoSerializationVerificationNeeded { }
+    internal sealed class HeartbeatTimer : INoSerializationVerificationNeeded { }
 
-    internal class HandshakeTimer : INoSerializationVerificationNeeded { }
+    internal sealed class HandshakeTimer : INoSerializationVerificationNeeded { }
 
     /// <summary>
     /// TBD
@@ -691,7 +689,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Message sent when a <see cref="FailureDetector.IsAvailable"/> returns false, signaling a transport timeout.
     /// </summary>
-    internal class TimeoutReason
+    internal sealed class TimeoutReason
     {
         /// <summary>
         /// TBD
@@ -717,17 +715,17 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal class ForbiddenUidReason { }
+    internal sealed class ForbiddenUidReason { }
 
     /// <summary>
     /// INTERNAL API.
     /// </summary>
-    internal class ProtocolStateActor : FSM<AssociationState, ProtocolStateData>
+    internal sealed class ProtocolStateActor : FSM<AssociationState, ProtocolStateData>
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly InitialProtocolStateData _initialData;
         private readonly HandshakeInfo _localHandshakeInfo;
-        private int? _refuseUid;
+        private readonly int? _refuseUid;
         private readonly AkkaProtocolSettings _settings;
         private readonly Address _localAddress;
         private readonly AkkaPduCodec _codec;
@@ -813,7 +811,7 @@ namespace Akka.Remote.Transport
         ///   </dd>
         /// </dl>
         /// </exception>
-        protected ProtocolStateActor(InitialProtocolStateData initialData, HandshakeInfo localHandshakeInfo, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, int? refuseUid)
+        private ProtocolStateActor(InitialProtocolStateData initialData, HandshakeInfo localHandshakeInfo, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, int? refuseUid)
         {
             _initialData = initialData;
             _localHandshakeInfo = localHandshakeInfo;

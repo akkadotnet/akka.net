@@ -55,7 +55,7 @@ namespace Akka.DistributedData
             {
                 if (string.IsNullOrEmpty(durableStoreTypeName))
                 {
-                    throw new ArgumentException($"`akka.cluster.distributed-data.durable.store-actor-class` must be set when `akka.cluster.distributed-data.durable.keys` have been configured.");
+                    throw new ArgumentException("`akka.cluster.distributed-data.durable.store-actor-class` must be set when `akka.cluster.distributed-data.durable.keys` have been configured.");
                 }
 
                 var durableStoreType = Type.GetType(durableStoreTypeName);

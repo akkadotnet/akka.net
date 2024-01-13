@@ -1,11 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />

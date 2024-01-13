@@ -125,7 +125,7 @@ namespace Akka.Remote
         // a lazy val
         private volatile Address _defaultAddress;
 
-        private IActorRef _transportSupervisor;
+        private readonly IActorRef _transportSupervisor;
         private readonly EventPublisher _eventPublisher;
 
         /// <summary>
@@ -433,7 +433,7 @@ namespace Akka.Remote
     /// <summary>
     /// Actor responsible for supervising the creation of all transport actors
     /// </summary>
-    internal class TransportSupervisor : ReceiveActor
+    internal sealed class TransportSupervisor : ReceiveActor
     {
         private readonly SupervisorStrategy _strategy = new OneForOneStrategy(_ => Directive.Restart);
         /// <summary>

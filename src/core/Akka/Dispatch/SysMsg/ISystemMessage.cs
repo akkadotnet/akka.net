@@ -278,11 +278,12 @@ namespace Akka.Dispatch.SysMsg
     /// <see cref="ISystemMessage"/> is an interface and too basic to express
     /// all of the capabilities needed to express a full-fledged system message.
     /// </summary>
-    [InternalApi]
+    [InternalStableApi]
     public abstract class SystemMessage : ISystemMessage
     {
         /// <summary>
         /// The next <see cref="ISystemMessage"/> in the linked list.
+        /// Next fields are only modifiable via the <see cref="SystemMessageList"/> class.
         /// </summary>
         [NonSerialized]
         internal SystemMessage Next;
@@ -290,15 +291,12 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         /// Unlinks this message from the linked list.
         /// </summary>
-        public void Unlink()
-        {
-            Next = null;
-        }
+        public void Unlink() => Next = null;
 
         /// <summary>
         /// Returns <c>true</c> if we are unlinked.
         /// </summary>
-        public bool Unlinked { get { return Next == null; } }
+        public bool Unlinked => Next == null;
     }
 
     /// <summary>
@@ -864,17 +862,7 @@ namespace Akka.Dispatch.SysMsg
     public sealed class RegisterTerminationHook
     {
         private RegisterTerminationHook() { }
-        private static readonly RegisterTerminationHook _instance = new();
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static RegisterTerminationHook Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static RegisterTerminationHook Instance { get; } = new();
 
         /// <summary>
         /// TBD
@@ -892,17 +880,7 @@ namespace Akka.Dispatch.SysMsg
     public sealed class TerminationHook
     {
         private TerminationHook() { }
-        private static readonly TerminationHook _instance = new();
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static TerminationHook Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static TerminationHook Instance { get; } = new();
 
         /// <summary>
         /// TBD
@@ -920,17 +898,7 @@ namespace Akka.Dispatch.SysMsg
     public sealed class TerminationHookDone
     {
         private TerminationHookDone() { }
-        private static readonly TerminationHookDone _instance = new();
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static TerminationHookDone Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static TerminationHookDone Instance { get; } = new();
 
         /// <summary>
         /// TBD

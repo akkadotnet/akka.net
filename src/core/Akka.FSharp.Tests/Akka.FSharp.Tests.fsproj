@@ -2,7 +2,6 @@
   <Import Project="..\..\xunitSettings.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.FSharp.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <IsPackable>false</IsPackable>

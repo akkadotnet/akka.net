@@ -298,7 +298,9 @@ namespace Akka.Cluster.Routing
         /// <inheritdoc cref="RouterConfig.CreateRouterActor"/>
         public override ActorBase CreateRouterActor()
         {
+#pragma warning disable AK1000
             return new ClusterRouterPoolActor(Local.SupervisorStrategy, Settings);
+#pragma warning restore AK1000
         }
 
         /// <summary>
@@ -445,7 +447,9 @@ namespace Akka.Cluster.Routing
         /// <inheritdoc cref="RouterConfig.CreateRouterActor"/>
         public override ActorBase CreateRouterActor()
         {
+#pragma warning disable AK1000
             return new ClusterRouterGroupActor(Settings);
+#pragma warning restore AK1000
         }
 
         /// <summary>

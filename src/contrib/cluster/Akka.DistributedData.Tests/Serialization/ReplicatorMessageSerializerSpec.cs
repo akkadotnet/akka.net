@@ -34,8 +34,6 @@ namespace Akka.DistributedData.Tests.Serialization
 
         private readonly ReplicatorMessageSerializer _serializer;
 
-        private readonly string _protocol;
-
         private readonly UniqueAddress _address1;
         private readonly UniqueAddress _address2;
         private readonly UniqueAddress _address3;
@@ -48,7 +46,6 @@ namespace Akka.DistributedData.Tests.Serialization
 
             // We dont have Artery implementation
             // _protocol = ((RemoteActorRefProvider) ((ExtendedActorSystem)Sys).Provider).RemoteSettings.Artery.Enabled
-            _protocol = "akka.tcp";
 
             _address1 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "some.host.org", 4711), 1);
             _address2 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "other.host.org", 4711), 2);

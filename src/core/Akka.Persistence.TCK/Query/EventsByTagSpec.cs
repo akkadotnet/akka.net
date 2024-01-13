@@ -15,17 +15,21 @@ using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 using static Akka.Persistence.Query.Offset;
 
+#nullable enable
 namespace Akka.Persistence.TCK.Query
 {
     public abstract class EventsByTagSpec : Akka.TestKit.Xunit2.TestKit
     {
         protected ActorMaterializer Materializer { get; }
 
-        protected IReadJournal ReadJournal { get; set; }
+        protected IReadJournal? ReadJournal { get; set; }
 
-        protected EventsByTagSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
+        protected virtual bool SupportsTagsInEventEnvelope => false;
+        
+        protected EventsByTagSpec(Config? config = null, string? actorSystemName = null, ITestOutputHelper? output = null)
             : base(config ?? Config.Empty, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
@@ -40,7 +44,8 @@ namespace Akka.Persistence.TCK.Query
         [Fact]
         public virtual void ReadJournal_live_query_EventsByTag_should_find_new_events()
         {
-            var queries = ReadJournal as IEventsByTagQuery;
+            if (ReadJournal is not IEventsByTagQuery queries)
+                throw IsTypeException.ForMismatchedType(nameof(IEventsByTagQuery), ReadJournal?.GetType().Name ?? "null");
 
             var b = Sys.ActorOf(Query.TestActor.Props("b"));
             var d = Sys.ActorOf(Query.TestActor.Props("d"));
@@ -51,7 +56,7 @@ namespace Akka.Persistence.TCK.Query
             var blackSrc = queries.EventsByTag("black", offset: NoOffset());
             var probe = blackSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe.Request(2);
-            ExpectEnvelope(probe, "b", 1L, "a black car");
+            ExpectEnvelope(probe, "b", 1L, "a black car", "black");
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             d.Tell("a black dog");
@@ -59,17 +64,18 @@ namespace Akka.Persistence.TCK.Query
             d.Tell("a black night");
             ExpectMsg("a black night-done");
 
-            ExpectEnvelope(probe, "d", 1L, "a black dog");
+            ExpectEnvelope(probe, "d", 1L, "a black dog", "black");
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
             probe.Request(10);
-            ExpectEnvelope(probe, "d", 2L, "a black night");
+            ExpectEnvelope(probe, "d", 2L, "a black night", "black");
             probe.Cancel();
         }
 
         [Fact]
         public virtual void ReadJournal_live_query_EventsByTag_should_find_events_from_offset_exclusive()
         {
-            var queries = ReadJournal as IEventsByTagQuery;
+            if (ReadJournal is not IEventsByTagQuery queries)
+                throw IsTypeException.ForMismatchedType(nameof(IEventsByTagQuery), ReadJournal?.GetType().Name ?? "null");
 
             var a = Sys.ActorOf(Query.TestActor.Props("a"));
             var b = Sys.ActorOf(Query.TestActor.Props("b"));
@@ -93,25 +99,30 @@ namespace Akka.Persistence.TCK.Query
             var greenSrc1 = queries.EventsByTag("green", offset: NoOffset());
             var probe1 = greenSrc1.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe1.Request(2);
-            ExpectEnvelope(probe1, "a", 2L, "a green apple");
-            var offs = ExpectEnvelope(probe1, "a", 4L, "a green banana").Offset;
+            ExpectEnvelope(probe1, "a", 2L, "a green apple", "green");
+            var offs = ExpectEnvelope(probe1, "a", 4L, "a green banana", "green").Offset;
             probe1.Cancel();
 
             var greenSrc2 = queries.EventsByTag("green", offset: offs);
             var probe2 = greenSrc2.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe2.Request(10);
-            ExpectEnvelope(probe2, "b", 2L, "a green leaf");
-            ExpectEnvelope(probe2, "c", 1L, "a green cucumber");
+            ExpectEnvelope(probe2, "b", 2L, "a green leaf", "green");
+            ExpectEnvelope(probe2, "c", 1L, "a green cucumber", "green");
             probe2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
             probe2.Cancel();
         }
 
-        private EventEnvelope ExpectEnvelope(TestSubscriber.Probe<EventEnvelope> probe, string persistenceId, long sequenceNr, string @event)
+        private EventEnvelope ExpectEnvelope(TestSubscriber.Probe<EventEnvelope> probe, string persistenceId, long sequenceNr, string @event, string tag)
         {
             var envelope = probe.ExpectNext<EventEnvelope>(_ => true);
             envelope.PersistenceId.Should().Be(persistenceId);
             envelope.SequenceNr.Should().Be(sequenceNr);
             envelope.Event.Should().Be(@event);
+            if (SupportsTagsInEventEnvelope)
+            {
+                envelope.Tags.Should().NotBeNull();
+                envelope.Tags.Should().Contain(tag);
+            }
             return envelope;
         }
     }

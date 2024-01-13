@@ -15,7 +15,7 @@ using BenchmarkDotNet.Engines;
 namespace Akka.Benchmarks.Actor
 {
     [Config(typeof(MicroBenchmarkConfig))]
-    [SimpleJob(RunStrategy.Throughput, targetCount:10, warmupCount:5)]
+    [SimpleJob(RunStrategy.Throughput, warmupCount:5)]
     public class SpawnActorBenchmarks
     {
         [Params(100_000)]

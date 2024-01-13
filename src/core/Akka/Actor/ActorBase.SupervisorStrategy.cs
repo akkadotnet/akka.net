@@ -18,7 +18,7 @@ namespace Akka.Actor
         /// </summary>
         internal SupervisorStrategy SupervisorStrategyInternal
         {
-            get { return _supervisorStrategy ?? (_supervisorStrategy = SupervisorStrategy()); }
+            get { return _supervisorStrategy ??= SupervisorStrategy(); }
             set { _supervisorStrategy = value; }
         }
 

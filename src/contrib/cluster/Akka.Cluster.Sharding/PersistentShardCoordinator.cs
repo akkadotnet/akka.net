@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
@@ -77,7 +78,7 @@ namespace Akka.Cluster.Sharding
             switch (message)
             {
                 case EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker _:
-                case SnapshotOffer offer when offer.Snapshot is EventSourcedRememberEntitiesCoordinatorStore.State _:
+                case SnapshotOffer { Snapshot: EventSourcedRememberEntitiesCoordinatorStore.State }:
                     throw new IllegalStateException(
                       "state-store is set to persistence but a migration has taken place to remember-entities-store=eventsourced. You can not downgrade.");
 
@@ -87,10 +88,10 @@ namespace Akka.Cluster.Sharding
 
                     switch (evt)
                     {
-                        case ShardRegionRegistered _:
+                        case ShardRegionRegistered:
                             State = State.Updated(evt);
                             return true;
-                        case ShardRegionProxyRegistered _:
+                        case ShardRegionProxyRegistered:
                             State = State.Updated(evt);
                             return true;
                         case ShardRegionTerminated regionTerminated:
@@ -125,7 +126,7 @@ namespace Akka.Cluster.Sharding
                             return true;
                     }
                     return false;
-                case SnapshotOffer offer when offer.Snapshot is CoordinatorState state:
+                case SnapshotOffer { Snapshot: CoordinatorState state }:
                     if (VerboseDebug)
                         Log.Debug("{0}: receiveRecover SnapshotOffer {1}", TypeName, state);
                     State = state.WithRememberEntities(Settings.RememberEntities);
@@ -135,7 +136,7 @@ namespace Akka.Cluster.Sharding
                         State = State.Copy(unallocatedShards: ImmutableHashSet<ShardId>.Empty);
                     return true;
 
-                case RecoveryCompleted _:
+                case RecoveryCompleted:
                     State = State.WithRememberEntities(Settings.RememberEntities);
                     _baseImpl.WatchStateActors();
                     return true;
@@ -158,12 +159,12 @@ namespace Akka.Cluster.Sharding
         {
             switch (message)
             {
-                case Terminate _:
+                case Terminate:
                     Log.Debug("{0}: Received termination message before state was initialized", TypeName);
                     Context.Stop(Self);
                     return true;
 
-                case StateInitialized _:
+                case StateInitialized:
                     _baseImpl.ReceiveStateInitialized();
                     Log.Debug("{0}: Coordinator initialization completed", TypeName);
                     Context.Become(msg => _baseImpl.Active(msg) || ReceiveSnapshotResult(msg));
@@ -175,8 +176,7 @@ namespace Akka.Cluster.Sharding
                     return true;
             }
 
-            if (_baseImpl.ReceiveTerminated(message)) return true;
-            else return ReceiveSnapshotResult(message);
+            return _baseImpl.ReceiveTerminated(message) || ReceiveSnapshotResult(message);
         }
 
         private bool ReceiveSnapshotResult(object message)

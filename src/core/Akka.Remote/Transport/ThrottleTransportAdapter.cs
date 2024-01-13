@@ -190,24 +190,17 @@ namespace Akka.Remote.Transport
     {
         private ForceDisassociateAck() { }
         // ReSharper disable once InconsistentNaming
-        private static readonly ForceDisassociateAck _instance = new();
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static ForceDisassociateAck Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static ForceDisassociateAck Instance { get; } = new();
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class ThrottlerManager : ActorTransportAdapterManager
+    internal sealed class ThrottlerManager : ActorTransportAdapterManager
     {
         #region Internal message classes
 
@@ -337,10 +330,10 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        protected readonly Transport WrappedTransport;
-        private Dictionary<Address, (ThrottleMode, ThrottleTransportAdapter.Direction)> _throttlingModes = new();
+        private readonly Transport WrappedTransport;
+        private readonly Dictionary<Address, (ThrottleMode, ThrottleTransportAdapter.Direction)> _throttlingModes = new();
 
-        private List<(Address, ThrottlerHandle)> _handleTable = new();
+        private readonly List<(Address, ThrottlerHandle)> _handleTable = new();
 
         /// <summary>
         /// TBD
@@ -603,18 +596,11 @@ namespace Akka.Remote.Transport
     {
         private Blackhole() { }
         // ReSharper disable once InconsistentNaming
-        private static readonly Blackhole _instance = new();
 
         /// <summary>
         /// The singleton instance
         /// </summary>
-        public static Blackhole Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static Blackhole Instance { get; } = new();
 
         /// <inheritdoc/>
         public override (ThrottleMode, bool) TryConsumeTokens(long nanoTimeOfSend, int tokens)
@@ -635,18 +621,7 @@ namespace Akka.Remote.Transport
     public class Unthrottled : ThrottleMode
     {
         private Unthrottled() { }
-        private static readonly Unthrottled _instance = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static Unthrottled Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static Unthrottled Instance { get; } = new();
 
         /// <inheritdoc/>
         public override (ThrottleMode, bool) TryConsumeTokens(long nanoTimeOfSend, int tokens)
@@ -868,17 +843,9 @@ namespace Akka.Remote.Transport
     public sealed class SetThrottleAck
     {
         private SetThrottleAck() { }
-        // ReSharper disable once InconsistentNaming
-        private static readonly SetThrottleAck _instance = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static SetThrottleAck Instance
-        {
-            get { return _instance; }
-        }
+        public static SetThrottleAck Instance { get; } = new();
     }
+
     /// <summary>
     /// INTERNAL API
     /// </summary>
@@ -946,7 +913,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class ThrottledAssociation : FSM<ThrottledAssociation.ThrottlerState, ThrottledAssociation.IThrottlerData>, ILoggingFSM
+    internal sealed class ThrottledAssociation : FSM<ThrottledAssociation.ThrottlerState, ThrottledAssociation.IThrottlerData>, ILoggingFSM
     {
         #region ThrottledAssociation FSM state and data classes
 
@@ -1005,15 +972,10 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Uninitialized : IThrottlerData
+        internal sealed class Uninitialized : IThrottlerData
         {
             private Uninitialized() { }
-            // ReSharper disable once InconsistentNaming
-            private static readonly Uninitialized _instance = new();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static Uninitialized Instance { get { return _instance; } }
+            public static Uninitialized Instance { get; } = new();
         }
 
         /// <summary>
@@ -1061,32 +1023,32 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        protected IActorRef Manager;
+        private readonly IActorRef Manager;
         /// <summary>
         /// TBD
         /// </summary>
-        protected IAssociationEventListener AssociationHandler;
+        private readonly IAssociationEventListener AssociationHandler;
         /// <summary>
         /// TBD
         /// </summary>
-        protected AssociationHandle OriginalHandle;
+        private readonly AssociationHandle OriginalHandle;
         /// <summary>
         /// TBD
         /// </summary>
-        protected bool Inbound;
+        private readonly bool Inbound;
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected ThrottleMode InboundThrottleMode;
+        private ThrottleMode InboundThrottleMode;
         /// <summary>
         /// TBD
         /// </summary>
-        protected Queue<ByteString> ThrottledMessages = new();
+        private Queue<ByteString> ThrottledMessages = new();
         /// <summary>
         /// TBD
         /// </summary>
-        protected IHandleEventListener UpstreamListener;
+        private IHandleEventListener UpstreamListener;
 
         /// <summary>
         /// Used for decoding certain types of throttled messages on-the-fly

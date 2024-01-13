@@ -162,7 +162,7 @@ namespace Akka.Cluster.Tools.Singleton
                 });
         }
 
-        private ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        private ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         /// <summary>
         /// TBD

@@ -4,16 +4,15 @@
 //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+#nullable enable
 
 using System;
-using System.IO;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Persistence;
 using Akka.TestKit;
-using Akka.Util;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -21,7 +20,7 @@ using Xunit.Abstractions;
 namespace Akka.Cluster.Sharding.Tests
 {
     /// <summary>
-    /// Covers that remembered entities is correctly migrated when used and the shard id extractor
+    /// Covers that remembered entities is correctly migrated when used and the shard id messageExtractor
     /// is changed so that entities should live on other shards after a full restart of the cluster.
     /// </summary>
     public class RememberEntitiesShardIdExtractorChangeSpec : AkkaSpec
@@ -52,36 +51,38 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private ExtractEntityId extractEntityId = message =>
+        private class FirstExtractor : IMessageExtractor
         {
-            if (message is Message m)
-                return (m.Id.ToString(), m);
-            return Option<(string, object)>.None;
-        };
-
-        private ExtractShardId firstExtractShardId = message =>
-        {
-            switch (message)
+            public string? EntityId(object message)
             {
-                case Message m:
-                    return (m.Id % 10).ToString();
-                case ShardRegion.StartEntity se:
-                    return (int.Parse(se.EntityId) % 10).ToString();
+                if (message is Message m)
+                    return m.Id.ToString();
+                return null;
             }
-            return null;
-        };
 
-        private ExtractShardId secondExtractShardId = message =>
-        {
-            switch (message)
+            public object? EntityMessage(object message)
             {
-                case Message m:
-                    return (m.Id % 10 + 1).ToString();
-                case ShardRegion.StartEntity se:
-                    return (int.Parse(se.EntityId) % 10 + 1).ToString();
+                return message;
             }
-            return null;
-        };
+
+            public string ShardId(object message)
+            {
+                throw new NotImplementedException();
+            }
+
+            public virtual string ShardId(string entityId, object? messageHint = null)
+            {
+                return (int.Parse(entityId) % 10).ToString();
+            }
+        }
+
+        private class SecondExtractor : FirstExtractor
+        {
+            public override string ShardId(string entityId, object? messageHint = null)
+            {
+                return (int.Parse(entityId) % 10 + 1).ToString();
+            }
+        }
 
         private const string TypeName = "ShardIdExtractorChange";
 
@@ -132,7 +133,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Fact]
         public void Sharding_with_remember_entities_enabled_should_allow_a_change_to_the_shard_id_extractor()
         {
-            WithSystem("FirstShardIdExtractor", firstExtractShardId, (system, region) =>
+            WithSystem("FirstShardIdExtractor", new FirstExtractor(), (system, region) =>
             {
                 AssertRegionRegistrationComplete(region);
                 region.Tell(new Message(1));
@@ -154,7 +155,7 @@ namespace Akka.Cluster.Sharding.Tests
                 });
             });
 
-            WithSystem("SecondShardIdExtractor", secondExtractShardId, (system, region) =>
+            WithSystem("SecondShardIdExtractor", new SecondExtractor(), (system, region) =>
             {
                 var probe = CreateTestProbe(system);
 
@@ -168,7 +169,7 @@ namespace Akka.Cluster.Sharding.Tests
                 });
             });
 
-            WithSystem("ThirdIncarnation", secondExtractShardId, (system, region) =>
+            WithSystem("ThirdIncarnation", new SecondExtractor(), (system, region) =>
             {
                 var probe = CreateTestProbe(system);
                 // Only way to verify that they were "normal"-remember-started here is to look at debug logs, will show
@@ -184,7 +185,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        private void WithSystem(string systemName, ExtractShardId extractShardId, Action<ActorSystem, IActorRef> f)
+        private void WithSystem(string systemName, IMessageExtractor extractor, Action<ActorSystem, IActorRef> f)
         {
             var system = ActorSystem.Create(systemName, Sys.Settings.Config);
             InitializeLogger(system, $"[{systemName}]");
@@ -192,7 +193,7 @@ namespace Akka.Cluster.Sharding.Tests
             Cluster.Get(system).Join(Cluster.Get(system).SelfAddress);
             try
             {
-                var region = ClusterSharding.Get(system).Start(TypeName, Props.Create(() => new PA()), ClusterShardingSettings.Create(system), extractEntityId, extractShardId);
+                var region = ClusterSharding.Get(system).Start(TypeName, Props.Create(() => new PA()), ClusterShardingSettings.Create(system), extractor);
                 f(system, region);
             }
             finally

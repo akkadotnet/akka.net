@@ -150,7 +150,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     [InternalApi]
-    internal class PublisherSink<TIn> : SinkModule<TIn, IPublisher<TIn>>
+    internal sealed class PublisherSink<TIn> : SinkModule<TIn, IPublisher<TIn>>
     {
         /// <summary>
         /// TBD

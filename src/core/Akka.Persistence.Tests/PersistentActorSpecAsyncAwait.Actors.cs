@@ -22,7 +22,9 @@ namespace Akka.Persistence.Tests
     {
         internal class BehaviorOneActor : ExamplePersistentActor
         {
-            public BehaviorOneActor(string name) : base(name) { }
+            public BehaviorOneActor(string name) : base(name)
+            {
+            }
 
             protected override bool ReceiveCommand(object message)
             {
@@ -43,10 +45,12 @@ namespace Akka.Persistence.Tests
                 else if (message is DeleteMessagesSuccess)
                 {
                     if (AskedForDelete == null)
-                        throw new ArgumentNullException("Received DeleteMessagesSuccess without anyone asking for delete!");
+                        throw new ArgumentNullException(
+                            "Received DeleteMessagesSuccess without anyone asking for delete!");
                     AskedForDelete.Tell(message);
                 }
                 else return false;
+
                 return true;
             }
 
@@ -66,6 +70,7 @@ namespace Akka.Persistence.Tests
                     base.OnPersistFailure(cause, @event, sequenceNr);
             }
         }
+
         internal class Cmd
         {
             public Cmd(object data)
@@ -95,9 +100,6 @@ namespace Akka.Persistence.Tests
                 return "Evt(" + Data + ")";
             }
         }
-
-
-
 
 
         internal class LatchCmd : INoSerializationVerificationNeeded
@@ -172,6 +174,7 @@ namespace Akka.Persistence.Tests
                     });
                 }
                 else return false;
+
                 return true;
             }
         }
@@ -179,7 +182,9 @@ namespace Akka.Persistence.Tests
 
         internal class BehaviorTwoActor : ExamplePersistentActor
         {
-            public BehaviorTwoActor(string name) : base(name) { }
+            public BehaviorTwoActor(string name) : base(name)
+            {
+            }
 
             protected override bool ReceiveCommand(object message)
             {
@@ -199,12 +204,16 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
         }
+
         internal class BehaviorThreeActor : ExamplePersistentActor
         {
-            public BehaviorThreeActor(string name) : base(name) { }
+            public BehaviorThreeActor(string name) : base(name)
+            {
+            }
 
             protected override bool ReceiveCommand(object message)
             {
@@ -224,13 +233,16 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
         }
 
         internal class ChangeBehaviorInLastEventHandlerActor : ExamplePersistentActor
         {
-            public ChangeBehaviorInLastEventHandlerActor(string name) : base(name) { }
+            public ChangeBehaviorInLastEventHandlerActor(string name) : base(name)
+            {
+            }
 
             protected override bool ReceiveCommand(object message)
             {
@@ -250,6 +262,7 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
 
@@ -270,13 +283,16 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
         }
 
         internal class ChangeBehaviorInFirstEventHandlerActor : ExamplePersistentActor
         {
-            public ChangeBehaviorInFirstEventHandlerActor(string name) : base(name) { }
+            public ChangeBehaviorInFirstEventHandlerActor(string name) : base(name)
+            {
+            }
 
             protected override bool ReceiveCommand(object message)
             {
@@ -296,6 +312,7 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
 
@@ -316,12 +333,16 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
         }
+
         internal class ChangeBehaviorInCommandHandlerFirstActor : ExamplePersistentActor
         {
-            public ChangeBehaviorInCommandHandlerFirstActor(string name) : base(name) { }
+            public ChangeBehaviorInCommandHandlerFirstActor(string name) : base(name)
+            {
+            }
 
             protected override bool ReceiveCommand(object message)
             {
@@ -338,6 +359,7 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
 
@@ -355,13 +377,16 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
         }
 
         internal class ChangeBehaviorInCommandHandlerLastActor : ExamplePersistentActor
         {
-            public ChangeBehaviorInCommandHandlerLastActor(string name) : base(name) { }
+            public ChangeBehaviorInCommandHandlerLastActor(string name) : base(name)
+            {
+            }
 
             protected override bool ReceiveCommand(object message)
             {
@@ -378,6 +403,7 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
 
@@ -395,6 +421,7 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
         }
@@ -402,6 +429,7 @@ namespace Akka.Persistence.Tests
         internal class SnapshottingPersistentActor : ExamplePersistentActor
         {
             protected readonly IActorRef Probe;
+
             public SnapshottingPersistentActor(string name, IActorRef probe)
                 : base(name)
             {
@@ -419,6 +447,7 @@ namespace Akka.Persistence.Tests
                     }
                     else return false;
                 }
+
                 return true;
             }
 
@@ -447,7 +476,10 @@ namespace Akka.Persistence.Tests
         {
             public const string Message = "It's changing me";
             public const string Response = "I'm becoming";
-            public SnapshottingBecomingPersistentActor(string name, IActorRef probe) : base(name, probe) { }
+
+            public SnapshottingBecomingPersistentActor(string name, IActorRef probe) : base(name, probe)
+            {
+            }
 
             private bool BecomingRecover(object message)
             {
@@ -459,6 +491,7 @@ namespace Akka.Persistence.Tests
                     Self.Tell(Message);
                     return base.ReceiveRecover(message);
                 }
+
                 return false;
             }
 
@@ -478,7 +511,9 @@ namespace Akka.Persistence.Tests
 
         internal class ReplyInEventHandlerActor : ExamplePersistentActor
         {
-            public ReplyInEventHandlerActor(string name) : base(name) { }
+            public ReplyInEventHandlerActor(string name) : base(name)
+            {
+            }
 
             protected override bool ReceiveCommand(object message)
             {
@@ -492,6 +527,7 @@ namespace Akka.Persistence.Tests
                     });
                 }
                 else return false;
+
                 return true;
             }
         }
@@ -499,6 +535,7 @@ namespace Akka.Persistence.Tests
         internal class AsyncPersistActor : ExamplePersistentActor
         {
             private int _counter = 0;
+
             public AsyncPersistActor(string name)
                 : base(name)
             {
@@ -517,16 +554,15 @@ namespace Akka.Persistence.Tests
                             await Task.Delay(100);
 
                             Sender.Tell(cmd.Data);
-                            PersistAsync(new Evt(cmd.Data.ToString() + "-" + (++_counter)), evt =>
-                            {
-                                Sender.Tell(evt.Data);
-                            });
+                            PersistAsync(new Evt(cmd.Data.ToString() + "-" + (++_counter)),
+                                evt => { Sender.Tell(evt.Data); });
                         });
 
                         return true;
                     }
                 }
                 else return true;
+
                 return false;
             }
 
@@ -542,6 +578,7 @@ namespace Akka.Persistence.Tests
         internal class AsyncPersistThreeTimesActor : ExamplePersistentActor
         {
             private int _counter = 0;
+
             public AsyncPersistThreeTimesActor(string name)
                 : base(name)
             {
@@ -562,10 +599,8 @@ namespace Akka.Persistence.Tests
                             Sender.Tell(cmd.Data);
                             for (int i = 1; i <= 3; i++)
                             {
-                                PersistAsync(new Evt(cmd.Data.ToString() + "-" + (++_counter)), evt =>
-                                {
-                                    Sender.Tell("a" + evt.Data.ToString().Substring(1));
-                                });
+                                PersistAsync(new Evt(cmd.Data.ToString() + "-" + (++_counter)),
+                                    evt => { Sender.Tell("a" + evt.Data.ToString().Substring(1)); });
                             }
                         });
 
@@ -573,6 +608,7 @@ namespace Akka.Persistence.Tests
                     }
                 }
                 else return true;
+
                 return false;
             }
         }
@@ -580,6 +616,7 @@ namespace Akka.Persistence.Tests
         internal class AsyncPersistSameEventTwiceActor : ExamplePersistentActor
         {
             private AtomicCounter _sendMessageCounter = new(0);
+
             public AsyncPersistSameEventTwiceActor(string name)
                 : base(name)
             {
@@ -606,13 +643,16 @@ namespace Akka.Persistence.Tests
                                 Sender.Tell(evt.Data.ToString() + "-a-" + _sendMessageCounter.IncrementAndGet());
                             });
 
-                            PersistAsync(@event, evt => Sender.Tell(evt.Data.ToString() + "-b-" + _sendMessageCounter.IncrementAndGet()));
+                            PersistAsync(@event,
+                                evt => Sender.Tell(evt.Data.ToString() + "-b-" +
+                                                   _sendMessageCounter.IncrementAndGet()));
                         });
 
                         return true;
                     }
                 }
                 else return true;
+
                 return false;
             }
         }
@@ -658,6 +698,7 @@ namespace Akka.Persistence.Tests
                     }
                 }
                 else return true;
+
                 return false;
             }
         }
@@ -665,6 +706,7 @@ namespace Akka.Persistence.Tests
         internal class AsyncPersistAndPersistMixedSyncAsyncSyncActor : ExamplePersistentActor
         {
             private int _counter = 0;
+
             public AsyncPersistAndPersistMixedSyncAsyncSyncActor(string name)
                 : base(name)
             {
@@ -693,6 +735,7 @@ namespace Akka.Persistence.Tests
                     }
                 }
                 else return true;
+
                 return false;
             }
         }
@@ -727,13 +770,13 @@ namespace Akka.Persistence.Tests
                     }
                 }
                 else return true;
+
                 return false;
             }
         }
 
         internal class AsyncPersistHandlerCorrelationCheck : ExamplePersistentActor
         {
-            private int _counter = 0;
             public AsyncPersistHandlerCorrelationCheck(string name)
                 : base(name)
             {
@@ -743,25 +786,23 @@ namespace Akka.Persistence.Tests
             {
                 if (!CommonBehavior(message))
                 {
-                    var cmd = message as Cmd;
-                    if (cmd != null)
+                    if (message is not Cmd cmd) return false;
+                    RunTask(async () =>
                     {
-                        RunTask(async () =>
+                        await Task.Yield();
+                        await Task.Delay(10);
+                        PersistAsync(new Evt(cmd.Data), evt =>
                         {
-                            await Task.Yield();
-                            await Task.Delay(10);
-                            PersistAsync(new Evt(cmd.Data), evt =>
-                            {
-                                if (!cmd.Data.Equals(evt.Data)) Sender.Tell("Expected " + cmd.Data + " but got " + evt.Data);
-                                if ("done" != evt.Data.ToString()) Sender.Tell("done");
-                            });
+                            if (!cmd.Data.Equals(evt.Data))
+                                Sender.Tell("Expected " + cmd.Data + " but got " + evt.Data);
+                            if ("done" != evt.Data.ToString()) Sender.Tell("done");
                         });
+                    });
 
-                        return true;
-                    }
+                    return true;
                 }
-                else return true;
-                return false;
+
+                return true;
             }
         }
 
@@ -774,17 +815,14 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                var cmd = message as Cmd;
-                if (cmd != null && cmd.Data.ToString() == "a")
+                if (message is Cmd cmd && cmd.Data.ToString() == "a")
                 {
                     RunTask(async () =>
                     {
                         await Task.Yield();
                         await Task.Delay(100);
-                        Persist(5L, i =>
-                        {
-                            Sender.Tell(i);
-                        });
+                        // ReSharper disable once MethodHasAsyncOverload
+                        Persist(5L, i => { Sender.Tell(i); });
                     });
                     return true;
                 }
@@ -812,20 +850,23 @@ namespace Akka.Persistence.Tests
 
             protected bool SendingRecover(object message)
             {
-                if (message is SnapshotOffer)
+                switch (message)
                 {
-                    // sending ourself a normal message tests
-                    // that we stash them until recovery is complete
-                    Self.Tell("I am the stashed");
-                    base.ReceiveRecover(message);
+                    case SnapshotOffer:
+                        // sending ourself a normal message tests
+                        // that we stash them until recovery is complete
+                        Self.Tell("I am the stashed");
+                        base.ReceiveRecover(message);
+                        break;
+                    case RecoveryCompleted:
+                        Probe.Tell(RecoveryCompleted.Instance);
+                        Self.Tell("I am the recovered");
+                        UpdateState(new Evt(RecoveryCompleted.Instance));
+                        break;
+                    default:
+                        return false;
                 }
-                else if (message is RecoveryCompleted)
-                {
-                    Probe.Tell(RecoveryCompleted.Instance);
-                    Self.Tell("I am the recovered");
-                    UpdateState(new Evt(RecoveryCompleted.Instance));
-                }
-                else return false;
+
                 return true;
             }
         }
@@ -847,6 +888,7 @@ namespace Akka.Persistence.Tests
                         await Task.Yield();
                         await Task.Delay(100);
                         DeferAsync("d-1", Sender.Tell);
+                        // ReSharper disable once MethodHasAsyncOverload
                         Persist(cmd.Data + "-2", Sender.Tell);
                         DeferAsync("d-3", Sender.Tell);
                         DeferAsync("d-4", Sender.Tell);
@@ -854,6 +896,7 @@ namespace Akka.Persistence.Tests
 
                     return true;
                 }
+
                 return false;
             }
         }
@@ -882,6 +925,7 @@ namespace Akka.Persistence.Tests
 
                     return true;
                 }
+
                 return false;
             }
         }
@@ -912,6 +956,7 @@ namespace Akka.Persistence.Tests
 
                     return true;
                 }
+
                 return false;
             }
         }
@@ -940,6 +985,7 @@ namespace Akka.Persistence.Tests
 
                     return true;
                 }
+
                 return false;
             }
         }
@@ -979,6 +1025,7 @@ namespace Akka.Persistence.Tests
                 else if (message is string)
                     Sender.Tell(message.ToString());
                 else return false;
+
                 return true;
             }
         }
@@ -986,9 +1033,9 @@ namespace Akka.Persistence.Tests
         internal class RecoverMessageCausedRestart : ExamplePersistentActor
         {
             private IActorRef _master;
+
             public RecoverMessageCausedRestart(string name) : base(name)
             {
-
             }
 
             protected override bool ReceiveCommand(object message)
@@ -998,6 +1045,7 @@ namespace Akka.Persistence.Tests
                     _master = Sender;
                     throw new TestException("boom");
                 }
+
                 return false;
             }
 
@@ -1041,6 +1089,7 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
         }
@@ -1078,6 +1127,7 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
         }
@@ -1115,6 +1165,7 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
         }
@@ -1152,6 +1203,7 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
         }
@@ -1183,7 +1235,7 @@ namespace Akka.Persistence.Tests
                             {
                                 _probe.Tell(inner);
                                 Thread.Sleep(1000); // really long wait here
-                                                    // the next incoming command must be handled by the following function
+                                // the next incoming command must be handled by the following function
                                 Context.Become(_ =>
                                 {
                                     Sender.Tell("done");
@@ -1194,6 +1246,7 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
         }
@@ -1242,6 +1295,7 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
         }
@@ -1290,9 +1344,9 @@ namespace Akka.Persistence.Tests
                     });
                     return true;
                 }
+
                 return false;
             }
         }
     }
 }
-

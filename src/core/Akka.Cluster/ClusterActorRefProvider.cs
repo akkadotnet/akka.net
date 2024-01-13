@@ -130,7 +130,7 @@ namespace Akka.Cluster
     /// 
     /// Deployer of cluster-aware routers
     /// </summary>
-    internal class ClusterDeployer : RemoteDeployer
+    internal sealed class ClusterDeployer : RemoteDeployer
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterDeployer"/> class.

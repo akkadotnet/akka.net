@@ -14,6 +14,7 @@ using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.TestKit.TestActors;
 using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util;
@@ -258,18 +259,18 @@ namespace Akka.Streams.Tests.Dsl
         }, _materializer);
 
         [Fact]
-        public async Task Flow_with_ask_signal_failure_when_target_actor_is_terminated() => await this.AssertAllStagesStoppedAsync(() => {
+        public async Task Flow_with_ask_signal_failure_when_target_actor_is_terminated() => await this.AssertAllStagesStoppedAsync(async () => {
             var r = Sys.ActorOf(Props.Create(() => new Replier()).WithDispatcher("akka.test.stream-dispatcher"), "replyRandomDelays");
             var done = Source.Maybe<int>()
                 .Ask<Reply>(r, _timeout, 4)
                 .RunWith(Sink.Ignore<Reply>(), _materializer);
 
-            Intercept<WatchedActorTerminatedException>(() =>
+            await InterceptAsync<WatchedActorTerminatedException>(async () =>
             {
                 r.Tell(PoisonPill.Instance);
-                done.Wait(RemainingOrDefault);
-            });
-            return Task.CompletedTask;
+                await done;
+            }).ShouldCompleteWithin(RemainingOrDefault);
+            
         }, _materializer);
 
         [Fact]

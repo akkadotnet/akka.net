@@ -15,6 +15,7 @@ using Akka.TestKit.Xunit2.Attributes;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
 
 namespace Akka.Persistence.Tests
 {

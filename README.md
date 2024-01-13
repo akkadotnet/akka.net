@@ -2,7 +2,10 @@
 
 ![Akka.NET logo](https://raw.githubusercontent.com/akkadotnet/akka.net/dev/docs/shfb/icons/AkkaNetLogo.Normal.png)
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/akkadotnet/akka.net?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Akka.NET Discord server](https://img.shields.io/discord/974500337396375553?label=Discord)](https://discord.gg/GSCfPwhbWP)
+[![NuGet](https://img.shields.io/nuget/v/Akka.svg?style=flat-square)](https://www.nuget.org/packages/Akka)
+[![Nuget](https://img.shields.io/nuget/dt/Akka)](https://www.nuget.org/packages/Akka)
+
 
 **[Akka.NET](https://getakka.net/)** is a .NET port of the popular [Akka project](https://akka.io/) from the Scala / Java community. We are an idiomatic [.NET implementation of the actor model](https://petabridge.com/blog/akkadotnet-what-is-an-actor/) built on top of the .NET Common Language Runtime.
 
@@ -82,7 +85,7 @@ dotnet new install "Akka.Templates::*"
 This will make our templates available via `dotnet new` on the CLI _and_ as new project templates inside any .NET IDE such as Visual Studio or JetBrains Rider. You can view the full list of templates included in our package here: https://github.com/akkadotnet/akkadotnet-templates#available-templates
 
 ## Builds
-Please see [Building Akka.NET](http://getakka.net/community/building-akka-net.html).
+Please see [Building Akka.NET](https://getakka.net/community/contributing/build-process.html).
 
 To access nightly Akka.NET builds, please [see the instructions here](http://getakka.net/community/getting-access-to-nightly-builds.html).
 

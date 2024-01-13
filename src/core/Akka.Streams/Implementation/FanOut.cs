@@ -415,7 +415,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         [Serializable]
-        public struct SubstreamRequestMore : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct SubstreamRequestMore : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -442,7 +442,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         [Serializable]
-        public struct SubstreamCancel : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct SubstreamCancel : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -463,7 +463,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         [Serializable]
-        public struct SubstreamSubscribePending : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct SubstreamSubscribePending : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -519,7 +519,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         [Serializable]
-        public struct ExposedPublishers<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct ExposedPublishers<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -590,7 +590,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
         private ILoggingAdapter _log;
 
         /// <summary>
@@ -720,7 +720,7 @@ namespace Akka.Streams.Implementation
         /// <param name="settings">TBD</param>
         /// <returns>TBD</returns>
         public static Props Props<T>(ActorMaterializerSettings settings)
-            => Actor.Props.Create(() => new Unzip<T>(settings, 2)).WithDeploy(Deploy.Local);
+            => Actor.Props.Create<Unzip<T>>(settings, 2).WithDeploy(Deploy.Local);
     }
 
     /// <summary>
@@ -740,6 +740,7 @@ namespace Akka.Streams.Implementation
         /// This exception is thrown when the elements in <see cref="Akka.Streams.Implementation.FanOut{T}.PrimaryInputs"/>
         /// are of an unknown type.
         /// </exception>>
+        /// If this gets changed you must change <see cref="Akka.Streams.Implementation.FanOut.Unzip{T}"/> as well!
         public Unzip(ActorMaterializerSettings settings, int outputCount = 2) : base(settings, outputCount)
         {
             OutputBunch.MarkAllOutputs();

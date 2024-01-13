@@ -162,7 +162,7 @@ namespace Akka.Cluster.Sharding.Internal
             }
 
             /// <inheritdoc/>
-            public override string ToString() => $"GetEntities";
+            public override string ToString() => "GetEntities";
         }
 
         public sealed class RememberedEntities : ICommand, IEquatable<RememberedEntities>
@@ -349,7 +349,7 @@ namespace Akka.Cluster.Sharding.Internal
             }
 
             /// <inheritdoc/>
-            public override string ToString() => $"GetShards";
+            public override string ToString() => "GetShards";
         }
 
         public sealed class RememberedShards : ICommand, IEquatable<RememberedShards>

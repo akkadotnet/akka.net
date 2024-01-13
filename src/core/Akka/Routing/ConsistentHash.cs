@@ -50,7 +50,7 @@ namespace Akka.Routing
         private (int[], T[])? _ring = null;
         private (int[], T[])? RingTuple
         {
-            get { return _ring ?? (_ring = (_nodes.Keys.ToArray(), _nodes.Values.ToArray())); }
+            get { return _ring ??= (_nodes.Keys.ToArray(), _nodes.Values.ToArray()); }
             }
 
         private int[] NodeHashRing
