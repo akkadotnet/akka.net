@@ -84,7 +84,7 @@ namespace Akka.Remote.Tests
                     var actorPath = new RootActorPath(sys2Address) / "user" / "myActor";
 
                     // get a remoteactorref for the second system
-                    var remoteActorRef = Sys.ActorSelection(actorPath).ResolveOne(TimeSpan.FromSeconds(3)).Result;
+                    var remoteActorRef = await Sys.ActorSelection(actorPath).ResolveOne(TimeSpan.FromSeconds(3));
 
                     // disconnect us from the second actorsystem
                     Assert.True(await RARP.For(Sys)
