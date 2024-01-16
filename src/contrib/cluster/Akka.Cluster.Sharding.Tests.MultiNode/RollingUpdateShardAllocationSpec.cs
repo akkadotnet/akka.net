@@ -147,7 +147,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void ClusterSharding_must_form_cluster()
         {
-            AwaitClusterUp(config.First, config.Second);
+            AwaitClusterUp(Config.First, Config.Second);
             EnterBarrier("cluster-started");
         }
 
@@ -173,13 +173,13 @@ namespace Akka.Cluster.Sharding.Tests
 
                 // one on each node
                 ImmutableHashSet.Create(address1, address2).Should().HaveCount(2);
-            }, config.First, config.Second);
+            }, Config.First, Config.Second);
             EnterBarrier("first-version-started");
         }
 
         private void ClusterSharding_must_start_a_rolling_upgrade()
         {
-            Join(config.Third, config.First);
+            Join(Config.Third, Config.First);
 
             RunOn(() =>
             {
@@ -195,14 +195,14 @@ namespace Akka.Cluster.Sharding.Tests
                     shardRegion.Value.Tell(GetCurrentRegions.Instance);
                     ExpectMsg<CurrentRegions>().Regions.Should().HaveCount(3);
                 });
-            }, config.First, config.Second, config.Third);
+            }, Config.First, Config.Second, Config.Third);
 
             EnterBarrier("third-region-registered");
             RunOn(() =>
             {
                 shardRegion.Value.Tell(new GiveMeYourHome.Get("id3"));
                 ExpectMsg<GiveMeYourHome.Home>();
-            }, config.First, config.Second);
+            }, Config.First, Config.Second);
             RunOn(() =>
             {
                 // now third region should be only option as the other two are old versions
@@ -214,26 +214,26 @@ namespace Akka.Cluster.Sharding.Tests
                     shardRegion.Value.Tell(new GiveMeYourHome.Get($"id{n}"));
                     ExpectMsg<GiveMeYourHome.Home>().Address.Should().Be(Cluster.Get(Sys).SelfAddress);
                 }
-            }, config.Third);
+            }, Config.Third);
             EnterBarrier("rolling-upgrade-in-progress");
         }
 
         private void ClusterSharding_must_complete_a_rolling_upgrade()
         {
-            Join(config.Fourth, config.First);
+            Join(Config.Fourth, Config.First);
 
             RunOn(() =>
             {
                 var cluster = Cluster.Get(Sys);
                 cluster.Leave(cluster.SelfAddress);
-            }, config.First);
+            }, Config.First);
             RunOn(() =>
             {
                 AwaitAssert(() =>
                 {
                     UpMembers.Count().Should().Be(3);
                 });
-            }, config.Second, config.Third, config.Fourth);
+            }, Config.Second, Config.Third, Config.Fourth);
             EnterBarrier("first-left");
 
             RunOn(() =>
@@ -244,7 +244,7 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectMsg<CurrentRegions>().Regions.Should().HaveCount(3);
 
                 }, TimeSpan.FromSeconds(30));
-            }, config.Second, config.Third, config.Fourth);
+            }, Config.Second, Config.Third, Config.Fourth);
             EnterBarrier("sharding-handed-off");
 
             // trigger allocation (no verification because we don't know which id was on node 1)
@@ -258,14 +258,14 @@ namespace Akka.Cluster.Sharding.Tests
                     shardRegion.Value.Tell(new GiveMeYourHome.Get("id2"));
                     ExpectMsg<GiveMeYourHome.Home>();
                 });
-            }, config.Second, config.Third, config.Fourth);
+            }, Config.Second, Config.Third, Config.Fourth);
             EnterBarrier("first-allocated");
 
             RunOn(() =>
             {
                 var cluster = Cluster.Get(Sys);
                 cluster.Leave(cluster.SelfAddress);
-            }, config.Second);
+            }, Config.Second);
             RunOn(() =>
             {
                 // make sure coordinator has noticed there are only two regions
@@ -274,7 +274,7 @@ namespace Akka.Cluster.Sharding.Tests
                     shardRegion.Value.Tell(GetCurrentRegions.Instance);
                     ExpectMsg<CurrentRegions>().Regions.Should().HaveCount(2);
                 }, TimeSpan.FromSeconds(30));
-            }, config.Third, config.Fourth);
+            }, Config.Third, Config.Fourth);
             EnterBarrier("second-left");
 
             // trigger allocation and verify where each was started
@@ -290,7 +290,7 @@ namespace Akka.Cluster.Sharding.Tests
                     var address2 = ExpectMsg<GiveMeYourHome.Home>().Address;
                     UpMembers.Select(i => i.Address).Should().Contain(address2);
                 });
-            }, config.Third, config.Fourth);
+            }, Config.Third, Config.Fourth);
             EnterBarrier("completo");
         }
     }

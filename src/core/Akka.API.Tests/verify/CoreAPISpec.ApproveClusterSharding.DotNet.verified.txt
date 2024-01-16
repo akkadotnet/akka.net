@@ -18,24 +18,34 @@ namespace Akka.Cluster.Sharding
         public static Akka.Cluster.Sharding.ClusterSharding Get(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.IActorRef ShardRegion(string typeName) { }
         public Akka.Actor.IActorRef ShardRegionProxy(string typeName) { }
+        [System.ObsoleteAttribute("Use one of the overloads that accepts an IMessageExtractor instead")]
         public Akka.Actor.IActorRef Start(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
+        [System.ObsoleteAttribute("Use one of the overloads that accepts an IMessageExtractor instead")]
         public Akka.Actor.IActorRef Start(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
         public Akka.Actor.IActorRef Start(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
         public Akka.Actor.IActorRef Start(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
+        [System.ObsoleteAttribute("Use one of the overloads that accepts an IMessageExtractor instead")]
         public Akka.Actor.IActorRef Start(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
+        [System.ObsoleteAttribute("Use one of the overloads that accepts an IMessageExtractor instead")]
         public Akka.Actor.IActorRef Start(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
         public Akka.Actor.IActorRef Start(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
         public Akka.Actor.IActorRef Start(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
+        [System.ObsoleteAttribute("Use one of the overloads that accepts an IMessageExtractor instead")]
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
+        [System.ObsoleteAttribute("Use one of the overloads that accepts an IMessageExtractor instead")]
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, Akka.Actor.Props entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
+        [System.ObsoleteAttribute("Use one of the overloads that accepts an IMessageExtractor instead")]
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
+        [System.ObsoleteAttribute("Use one of the overloads that accepts an IMessageExtractor instead")]
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor, Akka.Cluster.Sharding.IShardAllocationStrategy allocationStrategy, object handOffStopMessage) { }
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartAsync(string typeName, System.Func<string, Akka.Actor.Props> entityPropsFactory, Akka.Cluster.Sharding.ClusterShardingSettings settings, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
+        [System.ObsoleteAttribute("Use one of the overloads that accepts an IMessageExtractor instead")]
         public Akka.Actor.IActorRef StartProxy(string typeName, string role, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
         public Akka.Actor.IActorRef StartProxy(string typeName, string role, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
+        [System.ObsoleteAttribute("Use one of the overloads that accepts an IMessageExtractor instead")]
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartProxyAsync(string typeName, string role, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId) { }
         public System.Threading.Tasks.Task<Akka.Actor.IActorRef> StartProxyAsync(string typeName, string role, Akka.Cluster.Sharding.IMessageExtractor messageExtractor) { }
     }
@@ -165,13 +175,19 @@ namespace Akka.Cluster.Sharding
     {
         public readonly int MaxNumberOfShards;
         protected HashCodeMessageExtractor(int maxNumberOfShards) { }
-        public static Akka.Cluster.Sharding.HashCodeMessageExtractor Create(int maxNumberOfShards, System.Func<object, string> entityIdExtractor, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+        public static Akka.Cluster.Sharding.HashCodeMessageExtractor Create(int maxNumberOfShards, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                1,
+                1,
+                2})] System.Func<object, string> entityIdExtractor, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,
                 1,
                 1})] System.Func<object, object> messageExtractor = null) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
         public abstract string EntityId(object message);
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
         public virtual object EntityMessage(object message) { }
-        [System.ObsoleteAttribute("Use ShardId(string, object?) instead")]
+        [System.ObsoleteAttribute("Use ShardId(string, object?) instead. Since v1.5.15")]
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
         public virtual string ShardId(object message) { }
         public virtual string ShardId(string entityId, [System.Runtime.CompilerServices.NullableAttribute(2)] object messageHint = null) { }
     }

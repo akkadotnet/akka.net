@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Linq;
 using Akka.Actor;
@@ -12,7 +12,6 @@ using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.Util;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -35,7 +34,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private class EntityActor : ActorBase
         {
-            private readonly IActorRef probe;
+            private readonly IActorRef _probe;
 
             public class Started
             {
@@ -49,12 +48,12 @@ namespace Akka.Cluster.Sharding.Tests
                 #region Equals
 
                 /// <inheritdoc/>
-                public override bool Equals(object obj)
+                public override bool Equals(object? obj)
                 {
                     return Equals(obj as Started);
                 }
 
-                public bool Equals(Started other)
+                public bool Equals(Started? other)
                 {
                     if (ReferenceEquals(other, null)) return false;
                     if (ReferenceEquals(other, this)) return true;
@@ -86,12 +85,12 @@ namespace Akka.Cluster.Sharding.Tests
                 return Actor.Props.Create(() => new EntityActor(probe));
 
             }
-            private ILoggingAdapter log = Context.GetLogger();
+            private readonly ILoggingAdapter _log = Context.GetLogger();
 
             public EntityActor(IActorRef probe)
             {
                 probe.Tell(new Started(int.Parse(Self.Path.Name)));
-                this.probe = probe;
+                this._probe = probe;
             }
 
 
@@ -100,15 +99,15 @@ namespace Akka.Cluster.Sharding.Tests
                 switch (message)
                 {
                     case "stop":
-                        log.Debug("Got stop message, stopping");
+                        _log.Debug("Got stop message, stopping");
                         Context.Stop(Self);
                         return true;
                     case "graceful-stop":
-                        log.Debug("Got a graceful stop, requesting passivation");
+                        _log.Debug("Got a graceful stop, requesting passivation");
                         Context.Parent.Tell(new Passivate("stop"));
                         return true;
                     case "start":
-                        log.Debug("Got a start");
+                        _log.Debug("Got a start");
                         return true;
                     case "ping":
                         return true;
@@ -118,7 +117,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             protected override void PostStop()
             {
-                probe.Tell(new Stopped(int.Parse(Self.Path.Name)));
+                _probe.Tell(new Stopped(int.Parse(Self.Path.Name)));
             }
         }
 
@@ -164,8 +163,7 @@ namespace Akka.Cluster.Sharding.Tests
                 "batching",
                 EntityActor.Props(probe.Ref),
                 ClusterShardingSettings.Create(Sys),
-                ExtractEntityId,
-                ExtractShardId);
+                new MyMessageExtractor());
 
             // make sure that sharding is up and running
             sharding.Tell(new EntityEnvelope(0, "ping"), probe.Ref);
@@ -194,26 +192,33 @@ namespace Akka.Cluster.Sharding.Tests
             probe.ReceiveN(20);
         }
 
-        private Option<(string, object)> ExtractEntityId(object message)
+        private class MyMessageExtractor : IMessageExtractor
         {
-            switch (message)
+            public string? EntityId(object message)
             {
-                case EntityEnvelope e:
-                    return (e.Id.ToString(), e.Msg);
-            }
-            throw new NotSupportedException();
-        }
+                if (message is EntityEnvelope e)
+                    return e.Id.ToString();
 
-        private string ExtractShardId(object message)
-        {
-            switch (message)
-            {
-                case EntityEnvelope _:
-                    return "1"; // single shard for all entities
-                case ShardRegion.StartEntity _:
-                    return "1";
+                return null;
             }
-            throw new NotSupportedException();
+
+            public object? EntityMessage(object message)
+            {
+                if (message is EntityEnvelope e)
+                    return e.Msg;
+
+                return null;
+            }
+
+            public string ShardId(object message)
+            {
+                throw new NotImplementedException();
+            }
+
+            public string ShardId(string entityId, object? messageHint = null)
+            {
+                return "1";
+            }
         }
     }
 }
