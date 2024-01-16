@@ -21,12 +21,13 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Routing
 {
     public class RoutingSpec : AkkaSpec
     {
-        public RoutingSpec() : base(GetConfig())
+        public RoutingSpec(ITestOutputHelper output) : base(GetConfig(), output:output)
         {
         }
 

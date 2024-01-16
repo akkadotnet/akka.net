@@ -357,7 +357,18 @@ namespace Akka.TestKit
         /// <returns>The actor to watch, i.e. the parameter <paramref name="actorToWatch"/></returns>
         public IActorRef Watch(IActorRef actorToWatch)
         {
-            _testState.TestActor.Tell(new TestActor.Watch(actorToWatch));
+             var taskCompletionSource = new TaskCompletionSource<bool>();
+            _testState.TestActor.Tell(new TestActor.Watch(actorToWatch, taskCompletionSource));
+            /*
+             * Look, I know what you're thinking: wow, what kind of idiot would add this line of code?
+             * Did you know that this method is secretly asynchronous? And has been responsible for possibly dozens of
+             * racy unit tests? Why yes, yes dear reader - in fact it has!
+             *
+             * We have to ensure that the Watch completes before this method exit, so unfortunately we have to block.
+             *
+             * "Nuke the site from orbit. It's the only way to be sure."
+             */
+            taskCompletionSource.Task.Wait(RemainingOrDefault);
             return actorToWatch;
         }
 
@@ -368,7 +379,10 @@ namespace Akka.TestKit
         /// <returns>The actor to unwatch, i.e. the parameter <paramref name="actorToUnwatch"/></returns>
         public IActorRef Unwatch(IActorRef actorToUnwatch)
         {
-            _testState.TestActor.Tell(new TestActor.Unwatch(actorToUnwatch));
+            var taskCompletionSource = new TaskCompletionSource<bool>();
+            _testState.TestActor.Tell(new TestActor.Unwatch(actorToUnwatch, taskCompletionSource));
+            // See previous comment in Watch method
+            taskCompletionSource.Task.Wait(RemainingOrDefault);
             return actorToUnwatch;
         }
 

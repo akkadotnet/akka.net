@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Util;
 
@@ -64,18 +65,15 @@ namespace Akka.TestKit
         /// </summary>
         public class Watch : INoSerializationVerificationNeeded
         {
-            private readonly IActorRef _actorToWatch;
+            public Watch(IActorRef actorToWatch, TaskCompletionSource<bool> watchCompleted)
+            {
+                Actor = actorToWatch;
+                WatchCompleted = watchCompleted;
+            }
+            
+            public IActorRef Actor { get; }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="actorToWatch">TBD</param>
-            public Watch(IActorRef actorToWatch) { _actorToWatch = actorToWatch; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public IActorRef Actor { get { return _actorToWatch; } }
+            public TaskCompletionSource<bool> WatchCompleted { get; }
         }
 
         /// <summary>
@@ -84,18 +82,15 @@ namespace Akka.TestKit
         /// </summary>
         public class Unwatch : INoSerializationVerificationNeeded
         {
-            private readonly IActorRef _actorToUnwatch;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="actorToUnwatch">TBD</param>
-            public Unwatch(IActorRef actorToUnwatch) { _actorToUnwatch = actorToUnwatch; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public IActorRef Actor { get { return _actorToUnwatch; } }
+            public Unwatch(IActorRef actorToUnwatch, TaskCompletionSource<bool> unwatchCompleted)
+            {
+                Actor = actorToUnwatch;
+                UnwatchCompleted = unwatchCompleted;
+            }
+            
+            public IActorRef Actor { get; }
+            
+            public TaskCompletionSource<bool> UnwatchCompleted { get; }
         }
 
         /// <summary>
