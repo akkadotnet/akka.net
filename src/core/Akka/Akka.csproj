@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyTitle>Akka</AssemblyTitle>
     <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
     <Description>Canonical actor model implementation for .NET with local + distributed actors in C# and F#.</Description>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
@@ -20,6 +19,11 @@
       <PackageReference Include="System.Collections.Immutable" Version="$(MicrosoftLibVersion)" />
       <PackageReference Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
       <PackageReference Include="System.Configuration.ConfigurationManager" Version="$(ConfigurationManagerVersion)"/>
+      
+  </ItemGroup>
+  
+  <ItemGroup Label="PublicAnalyzers">
+    <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" />
   </ItemGroup>
   
   <ItemGroup>

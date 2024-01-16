@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.Cluster</AssemblyTitle>
         <Description>Clustering support for Akka.NET actors. Used to build highly-available, distributed applications.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);network;cluster</PackageTags>

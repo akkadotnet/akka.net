@@ -1,6 +1,6 @@
 ---
 uid: dependency-injection
-title: Dependency injection
+title: Dependency Injection Support in Akka.NET
 ---
 # Dependency Injection
 

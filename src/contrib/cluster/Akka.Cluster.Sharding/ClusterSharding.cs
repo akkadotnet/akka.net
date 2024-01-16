@@ -16,7 +16,6 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 
 using Akka.Actor;
-using Akka.Cluster.Sharding.Serialization.Proto.Msg;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -62,7 +61,7 @@ namespace Akka.Cluster.Sharding
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string? EntityId(Msg message)
+        public EntityId? EntityId(Msg message)
         {
             return message switch
             {
@@ -82,13 +81,13 @@ namespace Akka.Cluster.Sharding
         }
 
         [Obsolete("Use ShardId(EntityId, object) instead.")]
-        public string? ShardId(Msg message)
+        public ShardId? ShardId(Msg message)
         {
            return _underlying.ShardId(message);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string ShardId(string entityId, Msg? messageHint = null)
+        public ShardId ShardId(string entityId, Msg? messageHint = null)
         {
             return _underlying.ShardId(entityId, messageHint);
         }
@@ -103,18 +102,18 @@ namespace Akka.Cluster.Sharding
     {
         private sealed class Implementation : HashCodeMessageExtractor
         {
-            private readonly Func<Msg, string> _entityIdExtractor;
+            private readonly Func<Msg, string?> _entityIdExtractor;
             private readonly Func<Msg, Msg>? _messageExtractor;
-            public Implementation(int maxNumberOfShards, Func<Msg, string> entityIdExtractor, Func<Msg, Msg>? messageExtractor = null) : base(maxNumberOfShards)
+            public Implementation(int maxNumberOfShards, Func<Msg, string?> entityIdExtractor, Func<Msg, Msg>? messageExtractor = null) : base(maxNumberOfShards)
             {
                 _entityIdExtractor = entityIdExtractor ?? throw new NullReferenceException(nameof(entityIdExtractor));
                 _messageExtractor = messageExtractor;
             }
 
-            public override string EntityId(Msg message)
+            public override EntityId? EntityId(Msg message)
                 => _entityIdExtractor.Invoke(message);
 
-            public override Msg EntityMessage(Msg message)
+            public override Msg? EntityMessage(Msg message)
                 => _messageExtractor?.Invoke(message) ?? base.EntityMessage(message);
         }
 
@@ -125,7 +124,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="entityIdExtractor"></param>
         /// <param name="messageExtractor"></param>
         /// <returns></returns>
-        public static HashCodeMessageExtractor Create(int maxNumberOfShards, Func<Msg, string> entityIdExtractor, Func<Msg, Msg>? messageExtractor = null)
+        public static HashCodeMessageExtractor Create(int maxNumberOfShards, Func<Msg, string?> entityIdExtractor, Func<Msg, Msg>? messageExtractor = null)
             => new Implementation(maxNumberOfShards, entityIdExtractor, messageExtractor);
 
         /// <summary>
@@ -155,7 +154,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public abstract string EntityId(Msg message);
+        public abstract EntityId? EntityId(Msg message);
 
         /// <summary>
         /// Default implementation pass on the message as is.
@@ -163,7 +162,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual Msg EntityMessage(Msg message)
+        public virtual Msg? EntityMessage(Msg message)
         {
             return message;
         }
@@ -174,20 +173,20 @@ namespace Akka.Cluster.Sharding
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [Obsolete("Use ShardId(string, object?) instead")]
-        public virtual string ShardId(Msg message)
+        [Obsolete("Use ShardId(string, object?) instead. Since v1.5.15")]
+        public virtual ShardId? ShardId(Msg message)
         {
-            EntityId id;
+            EntityId? id;
             if (message is ShardRegion.StartEntity se)
                 id = se.EntityId;
             else
                 id = EntityId(message);
-
-            return _cachedIds[(Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards)];
+            
+            return string.IsNullOrEmpty(id) ? null : _cachedIds[(Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards)];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual string ShardId(string entityId, Msg? messageHint = null)
+        public virtual ShardId ShardId(string entityId, Msg? messageHint = null)
         {
             return _cachedIds[(Math.Abs(MurmurHash.StringHash(entityId)) % MaxNumberOfShards)];
         }
@@ -413,6 +412,7 @@ namespace Akka.Cluster.Sharding
         /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
         /// </exception>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        [Obsolete("Use one of the overloads that accepts an IMessageExtractor instead")]
         public IActorRef Start(
             string typeName,
             Props entityProps,
@@ -467,6 +467,7 @@ namespace Akka.Cluster.Sharding
         /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
         /// </exception>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        [Obsolete("Use one of the overloads that accepts an IMessageExtractor instead")]
         public Task<IActorRef> StartAsync(
             string typeName,
             Props entityProps,
@@ -515,6 +516,7 @@ namespace Akka.Cluster.Sharding
         /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
         /// </exception>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        [Obsolete("Use one of the overloads that accepts an IMessageExtractor instead")]
         public IActorRef Start(
             string typeName,
             Props entityProps,
@@ -562,6 +564,7 @@ namespace Akka.Cluster.Sharding
         /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
         /// </exception>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        [Obsolete("Use one of the overloads that accepts an IMessageExtractor instead")]
         public Task<IActorRef> StartAsync(
             string typeName,
             Props entityProps,
@@ -788,6 +791,7 @@ namespace Akka.Cluster.Sharding
         /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
         /// </exception>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        [Obsolete("Use one of the overloads that accepts an IMessageExtractor instead")]
         public IActorRef Start(
             string typeName,
             Func<string, Props> entityPropsFactory,
@@ -842,6 +846,7 @@ namespace Akka.Cluster.Sharding
         /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
         /// </exception>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        [Obsolete("Use one of the overloads that accepts an IMessageExtractor instead")]
         public Task<IActorRef> StartAsync(
             string typeName,
             Func<string, Props> entityPropsFactory,
@@ -994,6 +999,7 @@ namespace Akka.Cluster.Sharding
         /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
         /// </exception>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        [Obsolete("Use one of the overloads that accepts an IMessageExtractor instead")]
         public IActorRef Start(
             string typeName,
             Func<string, Props> entityPropsFactory,
@@ -1041,6 +1047,7 @@ namespace Akka.Cluster.Sharding
         /// This exception is thrown when the cluster member doesn't have the role specified in <paramref name="settings"/>.
         /// </exception>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        [Obsolete("Use one of the overloads that accepts an IMessageExtractor instead")]
         public Task<IActorRef> StartAsync(
             string typeName,
             Func<string, Props> entityPropsFactory,
@@ -1254,6 +1261,7 @@ namespace Akka.Cluster.Sharding
         /// that passed the `extractEntityId` will be used
         /// </param>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        [Obsolete("Use one of the overloads that accepts an IMessageExtractor instead")]
         public IActorRef StartProxy(
             string typeName,
             string role,
@@ -1290,6 +1298,7 @@ namespace Akka.Cluster.Sharding
         /// that passed the `extractEntityId` will be used
         /// </param>
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
+        [Obsolete("Use one of the overloads that accepts an IMessageExtractor instead")]
         public Task<IActorRef> StartProxyAsync(string typeName, string role, ExtractEntityId extractEntityId, ExtractShardId extractShardId)
         {
             return StartProxyAsync(
@@ -1548,7 +1557,7 @@ namespace Akka.Cluster.Sharding
             _extractShardId = extractShardId;
         }
 
-        public string? EntityId(Msg message)
+        public EntityId? EntityId(Msg message)
         {
             var entityId = _extractEntityId(message);
             return entityId.HasValue ? entityId.Value.Item1 : null;
@@ -1560,12 +1569,12 @@ namespace Akka.Cluster.Sharding
             return entityId.HasValue ? entityId.Value.Item2 : null;
         }
 
-        public string? ShardId(Msg message)
+        public ShardId? ShardId(Msg message)
         {
             return _extractShardId(message);
         }
 
-        public string ShardId(string entityId, Msg? messageHint = null)
+        public ShardId ShardId(string entityId, Msg? messageHint = null)
         {
             if(messageHint is null)
                 throw new ArgumentNullException(nameof(messageHint), "DeprecatedHandlerExtractorAdapter: Message hint must be provided when using the ShardId(EntityId, object) overload.");
