@@ -161,7 +161,7 @@ namespace Akka.TestKit
                     hint: null,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -282,7 +282,7 @@ namespace Akka.TestKit
 
                     if (resultTask == executionTask)
                     {
-                        ret = executionTask.Result;
+                        ret = executionTask.Result; // Task has already completed at this point; this does not block
                     }
                     else
                     {
