@@ -357,8 +357,6 @@ namespace Akka.TestKit
         /// <returns>The actor to watch, i.e. the parameter <paramref name="actorToWatch"/></returns>
         public IActorRef Watch(IActorRef actorToWatch)
         {
-             var taskCompletionSource = new TaskCompletionSource<bool>();
-            _testState.TestActor.Tell(new TestActor.Watch(actorToWatch, taskCompletionSource));
             /*
              * Look, I know what you're thinking: wow, what kind of idiot would add this line of code?
              * Did you know that this method is secretly asynchronous? And has been responsible for possibly dozens of
@@ -368,7 +366,24 @@ namespace Akka.TestKit
              *
              * "Nuke the site from orbit. It's the only way to be sure."
              */
-            taskCompletionSource.Task.Wait(RemainingOrDefault);
+            WatchAsync(actorToWatch).Wait(RemainingOrDefault);
+            return actorToWatch;
+        }
+        
+        /// <summary>
+        /// Have the <see cref="TestActor"/> watch an actor and receive 
+        /// <see cref="Terminated"/> messages when the actor terminates.
+        /// </summary>
+        /// <param name="actorToWatch">The actor to watch.</param>
+        /// <returns>The actor to watch, i.e. the parameter <paramref name="actorToWatch"/></returns>
+        /// <remarks>
+        /// This method exists in order to make the asynchronous nature of the Watch method explicit.
+        /// </remarks>
+        public async Task<IActorRef> WatchAsync(IActorRef actorToWatch)
+        {
+            var taskCompletionSource = new TaskCompletionSource<bool>();
+            _testState.TestActor.Tell(new TestActor.Watch(actorToWatch, taskCompletionSource));
+            await taskCompletionSource.Task;
             return actorToWatch;
         }
 
@@ -379,10 +394,24 @@ namespace Akka.TestKit
         /// <returns>The actor to unwatch, i.e. the parameter <paramref name="actorToUnwatch"/></returns>
         public IActorRef Unwatch(IActorRef actorToUnwatch)
         {
+            // See previous comment in Watch method
+            UnwatchAsync(actorToUnwatch).Wait(RemainingOrDefault);
+            return actorToUnwatch;
+        }
+        
+        /// <summary>
+        /// Have the <see cref="TestActor"/> stop watching an actor.
+        /// </summary>
+        /// <param name="actorToUnwatch">The actor to unwatch.</param>
+        /// <returns>The actor to unwatch, i.e. the parameter <paramref name="actorToUnwatch"/></returns>
+        /// <remarks>
+        /// This method exists in order to make the asynchronous nature of the Unwatch method explicit.
+        /// </remarks>
+        public async Task<IActorRef> UnwatchAsync(IActorRef actorToUnwatch)
+        {
             var taskCompletionSource = new TaskCompletionSource<bool>();
             _testState.TestActor.Tell(new TestActor.Unwatch(actorToUnwatch, taskCompletionSource));
-            // See previous comment in Watch method
-            taskCompletionSource.Task.Wait(RemainingOrDefault);
+            await taskCompletionSource.Task;
             return actorToUnwatch;
         }
 
