@@ -202,15 +202,13 @@ namespace Akka.TestKit
         }
         public class Unwatch : Akka.Actor.INoSerializationVerificationNeeded
         {
-            public Unwatch(Akka.Actor.IActorRef actorToUnwatch, System.Threading.Tasks.TaskCompletionSource<bool> unwatchCompleted) { }
+            public Unwatch(Akka.Actor.IActorRef actorToUnwatch) { }
             public Akka.Actor.IActorRef Actor { get; }
-            public System.Threading.Tasks.TaskCompletionSource<bool> UnwatchCompleted { get; }
         }
         public class Watch : Akka.Actor.INoSerializationVerificationNeeded
         {
-            public Watch(Akka.Actor.IActorRef actorToWatch, System.Threading.Tasks.TaskCompletionSource<bool> watchCompleted) { }
+            public Watch(Akka.Actor.IActorRef actorToWatch) { }
             public Akka.Actor.IActorRef Actor { get; }
-            public System.Threading.Tasks.TaskCompletionSource<bool> WatchCompleted { get; }
         }
     }
     public abstract class TestActorRefBase<TActor> : Akka.Actor.IActorRef, Akka.Actor.IActorRefScope, Akka.Actor.ICanTell, Akka.Actor.IInternalActorRef, Akka.Util.ISurrogated, System.IComparable, System.IComparable<Akka.Actor.IActorRef>, System.IEquatable<Akka.Actor.IActorRef>

@@ -65,15 +65,19 @@ namespace Akka.TestKit
         /// </summary>
         public class Watch : INoSerializationVerificationNeeded
         {
-            public Watch(IActorRef actorToWatch, TaskCompletionSource<bool> watchCompleted)
+            public Watch(IActorRef actorToWatch)
             {
                 Actor = actorToWatch;
-                WatchCompleted = watchCompleted;
             }
             
             public IActorRef Actor { get; }
-
-            public TaskCompletionSource<bool> WatchCompleted { get; }
+        }
+        
+        internal sealed class WatchAck : INoSerializationVerificationNeeded
+        {
+            private WatchAck() { }
+            
+            public static readonly WatchAck Instance = new();
         }
 
         /// <summary>
@@ -82,15 +86,22 @@ namespace Akka.TestKit
         /// </summary>
         public class Unwatch : INoSerializationVerificationNeeded
         {
-            public Unwatch(IActorRef actorToUnwatch, TaskCompletionSource<bool> unwatchCompleted)
+            public Unwatch(IActorRef actorToUnwatch)
             {
                 Actor = actorToUnwatch;
-                UnwatchCompleted = unwatchCompleted;
             }
             
             public IActorRef Actor { get; }
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal sealed class UnwatchAck : INoSerializationVerificationNeeded
+        {
+            private UnwatchAck() { }
             
-            public TaskCompletionSource<bool> UnwatchCompleted { get; }
+            public static readonly UnwatchAck Instance = new();
         }
 
         /// <summary>

@@ -381,9 +381,7 @@ namespace Akka.TestKit
         /// </remarks>
         public async Task<IActorRef> WatchAsync(IActorRef actorToWatch)
         {
-            var taskCompletionSource = new TaskCompletionSource<bool>();
-            _testState.TestActor.Tell(new TestActor.Watch(actorToWatch, taskCompletionSource));
-            await taskCompletionSource.Task;
+            await _testState.TestActor.Ask(new TestActor.Watch(actorToWatch), RemainingOrDefault);
             return actorToWatch;
         }
 
@@ -409,9 +407,7 @@ namespace Akka.TestKit
         /// </remarks>
         public async Task<IActorRef> UnwatchAsync(IActorRef actorToUnwatch)
         {
-            var taskCompletionSource = new TaskCompletionSource<bool>();
-            _testState.TestActor.Tell(new TestActor.Unwatch(actorToUnwatch, taskCompletionSource));
-            await taskCompletionSource.Task;
+            await _testState.TestActor.Ask(new TestActor.Unwatch(actorToUnwatch), RemainingOrDefault);
             return actorToUnwatch;
         }
 

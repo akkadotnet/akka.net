@@ -59,11 +59,11 @@ namespace Akka.TestKit.Internal
                     return;
                 case TestActor.Watch watch:
                     Context.Watch(watch.Actor);
-                    watch.WatchCompleted.TrySetResult(true);
+                    Sender.Tell(TestActor.WatchAck.Instance);
                     return;
                 case TestActor.Unwatch unwatch:
                     Context.Unwatch(unwatch.Actor);
-                    unwatch.UnwatchCompleted.TrySetResult(true);
+                    Sender.Tell(TestActor.UnwatchAck.Instance);
                     return;
                 case TestActor.SetAutoPilot setAutoPilot:
                     _autoPilot = setAutoPilot.AutoPilot;
