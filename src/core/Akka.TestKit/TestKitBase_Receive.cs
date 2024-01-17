@@ -38,7 +38,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
         {
             return FishForMessageAsync(isMessage, max, hint, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         } 
 
         /// <inheritdoc cref="FishForMessage(Predicate{object}, TimeSpan?, string, CancellationToken)"/>
@@ -68,7 +68,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
         {
             return FishForMessageAsync(isMessage, max, hint, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="FishForMessage{T}(Predicate{T}, TimeSpan?, string, CancellationToken)"/>
@@ -100,7 +100,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
         {
             return FishForMessageAsync(isMessage, allMessages, max, hint, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="FishForMessage{T}(Predicate{T}, ArrayList, TimeSpan?, string, CancellationToken)"/>
@@ -198,7 +198,7 @@ namespace Akka.TestKit
         public object ReceiveOne(TimeSpan? max = null,CancellationToken cancellationToken = default)
         {
             return ReceiveOneAsync(max, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="ReceiveOne(TimeSpan?, CancellationToken)"/>
@@ -230,7 +230,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
         {
             var (success, messageEnvelope) = TryReceiveOneAsync(max, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
             envelope = messageEnvelope;
             return success;
         }
@@ -309,7 +309,7 @@ namespace Akka.TestKit
         public object PeekOne(TimeSpan? max = null, CancellationToken cancellationToken = default)
         {
             return PeekOneAsync(max, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         } 
         
         /// <inheritdoc cref="PeekOne(TimeSpan?, CancellationToken)"/>
@@ -329,7 +329,7 @@ namespace Akka.TestKit
         public object PeekOne(CancellationToken cancellationToken)
         {
             return PeekOneAsync(cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="PeekOne(CancellationToken)"/>
@@ -361,7 +361,7 @@ namespace Akka.TestKit
         public bool TryPeekOne(out MessageEnvelope envelope, TimeSpan? max, CancellationToken cancellationToken)
         {
             var (success, result) = InternalTryPeekOneAsync(max, true, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
             envelope = result;
             return success;
         }
@@ -445,7 +445,7 @@ namespace Akka.TestKit
         {
             return ReceiveWhileAsync(max, filter, msgs, cancellationToken)
                 .ToListAsync(cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, Func{object, T}, int, CancellationToken)"/>
@@ -488,7 +488,7 @@ namespace Akka.TestKit
         {
             return ReceiveWhileAsync(max, idle, filter, msgs, cancellationToken)
                 .ToListAsync(cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="ReceiveWhile{T}(TimeSpan?, TimeSpan?, Func{object, T}, int, CancellationToken)"/>
@@ -532,7 +532,7 @@ namespace Akka.TestKit
         {
             return ReceiveWhileAsync(filter, max, idle, msgs, cancellationToken)
                 .ToListAsync(cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="ReceiveWhile{T}(Func{object, T}, TimeSpan?, TimeSpan?, int, CancellationToken)"/>
@@ -628,7 +628,7 @@ namespace Akka.TestKit
         {
            return ReceiveWhileAsync(shouldContinue, max, idle, msgs, shouldIgnoreOtherMessageTypes, cancellationToken)
                 .ToListAsync(cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="ReceiveWhile{T}(Predicate{T}, TimeSpan?, TimeSpan?, int, bool, CancellationToken)"/>
@@ -721,7 +721,7 @@ namespace Akka.TestKit
         {
             return ReceiveNAsync(numberOfMessages, cancellationToken)
                 .ToListAsync(cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="ReceiveN(int, CancellationToken)"/>
@@ -752,7 +752,7 @@ namespace Akka.TestKit
         {
             return ReceiveNAsync(numberOfMessages, max, cancellationToken)
                 .ToListAsync(cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="ReceiveN(int, TimeSpan, CancellationToken)"/>
