@@ -202,13 +202,15 @@ namespace Akka.TestKit
         }
         public class Unwatch : Akka.Actor.INoSerializationVerificationNeeded
         {
-            public Unwatch(Akka.Actor.IActorRef actorToUnwatch) { }
+            public Unwatch(Akka.Actor.IActorRef actorToUnwatch, System.Threading.Tasks.TaskCompletionSource<bool> unwatchCompleted) { }
             public Akka.Actor.IActorRef Actor { get; }
+            public System.Threading.Tasks.TaskCompletionSource<bool> UnwatchCompleted { get; }
         }
         public class Watch : Akka.Actor.INoSerializationVerificationNeeded
         {
-            public Watch(Akka.Actor.IActorRef actorToWatch) { }
+            public Watch(Akka.Actor.IActorRef actorToWatch, System.Threading.Tasks.TaskCompletionSource<bool> watchCompleted) { }
             public Akka.Actor.IActorRef Actor { get; }
+            public System.Threading.Tasks.TaskCompletionSource<bool> WatchCompleted { get; }
         }
     }
     public abstract class TestActorRefBase<TActor> : Akka.Actor.IActorRef, Akka.Actor.IActorRefScope, Akka.Actor.ICanTell, Akka.Actor.IInternalActorRef, Akka.Util.ISurrogated, System.IComparable, System.IComparable<Akka.Actor.IActorRef>, System.IEquatable<Akka.Actor.IActorRef>
@@ -829,10 +831,10 @@ namespace Akka.TestKit.Internal
             public virtual void HandleEvent(Akka.TestKit.Internal.EventFilterBase eventFilter, Akka.Event.LogEvent logEvent) { }
         }
     }
-    public class InternalTestActor : Akka.Actor.ActorBase
+    public class InternalTestActor : Akka.Actor.UntypedActor
     {
         public InternalTestActor(Akka.TestKit.Internal.ITestActorQueue<Akka.TestKit.MessageEnvelope> queue) { }
-        protected override bool Receive(object message) { }
+        protected override void OnReceive(object message) { }
     }
     public class InternalTestActorRef : Akka.Actor.LocalActorRef
     {
