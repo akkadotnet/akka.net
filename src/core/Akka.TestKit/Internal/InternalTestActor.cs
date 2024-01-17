@@ -59,19 +59,11 @@ namespace Akka.TestKit.Internal
                     return;
                 case TestActor.Watch watch:
                     Context.Watch(watch.Actor);
-                    RunTask(async () =>
-                    {
-                        await watch.Actor.Ask<ActorIdentity>(new Identify("watch"));
-                        watch.WatchCompleted.TrySetResult(true);
-                    });
+                    watch.WatchCompleted.TrySetResult(true);
                     return;
                 case TestActor.Unwatch unwatch:
                     Context.Unwatch(unwatch.Actor);
-                    RunTask(async () =>
-                    {
-                        await unwatch.Actor.Ask<ActorIdentity>(new Identify("unwatch"));
-                        unwatch.UnwatchCompleted.TrySetResult(true);
-                    });
+                    unwatch.UnwatchCompleted.TrySetResult(true);
                     return;
                 case TestActor.SetAutoPilot setAutoPilot:
                     _autoPilot = setAutoPilot.AutoPilot;
