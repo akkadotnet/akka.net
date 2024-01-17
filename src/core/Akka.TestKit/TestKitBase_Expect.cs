@@ -40,7 +40,7 @@ namespace Akka.TestKit
             string hint = null,
             CancellationToken cancellationToken = default)
         {
-            return ExpectMsgAsync<T>(duration, hint, cancellationToken).Result;
+            return ExpectMsgAsync<T>(duration, hint, cancellationToken).GetAwaiter().GetResult();
         }
         
         /// <inheritdoc cref="ExpectMsg{T}(TimeSpan?, string, CancellationToken)"/>
@@ -73,7 +73,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
         {
             return ExpectMsgAsync(message, timeout, hint, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="ExpectMsg{T}(T, TimeSpan?, string, CancellationToken)"/>
@@ -113,7 +113,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
         {
             return ExpectMsgAsync(isMessage, timeout, hint, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="ExpectMsg{T}(Predicate{T}, TimeSpan?, string, CancellationToken)"/>
@@ -157,7 +157,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
         {
             return ExpectMsgAsync(assert, timeout, hint, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="ExpectMsg{T}(Action{T}, TimeSpan?, string, CancellationToken)"/>
@@ -193,7 +193,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
         {
             return ExpectMsgAsync(isMessageAndSender, timeout, hint, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         /// <inheritdoc cref="ExpectMsg{T}(Func{T, IActorRef, bool}, TimeSpan?, string, CancellationToken)"/>
@@ -240,7 +240,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
         {
             return ExpectMsgAsync(assertMessageAndSender, timeout, hint, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
         
         /// <inheritdoc cref="ExpectMsg{T}(Action{T, IActorRef}, TimeSpan?, string, CancellationToken)"/>
@@ -277,7 +277,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
         {
             return ExpectMsgAsync(expected, comparer, timeout, hint, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
         
         /// <inheritdoc cref="ExpectMsg{T}(T, Func{T, T, bool}, TimeSpan?, string, CancellationToken)"/>
@@ -315,7 +315,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
         {
             return ExpectTerminatedAsync(target, timeout, hint, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
         
         /// <inheritdoc cref="ExpectTerminated(IActorRef, TimeSpan?, string, CancellationToken)"/>
@@ -366,7 +366,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken)
         {
             return InternalExpectMsgAsync(timeout, msgAssert, senderAssert, hint, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
         
         private async ValueTask<T> InternalExpectMsgAsync<T>(
@@ -528,7 +528,7 @@ namespace Akka.TestKit
         public T ExpectMsgAnyOf<T>(IEnumerable<T> messages, CancellationToken cancellationToken = default)
         {
             return ExpectMsgAnyOfAsync(messages, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         public ValueTask<T> ExpectMsgAnyOfAsync<T>(IEnumerable<T> messages, CancellationToken cancellationToken = default)
@@ -581,7 +581,7 @@ namespace Akka.TestKit
         {
             return ExpectMsgAllOfAsync(messages, cancellationToken)
                 .ToListAsync(cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
 
         public async IAsyncEnumerable<T> ExpectMsgAllOfAsync<T>(
@@ -628,7 +628,7 @@ namespace Akka.TestKit
         {
             return ExpectMsgAllOfAsync(max, messages, cancellationToken)
                 .ToListAsync(cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         }
         
         public async IAsyncEnumerable<T> ExpectMsgAllOfAsync<T>(
