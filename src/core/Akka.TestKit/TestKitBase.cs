@@ -587,7 +587,7 @@ namespace Akka.TestKit
             SupervisorStrategy supervisorStrategy,
             CancellationToken cancellationToken = default)
             => ChildActorOfAsync(props, name, supervisorStrategy, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
 
         /// <summary>
         /// Spawns an actor as a child of this test actor, and returns the child's IActorRef
@@ -618,7 +618,7 @@ namespace Akka.TestKit
         public IActorRef ChildActorOf(
             Props props, SupervisorStrategy supervisorStrategy, CancellationToken cancellationToken = default)
             => ChildActorOfAsync(props, supervisorStrategy, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
 
         /// <summary>
         /// Spawns an actor as a child of this test actor with an auto-generated name, and returns the child's ActorRef.
@@ -644,7 +644,7 @@ namespace Akka.TestKit
         /// <returns></returns>
         public IActorRef ChildActorOf(Props props, string name, CancellationToken cancellationToken = default)
             => ChildActorOfAsync(props, name, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
         
         /// <summary>
         /// Spawns an actor as a child of this test actor with a stopping supervisor strategy, and returns the child's ActorRef.
@@ -669,7 +669,7 @@ namespace Akka.TestKit
         /// <returns></returns>
         public IActorRef ChildActorOf(Props props, CancellationToken cancellationToken = default)
             => ChildActorOfAsync(props, cancellationToken)
-                .Result;
+                .GetAwaiter().GetResult();
 
         /// <summary>
         /// Spawns an actor as a child of this test actor with an auto-generated name and stopping supervisor strategy, returning the child's ActorRef.
