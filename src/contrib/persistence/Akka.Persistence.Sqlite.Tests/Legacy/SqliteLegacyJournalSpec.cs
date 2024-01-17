@@ -19,9 +19,9 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests.Legacy
 {
-    public class SqliteLegacyJournalSpec: Akka.TestKit.Xunit2.TestKit
+    public sealed class SqliteLegacyJournalSpec: Akka.TestKit.Xunit2.TestKit
     {
-        private Dictionary<string, IActorRef> _actors = new();
+        private readonly Dictionary<string, IActorRef> _actors = new();
         private readonly TestProbe _probe;
 
         public SqliteLegacyJournalSpec(ITestOutputHelper output)
@@ -58,7 +58,7 @@ akka.persistence {{
         }
 
         [Fact(DisplayName = "Legacy v1.3.0 and below data (null serializer_id) should be read correctly")]
-        public void ReadLegacyDataTest()
+        public async Task ReadLegacyDataTest()
         {
             var stateDict = new Dictionary<string, PersistedLegacyActor.CurrentState>();
             
@@ -72,7 +72,7 @@ akka.persistence {{
             
             for (var i = 0; i < 3; i++)
             {
-                var state = _probe.ExpectMsg<PersistedLegacyActor.CurrentState>();
+                var state = await _probe.ExpectMsgAsync<PersistedLegacyActor.CurrentState>();
                 stateDict[state.PersistenceId] = state;
             }
 

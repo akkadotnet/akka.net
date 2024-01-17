@@ -184,7 +184,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
             where T : ActorBase
             => ChildActorOfAsync(Props.Create<T>(), name, supervisorStrategy, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
         
         /// <summary>
         /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
@@ -199,7 +199,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
             where T : ActorBase
             => await ChildActorOfAsync(Props.Create<T>(), name, supervisorStrategy, cancellationToken)
-                .ConfigureAwait(false);
+                ;
 
         
         /// <summary>
@@ -212,7 +212,7 @@ namespace Akka.TestKit
             SupervisorStrategy supervisorStrategy, CancellationToken cancellationToken = default)
             where T : ActorBase
             => ChildActorOfAsync(Props.Create<T>(), supervisorStrategy, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
         
         /// <summary>
         /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
@@ -224,7 +224,7 @@ namespace Akka.TestKit
             SupervisorStrategy supervisorStrategy, CancellationToken cancellationToken = default)
             where T : ActorBase
             => await ChildActorOfAsync(Props.Create<T>(), supervisorStrategy, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         
         /// <summary>
         /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
@@ -235,7 +235,7 @@ namespace Akka.TestKit
         public IActorRef ChildActorOf<T>(string name, CancellationToken cancellationToken = default)
             where T : ActorBase
             => ChildActorOfAsync(Props.Create<T>(), name, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
         
         /// <summary>
         /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
@@ -246,7 +246,7 @@ namespace Akka.TestKit
         public async Task<IActorRef> ChildActorOfAsync<T>(string name, CancellationToken cancellationToken = default)
             where T : ActorBase
             => await ChildActorOfAsync(Props.Create<T>(), name, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         
         /// <summary>
         /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
@@ -256,7 +256,7 @@ namespace Akka.TestKit
         public IActorRef ChildActorOf<T>(CancellationToken cancellationToken = default)
             where T : ActorBase
             => ChildActorOfAsync(Props.Create<T>(), cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
         
         /// <summary>
         /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
@@ -266,7 +266,7 @@ namespace Akka.TestKit
         public async Task<IActorRef> ChildActorOfAsync<T>(CancellationToken cancellationToken = default)
             where T : ActorBase
             => await ChildActorOfAsync(Props.Create<T>(), cancellationToken)
-                .ConfigureAwait(false);
+                ;
         
         /// <summary>
         /// Sends a system message to the test probe

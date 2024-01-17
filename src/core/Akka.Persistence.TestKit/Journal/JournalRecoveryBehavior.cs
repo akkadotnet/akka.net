@@ -17,7 +17,7 @@ namespace Akka.Persistence.TestKit
     {
         internal JournalRecoveryBehavior(IJournalBehaviorSetter setter)
         {
-            this.Setter = setter;
+            Setter = setter;
         }
 
         private IJournalBehaviorSetter Setter { get; }

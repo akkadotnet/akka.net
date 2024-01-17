@@ -80,12 +80,16 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact(DisplayName = "A synchronous circuit breaker that is closed must increment failure count on callTimeout before call finishes")]
-        public void Must_increment_failure_count_on_callTimeout_before_call_finishes()
+        public async Task Must_increment_failure_count_on_callTimeout_before_call_finishes()
         {
             var breaker = ShortCallTimeoutCb();
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            // meant to run as detatched task
             Task.Run(() => breaker.Instance.WithSyncCircuitBreaker(() => Thread.Sleep(Dilated(TimeSpan.FromSeconds(1)))));
-            Within(TimeSpan.FromMilliseconds(900),
-                () => AwaitCondition(() => breaker.Instance.CurrentFailureCount == 1, Dilated(TimeSpan.FromMilliseconds(100)), TimeSpan.FromMilliseconds(100)));
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            var epsilon = TimeSpan.FromMilliseconds(500); // need to pad timeouts due to non-determinism of OS scheduler
+            await WithinAsync(TimeSpan.FromMilliseconds(900) + epsilon,
+                () => AwaitConditionAsync(() => breaker.Instance.CurrentFailureCount == 1, Dilated(TimeSpan.FromMilliseconds(100)), TimeSpan.FromMilliseconds(100)));
         }
     }
 

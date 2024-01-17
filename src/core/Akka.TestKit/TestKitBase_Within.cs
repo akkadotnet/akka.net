@@ -47,7 +47,7 @@ namespace Akka.TestKit
                     hint: null,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
         }
         
         /// <summary>
@@ -65,13 +65,13 @@ namespace Akka.TestKit
                 max: max,
                 function: async () =>
                 {
-                    await actionAsync().ConfigureAwait(false);
+                    await actionAsync();
                     return NotUsed.Instance;
                 },
                 hint: null,
                 epsilonValue: epsilonValue,
                 cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -106,7 +106,7 @@ namespace Akka.TestKit
                     hint: hint, 
                     epsilonValue: epsilonValue, 
                     cancellationToken: cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
         }
         
         /// <summary>
@@ -126,13 +126,13 @@ namespace Akka.TestKit
                 max: max,
                 function: async () =>
                 {
-                    await actionAsync().ConfigureAwait(false);
+                    await actionAsync();
                     return (object)null;
                 }, 
                 hint: hint,
                 epsilonValue: epsilonValue, 
                 cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -161,7 +161,7 @@ namespace Akka.TestKit
                     hint: null,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -282,7 +282,7 @@ namespace Akka.TestKit
 
                     if (resultTask == executionTask)
                     {
-                        ret = executionTask.Result;
+                        ret = executionTask.Result; // Task has already completed at this point; this does not block
                     }
                     else
                     {

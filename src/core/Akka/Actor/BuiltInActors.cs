@@ -250,8 +250,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected override bool SpecialHandle(object message, IActorRef sender)
         {
-            var w = message as Watch;
-            if (w != null)
+            if (message is Watch w)
             {
                 if (!w.Watchee.Equals(this) && !w.Watcher.Equals(this))
                 {

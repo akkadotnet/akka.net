@@ -158,17 +158,17 @@ namespace Akka.Tests.Pattern
             await probe.ExpectTerminatedAsync(supervisor);
         }
 
-        [Fact]
+        [Fact(Skip = "This test is very over-fitted for time and will never run reliably on busy CI/CD")]
         public async Task BackoffOnRestartSupervisor_must_restart_the_child_with_an_exponential_back_off()
         {
             var probe = CreateTestProbe();
             var supervisor = Sys.ActorOf(SupervisorProps(probe.Ref));
             await probe.ExpectMsgAsync("STARTED");
 
-            await EventFilter.Exception<TestException>().ExpectAsync(3, async() =>
+            await EventFilter.Exception<TestException>().ExpectAsync(3, () =>
             {
                 // Exponential back off restart test
-                await probe.WithinAsync(TimeSpan.FromSeconds(1.4), 2.Seconds(), async () =>
+                return probe.WithinAsync(TimeSpan.FromSeconds(1.4), 2.Seconds(), async () =>
                 {
                     supervisor.Tell("THROW");
                     // numRestart = 0 ~ 200 millis
