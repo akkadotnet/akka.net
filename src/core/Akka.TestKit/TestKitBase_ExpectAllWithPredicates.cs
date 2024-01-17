@@ -21,7 +21,7 @@ public abstract partial class TestKitBase
     {
         return ExpectMsgAllOfMatchingPredicatesAsync(predicates, cancellationToken)
             .ToListAsync(cancellationToken)
-            .Result;
+            .GetAwaiter().GetResult();
     }
 
     public async IAsyncEnumerable<object> ExpectMsgAllOfMatchingPredicatesAsync(
@@ -48,7 +48,7 @@ public abstract partial class TestKitBase
     {
         return ExpectMsgAllOfMatchingPredicatesAsync(max, predicates, cancellationToken)
             .ToListAsync(cancellationToken)
-            .Result;
+            .GetAwaiter().GetResult();
     }
 
     public async IAsyncEnumerable<object> ExpectMsgAllOfMatchingPredicatesAsync(
@@ -57,8 +57,7 @@ public abstract partial class TestKitBase
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         max.EnsureIsPositiveFinite("max");
-        var enumerable = InternalExpectMsgAllOfAsync(Dilated(max), predicates, cancellationToken: cancellationToken)
-            .WithCancellation(cancellationToken);
+        var enumerable = InternalExpectMsgAllOfAsync(Dilated(max), predicates, cancellationToken: cancellationToken);
         await foreach (var item in enumerable)
         {
             yield return item;
@@ -77,8 +76,7 @@ public abstract partial class TestKitBase
         var start = Now;
 
         var unexpectedMessages = new List<object>();
-        var receivedMessages = InternalReceiveNAsync(predicateInfos.Count, max, shouldLog, cancellationToken)
-            .WithCancellation(cancellationToken);
+        var receivedMessages = InternalReceiveNAsync(predicateInfos.Count, max, shouldLog, cancellationToken);
         await foreach (var msg in receivedMessages)
         {
             var foundPredicateInfo = predicateInfoList.FirstOrDefault(p =>
