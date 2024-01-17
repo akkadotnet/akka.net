@@ -148,8 +148,7 @@ namespace Akka.TestKit
                     _assertions.AssertFalse(x is T, "did not expect a message of type {0}", typeof(T));
                     return true; // please continue receiving, don't stop
                 },
-                cancellationToken: cancellationToken)
-                .WithCancellation(cancellationToken);
+                cancellationToken: cancellationToken);
             
             await foreach (var _ in enumerable)
             {
@@ -455,8 +454,7 @@ namespace Akka.TestKit
             int msgs = int.MaxValue,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            var enumerable = ReceiveWhileAsync(filter, max, Timeout.InfiniteTimeSpan, msgs, cancellationToken)
-                .WithCancellation(cancellationToken);
+            var enumerable = ReceiveWhileAsync(filter, max, Timeout.InfiniteTimeSpan, msgs, cancellationToken);
             await foreach (var item in enumerable)
             {
                 yield return item;
@@ -499,8 +497,7 @@ namespace Akka.TestKit
             int msgs = int.MaxValue,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            var enumerable = ReceiveWhileAsync(filter, max, idle, msgs, cancellationToken)
-                .WithCancellation(cancellationToken);
+            var enumerable = ReceiveWhileAsync(filter, max, idle, msgs, cancellationToken);
             await foreach (var item in enumerable)
             {
                 yield return item;
@@ -729,8 +726,7 @@ namespace Akka.TestKit
             int numberOfMessages,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            var enumerable = InternalReceiveNAsync(numberOfMessages, RemainingOrDefault, true, cancellationToken)
-                .WithCancellation(cancellationToken);
+            var enumerable = InternalReceiveNAsync(numberOfMessages, RemainingOrDefault, true, cancellationToken);
             await foreach (var item in enumerable)
             {
                 yield return item;
@@ -762,8 +758,7 @@ namespace Akka.TestKit
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             max.EnsureIsPositiveFinite("max");
-            var enumerable = InternalReceiveNAsync(numberOfMessages, Dilated(max), true, cancellationToken)
-                .WithCancellation(cancellationToken);
+            var enumerable = InternalReceiveNAsync(numberOfMessages, Dilated(max), true, cancellationToken);
             await foreach (var item in enumerable)
             {
                 yield return item;
