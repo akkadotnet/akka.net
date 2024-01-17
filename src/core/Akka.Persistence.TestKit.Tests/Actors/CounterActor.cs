@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Event;
 using Xunit.Abstractions;
 
 namespace Akka.Persistence.TestKit.Tests
@@ -17,6 +18,8 @@ namespace Akka.Persistence.TestKit.Tests
 
     public class CounterActor : UntypedPersistentActor
     {
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+        
         public CounterActor(string id)
         {
             PersistenceId = id;
@@ -28,6 +31,8 @@ namespace Akka.Persistence.TestKit.Tests
 
         protected override void OnCommand(object message)
         {
+            _log.Info("Received command {0}", message);
+            
             switch (message as string)
             {
                 case "inc":
@@ -51,6 +56,8 @@ namespace Akka.Persistence.TestKit.Tests
 
         protected override void OnRecover(object message)
         {
+            _log.Info("Received recover {0}", message);
+            
             switch (message as string)
             {
                 case "inc":

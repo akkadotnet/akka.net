@@ -47,6 +47,8 @@ namespace Akka.Persistence.TestKit.Tests
 
             protected override void OnCommand(object message)
             {
+                _log.Info("Received command {0}", message);
+                
                 switch (message)
                 {
                     case WriteMessage _:
@@ -66,6 +68,7 @@ namespace Akka.Persistence.TestKit.Tests
 
             protected override void OnRecover(object message)
             {
+                _log.Info("Received recover {0}", message);
                 _probe.Tell(message);
             }
         }
