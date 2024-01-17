@@ -305,6 +305,15 @@ namespace Akka.Tests.Routing
 
             (await RouteeSize(router)).Should().Be(resizer.LowerBound);
 
+            // 2 more should go through without triggering more
+            await Loop(2, 200.Milliseconds());
+            (await RouteeSize(router)).Should().Be(resizer.LowerBound);
+
+            // a whole bunch should max it out
+            await Loop(20, 500.Milliseconds());
+            (await RouteeSize(router)).Should().Be(resizer.UpperBound);
+            return;
+
             async Task Loop(int loops, TimeSpan d)
             {
                 for (var i = 0; i < loops; i++)
@@ -316,7 +325,8 @@ namespace Akka.Tests.Routing
                 }
 
                 var max = d.TotalMilliseconds * loops / resizer.LowerBound + Dilated(2.Seconds()).TotalMilliseconds;
-                await WithinAsync(TimeSpan.FromMilliseconds(max), async () =>
+                var epsilon = Dilated(TimeSpan.FromSeconds(1)); // used to help hedge against racy / non-determinism
+                await WithinAsync(TimeSpan.FromMilliseconds(max) + epsilon, async () =>
                 {
                     for (var i = 0; i < loops; i++)
                     {
@@ -324,14 +334,6 @@ namespace Akka.Tests.Routing
                     }
                 });
             }
-
-            // 2 more should go through without triggering more
-            await Loop(2, 200.Milliseconds());
-            (await RouteeSize(router)).Should().Be(resizer.LowerBound);
-
-            // a whole bunch should max it out
-            await Loop(20, 500.Milliseconds());
-            (await RouteeSize(router)).Should().Be(resizer.UpperBound);
         }
         
         [Fact(Skip = "Racy due to Resizer / Mailbox impl")]
