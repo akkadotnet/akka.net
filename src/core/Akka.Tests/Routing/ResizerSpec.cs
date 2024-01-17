@@ -326,13 +326,13 @@ namespace Akka.Tests.Routing
 
                 var max = d.TotalMilliseconds * loops / resizer.LowerBound + Dilated(2.Seconds()).TotalMilliseconds;
                 var epsilon = Dilated(TimeSpan.FromSeconds(1)); // used to help hedge against racy / non-determinism
-                await WithinAsync(TimeSpan.FromMilliseconds(max) + epsilon, async () =>
+                await WithinAsync(TimeSpan.FromMilliseconds(max), async () =>
                 {
                     for (var i = 0; i < loops; i++)
                     {
                         await ExpectMsgAsync("done");
                     }
-                });
+                }, epsilonValue:epsilon);
             }
         }
         
