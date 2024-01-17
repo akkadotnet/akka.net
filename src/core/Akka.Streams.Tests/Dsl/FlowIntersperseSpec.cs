@@ -7,10 +7,12 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -40,7 +42,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Intersperse_must_inject_element_between_existing_elements_when_downstream_is_aggregate()
+        public async Task A_Intersperse_must_inject_element_between_existing_elements_when_downstream_is_aggregate()
         {
             var concated =
                 Source.From(new[] { 1, 2, 3 })
@@ -48,8 +50,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Intersperse(",")
                     .RunAggregate("", (s, s1) => s + s1, Materializer);
 
-            concated.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            concated.Result.Should().Be("1,2,3");
+            (await concated.WaitAsync(3.Seconds())).Should().Be("1,2,3");
         }
 
         [Fact]

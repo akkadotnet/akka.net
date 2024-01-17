@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
@@ -17,7 +18,7 @@ namespace Akka.Tests.Routing
     public class ListenerSpec : AkkaSpec
     {
         [Fact]
-        public void Listener_must_listen_in()
+        public async Task Listener_must_listen_in()
         {
             //arrange
             var fooLatch = new TestLatch(2);
@@ -41,10 +42,10 @@ namespace Akka.Tests.Routing
             broadcast.Tell("foo");
 
             //assert
-            barLatch.Ready(TestLatch.DefaultTimeout);
+            await barLatch.ReadyAsync(TestLatch.DefaultTimeout);
             Assert.Equal(2, barCount.Current);
 
-            fooLatch.Ready(TestLatch.DefaultTimeout);
+            await fooLatch.ReadyAsync(TestLatch.DefaultTimeout);
             foreach (var actor in new[] {a1, a2, a3, broadcast})
             {
                 Sys.Stop(actor);

@@ -16,6 +16,8 @@ using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
+using FluentAssertions.Extensions;
+using Nito.AsyncEx;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -181,14 +183,12 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_SharedKillSwitch_must_pass_through_all_elements_unmodified()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var killSwitch = KillSwitches.Shared("switch");
                 var task = Source.From(Enumerable.Range(1, 100))
                     .Via(killSwitch.Flow<int>())
                     .RunWith(Sink.Seq<int>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
-                return Task.CompletedTask;
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
@@ -372,22 +372,20 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_SharedKillSwitch_should_not_cause_problems_if_switch_is_shutdown_after_flow_completed_normally()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var killSwitch = KillSwitches.Shared("switch");
                 var task = Source.From(Enumerable.Range(1, 10))
                     .Via(killSwitch.Flow<int>())
                     .RunWith(Sink.Seq<int>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 killSwitch.Shutdown();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task A_SharedKillSwitch_must_provide_flows_that_materialize_to_its_owner_KillSwitch()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var killSwitch = KillSwitches.Shared("switch");
                 var t = Source.Maybe<int>()
                     .ViaMaterialized(killSwitch.Flow<int>(), Keep.Right)
@@ -398,9 +396,8 @@ namespace Akka.Streams.Tests.Dsl
                 var completion = t.Item2;
                 killSwitch2.Should().Be(killSwitch);
                 killSwitch2.Shutdown();
-                completion.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                await completion.WaitAsync(3.Seconds());
                 completion.IsFaulted.Should().BeFalse();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -542,14 +539,12 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_CancellationToken_flow_must_pass_through_all_elements_unmodified()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var cancel = new CancellationTokenSource();
                 var task = Source.From(Enumerable.Range(1, 100))
                     .Via(cancel.Token.AsFlow<int>())
                     .RunWith(Sink.Seq<int>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
-                return Task.CompletedTask;
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
@@ -699,15 +694,13 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_CancellationToken_flow_should_not_cause_problems_if_switch_is_shutdown_after_flow_completed_normally()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var cancel = new CancellationTokenSource();
                 var task = Source.From(Enumerable.Range(1, 10))
                     .Via(cancel.Token.AsFlow<int>(cancelGracefully: true))
                     .RunWith(Sink.Seq<int>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 cancel.Cancel();
-                return Task.CompletedTask;
             }, Materializer);
         }
 

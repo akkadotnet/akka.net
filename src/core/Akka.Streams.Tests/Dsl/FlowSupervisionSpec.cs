@@ -8,13 +8,16 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -73,17 +76,17 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Stream_supervision_must_complete_stream_with_ArgumentNullException_when_null_is_emitted()
+        public async Task Stream_supervision_must_complete_stream_with_ArgumentNullException_when_null_is_emitted()
         {
             var task = Source.From(new[] {"a", "b"}).Select(_ => null as string).Limit(1000).RunWith(Sink.Seq<string>(), Materializer);
 
-            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                .Should().Throw<ArgumentNullException>()
+            (await Awaiting(() => task.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<ArgumentNullException>())
                 .And.Message.Should().StartWith(ReactiveStreamsCompliance.ElementMustNotBeNullMsg);
         }
 
         [Fact]
-        public void Stream_supervision_must_resume_stream_when_null_is_emitted()
+        public async Task Stream_supervision_must_resume_stream_when_null_is_emitted()
         {
             var nullMap = Flow.Create<string>().Select(element =>
             {
@@ -95,8 +98,8 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(nullMap)
                 .Limit(1000)
                 .RunWith(Sink.Seq<string>(), Materializer);
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new [] {"a", "c"});
+            
+            (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo("a", "c");
         }
     }
 }

@@ -423,7 +423,7 @@ namespace Akka.Tests.Actor
             var lockFsm = Sys.ActorOf(Props.Create(() => new Lock("33221", 1.Seconds(), latches)));
             var transitionTester = Sys.ActorOf(Props.Create(() => new TransitionTester(latches)));
             lockFsm.Tell(new SubscribeTransitionCallBack(transitionTester));
-            latches.InitialStateLatch.Ready(timeout);
+            await latches.InitialStateLatch.ReadyAsync(timeout);
 
             lockFsm.Tell('3');
             lockFsm.Tell('3');
@@ -431,24 +431,23 @@ namespace Akka.Tests.Actor
             lockFsm.Tell('2');
             lockFsm.Tell('1');
 
-            latches.UnlockedLatch.Ready(timeout);
-            latches.TransitionLatch.Ready(timeout);
-            latches.TransitionCallBackLatch.Ready(timeout);
-            latches.LockedLatch.Ready(timeout);
+            await latches.UnlockedLatch.ReadyAsync(timeout);
+            await latches.TransitionLatch.ReadyAsync(timeout);
+            await latches.TransitionCallBackLatch.ReadyAsync(timeout);
+            await latches.LockedLatch.ReadyAsync(timeout);
 
-            await EventFilter.Warning("unhandled event").ExpectOneAsync(() => {
+            await EventFilter.Warning("unhandled event").ExpectOneAsync(async () => {
                 lockFsm.Tell("not_handled");
-                latches.UnhandledLatch.Ready(timeout);
-                return Task.CompletedTask;
+                await latches.UnhandledLatch.ReadyAsync(timeout);
             });
 
             var answerLatch = new TestLatch();
             var tester = Sys.ActorOf(Props.Create(() => new AnswerTester(answerLatch, lockFsm)));
             tester.Tell(Hello.Instance);
-            answerLatch.Ready(timeout);
+            await answerLatch.ReadyAsync(timeout);
 
             tester.Tell(Bye.Instance);
-            latches.TerminatedLatch.Ready(timeout);
+            await latches.TerminatedLatch.ReadyAsync(timeout);
         }
 
         [Fact]
@@ -472,7 +471,7 @@ namespace Akka.Tests.Actor
         {
             var started = new TestLatch(1);
             var actorRef = Sys.ActorOf(Props.Create(() => new ActorStopTermination(started, TestActor)));
-            started.Ready();
+            await started.ReadyAsync();
             Sys.Stop(actorRef);
             var stopEvent = await ExpectMsgAsync<StopEvent<int, object>>(1.Seconds());
             stopEvent.Reason.Should().BeOfType<Shutdown>();

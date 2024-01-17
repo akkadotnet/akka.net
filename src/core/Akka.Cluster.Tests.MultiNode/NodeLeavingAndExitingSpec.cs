@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.MultiNode.TestAdapter;
@@ -79,16 +80,16 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void NodeLeavingAndExitingSpecs()
+        public async Task NodeLeavingAndExitingSpecs()
         {
-            Node_that_is_leaving_non_singleton_cluster_must_be_moved_to_exiting_by_the_leader();
+            await Node_that_is_leaving_non_singleton_cluster_must_be_moved_to_exiting_by_the_leader();
         }
 
-        public void Node_that_is_leaving_non_singleton_cluster_must_be_moved_to_exiting_by_the_leader()
+        public async Task Node_that_is_leaving_non_singleton_cluster_must_be_moved_to_exiting_by_the_leader()
         {
             AwaitClusterUp(_config.First, _config.Second, _config.Third);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var secondAddress = GetAddress(_config.Second);
                 var exitingLatch = new TestLatch();
@@ -105,7 +106,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 EnterBarrier("second-left");
 
                 // Verify that 'second' node is set to EXITING
-                exitingLatch.Ready();
+                await exitingLatch.ReadyAsync();
             }, _config.First, _config.Third);
 
 

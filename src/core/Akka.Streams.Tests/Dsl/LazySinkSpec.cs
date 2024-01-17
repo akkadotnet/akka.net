@@ -17,8 +17,10 @@ using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Akka.TestKit.Extensions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -74,7 +76,9 @@ namespace Akka.Streams.Tests.Dsl
                 sourceSub.SendNext(0);
                 await sourceSub.ExpectRequestAsync(1);
                 await sourceProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
+#pragma warning disable xUnit1031
                 taskProbe.Wait(TimeSpan.FromMilliseconds(200)).ShouldBeFalse();
+#pragma warning restore xUnit1031
 
                 p.SetResult(this.SinkProbe<int>());
                 var complete = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
@@ -125,7 +129,8 @@ namespace Akka.Streams.Tests.Dsl
                 await sourceSub.ExpectRequestAsync(1);
                 sourceSub.SendNext(0);
                 await sourceSub.ExpectCancellationAsync();
-                taskProbe.Invoking(t => t.Wait()).Should().Throw<TestException>();
+                
+                await Awaiting(() => taskProbe.WaitAsync(300.Milliseconds())).Should().ThrowAsync<TestException>();
             }, Materializer);
         }
 
@@ -165,7 +170,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sourceSub = await sourceProbe.ExpectSubscriptionAsync();
                 await sourceSub.ExpectRequestAsync(1);
                 sourceSub.SendNext(0);
-                taskProbe.Invoking(t => t.Wait(TimeSpan.FromMilliseconds(300))).Should().Throw<TestException>();
+                await Awaiting(() => taskProbe.WaitAsync(300.Milliseconds())).Should().ThrowAsync<TestException>();
                 
             }, Materializer);
         }
@@ -193,22 +198,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_LazySink_must_fail_correctly_when_materialization_of_inner_sink_fails()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var matFail = new TestException("fail!");
 
                 var task = Source.Single("whatever")
                     .RunWith(Sink.LazyInitAsync(() => Task.FromResult(Sink.FromGraph(new FailingInnerMat(matFail)))), Materializer);
 
-                try
-                {
-                    task.Wait(TimeSpan.FromSeconds(1));
-                }
-                catch (AggregateException) { }
-
-                task.IsFaulted.ShouldBe(true);
-                task.Exception.ShouldNotBe(null);
-                task.Exception.Flatten().InnerException.Should().BeEquivalentTo(matFail);
-                return Task.CompletedTask;
+                (await Awaiting(() => task).Should().ThrowAsync<TestException>())
+                    .And.Should().Be(matFail);
             }, Materializer);
         }
 

@@ -14,6 +14,7 @@ using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -81,7 +82,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(() => Task.FromResult(Scan(Source.Empty<int>()).Should().BeEquivalentTo(new[] {0})), Materializer);
 
         [Fact]
-        public void A_Scan_must_emit_values_promptly()
+        public async Task A_Scan_must_emit_values_promptly()
         {
             var task = Source.Single(1).MapMaterializedValue<TaskCompletionSource<int>>(_ => null)
                 .Concat(Source.Maybe<int>())
@@ -89,8 +90,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Take(2)
                 .RunWith(Sink.Seq<int>(), Materializer);
 
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] {0, 1});
+            (await task.WaitAsync(1.Seconds())).Should().BeEquivalentTo(new[] {0, 1});
         }
 
         [Fact]

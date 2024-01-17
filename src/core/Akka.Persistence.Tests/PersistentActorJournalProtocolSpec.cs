@@ -360,7 +360,7 @@ akka.persistence.snapshot-store.plugin = ""akka.persistence.no-snapshot-store"""
                         evt.ShouldBe(msg.Messages[j]);
                     }
                 }
-                else Assertions.Fail("unexpected ", message);
+                else Assertions.Fail("unexpected {0}", message);
             }
             return w;
         }

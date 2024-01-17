@@ -7,11 +7,13 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -26,7 +28,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Limit_must_produce_empty_sequence_when_source_is_empty_and_n_is_equal_to_zero()
+        public async Task A_Limit_must_produce_empty_sequence_when_source_is_empty_and_n_is_equal_to_zero()
         {
             var input = Enumerable.Empty<int>().ToList();
             var n = input.Count;
@@ -35,12 +37,11 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(), Materializer);
 
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeNull();
+            (await future.WaitAsync(RemainingOrDefault)).Should().BeNull();
         }
 
         [Fact]
-        public void A_Limit_must_produce_output_that_is_identical_to_the_input_when_n_is_equal_to_input_length()
+        public async Task A_Limit_must_produce_output_that_is_identical_to_the_input_when_n_is_equal_to_input_length()
         {
             var input = Enumerable.Range(1, 6).ToList();
             var n = input.Count;
@@ -49,12 +50,11 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(input);
+            (await future.WaitAsync(RemainingOrDefault)).Should().BeEquivalentTo(input);
         }
 
         [Fact]
-        public void A_Limit_must_produce_output_that_is_identical_to_the_input_when_n_greater_than_input_length()
+        public async Task A_Limit_must_produce_output_that_is_identical_to_the_input_when_n_greater_than_input_length()
         {
             var input = Enumerable.Range(1, 6).ToList();
             var n = input.Count + 2; // n > input.Count
@@ -63,12 +63,11 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(input);
+            (await future.WaitAsync(RemainingOrDefault)).Should().BeEquivalentTo(input);
         }
 
         [Fact]
-        public void A_Limit_must_produce_n_messages_before_throwing_a_StreamLimitReachedException_when_n_lower_than_input_size()
+        public async Task A_Limit_must_produce_n_messages_before_throwing_a_StreamLimitReachedException_when_n_lower_than_input_size()
         {
             //TODO: check if it actually produces n messages
             var input = Enumerable.Range(1, 6).ToList();
@@ -78,11 +77,12 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Invoking(f => f.Wait(RemainingOrDefault)).Should().Throw<StreamLimitReachedException>();
+            await Awaiting(() => future.WaitAsync(RemainingOrDefault))
+                .Should().ThrowAsync<StreamLimitReachedException>();
         }
 
         [Fact]
-        public void A_Limit_must_throw_a_StreamLimitReachedException_when_n_lower_than_0()
+        public async Task A_Limit_must_throw_a_StreamLimitReachedException_when_n_lower_than_0()
         {
             var input = Enumerable.Range(1, 6).ToList();
             var n = -1; // n < input.Count
@@ -91,7 +91,8 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Invoking(f => f.Wait(RemainingOrDefault)).Should().Throw<StreamLimitReachedException>();
+            await Awaiting(() => future.WaitAsync(RemainingOrDefault))
+                .Should().ThrowAsync<StreamLimitReachedException>();
         }
     }
 }

@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
+using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
@@ -52,9 +53,8 @@ namespace Akka.DependencyInjection.Tests
         {
             var actor = _serviceProvider.GetRequiredService<EchoActorProvider>()();
 
-            var task = actor.Ask("echo");
-            task.Wait(TimeSpan.FromSeconds(3));
-            task.Result.ShouldBe("echo");
+            var result = await actor.Ask("echo", RemainingOrDefault);
+            result.Should().Be("echo");
 
             var sys = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
             await sys.Terminate();
@@ -66,9 +66,8 @@ namespace Akka.DependencyInjection.Tests
             var system = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
             var actor = system.ActorOf(ParentActor.Props(system));
             
-            var task = actor.Ask("echo");
-            task.Wait(TimeSpan.FromSeconds(3));
-            task.Result.ShouldBe("echo");
+            var result = await actor.Ask("echo", RemainingOrDefault);
+            result.Should().Be("echo");
 
             var sys = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
             await sys.Terminate();

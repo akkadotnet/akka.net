@@ -170,11 +170,9 @@ namespace Akka.DistributedData.Tests
             var replicator = DistributedData.Get(_sys1).Replicator;
 
             IActorRef durableStore = null;
-            await AwaitAssertAsync(() =>
+            await AwaitAssertAsync(async () =>
             {
-                durableStore = _sys1.ActorSelection(durableStoreActorPath).ResolveOne(TimeSpan.FromSeconds(3))
-                    .ContinueWith(
-                        m => m.Result).Result;
+                durableStore = await _sys1.ActorSelection(durableStoreActorPath).ResolveOne(TimeSpan.FromSeconds(3));
             }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(100));
 
             Watch(replicator);

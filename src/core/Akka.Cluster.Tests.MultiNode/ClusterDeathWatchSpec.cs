@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -90,22 +91,22 @@ namespace Akka.Cluster.Tests.MultiNode
 
 
         [MultiNodeFact]
-        public void ClusterDeathWatchSpecTests()
+        public async Task ClusterDeathWatchSpecTests()
         {
-            An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed();
+            await An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed();
             //AnActorWatchingARemoteActorInTheClusterMustReceiveTerminatedWhenWatchedPathDoesNotExist();
             An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_watch_actor_before_node_joins_cluster_and_cluster_remote_watcher_takes_over_from_remote_watcher();
             An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_shutdown_system_when_using_remote_deployed_actor_on_node_that_crashed();
         }
 
-        public void An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed()
+        public async Task An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
             {
                 AwaitClusterUp(_config.First, _config.Second, _config.Third, _config.Fourth);
                 EnterBarrier("cluster-up");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     EnterBarrier("subjected-started");
 
@@ -115,17 +116,17 @@ namespace Akka.Cluster.Tests.MultiNode
                     Sys.ActorOf(Props.Create(() => new Observer(path2, path3, watchEstablished, TestActor))
                         .WithDeploy(Deploy.Local), "observer1");
 
-                    watchEstablished.Ready();
+                    await watchEstablished.ReadyAsync();
                     EnterBarrier("watch-established");
                     ExpectMsg(path2);
-                    ExpectNoMsg(TimeSpan.FromSeconds(2));
+                    await ExpectNoMsgAsync(TimeSpan.FromSeconds(2));
                     EnterBarrier("second-terminated");
                     MarkNodeAsUnavailable(GetAddress(_config.Third));
-                    AwaitAssert(() => Assert.Contains(GetAddress(_config.Third), ClusterView.UnreachableMembers.Select(x => x.Address)));
+                    await AwaitAssertAsync(() => Assert.Contains(GetAddress(_config.Third), ClusterView.UnreachableMembers.Select(x => x.Address)));
                     Cluster.Down(GetAddress(_config.Third));
                     //removed
-                    AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Third), ClusterView.Members.Select(x => x.Address)));
-                    AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Third), ClusterView.UnreachableMembers.Select(x => x.Address)));
+                    await AwaitAssertAsync(() => Assert.DoesNotContain(GetAddress(_config.Third), ClusterView.Members.Select(x => x.Address)));
+                    await AwaitAssertAsync(() => Assert.DoesNotContain(GetAddress(_config.Third), ClusterView.UnreachableMembers.Select(x => x.Address)));
                     ExpectMsg(path3);
                     EnterBarrier("third-terminated");
                 }, _config.First);

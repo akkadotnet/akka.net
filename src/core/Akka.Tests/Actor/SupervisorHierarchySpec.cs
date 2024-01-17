@@ -225,7 +225,11 @@ namespace Akka.Tests.Actor
             var latch = CreateTestLatch();
             var slowResumer = ActorOf(c =>
             {
-                c.Strategy = new OneForOneStrategy(_ => { latch.Ready(Dilated(TimeSpan.FromSeconds(4))); return Directive.Resume; });
+                c.Strategy = new OneForOneStrategy(_ =>
+                {
+                    latch.Ready(Dilated(TimeSpan.FromSeconds(4))); 
+                    return Directive.Resume;
+                });
                 c.Receive<string>(s => s.StartsWith("spawn:"), (s, ctx) => ctx.Sender.Tell(ctx.ActorOf<Resumer>(s.Substring(6))));
                 c.Receive("spawn", (_, ctx) => ctx.Sender.Tell(ctx.ActorOf<Resumer>()));
             }, "slowResumer");

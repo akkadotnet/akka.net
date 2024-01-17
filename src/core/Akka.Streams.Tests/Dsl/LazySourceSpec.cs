@@ -107,7 +107,7 @@ namespace Akka.Streams.Tests.Dsl
                 task.IsCompleted.Should().BeFalse();
                 probe.Request(1);
                 await probe.ExpectNextAsync(1);
-                task.Result.Should().Be(Done.Instance);
+                (await task).Should().Be(Done.Instance);
 
                 probe.Cancel();
             }, Materializer);
@@ -193,7 +193,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_lazy_source_must_fail_correctly_when_materialization_of_inner_source_fails()
         {
-            await this.AssertAllStagesStoppedAsync(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var matFail = new TestException("fail!");
 
@@ -201,16 +201,9 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.Ignore<string>())
                     .Run(Materializer);
 
-                try
-                {
-                    task.Wait(TimeSpan.FromSeconds(1));
-                }
-                catch (AggregateException) { }
-
-                task.IsFaulted.ShouldBe(true);
-                task.Exception.ShouldNotBe(null);
-                task.Exception.InnerException.Should().BeEquivalentTo(matFail);
-                return Task.CompletedTask;
+                (await Awaiting(() => task.WaitAsync(1.Seconds()))
+                    .Should().ThrowAsync<TestException>())
+                    .And.Should().Be(matFail); 
             }, Materializer);
         }
 

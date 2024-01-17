@@ -245,11 +245,10 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
             
             await RunOnAsync(async () =>
             {
-                await WithinAsync(20.Seconds(), () => {
+                await WithinAsync(20.Seconds(), async () => {
                     Sys.ActorOf(Props.Create<AdaptiveLoadBalancingRouterConfig.MemoryAllocator>(), "memory-allocator")
                                                                              .Tell(AdaptiveLoadBalancingRouterConfig.AllocateMemory.Instance);
-                    ExpectMsg("done");
-                    return Task.CompletedTask;
+                    await ExpectMsgAsync("done");
                 });
             }, _config.Node2);
             

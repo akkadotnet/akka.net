@@ -14,8 +14,10 @@ using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -278,23 +280,16 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_RecoverWith_must_fail_correctly_when_materialization_of_recover_source_fails()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var matFail = new TestException("fail!");
 
                 var task = Source.Failed<string>(new TestException("trigger"))
                     .RecoverWithRetries(_ => Source.FromGraph(new FailingInnerMat(matFail)), 1)
                     .RunWith(Sink.Ignore<string>(), Materializer);
 
-                try
-                {
-                    task.Wait(TimeSpan.FromSeconds(1));
-                }
-                catch (AggregateException) { }
-
-                task.IsFaulted.ShouldBe(true);
-                task.Exception.ShouldNotBe(null);
-                task.Exception.InnerException.Should().BeEquivalentTo(matFail);
-                return Task.CompletedTask;
+                var ex = await Awaiting(() => task.WaitAsync(1.Seconds()))
+                    .Should().ThrowAsync<TestException>();
+                ex.And.Should().BeEquivalentTo(matFail);
             }, Materializer);
         }
 

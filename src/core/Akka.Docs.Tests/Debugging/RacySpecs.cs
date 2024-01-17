@@ -219,6 +219,7 @@ namespace DocsExamples.Debugging
         }
         // </PoisonPillSysMsgOrdering>
 
+#pragma warning disable xUnit1031
         [Fact(Skip = "Racy by design")]
         // <TooTightTimingSpec>
         public void TooTightTimingSpec()
@@ -231,5 +232,6 @@ namespace DocsExamples.Debugging
             t.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10).Select(i => new List<int> {i}));
         }
         // </TooTightTimingSpec>
+#pragma warning restore xUnit1031
     }
 }

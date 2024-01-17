@@ -59,21 +59,17 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Take_complete_eagerly_when_zero_or_less_is_taken_independently_of_upstream_completion()
+        public async Task A_Take_complete_eagerly_when_zero_or_less_is_taken_independently_of_upstream_completion()
         {
-            Source.Maybe<int>()
+            await Source.Maybe<int>()
                 .Take(0)
                 .RunWith(Sink.Ignore<int>(), Materializer)
-                .Wait(TimeSpan.FromSeconds(3))
-                .Should()
-                .BeTrue();
+                .WaitAsync(TimeSpan.FromSeconds(3));
 
-            Source.Maybe<int>()
+            await Source.Maybe<int>()
                 .Take(-1)
                 .RunWith(Sink.Ignore<int>(), Materializer)
-                .Wait(TimeSpan.FromSeconds(3))
-                .Should()
-                .BeTrue();
+                .WaitAsync(TimeSpan.FromSeconds(3));
         }
     }
 }

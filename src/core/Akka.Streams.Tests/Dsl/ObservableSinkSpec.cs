@@ -13,6 +13,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2.Attributes;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -122,6 +123,8 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task An_ObservableSink_subscriber_must_be_disposable()
         {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
                 var probe = new TestObserver<int>(this);
                 var tuple = Source.Queue<int>(1, OverflowStrategy.DropHead)
                     .ToMaterialized(Sink.AsObservable<int>(), Keep.Both)
@@ -132,24 +135,25 @@ namespace Akka.Streams.Tests.Dsl
                 var d1 = observable.Subscribe(probe);
 
                 var t = queue.OfferAsync(1);
-                t.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
-                t.Result.ShouldBe(QueueOfferResult.Enqueued.Instance);
+                (await t.WaitAsync(1.Seconds()))
+                    .ShouldBe(QueueOfferResult.Enqueued.Instance);
 
                 await probe.ExpectEventAsync(1);
 
                 t = queue.OfferAsync(2);
-                t.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
-                t.Result.ShouldBe(QueueOfferResult.Enqueued.Instance);
+                (await t.WaitAsync(1.Seconds()))
+                    .ShouldBe(QueueOfferResult.Enqueued.Instance);
 
                 await probe.ExpectEventAsync(2);
 
                 d1.Dispose();
 
                 t = queue.OfferAsync(3);
-                t.Wait(TimeSpan.FromSeconds(1)).ShouldBeTrue();
+                await t.WaitAsync(TimeSpan.FromSeconds(1));
 
                 await probe.ExpectCompletedAsync();
                 await probe.ExpectNoMsgAsync();
+            }, Materializer);
         }
     }
 }

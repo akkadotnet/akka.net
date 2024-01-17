@@ -317,7 +317,9 @@ namespace Akka.Streams.Tests.IO
                 {
                     var lazySink = Sink.LazyInitAsync(() => Task.FromResult(FileIO.ToFile(f)))
                         // map a Task<Option<Task<IOResult>>> into a Task<IOResult>
+#pragma warning disable xUnit1031
                         .MapMaterializedValue(t => t.Result.GetOrElse(Task.FromResult(IOResult.Success(0))));
+#pragma warning restore xUnit1031
 
                     var completion = Source.From(new []{_testByteStrings.Head()})
                         .RunWith(lazySink, _materializer);
@@ -441,9 +443,8 @@ namespace Akka.Streams.Tests.IO
                     CheckFileContent(f, "a\nb\nc\nd\n"); // file content should all be flushed
 
                     actor.Tell(new Status.Success(NotUsed.Instance));
-                    task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                    task.Result.WasSuccessful.Should().BeTrue();
-                    task.Result.Count.Should().Be(8);
+                    var result = await task.WaitAsync(3.Seconds());
+                    result.Count.Should().Be(8);
                 }, _materializer);
             }, _materializer);
         }

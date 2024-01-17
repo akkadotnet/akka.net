@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_stream_via_LastElement_should_materialize_to_the_last_element_emitted_by_a_source_before_it_failed()
+        public async Task A_stream_via_LastElement_should_materialize_to_the_last_element_emitted_by_a_source_before_it_failed()
         {
             var t = Source.UnfoldInfinite(1, n => n >= 3 ? throw new Exception() : (n + 1, n + 1))
                 .ViaMaterialized(new LastElement<int>(), Keep.Right)
@@ -69,9 +69,9 @@ namespace Akka.Streams.Tests.Dsl
             var lastElement = t.Item1;
             var lastEmitted = t.Item2;
 
-            lastElement.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            lastEmitted.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            lastElement.Result.Should().Be(lastEmitted.Result);
+            var r1 = await lastElement.WaitAsync(1.Seconds());
+            var r2 = await lastEmitted.WaitAsync(1.Seconds());
+            r1.Should().Be(r2);
         }
     }
 }

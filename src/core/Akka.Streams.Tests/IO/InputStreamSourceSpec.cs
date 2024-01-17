@@ -167,39 +167,38 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void InputStreamSource_must_not_signal_when_no_demand()
+        public async Task InputStreamSource_must_not_signal_when_no_demand()
         {
             var f = StreamConverters.FromInputStream(() => new ConstInputStream());
 
-            f.TakeWithin(TimeSpan.FromSeconds(5)).RunForeach(_ => { }, _materializer).Wait(TimeSpan.FromSeconds(10));
+            await f.TakeWithin(TimeSpan.FromSeconds(5)).RunForeach(_ => { }, _materializer)
+                .WaitAsync(TimeSpan.FromSeconds(10));
         }
 
         [Fact]
         public async Task InputStreamSource_must_read_bytes_from_InputStream()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var f = StreamConverters.FromInputStream(() => new ListInputStream(new[] { "a", "b", "c" }))                                                                             
                 .RunWith(Sink.First<ByteString>(), _materializer);
 
-                f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                f.Result.Should().BeEquivalentTo(ByteString.FromString("abc"));
-                return Task.CompletedTask;
+                (await f.WaitAsync(TimeSpan.FromSeconds(3)))
+                    .Should().BeEquivalentTo(ByteString.FromString("abc"));
             }, _materializer);
         }
 
         [Fact]
         public async Task InputStreamSource_must_emit_as_soon_as_read()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var latch = new TestLatch(1);
                 var probe = StreamConverters.FromInputStream(() => new EmittedInputStream(latch), chunkSize: 1)
                     .RunWith(this.SinkProbe<ByteString>(), _materializer);
 
                 probe.Request(4);
-                probe.ExpectNext(ByteString.FromString("M"));
+                await probe.ExpectNextAsync(ByteString.FromString("M"));
                 latch.CountDown();
-                probe.ExpectComplete();
-                return Task.CompletedTask;
+                await probe.ExpectCompleteAsync();
             }, _materializer);
         }
     }

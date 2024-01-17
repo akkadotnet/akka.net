@@ -436,16 +436,15 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                             Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(writeButIgnoreRead).Run(Materializer)),
                             Keep.Left)
                         .Run(Materializer);
-                await task.ShouldCompleteWithin(3.Seconds());
-                var binding = task.Result;
+                var binding = await task.WaitAsync(3.Seconds());
 
                 var (promise, result) = Source.Maybe<ByteString>()
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress.Address.ToString(), serverAddress.Port))
                     .ToMaterialized(Sink.Aggregate<ByteString, ByteString>(ByteString.Empty, (s, s1) => s + s1), Keep.Both)
                     .Run(Materializer);
 
-                await result.ShouldCompleteWithin(5.Seconds());
-                result.Result.Should().BeEquivalentTo(ByteString.FromString("Early response"));
+                (await result.WaitAsync(5.Seconds()))
+                    .Should().BeEquivalentTo(ByteString.FromString("Early response"));
 
                 promise.SetResult(null); // close client upstream, no more data
                 await binding.Unbind().ShouldCompleteWithin(3.Seconds());
@@ -513,7 +512,8 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                     })
                     .Should().ThrowAsync<StreamTcpException>();
 
-                await binding.Result.Unbind().ShouldCompleteWithin(3.Seconds());
+                var bound = await binding.WaitAsync(3.Seconds());
+                await bound.Unbind().WaitAsync(3.Seconds());
             }
             finally
             {
@@ -710,8 +710,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                     .Run(Materializer);
 
                 // make sure server is running first
-                await bindingTask.ShouldCompleteWithin(3.Seconds());
-                var result = bindingTask.Result;
+                _ = await bindingTask.WaitAsync(3.Seconds());
 
                 // then connect, should trigger a block and then
                 var total = Source.From(thousandByteStrings)

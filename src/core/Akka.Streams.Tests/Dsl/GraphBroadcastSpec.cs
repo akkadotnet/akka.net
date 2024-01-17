@@ -14,6 +14,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -68,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Broadcast_must_work_with_one_way_broadcast()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var t = Source.FromGraph(GraphDsl.Create(b =>                                                                         
                 {                                                                             
                     var broadcast = b.Add(new Broadcast<int>(1));                                                                             
@@ -82,17 +83,15 @@ namespace Akka.Streams.Tests.Dsl
                     list.Add(i);                                                                             
                     return list;                                                                         
                 }, Materializer);
-
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
-                return Task.CompletedTask;
+                
+                (await t.WaitAsync(3.Seconds())).Should().BeEquivalentTo(new[] { 1, 2, 3 });
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Broadcast_must_work_with_n_way_broadcast()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var headSink = Sink.First<IEnumerable<int>>();
 
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(headSink, headSink, headSink, headSink, headSink, ValueTuple.Create,
@@ -111,10 +110,9 @@ namespace Akka.Streams.Tests.Dsl
                     })).Run(Materializer);
 
                 var task = Task.WhenAll(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                foreach (var list in task.Result)
+                var result = await task.WaitAsync(3.Seconds());
+                foreach (var list in result)
                     list.Should().BeEquivalentTo(new[] { 1, 2, 3 });
-                return Task.CompletedTask;
             }, Materializer);
         }
 

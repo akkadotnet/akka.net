@@ -22,6 +22,7 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.DistributedData.Tests
@@ -96,7 +97,7 @@ namespace Akka.DistributedData.Tests
         public async Task Bugfix_4184_Merge_ORDictionary()
         {
             await InitCluster();
-            UpdateORDictionaryNode2And1();
+            await UpdateORDictionaryNode2And1();
         }
 
         private async Task InitCluster()
@@ -131,7 +132,7 @@ namespace Akka.DistributedData.Tests
             });
         }
 
-        private void UpdateORDictionaryNode2And1()
+        private async Task UpdateORDictionaryNode2And1()
         {
             var changedProbe = CreateTestProbe(_sys2);
 
@@ -140,30 +141,33 @@ namespace Akka.DistributedData.Tests
             _replicator2.Tell(Dsl.Update(_keyH, ORDictionary<string, Flag>.Empty, _writeTwo, x => x.SetItem(Cluster.Cluster.Get(_sys2), "a", Flag.False)));
 
             // receive local update
-            changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyH)).Get(_keyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
+            var changed = await changedProbe.ExpectMsgAsync<Changed>(g => Equals(g.Key, _keyH));
+            changed.Get(_keyH).Entries.Should().BeEquivalentTo(ImmutableDictionary.CreateRange(new[]
             {
                 new KeyValuePair<string, Flag>("a", Flag.False),
-            })).ShouldBeTrue();
+            }));
 
             // push update from node 1
             _replicator1.Tell(Dsl.Update(_keyH, ORDictionary<string, Flag>.Empty, _writeTwo, x => x.SetItem(Cluster.Cluster.Get(_sys1), "a", Flag.True)));
 
             // expect replication of update on node 2
-            changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyH)).Get(_keyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
+            changed = await changedProbe.ExpectMsgAsync<Changed>(g => Equals(g.Key, _keyH));
+            changed.Get(_keyH).Entries.Should().BeEquivalentTo(ImmutableDictionary.CreateRange(new[]
             {
                 new KeyValuePair<string, Flag>("a", Flag.True)
-            })).ShouldBeTrue();
+            }));
 
             // add new value to dictionary from node 2
             _replicator2.Tell(Dsl.Update(_keyH, ORDictionary<string, Flag>.Empty, _writeTwo, x => x.SetItem(Cluster.Cluster.Get(_sys2), "b", Flag.True)));
-            changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyH)).Get(_keyH).Entries.SequenceEqual(ImmutableDictionary.CreateRange(new[]
+            changed = await changedProbe.ExpectMsgAsync<Changed>(g => Equals(g.Key, _keyH));
+            changed.Get(_keyH).Entries.Should().BeEquivalentTo(ImmutableDictionary.CreateRange(new[]
             {
                 new KeyValuePair<string, Flag>("a", Flag.True),
                 new KeyValuePair<string, Flag>("b", Flag.True)
-            })).ShouldBeTrue();
+            }));
         }
 
-        // <summary>
+        /// <summary>
         /// Reproduction spec for replicator duplicate publication.
         /// </summary>
         [Fact]
@@ -173,7 +177,7 @@ namespace Akka.DistributedData.Tests
             await ReplicatorDuplicatePublish();
         }
 
-        private Task ReplicatorDuplicatePublish()
+        private async Task ReplicatorDuplicatePublish()
         {
             var p1 = CreateTestProbe(_sys1);
             var p2 = CreateTestProbe(_sys2);
@@ -192,10 +196,10 @@ namespace Akka.DistributedData.Tests
             Sys.Log.Info("Pushed change from sys2 for I");
 
             // wait for write to replicate to all 3 nodes
-            Within(TimeSpan.FromSeconds(5), () =>
+            await WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
                 foreach (var p in probes)
-                    p.ExpectMsg<Changed>(c => c.Get(_keyI).Elements.ShouldBe(ImmutableHashSet.Create("a")));
+                    await p.ExpectMsgAsync<Changed>(c => c.Get(_keyI).Elements.ShouldBe(ImmutableHashSet.Create("a")));
             });
 
             // create duplicate write on node 1
@@ -204,8 +208,7 @@ namespace Akka.DistributedData.Tests
 
 
             // no probe should receive an update
-            p2.ExpectNoMsg(TimeSpan.FromSeconds(1));
-            return Task.CompletedTask;
+            await p2.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         /// <summary>
@@ -218,7 +221,7 @@ namespace Akka.DistributedData.Tests
             await PNCounterDictionary_Should_Merge();
         }
 
-        private Task PNCounterDictionary_Should_Merge()
+        private async Task PNCounterDictionary_Should_Merge()
         {
             var p1 = CreateTestProbe(_sys1);
             var p2 = CreateTestProbe(_sys2);
@@ -230,10 +233,10 @@ namespace Akka.DistributedData.Tests
                 (p3, _replicator3, Cluster.Cluster.Get(_sys3))
             };
 
-            AwaitAssert(() =>
+            await AwaitAssertAsync(async () =>
             {
                 _replicator1.Tell(Dsl.GetReplicaCount, p1);
-                p1.ExpectMsg(new ReplicaCount(3));
+                await p1.ExpectMsgAsync(new ReplicaCount(3));
             });
 
             // kick off writes
@@ -244,26 +247,25 @@ namespace Akka.DistributedData.Tests
                     replicator.Tell(Dsl.Update(_keyC, PNCounterDictionary<string>.Empty,
                         new WriteAll(_timeOut), x => x.Increment(cluster, "x")
                             .Increment(cluster, "y")), probe);
-                    probe.ExpectMsg(new UpdateSuccess(_keyC, null));
+                    await probe.ExpectMsgAsync(new UpdateSuccess(_keyC, null));
                 }
             }
 
             // perform read to ensure values are consistent
 
-            Within(TimeSpan.FromSeconds(5), () =>
+            await WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
                     foreach (var (probe, replicator, _) in probes)
                     {
                         replicator.Tell(Dsl.Get(_keyC, new ReadAll(_timeOut)), probe);
-                        probe.ExpectMsg<GetSuccess>().Get(_keyC).Entries["x"].ShouldBe(new BigInteger(30.0d));
+                        (await probe.ExpectMsgAsync<GetSuccess>()).Get(_keyC).Entries["x"].ShouldBe(new BigInteger(30.0d));
                     }
                 });
             });
 
             Sys.Log.Info("Done");
-            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -279,9 +281,9 @@ namespace Akka.DistributedData.Tests
             // subscribe to updates for KeyJ, then 
             _replicator2.Tell(Dsl.Subscribe(_keyK, changedProbe.Ref));
 
-            Within(TimeSpan.FromSeconds(2), () =>
+            await WithinAsync(TimeSpan.FromSeconds(2), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
                     // update it with a replication factor of two
                     _replicator2.Tell(Dsl.Update(
@@ -291,16 +293,16 @@ namespace Akka.DistributedData.Tests
                         x => x.SetItem(Cluster.Cluster.Get(_sys2), "a", "A")));
 
                     // receive local update
-                    var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyK)).Get(_keyK).Entries;
+                    var entries = (await changedProbe.ExpectMsgAsync<Changed>(g => Equals(g.Key, _keyK))).Get(_keyK).Entries;
                     entries.Should().BeEquivalentTo(new Dictionary<string, string> {
                         {"a", "A" }
                     });
                 });
             });
 
-            Within(TimeSpan.FromSeconds(2), () =>
+            await WithinAsync(TimeSpan.FromSeconds(2), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
                     // push update from node 1
                     // add item
@@ -310,7 +312,7 @@ namespace Akka.DistributedData.Tests
                         WriteLocal.Instance,
                         x => x.SetItem(Cluster.Cluster.Get(_sys1), "a", "A1")));
 
-                    var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyK)).Get(_keyK).Entries;
+                    var entries = (await changedProbe.ExpectMsgAsync<Changed>(g => Equals(g.Key, _keyK))).Get(_keyK).Entries;
                     // expect replication of update on node 2
                     entries.Should().BeEquivalentTo(new Dictionary<string, string> {
                         {"a", "A1" }
@@ -318,9 +320,9 @@ namespace Akka.DistributedData.Tests
                 });
             });
 
-            Within(TimeSpan.FromSeconds(2), () =>
+            await WithinAsync(TimeSpan.FromSeconds(2), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
                     // remove item
                     _replicator1.Tell(Dsl.Update(
@@ -329,15 +331,15 @@ namespace Akka.DistributedData.Tests
                         WriteLocal.Instance,
                         x => x.Remove(Cluster.Cluster.Get(_sys1), "a")));
 
-                    var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyK)).Get(_keyK).Entries;
+                    var entries = (await changedProbe.ExpectMsgAsync<Changed>(g => Equals(g.Key, _keyK))).Get(_keyK).Entries;
                     // expect replication of remove on node 2
                     entries.Should().BeEquivalentTo(new Dictionary<string, string> ());
                 });
             });
 
-            Within(TimeSpan.FromSeconds(2), () =>
+            await WithinAsync(TimeSpan.FromSeconds(2), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
                     // send multiple updates
                     _replicator1.Tell(Dsl.Update(
@@ -345,10 +347,10 @@ namespace Akka.DistributedData.Tests
                         LWWDictionary<string, string>.Empty,
                         WriteLocal.Instance,
                         x => x
-                        .SetItem(Cluster.Cluster.Get(_sys1), "a", "A")
-                        .SetItem(Cluster.Cluster.Get(_sys1), "b", "B")));
+                            .SetItem(Cluster.Cluster.Get(_sys1), "a", "A")
+                            .SetItem(Cluster.Cluster.Get(_sys1), "b", "B")));
 
-                    var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyK)).Get(_keyK).Entries;
+                    var entries = (await changedProbe.ExpectMsgAsync<Changed>(g => Equals(g.Key, _keyK))).Get(_keyK).Entries;
                     // expect replication of remove on node 2
                     entries.Should().BeEquivalentTo(new Dictionary<string, string> {
                         { "a", "A" },
@@ -411,12 +413,13 @@ namespace Akka.DistributedData.Tests
                         x => x.AddItem(Cluster.Cluster.Get(_sys1), "a", "A1")));
 
                     // expect replication of update on node 2
+                    var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
                     VerifyMultiValueDictionaryEntries(
-                        ImmutableDictionary.CreateRange(
-                        new[] {
-                    new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create(new []{"A1", "A" })),
-                        }),
-                        changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries);
+                        new Dictionary<string, IImmutableSet<string>>
+                            {
+                                ["a"] = ImmutableHashSet.Create("A1", "A")
+                            }.ToImmutableDictionary(),
+                        entries);
                 });
             });
 
@@ -480,19 +483,15 @@ namespace Akka.DistributedData.Tests
             return Task.CompletedTask;
         }
 
-        private void VerifyMultiValueDictionaryEntries(
+        private static void VerifyMultiValueDictionaryEntries(
             IImmutableDictionary<string, IImmutableSet<string>> expected,
             IImmutableDictionary<string, IImmutableSet<string>> entries)
         {
-            expected.Count.Should().Equals(entries.Count);
+            expected.Count.Should().Be(entries.Count);
             foreach (var kvp in entries)
             {
-                expected.ContainsKey(kvp.Key).Should().BeTrue();
-                expected.Values.Count().Should().Equals(expected[kvp.Key].Count());
-                foreach (var value in kvp.Value)
-                {
-                    expected[kvp.Key].Contains(value).Should().BeTrue();
-                }
+                expected.TryGetValue(kvp.Key, out var expectedValues).Should().BeTrue();
+                expectedValues.Should().BeEquivalentTo(kvp.Value);
             }
         }
 

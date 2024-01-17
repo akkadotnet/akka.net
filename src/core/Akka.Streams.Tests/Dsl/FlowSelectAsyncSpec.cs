@@ -28,7 +28,6 @@ using FluentAssertions.Extensions;
 using static FluentAssertions.FluentActions;
 using Directive = Akka.Streams.Supervision.Directive;
 
-// ReSharper disable InvokeAsExtensionMethod
 #pragma warning disable 162
 
 namespace Akka.Streams.Tests.Dsl
@@ -200,7 +199,7 @@ namespace Akka.Streams.Tests.Dsl
                         return Task.FromResult(n);
                     }).RunWith(Sink.Ignore<int>(), Materializer);
 
-                await Awaiting(async () => await done).Should()
+                await Awaiting(() => done.WaitAsync(RemainingOrDefault)).Should()
                     .ThrowAsync<Exception>()
                     .WithMessage("err1")
                     .ShouldCompleteWithin(RemainingOrDefault);
@@ -287,7 +286,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Flow_with_SelectAsync_must_resume_after_multiple_failures()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var futures = new[]
                 {
                     Task.Run(() => { throw new TestException("failure1"); return "";}),
@@ -303,9 +302,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(Sink.First<string>(), Materializer);
 
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().Be("happy");
-                return Task.CompletedTask;
+                (await t.WaitAsync(3.Seconds())).Should().Be("happy");
             }, Materializer);
         }
 

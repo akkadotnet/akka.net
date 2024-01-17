@@ -8,8 +8,10 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
@@ -77,146 +79,208 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_allocate_to_region_with_least_number_of_shards_1_1_0()
+        public async Task LeastShardAllocationStrategy_must_allocate_to_region_with_least_number_of_shards_1_1_0()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 3, maxSimultaneousRebalance: 10);
             var allocations = CreateAllocations(aCount: 1, bCount: 1);
-            allocationStrategy.AllocateShard(regionA, "003", allocations).Result.Should().Be(regionC);
+            var result = await allocationStrategy.AllocateShard(regionA, "003", allocations)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().Be(regionC);
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_2_0_0_rebalanceThreshold_1()
+        public async Task LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_2_0_0_rebalanceThreshold_1()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 1, maxSimultaneousRebalance: 10);
             var allocations = CreateAllocations(aCount: 2);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEquivalentTo("001");
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001")).Result.Should().BeEmpty();
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("001");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_not_rebalance_when_diff_equal_to_threshold_1_1_0_rebalanceThreshold_1()
+        public async Task LeastShardAllocationStrategy_must_not_rebalance_when_diff_equal_to_threshold_1_1_0_rebalanceThreshold_1()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 1, maxSimultaneousRebalance: 10);
             var allocations = CreateAllocations(aCount: 1, bCount: 1);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEmpty();
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_1_2_0_rebalanceThreshold_1()
+        public async Task LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_1_2_0_rebalanceThreshold_1()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 1, maxSimultaneousRebalance: 10);
             var allocations = CreateAllocations(aCount: 1, bCount: 2);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEquivalentTo("002");
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("002")).Result.Should().BeEmpty();
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("002");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("002"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_3_0_0_rebalanceThreshold_1()
+        public async Task LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_3_0_0_rebalanceThreshold_1()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 1, maxSimultaneousRebalance: 10);
             var allocations = CreateAllocations(aCount: 3);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEquivalentTo("001");
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001")).Result.Should().BeEquivalentTo("002");
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("001");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("002");
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_4_4_0_rebalanceThreshold_1()
+        public async Task LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_4_4_0_rebalanceThreshold_1()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 1, maxSimultaneousRebalance: 10);
             var allocations = CreateAllocations(aCount: 4, bCount: 4);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEquivalentTo("001");
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001")).Result.Should().BeEquivalentTo("005");
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("001");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("005");
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_4_4_2_rebalanceThreshold_1()
+        public async Task LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_4_4_2_rebalanceThreshold_1()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 1, maxSimultaneousRebalance: 10);
             var allocations = CreateAllocations(aCount: 4, bCount: 4, cCount: 2);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEquivalentTo("001");
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("001");
             // not optimal, 005 stopped and started again, but ok
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001")).Result.Should().BeEquivalentTo("005");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("005");
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_rebalance_from_region_with_most_number_of_shards_1_3_0_rebalanceThreshold_2()
+        public async Task LeastShardAllocationStrategy_must_rebalance_rebalance_from_region_with_most_number_of_shards_1_3_0_rebalanceThreshold_2()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 2, maxSimultaneousRebalance: 10);
             var allocations = CreateAllocations(aCount: 1, bCount: 2);
 
             // so far regionB has 2 shards and regionC has 0 shards, but the diff is <= rebalanceThreshold
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEmpty();
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
 
             var allocations2 = CreateAllocations(aCount: 1, bCount: 3);
-            allocationStrategy.Rebalance(allocations2, ImmutableHashSet<string>.Empty).Result.Should().BeEquivalentTo("002");
-            allocationStrategy.Rebalance(allocations2, ImmutableHashSet<string>.Empty.Add("002")).Result.Should().BeEmpty();
+            result = await allocationStrategy.Rebalance(allocations2, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("002");
+            result = await allocationStrategy.Rebalance(allocations2, ImmutableHashSet<string>.Empty.Add("002"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_not_rebalance_when_diff_equal_to_threshold_2_2_0_rebalanceThreshold_2()
+        public async Task LeastShardAllocationStrategy_must_not_rebalance_when_diff_equal_to_threshold_2_2_0_rebalanceThreshold_2()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 2, maxSimultaneousRebalance: 10);
             var allocations = CreateAllocations(aCount: 2, bCount: 2);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEmpty();
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_3_3_0_rebalanceThreshold_2()
+        public async Task LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_3_3_0_rebalanceThreshold_2()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 2, maxSimultaneousRebalance: 10);
             var allocations = CreateAllocations(aCount: 3, bCount: 3);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEquivalentTo("001");
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001")).Result.Should().BeEquivalentTo("004");
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("004")).Result.Should().BeEmpty();
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("001");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("004");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("004"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_4_4_0_rebalanceThreshold_2()
+        public async Task LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_4_4_0_rebalanceThreshold_2()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 2, maxSimultaneousRebalance: 10);
             var allocations = CreateAllocations(aCount: 4, bCount: 4);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEquivalentTo("001", "002");
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("002")).Result.Should().BeEquivalentTo("005", "006");
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("002").Add("005").Add("006")).Result.Should().BeEmpty();
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("001", "002");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("002"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("005", "006");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("002").Add("005").Add("006"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_5_5_0_rebalanceThreshold_2()
+        public async Task LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_5_5_0_rebalanceThreshold_2()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 2, maxSimultaneousRebalance: 10);
             var allocations = CreateAllocations(aCount: 5, bCount: 5);
             // optimal would => [4, 4, 2] or even => [3, 4, 3]
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEquivalentTo("001", "002");
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("001", "002");
             // if 001 and 002 are not started quickly enough this is stopping more than optimal
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("002")).Result.Should().BeEquivalentTo("006", "007");
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("002").Add("006").Add("007")).Result.Should().BeEquivalentTo("003");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("002"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("006", "007");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("002").Add("006").Add("007"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("003");
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_50_50_0_rebalanceThreshold_2()
+        public async Task LeastShardAllocationStrategy_must_rebalance_from_region_with_most_number_of_shards_50_50_0_rebalanceThreshold_2()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 2, maxSimultaneousRebalance: 100);
             var allocations = CreateAllocations(aCount: 50, bCount: 50);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEquivalentTo("001", "002");
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("002")).Result.Should().BeEquivalentTo("051", "052");
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("002").Add("051").Add("052")).Result.Should().BeEquivalentTo("003", "004");
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("001", "002");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("002"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("051", "052");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("001").Add("002").Add("051").Add("052"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("003", "004");
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_limit_number_of_simultaneous_rebalance_1_10_0()
+        public async Task LeastShardAllocationStrategy_must_limit_number_of_simultaneous_rebalance_1_10_0()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 3, maxSimultaneousRebalance: 2);
             var allocations = CreateAllocations(aCount: 1, bCount: 10);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEquivalentTo("002", "003");
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("002").Add("003")).Result.Should().BeEmpty();
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("002", "003");
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("002").Add("003"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_not_pick_shards_that_are_in_progress_10_0_0()
+        public async Task LeastShardAllocationStrategy_must_not_pick_shards_that_are_in_progress_10_0_0()
         {
             var allocationStrategy = AllocationStrategyWithFakeCluster(rebalanceThreshold: 3, maxSimultaneousRebalance: 4);
             var allocations = CreateAllocations(aCount: 10);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("002").Add("003")).Result.Should().BeEquivalentTo("001", "004");
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty.Add("002").Add("003"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEquivalentTo("001", "004");
         }
 
         [Fact]
@@ -260,7 +324,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_not_rebalance_when_rolling_update_in_progress()
+        public async Task LeastShardAllocationStrategy_must_not_rebalance_when_rolling_update_in_progress()
         {
             var member1 = NewUpMember("127.0.0.1", version: AppVersion.Create("1.0.0"));
             var member2 = NewUpMember("127.0.0.1", version: AppVersion.Create("1.0.1"));
@@ -270,14 +334,20 @@ namespace Akka.Cluster.Sharding.Tests
                 new TestLeastShardAllocationStrategy(rebalanceThreshold: 2, maxSimultaneousRebalance: 100, () => new CurrentClusterState().Copy(members: ImmutableSortedSet.Create(member1, member2)), () => member1);
 
             var allocations = CreateAllocations(aCount: 5, bCount: 5);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEmpty();
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002")).Result.Should().BeEmpty();
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002", "051", "052")).Result.Should().BeEmpty();
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002", "051", "052"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
         }
 
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_not_rebalance_when_regions_are_unreachable()
+        public async Task LeastShardAllocationStrategy_must_not_rebalance_when_regions_are_unreachable()
         {
             var member1 = NewUpMember("127.0.0.1");
             var member2 = NewUpMember("127.0.0.2");
@@ -287,13 +357,19 @@ namespace Akka.Cluster.Sharding.Tests
                 new TestLeastShardAllocationStrategy(rebalanceThreshold: 2, maxSimultaneousRebalance: 100, () => new CurrentClusterState().Copy(members: ImmutableSortedSet.Create(member1, member2), unreachable: ImmutableHashSet.Create(member2)), () => member2);
 
             var allocations = CreateAllocations(aCount: 5, bCount: 5);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEmpty();
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002")).Result.Should().BeEmpty();
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002", "051", "052")).Result.Should().BeEmpty();
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002", "051", "052"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_not_rebalance_when_members_are_joining_dc()
+        public async Task LeastShardAllocationStrategy_must_not_rebalance_when_members_are_joining_dc()
         {
             var member1 = NewUpMember("127.0.0.1");
             var member2 =
@@ -307,9 +383,15 @@ namespace Akka.Cluster.Sharding.Tests
                 new TestLeastShardAllocationStrategy(rebalanceThreshold: 2, maxSimultaneousRebalance: 100, () => new CurrentClusterState().Copy(members: ImmutableSortedSet.Create(member1, member2), unreachable: ImmutableHashSet.Create(member2)), () => member2);
 
             var allocations = CreateAllocations(aCount: 5, bCount: 5);
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEmpty();
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002")).Result.Should().BeEmpty();
-            allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002", "051", "052")).Result.Should().BeEmpty();
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty)
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
+            result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002", "051", "052"))
+                .ShouldCompleteWithin(RemainingOrDefault);
+            result.Should().BeEmpty();
         }
     }
 }

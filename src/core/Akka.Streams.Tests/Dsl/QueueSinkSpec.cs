@@ -17,8 +17,10 @@ using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -32,7 +34,7 @@ namespace Akka.Streams.Tests.Dsl
             return new TestException("boom");
         }
 
-        public QueueSinkSpec(ITestOutputHelper output) : base(output)
+        public QueueSinkSpec(ITestOutputHelper output) : base("akka.loglevel = DEBUG", output)
         {
             _materializer = Sys.Materializer();
         }
@@ -70,7 +72,9 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = probe.ExpectSubscription();
                 var future = queue.PullAsync();
                 var future2 = queue.PullAsync();
-                future2.Invoking(t => t.Wait(RemainingOrDefault)).Should().Throw<IllegalStateException>();
+
+                await Awaiting(() => future2.WaitAsync(RemainingOrDefault))
+                    .Should().ThrowAsync<IllegalStateException>();
 
                 sub.SendNext(1);
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -131,8 +135,8 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = await probe.ExpectSubscriptionAsync();
 
                 sub.SendError(TestException());
-                queue.Invoking(q => q.PullAsync().Wait(RemainingOrDefault))
-                    .Should().Throw<TestException>();
+                await Awaiting(() => queue.PullAsync().WaitAsync(RemainingOrDefault))
+                    .Should().ThrowAsync<TestException>();
             }, _materializer);
         }
 
@@ -194,7 +198,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(_materializer);
                 var probe = tuple.Item1;
                 var queue = tuple.Item2;
-                probe.Wait(TimeSpan.FromMilliseconds(300)).Should().BeTrue();
+                await probe.WaitAsync(300.Milliseconds());
 
                 for (var i = 1; i <= streamElementCount; i++)
                 {
@@ -234,8 +238,8 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.SendComplete();
                 var future = queue.PullAsync();
-                future.Wait(_pause).Should().BeTrue();
-                future.Result.Should().Be(Option<int>.None);
+                (await future.WaitAsync(_pause))
+                    .Should().Be(Option<int>.None);
             }, _materializer);
         }
 

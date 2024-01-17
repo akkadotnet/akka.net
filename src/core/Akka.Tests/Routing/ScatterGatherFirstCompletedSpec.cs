@@ -83,7 +83,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Scatter_gather_group_must_deliver_a_broadcast_message_using_tell()
+        public async Task Scatter_gather_group_must_deliver_a_broadcast_message_using_tell()
         {
             var doneLatch = new TestLatch(2);
 
@@ -98,7 +98,7 @@ namespace Akka.Tests.Routing
             routedActor.Tell(new Broadcast(1));
             routedActor.Tell(new Broadcast("end"));
 
-            doneLatch.Ready(TestKitSettings.DefaultTimeout);
+            await doneLatch.ReadyAsync(TestKitSettings.DefaultTimeout);
 
             counter1.Current.Should().Be(1);
             counter2.Current.Should().Be(1);
@@ -116,7 +116,7 @@ namespace Akka.Tests.Routing
             var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());
 
             routedActor.Tell(new Broadcast(new Stop(1)));
-            shutdownLatch.Ready(TestKitSettings.DefaultTimeout);
+            await shutdownLatch.ReadyAsync(TestKitSettings.DefaultTimeout);
             var res = await routedActor.Ask<int>(0, TimeSpan.FromSeconds(10));
             res.Should().Be(14);
         }

@@ -22,6 +22,7 @@ using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -252,7 +253,7 @@ namespace Akka.Streams.Tests.IO
         [InlineData(512, 4)]
         [InlineData(2048, 2)]
         [InlineData(2048, 4)]
-        public void FileSource_should_count_lines_in_a_real_file(int chunkSize, int readAhead)
+        public async Task FileSource_should_count_lines_in_a_real_file(int chunkSize, int readAhead)
         {
             var s = FileIO.FromFile(ManyLines(), chunkSize)
                 .WithAttributes(Attributes.CreateInputBuffer(readAhead, readAhead));
@@ -260,8 +261,7 @@ namespace Akka.Streams.Tests.IO
                 Sink.Aggregate<ByteString, int>(0, (acc, l) => acc + l.ToString(Encoding.UTF8).Count(c => c == '\n')),
                 _materializer);
 
-            f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            var lineCount = f.Result;
+            var lineCount = await f.WaitAsync(5.Seconds());
             lineCount.Should().Be(LinesCount);
         }
 

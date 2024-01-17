@@ -15,6 +15,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -41,11 +42,10 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task PrefixAndTail_must_work_on_empty_input()
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var futureSink = NewHeadSink;
                 var fut = Source.Empty<int>().PrefixAndTail(10).RunWith(futureSink, Materializer);
-                fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                var tailFlow = fut.Result.Item2;
+                var (_, tailFlow) = await fut.WaitAsync(3.Seconds());
                 var tailSubscriber = this.CreateManualSubscriberProbe<int>();
                 tailFlow.To(Sink.FromSubscriber(tailSubscriber)).Run(Materializer);
                 await tailSubscriber.ExpectSubscriptionAndCompleteAsync();
@@ -58,9 +58,8 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() => {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(new[] { 1, 2, 3 }).PrefixAndTail(10).RunWith(futureSink, Materializer);
-                fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                fut.Result.Item1.Should().BeEquivalentTo(new[] { 1, 2, 3 });
-                var tailFlow = fut.Result.Item2;
+                var (result, tailFlow) = await fut.WaitAsync(3.Seconds());
+                result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
                 var tailSubscriber = this.CreateManualSubscriberProbe<int>();
                 tailFlow.To(Sink.FromSubscriber(tailSubscriber)).Run(Materializer);
                 await tailSubscriber.ExpectSubscriptionAndCompleteAsync();
@@ -70,55 +69,45 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task PrefixAndTail_must_work_on_longer_inputs()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 10)).PrefixAndTail(5).RunWith(futureSink, Materializer);
-                fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                var takes = fut.Result.Item1;
-                var tail = fut.Result.Item2;
+                var (takes, tail) = await fut.WaitAsync(3.Seconds());
                 takes.Should().Equal(Enumerable.Range(1, 5));
 
                 var futureSink2 = Sink.First<IEnumerable<int>>();
                 var fut2 = tail.Grouped(6).RunWith(futureSink2, Materializer);
-                fut2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                fut2.Result.Should().BeEquivalentTo(Enumerable.Range(6, 5));
-                return Task.CompletedTask;
+                (await fut2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(6, 5));
             }, Materializer);
         }
 
         [Fact]
         public async Task PrefixAndTail_must_handle_zero_take_count()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 10)).PrefixAndTail(0).RunWith(futureSink, Materializer);
-                fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                fut.Result.Item1.Should().BeEmpty();
-                var tail = fut.Result.Item2;
+                var (result, tail) = await fut.WaitAsync(3.Seconds());
+                result.Should().BeEmpty();
 
                 var futureSink2 = Sink.First<IEnumerable<int>>();
                 var fut2 = tail.Grouped(11).RunWith(futureSink2, Materializer);
-                fut2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                fut2.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                return Task.CompletedTask;
+                (await fut2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
         [Fact]
         public async Task PrefixAndTail_must_handle_negative_take_count()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 10)).PrefixAndTail(-1).RunWith(futureSink, Materializer);
-                fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                fut.Result.Item1.Should().BeEmpty();
-                var tail = fut.Result.Item2;
+                var (result, tail) = await fut.WaitAsync(3.Seconds());
+                result.Should().BeEmpty();
 
                 var futureSink2 = Sink.First<IEnumerable<int>>();
                 var fut2 = tail.Grouped(11).RunWith(futureSink2, Materializer);
-                fut2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                fut2.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                return Task.CompletedTask;
+                (await fut2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -128,9 +117,8 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() => {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 10)).PrefixAndTail(10).RunWith(futureSink, Materializer);
-                fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                fut.Result.Item1.Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                var tail = fut.Result.Item2;
+                var (result, tail) = await fut.WaitAsync(3.Seconds());
+                result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 var subscriber = this.CreateManualSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(subscriber)).Run(Materializer);
                 await subscriber.ExpectSubscriptionAndCompleteAsync();
@@ -143,9 +131,8 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() => {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 2)).PrefixAndTail(1).RunWith(futureSink, Materializer);
-                fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                fut.Result.Item1.Should().BeEquivalentTo(Enumerable.Range(1, 1));
-                var tail = fut.Result.Item2;
+                var (result, tail) = await fut.WaitAsync(3.Seconds());
+                result.Should().BeEquivalentTo(Enumerable.Range(1, 1));
 
                 var subscriber1 = this.CreateSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(subscriber1)).Run(Materializer);
@@ -163,7 +150,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task PrefixAndTail_must_signal_error_if_substream_has_been_not_subscribed_in_time()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var ms = 300;
 
                 var settings = ActorMaterializerSettings.Create(Sys)
@@ -175,17 +162,15 @@ namespace Akka.Streams.Tests.Dsl
 
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 2)).PrefixAndTail(1).RunWith(futureSink, tightTimeoutMaterializer);
-                fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                fut.Result.Item1.Should().BeEquivalentTo(Enumerable.Range(1, 1));
-                var tail = fut.Result.Item2;
+                var (result, tail) = await fut.WaitAsync(3.Seconds());
+                result.Should().BeEquivalentTo(Enumerable.Range(1, 1));
 
                 var subscriber = this.CreateSubscriberProbe<int>();
-                Thread.Sleep(1000);
+                await Task.Delay(1000);
                 tail.To(Sink.FromSubscriber(subscriber)).Run(tightTimeoutMaterializer);
                 subscriber.ExpectSubscriptionAndError()
                     .Message.Should()
                     .Be("Substream Source has not been materialized in 00:00:00.3000000");
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -202,12 +187,12 @@ namespace Akka.Streams.Tests.Dsl
 
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 2)).PrefixAndTail(1).RunWith(futureSink, tightTimeoutMaterializer);
-                fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                fut.Result.Item1.Should().BeEquivalentTo(Enumerable.Range(1, 1));
+                var (result, tail) = await fut.WaitAsync(3.Seconds());
+                result.Should().BeEquivalentTo(Enumerable.Range(1, 1));
 
                 var subscriber = this.CreateSubscriberProbe<int>();
-                Thread.Sleep(200);
-                fut.Result.Item2.To(Sink.FromSubscriber(subscriber)).Run(tightTimeoutMaterializer);
+                await Task.Delay(1000);
+                tail.To(Sink.FromSubscriber(subscriber)).Run(tightTimeoutMaterializer);
                 subscriber.ExpectSubscription().Request(2);
                 await subscriber.ExpectNext(2).ExpectCompleteAsync();
             }, Materializer);
@@ -216,12 +201,11 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task PrefixAndTail_must_shut_down_main_stage_if_substream_is_empty_even_when_not_subscribed()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var futureSink = NewHeadSink;
                 var fut = Source.Single(1).PrefixAndTail(1).RunWith(futureSink, Materializer);
-                fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                fut.Result.Item1.Should().ContainSingle(i => i == 1);
-                return Task.CompletedTask;
+                var (result, _) = await fut.WaitAsync(3.Seconds());
+                result.Should().ContainSingle(i => i == 1);
             }, Materializer);
         }
 
@@ -374,8 +358,7 @@ namespace Akka.Streams.Tests.Dsl
             var s = await pub.ExpectSubscriptionAsync();
             s.SendNext(0);
 
-            f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            var tail = f.Result.Item2;
+            var (_, tail) = await f.WaitAsync(3.Seconds());
             var tailPub = tail.RunWith(Sink.AsPublisher<int>(false), Materializer);
             s.SendComplete();
 

@@ -13,6 +13,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -73,7 +74,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Flow_using_Join_must_allow_for_merge_cycle()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var source =                                                                             
                 Source.Single("lonely traveler").MapMaterializedValue(_ => Task.FromResult(""));
 
@@ -89,16 +90,14 @@ namespace Akka.Streams.Tests.Dsl
                 }));
 
                 var t = flow1.Join(Flow.Create<string>()).Run(Materializer);
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().Be("lonely traveler");
-                return Task.CompletedTask;
+                (await t.WaitAsync(3.Seconds())).Should().Be("lonely traveler");
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Flow_using_Join_must_allow_for_merge_preferred_cycle()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var source =                                                                             
                 Source.Single("lonely traveler").MapMaterializedValue(_ => Task.FromResult(""));
 
@@ -114,9 +113,7 @@ namespace Akka.Streams.Tests.Dsl
                 }));
 
                 var t = flow1.Join(Flow.Create<string>()).Run(Materializer);
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().Be("lonely traveler");
-                return Task.CompletedTask;
+                (await t.WaitAsync(3.Seconds())).Should().Be("lonely traveler");
             }, Materializer);
         }
 
@@ -158,7 +155,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Flow_using_Join_must_allow_for_concat_cycle()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var flow = 
                 Flow.FromGraph(GraphDsl.Create(TestSource.SourceProbe<string>(this), 
                 Sink.First<string>(), Keep.Both, (b, source, sink) =>                                                                         
@@ -175,17 +172,15 @@ namespace Akka.Streams.Tests.Dsl
                 var probe = tuple.Item1;
                 var t = tuple.Item2;
                 probe.SendNext("lonely traveler");
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().Be("lonely traveler");
+                (await t.WaitAsync(3.Seconds())).Should().Be("lonely traveler");
                 probe.SendComplete();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Flow_using_Join_must_allow_for_interleave_cycle()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var source = Source.Single("lonely traveler").MapMaterializedValue(_ => Task.FromResult(""));
                 var flow = Flow.FromGraph(GraphDsl.Create(Sink.First<string>(), (b, sink) =>
                 {
@@ -199,9 +194,7 @@ namespace Akka.Streams.Tests.Dsl
                 }));
 
                 var t = flow.Join(Flow.Create<string>()).Run(Materializer);
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().Be("lonely traveler");
-                return Task.CompletedTask;
+                (await t.WaitAsync(3.Seconds())).Should().Be("lonely traveler");
             }, Materializer);
         }
     }

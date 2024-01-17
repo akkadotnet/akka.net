@@ -75,6 +75,15 @@ namespace Akka.Tests.Routing
             };
         }
 
+        public Func<Func<IActorRef, Task<int>>, Task<bool>> OneOfShouldEqualAsync(int what, IEnumerable<IActorRef> actors)
+        {
+            return async func =>
+            {
+                var results = await Task.WhenAll(actors.Select(func));
+                return results.Any(x => x == what);
+            };
+        }
+
         public Func<Func<IActorRef, int>, bool> AllShouldEqual(int what, IEnumerable<IActorRef> actors)
         {
             return func =>
@@ -84,8 +93,17 @@ namespace Akka.Tests.Routing
             };
         }
 
+        public Func<Func<IActorRef, Task<int>>, Task<bool>> AllShouldEqualAsync(int what, IEnumerable<IActorRef> actors)
+        {
+            return async func =>
+            {
+                var results = await Task.WhenAll(actors.Select(func));
+                return results.All(x => x == what);
+            };
+        }
+
         [Fact]
-        public void Tail_chopping_group_router_must_deliver_a_broadcast_message_using_tell()
+        public async Task Tail_chopping_group_router_must_deliver_a_broadcast_message_using_tell()
         {
             var doneLatch = new TestLatch(2);
 
@@ -101,7 +119,7 @@ namespace Akka.Tests.Routing
             routedActor.Tell(new Broadcast(1));
             routedActor.Tell(new Broadcast("end"));
 
-            doneLatch.Ready(TestKitSettings.DefaultTimeout);
+            await doneLatch.ReadyAsync(TestKitSettings.DefaultTimeout);
 
             counter1.Current.Should().Be(1);
             counter2.Current.Should().Be(1);
@@ -121,7 +139,7 @@ namespace Akka.Tests.Routing
             await probe.ExpectMsgAsync("ack");
 
             var actorList = new List<IActorRef> { actor1, actor2 };
-            OneOfShouldEqual(1, actorList)(x => (int)x.Ask("times").Result).Should().BeTrue();
+            (await OneOfShouldEqualAsync(1, actorList)(async x => (int)await x.Ask("times"))).Should().BeTrue();
 
             routedActor.Tell(new Broadcast("stop"));
         }
@@ -142,7 +160,7 @@ namespace Akka.Tests.Routing
             failure.Cause.Should().BeOfType<AskTimeoutException>();
 
             var actorList = new List<IActorRef> { actor1, actor2 };
-            AllShouldEqual(1, actorList)(x => (int) x.Ask("times").Result).Should().BeTrue(); ;
+            (await AllShouldEqualAsync(1, actorList)(async x => (int)await x.Ask("times"))).Should().BeTrue(); ;
 
             routedActor.Tell(new Broadcast("stop"));
         }

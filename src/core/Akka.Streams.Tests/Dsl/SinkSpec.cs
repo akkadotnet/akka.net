@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -185,12 +186,12 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Sink_must_support_contramap()
+        public async Task A_Sink_must_support_contramap()
         {
-            Source.From(Enumerable.Range(0, 9))
+            (await Source.From(Enumerable.Range(0, 9))
                 .ToMaterialized(Sink.Seq<int>().ContraMap<int>(i => i + 1), Keep.Right)
-                .Run(Materializer)
-                .Result.Should().BeEquivalentTo(Enumerable.Range(1, 9));
+                .Run(Materializer))
+                .Should().BeEquivalentTo(Enumerable.Range(1, 9));
         }
 
         [Fact]

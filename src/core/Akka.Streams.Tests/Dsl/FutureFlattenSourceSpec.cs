@@ -17,6 +17,7 @@ using Akka.TestKit.Extensions;
 using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
 using FluentAssertions.Extensions;
+using Nito.AsyncEx;
 using Xunit;
 using Xunit.Abstractions;
 using static FluentAssertions.FluentActions;
@@ -44,13 +45,9 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(Sink.Seq<int>(), Keep.Both)
                     .Run(_materializer);
 
-                // wait until the underlying task is completed
-                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
-                await sinkMatVal.ShouldCompleteWithin(3.Seconds());
-
                 // should complete as soon as inner source has been materialized
-                sourceMatVal.Result.Should().Be("foo");
-                sinkMatVal.Result.Should().BeEquivalentTo(ImmutableList.CreateRange(new List<int>() { 1, 2, 3 }));
+                (await sourceMatVal.WaitAsync(3.Seconds())).Should().Be("foo");
+                (await sinkMatVal.WaitAsync(3.Seconds())).Should().BeEquivalentTo(ImmutableList.CreateRange(new List<int>() { 1, 2, 3 }));
             }, _materializer);
         }
 
@@ -89,13 +86,9 @@ namespace Akka.Streams.Tests.Dsl
 
                 sourcePromise.SetResult(Underlying);
 
-                // wait until the underlying task is completed
-                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
-                await sinkMatVal.ShouldCompleteWithin(3.Seconds());
-                
                 // should complete as soon as inner source has been materialized
-                sourceMatVal.Result.Should().Be("foo");
-                sinkMatVal.Result.Should().BeEquivalentTo(ImmutableList.CreateRange(new List<int>() { 1, 2, 3 }));
+                (await sourceMatVal.WaitAsync(3.Seconds())).Should().Be("foo");
+                (await sinkMatVal.WaitAsync(3.Seconds())).Should().BeEquivalentTo(ImmutableList.CreateRange(new List<int>() { 1, 2, 3 }));
             }, _materializer);
         }
 
@@ -167,7 +160,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(_materializer);
 
                 // we don't know that materialization completed yet
-                materializationLatch.Ready(RemainingOrDefault);                
+                await materializationLatch.ReadyAsync(RemainingOrDefault);                
                 sourcePromise.SetException(failure);
                 
                 // wait until the underlying tasks are completed
@@ -213,9 +206,8 @@ namespace Akka.Streams.Tests.Dsl
                 await subscriber.EnsureSubscriptionAsync();
                 sourcePromise.SetResult(Source.FromPublisher(publisher).MapMaterializedValue(_ => "woho"));
 
-                await matVal.ShouldCompleteWithin(3.Seconds());
                 // materialized value completes but still no demand
-                matVal.Result.Should().Be("woho");
+                (await matVal.WaitAsync(3.Seconds())).Should().Be("woho");
 
                 // then demand and let an element through to see it works
                 await subscriber.AsyncBuilder().Request(1).ExecuteAsync();
@@ -243,9 +235,8 @@ namespace Akka.Streams.Tests.Dsl
                 await subscriber.EnsureSubscriptionAsync();
                 sourcePromise.SetResult(Source.FromPublisher(publisher).MapMaterializedValue(_ => "woho"));
 
-                await matVal.ShouldCompleteWithin(3.Seconds());
                 // materialized value completes but still no demand
-                matVal.Result.Should().Be("woho");
+                (await matVal.WaitAsync(3.Seconds())).Should().Be("woho");
 
                 // then demand and let an element through to see it works
                 await subscriber.AsyncBuilder()

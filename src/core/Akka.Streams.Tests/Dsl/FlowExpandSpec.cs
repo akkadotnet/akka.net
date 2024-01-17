@@ -9,11 +9,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -108,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Expand_must_work_on_a_variable_rate_chain()
+        public async Task Expand_must_work_on_a_variable_rate_chain()
         {
             var future = Source.From(Enumerable.Range(1, 100))
                 .Select(x =>
@@ -124,8 +126,7 @@ namespace Akka.Streams.Tests.Dsl
                     return agg;
                 }, Materializer);
 
-            future.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
+            (await future.WaitAsync(10.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 100));
         }
 
         [Fact]

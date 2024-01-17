@@ -7,12 +7,15 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -27,33 +30,33 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Sink_ToSeq_must_return_a_SeqT_from_a_Source()
+        public async Task Sink_ToSeq_must_return_a_SeqT_from_a_Source()
         {
             var input = Enumerable.Range(1, 6).ToList();
             var future = Source.From(input).RunWith(Sink.Seq<int>(), Materializer);
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(input);
+            (await future.WaitAsync(RemainingOrDefault))
+                .Should().BeEquivalentTo(input);
         }
 
         [Fact]
-        public void Sink_ToSeq_must_return_an_empty_SeqT_from_an_empty_Source()
+        public async Task Sink_ToSeq_must_return_an_empty_SeqT_from_an_empty_Source()
         {
             var input = Enumerable.Empty<int>();
             var future = Source.FromEnumerator(() => input.GetEnumerator()).RunWith(Sink.Seq<int>(), Materializer);
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(input);
+            (await future.WaitAsync(RemainingOrDefault))
+                .Should().BeEquivalentTo(input);
         }
 
 
         [Fact]
-        public void Sink_ToSeq_must_fail_the_task_on_abrupt_termination()
+        public async Task Sink_ToSeq_must_fail_the_task_on_abrupt_termination()
         {
             var materializer = ActorMaterializer.Create(Sys);
             var probe = this.CreatePublisherProbe<int>();
             var task = Source.FromPublisher(probe).RunWith(Sink.Seq<int>(), materializer);
             materializer.Shutdown();
-            Action a = () => task.Wait(TimeSpan.FromSeconds(3));
-            a.Should().Throw<AbruptTerminationException>();
+            await Awaiting(() => task.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<AbruptTerminationException>();
         }
     }
 }

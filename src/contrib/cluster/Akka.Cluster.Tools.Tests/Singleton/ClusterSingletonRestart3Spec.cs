@@ -70,7 +70,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
 
         [Fact]
-        public void Singleton_should_consider_AppVersion_when_handing_over()
+        public async Task Singleton_should_consider_AppVersion_when_handing_over()
         {
             Join(_sys1, _sys1);
             Join(_sys2, _sys1);
@@ -97,7 +97,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             Cluster.Get(_sys1).Leave(Cluster.Get(_sys1).SelfAddress);
 
             // let it stabilize
-            Task.Delay(TimeSpan.FromSeconds(5)).Wait();
+            await Task.Delay(TimeSpan.FromSeconds(5));
 
             Within(TimeSpan.FromSeconds(10), () =>
             {

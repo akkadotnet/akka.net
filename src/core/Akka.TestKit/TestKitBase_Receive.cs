@@ -763,7 +763,7 @@ namespace Akka.TestKit
         {
             max.EnsureIsPositiveFinite("max");
             var enumerable = InternalReceiveNAsync(numberOfMessages, Dilated(max), true, cancellationToken)
-                .ConfigureAwait(false).WithCancellation(cancellationToken);
+                .ConfigureAwait(false);
             await foreach (var item in enumerable)
             {
                 yield return item;

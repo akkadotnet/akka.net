@@ -12,8 +12,10 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -29,19 +31,18 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Detacher_must_pass_through_all_elements()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.From(Enumerable.Range(1, 100))                                                                             
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var task = Source.From(Enumerable.Range(1, 100))                                                                             
                 .Detach()                                                                             
-                .RunWith(Sink.Seq<int>(), Materializer)                                                                             
-                .Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
-                return Task.CompletedTask;
+                .RunWith(Sink.Seq<int>(), Materializer);
+                (await task.WaitAsync(RemainingOrDefault)).Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Detacher_must_pass_through_failure()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var ex = new TestException("buh");
                 var result = Source.From(Enumerable.Range(1, 100)).Select(x =>
                 {
@@ -50,8 +51,8 @@ namespace Akka.Streams.Tests.Dsl
                     return x;
                 }).Detach().RunWith(Sink.Seq<int>(), Materializer);
 
-                result.Invoking(r => r.Wait(TimeSpan.FromSeconds(2))).Should().Throw<TestException>().And.Should().Be(ex);
-                return Task.CompletedTask;
+                (await Awaiting(() => result.WaitAsync(2.Seconds())).Should().ThrowAsync<TestException>())
+                    .And.Should().Be(ex);
             }, Materializer);
         }
 

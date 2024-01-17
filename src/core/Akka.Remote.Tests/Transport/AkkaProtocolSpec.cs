@@ -239,8 +239,8 @@ namespace Akka.Remote.Tests.Transport
             //finish the connection by sending back an associate message
             reader.Tell(TestAssociate(33), TestActor);
 
-            await statusPromise.Task.WithTimeout(3.Seconds());
-            switch (statusPromise.Task.Result)
+            var result = await statusPromise.Task.WaitAsync(3.Seconds());
+            switch (result)
             {
                 case AkkaProtocolHandle h:
                     Assert.Equal(_remoteAkkaAddress, h.RemoteAddress);
@@ -272,8 +272,7 @@ namespace Akka.Remote.Tests.Transport
 
             reader.Tell(TestAssociate(33), TestActor);
 
-            await statusPromise.Task.WithTimeout(3.Seconds());
-            var result = statusPromise.Task.Result;
+            var result = await statusPromise.Task.WaitAsync(3.Seconds());
             switch (result)
             {
                 case AkkaProtocolHandle h:
@@ -320,8 +319,7 @@ namespace Akka.Remote.Tests.Transport
 
             reader.Tell(TestAssociate(33), TestActor);
 
-            await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(3));
-            var result = statusPromise.Task.Result;
+            var result = await statusPromise.Task.WaitAsync(3.Seconds());
             switch (result)
             {
                 case AkkaProtocolHandle h:
@@ -368,8 +366,7 @@ namespace Akka.Remote.Tests.Transport
 
             stateActor.Tell(TestAssociate(33), TestActor);
 
-            await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(3));
-            var result = statusPromise.Task.Result;
+            var result = await statusPromise.Task.WaitAsync(3.Seconds());
             switch (result)
             {
                 case AkkaProtocolHandle h:
@@ -419,8 +416,7 @@ namespace Akka.Remote.Tests.Transport
 
             stateActor.Tell(TestAssociate(33), TestActor);
 
-            await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(3));
-            var result = statusPromise.Task.Result;
+            var result = await statusPromise.Task.WaitAsync(3.Seconds());
             switch (result)
             {
                 case AkkaProtocolHandle h:
@@ -471,10 +467,8 @@ namespace Akka.Remote.Tests.Transport
 
             Watch(stateActor);
 
-            await Awaiting(async () =>
-            {
-                await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(5));
-            }).Should().ThrowAsync<TimeoutException>();
+            await Awaiting(() => statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(5)))
+                .Should().ThrowAsync<TimeoutException>();
             
             await ExpectTerminatedAsync(stateActor);
         }

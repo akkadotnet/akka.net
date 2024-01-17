@@ -15,6 +15,9 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using Akka.Actor;
+using FluentAssertions.Extensions;
+using Nito.AsyncEx;
+
 // ReSharper disable InvokeAsExtensionMethod
 
 namespace Akka.Streams.Tests.Dsl
@@ -34,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public void A_Graph_with_materialized_value_must_expose_the_materialized_value_as_source(bool autoFusing)
+        public async Task A_Graph_with_materialized_value_must_expose_the_materialized_value_as_source(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
 
@@ -49,8 +52,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(materializer);
 
-            f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            var r1 = f.Result;
+            var r1 = await f.WaitAsync(3.Seconds());
             sub.ExpectSubscription().Request(1);
             var r2 = sub.ExpectNext();
             r1.Should().Be(r2);
@@ -59,7 +61,7 @@ namespace Akka.Streams.Tests.Dsl
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public void A_Graph_with_materialized_value_must_expose_the_materialized_value_as_source_multiple_times(bool autoFusing)
+        public async Task A_Graph_with_materialized_value_must_expose_the_materialized_value_as_source_multiple_times(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
 
@@ -80,8 +82,7 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(materializer);
 
-            f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            var r1 = f.Result;
+            var r1 = await f.WaitAsync(3.Seconds());
             sub.ExpectSubscription().Request(1);
             var r2 = sub.ExpectNext();
             r1.Should().Be(r2/2);
@@ -100,7 +101,7 @@ namespace Akka.Streams.Tests.Dsl
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public void A_Graph_with_materialized_value_must_allow_exposing_the_materialized_value_as_port(bool autoFusing)
+        public async Task A_Graph_with_materialized_value_must_allow_exposing_the_materialized_value_as_port(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
 
@@ -111,31 +112,28 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(materializer);
             var f1 = t.Item1;
             var f2 = t.Item2;
-            f1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            f1.Result.Should().Be(55);
+            (await f1.WaitAsync(3.Seconds())).Should().Be(55);
 
-            f2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            f2.Result.Should().Be(155);
+            (await f2.WaitAsync(3.Seconds())).Should().Be(155);
         }
 
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public void A_Graph_with_materialized_value_must_allow_exposing_the_materialized_values_as_port_even_if_wrapped_and_the_final_materialized_value_is_unit(bool autoFusing)
+        public async Task A_Graph_with_materialized_value_must_allow_exposing_the_materialized_values_as_port_even_if_wrapped_and_the_final_materialized_value_is_unit(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
 
             var noMatSource =
                 FoldFeedbackSource.SelectAsync(4, x => x).Select(x => x + 100).MapMaterializedValue(_ => NotUsed.Instance);
             var t = noMatSource.RunWith(Sink.First<int>(), materializer);
-            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            t.Result.Should().Be(155);
+            (await t.WaitAsync(3.Seconds())).Should().Be(155);
         }
 
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public void A_Graph_with_materialized_value_must_work_properly_with_nesting_and_reusing(bool autoFusing)
+        public async Task A_Graph_with_materialized_value_must_work_properly_with_nesting_and_reusing(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
 
@@ -163,18 +161,14 @@ namespace Akka.Streams.Tests.Dsl
 
             var t = compositeSource2.ToMaterialized(Sink.First<int>(), Keep.Both).Run(materializer);
             var task = Task.WhenAll(t.Item1.Item1.Item1, t.Item1.Item1.Item2, t.Item1.Item2.Item1, t.Item1.Item2.Item2, t.Item2);
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result[0].Should().Be(55);
-            task.Result[1].Should().Be(55);
-            task.Result[2].Should().Be(55);
-            task.Result[3].Should().Be(55);
-            task.Result[4].Should().Be(55555555);
+            var result = await task.WaitAsync(3.Seconds());
+            result.Should().BeEquivalentTo(55, 55, 55, 55, 55555555);
         }
 
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public void A_Graph_with_materialized_value_must_work_also_when_the_sources_module_is_copied(bool autoFusing)
+        public async Task A_Graph_with_materialized_value_must_work_also_when_the_sources_module_is_copied(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
 
@@ -185,14 +179,13 @@ namespace Akka.Streams.Tests.Dsl
             }));
 
             var t = Source.From(Enumerable.Range(1, 10)).Via(foldFlow).RunWith(Sink.First<int>(), materializer);
-            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            t.Result.Should().Be(55);
+            (await t.WaitAsync(3.Seconds())).Should().Be(55);
         }
 
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public void A_Graph_with_materialized_value_must_perform_side_effecting_transformations_even_when_not_used_as_source(bool autoFusing)
+        public async Task A_Graph_with_materialized_value_must_perform_side_effecting_transformations_even_when_not_used_as_source(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
             var done = false;
@@ -215,20 +208,19 @@ namespace Akka.Streams.Tests.Dsl
             }));
 
             var task = r.Run(materializer);
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            await task.WaitAsync(3.Seconds());
             done.Should().BeTrue();
         }
 
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public void A_Graph_with_materialized_value_must_produce_NotUsed_when_not_importing_materialized_value(bool autoFusing)
+        public async Task A_Graph_with_materialized_value_must_produce_NotUsed_when_not_importing_materialized_value(bool autoFusing)
         {
             var materializer = CreateMaterializer(autoFusing);
             var source = Source.FromGraph(GraphDsl.Create(b => new SourceShape<NotUsed>(b.MaterializedValue)));
             var task = source.RunWith(Sink.Seq<NotUsed>(), materializer);
-            task.Wait(TimeSpan.FromSeconds(3));
-            task.Result.Should().BeEquivalentTo(NotUsed.Instance);
+            (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(NotUsed.Instance);
         }
 
         [Theory]

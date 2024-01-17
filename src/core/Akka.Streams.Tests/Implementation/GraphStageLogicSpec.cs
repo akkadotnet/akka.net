@@ -395,26 +395,26 @@ namespace Akka.Streams.Tests.Implementation
         [Fact]
         public async Task A_GraphStageLogic_must_emit_properly_after_empty_iterable()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                Source.FromGraph(new EmitEmptyIterable())                                                                             
-                .RunWith(Sink.Seq<int>(), Materializer)                                                                             
-                .Result.Should()                                                                             
-                .HaveCount(1)                                                                             
-                .And.OnlyContain(x => x == 42);
-                return Task.CompletedTask;
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var result = await Source.FromGraph(new EmitEmptyIterable())
+                    .RunWith(Sink.Seq<int>(), Materializer);
+                
+                result.Should()
+                    .HaveCount(1)
+                    .And.OnlyContain(x => x == 42);
             }, Materializer);
         }
 
         [Fact]
-        public void A_GraphStageLogic_must_support_logging_in_custom_graphstage()
+        public async Task A_GraphStageLogic_must_support_logging_in_custom_graphstage()
         {
             const int n = 10;
-            EventFilter.Debug(start: "Randomly generated").Expect(n, () =>
+            await EventFilter.Debug(start: "Randomly generated").ExpectAsync(n, async () =>
             {
-                Source.FromGraph(new RandomLettersSource())
+                await Source.FromGraph(new RandomLettersSource())
                     .Take(n)
                     .RunWith(Sink.Ignore<string>(), Materializer)
-                    .Wait(TimeSpan.FromSeconds(3));
+                    .WaitAsync(TimeSpan.FromSeconds(3));
             });
         }
 

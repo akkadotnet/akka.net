@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -99,7 +100,7 @@ namespace Akka.Streams.Tests.Dsl
                 await upstream2.SendNextAsync("A");
                 await upstream2.SendCompleteAsync();
 
-                completed.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                await completed.WaitAsync(3.Seconds());
                 await upstream1.ExpectCancellationAsync();
             }, Materializer);
         }

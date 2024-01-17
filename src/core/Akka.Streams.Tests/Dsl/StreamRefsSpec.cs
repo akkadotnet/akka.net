@@ -342,7 +342,7 @@ namespace Akka.Streams.Tests
         }
 
         [Fact]
-        public void SourceRef_must_not_receive_timeout_when_data_is_being_sent()
+        public async Task SourceRef_must_not_receive_timeout_when_data_is_being_sent()
         {
             _remoteActor.Tell("give-infinite");
             var remoteSource = ExpectMsg<ISourceRef<string>>();
@@ -352,7 +352,7 @@ namespace Akka.Streams.Tests
                 .TakeWithin(5.Seconds()) // which is > than the subscription timeout (so we make sure the timeout was cancelled
                 .RunWith(Sink.Seq<string>(), Materializer);
 
-            done.Wait(8.Seconds()).Should().BeTrue();
+            await done.WaitAsync(8.Seconds());
         }
 
         [Fact]
@@ -440,7 +440,7 @@ namespace Akka.Streams.Tests
         }
 
         [Fact]
-        public void SinkRef_must_not_receive_timeout_while_data_is_being_sent()
+        public async Task SinkRef_must_not_receive_timeout_while_data_is_being_sent()
         {
             _remoteActor.Tell("receive-ignore");
             var remoteSink = ExpectMsg<ISinkRef<string>>();
@@ -453,8 +453,7 @@ namespace Akka.Streams.Tests
                     .To(remoteSink.Sink)
                     .Run(Materializer);
 
-            done.Wait(8.Seconds()).Should().BeTrue();
-
+            await done.WaitAsync(8.Seconds());
         }
 
         [Fact(Skip = "FIXME: how to pass test assertions to remote system?")]

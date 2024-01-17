@@ -21,18 +21,20 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Routing
 {
     public class RoutingSpec : AkkaSpec
     {
-        public RoutingSpec() : base(GetConfig())
+        public RoutingSpec(ITestOutputHelper output) : base(GetConfig(), output)
         {
         }
 
         private static string GetConfig()
         {
             return @"
+                akka.loglevel = DEBUG
                 akka.actor.serialize-messages = off
                 akka.actor.deployment {
                   /router1 {
@@ -171,6 +173,7 @@ namespace Akka.Tests.Routing
 
             var c1 = await ExpectMsgAsync<IActorRef>();
             var c2 = await ExpectMsgAsync<IActorRef>();
+            c1.Should().NotBe(c2);
 
             Watch(router);
             Watch(c2);
@@ -205,7 +208,7 @@ namespace Akka.Tests.Routing
             var resizer = new TestResizer(latch);
             var router = Sys.ActorOf(new RoundRobinPool(0, resizer).Props(Props.Create<BlackHoleActor>()));
             Watch(router);
-            latch.Ready(RemainingOrDefault);
+            await latch.ReadyAsync(RemainingOrDefault);
 
             router.Tell(new GetRoutees());
             var routees = (await ExpectMsgAsync<Routees>()).Members.ToList();
@@ -243,7 +246,7 @@ namespace Akka.Tests.Routing
             var latch = new TestLatch(1);
             var resizer = new TestResizer2(latch);
             var router = Sys.ActorOf(new RoundRobinPool(0, resizer).Props(Props.Create<BlackHoleActor>()), "router3");
-            latch.Ready(RemainingOrDefault);
+            await latch.ReadyAsync(RemainingOrDefault);
             router.Tell(new GetRoutees());
             (await ExpectMsgAsync<Routees>()).Members.Count().Should().Be(3);
             Sys.Stop(router);

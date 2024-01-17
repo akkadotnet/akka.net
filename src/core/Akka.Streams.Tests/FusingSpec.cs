@@ -18,6 +18,7 @@ using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using FluentAssertions;
 using FluentAssertions.Extensions;
+using Nito.AsyncEx;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -50,8 +51,8 @@ namespace Akka.Streams.Tests
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            await t.ShouldCompleteWithin(3.Seconds());
-            t.Result.Distinct().OrderBy(i => i).Should().BeEquivalentTo(Enumerable.Range(0, 199).Where(i => i%2 == 0));
+            (await t.WaitAsync(3.Seconds()))
+                .Distinct().OrderBy(i => i).Should().BeEquivalentTo(Enumerable.Range(0, 199).Where(i => i%2 == 0));
         }
 
         [Fact]
@@ -78,8 +79,8 @@ namespace Akka.Streams.Tests
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            await t.ShouldCompleteWithin(3.Seconds());
-            t.Result.Should().BeEquivalentTo(Enumerable.Range(0, 10));
+            (await t.WaitAsync(3.Seconds()))
+                .Should().BeEquivalentTo(Enumerable.Range(0, 10));
 
             var refs = await ReceiveNAsync(20).Distinct().ToListAsync();
             // main flow + 10 sub-flows
@@ -110,8 +111,8 @@ namespace Akka.Streams.Tests
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            await t.ShouldCompleteWithin(3.Seconds());
-            t.Result.Should().BeEquivalentTo(Enumerable.Range(0, 10));
+            (await t.WaitAsync(3.Seconds()))
+                .Should().BeEquivalentTo(Enumerable.Range(0, 10));
 
             var refs = await ReceiveNAsync(20).Distinct().ToListAsync();
             // main flow + 10 sub-flows

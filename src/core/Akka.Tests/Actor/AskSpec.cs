@@ -288,7 +288,9 @@ namespace Akka.Tests.Actor
             AsyncContext.Run(() =>
             {
                 var actor = Sys.ActorOf<SomeActor>();
+#pragma warning disable xUnit1031
                 var res = actor.Ask<string>("answer", TimeSpan.FromSeconds(3)).Result; // blocking on purpose
+#pragma warning restore xUnit1031
                 res.ShouldBe("answer");
             });
         }

@@ -8,8 +8,10 @@
 using System;
 using System.ComponentModel;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 
+#nullable enable
 namespace Akka.TestKit
 {
     /// <summary>
@@ -26,8 +28,12 @@ namespace Akka.TestKit
     /// </summary>
     public class TestLatch
     {
-        private readonly CountdownEvent _latch;
-        private readonly Func<TimeSpan, TimeSpan> _dilate;
+        private readonly object _lock = new ();
+        private readonly int _initialCount;
+        private int _count;
+        private TaskCompletionSource<NotUsed>? _tcs;
+        
+        private readonly Func<TimeSpan, TimeSpan>? _dilate;
         private readonly TimeSpan _defaultTimeout;
 
         /// <summary>
@@ -67,7 +73,7 @@ namespace Akka.TestKit
         /// <param name="defaultTimeout">TBD</param>
         public TestLatch(int count, TimeSpan defaultTimeout)
         {
-            _latch = new CountdownEvent(count);
+            _initialCount = _count = count;
             _defaultTimeout = defaultTimeout;
         }
 
@@ -102,7 +108,13 @@ namespace Akka.TestKit
         /// </summary>
         public bool IsOpen
         {
-            get { return _latch.CurrentCount == 0; }
+            get
+            {
+                lock (_lock)
+                {
+                    return _count <= 0;
+                }
+            }
         }
 
         /// <summary>
@@ -110,7 +122,12 @@ namespace Akka.TestKit
         /// </summary>
         public void CountDown()
         {
-            _latch.Signal();
+            lock (_lock)
+            {
+                _count--;
+                if (_count <= 0)
+                    _tcs?.TrySetResult(NotUsed.Instance);
+            }
         }
 
         /// <summary>
@@ -118,7 +135,11 @@ namespace Akka.TestKit
         /// </summary>
         public void Open()
         {
-            while(!IsOpen) CountDown();
+            lock (_lock)
+            {
+                _count = 0;
+                _tcs?.TrySetResult(NotUsed.Instance);
+            }
         }
 
         /// <summary>
@@ -126,9 +147,22 @@ namespace Akka.TestKit
         /// </summary>
         public void Reset()
         {
-            _latch.Reset();
+            lock (_lock)
+            {
+                _count = _initialCount;
+            }
         }
 
+        public void Ready(CancellationToken token = default)
+        {
+            ReadyAsync(token).GetAwaiter().GetResult();
+        }
+        
+        public void Ready(TimeSpan timeout, CancellationToken token = default)
+        {
+            ReadyAsync(timeout, token).GetAwaiter().GetResult();
+        }
+        
         /// <summary>
         /// Expects the latch to become open within the specified timeout. If the timeout is reached, a
         /// <see cref="TimeoutException"/> is thrown.
@@ -138,21 +172,43 @@ namespace Akka.TestKit
         /// </para>
         /// </summary>
         /// <param name="timeout">TBD</param>
+        /// <param name="token">The cancellation token</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when a too large timeout has been specified.
         /// </exception>
         /// <exception cref="TimeoutException">
         /// This exception is thrown when the timeout is reached.
         /// </exception>
-        public void Ready(TimeSpan timeout)
+        public async Task ReadyAsync(TimeSpan timeout, CancellationToken token = default)
         {
-            if(timeout == TimeSpan.MaxValue)
+            if(timeout == TimeSpan.MaxValue || timeout <= TimeSpan.Zero)
                 throw new ArgumentException($"TestLatch does not support waiting for {timeout}");
+
+            lock (_lock)
+            {
+                if (_count <= 0)
+                    return;
+                
+                if (_tcs is not null)
+                    throw new Exception("Another ReadyAsync operation has already started");
+
+                _tcs = new TaskCompletionSource<NotUsed>();
+            }
+            
             if(_dilate != null)
                 timeout = _dilate(timeout);
-            var opened = _latch.Wait(timeout);
-            if(!opened)
-                throw new TimeoutException($"Timeout of {timeout}");
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            cts.CancelAfter(timeout);
+
+            var task = await Task.WhenAny(_tcs.Task, Task.Delay(-1, cts.Token));
+            if(task != _tcs.Task)
+                throw new TimeoutException($"TestLatch timed out after {timeout}");
+
+            lock (_lock)
+            {
+                _tcs = null;
+            }
         }
 
         /// <summary>
@@ -167,9 +223,9 @@ namespace Akka.TestKit
         /// <exception cref="TimeoutException">
         /// This exception is thrown when the timeout is reached.
         /// </exception>
-        public void Ready()
+        public Task ReadyAsync(CancellationToken token = default)
         {
-            Ready(_defaultTimeout);
+            return ReadyAsync(_defaultTimeout, token);
         }
     }
 }

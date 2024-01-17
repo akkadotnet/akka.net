@@ -14,6 +14,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -163,7 +164,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task ActorBackpressureSink_should_keep_on_sending_even_after_the_buffer_has_been_full()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var bufferSize = 16;
                 var streamElementCount = bufferSize + 4;
                 var fw = CreateActor<Fw2>();
@@ -177,7 +178,7 @@ namespace Akka.Streams.Tests.Dsl
                             Keep.Right)
                         .To(sink)
                         .Run(Materializer);
-                probe.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                await probe.WaitAsync(3.Seconds());
                 probe.IsCompleted.Should().BeTrue();
                 ExpectMsg(InitMessage);
                 fw.Tell(TriggerAckMessage.Instance);
@@ -187,7 +188,6 @@ namespace Akka.Streams.Tests.Dsl
                     fw.Tell(TriggerAckMessage.Instance);
                 }
                 ExpectMsg(CompleteMessage);
-                return Task.CompletedTask;
             }, Materializer);
         }
 

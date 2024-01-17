@@ -17,9 +17,11 @@ using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Nito.AsyncEx;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -48,11 +50,10 @@ namespace Akka.Streams.Tests.Dsl
                 .Select(i => (i, new TestLatch(1)))
                 .ToDictionary(t => t.i, t => t.Item2);
 
-            var sink = Sink.ForEachAsync<int>(4, n =>
+            var sink = Sink.ForEachAsync<int>(4, async n =>
             {
-                latch[n].Ready(RemainingOrDefault);
+                await latch[n].ReadyAsync(RemainingOrDefault);
                 probe.Ref.Tell(n);
-                return Task.CompletedTask;
             });
 
             var p = Source.From(Enumerable.Range(1, 4)).RunWith(sink, Materializer);
@@ -79,7 +80,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var sink = Sink.ForEachAsync<Func<int>>(1, async n =>
             {
-                latch[n()].Ready(RemainingOrDefault);
+                await latch[n()].ReadyAsync(RemainingOrDefault);
                 probe.Ref.Tell(n());
                 await Task.Delay(2000);
             });
@@ -226,7 +227,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_ForeachAsync_must_finish_after_function_failure()
+        public async Task A_ForeachAsync_must_finish_after_function_failure()
         {
             var probe = CreateTestProbe();
             var element4Latch = new AsyncCountdownEvent(1);
@@ -251,9 +252,11 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectMsgAllOf(new[] { 1, 2 });
             element4Latch.Signal(); // Release elements 4, 5, 6, ...
 
-            var ex = p.Invoking(t => t.Wait(TimeSpan.FromSeconds(1))).Should().Throw<AggregateException>().Which;
-            ex.Flatten().InnerException.Should().BeOfType<TestException>();
-            ex.Flatten().InnerException.Message.Should().Be("err2");
+            var ex = (await Awaiting(() => p.WaitAsync(1.Seconds()))
+                .Should().ThrowAsync<AggregateException>()).Which.Flatten().InnerException;
+                
+            ex.Should().BeOfType<TestException>();
+            ex.Message.Should().Be("err2");
         }
     }
 }

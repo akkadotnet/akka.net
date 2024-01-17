@@ -13,8 +13,10 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -41,7 +43,7 @@ namespace Akka.Streams.Tests.Dsl
                 var p = t.Item2;
 
                 p.Request(4).ExpectNext(1, 2, 3, 4);
-                future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                await future.WaitAsync(3.Seconds());
                 await p.ExpectCompleteAsync();
             }, Materializer);
         }
@@ -49,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_WatchTermination_must_complete_the_future_when_stream_is_cancelled_from_downstream()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var t =                                                                            
                 Source.From(Enumerable.Range(1, 4))                                                                                 
                 .WatchTermination(Keep.Right)                                                                                 
@@ -60,30 +62,29 @@ namespace Akka.Streams.Tests.Dsl
 
                 p.Request(3).ExpectNext(1, 2, 3);
                 p.Cancel();
-                future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                return Task.CompletedTask;
+                await future.WaitAsync(3.Seconds());
             }, Materializer);
         }
 
         [Fact]
         public async Task A_WatchTermination_must_fail_the_future_when_stream_is_failed()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var ex = new Exception("Stream failed.");
                 var t = this.SourceProbe<int>().WatchTermination(Keep.Both).To(Sink.Ignore<int>()).Run(Materializer);
                 var p = t.Item1;
                 var future = t.Item2;
                 p.SendNext(1);
                 p.SendError(ex);
-                future.Invoking(f => f.Wait()).Should().Throw<Exception>().WithMessage("Stream failed.");
-                return Task.CompletedTask;
+                await Awaiting(() => future.WaitAsync(3.Seconds()))
+                    .Should().ThrowAsync<Exception>().WithMessage("Stream failed.");
             }, Materializer);
         }
 
         [Fact]
         public async Task A_WatchTermination_must_complete_the_future_for_an_empty_stream()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var t =                                                                             
                 Source.Empty<int>()                                                                                 
                 .WatchTermination(Keep.Right)                                                                                 
@@ -92,8 +93,7 @@ namespace Akka.Streams.Tests.Dsl
                 var future = t.Item1;
                 var p = t.Item2;
                 p.Request(1);
-                future.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                return Task.CompletedTask;
+                await future.WaitAsync(3.Seconds());
             }, Materializer);
         }
 
@@ -132,7 +132,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_WatchTermination_must_fail_task_when_abruptly_terminated()
+        public async Task A_WatchTermination_must_fail_task_when_abruptly_terminated()
         {
             var materializer = ActorMaterializer.Create(Sys);
 
@@ -141,8 +141,8 @@ namespace Akka.Streams.Tests.Dsl
 
             materializer.Shutdown();
 
-            Action a = () => task.Wait(TimeSpan.FromSeconds(3));
-            a.Should().Throw<AbruptTerminationException>();
+            await Awaiting(() => task.WaitAsync(3.Seconds()))
+                .Should().ThrowAsync<AbruptTerminationException>();
         }
     }
 }

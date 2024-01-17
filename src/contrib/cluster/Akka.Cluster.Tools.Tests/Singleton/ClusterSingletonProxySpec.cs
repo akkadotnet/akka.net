@@ -13,6 +13,9 @@ using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
+using FluentAssertions.Extensions;
+using Nito.AsyncEx;
 using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
@@ -20,7 +23,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
     public class ClusterSingletonProxySpec : TestKit.Xunit2.TestKit
     {
         [Fact]
-        public void ClusterSingletonProxy_must_correctly_identify_the_singleton()
+        public async Task ClusterSingletonProxy_must_correctly_identify_the_singleton()
         {
             var seed = new ActorSys();
             seed.Cluster.Join(seed.Cluster.SelfAddress);
@@ -38,8 +41,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             finally
             {
                 // force everything to cleanup
-                Task.WhenAll(testSystems.Select(s => s.Sys.Terminate()))
-                    .Wait(TimeSpan.FromSeconds(30));
+                await Task.WhenAll(testSystems.Select(s => s.Sys.Terminate()))
+                    .ShouldCompleteWithin(30.Seconds());
             }
         }
 
@@ -63,7 +66,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             finally
             {
                 // force everything to cleanup
-                Task.WhenAll(testSystem.Sys.Terminate()).Wait(TimeSpan.FromSeconds(30));
+                await Task.WhenAll(testSystem.Sys.Terminate())
+                    .ShouldCompleteWithin(30.Seconds());
             }
         }
 

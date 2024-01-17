@@ -8,11 +8,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using FluentAssertions;
+using Nito.AsyncEx;
 using Xunit;
 using Xunit.Abstractions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -27,7 +30,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Limit_must_produce_empty_sequence_regardless_of_cost_when_source_is_empty_and_n_equals_0()
+        public async Task Limit_must_produce_empty_sequence_regardless_of_cost_when_source_is_empty_and_n_equals_0()
         {
             var input = new List<int>();
             var n = input.Count;
@@ -37,12 +40,11 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(), Materializer);
 
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeNull();
+            (await future.WaitAsync(RemainingOrDefault)).Should().BeNull();
         }
 
         [Fact]
-        public void Limit_must_always_exhaust_a_source_regardless_of_n_as_long_as_n_is_greater_than_0_if_cost_is_0()
+        public async Task Limit_must_always_exhaust_a_source_regardless_of_n_as_long_as_n_is_greater_than_0_if_cost_is_0()
         {
             var input = Enumerable.Range(1, 15).ToList();
             var n = 1; // must not matter since costFn always evaluates to 0
@@ -52,13 +54,12 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(), Materializer);
 
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(input);
+            (await future.WaitAsync(RemainingOrDefault)).Should().BeEquivalentTo(input);
 
         }
 
         [Fact]
-        public void Limit_must_exhaust_source_if_n_equals_to_input_length_and_cost_is_1()
+        public async Task Limit_must_exhaust_source_if_n_equals_to_input_length_and_cost_is_1()
         {
             var input = Enumerable.Range(1, 16).ToList();
             var n = input.Count;
@@ -68,12 +69,11 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(), Materializer);
 
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(input);
+            (await future.WaitAsync(RemainingOrDefault)).Should().BeEquivalentTo(input);
         }
 
         [Fact]
-        public void Limit_must_exhaust_a_source_if_n_greater_or_equal_accumulated_cost()
+        public async Task Limit_must_exhaust_a_source_if_n_greater_or_equal_accumulated_cost()
         {
             var input = new[] {"this", "is", "some", "string"};
             var n = input.Length;
@@ -83,12 +83,11 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.FirstOrDefault<IEnumerable<string>>(), Materializer);
 
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(input);
+            (await future.WaitAsync(RemainingOrDefault)).Should().BeEquivalentTo(input);
         }
 
         [Fact]
-        public void Limit_must_throw_a_StreamLimitReachedException_when_n_lower_than_accumulated_cost()
+        public async Task Limit_must_throw_a_StreamLimitReachedException_when_n_lower_than_accumulated_cost()
         {
             var input = new[] { "this", "is", "some", "string" };
             var n = input.Aggregate((s, s1) => s + s1).Length - 1;
@@ -98,7 +97,8 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.FirstOrDefault<IEnumerable<string>>(), Materializer);
 
-            future.Invoking(f => f.Wait(RemainingOrDefault)).Should().Throw<StreamLimitReachedException>();
+            await Awaiting(() => future.WaitAsync(RemainingOrDefault))
+                .Should().ThrowAsync<StreamLimitReachedException>();
         }
     }
 }

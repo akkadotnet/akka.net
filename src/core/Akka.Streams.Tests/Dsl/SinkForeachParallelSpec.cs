@@ -20,6 +20,9 @@ using System.Threading;
 using Akka.Streams.TestKit;
 using Akka.TestKit.Xunit2.Attributes;
 using System.Threading.Tasks;
+using Akka.TestKit.Extensions;
+using FluentAssertions.Extensions;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -60,8 +63,7 @@ namespace Akka.Streams.Tests.Dsl
                 latch[1].CountDown();
                 await probe.ExpectMsgAsync(1, TimeSpan.FromSeconds(5));
 
-                p.Wait(TimeSpan.FromSeconds(4)).Should().BeTrue();
-                p.IsCompleted.Should().BeTrue();
+                await p.ShouldCompleteWithin(4.Seconds());
             }, Materializer);
         }
 
@@ -91,15 +93,14 @@ namespace Akka.Streams.Tests.Dsl
                 latch[5].CountDown();
                 await probe.ExpectMsgAsync(5);
 
-                p.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
-                p.IsCompleted.Should().BeTrue();
+                await p.ShouldCompleteWithin(5.Seconds());
             }, Materializer);
         }
 
         [Fact]
         public async Task A_ForeachParallel_must_resume_after_function_failure()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var probe = CreateTestProbe();
                 var latch = new TestLatch(1);
 
@@ -117,8 +118,7 @@ namespace Akka.Streams.Tests.Dsl
                 latch.CountDown();
                 probe.ExpectMsgAllOf(new[] { 1, 2, 4, 5 });
 
-                p.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
-                return Task.CompletedTask;
+                await p.ShouldCompleteWithin(5.Seconds());
             }, Materializer);
         }
 
@@ -145,23 +145,22 @@ namespace Akka.Streams.Tests.Dsl
                 latch.CountDown();
                 probe.ExpectMsgAllOf(new[] { 1, 2 });
 
-                var ex = p.Invoking(t => t.Wait(TimeSpan.FromSeconds(1))).Should().Throw<AggregateException>().Which;
-                ex.Flatten().InnerException.Should().BeOfType<TestException>();
-                ex.Flatten().InnerException.Message.Should().Be("err2");
-
-                p.IsCompleted.Should().BeTrue();
+                var ex = (await Awaiting(() => p.WaitAsync(1.Seconds()))
+                        .Should().ThrowAsync<AggregateException>())
+                    .And.Flatten().InnerException;
+                ex.Should().BeOfType<TestException>();
+                ex.Message.Should().Be("err2");
             }, Materializer);
         }
 
         [Fact]
         public async Task A_ForeachParallel_must_handle_empty_source()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
 #pragma warning disable CS0618 // Type or member is obsolete
                 var p = Source.From(new List<int>()).RunWith(Sink.ForEachParallel<int>(3, _ => { }), Materializer);
 #pragma warning restore CS0618 // Type or member is obsolete
-                p.Wait(TimeSpan.FromSeconds(2)).Should().BeTrue();
-                return Task.CompletedTask;
+                await p.WaitAsync(2.Seconds());
             }, Materializer);
         }
     }

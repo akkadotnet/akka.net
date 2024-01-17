@@ -14,6 +14,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -34,7 +35,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Partition_must_partition_to_three_subscribers()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var s = Sink.Seq<int>();
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(s, s, s, ValueTuple.Create, (b, sink1, sink2, sink3) =>
                 {
@@ -51,12 +52,10 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                var task = Task.WhenAll(t.Item1, t.Item2, t.Item3);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result[0].Should().BeEquivalentTo(new[] { 4, 5 });
-                task.Result[1].Should().BeEquivalentTo(new[] { 1, 2 });
-                task.Result[2].Should().BeEquivalentTo(new[] { 3 });
-                return Task.CompletedTask;
+                var result = await Task.WhenAll(t.Item1, t.Item2, t.Item3).WaitAsync(3.Seconds());
+                result[0].Should().BeEquivalentTo(new[] { 4, 5 });
+                result[1].Should().BeEquivalentTo(new[] { 1, 2 });
+                result[2].Should().BeEquivalentTo(new[] { 3 });
             }, Materializer);
         }
 
@@ -161,7 +160,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Partition_must_work_with_merge()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var s = Sink.Seq<int>();
                 var input = new[] { 5, 2, 9, 1, 1, 1, 10 };
 
@@ -179,9 +178,7 @@ namespace Akka.Streams.Tests.Dsl
                     return ClosedShape.Instance;
                 })).Run(Materializer);
 
-                task.Wait(RemainingOrDefault).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(input);
-                return Task.CompletedTask;
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(input);
             }, Materializer);
         }
 

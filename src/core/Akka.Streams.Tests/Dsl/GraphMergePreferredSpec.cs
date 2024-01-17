@@ -13,6 +13,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -44,7 +45,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PreferredMerge_must_prefer_selected_input_more_than_others()
+        public async Task PreferredMerge_must_prefer_selected_input_more_than_others()
         {
             const int numElements = 10000;
             var preferred =
@@ -64,18 +65,17 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.Result.Count(x => x == 1).Should().Be(numElements);
+            (await result.WaitAsync(3.Seconds())).Count(x => x == 1).Should().Be(numElements);
         }
 
         [Fact]
-        public void PreferredMerge_must_eventually_pass_through_all_elements_without_corrupting_the_ordering()
+        public async Task PreferredMerge_must_eventually_pass_through_all_elements_without_corrupting_the_ordering()
         {
             Source<int, Task<IEnumerable<int>>> Source(int from, int count) => Streams.Dsl.Source
                 .From(Enumerable.Range(from, count))
                 .MapMaterializedValue<Task<IEnumerable<int>>>(_ => null);
 
-            var result = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<IEnumerable<int>>(), (b, sink) =>
+            var task = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<IEnumerable<int>>(), (b, sink) =>
             {
                 var merge = b.Add(new MergePreferred<int>(3));
 
@@ -88,14 +88,14 @@ namespace Akka.Streams.Tests.Dsl
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
-            result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            var result = (await task.WaitAsync(3.Seconds())).ToArray();
 
-            result.Result.Where(i => i <= 100).ShouldOnlyContainInOrder(Enumerable.Range(1, 100));
-            result.Result.Where(i => i > 100 && i <= 200).ShouldOnlyContainInOrder(Enumerable.Range(101, 100));
-            result.Result.Where(i => i > 200 && i <= 300).ShouldOnlyContainInOrder(Enumerable.Range(201, 100));
-            result.Result.Where(i => i > 300 && i <= 400).ShouldOnlyContainInOrder(Enumerable.Range(301, 100));
+            result.Where(i => i <= 100).ShouldOnlyContainInOrder(Enumerable.Range(1, 100));
+            result.Where(i => i > 100 && i <= 200).ShouldOnlyContainInOrder(Enumerable.Range(101, 100));
+            result.Where(i => i > 200 && i <= 300).ShouldOnlyContainInOrder(Enumerable.Range(201, 100));
+            result.Where(i => i > 300 && i <= 400).ShouldOnlyContainInOrder(Enumerable.Range(301, 100));
 
-            result.Result.Should().BeEquivalentTo(Enumerable.Range(1, 400));
+            result.Should().BeEquivalentTo(Enumerable.Range(1, 400));
         }
 
         [Fact]

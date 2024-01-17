@@ -17,11 +17,11 @@ using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
-// ReSharper disable InvokeAsExtensionMethod
-// ReSharper disable UnusedMember.Local
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -148,16 +148,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task SplitAfter_must_work_with_single_element_splits_by()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var task = Source.From(Enumerable.Range(1, 10))
                 .SplitAfter(_ => true)
                 .Lift()
                 .SelectAsync(1, s => s.RunWith(Sink.First<int>(), Materializer))
                 .Grouped(10)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                return Task.CompletedTask;
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -289,21 +287,20 @@ namespace Akka.Streams.Tests.Dsl
         }, Materializer);
 
         [Fact]
-        public async Task SplitAfter_should_fail_stream_if_substream_not_materialized_in_time() => await this.AssertAllStagesStoppedAsync(() => {
+        public async Task SplitAfter_should_fail_stream_if_substream_not_materialized_in_time() => await this.AssertAllStagesStoppedAsync(async () => {
             var timeout = new StreamSubscriptionTimeoutSettings(StreamSubscriptionTimeoutTerminationMode.CancelTermination, TimeSpan.FromMilliseconds(500));
             var settings = ActorMaterializerSettings.Create(Sys).WithSubscriptionTimeoutSettings(timeout);
             var tightTimeoutMaterializer = ActorMaterializer.Create(Sys, settings);
 
             var testSource = Source.Single(1).ConcatMaterialized(Source.Maybe<int>(), Keep.Left).SplitAfter(_ => true);
 
-            Action a = () =>
-            {
-                testSource.Lift().Delay(TimeSpan.FromSeconds(1)).ConcatMany(x => x)
-                    .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer)
-                    .Wait(TimeSpan.FromSeconds(3));
-            };
-            a.Should().Throw<SubscriptionTimeoutException>();
-            return Task.CompletedTask;
+            await Awaiting(async () =>
+                {
+                    var t = testSource.Lift().Delay(TimeSpan.FromSeconds(1)).ConcatMany(x => x)
+                            .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer);
+                    await t.WaitAsync(2.Seconds());
+                })
+                .Should().ThrowAsync<SubscriptionTimeoutException>();
         }, Materializer);
 
         // Probably covert by SplitAfter_should_work_when_last_element_is_split_by

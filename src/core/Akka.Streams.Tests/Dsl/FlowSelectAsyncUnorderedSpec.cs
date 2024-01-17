@@ -24,8 +24,8 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions.Extensions;
+using static FluentAssertions.FluentActions;
 
-// ReSharper disable InvokeAsExtensionMethod
 #pragma warning disable 162
 
 namespace Akka.Streams.Tests.Dsl
@@ -47,9 +47,9 @@ namespace Akka.Streams.Tests.Dsl
                 var c = this.CreateManualSubscriberProbe<int>();
                 var latch = Enumerable.Range(0, 4).Select(_ => new TestLatch(1)).ToArray();
 
-                Source.From(Enumerable.Range(0, 4)).SelectAsyncUnordered(4, n => Task.Run(() =>
+                Source.From(Enumerable.Range(0, 4)).SelectAsyncUnordered(4, n => Task.Run(async () =>
                 {
-                    latch[n].Ready(TimeSpan.FromSeconds(5));
+                    await latch[n].ReadyAsync(TimeSpan.FromSeconds(5));
                     return n;
                 })).To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
@@ -122,18 +122,18 @@ namespace Akka.Streams.Tests.Dsl
                 var latch = new TestLatch(1);
                 var c = this.CreateManualSubscriberProbe<int>();
                 Source.From(Enumerable.Range(1, 5))
-                    .SelectAsyncUnordered(4, n => Task.Run(() =>
+                    .SelectAsyncUnordered(4, n => Task.Run(async () =>
                     {
                         if (n == 3)
                             throw new TestException("err1");
 
-                        latch.Ready(TimeSpan.FromSeconds(10));
+                        await latch.ReadyAsync(TimeSpan.FromSeconds(10));
                         return n;
                     }))
                     .To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(10);
-                c.ExpectError().InnerException.Message.Should().Be("err1");
+                (await c.ExpectErrorAsync()).InnerException!.Message.Should().Be("err1");
                 latch.CountDown();
             }, Materializer);
         }
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Flow_with_SelectAsyncUnordered_must_signal_task_failure_asap()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var latch = CreateTestLatch();
                 var done = Source.From(Enumerable.Range(1, 5))
                     .Select(n =>
@@ -165,9 +165,9 @@ namespace Akka.Streams.Tests.Dsl
                         return Task.FromResult(n);
                     }).RunWith(Sink.Ignore<int>(), Materializer);
 
-                done.Invoking(d => d.Wait(RemainingOrDefault)).Should().Throw<Exception>().WithMessage("err1");
+                await Awaiting(() => done.WaitAsync(RemainingOrDefault))
+                    .Should().ThrowAsync<Exception>().WithMessage("err1");
                 latch.CountDown();
-                return Task.CompletedTask;
             }, Materializer);
         }
 
@@ -183,16 +183,16 @@ namespace Akka.Streams.Tests.Dsl
                         if (n == 3)
                             throw new TestException("err2");
 
-                        return Task.Run(() =>
+                        return Task.Run(async () =>
                         {
-                            latch.Ready(TimeSpan.FromSeconds(10));
+                            await latch.ReadyAsync(TimeSpan.FromSeconds(10));
                             return n;
                         });
                     })
                     .RunWith(Sink.FromSubscriber(c), Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(10);
-                c.ExpectError().Message.Should().Be("err2");
+                (await c.ExpectErrorAsync()).Message.Should().Be("err2");
                 latch.CountDown();
             }, Materializer);
         }
@@ -247,7 +247,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Flow_with_SelectAsyncUnordered_must_finish_after_task_failure()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var t = Source.From(Enumerable.Range(1, 3))                                                                             
                 .SelectAsyncUnordered(1, n => Task.Run(() =>                                                                             
                 {                                                                                 
@@ -258,9 +258,7 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))                                                                             
                 .Grouped(10)                                                                             
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                t.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-                t.Result.Should().BeEquivalentTo(new[] { 1, 2 });
-                return Task.CompletedTask;
+                (await t.WaitAsync(1.Seconds())).Should().BeEquivalentTo(new[] { 1, 2 });
             }, Materializer);
         }
 
@@ -332,7 +330,7 @@ namespace Akka.Streams.Tests.Dsl
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task A_Flow_with_SelectAsyncUnordered_must_not_run_more_futures_than_configured()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
                 var queue = new BlockingQueue<(TaskCompletionSource<int>, long)>();
@@ -363,7 +361,7 @@ namespace Akka.Streams.Tests.Dsl
                     }
                 }, cancellation.Token);
 
-                Func<Task<int>> deferred = () =>
+                var deferred = () =>
                 {
                     var promise = new TaskCompletionSource<int>();
                     if (counter.IncrementAndGet() > parallelism)
@@ -380,15 +378,13 @@ namespace Akka.Streams.Tests.Dsl
                         .SelectAsyncUnordered(parallelism, _ => deferred())
                         .RunAggregate(0, (c, _) => c + 1, Materializer);
 
-                    task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                    task.Result.Should().Be(n);
+                    (await task.WaitAsync(TimeSpan.FromSeconds(3)))
+                        .Should().Be(n);
                 }
                 finally
                 {
                     cancellation.Cancel(false);
                 }
-
-                return Task.CompletedTask;
             }, Materializer);
         }
     }

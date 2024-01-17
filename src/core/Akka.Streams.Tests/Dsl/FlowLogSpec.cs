@@ -7,12 +7,14 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -146,7 +148,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Log_on_Source_must_follow_supervision_strategy_when_Exception_thrown()
+        public async Task A_Log_on_Source_must_follow_supervision_strategy_when_Exception_thrown()
         {
             var ex = new TestException("test");
             var future = Source.From(Enumerable.Range(1, 5))
@@ -154,8 +156,7 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(Sink.Aggregate<int, int>(0, (i, i1) => i + i1), Materializer);
 
-            future.Wait(TimeSpan.FromMilliseconds(500)).Should().BeTrue();
-            future.Result.Should().Be(0);
+            (await future.WaitAsync(500.Milliseconds())).Should().Be(0);
         }
     }
 }

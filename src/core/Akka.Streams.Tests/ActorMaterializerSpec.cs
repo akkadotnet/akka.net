@@ -82,11 +82,11 @@ namespace Akka.Streams.Tests
         }
 
         [Fact]
-        public void ActorMaterializer_should_report_correctly_if_it_has_been_shut_down_from_the_side()
+        public async Task ActorMaterializer_should_report_correctly_if_it_has_been_shut_down_from_the_side()
         {
             var sys = ActorSystem.Create("test-system");
             var m = sys.Materializer();
-            sys.Terminate().Wait();
+            await sys.Terminate().WaitAsync(3.Seconds());
             m.IsShutdown.Should().BeTrue();
         }
 

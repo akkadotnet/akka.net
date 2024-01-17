@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
@@ -49,7 +50,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Smallest_mailbox_pool_must_deliver_messages_to_idle_actor()
+        public async Task Smallest_mailbox_pool_must_deliver_messages_to_idle_actor()
         {
             var usedActors = new ConcurrentDictionary<int, string>();
             var router = Sys.ActorOf(new SmallestMailboxPool(3).Props(Props.Create(() => new SmallestMailboxActor(usedActors))));
@@ -57,19 +58,19 @@ namespace Akka.Tests.Routing
             var busy = new TestLatch(1);
             var received0 = new TestLatch(1);
             router.Tell((busy, received0));
-            received0.Ready(TestKitSettings.DefaultTimeout);
+            await received0.ReadyAsync(TestKitSettings.DefaultTimeout);
 
             var received1 = new TestLatch(1);
             router.Tell((1, received1));
-            received1.Ready(TestKitSettings.DefaultTimeout);
+            await received1.ReadyAsync(TestKitSettings.DefaultTimeout);
 
             var received2 = new TestLatch(1);
             router.Tell((2, received2));
-            received2.Ready(TestKitSettings.DefaultTimeout);
+            await received2.ReadyAsync(TestKitSettings.DefaultTimeout);
 
             var received3 = new TestLatch(1);
             router.Tell((3, received3));
-            received3.Ready(TestKitSettings.DefaultTimeout);
+            await received3.ReadyAsync(TestKitSettings.DefaultTimeout);
 
             busy.CountDown();
 

@@ -144,13 +144,13 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void ActorGraphInterpreter_should_be_able_to_report_errors_if_an_error_happens_for_an_already_completed_stage()
+        public async Task ActorGraphInterpreter_should_be_able_to_report_errors_if_an_error_happens_for_an_already_completed_stage()
         {
             var failyStage = new FailyGraphStage();
 
-            EventFilter.Exception<ArgumentException>(new Regex("Error in stage.*")).ExpectOne(() =>
+            await EventFilter.Exception<ArgumentException>(new Regex("Error in stage.*")).ExpectOneAsync(async () =>
             {
-                Source.FromGraph(failyStage).RunWith(Sink.Ignore<int>(), Materializer).Wait(TimeSpan.FromSeconds(3));
+                await Source.FromGraph(failyStage).RunWith(Sink.Ignore<int>(), Materializer).WaitAsync(TimeSpan.FromSeconds(3));
             });
         }
 
@@ -273,7 +273,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public async Task ActorGraphInterpreter_should_trigger_PostStop_in_all_stages_when_abruptly_terminated_and_no_upstream_boundaries()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 // force the system to create a new materializer
                 var materializer = ActorMaterializer.Create(Sys, ActorMaterializerSettings.Create(Sys));
                 var gotStop = new TestLatch(1);
@@ -283,13 +283,12 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(new PostStopSnitchFlow(gotStop))
                     .To(Sink.FromSubscriber(downstream)).Run(materializer);
 
-                downstream.RequestNext();
+                await downstream.RequestNextAsync();
 
                 materializer.Shutdown();
-                gotStop.Ready(RemainingOrDefault);
+                await gotStop.ReadyAsync(RemainingOrDefault);
 
-                downstream.ExpectError().Should().BeOfType<AbruptTerminationException>();
-                return Task.CompletedTask;
+                (await downstream.ExpectErrorAsync()).Should().BeOfType<AbruptTerminationException>();
             }, Materializer);
         }
 

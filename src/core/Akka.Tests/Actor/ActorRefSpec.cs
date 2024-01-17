@@ -145,7 +145,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task An_ActorRef_should_restart_when_Killed()
         {
-            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(() => {
+            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(async () => {
                 var latch = CreateTestLatch(2);
                 var boss = ActorOf(a =>
                 {
@@ -168,8 +168,7 @@ namespace Akka.Tests.Actor
                 });
 
                 boss.Tell("send kill");
-                latch.Ready(TimeSpan.FromSeconds(5));
-                return Task.CompletedTask;
+                await latch.ReadyAsync(TimeSpan.FromSeconds(5));
             });
         }
 
@@ -224,7 +223,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorRef_should_support_reply_via_Sender()
+        public async Task An_ActorRef_should_support_reply_via_Sender()
         {
             var latch = new TestLatch(4);
             var serverRef = Sys.ActorOf(Props.Create<ReplyActor>());
@@ -235,7 +234,7 @@ namespace Akka.Tests.Actor
             clientRef.Tell("simple");
             clientRef.Tell("simple");
 
-            latch.Ready(TimeSpan.FromSeconds(3));
+            await latch.ReadyAsync(TimeSpan.FromSeconds(3));
             latch.Reset();
 
             clientRef.Tell("complex2");
@@ -243,7 +242,7 @@ namespace Akka.Tests.Actor
             clientRef.Tell("simple");
             clientRef.Tell("simple");
 
-            latch.Ready(TimeSpan.FromSeconds(3));
+            await latch.ReadyAsync(TimeSpan.FromSeconds(3));
             Sys.Stop(clientRef);
             Sys.Stop(serverRef);
         }
@@ -267,13 +266,11 @@ namespace Akka.Tests.Actor
             var t2 = actorRef.Ask(0, timeout);
             actorRef.Tell(PoisonPill.Instance);
 
-            Func<Task> f1 = async () => await t1;
-            await f1.Should().CompleteWithinAsync(timeout);
-            Func<Task> f2 = async () => await t2;
-            await f2.Should().CompleteWithinAsync(timeout);
+            var r1 = await t1.WaitAsync(timeout);
+            var r2 = await t2.WaitAsync(timeout);
             
-            t1.Result.ShouldBe("five");
-            t2.Result.ShouldBe("zero");
+            r1.ShouldBe("five");
+            r2.ShouldBe("zero");
 
             await VerifyActorTermination(actorRef);
         }

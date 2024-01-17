@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
@@ -35,7 +36,7 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void BroadcastGroup_router_must_broadcast_message_using_Tell()
+        public async Task BroadcastGroup_router_must_broadcast_message_using_Tell()
         {
             var doneLatch = new TestLatch(2);
 
@@ -50,14 +51,14 @@ namespace Akka.Tests.Routing
             routedActor.Tell(new Broadcast(1));
             routedActor.Tell(new Broadcast("end"));
 
-            doneLatch.Ready(RemainingOrDefault);
+            await doneLatch.ReadyAsync(RemainingOrDefault);
 
             counter1.Current.Should().Be(1);
             counter2.Current.Should().Be(1);
         }
 
         [Fact]
-        public void BroadcastGroup_router_must_broadcast_message_using_Ask()
+        public async Task BroadcastGroup_router_must_broadcast_message_using_Ask()
         {
             var doneLatch = new TestLatch(2);
 
@@ -72,7 +73,7 @@ namespace Akka.Tests.Routing
             routedActor.Ask(new Broadcast(1));
             routedActor.Tell(new Broadcast("end"));
 
-            doneLatch.Ready(RemainingOrDefault);
+            await doneLatch.ReadyAsync(RemainingOrDefault);
 
             counter1.Current.Should().Be(1);
             counter2.Current.Should().Be(1);

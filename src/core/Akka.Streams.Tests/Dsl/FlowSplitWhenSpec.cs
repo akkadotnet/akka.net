@@ -17,6 +17,7 @@ using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
+using Nito.AsyncEx;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
@@ -344,21 +345,23 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async () =>
                 {
                     await Awaiting(async () =>
-                        await Source.Single(1)
-                            .SplitWhen(_ => true)
-                            .Lift()
-                            .SelectAsync(1, source =>
-                            {
-                                source.RunWith(Sink.Ignore<int>(), Materializer);
-                                // Sink.ignore+mapAsync pipes error back                                                                                 
-                                return Task.Run(() =>
+                        {
+                            var task = Source.Single(1)
+                                .SplitWhen(_ => true)
+                                .Lift()
+                                .SelectAsync(1, source =>
                                 {
-                                    source.RunWith(Sink.Ignore<int>(), Materializer).Wait(TimeSpan.FromSeconds(3));
-                                    return 1;
-                                });
-                            })
-                            .RunWith(Sink.Ignore<int>(), Materializer)
-                    ).Should().ThrowAsync<IllegalStateException>();
+                                    source.RunWith(Sink.Ignore<int>(), Materializer);
+                                    // Sink.ignore+mapAsync pipes error back                                                                                 
+                                    return Task.Run(() =>
+                                    {
+                                        source.RunWith(Sink.Ignore<int>(), Materializer).Wait(TimeSpan.FromSeconds(3));
+                                        return 1;
+                                    });
+                                })
+                                .RunWith(Sink.Ignore<int>(), Materializer);
+                            await task.WaitAsync(RemainingOrDefault);
+                        }).Should().ThrowAsync<IllegalStateException>();
                 }, Materializer)
                 .ShouldCompleteWithin(RemainingOrDefault);
         }
@@ -380,10 +383,11 @@ namespace Akka.Streams.Tests.Dsl
 
                 await Awaiting(async () =>
                 {
-                    await testSource.Lift()
+                    var task = testSource.Lift()
                         .Delay(TimeSpan.FromSeconds(1))
                         .ConcatMany(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null))
                         .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer);
+                    await task.WaitAsync(RemainingOrDefault);
                 }).Should().ThrowAsync<SubscriptionTimeoutException>();
             }, Materializer)
                 .ShouldCompleteWithin(RemainingOrDefault);

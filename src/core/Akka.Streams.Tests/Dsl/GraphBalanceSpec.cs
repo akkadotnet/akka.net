@@ -15,6 +15,7 @@ using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit;
 // ReSharper disable InvokeAsExtensionMethod
@@ -147,7 +148,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Balance_must_work_with_1_way_balance()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var task = Source.FromGraph(GraphDsl.Create(b =>                                                                         
                 {                                                                             
                     var balance = b.Add(new Balance<int>(1));                                                                             
@@ -160,16 +161,14 @@ namespace Akka.Streams.Tests.Dsl
                     list.Add(i);                                                                             
                     return list;                                                                         
                 }, Materializer);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(new[] { 1, 2, 3 });
-                return Task.CompletedTask;
+                (await task.WaitAsync(3.Seconds())).Should().BeEquivalentTo(new[] { 1, 2, 3 });
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Balance_must_work_with_5_way_balance()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var sink = Sink.First<IEnumerable<int>>();
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(sink, sink, sink, sink, sink, ValueTuple.Create,
                     (b, s1, s2, s3, s4, s5) =>
@@ -185,17 +184,15 @@ namespace Akka.Streams.Tests.Dsl
                         return ClosedShape.Instance;
                     })).Run(Materializer);
 
-                var task = Task.WhenAll(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.SelectMany(l => l).Should().BeEquivalentTo(Enumerable.Range(0, 15));
-                return Task.CompletedTask;
+                (await Task.WhenAll(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5).WaitAsync(3.Seconds()))
+                    .SelectMany(l => l).Should().BeEquivalentTo(Enumerable.Range(0, 15));
             }, Materializer);
         }
 
         [Fact]
         public async Task A_Balance_must_balance_between_all_three_outputs()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 const int numElementsForSink = 10000;
                 var outputs = Sink.Aggregate<int, int>(0, (sum, i) => sum + i);
                 var t = RunnableGraph.FromGraph(GraphDsl.Create(outputs, outputs, outputs, ValueTuple.Create,
@@ -213,11 +210,9 @@ namespace Akka.Streams.Tests.Dsl
                         return ClosedShape.Instance;
                     })).Run(Materializer);
 
-                var task = Task.WhenAll(t.Item1, t.Item2, t.Item3);
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.Should().NotContain(0);
-                task.Result.Sum().Should().Be(numElementsForSink * 3);
-                return Task.CompletedTask;
+                var result = await Task.WhenAll(t.Item1, t.Item2, t.Item3).WaitAsync(3.Seconds());
+                result.Should().NotContain(0);
+                result.Sum().Should().Be(numElementsForSink * 3);
             }, Materializer);
         }
 

@@ -15,6 +15,8 @@ using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using Akka.Tests.Util;
+using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -44,7 +46,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Inbox_support_queueing_multiple_queries()
+        public async Task Inbox_support_queueing_multiple_queries()
         {
             var tasks = new[]
                 {
@@ -65,11 +67,11 @@ namespace Akka.Tests.Actor
             _inbox.Receiver.Tell("hello");
             _inbox.Receiver.Tell("world");
 
-            Task.WaitAll(tasks.Cast<Task>().ToArray());
+            var results = await Task.WhenAll(tasks.Cast<Task<object>>());
 
-            tasks[0].Result.ShouldBe(42);
-            tasks[1].Result.ShouldBe("world");
-            tasks[2].Result.ShouldBe("hello");
+            results[0].ShouldBe(42);
+            results[1].ShouldBe("world");
+            results[2].ShouldBe("hello");
         }
 
         [Fact]
@@ -157,8 +159,8 @@ namespace Akka.Tests.Actor
         public async Task Inbox_Receive_will_timeout_gracefully_if_timeout_is_already_expired()
         {
             var task = _inbox.ReceiveAsync(TimeSpan.FromSeconds(-1));
-            Assert.True(await task.AwaitWithTimeout(TimeSpan.FromMilliseconds(1000)), "Receive did not complete in time.");
-            Assert.IsType<Status.Failure>(task.Result);
+            var result = await task.WaitAsync(1.Seconds()); // Receive did not complete in time.
+            result.Should().BeOfType<Status.Failure>();
         }
     }
 }
