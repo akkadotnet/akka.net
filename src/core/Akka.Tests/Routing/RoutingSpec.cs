@@ -21,12 +21,13 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Routing
 {
     public class RoutingSpec : AkkaSpec
     {
-        public RoutingSpec() : base(GetConfig())
+        public RoutingSpec(ITestOutputHelper output) : base(GetConfig(), output:output)
         {
         }
 
@@ -130,7 +131,7 @@ namespace Akka.Tests.Routing
                 ReceiveAsync<string>(s => s == "start", async _ =>
                 {
                     var actor = Context.ActorOf(new RoundRobinPool(2).Props(Props.Create<InlineReceiverActor>()));
-                    var sender = this.Sender;
+                    var sender = Sender;
                     await actor.Ask("hello").PipeTo(sender);
                 });
             }

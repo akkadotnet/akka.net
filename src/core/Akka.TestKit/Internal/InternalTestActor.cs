@@ -16,7 +16,7 @@ namespace Akka.TestKit.Internal
     /// An actor that enqueues received messages to a <see cref="BlockingCollection{T}"/>.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public class InternalTestActor : ActorBase
+    public class InternalTestActor : UntypedActor
     {
         private readonly ITestActorQueue<MessageEnvelope> _queue;
         private TestKit.TestActor.Ignore _ignore;
@@ -37,7 +37,7 @@ namespace Akka.TestKit.Internal
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        protected override bool Receive(object message)
+        protected override void OnReceive(object message)
         {
             try
             {
@@ -56,16 +56,18 @@ namespace Akka.TestKit.Internal
             {
                 case TestActor.SetIgnore setIgnore:
                     _ignore = setIgnore.Ignore;
-                    return true;
+                    return;
                 case TestActor.Watch watch:
                     Context.Watch(watch.Actor);
-                    return true;
+                    Sender.Tell(TestActor.WatchAck.Instance);
+                    return;
                 case TestActor.Unwatch unwatch:
                     Context.Unwatch(unwatch.Actor);
-                    return true;
+                    Sender.Tell(TestActor.UnwatchAck.Instance);
+                    return;
                 case TestActor.SetAutoPilot setAutoPilot:
                     _autoPilot = setAutoPilot.AutoPilot;
-                    return true;
+                    return;
                 case TestActor.Spawn spawn:
                 {
                     var actor = spawn.Apply(Context);
@@ -74,7 +76,7 @@ namespace Akka.TestKit.Internal
                         _supervisorStrategy.Update(actor, spawn._supervisorStrategy.Value);
                     }
                     _queue.Enqueue(new RealMessageEnvelope(actor, Self));
-                    return true;
+                    return;
                 }
             }
 
@@ -82,12 +84,11 @@ namespace Akka.TestKit.Internal
             if(_autoPilot != null)
             {
                 var newAutoPilot = _autoPilot.Run(actorRef, message);
-                if(!(newAutoPilot is KeepRunning))
+                if(newAutoPilot is not KeepRunning)
                     _autoPilot = newAutoPilot;
             }
             if(_ignore == null || !_ignore(message))
                 _queue.Enqueue(new RealMessageEnvelope(message, actorRef));
-            return true;
         }
     }
 }
