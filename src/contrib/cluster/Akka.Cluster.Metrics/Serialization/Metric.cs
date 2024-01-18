@@ -6,10 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.ComponentModel;
 using Akka.Annotations;
 using Akka.Cluster.Metrics.Helpers;
-using Akka.Dispatch.SysMsg;
 using Akka.Util;
 
 namespace Akka.Cluster.Metrics.Serialization
@@ -23,7 +21,7 @@ namespace Akka.Cluster.Metrics.Serialization
             ///
             /// Equality of Metric is based on its name index.
             /// </summary>
-            public sealed partial class Metric
+            public sealed class Metric
             {
                 /// <summary>
                 /// Metric average value
@@ -79,7 +77,6 @@ namespace Akka.Cluster.Metrics.Serialization
                     Name = name;
                     Value = value;
                     Average = average;
-                    ewma_ = average.HasValue ? average.Value : default(EWMA);
                 }
 
                 /// <summary>

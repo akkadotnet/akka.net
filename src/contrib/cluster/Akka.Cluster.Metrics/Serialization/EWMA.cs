@@ -31,8 +31,12 @@ namespace Akka.Cluster.Metrics.Serialization
             ///             the sampled value resulting from the previous smoothing iteration.
             ///             This value is always used as the previous EWMA to calculate the new EWMA.
             /// </summary>
-            public sealed partial class EWMA 
+            public sealed class EWMA 
             {
+                public double Value { get; }
+                
+                public double Alpha { get; }
+                
                 /// <summary>
                 /// Creates new instance of <see cref="EWMA"/>
                 /// </summary>
@@ -49,8 +53,8 @@ namespace Akka.Cluster.Metrics.Serialization
                     if (alpha is < 0 or > 1)
                         throw new ArgumentException(nameof(alpha), "alpha must be between 0.0 and 1.0");
                     
-                    value_ = value;
-                    alpha_ = alpha;
+                    Value = value;
+                    Alpha = alpha;
                 }
 
                 /// <summary>
@@ -83,7 +87,7 @@ namespace Akka.Cluster.Metrics.Serialization
                     
                     var halfLifeMillis = halfLife.TotalMilliseconds;
                     if (halfLifeMillis <= 0)
-                        throw new ArgumentException(nameof(halfLife), "halfLife must be > 0 s");
+                        throw new ArgumentException("halfLife must be > 0 s", nameof(halfLife));
 
                     var decayRate = logOf2 / halfLifeMillis;
                     return 1 - Math.Exp(-decayRate * collectInterval.TotalMilliseconds);

@@ -5,13 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Annotations;
 using Akka.Util;
-using Akka.Util.Internal;
-using Newtonsoft.Json;
 
 namespace Akka.Cluster.Metrics.Serialization
 {
@@ -21,9 +18,9 @@ namespace Akka.Cluster.Metrics.Serialization
     /// Metrics gossip message
     /// </summary>
     [InternalApi]
-    public sealed partial class MetricsGossip
+    public sealed class MetricsGossip
     {
-        public IImmutableSet<NodeMetrics> Nodes { get; private set; } = ImmutableHashSet<NodeMetrics>.Empty;
+        public IImmutableSet<NodeMetrics> Nodes { get; }
 
         /// <summary>
         /// Empty metrics gossip
