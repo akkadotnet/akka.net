@@ -12,7 +12,7 @@ using scg = global::System.Collections.Generic;
 namespace Akka.Cluster.Metrics.Serialization.Proto {
 
   /// <summary>Holder for reflection information generated from ClusterMetricsMessages.proto</summary>
-  public static partial class ClusterMetricsMessagesReflection {
+  internal static partial class ClusterMetricsMessagesReflection {
 
     #region Descriptor
     /// <summary>File descriptor for ClusterMetricsMessages.proto</summary>
@@ -70,7 +70,7 @@ namespace Akka.Cluster.Metrics.Serialization.Proto {
   ///*
   /// Metrics Gossip Envelope
   /// </summary>
-  public sealed partial class MetricsGossipEnvelope : pb::IMessage<MetricsGossipEnvelope>
+  internal sealed partial class MetricsGossipEnvelope : pb::IMessage<MetricsGossipEnvelope>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -355,7 +355,7 @@ namespace Akka.Cluster.Metrics.Serialization.Proto {
   ///*
   /// Metrics Gossip
   /// </summary>
-  public sealed partial class MetricsGossip : pb::IMessage<MetricsGossip>
+  internal sealed partial class MetricsGossip : pb::IMessage<MetricsGossip>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -589,7 +589,7 @@ namespace Akka.Cluster.Metrics.Serialization.Proto {
   ///*
   /// Node Metrics
   /// </summary>
-  public sealed partial class NodeMetrics : pb::IMessage<NodeMetrics>
+  internal sealed partial class NodeMetrics : pb::IMessage<NodeMetrics>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -844,7 +844,7 @@ namespace Akka.Cluster.Metrics.Serialization.Proto {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static partial class Types {
-      public enum NumberType {
+      internal enum NumberType {
         [pbr::OriginalName("Serialized")] Serialized = 0,
         [pbr::OriginalName("Double")] Double = 1,
         [pbr::OriginalName("Float")] Float = 2,
@@ -852,7 +852,7 @@ namespace Akka.Cluster.Metrics.Serialization.Proto {
         [pbr::OriginalName("Long")] Long = 4,
       }
 
-      public sealed partial class Number : pb::IMessage<Number>
+      internal sealed partial class Number : pb::IMessage<Number>
       #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
           , pb::IBufferMessage
       #endif
@@ -1152,7 +1152,7 @@ namespace Akka.Cluster.Metrics.Serialization.Proto {
 
       }
 
-      public sealed partial class EWMA : pb::IMessage<EWMA>
+      internal sealed partial class EWMA : pb::IMessage<EWMA>
       #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
           , pb::IBufferMessage
       #endif
@@ -1378,7 +1378,7 @@ namespace Akka.Cluster.Metrics.Serialization.Proto {
 
       }
 
-      public sealed partial class Metric : pb::IMessage<Metric>
+      internal sealed partial class Metric : pb::IMessage<Metric>
       #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
           , pb::IBufferMessage
       #endif
@@ -1668,7 +1668,7 @@ namespace Akka.Cluster.Metrics.Serialization.Proto {
   ///*
   /// Defines a remote address.
   /// </summary>
-  public sealed partial class AddressData : pb::IMessage<AddressData>
+  internal sealed partial class AddressData : pb::IMessage<AddressData>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -1968,7 +1968,7 @@ namespace Akka.Cluster.Metrics.Serialization.Proto {
 
   }
 
-  public sealed partial class AdaptiveLoadBalancingPool : pb::IMessage<AdaptiveLoadBalancingPool>
+  internal sealed partial class AdaptiveLoadBalancingPool : pb::IMessage<AdaptiveLoadBalancingPool>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -2286,7 +2286,7 @@ namespace Akka.Cluster.Metrics.Serialization.Proto {
   /// <summary>
   /// couldn't figure out how to import Payload
   /// </summary>
-  public sealed partial class MetricsSelector : pb::IMessage<MetricsSelector>
+  internal sealed partial class MetricsSelector : pb::IMessage<MetricsSelector>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
@@ -2549,7 +2549,7 @@ namespace Akka.Cluster.Metrics.Serialization.Proto {
 
   }
 
-  public sealed partial class MixMetricsSelector : pb::IMessage<MixMetricsSelector>
+  internal sealed partial class MixMetricsSelector : pb::IMessage<MixMetricsSelector>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
