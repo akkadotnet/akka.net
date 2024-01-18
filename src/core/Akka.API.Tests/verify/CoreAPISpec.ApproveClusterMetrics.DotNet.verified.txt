@@ -307,7 +307,6 @@ namespace Akka.Cluster.Metrics.Serialization
         public Akka.Cluster.Metrics.Serialization.MetricsGossip Gossip { get; }
         public bool Reply { get; }
     }
-    [Akka.Annotations.InternalApiAttribute()]
     public sealed class NodeMetrics
     {
         public NodeMetrics(Akka.Actor.Address address, long timestamp, System.Collections.Generic.IEnumerable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> metrics) { }
