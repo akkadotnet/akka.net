@@ -10,6 +10,7 @@ using Akka.Annotations;
 using Akka.Cluster.Metrics.Helpers;
 using Akka.Util;
 
+#nullable enable
 namespace Akka.Cluster.Metrics.Serialization
 {
     public sealed partial class NodeMetrics
@@ -21,7 +22,7 @@ namespace Akka.Cluster.Metrics.Serialization
             ///
             /// Equality of Metric is based on its name index.
             /// </summary>
-            public sealed class Metric
+            public sealed class Metric: IEquatable<Metric>
             {
                 /// <summary>
                 /// Metric average value
@@ -178,7 +179,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 
                 public override int GetHashCode()
                 {
-                    return (Name != null ? Name.GetHashCode() : 0);
+                    return Name.GetHashCode();
                 }
             }
         }

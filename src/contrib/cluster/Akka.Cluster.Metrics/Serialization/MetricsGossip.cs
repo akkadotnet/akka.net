@@ -37,7 +37,7 @@ namespace Akka.Cluster.Metrics.Serialization
         /// </summary>
         public MetricsGossip Remove(Actor.Address node)
         {
-            return new MetricsGossip(Nodes.Where(n => !n.Address.Equals(node)).ToImmutableHashSet());
+            return new MetricsGossip(Nodes.Where(n => !n.Address.Equals(node)).ToImmutableHashSet(NodeMetricsComparer.Instance));
         }
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace Akka.Cluster.Metrics.Serialization
         /// </summary>
         public MetricsGossip Filter(IImmutableSet<Actor.Address> includeNodes)
         {
-            return new MetricsGossip(Nodes.Where(n => includeNodes.Contains(n.Address)).ToImmutableHashSet());
+            return new MetricsGossip(Nodes.Where(n => includeNodes.Contains(n.Address)).ToImmutableHashSet(NodeMetricsComparer.Instance));
         }
 
         /// <summary>
@@ -74,7 +74,7 @@ namespace Akka.Cluster.Metrics.Serialization
         public Option<NodeMetrics> NodeMetricsFor(Actor.Address address)
         {
             var node = Nodes.FirstOrDefault(m => m.Address.Equals(address));
-            return node ?? Option<NodeMetrics>.None;
+            return node is not null ? Option<NodeMetrics>.Create(node) : Option<NodeMetrics>.None;
         }
     }
 }

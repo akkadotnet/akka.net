@@ -11,15 +11,36 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Util;
 
+#nullable enable
 namespace Akka.Cluster.Metrics.Serialization
 {
+    internal sealed class NodeMetricsComparer: IEqualityComparer<NodeMetrics>
+    {
+        public static readonly NodeMetricsComparer Instance = new();
+        
+        private NodeMetricsComparer() { }
+        public bool Equals(NodeMetrics x, NodeMetrics y)
+        {
+            if (ReferenceEquals(x, y)) return true;
+            if (ReferenceEquals(x, null)) return false;
+            if (ReferenceEquals(y, null)) return false;
+            if (x.GetType() != y.GetType()) return false;
+            return Equals(x.Address, y.Address);
+        }
+
+        public int GetHashCode(NodeMetrics obj)
+        {
+            return obj.Address.GetHashCode();
+        }
+    }
+
     /// <summary>
     /// The snapshot of current sampled health metrics for any monitored process.
     /// Collected and gossipped at regular intervals for dynamic cluster management strategies.
     ///
     /// Equality of NodeMetrics is based on its address.
     /// </summary>
-    public sealed partial class NodeMetrics
+    public sealed partial class NodeMetrics: IEquatable<NodeMetrics>
     {
         public Actor.Address Address { get; }
         public long Timestamp { get; }
@@ -93,19 +114,16 @@ namespace Akka.Cluster.Metrics.Serialization
          * just stip them from generated code and paste here, with adding Address property check
          */
 
-
-        
         public bool Equals(NodeMetrics other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Equals(Address, other.Address);
+            return Address.Equals(other.Address);
         }
 
-        
         public override int GetHashCode()
         {
-            return (Address != null ? Address.GetHashCode() : 0);
+            return Address.GetHashCode();
         }
     }
 }
