@@ -307,7 +307,8 @@ namespace Akka.Cluster.Metrics.Serialization
         public Akka.Cluster.Metrics.Serialization.MetricsGossip Gossip { get; }
         public bool Reply { get; }
     }
-    public sealed class NodeMetrics
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class NodeMetrics : System.IEquatable<Akka.Cluster.Metrics.Serialization.NodeMetrics>
     {
         public NodeMetrics(Akka.Actor.Address address, long timestamp, System.Collections.Generic.IEnumerable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> metrics) { }
         public Akka.Actor.Address Address { get; }
@@ -316,22 +317,34 @@ namespace Akka.Cluster.Metrics.Serialization
         public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics other) { }
         public override int GetHashCode() { }
         public Akka.Cluster.Metrics.Serialization.NodeMetrics Merge(Akka.Cluster.Metrics.Serialization.NodeMetrics that) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                0,
+                1})]
         public Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Metric(string name) { }
         public bool SameAs(Akka.Cluster.Metrics.Serialization.NodeMetrics that) { }
         public Akka.Cluster.Metrics.Serialization.NodeMetrics Update(Akka.Cluster.Metrics.Serialization.NodeMetrics that) { }
         public class static Types
         {
-            public sealed class EWMA
+            public sealed class EWMA : System.IEquatable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA>
             {
                 public EWMA(double value, double alpha) { }
                 public double Alpha { get; }
                 public double Value { get; }
+                public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA other) { }
+                public override bool Equals(object obj) { }
                 public static double GetAlpha(System.TimeSpan halfLife, System.TimeSpan collectInterval) { }
+                public override int GetHashCode() { }
                 public static Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA +(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA current, double xn) { }
             }
-            public sealed class Metric
+            [System.Runtime.CompilerServices.NullableAttribute(0)]
+            public sealed class Metric : System.IEquatable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric>
             {
-                public Metric(string name, Akka.Cluster.Metrics.Helpers.AnyNumber value, Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> average) { }
+                public Metric(string name, Akka.Cluster.Metrics.Helpers.AnyNumber value, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                        0,
+                        1})] Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> average) { }
+                [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                        0,
+                        1})]
                 public Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> Average { get; }
                 public bool IsSmooth { get; }
                 public string Name { get; }
@@ -340,9 +353,21 @@ namespace Akka.Cluster.Metrics.Serialization
                 public Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric Add(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric latest) { }
                 [Akka.Annotations.InternalApiAttribute()]
                 public static Akka.Util.Either<long, double> ConvertNumber(Akka.Cluster.Metrics.Helpers.AnyNumber number) { }
+                [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                        0,
+                        1})]
                 public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create(string name, Akka.Cluster.Metrics.Helpers.AnyNumber value) { }
-                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create(string name, Akka.Cluster.Metrics.Helpers.AnyNumber value, Akka.Util.Option<double> decayFactor) { }
-                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create(string name, Akka.Util.Try<Akka.Cluster.Metrics.Helpers.AnyNumber> value, Akka.Util.Option<double> decayFactor) { }
+                [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                        0,
+                        1})]
+                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create([System.Runtime.CompilerServices.NullableAttribute(1)] string name, Akka.Cluster.Metrics.Helpers.AnyNumber value, Akka.Util.Option<double> decayFactor) { }
+                [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                        0,
+                        1})]
+                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create(string name, Akka.Util.Try<Akka.Cluster.Metrics.Helpers.AnyNumber> value, [System.Runtime.CompilerServices.NullableAttribute(0)] Akka.Util.Option<double> decayFactor) { }
+                [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                        0,
+                        1})]
                 public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> CreateEWMA(Akka.Cluster.Metrics.Helpers.AnyNumber value, Akka.Util.Option<double> decayFactor) { }
                 [Akka.Annotations.InternalApiAttribute()]
                 public static bool Defined(Akka.Cluster.Metrics.Helpers.AnyNumber value) { }
