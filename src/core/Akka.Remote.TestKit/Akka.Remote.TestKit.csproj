@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="../../protobuf/TestConductorProtocol.proto" />
+    <Protobuf Access="internal" Include="../../protobuf/TestConductorProtocol.proto" />
 
   </ItemGroup>
 

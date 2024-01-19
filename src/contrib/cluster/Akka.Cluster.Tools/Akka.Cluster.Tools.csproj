@@ -18,8 +18,8 @@
     </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="../../../protobuf/DistributedPubSubMessages.proto" />
-    <Protobuf Include="../../../protobuf/ClusterClientMessages.proto" />
+    <Protobuf Access="internal" Include="../../../protobuf/DistributedPubSubMessages.proto" />
+    <Protobuf Access="internal" Include="../../../protobuf/ClusterClientMessages.proto" />
 
 
   </ItemGroup>

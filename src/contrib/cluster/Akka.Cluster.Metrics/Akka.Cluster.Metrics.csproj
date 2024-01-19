@@ -27,7 +27,7 @@
     </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="Serialization/Proto/ClusterMetricsMessages.proto" />
+    <Protobuf Access="internal" Include="Serialization/Proto/ClusterMetricsMessages.proto" />
 
   </ItemGroup>
 

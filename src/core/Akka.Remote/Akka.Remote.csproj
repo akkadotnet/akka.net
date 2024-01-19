@@ -19,9 +19,9 @@
     </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="../../protobuf/ContainerFormats.proto" />
-    <Protobuf Include="../../protobuf/SystemMessageFormats.proto" />
-    <Protobuf Include="../../protobuf/WireFormats.proto" />
+    <Protobuf Access="internal" Include="../../protobuf/ContainerFormats.proto" />
+    <Protobuf Access="internal" Include="../../protobuf/SystemMessageFormats.proto" />
+    <Protobuf Access="internal" Include="../../protobuf/WireFormats.proto" />
 
   </ItemGroup>
     <PropertyGroup>

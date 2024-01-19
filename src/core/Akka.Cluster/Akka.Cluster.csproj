@@ -18,8 +18,8 @@
     </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="../../protobuf/ClusterMessages.proto" />
-    <Protobuf Include="../../protobuf/ReliableDelivery.proto" />
+    <Protobuf Access="internal" Include="../../protobuf/ClusterMessages.proto" />
+    <Protobuf Access="internal" Include="../../protobuf/ReliableDelivery.proto" />
 
   </ItemGroup>
 

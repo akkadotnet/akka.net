@@ -21,8 +21,8 @@
     </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="../../../protobuf/ReplicatedDataMessages.proto" />
-    <Protobuf Include="../../../protobuf/ReplicatorMessages.proto" />
+    <Protobuf Access="internal" Include="../../../protobuf/ReplicatedDataMessages.proto" />
+    <Protobuf Access="internal" Include="../../../protobuf/ReplicatorMessages.proto" />
   </ItemGroup>
 
 </Project>
