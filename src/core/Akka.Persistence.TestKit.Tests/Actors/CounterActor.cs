@@ -96,6 +96,7 @@ namespace Akka.Persistence.TestKit.Tests
                 var counterProps = Props.Create(() => new CounterActor("test"));
                 var actor = ActorOf(counterProps, "counter");
                 
+                Sys.Log.Info("Messaging actor");
                 await WatchAsync(actor);
                 actor.Tell("inc", TestActor);
                 await ExpectTerminatedAsync(actor);
