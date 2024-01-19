@@ -10,19 +10,41 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Util;
-using Google.Protobuf.Collections;
 
+#nullable enable
 namespace Akka.Cluster.Metrics.Serialization
 {
+    internal sealed class NodeMetricsComparer: IEqualityComparer<NodeMetrics>
+    {
+        public static readonly NodeMetricsComparer Instance = new();
+        
+        private NodeMetricsComparer() { }
+        public bool Equals(NodeMetrics x, NodeMetrics y)
+        {
+            if (ReferenceEquals(x, y)) return true;
+            if (ReferenceEquals(x, null)) return false;
+            if (ReferenceEquals(y, null)) return false;
+            if (x.GetType() != y.GetType()) return false;
+            return Equals(x.Address, y.Address);
+        }
+
+        public int GetHashCode(NodeMetrics obj)
+        {
+            return obj.Address.GetHashCode();
+        }
+    }
+
     /// <summary>
     /// The snapshot of current sampled health metrics for any monitored process.
     /// Collected and gossipped at regular intervals for dynamic cluster management strategies.
     ///
     /// Equality of NodeMetrics is based on its address.
     /// </summary>
-    public sealed partial class NodeMetrics
+    public sealed partial class NodeMetrics: IEquatable<NodeMetrics>
     {
-        public Actor.Address Address { get; private set; }
+        public Actor.Address Address { get; }
+        public long Timestamp { get; }
+        public ImmutableHashSet<Types.Metric> Metrics { get; }
         
         /// <summary>
         /// Creates new instance of <see cref="NodeMetrics"/>
@@ -33,9 +55,8 @@ namespace Akka.Cluster.Metrics.Serialization
         public NodeMetrics(Actor.Address address, long timestamp, IEnumerable<Types.Metric> metrics)
         {
             Address = address;
-            timestamp_ = timestamp;
-            metrics_ = new RepeatedField<Types.Metric>();
-            metrics_.AddRange(metrics);
+            Timestamp = timestamp;
+            Metrics = metrics.ToImmutableHashSet();
         }
 
         /// <summary>
@@ -44,7 +65,7 @@ namespace Akka.Cluster.Metrics.Serialization
         public NodeMetrics Merge(NodeMetrics that)
         {
             if (!Address.Equals(that.Address))
-                throw new ArgumentException(nameof(that), $"merge only allowed for same address, {Address} != {that.Address}");
+                throw new ArgumentException($"merge only allowed for same address, {Address} != {that.Address}", nameof(that));
 
             if (Timestamp >= that.Timestamp)
                 return this; // that is order
@@ -58,7 +79,7 @@ namespace Akka.Cluster.Metrics.Serialization
         public NodeMetrics Update(NodeMetrics that)
         {
             if (!Address.Equals(that.Address))
-                throw new ArgumentException(nameof(that), $"merge only allowed for same address, {Address} != {that.Address}");
+                throw new ArgumentException($"merge only allowed for same address, {Address} != {that.Address}", nameof(that));
             
             // Apply sample ordering
             var (latestNode, currentNode) = Timestamp >= that.Timestamp ? (this, that) : (that, this);
@@ -93,19 +114,16 @@ namespace Akka.Cluster.Metrics.Serialization
          * just stip them from generated code and paste here, with adding Address property check
          */
 
-
-        
         public bool Equals(NodeMetrics other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Equals(Address, other.Address);
+            return Address.Equals(other.Address);
         }
 
-        
         public override int GetHashCode()
         {
-            return (Address != null ? Address.GetHashCode() : 0);
+            return Address.GetHashCode();
         }
     }
 }
