@@ -137,7 +137,7 @@ namespace Akka.Persistence.Journal
             var highest = HighestSequenceNr(persistenceId);
             if (highest != 0L && max != 0L)
                 Read(persistenceId, fromSequenceNr, Math.Min(toSequenceNr, highest), max).ForEach(recoveryCallback);
-            return Task.FromResult(new object());
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -154,7 +154,7 @@ namespace Akka.Persistence.Journal
                 _meta.AddOrUpdate(persistenceId, highestSeqNr, (_, _) => highestSeqNr);
             for (var snr = 1L; snr <= toSeqNr; snr++)
                 Delete(persistenceId, snr);
-            return Task.FromResult(new object());
+            return Task.CompletedTask;
         }
 
         protected override bool ReceivePluginInternal(object message)

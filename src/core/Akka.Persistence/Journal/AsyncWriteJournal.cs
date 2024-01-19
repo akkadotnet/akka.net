@@ -259,20 +259,11 @@ namespace Akka.Persistence.Journal
 
             async Task ExecuteHighestSequenceNr()
             {
-                void CompleteHighSeqNo(long highSeqNo)
-                {
-                    replyTo.Tell(new RecoverySuccess(highSeqNo));
-
-                    if (CanPublish)
-                    {
-                        eventStream.Publish(message);
-                    }
-                }
-                
                 try
                 {
                     var highSequenceNr = await _breaker.WithCircuitBreaker((message, readHighestSequenceNrFrom, awj: this), state =>
-                        state.awj.ReadHighestSequenceNrAsync(state.message.PersistenceId, state.readHighestSequenceNrFrom));
+                        state.awj.ReadHighestSequenceNrAsync(state.message.PersistenceId, state.readHighestSequenceNrFrom))
+                        .ConfigureAwait(false);
                     var toSequenceNr = Math.Min(message.ToSequenceNr, highSequenceNr);
                     if (toSequenceNr <= 0L || message.FromSequenceNr > toSequenceNr)
                     {
@@ -293,7 +284,7 @@ namespace Akka.Persistence.Journal
                                         replyTo.Tell(new ReplayedMessage(adaptedRepresentation), ActorRefs.NoSender);
                                     }
                                 }
-                            });
+                            }).ConfigureAwait(false);
 
                         CompleteHighSeqNo(highSequenceNr);
                     }
@@ -308,6 +299,18 @@ namespace Akka.Persistence.Journal
                 catch (Exception ex)
                 {
                     replyTo.Tell(new ReplayMessagesFailure(TryUnwrapException(ex)));
+                }
+
+                return;
+
+                void CompleteHighSeqNo(long highSeqNo)
+                {
+                    replyTo.Tell(new RecoverySuccess(highSeqNo));
+
+                    if (CanPublish)
+                    {
+                        eventStream.Publish(message);
+                    }
                 }
             }
             
