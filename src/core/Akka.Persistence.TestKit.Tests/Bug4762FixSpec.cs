@@ -80,7 +80,6 @@ namespace Akka.Persistence.TestKit.Tests
             return WithJournalWrite(write => write.Pass(), async () =>
             {
                 var actor = ActorOf(() => new TestActor2(probe));
-                Watch(actor);
 
                 var command = new WriteMessage();
                 actor.Tell(command, actor);

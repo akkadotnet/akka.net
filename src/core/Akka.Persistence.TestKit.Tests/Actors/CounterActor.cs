@@ -72,6 +72,16 @@ namespace Akka.Persistence.TestKit.Tests
                     return;
             }
         }
+
+        protected override void PostStop()
+        {
+            _log.Info("Shutting down");
+        }
+        
+        protected override void PreStart()
+        {
+            _log.Info("Starting up");
+        }
     }
 
     public class CounterActorTests : PersistenceTestKit
@@ -86,9 +96,9 @@ namespace Akka.Persistence.TestKit.Tests
                 var counterProps = Props.Create(() => new CounterActor("test"));
                 var actor = ActorOf(counterProps, "counter");
                 
-                Watch(actor);
+                await WatchAsync(actor);
                 actor.Tell("inc", TestActor);
-                await ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(3));
+                await ExpectTerminatedAsync(actor);
 
                 // need to restart actor
                 actor = ActorOf(counterProps, "counter1");
