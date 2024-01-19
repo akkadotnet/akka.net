@@ -44,6 +44,7 @@ namespace Akka.TestKit.Extensions
             }
         }
         
+        // TODO: replace with WaitAsync after we drop .NET Standard 2.0 support
         public static async Task<T> WithTimeout<T>(this Task<T> parentTask, TimeSpan timeout, CancellationToken cancellationToken = default)
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))

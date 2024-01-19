@@ -5,6 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Event;
+using Xunit.Abstractions;
+
 namespace Akka.Persistence.TestKit.Tests
 {
     using System;
@@ -15,9 +18,11 @@ namespace Akka.Persistence.TestKit.Tests
 
     public class CounterActor : UntypedPersistentActor
     {
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+        
         public CounterActor(string id)
         {
-            this.PersistenceId = id;
+            PersistenceId = id;
         }
 
         private int _value = 0;
@@ -26,6 +31,8 @@ namespace Akka.Persistence.TestKit.Tests
 
         protected override void OnCommand(object message)
         {
+            _log.Info("Received command {0}", message);
+            
             switch (message as string)
             {
                 case "inc":
@@ -49,6 +56,8 @@ namespace Akka.Persistence.TestKit.Tests
 
         protected override void OnRecover(object message)
         {
+            _log.Info("Received recover {0}", message);
+            
             switch (message as string)
             {
                 case "inc":
@@ -67,10 +76,12 @@ namespace Akka.Persistence.TestKit.Tests
 
     public class CounterActorTests : PersistenceTestKit
     {
+        public CounterActorTests(ITestOutputHelper output) : base(output:output){}
+        
         [Fact]
-        public async Task CounterActor_internal_state_will_be_lost_if_underlying_persistence_store_is_not_available()
+        public Task CounterActor_internal_state_will_be_lost_if_underlying_persistence_store_is_not_available()
         {
-            await WithJournalWrite(write => write.Fail(), async () => 
+            return WithJournalWrite(write => write.Fail(), async () => 
             {
                 var counterProps = Props.Create(() => new CounterActor("test"));
                 var actor = ActorOf(counterProps, "counter");

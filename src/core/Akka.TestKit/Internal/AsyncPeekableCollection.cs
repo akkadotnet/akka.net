@@ -117,7 +117,7 @@ namespace Akka.TestKit.Internal
         /// <param name="sync">Whether to run this method synchronously.</param>
         internal async Task DoAddAsync(T item, CancellationToken cancellationToken, bool sync)
         {
-            using (sync ? _mutex.Lock() : await _mutex.LockAsync().ConfigureAwait(false))
+            using (sync ? _mutex.Lock() : await _mutex.LockAsync())
             {
                 // Wait for the collection to be not full.
                 while (Full && !_completed)
@@ -125,7 +125,7 @@ namespace Akka.TestKit.Internal
                     if (sync)
                         _completedOrNotFull.Wait(cancellationToken);
                     else
-                        await _completedOrNotFull.WaitAsync(cancellationToken).ConfigureAwait(false);
+                        await _completedOrNotFull.WaitAsync(cancellationToken);
                 }
 
                 // If the queue has been marked complete, then abort.
@@ -180,14 +180,14 @@ namespace Akka.TestKit.Internal
         /// <param name="sync">Whether to run this method synchronously.</param>
         private async Task<bool> DoOutputAvailableAsync(CancellationToken cancellationToken, bool sync)
         {
-            using (sync ? _mutex.Lock() : await _mutex.LockAsync().ConfigureAwait(false))
+            using (sync ? _mutex.Lock() : await _mutex.LockAsync())
             {
                 while (Empty && !_completed)
                 {
                     if (sync)
                         _completedOrNotEmpty.Wait(cancellationToken);
                     else
-                        await _completedOrNotEmpty.WaitAsync(cancellationToken).ConfigureAwait(false);
+                        await _completedOrNotEmpty.WaitAsync(cancellationToken);
                 }
                 return !Empty;
             }
@@ -252,14 +252,14 @@ namespace Akka.TestKit.Internal
         /// <exception cref="InvalidOperationException">The collection has been marked complete for adding and is empty.</exception>
         private async Task<T> DoTakeAsync(CancellationToken cancellationToken, bool sync)
         {
-            using (sync ? _mutex.Lock() : await _mutex.LockAsync().ConfigureAwait(false))
+            using (sync ? _mutex.Lock() : await _mutex.LockAsync())
             {
                 while (Empty && !_completed)
                 {
                     if (sync)
                         _completedOrNotEmpty.Wait(cancellationToken);
                     else
-                        await _completedOrNotEmpty.WaitAsync(cancellationToken).ConfigureAwait(false);
+                        await _completedOrNotEmpty.WaitAsync(cancellationToken);
                 }
 
                 if (_completed && Empty)
@@ -318,14 +318,14 @@ namespace Akka.TestKit.Internal
         /// <exception cref="InvalidOperationException">The collection has been marked complete for adding and is empty.</exception>
         private async Task<T> DoPeekAsync(CancellationToken cancellationToken, bool sync)
         {
-            using (sync ? _mutex.Lock() : await _mutex.LockAsync().ConfigureAwait(false))
+            using (sync ? _mutex.Lock() : await _mutex.LockAsync())
             {
                 while (Empty && !_completed)
                 {
                     if (sync)
                         _completedOrNotEmpty.Wait(cancellationToken);
                     else
-                        await _completedOrNotEmpty.WaitAsync(cancellationToken).ConfigureAwait(false);
+                        await _completedOrNotEmpty.WaitAsync(cancellationToken);
                 }
 
                 if (_completed && Empty)
