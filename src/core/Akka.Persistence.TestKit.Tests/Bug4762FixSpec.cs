@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 using Xunit;
 using Xunit.Abstractions;
@@ -22,16 +23,21 @@ namespace Akka.Persistence.TestKit.Tests
     /// </summary>
     public class Bug4762FixSpec : PersistenceTestKit
     {
-        public Bug4762FixSpec(ITestOutputHelper outputHelper) : base(output: outputHelper)
+        // create a Config that enables debug mode on the TestJournal
+        private static readonly Config Config =
+            ConfigurationFactory.ParseString("akka.persistence.journal.test.debug = on");
+
+        public Bug4762FixSpec(ITestOutputHelper outputHelper) : base(Config, output: outputHelper)
         {
-            
         }
-        
+
         private class WriteMessage
-        { }
+        {
+        }
 
         private class TestEvent
-        { }
+        {
+        }
 
         private class TestActor2 : UntypedPersistentActor
         {
@@ -48,17 +54,14 @@ namespace Akka.Persistence.TestKit.Tests
             protected override void OnCommand(object message)
             {
                 _log.Info("Received command {0}", message);
-                
+
                 switch (message)
                 {
                     case WriteMessage _:
                         var event1 = new TestEvent();
                         var event2 = new TestEvent();
                         var events = new List<TestEvent> { event1, event2 };
-                        PersistAll(events, _ =>
-                        {
-                            _probe.Tell(Done.Instance);
-                        });
+                        PersistAll(events, _ => { _probe.Tell(Done.Instance); });
                         break;
 
                     default:

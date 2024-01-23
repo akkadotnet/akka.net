@@ -121,6 +121,9 @@ namespace Akka.Persistence.TestKit
                         throw;
                     }
                 }
+                
+                if(DebugEnabled)
+                    _log.Info("Completed replaying messages from {0} to {1} for persistenceId {2}", fromSequenceNr, toSequenceNr, persistenceId);
             }
         }
 
