@@ -7,6 +7,7 @@
 
 using Akka.Actor.Setup;
 using Akka.Configuration;
+using Akka.Event;
 
 namespace Akka.Persistence.TestKit
 {
@@ -111,6 +112,11 @@ namespace Akka.Persistence.TestKit
                 await behaviorSelector(Journal.OnRecovery);
                 await execution();
             }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during execution of WithJournalRecovery");
+                throw;
+            }
             finally
             {
                 await Journal.OnRecovery.Pass();
@@ -135,6 +141,11 @@ namespace Akka.Persistence.TestKit
             {
                 await behaviorSelector(Journal.OnWrite);
                 await execution();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during execution of WithJournalWrite");
+                throw;
             }
             finally
             {
@@ -197,6 +208,11 @@ namespace Akka.Persistence.TestKit
                 await behaviorSelector(Snapshots.OnSave);
                 await execution();
             }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during execution of WithSnapshotSave");
+                throw;
+            }
             finally
             {
                 await Snapshots.OnSave.Pass();
@@ -222,6 +238,11 @@ namespace Akka.Persistence.TestKit
                 await behaviorSelector(Snapshots.OnLoad);
                 await execution();
             }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during execution of WithSnapshotLoad");
+                throw;
+            }
             finally
             {
                 await Snapshots.OnLoad.Pass();
@@ -246,6 +267,11 @@ namespace Akka.Persistence.TestKit
             {
                 await behaviorSelector(Snapshots.OnDelete);
                 await execution();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during execution of WithSnapshotDelete");
+                throw;
             }
             finally
             {

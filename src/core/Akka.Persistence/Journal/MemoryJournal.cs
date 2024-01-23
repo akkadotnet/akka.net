@@ -118,7 +118,7 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
-            return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.TryGetValue(persistenceId, out long metaSeqNr) ? metaSeqNr : 0L));
+            return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.TryGetValue(persistenceId, out var metaSeqNr) ? metaSeqNr : 0L));
         }
 
         /// <summary>
