@@ -374,7 +374,7 @@ namespace Akka.Persistence.TestKit
         {
             var defaultConfig = ConfigurationFactory.FromResource<TestJournal>("Akka.Persistence.TestKit.config.conf");
             if (customConfig == Config.Empty) return defaultConfig;
-            else return defaultConfig.SafeWithFallback(customConfig);
+            else return customConfig.WithFallback(defaultConfig);
         }        
     }
 }

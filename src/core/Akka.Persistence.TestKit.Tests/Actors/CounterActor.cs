@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Configuration;
 using Akka.Event;
 using Xunit.Abstractions;
 
@@ -86,7 +87,10 @@ namespace Akka.Persistence.TestKit.Tests
 
     public class CounterActorTests : PersistenceTestKit
     {
-        public CounterActorTests(ITestOutputHelper output) : base(output:output){}
+        // create a Config that enables debug mode on the TestJournal
+        private static readonly Config Config = ConfigurationFactory.ParseString("akka.persistence.journal.test.debug = on");
+        
+        public CounterActorTests(ITestOutputHelper output) : base(Config, output:output){}
         
         [Fact]
         public Task CounterActor_internal_state_will_be_lost_if_underlying_persistence_store_is_not_available()
