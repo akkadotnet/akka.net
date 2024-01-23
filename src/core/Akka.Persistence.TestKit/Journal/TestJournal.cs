@@ -7,17 +7,15 @@
 
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Actor;
+using Akka.Persistence.Journal;
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Threading.Tasks;
 
 namespace Akka.Persistence.TestKit
 {
-    using Akka.Actor;
-    using Akka.Persistence;
-    using Akka.Persistence.Journal;
-    using System;
-    using System.Collections.Generic;
-    using System.Collections.Immutable;
-    using System.Threading.Tasks;
-
     /// <summary>
     ///     In-memory persistence journal implementation which behavior could be controlled by interceptors.
     /// </summary>

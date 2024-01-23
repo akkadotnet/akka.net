@@ -88,7 +88,11 @@ namespace Akka.Persistence.TestKit.Tests
     public class CounterActorTests : PersistenceTestKit
     {
         // create a Config that enables debug mode on the TestJournal
-        private static readonly Config Config = ConfigurationFactory.ParseString("akka.persistence.journal.test.debug = on");
+        private static readonly Config Config =
+            ConfigurationFactory.ParseString("""
+                                             akka.persistence.journal.test.debug = on
+                                             akka.persistence.snapshot-store.test.debug = on
+                                             """);
         
         public CounterActorTests(ITestOutputHelper output) : base(Config, output:output){}
         
