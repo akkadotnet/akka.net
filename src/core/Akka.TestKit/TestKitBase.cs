@@ -701,8 +701,9 @@ namespace Akka.TestKit
 
         private IActorRef CreateTestActor(ActorSystem system, string name)
         {
-            var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_testState.Queue)))
-                .WithDispatcher("akka.test.test-actor.dispatcher");
+            var testActorProps = Props.Create(() =>
+                new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_testState.Queue)));
+                //.WithDispatcher("akka.test.test-actor.dispatcher");
             var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
             return testActor;
         }
