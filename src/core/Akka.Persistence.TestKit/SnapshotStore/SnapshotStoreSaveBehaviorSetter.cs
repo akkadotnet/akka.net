@@ -18,7 +18,7 @@ namespace Akka.Persistence.TestKit
     {
         internal SnapshotStoreSaveBehaviorSetter(IActorRef snapshots)
         {
-            this._snapshots = snapshots;
+            _snapshots = snapshots;
         }
 
         private readonly IActorRef _snapshots;

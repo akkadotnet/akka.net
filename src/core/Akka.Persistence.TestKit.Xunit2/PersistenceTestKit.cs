@@ -157,7 +157,7 @@ namespace Akka.Persistence.TestKit
                 if (execution == null) throw new ArgumentNullException(nameof(execution));
 
                 execution();
-                return Task.FromResult(new object());
+                return Task.CompletedTask;
             });
 
         /// <summary>
@@ -175,7 +175,7 @@ namespace Akka.Persistence.TestKit
                 if (execution == null) throw new ArgumentNullException(nameof(execution));
 
                 execution();
-                return Task.FromResult(new object());
+                return Task.CompletedTask;
             });
 
         /// <summary>
@@ -268,7 +268,7 @@ namespace Akka.Persistence.TestKit
                 if (execution == null) throw new ArgumentNullException(nameof(execution));
 
                 execution();
-                return Task.FromResult(true);
+                return Task.CompletedTask;
             });
 
         /// <summary>
@@ -286,7 +286,7 @@ namespace Akka.Persistence.TestKit
                 if (execution == null) throw new ArgumentNullException(nameof(execution));
 
                 execution();
-                return Task.FromResult(true);
+                return Task.CompletedTask;
             });
 
         /// <summary>
@@ -304,7 +304,7 @@ namespace Akka.Persistence.TestKit
                 if (execution == null) throw new ArgumentNullException(nameof(execution));
 
                 execution();
-                return Task.FromResult(true);
+                return Task.CompletedTask;
             });
 
         /// <summary>
