@@ -5,6 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Configuration;
+using Akka.Event;
+
 namespace Akka.Persistence.TestKit
 {
     using Akka.Actor;
@@ -20,19 +23,31 @@ namespace Akka.Persistence.TestKit
     /// </summary>
     public sealed class TestJournal : MemoryJournal
     {
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         private IJournalInterceptor _writeInterceptor = JournalInterceptors.Noop.Instance;
         private IJournalInterceptor _recoveryInterceptor = JournalInterceptors.Noop.Instance;
+
+        public TestJournal(Config journalConfig)
+        {
+            DebugEnabled = journalConfig.GetBoolean("debug", false);
+        }
+
+        private bool DebugEnabled { get; }
 
         protected override bool ReceivePluginInternal(object message)
         {
             switch (message)
             {
                 case UseWriteInterceptor use:
+                    if(DebugEnabled)
+                        _log.Info("Using write interceptor {0}", use.Interceptor.GetType().Name);
                     _writeInterceptor = use.Interceptor;
                     Sender.Tell(Ack.Instance);
                     return true;
 
                 case UseRecoveryInterceptor use:
+                    if(DebugEnabled)
+                        _log.Info("Using recovery interceptor {0}", use.Interceptor.GetType().Name);
                     _recoveryInterceptor = use.Interceptor;
                     Sender.Tell(Ack.Instance);
                     return true;
@@ -51,7 +66,12 @@ namespace Akka.Persistence.TestKit
                 {
                     foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
                     {
+                        if(DebugEnabled)
+                           _log.Info("Beginning write intercept of message {0} with interceptor {1}", p, _writeInterceptor.GetType().Name);
                         await _writeInterceptor.InterceptAsync(p);
+                        
+                        if(DebugEnabled)
+                            _log.Info("Completed write intercept of message {0} with interceptor {1}", p, _writeInterceptor.GetType().Name);
                         Add(p);
                     }
                 }
@@ -75,6 +95,10 @@ namespace Akka.Persistence.TestKit
         public override async Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)
         {
             var highest = HighestSequenceNr(persistenceId);
+            
+            if(DebugEnabled)
+                _log.Info("Replaying messages from {0} to {1} for persistenceId {2}", fromSequenceNr, toSequenceNr, persistenceId);
+            
             if (highest != 0L && max != 0L)
             {
                 var messages = Read(persistenceId, fromSequenceNr, Math.Min(toSequenceNr, highest), max);
@@ -82,7 +106,12 @@ namespace Akka.Persistence.TestKit
                 {
                     try
                     {
+                        if(DebugEnabled)
+                            _log.Info("Beginning recovery intercept of message {0} with interceptor {1}", p, _recoveryInterceptor.GetType().Name);
                         await _recoveryInterceptor.InterceptAsync(p);
+                        
+                        if(DebugEnabled)
+                            _log.Info("Completed recovery intercept of message {0} with interceptor {1}", p, _recoveryInterceptor.GetType().Name);
                         recoveryCallback(p);
                     }
                     catch (TestJournalFailureException)
