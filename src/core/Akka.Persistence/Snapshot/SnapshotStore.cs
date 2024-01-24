@@ -195,7 +195,7 @@ namespace Akka.Persistence.Snapshot
             try
             {
                 await _breaker.WithCircuitBreaker((msg: metadata, save: saveSnapshot, ss: this),
-                    state => state.ss.SaveAsync(state.msg, state.save));
+                    state => state.ss.SaveAsync(state.msg, state.save.Snapshot));
                 self.Tell(new SaveSnapshotSuccess(metadata), senderPersistentActor);
             }
             catch (Exception ex)
