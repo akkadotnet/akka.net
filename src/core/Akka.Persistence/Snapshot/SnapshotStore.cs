@@ -80,7 +80,8 @@ namespace Akka.Persistence.Snapshot
                     try
                     {
                         ReceivePluginInternal(message);
-                        _breaker.WithCircuitBreaker((msg: saveSnapshotFailure, ss: this), state => state.ss.DeleteAsync(state.msg.Metadata));
+                        _breaker.WithCircuitBreaker((msg: saveSnapshotFailure, ss: this),
+                            state => state.ss.DeleteAsync(state.msg.Metadata));
                     }
                     finally
                     {
@@ -145,7 +146,8 @@ namespace Akka.Persistence.Snapshot
             return true;
         }
 
-        private async Task DeleteSnapshotsAsync(DeleteSnapshots deleteSnapshots, IActorRef self, IActorRef senderPersistentActor)
+        private async Task DeleteSnapshotsAsync(DeleteSnapshots deleteSnapshots, IActorRef self,
+            IActorRef senderPersistentActor)
         {
             var eventStream = Context.System.EventStream;
             try
@@ -159,7 +161,7 @@ namespace Akka.Persistence.Snapshot
             {
                 self.Tell(new DeleteSnapshotsFailure(deleteSnapshots.Criteria, ex), senderPersistentActor);
             }
-            
+
             if (_publish)
                 eventStream.Publish(deleteSnapshots);
         }
@@ -168,7 +170,7 @@ namespace Akka.Persistence.Snapshot
             IActorRef senderPersistentActor)
         {
             var eventStream = Context.System.EventStream;
-            
+
             try
             {
                 await _breaker.WithCircuitBreaker((msg: deleteSnapshot, ss: this),
@@ -180,7 +182,7 @@ namespace Akka.Persistence.Snapshot
             {
                 self.Tell(new DeleteSnapshotFailure(deleteSnapshot.Metadata, ex), senderPersistentActor);
             }
-            
+
             if (_publish)
                 eventStream.Publish(deleteSnapshot);
         }
