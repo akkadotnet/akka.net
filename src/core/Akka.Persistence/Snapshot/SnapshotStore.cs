@@ -55,108 +55,113 @@ namespace Akka.Persistence.Snapshot
         {
             var senderPersistentActor = Sender; // Sender is PersistentActor
             var self = Self; //Self MUST BE CLOSED OVER here, or the code below will be subject to race conditions
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            switch (message)
+            {
+                case LoadSnapshot loadSnapshot:
 
-            if (message is LoadSnapshot loadSnapshot)
-            {
-                LoadSnapshotAsync(loadSnapshot, senderPersistentActor);
-            }
-            else if (message is SaveSnapshot saveSnapshot)
-            {
-                SaveSnapshotAsync(saveSnapshot, self, senderPersistentActor);
-            }
-            else if (message is SaveSnapshotSuccess)
-            {
-                try
-                {
-                    ReceivePluginInternal(message);
-                }
-                finally
-                {
-                    senderPersistentActor.Tell(message);
-                }
-            }
-            else if (message is SaveSnapshotFailure saveSnapshotFailure)
-            {
-                try
-                {
-                    ReceivePluginInternal(message);
-                    _breaker.WithCircuitBreaker((msg: saveSnapshotFailure, ss: this), state => state.ss.DeleteAsync(state.msg.Metadata));
-                }
-                finally
-                {
-                    senderPersistentActor.Tell(message);
-                }
-            }
-            else if (message is DeleteSnapshot deleteSnapshot)
-            {
-                DeleteSnapshotAsync(deleteSnapshot, self, senderPersistentActor);
-            }
-            else if (message is DeleteSnapshotSuccess)
-            {
-                try
-                {
-                    ReceivePluginInternal(message);
-                }
-                finally
-                {
-                    senderPersistentActor.Tell(message);
-                }
-            }
-            else if (message is DeleteSnapshotFailure)
-            {
-                try
-                {
-                    ReceivePluginInternal(message);
-                }
-                finally
-                {
-                    senderPersistentActor.Tell(message);
-                }
-            }
-            else if (message is DeleteSnapshots deleteSnapshots)
-            {
-                var eventStream = Context.System.EventStream;
-                _breaker.WithCircuitBreaker(() => DeleteAsync(deleteSnapshots.PersistenceId, deleteSnapshots.Criteria))
-                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
-                            ? new DeleteSnapshotsSuccess(deleteSnapshots.Criteria) as ISnapshotResponse
-                            : new DeleteSnapshotsFailure(deleteSnapshots.Criteria,
-                                t.IsFaulted
-                                    ? TryUnwrapException(t.Exception)
-                                    : new OperationCanceledException(
-                                        "DeleteAsync canceled, possibly due to timing out.")),
-                        _continuationOptions)
-                    .PipeTo(self, senderPersistentActor)
-                    .ContinueWith(_ =>
+                    LoadSnapshotAsync(loadSnapshot, senderPersistentActor);
+                    break;
+                case SaveSnapshot saveSnapshot:
+                    SaveSnapshotAsync(saveSnapshot, self, senderPersistentActor);
+                    break;
+                case SaveSnapshotSuccess:
+                    try
                     {
-                        if (_publish)
-                            eventStream.Publish(message);
-                    }, _continuationOptions);
-            }
-            else if (message is DeleteSnapshotsSuccess)
-            {
-                try
-                {
-                    ReceivePluginInternal(message);
-                }
-                finally
-                {
-                    senderPersistentActor.Tell(message);
-                }
-            }
-            else if (message is DeleteSnapshotsFailure)
-            {
-                try
-                {
-                    ReceivePluginInternal(message);
-                }
-                finally
-                {
-                    senderPersistentActor.Tell(message);
-                }
-            }
-            else return false;
+                        ReceivePluginInternal(message);
+                    }
+                    finally
+                    {
+                        senderPersistentActor.Tell(message);
+                    }
 
+                    break;
+                case SaveSnapshotFailure saveSnapshotFailure:
+                    try
+                    {
+                        ReceivePluginInternal(message);
+                        _breaker.WithCircuitBreaker((msg: saveSnapshotFailure, ss: this), state => state.ss.DeleteAsync(state.msg.Metadata));
+                    }
+                    finally
+                    {
+                        senderPersistentActor.Tell(message);
+                    }
+
+                    break;
+                case DeleteSnapshot deleteSnapshot:
+                    DeleteSnapshotAsync(deleteSnapshot, self, senderPersistentActor);
+                    break;
+                case DeleteSnapshotSuccess:
+                    try
+                    {
+                        ReceivePluginInternal(message);
+                    }
+                    finally
+                    {
+                        senderPersistentActor.Tell(message);
+                    }
+
+                    break;
+                case DeleteSnapshotFailure:
+                    try
+                    {
+                        ReceivePluginInternal(message);
+                    }
+                    finally
+                    {
+                        senderPersistentActor.Tell(message);
+                    }
+
+                    break;
+                case DeleteSnapshots deleteSnapshots:
+                    DeleteSnapshotsAsync(deleteSnapshots, self, senderPersistentActor);
+                    break;
+                case DeleteSnapshotsSuccess:
+                    try
+                    {
+                        ReceivePluginInternal(message);
+                    }
+                    finally
+                    {
+                        senderPersistentActor.Tell(message);
+                    }
+
+                    break;
+                case DeleteSnapshotsFailure:
+                    try
+                    {
+                        ReceivePluginInternal(message);
+                    }
+                    finally
+                    {
+                        senderPersistentActor.Tell(message);
+                    }
+
+                    break;
+                default:
+                    return false;
+            }
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             return true;
+        }
+
+        private async Task DeleteSnapshotsAsync(DeleteSnapshots deleteSnapshots, IActorRef self, IActorRef senderPersistentActor)
+        {
+            var eventStream = Context.System.EventStream;
+            try
+            {
+                await _breaker.WithCircuitBreaker((msg: deleteSnapshots, ss: this),
+                    state => state.ss.DeleteAsync(state.msg.PersistenceId, state.msg.Criteria));
+
+                self.Tell(new DeleteSnapshotsSuccess(deleteSnapshots.Criteria), senderPersistentActor);
+            }
+            catch (Exception ex)
+            {
+                self.Tell(new DeleteSnapshotsFailure(deleteSnapshots.Criteria, ex), senderPersistentActor);
+            }
+            
+            if (_publish)
+                eventStream.Publish(deleteSnapshots);
         }
 
         private async Task DeleteSnapshotAsync(DeleteSnapshot deleteSnapshot, IActorRef self,
