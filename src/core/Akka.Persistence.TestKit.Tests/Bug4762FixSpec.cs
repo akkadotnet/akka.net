@@ -26,6 +26,7 @@ namespace Akka.Persistence.TestKit.Tests
         // create a Config that enables debug mode on the TestJournal
         private static readonly Config Config =
             ConfigurationFactory.ParseString("""
+                                             akka.loglevel = DEBUG
                                              akka.persistence.journal.test.debug = on
                                              akka.persistence.snapshot-store.test.debug = on
                                              """);
