@@ -73,6 +73,12 @@ namespace Akka.Persistence.TestKit.Tests
                 }
             }
 
+            protected override void PreStart()
+            {
+                _log.Info("Starting up and beginning recovery");
+                base.PreStart();
+            }
+
             protected override void OnRecover(object message)
             {
                 _log.Info("Received recover {0}", message);
