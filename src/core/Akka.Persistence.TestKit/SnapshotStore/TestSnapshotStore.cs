@@ -33,6 +33,9 @@ namespace Akka.Persistence.TestKit
 
         protected override bool ReceivePluginInternal(object message)
         {
+            if(DebugEnabled)
+                _log.Info("Received plugin internal message {0}", message);
+            
             switch (message)
             {
                 case UseSaveInterceptor use:
