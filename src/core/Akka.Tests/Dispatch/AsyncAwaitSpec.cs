@@ -429,11 +429,13 @@ namespace Akka.Tests.Dispatch
             public AsyncFailingActor()
             {
 #pragma warning disable CS1998
+#pragma warning disable AK1003
                 ReceiveAsync<string>(async _ =>
-#pragma warning restore CS1998
                 {
                     ThrowException();
                 });
+#pragma warning restore AK1003
+#pragma warning restore CS1998
             }
 
             protected override void PreRestart(Exception reason, object message)
