@@ -196,7 +196,7 @@ namespace Akka.Dispatch
         /// <param name="scheduler">TBD</param>
         public TaskSchedulerExecutor(string id, TaskScheduler scheduler) : base(id)
         {
-            _factory = new TaskFactory(_cts.Token, TaskCreationOptions.HideScheduler, TaskContinuationOptions.HideScheduler, scheduler);
+            _factory = new TaskFactory(_cts.Token, TaskCreationOptions.HideScheduler, TaskContinuationOptions.None, scheduler);
         }
 
         // cache the delegate used for execution to prevent allocations
