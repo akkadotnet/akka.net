@@ -139,6 +139,7 @@ namespace Akka.Cluster.Sharding
     /// The number of ongoing rebalancing processes can be limited by `maxSimultaneousRebalance`.
     /// </summary>
     [Serializable]
+    [Obsolete("Use ShardAllocationStrategy.LeastShardAllocationStrategy instead. This will be removed in v1.6.")]
     public class LeastShardAllocationStrategy : AbstractLeastShardAllocationStrategy
     {
         private readonly int _rebalanceThreshold;

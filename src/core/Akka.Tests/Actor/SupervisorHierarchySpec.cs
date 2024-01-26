@@ -74,10 +74,12 @@ namespace Akka.Tests.Actor
             public ResumerAsync()
             {
 #pragma warning disable CS1998
+#pragma warning disable AK1003
                 ReceiveAsync<string>(s => s.StartsWith("spawn:"), async s => Sender.Tell(Context.ActorOf<ResumerAsync>(s.Substring(6))));
                 ReceiveAsync<string>(s => s.Equals("spawn"), async _ => Sender.Tell(Context.ActorOf<ResumerAsync>()));
                 ReceiveAsync<string>(s => s.Equals("fail"), async _ => { throw new Exception("expected"); });
                 ReceiveAsync<string>(s => s.Equals("ping"), async _ => Sender.Tell("pong"));
+#pragma warning restore AK1003
 #pragma warning restore CS1998
             }
 

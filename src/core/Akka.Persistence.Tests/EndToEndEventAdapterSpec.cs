@@ -240,7 +240,10 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveRecover(object message)
             {
-                if (message is RecoveryCompleted) ;
+                if (message is RecoveryCompleted)
+                {
+                    // skip
+                }
                 else _state.AddLast(message);
                 return true;
             }

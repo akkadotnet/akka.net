@@ -278,12 +278,12 @@ namespace Akka.Cluster.Tests.MultiNode
                     {
                         if (!Sys.WhenTerminated.Wait(timeout)) // TestConductor.Shutdown called by First MUST terminate this actor system
                         {
-                            Assert.True(false, String.Format("Failed to stop [{0}] within [{1}]", Sys.Name, timeout));
+                            Assert.Fail($"Failed to stop [{Sys.Name}] within [{timeout}]");
                         }
                     }
                     catch (TimeoutException)
                     {
-                        Assert.True(false, String.Format("Failed to stop [{0}] within [{1}]", Sys.Name, timeout));
+                        Assert.Fail($"Failed to stop [{Sys.Name}] within [{timeout}]");
                     }
 
                     
@@ -328,10 +328,10 @@ namespace Akka.Cluster.Tests.MultiNode
         /// <summary>
         /// Used to report <see cref="Terminated"/> events to the <see cref="TestActor"/>
         /// </summary>
-        class Observer : ReceiveActor
+        private class Observer : ReceiveActor
         {
             private readonly IActorRef _testActorRef;
-            readonly TestLatch _watchEstablished;
+            private readonly TestLatch _watchEstablished;
 
             public Observer(ActorPath path2, ActorPath path3, TestLatch watchEstablished, IActorRef testActorRef)
             {
@@ -358,28 +358,6 @@ namespace Akka.Cluster.Tests.MultiNode
                 Context.ActorSelection(path2).Tell(new Identify(path2));
                 Context.ActorSelection(path3).Tell(new Identify(path3));
 
-            }
-        }
-
-        class DumbObserver : ReceiveActor
-        {
-            private readonly IActorRef _testActorRef;
-
-            public DumbObserver(ActorPath path2, IActorRef testActorRef)
-            {
-                _testActorRef = testActorRef;
-
-                Receive<ActorIdentity>(identity =>
-                {
-                    Context.Watch(identity.Subject);
-                });
-
-                Receive<Terminated>(terminated =>
-                {
-                    _testActorRef.Tell(terminated.ActorRef.Path);
-                });
-
-                Context.ActorSelection(path2).Tell(new Identify(path2));
             }
         }
     }

@@ -690,7 +690,7 @@ namespace Akka.DistributedData
                             case AddDeltaOperation op: acc = acc.DryMerge(op.Underlying, addDeltaOp: true); break;
                             case RemoveDeltaOperation op: acc = acc.MergeRemoveDelta(op); break;
                             case FullStateDeltaOperation op: acc = acc.DryMerge(op.Underlying, addDeltaOp: false); break;
-                            default: throw new ArgumentException($"GroupDelta should not be nested");
+                            default: throw new ArgumentException("GroupDelta should not be nested");
                         }
                     }
                     return acc;

@@ -185,7 +185,7 @@ namespace Akka.Actor
 
         private void SendTerminated(bool ifLocal, IInternalActorRef watcher)
         {
-            if (((IActorRefScope)watcher).IsLocal == ifLocal && !watcher.Equals(Parent))
+            if (watcher.IsLocal == ifLocal && !watcher.Equals(Parent))
             {
                 watcher.SendSystemMessage(new DeathWatchNotification(Self, true, false));
             }

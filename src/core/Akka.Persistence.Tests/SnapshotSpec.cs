@@ -364,7 +364,9 @@ namespace Akka.Persistence.Tests
             pref.Tell("done");
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4);
-            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
+            var strSnapshot1 = offer.Snapshot as IEnumerable<string>;
+            Assert.NotNull(strSnapshot1);
+            strSnapshot1.Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
 
             ExpectMsg<RecoveryCompleted>();
             ExpectMsg("done");
@@ -376,7 +378,9 @@ namespace Akka.Persistence.Tests
             ActorOf(() => new DeleteSnapshotTestActor(Name, new Recovery(SnapshotSelectionCriteria.Latest, 4), TestActor));
 
             var offer2 = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
-            (offer2.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
+            var strSnapshot2 = offer2.Snapshot as IEnumerable<string>;
+            Assert.NotNull(strSnapshot2);
+            strSnapshot2.Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
 
             ExpectMsg("c-3");
             ExpectMsg("d-4");
@@ -395,12 +399,12 @@ namespace Akka.Persistence.Tests
             // recover persistentActor and the delete first three (= all) snapshots
             pref.Tell(new DeleteMany(new SnapshotSelectionCriteria(4, DateTime.MaxValue)));
 
-            ExpectMsgPf("offer", o =>
+            ExpectMsgOf("offer", o =>
             {
-                var offer = o as SnapshotOffer;
-                if (offer != null)
+                if (o is SnapshotOffer offer)
                 {
                     var snapshot = offer.Snapshot as IEnumerable<string>;
+                    Assert.NotNull(snapshot);
                     snapshot.Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
 
                     Assert.Equal(persistenceId, offer.Metadata.PersistenceId);
@@ -408,7 +412,8 @@ namespace Akka.Persistence.Tests
 
                     return offer;
                 }
-                else return null;
+
+                return null;
             });
 
             ExpectMsg<RecoveryCompleted>();

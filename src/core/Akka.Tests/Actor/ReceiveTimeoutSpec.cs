@@ -77,6 +77,8 @@ namespace Akka.Tests.Actor
                 
                 Context.SetReceiveTimeout(timeout.GetValueOrDefault());
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+#pragma warning disable AK1003
                 ReceiveAsync<ReceiveTimeout>(async _ =>
                 {
                     log.Info($"Received {nameof(ReceiveTimeout)}");
@@ -92,6 +94,8 @@ namespace Akka.Tests.Actor
                 {
                     log.Info($"Received {nameof(Tick)}");
                 });
+#pragma warning restore AK1003
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
             }
 
         }

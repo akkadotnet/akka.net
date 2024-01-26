@@ -50,22 +50,22 @@ namespace Akka.DistributedData.Tests.MultiNode
                 akka.test.single-expect-default = 15s")
                 .WithFallback(DistributedData.DefaultConfig());
 
-            NodeConfig(new[] { First }, new[] { ConfigurationFactory.ParseString($@"
-                akka.cluster.distributed-data.durable.lmdb {{
+            NodeConfig(new[] { First }, new[] { ConfigurationFactory.ParseString(@"
+                akka.cluster.distributed-data.durable.lmdb {
                   dir = ""target/DurableDataPocoSpec/first-ddata""
-                }}
+                }
             ") });
 
-            NodeConfig(new[] { Second }, new[] { ConfigurationFactory.ParseString($@"
-                akka.cluster.distributed-data.durable.lmdb {{
+            NodeConfig(new[] { Second }, new[] { ConfigurationFactory.ParseString(@"
+                akka.cluster.distributed-data.durable.lmdb {
                   dir = ""target/DurableDataPocoSpec/second-ddata""
-                }}
+                }
             ") });
 
-            NodeConfig(new[] { Third }, new[] { ConfigurationFactory.ParseString($@"
-                akka.cluster.distributed-data.durable.lmdb {{
+            NodeConfig(new[] { Third }, new[] { ConfigurationFactory.ParseString(@"
+                akka.cluster.distributed-data.durable.lmdb {
                   dir = ""target/DurableDataPocoSpec/third-ddata""
-                }}
+                }
             ") });
         }
     }

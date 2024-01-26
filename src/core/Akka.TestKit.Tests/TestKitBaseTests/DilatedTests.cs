@@ -40,7 +40,7 @@ namespace Akka.TestKit.Tests.TestKitBaseTests
         {
             var stopwatch = Stopwatch.StartNew();
             await Awaiting(() => AwaitConditionAsync(() => Task.FromResult(false), TimeSpan.FromMilliseconds(Timeout)))
-                .Should().ThrowAsync<TrueException>();
+                .Should().ThrowAsync<FailException>();
             stopwatch.Stop();
             AssertDilated(stopwatch.ElapsedMilliseconds, $"Expected the timeout to be {ExpectedTimeout} but in fact it was {stopwatch.ElapsedMilliseconds}.");
         }

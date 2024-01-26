@@ -207,10 +207,10 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
-                StartPersistenceIfNeeded(startOn: config.First, config.First, config.Second);
+                StartPersistenceIfNeeded(startOn: Config.First, Config.First, Config.Second);
 
-                Join(config.First, config.First, TypeName);
-                Join(config.Second, config.First, TypeName);
+                Join(Config.First, Config.First, TypeName);
+                Join(Config.Second, Config.First, TypeName);
 
                 AwaitAssert(() =>
                 {
@@ -245,12 +245,12 @@ namespace Akka.Cluster.Sharding.Tests
                     Sys.ActorOf(TerminationOrderActor.Props(terminationProbe.Ref, coordinator, _region.Value));
 
                     // trigger graceful shutdown
-                    Cluster.Leave(GetAddress(config.First));
+                    Cluster.Leave(GetAddress(Config.First));
 
                     // region first
                     terminationProbe.ExpectMsg<TerminationOrderActor.RegionTerminated>();
                     terminationProbe.ExpectMsg<TerminationOrderActor.CoordinatorTerminated>();
-                }, config.First);
+                }, Config.First);
 
                 EnterBarrier("terminated");
 
@@ -269,7 +269,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                         responses.Count.Should().Be(100);
                     });
-                }, config.Second);
+                }, Config.Second);
                 EnterBarrier("done-o");
             });
         }

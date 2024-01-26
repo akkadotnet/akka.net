@@ -212,7 +212,7 @@ namespace Akka.Persistence.TCK.Query
         }
         
         [Fact]
-        public void ReadJournal_query_CurrentEventsByTag_should_include_timestamp_in_EventEnvelope()
+        public virtual void ReadJournal_query_CurrentEventsByTag_should_include_timestamp_in_EventEnvelope()
         {
             if (ReadJournal is not ICurrentEventsByTagQuery queries)
                 throw IsTypeException.ForMismatchedType(nameof(ICurrentEventsByTagQuery), ReadJournal?.GetType().Name ?? "null");
@@ -226,7 +226,7 @@ namespace Akka.Persistence.TCK.Query
             a.Tell("a green banana");
             ExpectMsg("a green banana-done");
 
-            var greenSrc = queries.CurrentEventsByTag("green", offset: Sequence(0L));
+            var greenSrc = queries.CurrentEventsByTag("green", offset: NoOffset());
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe.Request(2);
             probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
