@@ -13,8 +13,8 @@ Akka.NET v1.5.16 is a patch release for Akka.NET with some feature additions and
 **Akka.Analyzers**
 
 We have expanded Akka.Analyzer and introduced 2 new rules to the Roslyn analyzer:
-* `AK1002`: Error: Must not await `Self.GracefulStop()` inside `ReceiveAsync` or `ReceiveAnyAsync`
-* `AK1003`: Warning: `ReceiveAsync<T>()` or `ReceiveAnyAsync<T>()` message handler without async lambda body
+* `AK1002`: Error: Must not await `Self.GracefulStop()` inside `ReceiveAsync<T>()` or `ReceiveAnyAsync`
+* `AK1003`: Warning: `ReceiveAsync<T>()` or `ReceiveAnyAsync()` message handler without async lambda body
 
 [See the full set of supported Akka.Analyzers rules here](https://getakka.net/articles/debugging/akka-analyzers.html)
 
