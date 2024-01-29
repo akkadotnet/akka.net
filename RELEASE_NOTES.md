@@ -1,6 +1,34 @@
-#### 1.5.16 January 9th 2024 ####
+#### 1.5.16 January 29th 2024 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.16 is a patch release for Akka.NET with some feature additions and changes.
+
+* [Core: Bump Google.Protobuf to 3.25.2](https://github.com/akkadotnet/akka.net/pull/7056)
+* [Core: Remove redundant assembly titles](https://github.com/akkadotnet/akka.net/pull/6796)
+* [Akka.Cluster.Sharding: Fix sharding entity ID extractor nullability](https://github.com/akkadotnet/akka.net/pull/7059)
+* [Akka.Cluster.Sharding: Fix cluster sharding benchmark](https://github.com/akkadotnet/akka.net/pull/7061)
+* [Akka.TestKit: Fix Watch and Unwatch bug](https://github.com/akkadotnet/akka.net/pull/7037)
+* [Akka.Cluster.Metrics: Separate business models and wire format models](https://github.com/akkadotnet/akka.net/pull/7067)
+* [Akka.Analyzer: Bump Akka.Analyzer to 0.2.2](https://github.com/akkadotnet/akka.net/pull/7073)
+
+**Akka.Analyzers**
+
+We have expanded Akka.Analyzer and introduced 2 new rules to the Roslyn analyzer:
+* `AK1002`: Error: Must not await `Self.GracefulStop()` inside `ReceiveAsync` or `ReceiveAnyAsync`
+* `AK1003`: Warning: `ReceiveAsync<T>()` or `ReceiveAnyAsync<T>()` message handler without async lambda body
+
+[See the full set of supported Akka.Analyzers rules here](https://getakka.net/articles/debugging/akka-analyzers.html)
+
+You can [see the full set of changes for Akka.NET v1.5.16 here](https://github.com/akkadotnet/akka.net/milestones/1.5.16).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 6       | 1268 | 628  | Gregorius Soedharmo |
+| 5       | 6    | 6    | dependabot[bot]     |
+| 2       | 286  | 224  | Aaron Stannard      |
+| 1       | 2120 | 0    | Yan Pitangui        |
+| 1       | 2    | 2    | Mattias Jakobsson   |
+| 1       | 2    | 0    | Ebere Abanonu       |
+| 1       | 0    | 65   | Simon Cropp         |
 
 #### 1.5.15 January 9th 2024 ####
 
