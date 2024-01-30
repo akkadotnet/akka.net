@@ -107,7 +107,12 @@ namespace Akka.Event
         {
             try
             {
-                return a.Path.ToStringWithAddress(system.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress);
+                var defaultAddress = system.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
+                if (defaultAddress is null)
+                {
+                    return a.Path.ToString();
+                }
+                return a.Path.ToStringWithAddress(defaultAddress);
             }
             catch // can fail if the ActorSystem (remoting) is not completely started yet
             {
