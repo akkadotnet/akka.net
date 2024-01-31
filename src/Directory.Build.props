@@ -40,7 +40,7 @@
     <MultiNodeAdapterVersion>1.5.13</MultiNodeAdapterVersion>
     <MicrosoftLibVersion>[6.0.*,)</MicrosoftLibVersion>
     <MsExtVersion>[6.0.*,)</MsExtVersion>
-    <AkkaAnalyzerVersion>0.2.1</AkkaAnalyzerVersion>
+    <AkkaAnalyzerVersion>0.2.2</AkkaAnalyzerVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
