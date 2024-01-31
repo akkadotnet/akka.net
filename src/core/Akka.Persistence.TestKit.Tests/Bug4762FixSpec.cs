@@ -28,6 +28,7 @@ namespace Akka.Persistence.TestKit.Tests
             ConfigurationFactory.ParseString("""
                                              akka.loglevel = DEBUG
                                              akka.persistence.journal.test.debug = on
+                                             akka.persistence.journal.test.replay-filter.debug = on
                                              akka.persistence.snapshot-store.test.debug = on
                                              """);
 
