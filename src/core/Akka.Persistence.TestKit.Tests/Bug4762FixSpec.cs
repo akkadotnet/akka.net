@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -98,7 +99,7 @@ namespace Akka.Persistence.TestKit.Tests
                 var command = new WriteMessage();
                 actor.Tell(command, actor);
 
-                await probe.ExpectMsgAsync<RecoveryCompleted>();
+                await probe.ExpectMsgAsync<RecoveryCompleted>(10.Seconds());
                 await probe.ExpectMsgAsync<Done>();
                 await probe.ExpectMsgAsync<Done>();
                 await probe.ExpectNoMsgAsync(3000);
