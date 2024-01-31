@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 
 #pragma warning disable 1998 //async method lacks an await
+#pragma warning disable AK1003 // ReceiveAsync lacks an await
 
 namespace PingPong
 {
