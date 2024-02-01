@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Pattern;
 
 namespace Akka.Persistence.Snapshot
@@ -20,6 +21,8 @@ namespace Akka.Persistence.Snapshot
         private readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
         private readonly bool _publish;
         private readonly CircuitBreaker _breaker;
+        private readonly ILoggingAdapter _log;
+        private readonly bool _debugEnabled;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotStore"/> class.
@@ -43,6 +46,9 @@ namespace Akka.Persistence.Snapshot
                 config.GetInt("circuit-breaker.max-failures", 10),
                 config.GetTimeSpan("circuit-breaker.call-timeout", TimeSpan.FromSeconds(10)),
                 config.GetTimeSpan("circuit-breaker.reset-timeout", TimeSpan.FromSeconds(30)));
+
+            _debugEnabled = config.GetBoolean("debug");
+            _log = Context.GetLogger();
         }
 
         /// <inheritdoc/>
@@ -59,6 +65,8 @@ namespace Akka.Persistence.Snapshot
             switch (message)
             {
                 case LoadSnapshot loadSnapshot:
+                    if(_debugEnabled)
+                        _log.Info($"{nameof(LoadSnapshot)} message received.");
 
                     LoadSnapshotAsync(loadSnapshot, self, senderPersistentActor);
                     break;
@@ -214,9 +222,20 @@ namespace Akka.Persistence.Snapshot
             {
                 try
                 {
+                    if(_debugEnabled)
+                        _log.Info($"Starting {nameof(LoadSnapshotAsync)} circuit breaker.");
+                    
                     var result = await _breaker.WithCircuitBreaker((msg: loadSnapshot, ss: this),
-                        state => state.ss.LoadAsync(state.msg.PersistenceId,
-                            state.msg.Criteria.Limit(state.msg.ToSequenceNr)));
+                        state =>
+                        {
+                            if(_debugEnabled)
+                                _log.Info($"Invoking {nameof(LoadAsync)} inside circuit breaker.");
+                    
+                            return state.ss.LoadAsync(state.msg.PersistenceId, state.msg.Criteria.Limit(state.msg.ToSequenceNr));
+                        });
+                    
+                    if(_debugEnabled)
+                        _log.Info($"{nameof(LoadSnapshotAsync)} circuit breaker completed.");
 
                     senderPersistentActor.Tell(new LoadSnapshotResult(result, loadSnapshot.ToSequenceNr), self);
                 }
