@@ -60,7 +60,7 @@ namespace Akka.Persistence.Snapshot
             {
                 case LoadSnapshot loadSnapshot:
 
-                    LoadSnapshotAsync(loadSnapshot, senderPersistentActor);
+                    LoadSnapshotAsync(loadSnapshot, self, senderPersistentActor);
                     break;
                 case SaveSnapshot saveSnapshot:
                     SaveSnapshotAsync(saveSnapshot, self, senderPersistentActor);
@@ -204,11 +204,11 @@ namespace Akka.Persistence.Snapshot
             }
         }
 
-        private async Task LoadSnapshotAsync(LoadSnapshot loadSnapshot, IActorRef senderPersistentActor)
+        private async Task LoadSnapshotAsync(LoadSnapshot loadSnapshot, IActorRef self, IActorRef senderPersistentActor)
         {
             if (loadSnapshot.Criteria == SnapshotSelectionCriteria.None)
             {
-                senderPersistentActor.Tell(new LoadSnapshotResult(null, loadSnapshot.ToSequenceNr));
+                senderPersistentActor.Tell(new LoadSnapshotResult(null, loadSnapshot.ToSequenceNr), self);
             }
             else
             {
@@ -218,11 +218,11 @@ namespace Akka.Persistence.Snapshot
                         state => state.ss.LoadAsync(state.msg.PersistenceId,
                             state.msg.Criteria.Limit(state.msg.ToSequenceNr)));
 
-                    senderPersistentActor.Tell(new LoadSnapshotResult(result, loadSnapshot.ToSequenceNr));
+                    senderPersistentActor.Tell(new LoadSnapshotResult(result, loadSnapshot.ToSequenceNr), self);
                 }
                 catch (Exception ex)
                 {
-                    senderPersistentActor.Tell(new LoadSnapshotFailed(ex));
+                    senderPersistentActor.Tell(new LoadSnapshotFailed(ex), self);
                 }
             }
         }
