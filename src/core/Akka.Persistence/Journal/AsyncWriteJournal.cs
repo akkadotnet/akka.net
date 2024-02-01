@@ -251,6 +251,7 @@ namespace Akka.Persistence.Journal
                 ? Context.ActorOf(ReplayFilter.Props(message.PersistentActor, _replayFilterMode, _replayFilterWindowSize,
                     _replayFilterMaxOldWriters, _replayDebugEnabled))
                 : message.PersistentActor;
+            var self = Context.Self;
 
             var context = Context;
             var eventStream = Context.System.EventStream;
@@ -294,18 +295,18 @@ namespace Akka.Persistence.Journal
                     // operation failed because a CancellationToken was invoked
                     // wrap the original exception and throw it, with some additional callsite context
                     var newEx = new OperationCanceledException("ReplayMessagesAsync canceled, possibly due to timing out.", cx);
-                    replyTo.Tell(new ReplayMessagesFailure(newEx));
+                    replyTo.Tell(new ReplayMessagesFailure(newEx), self);
                 }
                 catch (Exception ex)
                 {
-                    replyTo.Tell(new ReplayMessagesFailure(TryUnwrapException(ex)));
+                    replyTo.Tell(new ReplayMessagesFailure(TryUnwrapException(ex)), self);
                 }
 
                 return;
 
                 void CompleteHighSeqNo(long highSeqNo)
                 {
-                    replyTo.Tell(new RecoverySuccess(highSeqNo));
+                    replyTo.Tell(new RecoverySuccess(highSeqNo), self);
 
                     if (CanPublish)
                     {
