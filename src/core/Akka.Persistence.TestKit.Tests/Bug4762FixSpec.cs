@@ -96,7 +96,7 @@ namespace Akka.Persistence.TestKit.Tests
             {
                 var actor = Sys.ActorOf(
                     Props.Create(() => new TestActor2(probe))
-                        .WithDispatcher("internal-dispatcher"), "test-actor");
+                        .WithDispatcher("akka.actor.internal-dispatcher"), "test-actor");
 
                 var command = new WriteMessage();
                 actor.Tell(command, actor);
