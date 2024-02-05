@@ -157,7 +157,7 @@ namespace Akka.TestKit.Internal
         /// <param name="item">The item to add.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to abort the add operation.</param>
         public void Add(T item, CancellationToken cancellationToken) 
-            => DoAddAsync(item, cancellationToken, sync: true).WaitAndUnwrapException(cancellationToken);
+            => DoAddAsync(item, cancellationToken, sync: true).WaitAndUnwrapException(CancellationToken.None);
 
         /// <summary>
         /// Adds an item to the producer/consumer collection. Throws <see cref="InvalidOperationException"/>
