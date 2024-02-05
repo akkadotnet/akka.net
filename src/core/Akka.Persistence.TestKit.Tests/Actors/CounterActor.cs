@@ -101,7 +101,8 @@ namespace Akka.Persistence.TestKit.Tests
         {
             return WithJournalWrite(write => write.Fail(), async () => 
             {
-                var counterProps = Props.Create(() => new CounterActor("test"));
+                var counterProps = Props.Create(() => new CounterActor("test"))
+                    .WithDispatcher("internal-dispatcher");
                 var actor = ActorOf(counterProps, "counter");
                 
                 Sys.Log.Info("Messaging actor");
