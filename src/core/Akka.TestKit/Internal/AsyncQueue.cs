@@ -6,45 +6,51 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Nito.AsyncEx.Synchronous;
 
 namespace Akka.TestKit.Internal
 {
     public class AsyncQueue<T>: ITestQueue<T> where T: class
     {
-        private readonly AsyncPeekableCollection<T> _collection = new(new QueueCollection());
+        private readonly ConcurrentQueue<T> _collection = new();
 
         public int Count => _collection.Count;
-        
-        public void Enqueue(T item) => EnqueueAsync(item).AsTask().WaitAndUnwrapException();
 
-        public ValueTask EnqueueAsync(T item) => new(_collection.AddAsync(item)); 
+        public void Enqueue(T item) => _collection.Enqueue(item);
+
+        public ValueTask EnqueueAsync(T item)
+        {
+            _collection.Enqueue(item);
+            return new ValueTask();
+        }
 
         public bool TryEnqueue(T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
-            var task = TryEnqueueAsync(item, millisecondsTimeout, cancellationToken);
-            task.AsTask().Wait(cancellationToken);
-            return task.Result;
+            try
+            {
+                _collection.Enqueue(item);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
-        public async ValueTask<bool> TryEnqueueAsync(T item, int millisecondsTimeout, CancellationToken cancellationToken)
+        public ValueTask<bool> TryEnqueueAsync(T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+            try
             {
-                cts.CancelAfter(millisecondsTimeout);
-                try
-                {
-                    await _collection.AddAsync(item, cts.Token);
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
+                _collection.Enqueue(item);
+                return new ValueTask<bool>(true);
+            }
+            catch
+            {
+                return new ValueTask<bool>(false);
             }
         }
 
@@ -59,7 +65,7 @@ namespace Akka.TestKit.Internal
             try
             {
                 // TryRead returns immediately
-                return _collection.TryTake(out item);
+                return _collection.TryDequeue(out item);
             }
             catch
             {
@@ -84,36 +90,33 @@ namespace Akka.TestKit.Internal
             }
         }
 
-        public async ValueTask<(bool success, T item)> TryTakeAsync(CancellationToken cancellationToken)
+        public ValueTask<(bool success, T item)> TryTakeAsync(CancellationToken cancellationToken)
         {
             try
             {
-                var result = await _collection.TakeAsync(cancellationToken);
-                return (true, result);
+                _collection.TryDequeue(out var result);
+                return new ValueTask<(bool success, T item)>((true, result));
             }
             catch
             {
-                return (false, default);
+                return new ValueTask<(bool success, T item)>((false, default));
             }
         }
 
         public async ValueTask<(bool success, T item)> TryTakeAsync(int millisecondsTimeout, CancellationToken cancellationToken)
         {
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
-            {
-                cts.CancelAfter(millisecondsTimeout);
-                return await TryTakeAsync(cts.Token);
-            }
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            return await TryTakeAsync(cts.Token);
         }
 
         public T Take(CancellationToken cancellationToken)
         {
-            if(!_collection.TryTake(out var item))
+            if(!_collection.TryDequeue(out var item))
                 throw new InvalidOperationException("Failed to dequeue item from the queue.");
             return item;
         }
 
-        public ValueTask<T> TakeAsync(CancellationToken cancellationToken) => new(_collection.TakeAsync(cancellationToken));
+        public ValueTask<T> TakeAsync(CancellationToken cancellationToken) => new(Take(cancellationToken)); 
 
         public bool TryPeek(out T item) => _collection.TryPeek(out item);
 
@@ -133,16 +136,16 @@ namespace Akka.TestKit.Internal
             }
         }
 
-        public async ValueTask<(bool success, T item)> TryPeekAsync(CancellationToken cancellationToken)
+        public ValueTask<(bool success, T item)> TryPeekAsync(CancellationToken cancellationToken)
         {
             try
             {
-                var result = await _collection.PeekAsync(cancellationToken);
-                return (true, result);
+                _collection.TryPeek(out var result);
+                return new ValueTask<(bool success, T item)>((true, result));
             }
             catch
             {
-                return (false, default);
+                return new ValueTask<(bool success, T item)>((false, default));
             }
         }
 
@@ -165,110 +168,11 @@ namespace Akka.TestKit.Internal
             return item;
         }
 
-        public ValueTask<T> PeekAsync(CancellationToken cancellationToken) => new(_collection.PeekAsync(cancellationToken));
+        public ValueTask<T> PeekAsync(CancellationToken cancellationToken) => new(Peek(cancellationToken));
         
         public List<T> ToList()
         {
-            throw new System.NotImplementedException();
+            return _collection.ToList();
         }
-        
-        private class QueueCollection : IPeekableProducerConsumerCollection<T>
-        {
-            private readonly Queue<T> _queue = new();
-
-            public int Count { 
-                get
-                {
-                    lock (SyncRoot)
-                    {
-                        return _queue.Count;
-                    }
-                }
-            }
-
-            public bool TryAdd(T item)
-            {
-                lock (SyncRoot)
-                {
-                    _queue.Enqueue(item);
-                    return true;
-                }
-            }
-
-            public bool TryTake(out T item)
-            {
-                lock(SyncRoot)
-                {
-                    if(_queue.Count == 0)
-                    {
-                        item = null;
-                        return false;
-                    }
-
-                    item = _queue.Dequeue();
-                    return true;
-                }
-            }
-
-            public bool TryPeek(out T item)
-            {
-                lock(SyncRoot)
-                {
-                    if(_queue.Count == 0)
-                    {
-                        item = null;
-                        return false;
-                    }
-
-                    item = _queue.Peek();
-                    return true;
-                }
-            }
-
-            public void CopyTo(T[] array, int index)
-            {
-                lock(SyncRoot)
-                {
-                    _queue.CopyTo(array, index);
-                }
-            }
-
-
-            public void CopyTo(Array array, int index)
-            {
-                lock(SyncRoot)
-                {
-                    ((ICollection)_queue).CopyTo(array, index);
-                }
-            }
-
-            public T[] ToArray()
-            {
-                lock(SyncRoot)
-                {
-                    return _queue.ToArray();
-                }
-            }
-
-
-            public IEnumerator<T> GetEnumerator()
-            {
-                lock(SyncRoot)
-                {
-                    //We must create a copy
-                    return new List<T>(_queue).GetEnumerator();
-                }
-            }
-
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                return GetEnumerator();
-            }
-
-            public object SyncRoot { get; } = new();
-
-            public bool IsSynchronized => true;
-        }        
     }
-    
 }
