@@ -94,7 +94,9 @@ namespace Akka.Persistence.TestKit.Tests
             var probe = CreateTestProbe();
             return WithJournalWrite(write => write.Pass(), async () =>
             {
-                var actor = Sys.ActorOf(Props.Create(() => new TestActor2(probe)), "test-actor");
+                var actor = Sys.ActorOf(
+                    Props.Create(() => new TestActor2(probe))
+                        .WithDispatcher("akka.actor.internal-dispatcher"), "test-actor");
 
                 var command = new WriteMessage();
                 actor.Tell(command, actor);
