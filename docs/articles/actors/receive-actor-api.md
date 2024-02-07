@@ -528,7 +528,7 @@ Receive<string>(s => Console.WriteLine("Received string: " + s);  //This will ca
 
 ```csharp
 ReceiveAny(o => Console.WriteLine("Received object: " + o);
-Receive<object>(0 => Console.WriteLine("Received object: " + o);
+Receive<object>(o => Console.WriteLine("Received object: " + o);
 ```
 
 ## Reply to Messages
