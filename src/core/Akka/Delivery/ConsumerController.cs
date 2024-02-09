@@ -242,12 +242,28 @@ public static class ConsumerController
             OnlyFlowControl = onlyFlowControl;
         }
 
+        /// <summary>
+        /// Number of messages in flight between <see cref="ProducerController"/> and <see cref="ConsumerController"/>.
+        ///
+        /// The <see cref="ConsumerController"/> requests for more message when half of the window has been used.
+        /// </summary>
         public int FlowControlWindow { get; init; }
 
+        /// <summary>
+        /// The ConsumerController resends flow control messages to the ProducerController with the resend-interval-min,
+        /// and increasing it gradually to resend-interval-max when idle.
+        /// </summary>
         public TimeSpan ResendIntervalMin { get; init; }
 
         public TimeSpan ResendIntervalMax { get; init; }
 
+        /// <summary>
+        /// If this is enabled lost messages will not be resent, but flow control is used.
+        ///
+        /// This can be more efficient since messages don't have to be kept in memory in the
+        /// <see cref="ProducerController"/> until they have been confirmed, but the drawback is that lost messages
+        /// will not be delivered.
+        /// </summary>
         public bool OnlyFlowControl { get; init; }
 
         public override string ToString()
