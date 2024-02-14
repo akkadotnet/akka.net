@@ -386,6 +386,17 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
         Receive<Retry>(_ =>
         {
             // no retries when WaitingForConfirmation, will be performed from (idle) active
+            if (!Settings.RetryConfirmation)
+                return;
+            
+            _log.Debug("Consumer received Retry while waiting for confirmation.");
+            ReceiveRetry(() =>
+            {
+                _log.Debug("Retry sending SequencedMessage [{0}].", sequencedMessage.SeqNr);
+                CurrentState.Consumer.Tell(new Delivery<T>(sequencedMessage.Message.Message!, Context.Self,
+                    sequencedMessage.ProducerId, sequencedMessage.SeqNr));
+                Become(() => WaitingForConfirmation(sequencedMessage));
+            });
         });
 
         Receive<ConsumerController.Start<T>>(start =>
