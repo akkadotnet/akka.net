@@ -277,7 +277,9 @@ public static class ConsumerController
         
         /// <summary>
         /// When disabled, the <see cref="ConsumerController"/> will discard any <c>Retry</c> messages when it is
-        /// waiting for a message confirmation.
+        /// waiting for a message delivery confirmation.
+        ///
+        /// When enabled, timed-out message delivery will be subject to the same retry mechanism as all other message types. 
         /// </summary>
         public bool RetryConfirmation { get; init; }
 
