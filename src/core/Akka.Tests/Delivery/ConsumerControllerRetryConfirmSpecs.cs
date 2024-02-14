@@ -10,6 +10,8 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Delivery;
 using Akka.Util;
+using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using static Akka.Tests.Delivery.TestConsumer;
@@ -35,6 +37,21 @@ public class ConsumerControllerRetryConfirmSpecs : TestKit.Xunit2.TestKit
     private string ProducerId => $"p-{_idCount}";
 
     [Fact]
+    public void ConsumerController_Settings_confirmation_retry_must_not_be_set_by_default()
+    {
+        var config = ConfigurationFactory.Default();
+        var settings = ConsumerController.Settings.Create(config.GetConfig("akka.reliable-delivery.consumer-controller"));
+        settings.RetryConfirmation.Should().BeFalse();
+    }
+    
+    [Fact]
+    public void ConsumerController_Settings_confirmation_retry_must_be_set()
+    {
+        var settings = ConsumerController.Settings.Create(Sys);
+        settings.RetryConfirmation.Should().BeTrue();
+    }
+    
+    [Fact]
     public async Task ConsumerController_must_resend_Delivery_on_confirmation_retry()
     {
         var id = NextId();
@@ -52,7 +69,7 @@ public class ConsumerControllerRetryConfirmSpecs : TestKit.Xunit2.TestKit
         await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
         
         // expected resend
-        await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>(1.5.Seconds());
     }
 
 }
