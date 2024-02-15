@@ -23,7 +23,7 @@ public class ConsumerControllerRetryConfirmSpecs : TestKit.Xunit2.TestKit
     public static readonly Config Config = @"
         akka.reliable-delivery.consumer-controller {
         flow-control-window = 20
-        resend-interval-min = 1s
+        resend-interval-min = 500ms
         retry-confirmation = true
     }";
 
