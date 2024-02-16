@@ -7,6 +7,7 @@ using Akka.Delivery;
 using Akka.Delivery.Internal;
 using Akka.Util;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using static Akka.Tests.Delivery.TestConsumer;
@@ -672,4 +673,26 @@ public class ConsumerControllerSpecs : TestKit.Xunit2.TestKit
         consumerController.Tell(seqMessages1.First());
         (await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<ZeroLengthSerializer.TestMsg>>()).Message.Should().Be(ZeroLengthSerializer.TestMsg.Instance);
     }
+    
+    [Fact]
+    public async Task ConsumerController_must_not_resend_Delivery()
+    {
+        var id = NextId();
+        var consumerProbe = CreateTestProbe();
+        var consumerController = Sys.ActorOf(ConsumerController.Create<Job>(Sys, Option<IActorRef>.None),
+            $"consumerController-{id}");
+        var producerControllerProbe = CreateTestProbe();
+
+        consumerController.Tell(new ConsumerController.Start<Job>(consumerProbe.Ref));
+        consumerController.Tell(new ConsumerController.RegisterToProducerController<Job>(producerControllerProbe.Ref));
+        await producerControllerProbe.ExpectMsgAsync<ProducerController.RegisterConsumer<Job>>();
+
+        consumerController.Tell(SequencedMessage(ProducerId, 1, producerControllerProbe.Ref));
+        
+        await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        
+        // expects no resend
+        await consumerProbe.ExpectNoMsgAsync(1.5.Seconds());
+    }
+
 }
