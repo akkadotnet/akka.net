@@ -20,6 +20,15 @@
 
     <ItemGroup>
       <PackageReference Include="System.Diagnostics.Process" Version="4.3.0" />
+      <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
     </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Access="internal" Include="Serialization/Proto/ClusterMetricsMessages.proto" />
+
+  </ItemGroup>
 
 </Project>

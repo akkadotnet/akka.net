@@ -25,6 +25,7 @@
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
     <ProtobufVersion>3.25.2</ProtobufVersion>
+    <GrpcToolsVersion>2.60.0</GrpcToolsVersion>
     <BenchmarkDotNetVersion>0.13.12</BenchmarkDotNetVersion>
     <NetTestVersion>net8.0</NetTestVersion>
     <FsharpVersion>6.0.5</FsharpVersion>
