@@ -188,8 +188,6 @@ namespace Akka.Cluster.Sharding.Tests
                 Sys,
                 typeName,
                 entityProps: Props.Create(() => new SlowStopShardedEntity()),
-                extractEntityId: IntExtractEntityId,
-                extractShardId: IntExtractShardId,
                 allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0),
                 handOffStopMessage: SlowStopShardedEntity.Stop.Instance);
         }

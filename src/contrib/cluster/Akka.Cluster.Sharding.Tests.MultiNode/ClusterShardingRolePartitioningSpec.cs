@@ -106,50 +106,56 @@ namespace Akka.Cluster.Sharding.Tests
         {
             public const string TypeKey = "Datatype1";
 
-            public static readonly ExtractEntityId ExtractEntityId = message =>
+            public sealed class MessageExtractor: IMessageExtractor
             {
-                switch (message)
-                {
-                    case string id:
-                        return (id, id);
-                }
-                return Option<(string, object)>.None;
-            };
+                public string EntityId(object message)
+                    => message switch
+                    {
+                        string id => id,
+                        _ => null
+                    };
 
-            public static readonly ExtractShardId ExtractShardId = message =>
-            {
-                switch (message)
-                {
-                    case string id:
-                        return id;
-                }
-                return null;
-            };
+                public object EntityMessage(object message)
+                    => message;
+
+                public string ShardId(object message)
+                    => message switch
+                    {
+                        string id => id,
+                        _ => null
+                    };
+
+                public string ShardId(string entityId, object messageHint = null)
+                    => entityId;
+            }
         }
 
         private static class E2
         {
             public const string TypeKey = "Datatype2";
 
-            public static readonly ExtractEntityId ExtractEntityId = message =>
+            public sealed class MessageExtractor: IMessageExtractor
             {
-                switch (message)
-                {
-                    case int id:
-                        return (id.ToString(), id);
-                }
-                return Option<(string, object)>.None;
-            };
+                public string EntityId(object message)
+                    => message switch
+                    {
+                        int id => id.ToString(),
+                        _ => null
+                    };
 
-            public static readonly ExtractShardId ExtractShardId = message =>
-            {
-                switch (message)
-                {
-                    case int id:
-                        return id.ToString();
-                }
-                return null;
-            };
+                public object EntityMessage(object message)
+                    => message;
+
+                public string ShardId(object message)
+                    => message switch
+                    {
+                        int id => id.ToString(),
+                        _ => null
+                    };
+
+                public string ShardId(string entityId, object messageHint = null)
+                    => entityId;
+            }
         }
 
         private readonly Address fourthAddress;
@@ -180,8 +186,7 @@ namespace Akka.Cluster.Sharding.Tests
               entityProps: SimpleEchoActor.Props(),
               // nodes 1,2,3: role R1, shard region E1, proxy region E2
               settings: Settings.Value.WithRole("R1"),
-              extractEntityId: E1.ExtractEntityId,
-              extractShardId: E1.ExtractShardId);
+              messageExtractor: new E1.MessageExtractor());
 
             // when run on first, second and third (role R1) proxy region is started
             StartSharding(
@@ -190,8 +195,7 @@ namespace Akka.Cluster.Sharding.Tests
                 entityProps: SimpleEchoActor.Props(),
                 // nodes 4,5: role R2, shard region E2, proxy region E1
                 settings: Settings.Value.WithRole("R2"),
-                extractEntityId: E2.ExtractEntityId,
-                extractShardId: E2.ExtractShardId);
+                messageExtractor: new E2.MessageExtractor());
 
             AwaitClusterUp(Config.First, Config.Second, Config.Third, Config.Fourth, Config.Fifth);
 
