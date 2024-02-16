@@ -290,7 +290,11 @@ namespace Akka.Cluster.Sharding.Tests
                 };
 
             public object EntityMessage(object message)
-                => message;
+                => message switch
+                {
+                    EntityEnvelope env => env.Payload,
+                    _ => message
+                };
 
             public string ShardId(object message)
                 => message switch
