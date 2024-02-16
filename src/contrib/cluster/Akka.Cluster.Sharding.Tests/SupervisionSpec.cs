@@ -93,11 +93,32 @@ namespace Akka.Cluster.Sharding.Tests
 
         #endregion
 
-        private readonly ExtractEntityId _extractEntityId = message =>
-            message is Msg msg ? (msg.Id.ToString(), msg.Message) : Option<(string, object)>.None;
+        private sealed class MessageExtractor: IMessageExtractor
+        {
+            public string EntityId(object message)
+                => message switch
+                {
+                    Msg msg => msg.Id.ToString(),
+                    _ => null
+                };
 
-        private readonly ExtractShardId _extractShard = message =>
-            message is Msg msg ? (msg.Id % 2).ToString(CultureInfo.InvariantCulture) : null;
+            public object EntityMessage(object message)
+                => message switch
+                {
+                    Msg msg => msg.Message,
+                    _ => message
+                };
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    Msg msg => (msg.Id % 2).ToString(CultureInfo.InvariantCulture),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % 2).ToString(CultureInfo.InvariantCulture);
+        }
 
         private static Config SpecConfig =>
             ConfigurationFactory.ParseString(@"
@@ -129,8 +150,7 @@ namespace Akka.Cluster.Sharding.Tests
                 "passy",
                 supervisedProps,
                 ClusterShardingSettings.Create(Sys),
-                _extractEntityId,
-                _extractShard);
+                new MessageExtractor());
 
             region.Tell(new Msg(10, "hello"));
             var response = ExpectMsg<Response>(TimeSpan.FromSeconds(5));
@@ -166,8 +186,7 @@ namespace Akka.Cluster.Sharding.Tests
                 "passy",
                 supervisedProps,
                 ClusterShardingSettings.Create(Sys),
-                _extractEntityId,
-                _extractShard);
+                new MessageExtractor());
 
             region.Tell(new Msg(10, "hello"));
             var response = ExpectMsg<Response>(TimeSpan.FromSeconds(5));

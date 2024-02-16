@@ -52,28 +52,48 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            if (message is Message m)
-                return (m.Id.ToString(), m);
-            return Option<(string, object)>.None;
-        };
+            private readonly IActorRef _probe;
 
-        private ExtractShardId ExtractShardId(IActorRef probe)
-        {
-            return message =>
+            public MessageExtractor(IActorRef probe)
+            {
+                _probe = probe;
+            }
+
+            public string EntityId(object message)
+                => message switch
+                {
+                    Message m => m.Id.ToString(),
+                    _ => null
+                };
+
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
             {
                 switch (message)
                 {
                     case Message m:
                         return m.Id.ToString();
+#pragma warning disable AK2001
                     case ShardRegion.StartEntity se:
                         // StartEntity is used by remembering entities feature
-                        probe.Tell(se.EntityId);
+                        _probe.Tell(se.EntityId);
                         return se.EntityId;
+#pragma warning restore AK2001
+                    default:
+                        return null;
                 }
-                return null;
-            };
+            }
+
+            public string ShardId(string entityId, object messageHint = null)
+            {
+                if(messageHint is ShardRegion.StartEntity)
+                    _probe.Tell(entityId);
+                return entityId;
+            }
         }
 
         private static Config SpecConfig
@@ -242,8 +262,7 @@ namespace Akka.Cluster.Sharding.Tests
                     typeName,
                     Props.Create(() => new PA()),
                     ClusterShardingSettings.Create(system),
-                    extractEntityId,
-                    ExtractShardId(rememberedEntitiesProbe.Ref));
+                    new MessageExtractor(rememberedEntitiesProbe.Ref));
 
                 f(system, region, rememberedEntitiesProbe);
             }

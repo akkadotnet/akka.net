@@ -25,7 +25,7 @@ namespace Akka.Cluster.Sharding.Tests
     /// </summary>
     public class EntityTerminationSpec : AkkaSpec
     {
-        internal class EntityEnvelope
+        private class EntityEnvelope
         {
             public EntityEnvelope(string id, object msg)
             {
@@ -62,25 +62,33 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            if (message is EntityEnvelope e)
-                return (e.Id, e.Msg);
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    EntityEnvelope e => e.Id,
+                    _ => null
+                };
 
-        private ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case EntityEnvelope _:
-                    return "1"; // single shard for all entities
-                case ShardRegion.StartEntity se:
-                    return "1";
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message switch
+                {
+                    EntityEnvelope e => e.Msg,
+                    _ => message
+                };
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    EntityEnvelope => "1",
+                    ShardRegion.StartEntity => "1",
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => "1";
+        }
 
         private static Config SpecConfig =>
             ConfigurationFactory.ParseString(@"
@@ -121,8 +129,7 @@ namespace Akka.Cluster.Sharding.Tests
                 "regular",
                 StoppingActor.Props(),
                 ClusterShardingSettings.Create(Sys),
-                extractEntityId,
-                extractShardId);
+                new MessageExtractor());
 
             sharding.Tell(new EntityEnvelope("1", "ping"));
             ExpectMsg("pong-1");
@@ -153,8 +160,7 @@ namespace Akka.Cluster.Sharding.Tests
                 "remembering",
                 StoppingActor.Props(),
                 ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                extractEntityId,
-                extractShardId);
+                new MessageExtractor());
 
             sharding.Tell(new EntityEnvelope("1", "ping"));
             ExpectMsg("pong-1");
@@ -181,8 +187,7 @@ namespace Akka.Cluster.Sharding.Tests
                 "remembering",
                 StoppingActor.Props(),
                 ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                extractEntityId,
-                extractShardId);
+                new MessageExtractor());
 
             sharding.Tell(new EntityEnvelope("1", "ping"));
             ExpectMsg("pong-1");

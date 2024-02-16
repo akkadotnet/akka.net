@@ -1819,7 +1819,9 @@ namespace Akka.Cluster.Sharding
 
         private void DeliverMessage(string entityId, object msg, IActorRef snd)
         {
-            var payload = _extractor.EntityMessage(msg)!; // payload can't be null unless dev really screwed up
+            var payload = _extractor.EntityMessage(msg); // payload can't be null unless dev really screwed up
+            if (payload is null)
+                throw new ArgumentNullException($"IMessageExtractor.EntityMessage() should never return null. Message extractor: {_extractor.GetType()}");
 
             if (payload is ShardRegion.StartEntity start)
             {
