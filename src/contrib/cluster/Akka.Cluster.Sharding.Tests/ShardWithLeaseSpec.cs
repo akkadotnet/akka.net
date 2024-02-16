@@ -38,7 +38,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        public sealed class EntityEnvelope
+        private sealed class EntityEnvelope
         {
             public readonly long EntityId;
             public readonly object Payload;
@@ -51,25 +51,32 @@ namespace Akka.Cluster.Sharding.Tests
 
         public const int NumberOfShards = 5;
 
-        public static readonly ExtractEntityId ExtractEntityId = message =>
+        private class MessageExtractor: IMessageExtractor
         {
-            switch (message)
-            {
-                case EntityEnvelope env:
-                    return (env.EntityId.ToString(), env.Payload);
-            }
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    EntityEnvelope env => env.EntityId.ToString(),
+                    _ => null
+                };
 
-        public static readonly ExtractShardId ExtractShardId = message =>
-        {
-            switch (message)
-            {
-                case EntityEnvelope msg:
-                    return (msg.EntityId % NumberOfShards).ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message switch
+                {
+                    EntityEnvelope env => env.Payload,
+                    _ => message
+                };
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    EntityEnvelope msg => (msg.EntityId % NumberOfShards).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % NumberOfShards).ToString();
+        }
 
         public class BadLease : Exception
         {
@@ -103,7 +110,7 @@ namespace Akka.Cluster.Sharding.Tests
                 TypeName = $"type{spec.NextTypeIdx()}";
 
                 Sharding = ClusterSharding.Get(spec.Sys)
-                    .Start(TypeName, Props.Create(() => new EntityActor()), settings, ExtractEntityId, ExtractShardId);
+                    .Start(TypeName, Props.Create(() => new EntityActor()), settings, new MessageExtractor());
                 this.spec = spec;
             }
 

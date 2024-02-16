@@ -39,7 +39,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal class EntityEnvelope
+        private class EntityEnvelope
         {
             public EntityEnvelope(int entityId, object msg)
             {
@@ -51,24 +51,32 @@ namespace Akka.Cluster.Sharding.Tests
             public object Msg { get; }
         }
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            if (message is EntityEnvelope e)
-                return (e.EntityId.ToString(), e.Msg);
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    EntityEnvelope e => e.EntityId.ToString(),
+                    _ => null
+                };
 
-        private ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case EntityEnvelope e:
-                    return (e.EntityId % 10).ToString();
-                case ShardRegion.StartEntity se:
-                    return (int.Parse(se.EntityId) % 10).ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message switch
+                {
+                    EntityEnvelope e => e.Msg,
+                    _ => message
+                };
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    EntityEnvelope e => (e.EntityId % 10).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % 10).ToString();
+        }
 
         static PersistentStartEntitySpec()
         {
@@ -108,8 +116,7 @@ namespace Akka.Cluster.Sharding.Tests
               ClusterShardingSettings.Create(Sys)
                 .WithRememberEntities(true)
                 .WithStateStoreMode(StateStoreMode.Persistence),
-              extractEntityId,
-              extractShardId);
+              new MessageExtractor());
 
             sharding.Tell(new ShardRegion.StartEntity("1"));
             ExpectMsg(new ShardRegion.StartEntityAck("1", "1"));
