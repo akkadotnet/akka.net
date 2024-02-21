@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="UnfoldAsyncBenchmarks.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="UnfoldResourceAsyncBenchmarks.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -16,7 +16,7 @@ using BenchmarkDotNet.Attributes;
 namespace Akka.Benchmarks.Streams;
 
 [Config(typeof(MicroBenchmarkConfig))]
-public class UnfoldAsyncBenchmarks
+public class UnfoldResourceAsyncBenchmarks
 {
     public struct IntOrCompletion
     {
@@ -53,69 +53,74 @@ public class UnfoldAsyncBenchmarks
             
         vtAsyncYieldCh = Channel.CreateUnbounded<IntOrCompletion>();
             
-        unfoldAsyncSyncStub = Source.UnfoldAsync<ChannelReader<IntOrCompletion>,int>(asyncYieldCh.Reader, async r =>
+        unfoldAsyncSyncStub = Source.UnfoldResourceAsync<int,ChannelReader<IntOrCompletion>>(()=> Task.FromResult(asyncYieldCh.Reader), async r =>
             {
                 var i = await r.ReadAsync();
                 if (i.Completion != null)
                 {
                     i.Completion.TrySetResult();
-                    return (r, -1);
+                    return -1;
                 }
                 else
                 {
-                    return (r, i.IntValue);
+                    return i.IntValue;
                 }
-            })
+            }, (r)=> Task.FromResult(Done.Instance))
             .RunWith(Sink.Ignore<int>(), materializer);
             
-        selectAsyncValueTaskSyncStub = Source.UnfoldValueTaskAsync<ChannelReader<IntOrCompletion>,int>(vtAsyncYieldCh.Reader, async r =>
+        selectAsyncValueTaskSyncStub = Source.UnfoldResourceValueTaskAsync<ChannelReader<IntOrCompletion>,int,ChannelReader<IntOrCompletion>>(vtAsyncYieldCh.Reader,(r)=>new ValueTask<ChannelReader<IntOrCompletion>>(r), async r =>
             {
                 var i = await r.ReadAsync();
                 if (i.Completion != null)
                 {
                     i.Completion.TrySetResult();
-                    return (r, -1);
+                    return -1;
                 }
                 else
                 {
-                    return (r, i.IntValue);
+                    return i.IntValue;
                 }
-            })
+            }, (r)=> ValueTask.CompletedTask)
             .RunWith(Sink.Ignore<int>(), materializer);
-        selectAsyncStub = Source.UnfoldAsync<ChannelReader<IntOrCompletion>,int>(asyncNoYieldCh.Reader,async r =>
+        selectAsyncStub = Source.UnfoldResourceAsync<int,ChannelReader<IntOrCompletion>>(()=>Task.FromResult(asyncNoYieldCh.Reader),async r =>
         { 
             await Task.Yield();
             var a = await r.ReadAsync(); 
             if (a.Completion != null)
             {
                 a.Completion.TrySetResult();
-                return (r, -1);
+                return -1;
             }
             else
             {
                 //await Task.Yield();
                 //        await Task.Delay(0);
-                return (r, a.IntValue);
+                return  a.IntValue;
             }
-        }).RunWith(Sink.Ignore<int>(), materializer);
+        }, (r)=> Task.FromResult(Done.Instance) ).RunWith(Sink.Ignore<int>(), materializer);
         vtAsyncCh = Channel.CreateUnbounded<IntOrCompletion>();
         int vta = 0;
-        selectValueTaskAsyncStub = Source.UnfoldValueTaskAsync<ChannelReader<IntOrCompletion>,int>(vtAsyncCh.Reader,async r =>
-        {
-            await Task.Yield();
-            var a = await r.ReadAsync();
-            if (a.Completion != null)
-            {
-                a.Completion.TrySetResult();
-                return (r, -1);
-            }
-            else
-            {
-                //await Task.Yield();
-                //await Task.Delay(0);
-                return (r, a.IntValue);
-            }
-        }).RunWith(Sink.Ignore<int>(), materializer);
+        selectValueTaskAsyncStub = Source
+            .UnfoldResourceValueTaskAsync<ChannelReader<IntOrCompletion>, int,
+                ChannelReader<IntOrCompletion>>(vtAsyncCh.Reader,
+                r => new ValueTask<ChannelReader<IntOrCompletion>>(r),
+                async r =>
+                {
+                    await Task.Yield();
+                    var a = await r.ReadAsync();
+                    if (a.Completion != null)
+                    {
+                        a.Completion.TrySetResult();
+                        return -1;
+                    }
+                    else
+                    {
+                        //await Task.Yield();
+                        //await Task.Delay(0);
+                        return a.IntValue;
+                    }
+                }, (r) => ValueTask.CompletedTask)
+            .RunWith(Sink.Ignore<int>(), materializer);
     }
 
     [GlobalCleanup]
@@ -126,7 +131,7 @@ public class UnfoldAsyncBenchmarks
     }
         
     [Benchmark]
-    public async Task UnfoldAsyncNoYield()
+    public async Task UnfoldResourceAsyncNoYield()
     {
         var completion = new TaskCompletionSource(TaskCreationOptions
             .RunContinuationsAsynchronously);
@@ -142,7 +147,7 @@ public class UnfoldAsyncBenchmarks
         
         
     [Benchmark]
-    public async Task UnfoldValueTaskAsyncNoYield()
+    public async Task UnfoldResourceValueTaskAsyncNoYield()
     {
         var completion = new TaskCompletionSource(TaskCreationOptions
             .RunContinuationsAsynchronously);
@@ -157,7 +162,7 @@ public class UnfoldAsyncBenchmarks
     }
         
     [Benchmark]
-    public async Task UnfoldAsyncWithYield()
+    public async Task UnfoldResourceAsyncWithYield()
     {
         var completion = new TaskCompletionSource(TaskCreationOptions
             .RunContinuationsAsynchronously);
@@ -174,7 +179,7 @@ public class UnfoldAsyncBenchmarks
         
         
     [Benchmark]
-    public async Task UnfoldValueTaskAsyncWithYield()
+    public async Task UnfoldResourceValueTaskAsyncWithYield()
     {
         var completion = new TaskCompletionSource(TaskCreationOptions
             .RunContinuationsAsynchronously);
