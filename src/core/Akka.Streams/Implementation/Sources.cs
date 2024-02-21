@@ -774,14 +774,12 @@ namespace Akka.Streams.Implementation
     {
         #region Logic
 
-        private sealed class Logic : OutGraphStageLogic
+        private sealed class Logic : PooledAwaitOutGraphStageLogic<Option<TOut>>
         {
             private readonly UnfoldResourceSourceValueTaskAsync<TOut, TCreateState, TSource> _stage;
             private readonly Lazy<Decider> _decider;
             private Option<TSource> _state = Option<TSource>.None;
 
-            private ValueTask<Option<TOut>> _currentReadVt;
-            private readonly Action _valueTaskAwaiterOnCompleteAction;
             public Logic(UnfoldResourceSourceValueTaskAsync<TOut, TCreateState, TSource> stage, Attributes inheritedAttributes)
                 : base(stage.Shape)
             {
@@ -791,7 +789,7 @@ namespace Akka.Streams.Implementation
                     var strategy = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                     return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
                 });
-                _valueTaskAwaiterOnCompleteAction = SelfReadCallback;
+                SetPooledCompletionCallback(Handler);
                 SetHandler(_stage.Out, this);
             }
 
@@ -831,21 +829,7 @@ namespace Akka.Streams.Implementation
                 }
             }
             
-            
-            private void SelfReadCallback()
-            {
-                var swap = _currentReadVt;
-                _currentReadVt = default;
-                if (swap.IsCompletedSuccessfully)
-                {
-                    ReadCallback(new SlimResult<Option<TOut>>(default,swap.Result));
-                }
-                else
-                {
-                    ReadCallback(SlimResult<Option<TOut>>.FromTask(swap.AsTask()));
-                }
-            }
-            private Action<SlimResult<Option<TOut>>> ReadCallback => GetAsyncCallback<SlimResult<Option<TOut>>>(read =>
+            private void Handler(SlimResult<Option<TOut>> read)
             {
                 if (read.IsSuccess())
                 {
@@ -869,8 +853,9 @@ namespace Akka.Streams.Implementation
                         }
                     }
                 }
-                else ErrorHandler(read.Error);
-            });
+                else
+                    ErrorHandler(read.Error);
+            }
 
             private void CloseResource()
             {
@@ -884,7 +869,11 @@ namespace Akka.Streams.Implementation
                 _state = Option<TSource>.None;
             }
 
-            public override void PreStart() => CreateResource();
+            public override void PreStart()
+            {
+                CreateResource();
+                base.PreStart();
+            }
 
             public override void OnPull()
             {
@@ -908,9 +897,7 @@ namespace Akka.Streams.Implementation
                         }
                         else
                         {
-                            _currentReadVt = vt;
-                            _currentReadVt.GetAwaiter().OnCompleted(_valueTaskAwaiterOnCompleteAction);
-                            //_pooledContinuation.AttachAwaiter(vt);
+                            SetContinuation(vt);
                         }
 
                         
@@ -986,6 +973,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
+        /// <param name="createState"></param>
         /// <param name="create">TBD</param>
         /// <param name="readData">TBD</param>
         /// <param name="close">TBD</param>

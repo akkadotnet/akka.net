@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -2521,43 +2522,6 @@ namespace Akka.Streams.Implementation.Fusing
         public static readonly NotYetThereSentinel Instance = new();
     }
 
-    public readonly struct SlimResult<T>
-    {
-        public readonly Exception Error;
-        public readonly T Result;
-
-        public static readonly SlimResult<T> NotYetReady =
-            new SlimResult<T>(NotYetThereSentinel.Instance, default);
-        
-        public static SlimResult<T> FromTask(Task<T> task)
-        {
-            return task.IsCanceled || task.IsFaulted
-                ? new SlimResult<T>(task.Exception, default)
-                : new SlimResult<T>(default, task.Result);
-        }
-        public SlimResult(Exception errorOrSentinel, T result)
-        {
-            if (result == null)
-            {
-                Error = errorOrSentinel ?? ReactiveStreamsCompliance
-                    .ElementMustNotBeNullException;
-            }
-            else
-            {
-                Result = result;
-            }
-        }
-
-        public bool IsSuccess()
-        {
-            return Error == null;
-        }
-
-        public bool IsDone()
-        {
-            return Error != NotYetThereSentinel.Instance;
-        }
-    }
     /// <summary>
     /// INTERNAL API
     /// </summary>
@@ -2576,45 +2540,8 @@ namespace Akka.Streams.Implementation.Fusing
                 public SlimResult<T> Element { get; private set; }
                 private readonly Action<Holder<T>> _callback;
                 private ValueTask<T> _pending;
-
-                /*private static readonly Action<object> OnCompletedAction =
-                    CompletionActionVt;
-
-                private static readonly Action<Task<T>, object>
-                    TaskCompletedAction = (Task<T> t, object o) =>
-                    {
-                        var ca = (Holder<T>)o;
-                        if (t.IsFaulted)
-                        {
-                            var exception =
-                                t.Exception?.InnerExceptions != null &&
-                                t.Exception.InnerExceptions.Count == 1
-                                    ? t.Exception.InnerExceptions[0]
-                                    : t.Exception;
-                            ca.Invoke(Result.Failure<T>(exception));
-                        }
-                        else
-                        {
-                            ca.Invoke(Result.Success(t.Result));
-                        }
-                    };
-                */
-                private readonly Action TaskCompletedAction;
-                /*
-                private static void CompletionActionVt(object discard)
-                {
-                    var inst = (Holder<T>)discard;
-                    var vtCapture = inst._pending;
-                    inst._pending = default;
-                    if (vtCapture.IsCompletedSuccessfully)
-                    {
-                        inst.Invoke(Result.Success(vtCapture.Result));
-                    }
-                    else if (vtCapture.IsCanceled == false)
-                    {
-                        inst.VTCompletionError(vtCapture);
-                    }
-                }*/
+                private readonly Action _taskCompletedAction;
+                
 
                 private void VTCompletionError(ValueTask<T> vtCapture)
                 {
@@ -2629,17 +2556,13 @@ namespace Akka.Streams.Implementation.Fusing
 
                         Invoke(new SlimResult<T>(exception,default));
                     }
-                    else
-                    {
-                        //Console.WriteLine("Unexpected condition, CompletionError without faulted!!!!");
-                    }
                 }
 
                 public Holder(SlimResult<T> element, Action<Holder<T>> callback)
                 {
                     _callback = callback;
                     Element = element;
-                    TaskCompletedAction = () =>
+                    _taskCompletedAction = () =>
                     {
                         var inst = this._pending;
                         this._pending = default;
@@ -2663,7 +2586,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     _pending = vt;
                     vt.ConfigureAwait(true).GetAwaiter()
-                        .OnCompleted(TaskCompletedAction);
+                        .OnCompleted(_taskCompletedAction);
                 }
 
                 public void Invoke(SlimResult<T> result)
@@ -4201,7 +4124,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class Logic : OutGraphStageLogic
+        private sealed class Logic : PooledAwaitOutGraphStageLogic<bool>
         {
             private readonly IAsyncEnumerable<T> _enumerable;
             private readonly Outlet<T> _outlet;
@@ -4217,12 +4140,30 @@ namespace Akka.Streams.Implementation.Fusing
                 
                 _enumerable = enumerable;
                 _outlet = shape.Outlet;
-                _onSuccess = GetAsyncCallback<T>(OnSuccess);
-                _onFailure = GetAsyncCallback<Exception>(OnFailure);
-                _onComplete = GetAsyncCallback(OnComplete);
+                SetPooledCompletionCallback(OnResult);
                 _completionCts = new CancellationTokenSource();
                 SetHandler(_outlet, this);
             }
+
+            private void OnResult(SlimResult<bool> obj)
+            {
+                if (obj.IsSuccess())
+                {
+                    if (obj.Result)
+                    {
+                        OnSuccess(_enumerator.Current);
+                    }
+                    else
+                    {
+                        OnComplete();
+                    }
+                }
+                else
+                {
+                    OnFailure(obj.Error);
+                }
+            }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private void OnComplete() => CompleteStage();
 
@@ -4282,46 +4223,21 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPull()
             {
-                var vtask = _enumerator.MoveNextAsync();
-                if (vtask.IsCompletedSuccessfully)
+                try
                 {
-                    // When MoveNextAsync returned immediately, we don't need to await.
-                    // We can use fast path instead.
-                    if (vtask.Result)
+                    var vtask = _enumerator.MoveNextAsync();
+                    if (vtask.IsCompletedSuccessfully)
                     {
-                        // if result is true, it means we got an element. Push it downstream.
-                        Push(_outlet, _enumerator.Current);
+                        OnResult(new SlimResult<bool>(default,vtask.Result));
                     }
                     else
                     {
-                        // if result is false, it means enumerator was closed. Complete stage in that case.
-                        CompleteStage();
+                        SetContinuation(vtask,false);
                     }
                 }
-                else
+                catch (Exception e)
                 {
-                    //We immediately fall into wait case.
-                    //Unlike Task, we don't have a 'status' Enum to switch off easily,
-                    //And Error cases can just live with the small cost of async callback.
-                    async Task ProcessTask()
-                    {
-                        // Since this Action is used as task continuation, we cannot safely call corresponding
-                        // OnSuccess/OnFailure/OnComplete methods directly. We need to do that via async callbacks.
-                        try
-                        {
-                            var completed = await vtask.ConfigureAwait(false);
-                            if (completed)
-                                _onSuccess(_enumerator.Current);
-                            else
-                                _onComplete();
-                        }
-                        catch (Exception ex)
-                        {
-                            _onFailure(ex);
-                        }
-                    }
-
-                    _ = ProcessTask();
+                    OnResult(new SlimResult<bool>(e, default));
                 }
             }
 

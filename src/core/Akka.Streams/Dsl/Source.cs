@@ -789,6 +789,9 @@ namespace Akka.Streams.Dsl
         public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Option<(TState, TElem)>>> unfoldAsync)
             => FromGraph(new UnfoldAsync<TState, TElem>(state, unfoldAsync)).WithAttributes(DefaultAttributes.UnfoldAsync);
 
+        
+        public static Source<TElem, NotUsed> UnfoldValueTaskAsync<TState, TElem>(TState state, Func<TState, ValueTask<Option<(TState, TElem)>>> unfoldAsync)
+            => FromGraph(new UnfoldValueTaskAsync<TState, TElem>(state, unfoldAsync)).WithAttributes(DefaultAttributes.UnfoldValueTaskAsync);
         /// <summary>
         /// Simpler <see cref="Unfold{TState,TElem}"/>, for infinite sequences. 
         /// </summary>

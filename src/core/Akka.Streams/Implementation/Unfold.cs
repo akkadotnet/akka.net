@@ -91,7 +91,7 @@ namespace Akka.Streams.Implementation
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
-        /// <summary>
+    /// <summary>
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="TState">TBD</typeparam>
@@ -100,69 +100,65 @@ namespace Akka.Streams.Implementation
     public class UnfoldValueTaskAsync<TState, TElement> : GraphStage<SourceShape<TElement>>
     {
         #region stage logic
-        private sealed class Logic : OutGraphStageLogic
+        private sealed class Logic : PooledAwaitOutGraphStageLogic<Option<(TState,TElement)>>
         {
             private readonly UnfoldValueTaskAsync<TState, TElement> _stage;
             private TState _state;
-            private Action<SlimResult<Option<(TState, TElement)>>> _asyncHandler;
-            private ValueTask<Option<(TState, TElement)>> _currentTask;
+
             public Logic(UnfoldValueTaskAsync<TState, TElement> stage) : base(stage.Shape)
             {
+                
                 _stage = stage;
                 _state = _stage.State;
-
+                SetPooledCompletionCallback(SyncResult);
                 SetHandler(_stage.Out, this);
             }
 
             public override void OnPull()
             {
-                var vt = _stage.UnfoldFunc(_state);
-                if (vt.IsCompletedSuccessfully)
+                ValueTask<Option<(TState, TElement)>> vt;
+                bool taken = false;
+                try
                 {
-                    _asyncHandler(
-                        new SlimResult<Option<(TState, TElement)>>(default,
-                            vt.Result));
+                    vt = _stage.UnfoldFunc(_state);
+                    taken = true;
                 }
-                else
+                catch (Exception e)
                 {
-                    _currentTask = vt;
-                    vt.GetAwaiter().OnCompleted(CompletionAction);
+                    vt = default;
+                    Fail(_stage.Out,e);
                 }
-            }
-            private void CompletionAction()
-            {
-                if (_currentTask.IsCompletedSuccessfully)
+
+                if (taken)
                 {
-                    _asyncHandler.Invoke(
-                        new SlimResult<Option<(TState, TElement)>>(default,
-                            _currentTask.Result));
-                }
-                else
-                {
-                    _asyncHandler.Invoke(
-                        SlimResult<Option<(TState, TElement)>>.FromTask(
-                            _currentTask.AsTask()));
-                }
-            }
-            public override void PreStart()
-            {
-                var ac = GetAsyncCallback<SlimResult<Option<(TState, TElement)>>>(result =>
-                {
-                    if (!result.IsSuccess())
-                        Fail(_stage.Out, result.Error);
+                    if (vt.IsCompletedSuccessfully)
+                    {
+                        SyncResult(
+                            new SlimResult<Option<(TState, TElement)>>(default,
+                                vt.Result));
+                    }
                     else
                     {
-                        var option = result.Result;
-                        if (!option.HasValue)
-                            Complete(_stage.Out);
-                        else
-                        {
-                            Push(_stage.Out, option.Value.Item2);
-                            _state = option.Value.Item1;
-                        }
+                        SetContinuation(vt);
                     }
-                });
-                _asyncHandler = ac;
+                }
+            }
+
+            private void SyncResult(SlimResult<Option<(TState, TElement)>> result)
+            {
+                if (!result.IsSuccess())
+                    Fail(_stage.Out, result.Error);
+                else
+                {
+                    var option = result.Result;
+                    if (!option.HasValue)
+                        Complete(_stage.Out);
+                    else
+                    {
+                        Push(_stage.Out, option.Value.Item2);
+                        _state = option.Value.Item1;
+                    }
+                }
             }
         }
         #endregion

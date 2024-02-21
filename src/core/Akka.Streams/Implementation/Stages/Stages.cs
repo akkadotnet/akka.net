@@ -257,6 +257,7 @@ namespace Akka.Streams.Implementation.Stages
         /// TBD
         /// </summary>
         public static readonly Attributes UnfoldAsync = Attributes.CreateName("unfoldAsync");
+        public static readonly Attributes UnfoldValueTaskAsync = Attributes.CreateName("unfoldValueTaskAsync");
         /// <summary>
         /// TBD
         /// </summary>
