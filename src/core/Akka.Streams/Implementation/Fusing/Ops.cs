@@ -4124,7 +4124,7 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
-        private sealed class Logic : PooledAwaitOutGraphStageLogic<bool>
+        private sealed class Logic : OutGraphStageLogic
         {
             private readonly IAsyncEnumerable<T> _enumerable;
             private readonly Outlet<T> _outlet;
@@ -4140,28 +4140,11 @@ namespace Akka.Streams.Implementation.Fusing
                 
                 _enumerable = enumerable;
                 _outlet = shape.Outlet;
-                SetPooledCompletionCallback(OnResult);
+                _onSuccess = GetAsyncCallback<T>(OnSuccess);
+                _onFailure = GetAsyncCallback<Exception>(OnFailure);
+                _onComplete = GetAsyncCallback(OnComplete);
                 _completionCts = new CancellationTokenSource();
                 SetHandler(_outlet, this);
-            }
-
-            private void OnResult(SlimResult<bool> obj)
-            {
-                if (obj.IsSuccess())
-                {
-                    if (obj.Result)
-                    {
-                        OnSuccess(_enumerator.Current);
-                    }
-                    else
-                    {
-                        OnComplete();
-                    }
-                }
-                else
-                {
-                    OnFailure(obj.Error);
-                }
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -4223,21 +4206,42 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPull()
             {
-                try
+                var vtask = _enumerator.MoveNextAsync();
+                if (vtask.IsCompletedSuccessfully)
                 {
-                    var vtask = _enumerator.MoveNextAsync();
-                    if (vtask.IsCompletedSuccessfully)
+                    if (vtask.Result)
                     {
-                        OnResult(new SlimResult<bool>(default,vtask.Result));
+                        Push(_outlet, _enumerator.Current);
                     }
                     else
                     {
-                        SetContinuation(vtask,false);
+                        CompleteStage();
                     }
                 }
-                catch (Exception e)
+                else
                 {
-                    OnResult(new SlimResult<bool>(e, default));
+                    //We immediately fall into wait case.
+                    //Unlike Task, we don't have a 'status' Enum to switch off easily,
+                    //And Error cases can just live with the small cost of async callback.
+                    async Task ProcessTask()
+                    {
+                        // Since this Action is used as task continuation, we cannot safely call corresponding
+                        // OnSuccess/OnFailure/OnComplete methods directly. We need to do that via async callbacks.
+                        try
+                        {
+                            var completed = await vtask.ConfigureAwait(false);
+                            if (completed)
+                                _onSuccess(_enumerator.Current);
+                            else
+                                _onComplete();
+                        }
+                        catch (Exception ex)
+                        {
+                            _onFailure(ex);
+                        }
+                    }
+
+                    _ = ProcessTask();
                 }
             }
 
