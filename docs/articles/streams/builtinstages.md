@@ -121,7 +121,6 @@ Just like ``UnfoldAsync``, but the fold function returns a ``ValueTask``, with i
 
 **completes** when the task returned by the unfold function completes with an null value
 
-
 ### Empty
 
 Complete right away without ever emitting any elements. Useful when you have to provide a source to
@@ -208,7 +207,6 @@ Functions return ``Task`` to achieve asynchronous processing
 ### UnfoldResourceValueTaskAsync
 
 Like ``UnfoldResourceAsync`` but takes ``ValueTask`` Functions instead, with amortization of allocations for the main read stage.
-
 
 **emits** when there is demand and ``ValueTask`` from read function returns value
 
