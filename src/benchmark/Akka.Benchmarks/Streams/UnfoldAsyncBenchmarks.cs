@@ -126,7 +126,7 @@ public class UnfoldAsyncBenchmarks
     }
         
     [Benchmark]
-    public async Task UnfoldAsyncNoYield()
+    public async Task UnfoldAsyncYieldInConsume()
     {
         var completion = new TaskCompletionSource(TaskCreationOptions
             .RunContinuationsAsynchronously);
@@ -142,7 +142,7 @@ public class UnfoldAsyncBenchmarks
         
         
     [Benchmark]
-    public async Task UnfoldValueTaskAsyncNoYield()
+    public async Task UnfoldValueTaskAsyncYieldInConsume()
     {
         var completion = new TaskCompletionSource(TaskCreationOptions
             .RunContinuationsAsynchronously);
@@ -157,7 +157,7 @@ public class UnfoldAsyncBenchmarks
     }
         
     [Benchmark]
-    public async Task UnfoldAsyncWithYield()
+    public async Task UnfoldAsyncYieldInPush()
     {
         var completion = new TaskCompletionSource(TaskCreationOptions
             .RunContinuationsAsynchronously);
@@ -174,7 +174,7 @@ public class UnfoldAsyncBenchmarks
         
         
     [Benchmark]
-    public async Task UnfoldValueTaskAsyncWithYield()
+    public async Task UnfoldValueTaskAsyncYieldInPush()
     {
         var completion = new TaskCompletionSource(TaskCreationOptions
             .RunContinuationsAsynchronously);

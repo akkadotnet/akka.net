@@ -5,12 +5,15 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using Akka.Streams;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation.Fusing;
 using BenchmarkDotNet.Attributes;
 
 namespace Akka.Benchmarks.Streams;
@@ -18,6 +21,7 @@ namespace Akka.Benchmarks.Streams;
 [Config(typeof(MicroBenchmarkConfig))]
 public class UnfoldResourceAsyncBenchmarks
 {
+    
     public struct IntOrCompletion
     {
         public readonly int IntValue;
@@ -41,6 +45,11 @@ public class UnfoldResourceAsyncBenchmarks
     private Task<Done> selectAsyncValueTaskSyncStub;
     private Channel<IntOrCompletion> asyncYieldCh;
     private Channel<IntOrCompletion> vtAsyncYieldCh;
+    private Channel<IntOrCompletion> straightCh;
+    private Task straightTask;
+    private CancellationTokenSource straightChTokenSource;
+    private Channel<IntOrCompletion> straightYieldCh;
+    private Task straightYieldTask;
 
     [GlobalSetup]
     public void Setup()
@@ -99,6 +108,8 @@ public class UnfoldResourceAsyncBenchmarks
             }
         }, (r)=> Task.FromResult(Done.Instance) ).RunWith(Sink.Ignore<int>(), materializer);
         vtAsyncCh = Channel.CreateUnbounded<IntOrCompletion>();
+        
+        
         int vta = 0;
         selectValueTaskAsyncStub = Source
             .UnfoldResourceValueTaskAsync<ChannelReader<IntOrCompletion>, int,
@@ -121,6 +132,69 @@ public class UnfoldResourceAsyncBenchmarks
                     }
                 }, (r) => ValueTask.CompletedTask)
             .RunWith(Sink.Ignore<int>(), materializer);
+        straightChTokenSource = new CancellationTokenSource();
+        straightCh = Channel.CreateUnbounded<IntOrCompletion>();
+
+
+        straightTask = Task.Run(async () =>
+        {
+            static async IAsyncEnumerable<int> GetEnumerator(
+                ChannelReader<IntOrCompletion> reader, CancellationToken token)
+            {
+                while (token.IsCancellationRequested == false)
+                {
+                    await Task.Yield();
+                    var a = await reader.ReadAsync();
+                    if (a.Completion != null)
+                    {
+                        a.Completion.TrySetResult();
+                        yield return -1;
+                    }
+                    else
+                    {
+                        //await Task.Yield();
+                        //await Task.Delay(0);
+                        yield return a.IntValue;
+                    }
+                }
+            }
+            var r = straightCh.Reader;
+            await foreach (var v in GetEnumerator(r,straightChTokenSource.Token))
+            {
+                
+            }
+        });
+        
+        straightYieldCh = Channel.CreateUnbounded<IntOrCompletion>();
+
+
+        straightYieldTask = Task.Run(async () =>
+        {
+            static async IAsyncEnumerable<int> GetEnumerator(
+                ChannelReader<IntOrCompletion> reader, CancellationToken token)
+            {
+                while (token.IsCancellationRequested == false)
+                {
+                    var a = await reader.ReadAsync();
+                    if (a.Completion != null)
+                    {
+                        a.Completion.TrySetResult();
+                        yield return -1;
+                    }
+                    else
+                    {
+                        //await Task.Yield();
+                        //await Task.Delay(0);
+                        yield return a.IntValue;
+                    }
+                }
+            }
+            var r = straightYieldCh.Reader;
+            await foreach (var v in GetEnumerator(r,straightChTokenSource.Token))
+            {
+                
+            }
+        });
     }
 
     [GlobalCleanup]
@@ -128,6 +202,7 @@ public class UnfoldResourceAsyncBenchmarks
     {
         materializer.Dispose();
         system.Dispose();
+        straightChTokenSource.Cancel();
     }
         
     [Benchmark]
@@ -190,6 +265,37 @@ public class UnfoldResourceAsyncBenchmarks
         }
 
         vtAsyncYieldCh.Writer.TryWrite(new IntOrCompletion(0, completion));
+        await completion.Task;
+
+    }
+    
+    [Benchmark]
+    public async Task StraightChannelReadNoYield()
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions
+            .RunContinuationsAsynchronously);
+        for (int i = 0; i < 100; i++)
+        {
+            straightCh.Writer.TryWrite(new IntOrCompletion(i, null));
+        }
+
+        straightCh.Writer.TryWrite(new IntOrCompletion(0, completion));
+        await completion.Task;
+
+    }
+    
+    [Benchmark]
+    public async Task StraightChannelReadWithYield()
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions
+            .RunContinuationsAsynchronously);
+        for (int i = 0; i < 100; i++)
+        {
+            straightYieldCh.Writer.TryWrite(new IntOrCompletion(i, null));
+            await Task.Yield();
+        }
+
+        straightYieldCh.Writer.TryWrite(new IntOrCompletion(0, completion));
         await completion.Task;
 
     }
