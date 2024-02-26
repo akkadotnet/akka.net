@@ -85,7 +85,7 @@ namespace Akka.Actor.Scheduler
         {
             _ctx = ctx;
             _log = _ctx.System.Log;
-            _logDebug = ctx.System.Settings.Config.GetBoolean("akka.actor.debug.log-timers");
+            _logDebug = ctx.System.Settings.DebugTimerScheduler;
         }
 
         /// <summary>
