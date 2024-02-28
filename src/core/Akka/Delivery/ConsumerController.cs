@@ -229,59 +229,26 @@ public static class ConsumerController
         
         public static Settings Create(Config config)
         {
-            return new Settings(
-                flowControlWindow: config.GetInt("flow-control-window"), 
-                resendIntervalMin: config.GetTimeSpan("resend-interval-min"),
-                resendIntervalMax: config.GetTimeSpan("resend-interval-max"), 
-                onlyFlowControl: config.GetBoolean("only-flow-control"),
-                retryConfirmation: config.GetBoolean("retry-confirmation"));
+            return new Settings(config.GetInt("flow-control-window"), config.GetTimeSpan("resend-interval-min"),
+                config.GetTimeSpan("resend-interval-max"), config.GetBoolean("only-flow-control"));
         }
 
         private Settings(int flowControlWindow, TimeSpan resendIntervalMin, TimeSpan resendIntervalMax,
-            bool onlyFlowControl, bool retryConfirmation)
+            bool onlyFlowControl)
         {
             FlowControlWindow = flowControlWindow;
             ResendIntervalMin = resendIntervalMin;
             ResendIntervalMax = resendIntervalMax;
             OnlyFlowControl = onlyFlowControl;
-            RetryConfirmation = retryConfirmation;
         }
 
-        /// <summary>
-        /// Number of messages in flight between <see cref="ProducerController"/> and <see cref="ConsumerController"/>.
-        ///
-        /// The <see cref="ConsumerController"/> requests for more message when half of the window has been used.
-        /// </summary>
         public int FlowControlWindow { get; init; }
 
-        /// <summary>
-        /// The ConsumerController resends flow control messages to the ProducerController with the <see cref="ResendIntervalMin"/>,
-        /// and increasing it gradually to <see cref="ResendIntervalMax"/> when idle.
-        /// </summary>
         public TimeSpan ResendIntervalMin { get; init; }
 
-        /// <summary>
-        /// The ConsumerController resends flow control messages to the ProducerController with the <see cref="ResendIntervalMin"/>,
-        /// and increasing it gradually to <see cref="ResendIntervalMax"/> when idle.
-        /// </summary>
         public TimeSpan ResendIntervalMax { get; init; }
 
-        /// <summary>
-        /// If this is enabled lost messages will not be resent, but flow control is used.
-        ///
-        /// This can be more efficient since messages don't have to be kept in memory in the
-        /// <see cref="ProducerController"/> until they have been confirmed, but the drawback is that lost messages
-        /// will not be delivered.
-        /// </summary>
         public bool OnlyFlowControl { get; init; }
-        
-        /// <summary>
-        /// When disabled, the <see cref="ConsumerController"/> will discard any <c>Retry</c> messages when it is
-        /// waiting for a message delivery confirmation.
-        ///
-        /// When enabled, timed-out message delivery will be subject to the same retry mechanism as all other message types. 
-        /// </summary>
-        public bool RetryConfirmation { get; init; }
 
         public override string ToString()
         {
