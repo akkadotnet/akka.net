@@ -2558,7 +2558,6 @@ namespace Akka.Delivery
             public bool OnlyFlowControl { get; set; }
             public System.TimeSpan ResendIntervalMax { get; set; }
             public System.TimeSpan ResendIntervalMin { get; set; }
-            public bool RetryConfirmation { get; set; }
             public static Akka.Delivery.ConsumerController.Settings Create(Akka.Actor.ActorSystem actorSystem) { }
             public static Akka.Delivery.ConsumerController.Settings Create(Akka.Configuration.Config config) { }
             public override string ToString() { }
