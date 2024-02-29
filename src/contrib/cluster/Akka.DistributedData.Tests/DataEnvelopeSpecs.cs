@@ -28,7 +28,7 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void DataEnvelope_must_handle_pruning_transitions()
         {
-            var g1 = GCounter.Empty.Increment(node1, 1);
+            var g1 = GCounter.Empty.Increment(node1);
             var d1 = new DataEnvelope(g1);
 
             var d2 = d1.InitRemovedNodePruning(node1, node2);
@@ -55,7 +55,7 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void DataEnvelope_must_merge_correctly()
         {
-            var g1 = GCounter.Empty.Increment(node1, 1);
+            var g1 = GCounter.Empty.Increment(node1);
             var d1 = new DataEnvelope(g1);
             var g2 = GCounter.Empty.Increment(node2, 2);
             var d2 = new DataEnvelope(g2);
@@ -89,7 +89,7 @@ namespace Akka.DistributedData.Tests
         [Fact()]
         public void DataEnvelopes_with_identical_content_must_match()
         {
-            var g1 = GCounter.Empty.Increment(node1, 1);
+            var g1 = GCounter.Empty.Increment(node1);
             var d1 = new DataEnvelope(g1);
             var d1a = new DataEnvelope(g1);
             var g2 = GCounter.Empty.Increment(node2, 2);

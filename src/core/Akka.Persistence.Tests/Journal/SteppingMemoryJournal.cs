@@ -53,7 +53,7 @@ namespace Akka.Persistence.Tests.Journal
 
         public SteppingMemoryJournal()
         {
-            _instanceId = Context.System.Settings.Config.GetString("akka.persistence.journal.stepping-inmem.instance-id", null);
+            _instanceId = Context.System.Settings.Config.GetString("akka.persistence.journal.stepping-inmem.instance-id");
         }
 
         public static void Step(IActorRef journal)

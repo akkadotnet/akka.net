@@ -130,7 +130,7 @@ namespace Akka.Coordination
 
                 var settings = LeaseSettings.Create(leaseConfig, leaseName, ownerName);
 
-                var leaseClassName = settings.LeaseConfig.GetString("lease-class", null);
+                var leaseClassName = settings.LeaseConfig.GetString("lease-class");
                 if (string.IsNullOrEmpty(leaseClassName))
                     throw new ArgumentException("lease-class must not be empty");
                 var leaseType = Type.GetType(leaseClassName, true);

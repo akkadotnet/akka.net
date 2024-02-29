@@ -51,8 +51,7 @@ namespace Akka.Routing
             nrOfInstances,
             null,
             Pool.DefaultSupervisorStrategy,
-            Dispatchers.DefaultDispatcherId,
-            false) { }
+            Dispatchers.DefaultDispatcherId) { }
 
         // TODO: do we need to check for null or empty config here?
         /// <summary>
@@ -61,7 +60,7 @@ namespace Akka.Routing
         /// <param name="config">The configuration used to configure the pool.</param>
         public BroadcastPool(Config config)
             : this(
-                  nrOfInstances: config.GetInt("nr-of-instances", 0),
+                  nrOfInstances: config.GetInt("nr-of-instances"),
                   resizer: Resizer.FromConfig(config),
                   supervisorStrategy: Pool.DefaultSupervisorStrategy,
                   routerDispatcher: Dispatchers.DefaultDispatcherId,

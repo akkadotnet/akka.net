@@ -83,7 +83,7 @@ namespace Akka.Persistence.Sql.Common
             ConnectionString = config.GetString("connection-string");
             ConnectionStringName = config.GetString("connection-string-name");
             ConnectionTimeout = config.GetTimeSpan("connection-timeout");
-            SchemaName = config.GetString("schema-name", null);
+            SchemaName = config.GetString("schema-name");
             JournalTableName = config.GetString("table-name");
             MetaTableName = config.GetString("metadata-table-name");
             TimestampProvider = config.GetString("timestamp-provider");
@@ -160,11 +160,11 @@ namespace Akka.Persistence.Sql.Common
             ConnectionString = config.GetString("connection-string");
             ConnectionStringName = config.GetString("connection-string-name");
             ConnectionTimeout = config.GetTimeSpan("connection-timeout");
-            SchemaName = config.GetString("schema-name", null);
+            SchemaName = config.GetString("schema-name");
             TableName = config.GetString("table-name");
             AutoInitialize = config.GetBoolean("auto-initialize");
 #pragma warning disable CS0618
-            DefaultSerializer = config.GetString("serializer", null);
+            DefaultSerializer = config.GetString("serializer");
 #pragma warning restore CS0618
 
             ReadIsolationLevel = config.GetIsolationLevel("read-isolation-level");

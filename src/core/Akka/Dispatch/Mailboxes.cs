@@ -170,7 +170,7 @@ namespace Akka.Dispatch
                     if (!Settings.Config.HasPath(id)) throw new ConfigurationException($"Mailbox Type [{id}] not configured");
                     var conf = Config(id);
 
-                    var mailboxTypeName = conf.GetString("mailbox-type", null);
+                    var mailboxTypeName = conf.GetString("mailbox-type");
                     if (string.IsNullOrEmpty(mailboxTypeName))
                         throw new ConfigurationException($"The setting mailbox-type defined in [{id}] is empty");
                     var mailboxType = Type.GetType(mailboxTypeName) 
@@ -260,7 +260,7 @@ namespace Akka.Dispatch
 
         private Type GetMailboxRequirement(Config config)
         {
-            var mailboxRequirement = config.GetString("mailbox-requirement", null);
+            var mailboxRequirement = config.GetString("mailbox-requirement");
             return mailboxRequirement == null || mailboxRequirement.Equals(NoMailboxRequirement) ? typeof (IMessageQueue) : Type.GetType(mailboxRequirement, true);
         }
 
@@ -277,7 +277,7 @@ namespace Akka.Dispatch
         {
             if (dispatcherConfig == null)
                 dispatcherConfig = ConfigurationFactory.Empty;
-            var id = dispatcherConfig.GetString("id", null);
+            var id = dispatcherConfig.GetString("id");
             var deploy = props.Deploy;
             var actorType = props.Type;
             var actorRequirement = new Lazy<Type>(() => GetRequiredType(actorType));
@@ -286,7 +286,7 @@ namespace Akka.Dispatch
             var hasMailboxRequirement = mailboxRequirement != typeof(IMessageQueue);
 
             var hasMailboxType = dispatcherConfig.HasPath("mailbox-type") &&
-                                 dispatcherConfig.GetString("mailbox-type", null) != Deploy.NoMailboxGiven;
+                                 dispatcherConfig.GetString("mailbox-type") != Deploy.NoMailboxGiven;
 
             if (!hasMailboxType && !_mailboxSizeWarningIssued && dispatcherConfig.HasPath("mailbox-size"))
             {
@@ -307,7 +307,7 @@ namespace Akka.Dispatch
             if (!deploy.Mailbox.Equals(Deploy.NoMailboxGiven))
                 return VerifyRequirements(Lookup(deploy.Mailbox));
             if (!deploy.Dispatcher.Equals(Deploy.NoDispatcherGiven) && hasMailboxType)
-                return VerifyRequirements(Lookup(dispatcherConfig.GetString("id", null)));
+                return VerifyRequirements(Lookup(dispatcherConfig.GetString("id")));
             if (actorRequirement.Value != null)
             {
                 try

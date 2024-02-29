@@ -43,19 +43,19 @@ namespace Akka.IO
             return new TcpSettings(
                 bufferPoolConfigPath: config.GetString("buffer-pool", "akka.io.tcp.disabled-buffer-pool"),
                 initialSocketAsyncEventArgs: config.GetInt("nr-of-socket-async-event-args", 32),
-                traceLogging: config.GetBoolean("trace-logging", false),
+                traceLogging: config.GetBoolean("trace-logging"),
                 batchAcceptLimit: config.GetInt("batch-accept-limit", 10),
                 registerTimeout: config.GetTimeSpan("register-timeout", TimeSpan.FromSeconds(5)),
                 receivedMessageSizeLimit: config.GetString("max-received-message-size", "unlimited") == "unlimited"
                     ? int.MaxValue
-                    : config.GetInt("max-received-message-size", 0),
+                    : config.GetInt("max-received-message-size"),
                 managementDispatcher: config.GetString("management-dispatcher", "akka.actor.default-dispatcher"),
                 fileIoDispatcher: config.GetString("file-io-dispatcher", "akka.actor.default-dispatcher"),
-                transferToLimit: config.GetString("file-io-transferTo-limit", null) == "unlimited"
+                transferToLimit: config.GetString("file-io-transferTo-limit") == "unlimited"
                     ? int.MaxValue
                     : config.GetInt("file-io-transferTo-limit", 512 * 1024),
                 finishConnectRetries: config.GetInt("finish-connect-retries", 5),
-                outgoingSocketForceIpv4: config.GetBoolean("outgoing-socket-force-ipv4", false),
+                outgoingSocketForceIpv4: config.GetBoolean("outgoing-socket-force-ipv4"),
                 writeCommandsQueueMaxSize: config.GetInt("write-commands-queue-max-size", -1));
         }
 

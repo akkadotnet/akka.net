@@ -29,8 +29,8 @@ namespace Akka.Persistence.Sqlite.Journal
         /// <param name="config">Config object used to obtain Journal settings</param>
         public BatchingSqliteJournalSetup(Config config) : base(config, new QueryConfiguration(
                     schemaName: null,
-                    journalEventsTableName: config.GetString("table-name", null),
-                    metaTableName: config.GetString("metadata-table-name", null),
+                    journalEventsTableName: config.GetString("table-name"),
+                    metaTableName: config.GetString("metadata-table-name"),
                     persistenceIdColumnName: "persistence_id",
                     sequenceNrColumnName: "sequence_nr",
                     payloadColumnName: "payload",
@@ -40,9 +40,9 @@ namespace Akka.Persistence.Sqlite.Journal
                     tagsColumnName: "tags",
                     orderingColumnName: "ordering",
                     serializerIdColumnName: "serializer_id",
-                    timeout: config.GetTimeSpan("connection-timeout", null),
-                    defaultSerializer: config.GetString("serializer", null),
-                    useSequentialAccess: config.GetBoolean("use-sequential-access", false),
+                    timeout: config.GetTimeSpan("connection-timeout"),
+                    defaultSerializer: config.GetString("serializer"),
+                    useSequentialAccess: config.GetBoolean("use-sequential-access"),
                     readIsolationLevel: config.GetIsolationLevel("read-isolation-level"),
                     writeIsolationLevel: config.GetIsolationLevel("write-isolation-level")))
         {

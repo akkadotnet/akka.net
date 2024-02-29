@@ -113,7 +113,7 @@ namespace Akka.Cluster
             if (useTimeSpanOffSwitch.ToLower() != "off" &&
                 useTimeSpanOffSwitch.ToLower() != "false" &&
                 useTimeSpanOffSwitch.ToLower() != "no")
-                ret = @this.GetTimeSpan(key, null);
+                ret = @this.GetTimeSpan(key);
             return ret;
         }
 

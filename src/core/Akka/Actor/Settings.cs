@@ -85,11 +85,11 @@ namespace Akka.Actor
             var providerSelectionSetup = Setup.Get<BootstrapSetup>()
                 .FlatSelect(_ => _.ActorRefProvider)
                 .Select(_ => _.Fqn)
-                .GetOrElse(Config.GetString("akka.actor.provider", null));
+                .GetOrElse(Config.GetString("akka.actor.provider"));
 
             ProviderSelectionType = ProviderSelection.GetProvider(providerSelectionSetup);
 
-            ConfigVersion = Config.GetString("akka.version", null);
+            ConfigVersion = Config.GetString("akka.version");
             ProviderClass = ProviderSelectionType.Fqn;
             HasCluster = ProviderSelectionType.HasCluster;
 
@@ -99,20 +99,20 @@ namespace Akka.Actor
             if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
                 throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{ProviderClass}'");
 
-            SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy", null);
+            SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy");
 
-            AskTimeout = Config.GetTimeSpan("akka.actor.ask-timeout", null, allowInfinite: true);
-            CreationTimeout = Config.GetTimeSpan("akka.actor.creation-timeout", null);
-            UnstartedPushTimeout = Config.GetTimeSpan("akka.actor.unstarted-push-timeout", null);
+            AskTimeout = Config.GetTimeSpan("akka.actor.ask-timeout");
+            CreationTimeout = Config.GetTimeSpan("akka.actor.creation-timeout");
+            UnstartedPushTimeout = Config.GetTimeSpan("akka.actor.unstarted-push-timeout");
 
-            SerializeAllMessages = Config.GetBoolean("akka.actor.serialize-messages", false);
-            SerializeAllCreators = Config.GetBoolean("akka.actor.serialize-creators", false);
-            EmitActorTelemetry = Config.GetBoolean("akka.actor.telemetry.enabled", false);
+            SerializeAllMessages = Config.GetBoolean("akka.actor.serialize-messages");
+            SerializeAllCreators = Config.GetBoolean("akka.actor.serialize-creators");
+            EmitActorTelemetry = Config.GetBoolean("akka.actor.telemetry.enabled");
 
-            LogLevel = Config.GetString("akka.loglevel", null);
-            StdoutLogLevel = Config.GetString("akka.stdout-loglevel", null);
+            LogLevel = Config.GetString("akka.loglevel");
+            StdoutLogLevel = Config.GetString("akka.stdout-loglevel");
 
-            var stdoutClassName = Config.GetString("akka.stdout-logger-class", null);
+            var stdoutClassName = Config.GetString("akka.stdout-logger-class");
             if (string.IsNullOrWhiteSpace(stdoutClassName))
             {
                 StdoutLogger = new StandardOutLogger();
@@ -137,11 +137,11 @@ namespace Akka.Actor
             }
             
             Loggers = Config.GetStringList("akka.loggers", new string[] { });
-            LoggersDispatcher = Config.GetString("akka.loggers-dispatcher", null);
-            LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout", null);
-            LoggerAsyncStart = Config.GetBoolean("akka.logger-async-start", false);
+            LoggersDispatcher = Config.GetString("akka.loggers-dispatcher");
+            LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout");
+            LoggerAsyncStart = Config.GetBoolean("akka.logger-async-start");
 
-            var loggerFormatterName = Config.GetString("akka.logger-formatter", null);
+            var loggerFormatterName = Config.GetString("akka.logger-formatter");
             if (string.IsNullOrWhiteSpace(loggerFormatterName))
             {
                 LogFormatter = DefaultLogMessageFormatter.Instance;
@@ -174,10 +174,10 @@ namespace Akka.Actor
             }
 
             //handled
-            LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start", false);
+            LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start");
             LogSerializerOverrideOnStart = Config.GetBoolean("akka.log-serializer-override-on-start", true);
             LogDeadLetters = 0;
-            switch (Config.GetString("akka.log-dead-letters", null))
+            switch (Config.GetString("akka.log-dead-letters"))
             {
                 case "on":
                 case "true":
@@ -190,26 +190,26 @@ namespace Akka.Actor
                     LogDeadLetters = 0;
                     break;
                 default:
-                    LogDeadLetters = Config.GetInt("akka.log-dead-letters", 0);
+                    LogDeadLetters = Config.GetInt("akka.log-dead-letters");
                     break;
             }
-            LogDeadLettersDuringShutdown = Config.GetBoolean("akka.log-dead-letters-during-shutdown", false);
+            LogDeadLettersDuringShutdown = Config.GetBoolean("akka.log-dead-letters-during-shutdown");
 
             const string key = "akka.log-dead-letters-suspend-duration";
-            LogDeadLettersSuspendDuration = Config.GetString(key, null) == "infinite" ? Timeout.InfiniteTimeSpan : Config.GetTimeSpan(key);
+            LogDeadLettersSuspendDuration = Config.GetString(key) == "infinite" ? Timeout.InfiniteTimeSpan : Config.GetTimeSpan(key);
 
-            AddLoggingReceive = Config.GetBoolean("akka.actor.debug.receive", false);
-            DebugAutoReceive = Config.GetBoolean("akka.actor.debug.autoreceive", false);
-            DebugLifecycle = Config.GetBoolean("akka.actor.debug.lifecycle", false);
-            FsmDebugEvent = Config.GetBoolean("akka.actor.debug.fsm", false);
-            DebugEventStream = Config.GetBoolean("akka.actor.debug.event-stream", false);
-            DebugUnhandledMessage = Config.GetBoolean("akka.actor.debug.unhandled", false);
-            DebugRouterMisconfiguration = Config.GetBoolean("akka.actor.debug.router-misconfiguration", false);
+            AddLoggingReceive = Config.GetBoolean("akka.actor.debug.receive");
+            DebugAutoReceive = Config.GetBoolean("akka.actor.debug.autoreceive");
+            DebugLifecycle = Config.GetBoolean("akka.actor.debug.lifecycle");
+            FsmDebugEvent = Config.GetBoolean("akka.actor.debug.fsm");
+            DebugEventStream = Config.GetBoolean("akka.actor.debug.event-stream");
+            DebugUnhandledMessage = Config.GetBoolean("akka.actor.debug.unhandled");
+            DebugRouterMisconfiguration = Config.GetBoolean("akka.actor.debug.router-misconfiguration");
             Home = Config.GetString("akka.home", "");
-            DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor", 0);
+            DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor");
 
-            SchedulerClass = Config.GetString("akka.scheduler.implementation", null);
-            SchedulerShutdownTimeout = Config.GetTimeSpan("akka.scheduler.shutdown-timeout", null);
+            SchedulerClass = Config.GetString("akka.scheduler.implementation");
+            SchedulerShutdownTimeout = Config.GetTimeSpan("akka.scheduler.shutdown-timeout");
 
             CoordinatedShutdownTerminateActorSystem = Config.GetBoolean("akka.coordinated-shutdown.terminate-actor-system");
             CoordinatedShutdownRunByActorSystemTerminate = Config.GetBoolean("akka.coordinated-shutdown.run-by-actor-system-terminate");

@@ -101,7 +101,7 @@ namespace Akka.Tests.Actor
             await ExpectMsgAsync("A says: hi");
             await ExpectMsgAsync("A says: True");
             //we dont expect any further messages
-            await ExpectNoMsgAsync(default);
+            await ExpectNoMsgAsync();
         }
 
         private class BecomeActor : UntypedActor

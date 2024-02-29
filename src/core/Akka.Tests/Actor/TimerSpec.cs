@@ -80,7 +80,7 @@ namespace Akka.Tests.Actor
 
             await probe.ExpectMsgAsync(new Tock(1));
 
-            var latch = CreateTestLatch(1);
+            var latch = CreateTestLatch();
             // next Tock(1) enqueued in mailboxed, but should be discarded because of new timer
             actor.Tell(new SlowThenBump(latch));
             await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(interval) + TimeSpan.FromMilliseconds(100));
@@ -128,7 +128,7 @@ namespace Akka.Tests.Actor
 
             await probe.ExpectMsgAsync(new Tock(1));
 
-            var latch = CreateTestLatch(1);
+            var latch = CreateTestLatch();
             // next Tock(1) is enqueued in mailbox, but should be discarded by new incarnation
             actor.Tell(new SlowThenThrow(latch, new Exc()));
             await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(interval) + TimeSpan.FromMilliseconds(100));
@@ -153,7 +153,7 @@ namespace Akka.Tests.Actor
 
             await probe.ExpectMsgAsync(new Tock(2));
 
-            var latch = CreateTestLatch(1);
+            var latch = CreateTestLatch();
             // next Tock(2) is enqueued in mailbox, but should be discarded by new incarnation
             actor.Tell(new SlowThenThrow(latch, new Exc()));
             await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(interval) + TimeSpan.FromMilliseconds(100));

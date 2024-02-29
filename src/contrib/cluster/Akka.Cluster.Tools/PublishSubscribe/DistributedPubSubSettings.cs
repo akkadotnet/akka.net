@@ -70,7 +70,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             // TODO: "removed-time-to-live" key depends on Config.GetTimeSpan() to return a TimeSpan.Zero default.
             // TODO: "max-delta-elements" key depends on Config.GetInt() to return a 0 default.
             return new DistributedPubSubSettings(
-                config.GetString("role", null),
+                config.GetString("role"),
                 routingLogic,
                 config.GetTimeSpan("gossip-interval"),
                 config.GetTimeSpan("removed-time-to-live"),

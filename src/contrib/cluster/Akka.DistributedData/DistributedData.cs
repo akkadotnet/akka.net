@@ -84,7 +84,7 @@ namespace Akka.DistributedData
             }
             else
             {
-                var name = config.GetString("name", null);
+                var name = config.GetString("name");
                 Replicator = _settings.RestartReplicatorOnFailure 
                     ? system.ActorOf(GetSupervisedReplicator(_settings, name), name+"Supervisor")
                     : system.ActorOf(Akka.DistributedData.Replicator.Props(_settings), name);

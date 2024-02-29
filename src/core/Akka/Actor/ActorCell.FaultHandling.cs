@@ -147,7 +147,7 @@ namespace Akka.Actor
             global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended(), "Mailbox must be suspended during failed creation, status=" + Mailbox.CurrentStatus());
             global::System.Diagnostics.Debug.Assert(_self.Equals(Perpetrator), "Perpetrator should be self");
 
-            SetReceiveTimeout(null);
+            SetReceiveTimeout();
             CancelReceiveTimeout();
 
             // stop all children, which will turn childrenRefs into TerminatingChildrenContainer (if there are children)
@@ -180,7 +180,7 @@ namespace Akka.Actor
         /// <summary>Terminates this instance.</summary>
         private void Terminate()
         {
-            SetReceiveTimeout(null);
+            SetReceiveTimeout();
             CancelReceiveTimeout();
 
             // prevent Deadletter(Terminated) messages

@@ -151,7 +151,7 @@ namespace Akka.Tests.IO
             client.Tell(UdpConnected.Send.Create(data));
             client.Tell(UdpConnected.Send.Create(data));
 
-            var raw = await serverProbe.ReceiveNAsync(3, default).ToListAsync();
+            var raw = await serverProbe.ReceiveNAsync(3).ToListAsync();
             var serverMsgs = raw.Cast<Udp.Received>();
             serverMsgs.Sum(x => x.Data.Count).Should().Be(data.Count * 3);
             await serverProbe.ExpectNoMsgAsync(100.Milliseconds());
@@ -161,7 +161,7 @@ namespace Akka.Tests.IO
             server.Tell(Udp.Send.Create(data, clientEndPoint));
             server.Tell(Udp.Send.Create(data, clientEndPoint));
 
-            raw = await clientProbe.ReceiveNAsync(3, default).ToListAsync();
+            raw = await clientProbe.ReceiveNAsync(3).ToListAsync();
             var clientMsgs = raw.Cast<UdpConnected.Received>();
             clientMsgs.Sum(x => x.Data.Count).Should().Be(data.Count * 3);
         }

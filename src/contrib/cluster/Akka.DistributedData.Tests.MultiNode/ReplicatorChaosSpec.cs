@@ -107,9 +107,9 @@ namespace Akka.DistributedData.Tests.MultiNode
             {
                 for (var i = 0; i < 5; i++)
                 {
-                    _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 1)));
-                    _replicator.Tell(Dsl.Update(KeyB, PNCounter.Empty, WriteLocal.Instance, x => x.Decrement(_cluster, 1)));
-                    _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 1)));
+                    _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster)));
+                    _replicator.Tell(Dsl.Update(KeyB, PNCounter.Empty, WriteLocal.Instance, x => x.Decrement(_cluster)));
+                    _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster)));
                 }
                 ReceiveN(15).Select(x => x.GetType()).ToImmutableHashSet().ShouldBe(new[] { typeof(UpdateSuccess) });
             }, First);
@@ -187,7 +187,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster, 1)));
+                _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateSuccess(KeyA, null));
             }, First);
 
@@ -205,7 +205,7 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster, 1)));
+                _replicator.Tell(Dsl.Update(KeyD, GCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster)));
                 ExpectMsg(new UpdateSuccess(KeyD, null));
             }, Fourth);
 

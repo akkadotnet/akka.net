@@ -307,7 +307,7 @@ namespace Akka.Tests.Actor
             await EventFilter.DeadLetter<object>().ExpectOneAsync(() => { actor.Tell(new object(), null); return Task.CompletedTask; });
 
             // will throw an exception if there's a bug
-            await ExpectNoMsgAsync(default);
+            await ExpectNoMsgAsync();
         }
 
         [Fact]

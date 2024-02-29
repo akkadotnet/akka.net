@@ -34,7 +34,7 @@ namespace Akka.Dispatch
         {
             _executorServiceConfigurator = 
                 new ForkJoinExecutorServiceFactory(
-                    ForkJoinExecutorServiceFactory.SingleThreadDefault.WithFallback("id=" + config.GetString("id", null)), Prerequisites);
+                    ForkJoinExecutorServiceFactory.SingleThreadDefault.WithFallback("id=" + config.GetString("id")), Prerequisites);
             // We don't bother trying to support any other type of executor here. PinnedDispatcher doesn't support them
         }
 
@@ -47,11 +47,11 @@ namespace Akka.Dispatch
             if (Config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<MessageDispatcher>();
 
-            return new PinnedDispatcher(this, Config.GetString("id", null),
-                Config.GetInt("throughput", 0),
-                Config.GetTimeSpan("throughput-deadline-time", null).Ticks,
+            return new PinnedDispatcher(this, Config.GetString("id"),
+                Config.GetInt("throughput"),
+                Config.GetTimeSpan("throughput-deadline-time").Ticks,
                 _executorServiceConfigurator,
-                Config.GetTimeSpan("shutdown-timeout", null));
+                Config.GetTimeSpan("shutdown-timeout"));
         }
     }
 

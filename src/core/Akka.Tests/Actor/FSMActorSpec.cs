@@ -317,7 +317,7 @@ namespace Akka.Tests.Actor
                     {
                         foreach (var timerName in timerNames)
                         {
-                            SetTimer(timerName, new object(), 10.Seconds(), false);
+                            SetTimer(timerName, new object(), 10.Seconds());
                         }
                     }
                 });

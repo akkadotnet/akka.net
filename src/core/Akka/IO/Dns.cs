@@ -223,10 +223,10 @@ namespace Akka.IO
                 if (config.IsNullOrEmpty())
                     throw ConfigurationException.NullOrEmptyConfig<DnsSettings>();
 
-                Dispatcher = config.GetString("dispatcher", null);
-                Resolver = config.GetString("resolver", null);
+                Dispatcher = config.GetString("dispatcher");
+                Resolver = config.GetString("resolver");
                 ResolverConfig = config.GetConfig(Resolver);
-                ProviderObjectName = ResolverConfig.GetString("provider-object", null);
+                ProviderObjectName = ResolverConfig.GetString("provider-object");
             }
 
             /// <summary>

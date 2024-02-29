@@ -121,7 +121,7 @@ namespace Akka.Tests.Actor
 
         #endregion
 
-        public FunctionRefSpec(ITestOutputHelper output) : base(output, null)
+        public FunctionRefSpec(ITestOutputHelper output) : base(output)
         {
         }
 

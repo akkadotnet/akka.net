@@ -44,7 +44,7 @@ namespace Akka.Remote
             var deploy = base.ParseConfig(key, config);
             if (deploy == null) return null;
 
-            var remote = deploy.Config.GetString("remote", null);
+            var remote = deploy.Config.GetString("remote");
 
             if(ActorPath.TryParse(remote, out var actorPath))
             {

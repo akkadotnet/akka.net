@@ -190,7 +190,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             {
                 // inject data from removed node to simulate bad data
                 _replicator.Tell(Dsl.Update(_keyA, GCounter.Empty,
-                    new WriteAll(_timeout), x => x.Merge(oldCounter).Increment(_cluster, 1)));
+                    new WriteAll(_timeout), x => x.Merge(oldCounter).Increment(_cluster)));
                 ExpectMsg<UpdateSuccess>();
                 
                 AwaitAssert(() =>

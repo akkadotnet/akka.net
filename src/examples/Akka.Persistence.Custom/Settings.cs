@@ -89,7 +89,7 @@ namespace Akka.Persistence.Custom
             ConnectionString = config.GetString("connection-string");
             ConnectionTimeout = config.GetTimeSpan("connection-timeout");
             AutoInitialize = config.GetBoolean("auto-initialize");
-            DefaultSerializer = config.GetString("serializer", null);
+            DefaultSerializer = config.GetString("serializer");
         }
     }
 }

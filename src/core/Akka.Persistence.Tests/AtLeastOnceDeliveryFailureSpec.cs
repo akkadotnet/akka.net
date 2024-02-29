@@ -147,8 +147,8 @@ namespace Akka.Persistence.Tests
                 if (_config.IsNullOrEmpty())
                     throw ConfigurationException.NullOrEmptyConfig<ChaosSender>("akka.persistence.sender.chaos");
 
-                _liveProcessingFailureRate = _config.GetDouble("live-processing-failure-rate", 0);
-                _replayProcessingFailureRate = _config.GetDouble("replay-processing-failure-rate", 0);
+                _liveProcessingFailureRate = _config.GetDouble("live-processing-failure-rate");
+                _replayProcessingFailureRate = _config.GetDouble("replay-processing-failure-rate");
             }
 
             public override string PersistenceId { get { return "chaosSender"; } }
@@ -249,7 +249,7 @@ namespace Akka.Persistence.Tests
                 Probe = probe;
                 State = new List<int>();
                 _config = Context.System.Settings.Config.GetConfig("akka.persistence.destination.chaos");
-                _confirmFailureRate = _config.GetDouble("confirm-failure-rate", 0);
+                _confirmFailureRate = _config.GetDouble("confirm-failure-rate");
 
                 Receive<Msg>(m =>
                 {

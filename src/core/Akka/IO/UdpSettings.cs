@@ -38,10 +38,10 @@ namespace Akka.IO
                 throw ConfigurationException.NullOrEmptyConfig<UdpSettings>();
 
             return new UdpSettings(
-                bufferPoolConfigPath: config.GetString("buffer-pool", null),
-                traceLogging: config.GetBoolean("trace-logging", false),
+                bufferPoolConfigPath: config.GetString("buffer-pool"),
+                traceLogging: config.GetBoolean("trace-logging"),
                 initialSocketAsyncEventArgs: config.GetInt("nr-of-socket-async-event-args", 32),
-                batchReceiveLimit: config.GetInt("receive-throughput", 0),
+                batchReceiveLimit: config.GetInt("receive-throughput"),
                 managementDispatcher: config.GetString("management-dispatcher", "akka.actor.default-dispatcher"),
                 fileIoDispatcher: config.GetString("file-io-dispatcher", "akka.actor.default-dispatcher"));
         }

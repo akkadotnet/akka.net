@@ -468,7 +468,7 @@ namespace Akka.Persistence.Fsm
             }
             else
             {
-                SnapshotAfterValue = config.GetInt(Key, 0);
+                SnapshotAfterValue = config.GetInt(Key);
             }
         }
         

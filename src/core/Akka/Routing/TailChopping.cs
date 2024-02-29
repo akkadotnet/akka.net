@@ -162,11 +162,11 @@ namespace Akka.Routing
         /// <param name="config">The configuration used to configure the pool.</param>
         public TailChoppingPool(Config config)
             : this(
-                  config.GetInt("nr-of-instances", 0),
+                  config.GetInt("nr-of-instances"),
                   Resizer.FromConfig(config),
                   Pool.DefaultSupervisorStrategy,
                   Dispatchers.DefaultDispatcherId,
-                  config.GetTimeSpan("within", null), config.GetTimeSpan("tail-chopping-router.interval", null), config.HasPath("pool-dispatcher"))
+                  config.GetTimeSpan("within"), config.GetTimeSpan("tail-chopping-router.interval"), config.HasPath("pool-dispatcher"))
         {
         }
 
@@ -398,8 +398,8 @@ namespace Akka.Routing
         public TailChoppingGroup(Config config)
             : this(
                   config.GetStringList("routees.paths", new string[] { }),
-                  config.GetTimeSpan("within", null),
-                  config.GetTimeSpan("tail-chopping-router.interval", null),
+                  config.GetTimeSpan("within"),
+                  config.GetTimeSpan("tail-chopping-router.interval"),
                   Dispatchers.DefaultDispatcherId)
         {
         }

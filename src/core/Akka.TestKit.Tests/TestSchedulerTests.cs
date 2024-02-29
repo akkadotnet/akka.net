@@ -47,7 +47,7 @@ namespace Akka.TestKit.Tests
         [Fact]
         public async Task Delivers_messages_scheduled_for_same_time_in_order_they_were_added()
         {
-            _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1), 1));
+            _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1)));
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1), 2));
             await _testReceiveActor.Ask<ActorIdentity>(new Identify(null), RemainingOrDefault); // verify that the ActorCell has started
 
@@ -98,7 +98,7 @@ namespace Akka.TestKit.Tests
         [Fact]
         public async Task Advance_to_takes_us_to_correct_time()
         {
-            _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1), 1));
+            _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(1)));
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(2), 2));
             _testReceiveActor.Tell(new ScheduleOnceMessage(TimeSpan.FromSeconds(3), 3));
             await _testReceiveActor.Ask<ActorIdentity>(new Identify(null), RemainingOrDefault); // verify that the ActorCell has started

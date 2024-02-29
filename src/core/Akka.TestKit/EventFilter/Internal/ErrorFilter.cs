@@ -26,7 +26,7 @@ namespace Akka.TestKit.Internal
         /// <param name="messageMatcher">TBD</param>
         /// <param name="sourceMatcher">TBD</param>
         public ErrorFilter(IStringMatcher messageMatcher = null, IStringMatcher sourceMatcher = null)
-            : this(null,messageMatcher,sourceMatcher, false)
+            : this(null,messageMatcher,sourceMatcher)
         {
         }
 

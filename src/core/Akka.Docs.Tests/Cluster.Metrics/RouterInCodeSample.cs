@@ -37,7 +37,7 @@ namespace Akka.Cluster.Metrics.Tests
             var useRoles = "backend";
             IActorRef backend = Context.ActorOf(
                 new ClusterRouterPool(
-                        new AdaptiveLoadBalancingPool(CpuMetricsSelector.Instance, 0),
+                        new AdaptiveLoadBalancingPool(CpuMetricsSelector.Instance),
                         new ClusterRouterPoolSettings(totalInstances, maxInstancesPerNode, allowLocalRoutees, useRoles))
                     .Props(Props.Create<FactorialBackend>()),
                 "factorialBackendRouter3");

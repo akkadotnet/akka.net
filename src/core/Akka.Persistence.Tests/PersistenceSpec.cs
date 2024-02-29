@@ -100,7 +100,7 @@ namespace Akka.Persistence.Tests
             StorageLocations = new[]
             {
                 "akka.persistence.snapshot-store.local.dir"
-            }.Select(s => new DirectoryInfo(spec.Sys.Settings.Config.GetString(s, null))).ToList();
+            }.Select(s => new DirectoryInfo(spec.Sys.Settings.Config.GetString(s))).ToList();
         }
 
         public void Initialize()

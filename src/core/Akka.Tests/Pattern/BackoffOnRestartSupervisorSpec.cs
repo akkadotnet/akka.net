@@ -225,7 +225,7 @@ namespace Akka.Tests.Pattern
         [Fact]
         public async Task BackoffOnRestartSupervisor_must_accept_commands_while_child_is_terminating()
         {
-            var postStopLatch = CreateTestLatch(1);
+            var postStopLatch = CreateTestLatch();
             var options = Backoff.OnFailure(SlowlyFailingActor.Props(postStopLatch), "someChildName", 1.Ticks(), 1.Ticks(), 0.0, -1)
                 .WithSupervisorStrategy(new OneForOneStrategy(ex => ex is StoppingException 
                     ? Directive.Stop 

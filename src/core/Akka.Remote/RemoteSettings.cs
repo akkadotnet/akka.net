@@ -29,8 +29,8 @@ namespace Akka.Remote
                 throw ConfigurationException.NullOrEmptyConfig<RemoteSettings>();
 
             Config = config;
-            LogReceive = config.GetBoolean("akka.remote.log-received-messages", false);
-            LogSend = config.GetBoolean("akka.remote.log-sent-messages", false);
+            LogReceive = config.GetBoolean("akka.remote.log-received-messages");
+            LogSend = config.GetBoolean("akka.remote.log-sent-messages");
 
             // TODO: what is the default value if the key wasn't found?
             var bufferSizeLogKey = "akka.remote.log-buffer-size-exceeding";
@@ -43,43 +43,43 @@ namespace Akka.Remote
             }
             else
             {
-                LogBufferSizeExceeding = config.GetInt(bufferSizeLogKey, 0);
+                LogBufferSizeExceeding = config.GetInt(bufferSizeLogKey);
             }
 
-            UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode", false);
+            UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode");
             TrustedSelectionPaths = new HashSet<string>(config.GetStringList("akka.remote.trusted-selection-paths", new string[] { }));
             RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events", "DEBUG");
             if (RemoteLifecycleEventsLogLevel.Equals("on", StringComparison.OrdinalIgnoreCase) ||
                 RemoteLifecycleEventsLogLevel.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
                 RemoteLifecycleEventsLogLevel.Equals("true", StringComparison.OrdinalIgnoreCase)
                 ) RemoteLifecycleEventsLogLevel = "DEBUG";
-            Dispatcher = config.GetString("akka.remote.use-dispatcher", null);
-            FlushWait = config.GetTimeSpan("akka.remote.flush-wait-on-shutdown", null);
-            ShutdownTimeout = config.GetTimeSpan("akka.remote.shutdown-timeout", null);
+            Dispatcher = config.GetString("akka.remote.use-dispatcher");
+            FlushWait = config.GetTimeSpan("akka.remote.flush-wait-on-shutdown");
+            ShutdownTimeout = config.GetTimeSpan("akka.remote.shutdown-timeout");
             TransportNames = config.GetStringList("akka.remote.enabled-transports", new string[] { });
             Transports = (from transportName in TransportNames
                 let transportConfig = TransportConfigFor(transportName)
                 select new TransportSettings(transportConfig)).ToArray();
             Adapters = ConfigToMap(config.GetConfig("akka.remote.adapters"));
-            BackoffPeriod = config.GetTimeSpan("akka.remote.backoff-interval", null);
+            BackoffPeriod = config.GetTimeSpan("akka.remote.backoff-interval");
             RetryGateClosedFor = config.GetTimeSpan("akka.remote.retry-gate-closed-for", TimeSpan.Zero);
-            UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections", false);
-            SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size", 0);
-            SysResendTimeout = config.GetTimeSpan("akka.remote.resend-interval", null);
-            SysResendLimit = config.GetInt("akka.remote.resend-limit", 0);
-            InitialSysMsgDeliveryTimeout = config.GetTimeSpan("akka.remote.initial-system-message-delivery-timeout", null);
-            QuarantineSilentSystemTimeout = config.GetTimeSpan("akka.remote.quarantine-after-silence", null);
-            SysMsgAckTimeout = config.GetTimeSpan("akka.remote.system-message-ack-piggyback-timeout", null);
-            QuarantineDuration = config.GetTimeSpan("akka.remote.prune-quarantine-marker-after", null);
+            UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections");
+            SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size");
+            SysResendTimeout = config.GetTimeSpan("akka.remote.resend-interval");
+            SysResendLimit = config.GetInt("akka.remote.resend-limit");
+            InitialSysMsgDeliveryTimeout = config.GetTimeSpan("akka.remote.initial-system-message-delivery-timeout");
+            QuarantineSilentSystemTimeout = config.GetTimeSpan("akka.remote.quarantine-after-silence");
+            SysMsgAckTimeout = config.GetTimeSpan("akka.remote.system-message-ack-piggyback-timeout");
+            QuarantineDuration = config.GetTimeSpan("akka.remote.prune-quarantine-marker-after");
 
-            StartupTimeout = config.GetTimeSpan("akka.remote.startup-timeout", null);
-            CommandAckTimeout = config.GetTimeSpan("akka.remote.command-ack-timeout", null);
+            StartupTimeout = config.GetTimeSpan("akka.remote.startup-timeout");
+            CommandAckTimeout = config.GetTimeSpan("akka.remote.command-ack-timeout");
 
             WatchFailureDetectorConfig = config.GetConfig("akka.remote.watch-failure-detector");
-            WatchFailureDetectorImplementationClass = WatchFailureDetectorConfig.GetString("implementation-class", null);
-            WatchHeartBeatInterval = WatchFailureDetectorConfig.GetTimeSpan("heartbeat-interval", null);
-            WatchUnreachableReaperInterval = WatchFailureDetectorConfig.GetTimeSpan("unreachable-nodes-reaper-interval", null);
-            WatchHeartbeatExpectedResponseAfter = WatchFailureDetectorConfig.GetTimeSpan("expected-response-after", null);
+            WatchFailureDetectorImplementationClass = WatchFailureDetectorConfig.GetString("implementation-class");
+            WatchHeartBeatInterval = WatchFailureDetectorConfig.GetTimeSpan("heartbeat-interval");
+            WatchUnreachableReaperInterval = WatchFailureDetectorConfig.GetTimeSpan("unreachable-nodes-reaper-interval");
+            WatchHeartbeatExpectedResponseAfter = WatchFailureDetectorConfig.GetTimeSpan("expected-response-after");
         }
 
         /// <summary>
@@ -252,7 +252,7 @@ namespace Akka.Remote
                 if (config.IsNullOrEmpty())
                     throw ConfigurationException.NullOrEmptyConfig<TransportSettings>();
 
-                TransportClass = config.GetString("transport-class", null);
+                TransportClass = config.GetString("transport-class");
                 Adapters = config.GetStringList("applied-adapters", new string[] { }).Reverse().ToList();
                 Config = config;
             }

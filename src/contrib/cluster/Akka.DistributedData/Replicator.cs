@@ -489,7 +489,7 @@ namespace Akka.DistributedData
                         var newEnvelope = Write(entry.Key, envelope);
                         if (!ReferenceEquals(newEnvelope, envelope))
                         {
-                            _durableStore.Tell(new Store(entry.Key, new DurableDataEnvelope(newEnvelope), null));
+                            _durableStore.Tell(new Store(entry.Key, new DurableDataEnvelope(newEnvelope)));
                         }
                     }
                     return true;
@@ -970,7 +970,7 @@ namespace Akka.DistributedData
             if (envelope != null)
             {
                 var msg = envelope.Data is DeletedData
-                    ? (object)new DataDeleted(key, null)
+                    ? (object)new DataDeleted(key)
                     : new Changed(key, envelope.Data);
 
                 foreach (var sub in subs) sub.Tell(msg);
@@ -1481,7 +1481,7 @@ namespace Akka.DistributedData
                             SetData(key, newEnvelope);
                             if (!newEnvelope.Data.Equals(data) && isDurable)
                             {
-                                _durableStore.Tell(new Store(key, new DurableDataEnvelope(newEnvelope), null));
+                                _durableStore.Tell(new Store(key, new DurableDataEnvelope(newEnvelope)));
                             }
                         }
                     }

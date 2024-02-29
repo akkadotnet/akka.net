@@ -57,10 +57,10 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartBeatInterval);
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartbeatExpectedResponseAfter);
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchUnreachableReaperInterval);
-            Assert.Equal(10, remoteSettings.WatchFailureDetectorConfig.GetDouble("threshold", 0));
-            Assert.Equal(200, remoteSettings.WatchFailureDetectorConfig.GetDouble("max-sample-size", 0));
-            Assert.Equal(TimeSpan.FromSeconds(10), remoteSettings.WatchFailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause", null));
-            Assert.Equal(TimeSpan.FromMilliseconds(100), remoteSettings.WatchFailureDetectorConfig.GetTimeSpan("min-std-deviation", null));
+            Assert.Equal(10, remoteSettings.WatchFailureDetectorConfig.GetDouble("threshold"));
+            Assert.Equal(200, remoteSettings.WatchFailureDetectorConfig.GetDouble("max-sample-size"));
+            Assert.Equal(TimeSpan.FromSeconds(10), remoteSettings.WatchFailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause"));
+            Assert.Equal(TimeSpan.FromMilliseconds(100), remoteSettings.WatchFailureDetectorConfig.GetTimeSpan("min-std-deviation"));
 
             var remoteSettingsAdaptersStandart = new List<KeyValuePair<string, Type>>()
             {
@@ -73,7 +73,7 @@ namespace Akka.Remote.Tests
 
             Assert.Empty(remoteSettingsAdapters.Except(remoteSettingsAdaptersStandart));
 
-            remoteSettings.Config.GetString("akka.remote.log-frame-size-exceeding", null).ShouldBe("off");
+            remoteSettings.Config.GetString("akka.remote.log-frame-size-exceeding").ShouldBe("off");
         }
 
         [Fact]
@@ -83,7 +83,7 @@ namespace Akka.Remote.Tests
             
             Assert.Equal(typeof(DeadlineFailureDetector), Type.GetType(settings.TransportFailureDetectorImplementationClass));
             Assert.Equal(TimeSpan.FromSeconds(4), settings.TransportHeartBeatInterval);
-            Assert.Equal(TimeSpan.FromSeconds(120), settings.TransportFailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause", null));
+            Assert.Equal(TimeSpan.FromSeconds(120), settings.TransportFailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause"));
         }
 
         [Fact]
@@ -102,8 +102,8 @@ namespace Akka.Remote.Tests
             Assert.Equal(4096, s.Backlog);
             Assert.True(s.TcpNoDelay);
             Assert.True(s.TcpKeepAlive);
-            Assert.Equal("off-for-windows", c.GetString("tcp-reuse-addr", null));
-            Assert.True(string.IsNullOrEmpty(c.GetString("hostname", null)));
+            Assert.Equal("off-for-windows", c.GetString("tcp-reuse-addr"));
+            Assert.True(string.IsNullOrEmpty(c.GetString("hostname")));
             Assert.Null(s.PublicPort);
             Assert.Equal(2, s.ServerSocketWorkerPoolSize);
             Assert.Equal(2, s.ClientSocketWorkerPoolSize);
@@ -142,17 +142,17 @@ namespace Akka.Remote.Tests
             // server-socket-worker-pool
             {
                 var pool = c.GetConfig("server-socket-worker-pool");
-                Assert.Equal(2, pool.GetInt("pool-size-min", 0));
-                Assert.Equal(1.0d, pool.GetDouble("pool-size-factor", 0));
-                Assert.Equal(2, pool.GetInt("pool-size-max", 0));
+                Assert.Equal(2, pool.GetInt("pool-size-min"));
+                Assert.Equal(1.0d, pool.GetDouble("pool-size-factor"));
+                Assert.Equal(2, pool.GetInt("pool-size-max"));
             }
 
             //client-socket-worker-pool
             {
                 var pool = c.GetConfig("client-socket-worker-pool");
-                Assert.Equal(2, pool.GetInt("pool-size-min", 0));
-                Assert.Equal(1.0d, pool.GetDouble("pool-size-factor", 0));
-                Assert.Equal(2, pool.GetInt("pool-size-max", 0));
+                Assert.Equal(2, pool.GetInt("pool-size-min"));
+                Assert.Equal(1.0d, pool.GetDouble("pool-size-factor"));
+                Assert.Equal(2, pool.GetInt("pool-size-max"));
             }
         }
 

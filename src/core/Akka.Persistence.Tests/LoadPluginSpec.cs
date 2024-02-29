@@ -52,7 +52,7 @@ namespace Akka.Persistence.Tests
         {
             var pluginRef = Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.inmem");
             pluginRef.Tell(GetConfig.Instance);
-            ExpectMsg<Config>(c => c.GetInt("extra-property", 0) == 17);
+            ExpectMsg<Config>(c => c.GetInt("extra-property") == 17);
         }
     }
 }

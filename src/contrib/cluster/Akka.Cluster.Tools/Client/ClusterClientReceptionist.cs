@@ -53,7 +53,7 @@ namespace Akka.Cluster.Tools.Client
             _system.Settings.InjectTopLevelFallback(DefaultConfig());
             _config = system.Settings.Config.GetConfig("akka.cluster.client.receptionist");
 
-            _role = _config.GetString("role", null);
+            _role = _config.GetString("role");
             if (string.IsNullOrEmpty(_role)) _role = null;
 
             _receptionist = CreateReceptionist();
@@ -132,7 +132,7 @@ namespace Akka.Cluster.Tools.Client
             else
             {
                 var name = _config.GetString("name");
-                var dispatcher = _config.GetString("use-dispatcher", null);
+                var dispatcher = _config.GetString("use-dispatcher");
                 if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.InternalDispatcherId;
 
                 // important to use var mediator here to activate it outside of ClusterReceptionist constructor

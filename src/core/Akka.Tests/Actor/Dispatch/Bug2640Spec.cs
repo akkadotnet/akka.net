@@ -80,7 +80,7 @@ namespace Akka.Tests.Actor.Dispatch
             for (var i = 0; i < 100; i++)
                 actor.Tell(GetThread.Instance);
 
-            var objs = await ReceiveNAsync(100, default).ToListAsync();
+            var objs = await ReceiveNAsync(100).ToListAsync();
             threads = objs.Cast<Thread>().GroupBy(x => x.ManagedThreadId)
                 .ToDictionary(x => x.Key, grouping => grouping.First());
 
@@ -100,7 +100,7 @@ namespace Akka.Tests.Actor.Dispatch
             for (var i = 0; i < 100; i++)
                 actor.Tell(GetThread.Instance);
 
-            var objs = await ReceiveNAsync(100, default).ToListAsync();
+            var objs = await ReceiveNAsync(100).ToListAsync();
 
             threads = objs.Cast<Thread>().GroupBy(x => x.ManagedThreadId)
                 .ToDictionary(x => x.Key, grouping => grouping.First());

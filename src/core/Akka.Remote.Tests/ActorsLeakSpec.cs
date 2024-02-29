@@ -90,7 +90,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public async Task Remoting_must_not_leak_actors()
         {
-            var actorRef = Sys.ActorOf(EchoActor.Props(this, true), "echo");
+            var actorRef = Sys.ActorOf(EchoActor.Props(this), "echo");
             var echoPath = new RootActorPath(RARP.For(Sys).Provider.DefaultAddress)/"user"/"echo";
 
             var targets = await Task.WhenAll(new[] { "/system/endpointManager", "/system/transports" }.Select(

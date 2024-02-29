@@ -314,7 +314,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="localOnlyDecider">mapping from Exception to <see cref="Directive" /></param>
         public OneForOneStrategy(Func<Exception, Directive> localOnlyDecider)
-            : this(-1, -1, localOnlyDecider, true)
+            : this(-1, -1, localOnlyDecider)
         {
         }
 
@@ -333,7 +333,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="decider">TBD</param>
         public OneForOneStrategy(IDecider decider)
-            : this(-1, -1, decider, true)
+            : this(-1, -1, decider)
         {
         }
 
@@ -581,7 +581,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="localOnlyDecider">The mapping used to translate an <see cref="Exception"/> to a <see cref="Directive"/>.</param>
         public AllForOneStrategy(Func<Exception, Directive> localOnlyDecider)
-            : this(-1, -1, localOnlyDecider, true)
+            : this(-1, -1, localOnlyDecider)
         {
         }
 
@@ -590,7 +590,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="decider">The mapping used to translate an <see cref="Exception"/> to a <see cref="Directive"/>.</param>
         public AllForOneStrategy(IDecider decider)
-            : this(-1, -1, decider, true)
+            : this(-1, -1, decider)
         {
             //Intentionally left blank
         }

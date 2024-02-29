@@ -53,9 +53,9 @@ namespace Akka.Persistence.Query.Sql
 
         public SqlReadJournal(ExtendedActorSystem system, Config config)
         {
-            _refreshInterval = config.GetTimeSpan("refresh-interval", null);
-            var writeJournalPluginId = config.GetString("write-plugin", null);
-            _maxBufferSize = config.GetInt("max-buffer-size", 0);
+            _refreshInterval = config.GetTimeSpan("refresh-interval");
+            var writeJournalPluginId = config.GetString("write-plugin");
+            _maxBufferSize = config.GetInt("max-buffer-size");
             _maxConcurrentQueries = config.GetInt("max-concurrent-queries", 50);
             _system = system;
 

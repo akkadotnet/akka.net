@@ -323,7 +323,7 @@ channel-executor.priority = normal");
         /// <returns>The requested <see cref="ExecutorServiceConfigurator"/> instance.</returns>
         protected ExecutorServiceConfigurator ConfigureExecutor()
         {
-            var executor = Config.GetString("executor", null);
+            var executor = Config.GetString("executor");
             switch (executor)
             {
                 case null:

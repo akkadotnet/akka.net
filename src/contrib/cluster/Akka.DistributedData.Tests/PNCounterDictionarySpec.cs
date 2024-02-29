@@ -36,7 +36,7 @@ namespace Akka.DistributedData.Tests
             var m = PNCounterDictionary<string>.Empty
                 .Increment(_node1, "a", 2)
                 .Increment(_node1, "b", 3)
-                .Decrement(_node2, "a", 1);
+                .Decrement(_node2, "a");
 
             Assert.Equal(ImmutableDictionary.CreateRange(new[]
             {
@@ -49,7 +49,7 @@ namespace Akka.DistributedData.Tests
         public void PNCounterDictionary_must_be_able_to_have_its_entries_correctly_merged_with_another_ORDictionary_with_other_entries()
         {
             var m1 = PNCounterDictionary<string>.Empty
-                .Increment(_node1, "a", 1)
+                .Increment(_node1, "a")
                 .Increment(_node1, "b", 3)
                 .Increment(_node1, "c", 2);
 
@@ -71,7 +71,7 @@ namespace Akka.DistributedData.Tests
         public void PNCounterDictionary_must_be_able_to_remove_entry()
         {
             var m1 = PNCounterDictionary<string>.Empty
-                .Increment(_node1, "a", 1)
+                .Increment(_node1, "a")
                 .Increment(_node1, "b", 3)
                 .Increment(_node1, "c", 2);
 
@@ -101,7 +101,7 @@ namespace Akka.DistributedData.Tests
         public void PNCounterDictionary_must_be_able_to_work_with_deltas()
         {
             var m1 = PNCounterDictionary<string>.Empty
-                .Increment(_node1, "a", 1)
+                .Increment(_node1, "a")
                 .Increment(_node1, "b", 3)
                 .Increment(_node1, "c", 2);
             var m2 = PNCounterDictionary<string>.Empty.Increment(_node2, "c", 5);
@@ -141,7 +141,7 @@ namespace Akka.DistributedData.Tests
         public void Bugfix_4198_PNCounterMapDeltas_must_merge_other_PNCounterMaps()
         {
             var m1 = PNCounterDictionary<string>.Empty
-                .Increment(_node1, "a", 1)
+                .Increment(_node1, "a")
                 .Increment(_node1, "b", 3)
                 .Increment(_node1, "c", 2);
             var m2 = PNCounterDictionary<string>.Empty.Increment(_node2, "c", 5);
@@ -176,7 +176,7 @@ namespace Akka.DistributedData.Tests
         public void Bugfix_4199_PNCounterMaps_must_support_pruning()
         {
             var m1 = PNCounterDictionary<string>.Empty
-                .Increment(_node1, "a", 1)
+                .Increment(_node1, "a")
                 .Increment(_node1, "b", 3)
                 .Increment(_node1, "c", 2)
                 .Increment(_node2, "a", 2);

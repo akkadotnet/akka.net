@@ -43,7 +43,7 @@ namespace Akka.Cluster.Tools.Client
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ClusterReceptionistSettings>();
 
-            var role = config.GetString("role", null);
+            var role = config.GetString("role");
             if (string.IsNullOrEmpty(role)) role = null;
 
             return new ClusterReceptionistSettings(
