@@ -1,6 +1,36 @@
-#### 1.5.17 January 29th 2024 ####
+#### 1.5.17 February 29th 2024 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.17 is a patch release for Akka.NET with some feature additions and bug fixes.
+
+* [Core: Fix null ref for `LogSource`](https://github.com/akkadotnet/akka.net/pull/7078)
+* [Persistence.TCK: Make all snapshot tests virtual](https://github.com/akkadotnet/akka.net/pull/7093)
+* [Core: Suppress extremely verbose `TimerScheduler` debug message](https://github.com/akkadotnet/akka.net/pull/7102)
+* [Sharding: Implement reliable delivery custom message bypass feature](https://github.com/akkadotnet/akka.net/pull/7106)
+* Update dependencies
+  * [Persistence: Bump Microsoft.Data.SQLite to 8.0.2](https://github.com/akkadotnet/akka.net/pull/7096)
+  * [Core: Bump Google.Protobuf to 3.25.3](https://github.com/akkadotnet/akka.net/pull/7100)
+  * [Core: Bump Akka.Analyzers to 0.2.3](https://github.com/akkadotnet/akka.analyzers/releases/tag/0.2.3)
+* Documentations
+  * [Actors: Fix typo](https://github.com/akkadotnet/akka.net/pull/7085)
+  * [Remoting: Fix remote deployment typo](https://github.com/akkadotnet/akka.net/pull/7095)
+  * [Analyzers: Add missing TOC links](https://github.com/akkadotnet/akka.net/pull/7098)
+  * [Sharding: Add missing custom sharding handoff stop documentation](https://github.com/akkadotnet/akka.net/pull/7101)
+
+**Akka.Analyzers**
+
+* The AK1001 rule has been removed due to the discussion [here](https://github.com/akkadotnet/akka.analyzers/issues/65).
+* AK1002 has been enhanced with better problem detection.
+
+You can [see the full set of changes for Akka.NET v1.5.17 here](https://github.com/akkadotnet/akka.net/milestones/1.5.17).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 7       | 1342 | 732  | Gregorius Soedharmo |
+| 4       | 5    | 5    | dependabot[bot]     |
+| 3       | 158  | 4    | Aaron Stannard      |
+| 2       | 3    | 3    | hassan-me           |
+| 1       | 2    | 8    | Massimiliano Donini |
+| 1       | 12   | 12   | Mattias Jakobsson   |
 
 #### 1.5.16 January 29th 2024 ####
 
