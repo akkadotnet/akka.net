@@ -74,7 +74,7 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
         {
             if (Settings.AllowBypass)
             {
-                _consumer.Tell(msg);
+                _consumer.Forward(msg);
             }
             else
             {
@@ -146,7 +146,7 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
         {
             if (Settings.AllowBypass)
             {
-                _consumer.Tell(msg);
+                _consumer.Forward(msg);
             }
             else
             {
