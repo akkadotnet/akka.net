@@ -1,3 +1,14 @@
+#### 1.5.17.1 March 1st 2024 ####
+
+Akka.NET v1.5.17.1 is a patch release for Akka.NET with a bug fix.
+
+* [Core: Bump Akka.Analyzers to 0.2.3.1](https://github.com/akkadotnet/akka.analyzers/releases/tag/0.2.3.1)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 1    | 1    | Gregorius Soedharmo |
+| 1       | 1    | 1    | Aaron Stannard      |
+
 #### 1.5.17 February 29th 2024 ####
 
 Akka.NET v1.5.17 is a patch release for Akka.NET with some feature additions and bug fixes.
