@@ -17,6 +17,10 @@ public readonly struct SlimResult<T>
 
     public static readonly SlimResult<T> NotYetReady =
         SlimResult<T>.ForError(NotYetThereSentinel.Instance);
+
+    private static readonly SlimResult<T> MustNotBeNull =
+        SlimResult<T>.ForError(ReactiveStreamsCompliance
+            .ExceptionMustNotBeNullException);
     public static SlimResult<T> FromTask(Task<T> task)
     {
         return task.IsCanceled || task.IsFaulted
@@ -55,15 +59,9 @@ public readonly struct SlimResult<T>
 
     public static SlimResult<T> ForSuccess(T result)
     {
-        if (result == null)
-        {
-            return new SlimResult<T>(ReactiveStreamsCompliance
-                .ExceptionMustNotBeNullException);
-        }
-        else
-        {
-            return new SlimResult<T>(result);   
-        }
+        return result == null
+            ? SlimResult<T>.MustNotBeNull
+            : new SlimResult<T>(result);
     }
 
     public bool IsSuccess()
