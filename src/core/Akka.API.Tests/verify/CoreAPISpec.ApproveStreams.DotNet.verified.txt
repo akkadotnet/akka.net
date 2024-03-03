@@ -4547,6 +4547,8 @@ namespace Akka.Streams.Implementation.Fusing
         public static readonly Akka.Streams.Implementation.Fusing.SlimResult<T> NotYetReady;
         public readonly T Result;
         public SlimResult(System.Exception errorOrSentinel, T result) { }
+        public static Akka.Streams.Implementation.Fusing.SlimResult<T> ForError(System.Exception errorOrSentinel) { }
+        public static Akka.Streams.Implementation.Fusing.SlimResult<T> ForSuccess(T result) { }
         public static Akka.Streams.Implementation.Fusing.SlimResult<T> FromTask(System.Threading.Tasks.Task<T> task) { }
         public bool IsDone() { }
         public bool IsSuccess() { }
