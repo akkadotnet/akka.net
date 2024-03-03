@@ -205,6 +205,7 @@ namespace Akka.Actor
             DebugEventStream = Config.GetBoolean("akka.actor.debug.event-stream", false);
             DebugUnhandledMessage = Config.GetBoolean("akka.actor.debug.unhandled", false);
             DebugRouterMisconfiguration = Config.GetBoolean("akka.actor.debug.router-misconfiguration", false);
+            DebugTimerScheduler = Config.GetBoolean("akka.actor.debug.log-timers");
             Home = Config.GetString("akka.home", "");
             DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor", 0);
 
@@ -425,6 +426,11 @@ namespace Akka.Actor
         /// </summary>
         /// <value><c>true</c> if [debug lifecycle]; otherwise, <c>false</c>.</value>
         public bool DebugLifecycle { get; private set; }
+        
+        /// <summary>
+        ///     Should TimerScheduler emit debug logs
+        /// </summary>
+        public bool DebugTimerScheduler { get; private set; }
 
         /// <summary>
         /// TBD
