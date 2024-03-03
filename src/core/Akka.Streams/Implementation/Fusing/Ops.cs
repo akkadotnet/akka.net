@@ -2554,7 +2554,7 @@ namespace Akka.Streams.Implementation.Fusing
                             ? t.Exception.InnerExceptions[0]
                             : t.Exception;
 
-                        Invoke(new SlimResult<T>(exception,default));
+                        Invoke(SlimResult<T>.ForError(exception));
                     }
                 }
 
@@ -2568,7 +2568,7 @@ namespace Akka.Streams.Implementation.Fusing
                         this._pending = default;
                         if (inst.IsCompletedSuccessfully)
                         {
-                            this.Invoke(new SlimResult<T>(default,inst.Result));
+                            this.Invoke(SlimResult<T>.ForSuccess(inst.Result));
                         }
                         else
                         {
@@ -2650,7 +2650,7 @@ namespace Akka.Streams.Implementation.Fusing
                     // scheduling it to an execution context
                     if (task.IsCompletedSuccessfully)
                     {
-                        holder.SetElement(new SlimResult<TOut>(null,task.Result));
+                        holder.SetElement(SlimResult<TOut>.ForSuccess(task.Result));
                         HolderCompleted(holder);
                     }
                     else
@@ -2694,7 +2694,7 @@ namespace Akka.Streams.Implementation.Fusing
                     CompleteStage();
             }
 
-            public override void OnPull() => PushOne();
+            public override void OnPull() => PushOne(null);
 
             private int Todo => _buffer.Used;
 
@@ -2703,7 +2703,7 @@ namespace Akka.Streams.Implementation.Fusing
                     Buffer.Create<Holder<TOut>>(_stage._parallelism,
                         Materializer);
 
-            private void PushOne()
+            private void PushOne(Holder<TOut> holder)
             {
                 var inlet = _stage.In;
                 while (true)
@@ -2730,10 +2730,18 @@ namespace Akka.Streams.Implementation.Fusing
                     {
                         var dequeued = _buffer.Dequeue();
                         var result = dequeued!.Element;
-                        dequeued.SetElement(NotYetThere);
-                        _holderReuseQueue.Enqueue(dequeued);
                         if (!result.IsSuccess())
                             continue;
+                        // Important! We can only re-use if the DQ holder
+                        // is the one that was passed in.
+                        // That means it already passed through HolderCompleted,
+                        // otherwise (i.e. HolderCompleted not yet called)
+                        // when that happens, because it is reset, we blow up =(
+                        if (holder == dequeued)
+                        {
+                            dequeued.SetElement(NotYetThere);
+                            _holderReuseQueue.Enqueue(dequeued);
+                        }
 
                         Push(_stage.Out, result.Result);
 
@@ -2751,10 +2759,15 @@ namespace Akka.Streams.Implementation.Fusing
                 if (element.IsSuccess())
                 {
                     if (IsAvailable(_stage.Out))
-                        PushOne();
+                        PushOne(holder);
                     return;
                 }
 
+                HolderCompletedError(element);
+            }
+
+            private void HolderCompletedError(SlimResult<TOut> element)
+            {
                 var exception = element.Error;
                 var strategy = _decider(exception);
                 Log.Error(exception,
@@ -2769,7 +2782,7 @@ namespace Akka.Streams.Implementation.Fusing
                     case Directive.Resume:
                     case Directive.Restart:
                         if (IsAvailable(_stage.Out))
-                            PushOne();
+                            PushOne(null);
                         break;
 
                     default:

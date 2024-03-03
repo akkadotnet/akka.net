@@ -16,17 +16,16 @@ public readonly struct SlimResult<T>
     public readonly T Result;
 
     public static readonly SlimResult<T> NotYetReady =
-        new SlimResult<T>(NotYetThereSentinel.Instance, default);
-        
+        SlimResult<T>.ForError(NotYetThereSentinel.Instance);
     public static SlimResult<T> FromTask(Task<T> task)
     {
         return task.IsCanceled || task.IsFaulted
-            ? new SlimResult<T>(task.Exception, default)
-            : new SlimResult<T>(default, task.Result);
+            ? SlimResult<T>.ForError(task.Exception)
+            : SlimResult<T>.ForSuccess(task.Result);
     }
     public SlimResult(Exception errorOrSentinel, T result)
     {
-        if (result == null)
+        if (result == null || errorOrSentinel != null)
         {
             Error = errorOrSentinel ?? ReactiveStreamsCompliance
                 .ElementMustNotBeNullException;
@@ -34,6 +33,36 @@ public readonly struct SlimResult<T>
         else
         {
             Result = result;
+        }
+    }
+
+    private SlimResult(Exception errorOrSentinel)
+    {
+        Error = errorOrSentinel;
+        Result = default;
+    }
+
+    private SlimResult(T result)
+    {
+        Error = default;
+        Result = result;
+    }
+
+    public static SlimResult<T> ForError(Exception errorOrSentinel)
+    {
+        return new SlimResult<T>(errorOrSentinel);
+    }
+
+    public static SlimResult<T> ForSuccess(T result)
+    {
+        if (result == null)
+        {
+            return new SlimResult<T>(ReactiveStreamsCompliance
+                .ExceptionMustNotBeNullException);
+        }
+        else
+        {
+            return new SlimResult<T>(result);   
         }
     }
 

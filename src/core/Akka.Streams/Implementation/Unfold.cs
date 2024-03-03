@@ -134,7 +134,7 @@ namespace Akka.Streams.Implementation
                     if (vt.IsCompletedSuccessfully)
                     {
                         SyncResult(
-                            new SlimResult<Option<(TState, TElement)>>(default,
+                            SlimResult<Option<(TState, TElement)>>.ForSuccess(
                                 vt.Result));
                     }
                     else

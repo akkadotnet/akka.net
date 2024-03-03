@@ -85,7 +85,7 @@ internal abstract class PooledAwaitOutGraphStageLogic<T> : OutGraphStageLogic
         if (object.ReferenceEquals(_unsafeSlimHolder, unsafeSlimHolder))
         {
             _completedCallback(vt.IsCompletedSuccessfully
-                ? new SlimResult<T>(default, vt.Result)
+                ? SlimResult<T>.ForSuccess(vt.Result)
                 : SlimResult<T>.FromTask(vt.AsTask()));
         }
     }
