@@ -20,7 +20,7 @@ public readonly struct SlimResult<T>
 
     private static readonly SlimResult<T> MustNotBeNull =
         SlimResult<T>.ForError(ReactiveStreamsCompliance
-            .ExceptionMustNotBeNullException);
+            .ElementMustNotBeNullException);
     public static SlimResult<T> FromTask(Task<T> task)
     {
         return task.IsCanceled || task.IsFaulted
