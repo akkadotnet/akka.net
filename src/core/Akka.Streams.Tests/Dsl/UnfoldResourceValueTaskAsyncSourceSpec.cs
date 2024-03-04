@@ -16,6 +16,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.Tests.Util;
+using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using Akka.Util;

@@ -7,15 +7,25 @@
 
 using System.Threading.Tasks;
 
-namespace Akka.Streams.Tests.Util;
+namespace Akka.Streams.Util;
 
-public static class TaskHelperExts
+/// <summary>
+/// Internal API.
+/// Extension Helper Sugar for
+/// <see cref="Task{TResult}"/> -> <see cref="ValueTask{TResult}"/> Conversions.
+/// </summary>
+internal static class TaskHelperExts
 {
     public static ValueTask<T> ToValueTask<T>(this Task<T> task)
     {
         return new ValueTask<T>(task);
     }
-
+    
+    /// <summary>
+    /// Converts a <see cref="Task{Done}"/> into a <see cref="ValueTask"/>
+    /// If you want <see cref="ValueTask{Done}"/>,
+    /// Call <see cref="ToValueTask{T}"/> with an explicit Type parameter.
+    /// </summary>
     public static ValueTask ToValueTask(this Task<Done> task)
     {
         return new ValueTask(task);
