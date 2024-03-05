@@ -9,7 +9,6 @@ using System;
 using System.Collections.Immutable;
 using System.Text;
 using Akka.Util.Internal;
-using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor.Internal
 {

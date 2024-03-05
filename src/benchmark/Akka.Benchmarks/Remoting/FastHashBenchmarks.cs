@@ -5,9 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using Akka.Benchmarks.Configurations;
 using Akka.Remote.Serialization;
 using BenchmarkDotNet.Attributes;

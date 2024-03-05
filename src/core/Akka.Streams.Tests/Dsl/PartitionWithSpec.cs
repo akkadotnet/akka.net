@@ -6,8 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Linq;
-using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util;

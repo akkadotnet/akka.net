@@ -5,19 +5,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections.Immutable;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
-using Akka.Util;
 
 namespace Akka.Cluster.Tests
 {

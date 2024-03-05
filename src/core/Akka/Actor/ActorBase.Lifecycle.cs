@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Linq;
 using Akka.Util.Internal;
 
 namespace Akka.Actor

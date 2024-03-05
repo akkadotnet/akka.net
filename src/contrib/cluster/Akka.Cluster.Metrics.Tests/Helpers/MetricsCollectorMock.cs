@@ -8,7 +8,6 @@
 using System;
 using Akka.Actor;
 using Akka.Cluster.Metrics.Serialization;
-using Google.Protobuf.WellKnownTypes;
 using Address = Akka.Actor.Address;
 
 namespace Akka.Cluster.Metrics.Tests.Helpers

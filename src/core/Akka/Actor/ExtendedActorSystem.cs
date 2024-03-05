@@ -5,8 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-
 namespace Akka.Actor
 {
     /// <summary>

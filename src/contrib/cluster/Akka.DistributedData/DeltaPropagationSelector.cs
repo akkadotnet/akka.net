@@ -11,7 +11,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.DistributedData.Internal;
-using Akka.Event;
 using Akka.Util.Internal;
 
 namespace Akka.DistributedData

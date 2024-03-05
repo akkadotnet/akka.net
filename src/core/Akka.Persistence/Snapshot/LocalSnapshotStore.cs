@@ -14,7 +14,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Dispatch;
 using Akka.Event;
-using Akka.Configuration;
 
 namespace Akka.Persistence.Snapshot
 {

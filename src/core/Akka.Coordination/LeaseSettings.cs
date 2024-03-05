@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using Akka.Configuration;
 
 namespace Akka.Coordination

@@ -5,9 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Reflection;
-using Akka.Cluster.Benchmarks.Persistence;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Running;
 

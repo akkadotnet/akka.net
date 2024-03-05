@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Akka.Cluster.Sharding;
 using Akka.Persistence;
 

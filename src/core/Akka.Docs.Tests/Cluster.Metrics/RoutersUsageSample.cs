@@ -5,16 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Cluster.Routing;
 using Akka.Event;
 using Akka.Routing;
-using FluentAssertions;
 using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Metrics.Tests

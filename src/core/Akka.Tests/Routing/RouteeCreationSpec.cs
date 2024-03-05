@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 
-using System;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;

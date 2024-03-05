@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Xunit;

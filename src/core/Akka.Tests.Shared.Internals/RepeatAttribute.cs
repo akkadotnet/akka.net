@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using Xunit.Sdk;
 
 namespace Akka.Tests.Shared.Internals

@@ -8,12 +8,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
-using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
 using static Akka.Streams.Tests.Dsl.TestConfig;

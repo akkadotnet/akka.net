@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using Akka.Actor.Internal;
 using Akka.Event;
 using Akka.Pattern;

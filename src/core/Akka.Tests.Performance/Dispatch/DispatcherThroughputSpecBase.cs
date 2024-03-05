@@ -8,7 +8,6 @@
 using System;
 using System.Threading;
 using Akka.Actor;
-using Akka.Actor.Internal;
 using Akka.Dispatch;
 using NBench;
 

@@ -15,8 +15,6 @@ using Akka.Event;
 using Akka.Pattern;
 using Akka.Routing;
 using Akka.Util;
-using Akka.Util.Internal;
-using Group = Akka.Cluster.Tools.PublishSubscribe.Internal.Group;
 using Status = Akka.Cluster.Tools.PublishSubscribe.Internal.Status;
 
 namespace Akka.Cluster.Tools.PublishSubscribe

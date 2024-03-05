@@ -5,11 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Util;
 
 namespace Akka.Event
 {

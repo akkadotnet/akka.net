@@ -16,8 +16,6 @@ using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Akka.Actor;
-using Akka.Streams.Dsl.Internal;
-using Akka.Streams.Tests.Actor;
 using Akka.TestKit.Extensions;
 using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Internal;

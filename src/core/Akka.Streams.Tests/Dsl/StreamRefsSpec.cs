@@ -16,7 +16,6 @@ using FluentAssertions;
 using System;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.TestKit.Xunit2.Attributes;
 using FluentAssertions.Extensions;
 using Xunit;

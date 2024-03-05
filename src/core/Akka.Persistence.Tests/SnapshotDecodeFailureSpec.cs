@@ -12,7 +12,6 @@ using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Xunit;
-using static Akka.Persistence.Tests.SnapshotSpec;
 
 namespace Akka.Persistence.Tests
 {

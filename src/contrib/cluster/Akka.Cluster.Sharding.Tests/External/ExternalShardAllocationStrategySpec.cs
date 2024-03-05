@@ -7,14 +7,10 @@
 
 using System;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.Sharding.External;
-using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
-using Akka.DistributedData;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;

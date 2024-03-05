@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Text;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.Serialization;

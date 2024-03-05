@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;

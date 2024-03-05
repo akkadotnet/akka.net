@@ -6,8 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka;
 using Akka.Streams;
@@ -16,8 +14,6 @@ using Akka.TestKit.Xunit2;
 using Xunit;
 using Xunit.Abstractions;
 using Akka.Actor;
-using Akka.IO;
-using Akka.Util;
 using System.Linq;
 
 namespace DocsExamples.Streams

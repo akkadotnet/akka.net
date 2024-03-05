@@ -7,7 +7,6 @@
 
 using System;
 using System.Threading.Tasks;
-using Akka.Streams.Util;
 using Akka.Util;
 
 namespace Akka.Streams

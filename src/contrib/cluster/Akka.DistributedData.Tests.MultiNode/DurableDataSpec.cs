@@ -9,7 +9,6 @@ using System;
 using System.Collections.Immutable;
 using System.IO;
 using Akka.Actor;
-using Akka.Cluster;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.DistributedData.Durable;
@@ -17,7 +16,6 @@ using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
-using FluentAssertions;
 using FluentAssertions.Extensions;
 
 namespace Akka.DistributedData.Tests.MultiNode

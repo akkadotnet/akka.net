@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Remote.TestKit;
 using FluentAssertions;
-using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 
 namespace Akka.Cluster.Sharding.Tests

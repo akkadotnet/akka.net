@@ -5,11 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using Akka.Actor;
 using Akka.TestKit.Xunit2;
 using Akka.Util.Internal;
-using FluentAssertions;
 using Xunit;
 
 namespace Tutorials.Tutorial4

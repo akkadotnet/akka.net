@@ -6,9 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Immutable;
 using Akka.Streams.Implementation;
-using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 
 namespace Akka.Streams

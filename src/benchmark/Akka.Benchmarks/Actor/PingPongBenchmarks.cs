@@ -9,7 +9,6 @@ using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
-using Akka.Configuration;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 

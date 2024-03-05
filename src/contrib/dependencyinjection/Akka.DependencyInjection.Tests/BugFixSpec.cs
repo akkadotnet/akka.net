@@ -16,7 +16,6 @@ using Microsoft.Extensions.Hosting;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
-using static FluentAssertions.FluentActions;
 
 namespace Akka.DependencyInjection.Tests
 {

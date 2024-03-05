@@ -12,7 +12,6 @@ using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
-using Akka.Cluster.Tests.MultiNode;
 using Akka.MultiNode.TestAdapter;
 
 namespace Akka.Cluster.Tests.MultiNode

@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Akka.Configuration;
 using Akka.Actor;
@@ -15,7 +14,6 @@ using Akka.Dispatch;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
-using Akka.Tests.TestUtils;
 using Akka.Util.Internal;
 using FluentAssertions;
 using FluentAssertions.Extensions;

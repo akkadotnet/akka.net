@@ -11,7 +11,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
-using Akka.Remote.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.Protobuf;

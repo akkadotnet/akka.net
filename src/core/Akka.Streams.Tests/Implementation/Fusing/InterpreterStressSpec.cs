@@ -9,7 +9,6 @@ using System.Diagnostics;
 using System.Linq;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
-using Akka.Streams.Supervision;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;

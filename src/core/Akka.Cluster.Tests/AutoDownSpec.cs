@@ -9,7 +9,6 @@ using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
-using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 

@@ -7,16 +7,11 @@
 
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Cluster.Metrics.Tests.Base;
 using Akka.Cluster.Metrics.Tests.Helpers;
-using Akka.TestKit;
 using Akka.TestKit.Xunit2.Attributes;
-using Akka.Util.Extensions;
-using Akka.Util.Internal;
 using FluentAssertions;
-using Google.Protobuf.WellKnownTypes;
 using Xunit;
 using Xunit.Abstractions;
 

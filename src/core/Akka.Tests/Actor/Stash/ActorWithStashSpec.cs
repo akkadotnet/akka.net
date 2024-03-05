@@ -13,7 +13,6 @@ using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using Akka.TestKit.TestActors;
 using Akka.Tests.TestUtils;
-using Akka.Tests.Util;
 using Xunit;
 
 namespace Akka.Tests.Actor.Stash

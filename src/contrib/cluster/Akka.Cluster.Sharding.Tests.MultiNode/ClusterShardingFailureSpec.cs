@@ -12,7 +12,6 @@ using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.Util;
-using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {

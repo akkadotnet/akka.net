@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -16,7 +15,6 @@ using Akka.IO;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
-using Akka.Streams.Util;
 using Akka.Util;
 
 namespace Akka.Streams.Dsl.Internal

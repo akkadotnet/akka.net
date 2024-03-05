@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reflection;
 using Xunit;
 
 namespace Akka.TestKit.Tests.Xunit2

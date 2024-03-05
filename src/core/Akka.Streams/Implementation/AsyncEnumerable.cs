@@ -8,7 +8,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Akka.Configuration.Hocon;
 
 namespace Akka.Streams.Dsl
 {

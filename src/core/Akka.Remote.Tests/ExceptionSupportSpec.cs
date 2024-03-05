@@ -6,10 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -17,7 +13,6 @@ using Akka.IO.Buffers;
 using Akka.Pattern;
 using Akka.Remote.Serialization;
 using Akka.Remote.Transport;
-using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;

@@ -7,7 +7,6 @@
 
 using Akka.Actor;
 using Akka.IO;
-using Akka.Util.Internal;
 
 namespace DocsExamples.Networking.IO
 {

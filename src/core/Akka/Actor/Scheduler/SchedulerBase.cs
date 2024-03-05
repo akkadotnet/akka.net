@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;

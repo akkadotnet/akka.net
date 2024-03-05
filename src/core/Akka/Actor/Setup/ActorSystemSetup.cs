@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using Akka.Annotations;
 using Akka.Util;
 
 namespace Akka.Actor.Setup

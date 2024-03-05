@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
-using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Configuration;
 using Akka.Util;

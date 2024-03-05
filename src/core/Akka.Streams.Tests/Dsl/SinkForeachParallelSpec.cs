@@ -16,7 +16,6 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using System.Collections.Generic;
-using System.Threading;
 using Akka.Streams.TestKit;
 using Akka.TestKit.Xunit2.Attributes;
 using System.Threading.Tasks;

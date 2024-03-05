@@ -7,7 +7,6 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;

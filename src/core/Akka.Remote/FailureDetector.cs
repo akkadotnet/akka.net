@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using Akka.Util;
 
 namespace Akka.Remote

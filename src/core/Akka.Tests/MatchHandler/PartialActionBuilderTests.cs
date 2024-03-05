@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reflection;
 using Akka.TestKit;
 using Akka.Tools.MatchHandler;
 using Xunit;

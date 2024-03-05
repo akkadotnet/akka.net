@@ -9,7 +9,6 @@ using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util;
-using Google.Protobuf.WellKnownTypes;
 
 namespace Akka.Cluster.Tools.Singleton
 {

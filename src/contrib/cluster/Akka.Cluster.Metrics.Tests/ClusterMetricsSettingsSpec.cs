@@ -5,16 +5,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using Akka.Cluster.Metrics.Configuration;
-using Akka.Configuration;
-using Akka.Configuration.Hocon;
 using Akka.Dispatch;
 using Akka.TestKit;
 using Akka.Util;
 using Xunit;
 using FluentAssertions;
-using FsCheck;
 using FluentAssertions.Extensions;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 

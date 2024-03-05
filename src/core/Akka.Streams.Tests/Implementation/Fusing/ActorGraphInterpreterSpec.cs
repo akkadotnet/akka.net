@@ -23,7 +23,6 @@ using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
-using Akka.Streams.Tests.Actor;
 using System.Threading.Tasks;
 
 namespace Akka.Streams.Tests.Implementation.Fusing

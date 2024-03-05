@@ -8,7 +8,6 @@
 using System;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.Util;
 using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util;
 using FluentAssertions;

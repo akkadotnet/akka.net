@@ -12,8 +12,6 @@ using Akka.Actor.Dsl;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.TestKit;
 using Xunit;
-using Akka.Event;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Akka.Cluster.Tools.Tests.PublishSubscribe

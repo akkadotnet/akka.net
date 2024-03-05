@@ -10,7 +10,6 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Event;
-using Akka.Util;
 using Akka.Util.Internal.Collections;
 
 namespace Akka.DistributedData

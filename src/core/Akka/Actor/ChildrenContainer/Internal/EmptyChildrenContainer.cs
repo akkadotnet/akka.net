@@ -7,7 +7,6 @@
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor.Internal
 {

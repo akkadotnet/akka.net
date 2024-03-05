@@ -14,7 +14,6 @@ using Akka.Event;
 using Akka.IO;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Stage;
-using Akka.Streams.Util;
 using Akka.Util;
 
 // ReSharper disable UnusedMember.Global

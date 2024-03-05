@@ -15,8 +15,6 @@ using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
 using Akka.Util;
-using Akka.Util.Internal;
-using Google.Protobuf;
 using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests.Serialization

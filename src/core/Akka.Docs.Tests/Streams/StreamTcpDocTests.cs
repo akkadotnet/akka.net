@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka;
 using Akka.Streams;
@@ -17,9 +16,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Akka.Actor;
 using Akka.IO;
-using Akka.Util;
 using Tcp = Akka.Streams.Dsl.Tcp;
-using Akka.Configuration;
 
 namespace DocsExamples.Streams
 {

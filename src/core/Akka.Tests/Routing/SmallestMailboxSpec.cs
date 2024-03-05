@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Concurrent;
 using Akka.Actor;
 using Akka.Routing;

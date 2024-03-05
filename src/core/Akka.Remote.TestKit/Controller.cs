@@ -9,7 +9,6 @@ using System;
 using System.Collections.Immutable;
 using System.Net;
 using System.Runtime.Serialization;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using DotNetty.Transport.Channels;

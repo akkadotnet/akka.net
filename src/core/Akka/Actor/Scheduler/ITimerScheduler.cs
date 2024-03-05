@@ -6,8 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Actor.Scheduler;
-using Akka.Event;
 
 namespace Akka.Actor
 {

@@ -14,7 +14,6 @@ using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
-using Xunit;
 
 namespace Akka.Cluster.Tests.MultiNode
 {

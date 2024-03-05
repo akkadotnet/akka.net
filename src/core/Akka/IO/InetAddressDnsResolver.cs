@@ -6,9 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
-using System.Net;
 using System.Net.Sockets;
-using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;

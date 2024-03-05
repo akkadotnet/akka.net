@@ -6,14 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Data;
-using Akka.Actor;
 using Akka.Configuration;
-using Akka.Persistence.Sql.TestKit;
 using Akka.Persistence.Sql.Common;
 using Akka.Persistence.Sql.Common.Extensions;
-using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;

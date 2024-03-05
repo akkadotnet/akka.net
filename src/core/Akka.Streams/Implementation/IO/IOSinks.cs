@@ -7,11 +7,9 @@
 
 using System;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Actors;
-using Akka.Streams.Implementation.Stages;
 using Akka.Streams.IO;
 
 namespace Akka.Streams.Implementation.IO

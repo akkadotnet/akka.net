@@ -5,15 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Threading.Tasks;
-using Akka.Actor;
 using Akka.Cluster.Metrics.Events;
-using Akka.Cluster.Metrics.Tests.Helpers;
 using Akka.Configuration;
 using Akka.TestKit;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 

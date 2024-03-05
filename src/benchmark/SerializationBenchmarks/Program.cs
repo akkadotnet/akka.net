@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -15,7 +14,6 @@ using Akka.Configuration;
 using Akka.Serialization;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
-using Newtonsoft.Json;
 
 namespace SerializationBenchmarks
 {

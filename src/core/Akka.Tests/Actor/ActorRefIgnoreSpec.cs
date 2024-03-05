@@ -6,14 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using Akka.Actor;
-using Akka.Actor.Internal;
-using Akka.Serialization;
 using Akka.TestKit;
-using Akka.TestKit.TestActors;
 using Xunit;
-using Akka.Util.Internal;
 using FluentAssertions;
 using System.Threading.Tasks;
 

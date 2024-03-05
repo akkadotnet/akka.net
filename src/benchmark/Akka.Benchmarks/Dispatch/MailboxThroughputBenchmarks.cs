@@ -8,7 +8,6 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Dsl;
 using Akka.Benchmarks.Configurations;
 using Akka.Configuration;
 using Akka.Dispatch;

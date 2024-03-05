@@ -14,10 +14,8 @@ using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.Streams.Serialization;
-using Akka.Streams.Serialization.Proto.Msg;
 using Akka.Streams.Stage;
 using Akka.Util;
-using Google.Protobuf.WellKnownTypes;
 using Type = System.Type;
 
 namespace Akka.Streams.Implementation.StreamRef

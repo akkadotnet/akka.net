@@ -5,10 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Immutable;
 using Akka.Actor;
-using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;

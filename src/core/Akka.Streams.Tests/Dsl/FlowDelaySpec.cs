@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -16,9 +15,7 @@ using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
-using Akka.TestKit.Extensions;
 using Akka.TestKit.Xunit2.Attributes;
-using Akka.Tests.Shared.Internals;
 using Akka.Util.Internal;
 using FluentAssertions;
 using FluentAssertions.Extensions;

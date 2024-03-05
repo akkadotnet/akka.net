@@ -8,13 +8,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.Serialization.Proto.Msg;
 using Akka.Serialization;
-using Akka.Util;
 using Google.Protobuf;
 
 namespace Akka.Persistence.Serialization

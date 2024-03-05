@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using Akka.Configuration;
 using Akka.Persistence.TCK.Query;
 using Xunit.Abstractions;

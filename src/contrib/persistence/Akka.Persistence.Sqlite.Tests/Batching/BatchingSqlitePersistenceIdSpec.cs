@@ -10,7 +10,6 @@ using Akka.Configuration;
 using Akka.Persistence.Query;
 using Akka.Persistence.Query.Sql;
 using Akka.Persistence.TCK.Query;
-using Akka.Util.Internal;
 using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests.Batching

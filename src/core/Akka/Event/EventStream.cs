@@ -6,9 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Dispatch;

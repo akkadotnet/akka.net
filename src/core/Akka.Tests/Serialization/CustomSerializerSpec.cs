@@ -7,17 +7,12 @@
 
 using System;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Text;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Serialization;
-using Akka.TestKit;
-using Akka.TestKit.Xunit2.Internals;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;

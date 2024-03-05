@@ -19,7 +19,6 @@ using Akka.Event;
 using Akka.IO.Buffers;
 using Akka.Pattern;
 using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.IO
 {

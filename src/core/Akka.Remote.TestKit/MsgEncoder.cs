@@ -5,14 +5,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Remote.Transport;
 using DotNetty.Codecs;
 using DotNetty.Common.Internal.Logging;
 using DotNetty.Transport.Channels;
-using Google.Protobuf;
 using Microsoft.Extensions.Logging;
 
 namespace Akka.Remote.TestKit

@@ -7,8 +7,6 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using Akka.Actor;
-using Microsoft.Extensions.Hosting;
 using Samples.Akka.AspNetCore.Messages;
 
 namespace Samples.Akka.AspNetCore.Services

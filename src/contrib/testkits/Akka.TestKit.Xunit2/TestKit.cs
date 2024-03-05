@@ -6,13 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit.Xunit2.Internals;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.TestKit.Xunit2

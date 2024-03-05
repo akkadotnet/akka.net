@@ -8,17 +8,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using Akka.Tests.TestUtils;
-using Akka.Tests.Util;
 using Akka.Util.Internal;
 using Xunit;
 

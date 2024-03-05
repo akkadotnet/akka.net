@@ -10,7 +10,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Xunit.Abstractions;
 

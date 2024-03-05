@@ -6,8 +6,6 @@
 //-----------------------------------------------------------------------
 
 
-
-using System;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
