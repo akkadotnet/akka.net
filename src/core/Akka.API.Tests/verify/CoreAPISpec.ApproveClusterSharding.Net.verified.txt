@@ -136,6 +136,11 @@ namespace Akka.Cluster.Sharding
     public delegate Akka.Util.Option<System.ValueTuple<string, object>> ExtractEntityId(object message);
     [System.ObsoleteAttribute("Use HashCodeMessageExtractor or IMessageExtractor instead.")]
     public delegate string ExtractShardId(object message);
+    public sealed class GenericChildPerEntityParent : Akka.Actor.ReceiveActor
+    {
+        public GenericChildPerEntityParent(Akka.Cluster.Sharding.IMessageExtractor extractor, System.Func<string, Akka.Actor.Props> propsFactory) { }
+        public static Akka.Actor.Props Props(Akka.Cluster.Sharding.IMessageExtractor extractor, System.Func<string, Akka.Actor.Props> propsFactory) { }
+    }
     public sealed class GetClusterShardingStats : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery, System.IEquatable<Akka.Cluster.Sharding.GetClusterShardingStats>
     {
         public readonly System.TimeSpan Timeout;
