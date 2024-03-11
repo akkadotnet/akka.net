@@ -6,9 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
@@ -21,6 +23,39 @@ using static Akka.Streams.Implementation.Fusing.GraphInterpreter;
 // ReSharper disable MemberHidesStaticFromOuterClass
 namespace Akka.Streams.Implementation.Fusing
 {
+    [InternalApi]
+    public sealed class ImperfectPerformantPool<T>
+    {
+        private readonly int _maxItems;
+        private readonly ConcurrentQueue<T> _itemSet;
+        private int _curr = 0;
+
+        public ImperfectPerformantPool(int? maxItems = null)
+        {
+            _maxItems = maxItems ?? Environment.ProcessorCount;
+            _itemSet = new ConcurrentQueue<T>();
+        }
+
+        public void TryAdd(T item)
+        {
+            if (_curr + 1 <= _maxItems)
+            {
+                _curr = _curr + 1;
+                _itemSet.Enqueue(item);
+            }
+        }
+
+        public bool TryGetValue(out T item)
+        {
+            if (_itemSet.TryDequeue(out item))
+            {
+                _curr = _curr - 1;
+                return true;
+            }
+
+            return false;
+        }
+    }
     /// <summary>
     /// INTERNAL API
     /// </summary>
@@ -98,11 +133,63 @@ namespace Akka.Streams.Implementation.Fusing
     [InternalApi]
     public sealed class GraphInterpreterShell
     {
+        internal sealed class BoxedRequestMore : ActorGraphInterpreter.IBoundaryEvent
+        {
+            public ActorGraphInterpreter.RequestMore Boxed { get; private set; }
+
+            public BoxedRequestMore()
+            {
+                
+            }
+            public BoxedRequestMore SetBox(ActorGraphInterpreter.RequestMore value)
+            {
+                Boxed = value;
+                return this;
+            }
+
+            public GraphInterpreterShell Shell => Boxed.Shell;
+        }
+        internal sealed class BoxedOnNext : ActorGraphInterpreter.IBoundaryEvent
+        {
+            public ActorGraphInterpreter.OnNext Boxed { get; private set; }
+
+            public BoxedOnNext()
+            {
+                
+            }
+            public BoxedOnNext SetBox(ActorGraphInterpreter.OnNext value)
+            {
+                Boxed = value;
+                return this;
+            }
+
+            public GraphInterpreterShell Shell => Boxed.Shell;
+        }
+        private sealed class BoxedAsyncInput : ActorGraphInterpreter.IBoundaryEvent
+        {
+            public ActorGraphInterpreter.AsyncInput Boxed { get; private set; }
+            public BoxedAsyncInput()
+            {
+            
+            }
+            public BoxedAsyncInput SetBox(ActorGraphInterpreter.AsyncInput value)
+            {
+                Boxed = value;
+                return this;
+            }
+
+            public GraphInterpreterShell Shell => Boxed.Shell;
+        }
         private readonly GraphAssembly _assembly;
         private readonly Connection[] _connections;
         private readonly GraphStageLogic[] _logics;
         private readonly Shape _shape;
         private readonly ActorMaterializerSettings _settings;
+
+        private readonly ImperfectPerformantPool<BoxedOnNext> _onNextPool =
+            new ImperfectPerformantPool<BoxedOnNext>();
+        private readonly ImperfectPerformantPool<BoxedRequestMore> _requestMorePool =
+            new ImperfectPerformantPool<BoxedRequestMore>();
         /// <summary>
         /// TBD
         /// </summary>
@@ -138,6 +225,8 @@ namespace Akka.Streams.Implementation.Fusing
         private bool _interpreterCompleted;
         private readonly ActorGraphInterpreter.Resume _resume;
 
+        private readonly ImperfectPerformantPool<BoxedAsyncInput>
+            _asyncInputPool = new ImperfectPerformantPool<BoxedAsyncInput>();
         /// <summary>
         /// TBD
         /// </summary>
@@ -156,8 +245,8 @@ namespace Akka.Streams.Implementation.Fusing
             _settings = settings;
             Materializer = materializer;
 
-            _inputs = new ActorGraphInterpreter.BatchingActorInputBoundary[shape.Inlets.Count()];
-            _outputs = new ActorGraphInterpreter.IActorOutputBoundary[shape.Outlets.Count()];
+            _inputs = new ActorGraphInterpreter.BatchingActorInputBoundary[shape.Inlets.Length];
+            _outputs = new ActorGraphInterpreter.IActorOutputBoundary[shape.Outlets.Length];
             _subscribersPending = _inputs.Length;
             _publishersPending = _outputs.Length;
             _shellEventLimit = settings.MaxInputBufferSize * (assembly.Inlets.Length + assembly.Outlets.Length);
@@ -264,30 +353,38 @@ namespace Akka.Streams.Implementation.Fusing
             // Cases that are most likely on the hot path, in decreasing order of frequency
             switch (e)
             {
-                case ActorGraphInterpreter.OnNext onNext:
-                    if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnNext {onNext.Event} id={onNext.Id}");
-                    _inputs[onNext.Id].OnNext(onNext.Event);
-                    return RunBatch(eventLimit);
+                case BoxedOnNext bOn:
+                    var asO = bOn.Boxed;
+                    bOn.SetBox(default);
+                    _onNextPool.TryAdd(bOn);
+                    return RunOnNextMeth(asO);
+                    break;
+                // Case unused:
+                //case ActorGraphInterpreter.OnNext onNext:
+                //    return RunOnNextMeth(onNext);
 
-                case ActorGraphInterpreter.RequestMore requestMore:
-                    if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Request {requestMore.Demand} id={requestMore.Id}");
-                    _outputs[requestMore.Id].RequestMore(requestMore.Demand);
-                    return RunBatch(eventLimit);
-
+                //case ActorGraphInterpreter.RequestMore requestMore:
+                //    return RunRequestMore(requestMore);
+                case BoxedRequestMore bRm:
+                    var asR = bRm.Boxed;
+                    bRm.SetBox(default);
+                    _requestMorePool.TryAdd(bRm);
+                    return RunRequestMore(asR);
+                
                 case ActorGraphInterpreter.Resume _:
                     if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Resume");
                     if (Interpreter.IsSuspended)
                         return RunBatch(eventLimit);
                     return eventLimit;
-
-                case ActorGraphInterpreter.AsyncInput asyncInput:
-                    Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Handler);
-                    if (eventLimit == 1 && _interpreter.IsSuspended)
-                    {
-                        SendResume(true);
-                        return 0;
-                    }
-                    return RunBatch(eventLimit - 1);
+                
+                case BoxedAsyncInput bAi:
+                    var asI = bAi.Boxed;
+                    bAi.SetBox(default);
+                    _asyncInputPool.TryAdd(bAi);
+                    return RunAsyncInputMeth(asI); 
+                
+                //case ActorGraphInterpreter.AsyncInput asyncInput:
+                //    return RunAsyncInputMeth(asyncInput);
 
                 case ActorGraphInterpreter.OnError onError:
                     if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnError id={onError.Id}");
@@ -320,7 +417,32 @@ namespace Akka.Streams.Implementation.Fusing
                     return eventLimit;
             }
 
+            int RunRequestMore(ActorGraphInterpreter.RequestMore requestMore1)
+            {
+                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Request {requestMore1.Demand} id={requestMore1.Id}");
+                _outputs[requestMore1.Id].RequestMore(requestMore1.Demand);
+                return RunBatch(eventLimit);
+            }
+
+            int RunOnNextMeth(ActorGraphInterpreter.OnNext onNext1)
+            {
+                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnNext {onNext1.Event} id={onNext1.Id}");
+                _inputs[onNext1.Id].OnNext(onNext1.Event);
+                return RunBatch(eventLimit);
+            }
+
             return eventLimit;
+
+            int RunAsyncInputMeth(ActorGraphInterpreter.AsyncInput asyncInput)
+            {
+                Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Handler);
+                if (eventLimit == 1 && _interpreter.IsSuspended)
+                {
+                    SendResume(true);
+                    return 0;
+                }
+                return RunBatch(eventLimit - 1);
+            }
         }
 #pragma warning restore CS0162
 
@@ -411,12 +533,25 @@ namespace Akka.Streams.Implementation.Fusing
             return new GraphInterpreter(_assembly, Materializer, Log, _logics, _connections,
                 (logic, @event, handler) =>
                 {
-                    var asyncInput = new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler);
+                    if (_asyncInputPool.TryGetValue(out var bAi) == false)
+                    {
+                        bAi = new BoxedAsyncInput();
+                    }
                     var currentInterpreter = CurrentInterpreterOrNull;
-                    if (currentInterpreter == null || !Equals(currentInterpreter.Context, Self))
-                        Self.Tell(new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler));
+                    if (currentInterpreter == null ||
+                        !Equals(currentInterpreter.Context, Self))
+                    {
+                        Self.Tell(bAi.SetBox(
+                            new ActorGraphInterpreter.AsyncInput(this,
+                                logic, @event, handler)));
+                        //Self.Tell(new ActorGraphInterpreter.AsyncInput(this,
+                        //    logic, @event, handler));
+                    }
                     else
-                        _enqueueToShortCircuit(asyncInput);
+                        _enqueueToShortCircuit(bAi.SetBox(
+                            new ActorGraphInterpreter.AsyncInput(this,
+                                logic, @event, handler)));
+                    //_enqueueToShortCircuit( new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler));
                 }, _settings.IsFuzzingMode, Self);
         }
 
@@ -430,6 +565,26 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <returns>TBD</returns>
         public override string ToString() => $"GraphInterpreterShell\n  {_assembly.ToString().Replace("\n", "\n  ")}";
+
+        internal BoxedOnNext GetNextBuffer()
+        {
+            if (_onNextPool.TryGetValue(out var rV) == false)
+            {
+                rV = new BoxedOnNext();
+            }
+
+            return rV;
+        }
+
+        internal BoxedRequestMore GetNextRequestMore()
+        {
+            if (_requestMorePool.TryGetValue(out var rV) == false)
+            {
+                rV = new BoxedRequestMore();
+            }
+
+            return rV;
+        }
     }
 
     /// <summary>
@@ -736,7 +891,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly struct Resume : IBoundaryEvent
+        public class Resume : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -828,7 +983,12 @@ namespace Akka.Streams.Implementation.Fusing
             /// TBD
             /// </summary>
             /// <param name="elements">TBD</param>
-            public void Request(long elements) => _parent.Tell(new RequestMore(_shell, _id, elements));
+            public void Request(long elements)
+            {
+                var bRm = _shell.GetNextRequestMore();
+                _parent.Tell(bRm.SetBox(new RequestMore(_shell, _id, elements)));
+                //_parent.Tell(new RequestMore(_shell, _id, elements));   
+            }
 
             /// <summary>
             /// TBD
@@ -899,7 +1059,8 @@ namespace Akka.Streams.Implementation.Fusing
             public void OnNext(T element)
             {
                 ReactiveStreamsCompliance.RequireNonNullElement(element);
-                _parent.Tell(new OnNext(_shell, _id, element));
+                _parent.Tell(_shell.GetNextBuffer().SetBox(new OnNext(_shell, _id, element)));
+                //_parent.Tell(new OnNext(_shell, _id, element));
             }
         }
 
