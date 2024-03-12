@@ -28,24 +28,29 @@ namespace Akka.Cluster.Sharding.Tests
 
         private const int numberOfShards = 3;
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            if (message is int i)
-                return (i.ToString(), i);
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    int i => i.ToString(),
+                    _ => null
+                };
 
-        private ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case int i:
-                    return (i % 10).ToString();
-                case ShardRegion.StartEntity se:
-                    return (int.Parse(se.EntityId) % numberOfShards).ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    int i => (i % 10).ToString(),
+                    ShardRegion.StartEntity se => (int.Parse(se.EntityId) % numberOfShards).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % 10).ToString();
+        }
 
         internal class EntityActor : ActorBase
         {
@@ -110,13 +115,12 @@ namespace Akka.Cluster.Sharding.Tests
                 shardTypeName,
                 Props.Create(() => new EntityActor()),
                 ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                extractEntityId,
-                extractShardId);
+                new MessageExtractor());
         }
 
         private IActorRef StartProxy(ActorSystem sys)
         {
-            return ClusterSharding.Get(sys).StartProxy(shardTypeName, null, extractEntityId, extractShardId);
+            return ClusterSharding.Get(sys).StartProxy(shardTypeName, null, new MessageExtractor());
         }
 
         [Fact(DisplayName = "ClusterSharding must clean up its internal regions cache when ShardRegion actor died")]

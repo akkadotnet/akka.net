@@ -83,8 +83,6 @@ namespace Akka.Cluster.Sharding.Tests
                 Sys,
                 typeName: "Entity",
                 entityProps: SimpleEchoActor.Props(),
-                extractEntityId: IntExtractEntityId,
-                extractShardId: IntExtractShardId,
                 allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0),
                 handOffStopMessage: ShardedEntity.Stop.Instance);
         }

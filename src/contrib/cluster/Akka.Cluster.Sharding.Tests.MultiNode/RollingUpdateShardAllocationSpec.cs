@@ -73,22 +73,29 @@ namespace Akka.Cluster.Sharding.Tests
                 public Address Address { get; }
             }
 
-            static internal ExtractEntityId ExtractEntityId = message =>
+            public sealed class MessageExtractor: IMessageExtractor
             {
-                if (message is Get get)
-                    return (get.Id, get);
-                return Option<(string, object)>.None;
-            };
+                // shard == id to make testing easier
+                public string EntityId(object message)
+                    => message switch
+                    {
+                        Get g => g.Id,
+                        _ => null
+                    };
 
-            static internal ExtractShardId ExtractShardId = message =>
-            {
-                switch (message)
-                {
-                    case Get get:
-                        return get.Id;
-                }
-                return null;
-            };
+                public object EntityMessage(object message)
+                    => message;
+
+                public string ShardId(object message)
+                    => message switch
+                    {
+                        Get g => g.Id,
+                        _ => null
+                    };
+
+                public string ShardId(string entityId, object messageHint = null)
+                    => entityId;
+            }
 
             private ILoggingAdapter _log;
             private ILoggingAdapter Log => _log ??= Context.GetLogger();
@@ -129,8 +136,7 @@ namespace Akka.Cluster.Sharding.Tests
                     Sys,
                     typeName: TypeName,
                     entityProps: Props.Create(() => new GiveMeYourHome()),
-                    extractEntityId: GiveMeYourHome.ExtractEntityId,
-                    extractShardId: GiveMeYourHome.ExtractShardId));
+                    messageExtractor: new GiveMeYourHome.MessageExtractor()));
         }
 
         private IEnumerable<Member> UpMembers => Cluster.State.Members.Where(m => m.Status == MemberStatus.Up);

@@ -69,23 +69,29 @@ namespace Akka.Cluster.Sharding.Tests
                 public Address Address { get; }
             }
 
-            // shard == id to make testing easier
-            public static readonly ExtractEntityId extractEntityId = message =>
+            public sealed class MessageExtractor: IMessageExtractor
             {
-                if (message is Get g)
-                    return (g.Id, g);
-                return Option<(string, object)>.None;
-            };
+                // shard == id to make testing easier
+                public string EntityId(object message)
+                    => message switch
+                    {
+                        Get g => g.Id,
+                        _ => null
+                    };
 
-            public static readonly ExtractShardId extractShardId = message =>
-            {
-                switch (message)
-                {
-                    case Get g:
-                        return g.Id;
-                }
-                return null;
-            };
+                public object EntityMessage(object message)
+                    => message;
+
+                public string ShardId(object message)
+                    => message switch
+                    {
+                        Get g => g.Id,
+                        _ => null
+                    };
+
+                public string ShardId(string entityId, object messageHint = null)
+                    => entityId;
+            }
 
             private readonly Address selfAddress = Cluster.Get(Context.System).SelfAddress;
             private readonly ILoggingAdapter log = Context.GetLogger();
@@ -125,8 +131,7 @@ namespace Akka.Cluster.Sharding.Tests
                 Sys,
                   typeName: TypeName,
                   entityProps: Props.Create(() => new GiveMeYourHome()),
-                  extractEntityId: GiveMeYourHome.extractEntityId,
-                  extractShardId: GiveMeYourHome.extractShardId,
+                  messageExtractor: new GiveMeYourHome.MessageExtractor(),
                   allocationStrategy: new ExternalShardAllocationStrategy(Sys, TypeName))
                 );
         }
