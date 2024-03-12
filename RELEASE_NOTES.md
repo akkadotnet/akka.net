@@ -1,3 +1,7 @@
+#### 1.5.19 March 13th 2024 ####
+
+**Placeholder for nightlies**
+
 #### 1.5.18 March 13th 2024 ####
 
 Akka.NET v1.5.17.1 is a patch release for Akka.NET with a feature addition.
