@@ -15,6 +15,7 @@ using Akka.Cluster.Sharding.Internal;
 using Akka.DistributedData;
 using Akka.Event;
 using Akka.Pattern;
+using static Akka.Cluster.Sharding.InternalConfigUtilities;
 
 namespace Akka.Cluster.Sharding
 {
@@ -29,7 +30,7 @@ namespace Akka.Cluster.Sharding
 
         private sealed class RememberEntitiesStoreStopped
         {
-            public static RememberEntitiesStoreStopped Instance = new();
+            public static readonly RememberEntitiesStoreStopped Instance = new();
 
             private RememberEntitiesStoreStopped()
             {
@@ -77,7 +78,7 @@ namespace Akka.Cluster.Sharding
 
         private readonly IActorRef _replicator;
         private readonly ShardCoordinator _baseImpl;
-        private bool VerboseDebug => _baseImpl.VerboseDebug;
+        private LogLevel? VerboseDebug => _baseImpl.VerboseDebug;
 
         private readonly IReadConsistency _stateReadConsistency;
         private readonly IWriteConsistency _stateWriteConsistency;
@@ -108,7 +109,7 @@ namespace Akka.Cluster.Sharding
         {
             _replicator = replicator;
             var log = Context.GetLogger();
-            var verboseDebug = Context.System.Settings.Config.GetBoolean("akka.cluster.sharding.verbose-debug-logging");
+            var verboseDebug = ParseVerboseLogSettings(Context.System.Settings.Config);
 
             _baseImpl = new ShardCoordinator(typeName, settings, allocationStrategy,
                 Context, log, verboseDebug, Update, UnstashOneGetShardHomeRequest);
@@ -171,9 +172,9 @@ namespace Akka.Cluster.Sharding
                 {
                     case GetSuccess g when g.Key.Equals(_coordinatorStateKey):
                         var existingState = g.Get(_coordinatorStateKey).Value.WithRememberEntities(Settings.RememberEntities);
-                        if (VerboseDebug)
-                            Log.Debug("{0}: Received initial coordinator state [{1}]", TypeName, existingState);
-                        else
+                        if (VerboseDebug.HasValue)
+                            Log.Log(VerboseDebug.Value, null, "{0}: Received initial coordinator state [{1}]", TypeName, existingState);
+                        else if(Log.IsDebugEnabled)
                             Log.Debug(
                                 "{0}: Received initial coordinator state with [{1}] shards",
                                 TypeName,
@@ -183,8 +184,7 @@ namespace Akka.Cluster.Sharding
 
                     case GetFailure m when m.Key.Equals(_coordinatorStateKey):
                         _initialStateRetries++;
-                        var template =
-                            "{0}: The ShardCoordinator was unable to get an initial state within 'waiting-for-state-timeout': {1} millis (retrying). Has ClusterSharding been started on all nodes?";
+                        const string template = "{0}: The ShardCoordinator was unable to get an initial state within 'waiting-for-state-timeout': {1} millis (retrying). Has ClusterSharding been started on all nodes?";
                         if (_initialStateRetries == 1)
                             Log.Info(template, TypeName, _stateReadConsistency.Timeout.TotalMilliseconds);
                         else if (_initialStateRetries < 5)
@@ -488,8 +488,8 @@ namespace Akka.Cluster.Sharding
         {
             Context.UnbecomeStacked();
             afterUpdateCallback(evt);
-            if (VerboseDebug)
-                Log.Debug("{0}: New coordinator state after [{1}]: [{2}]", TypeName, evt, State);
+            if (VerboseDebug.HasValue)
+                Log.Log(VerboseDebug.Value, null, "{0}: New coordinator state after [{1}]: [{2}]", TypeName, evt, State);
             UnstashOneGetShardHomeRequest();
             Stash.UnstashAll();
         }
@@ -521,8 +521,8 @@ namespace Akka.Cluster.Sharding
         {
             Context.Become(msg => _baseImpl.Active(msg) || ReceiveLateRememberedEntities(msg));
             Log.Info("{0}: ShardCoordinator was moved to the active state with [{1}] shards", TypeName, State.Shards.Count);
-            if (VerboseDebug)
-                Log.Debug("{0}: Full ShardCoordinator initial state {1}", TypeName, State);
+            if (VerboseDebug.HasValue)
+                Log.Log(VerboseDebug.Value, null, "{0}: Full ShardCoordinator initial state {1}", TypeName, State);
         }
 
         /// <summary>
@@ -599,8 +599,8 @@ namespace Akka.Cluster.Sharding
         private void SendCoordinatorStateUpdate(IDomainEvent evt)
         {
             var s = State.Updated(evt);
-            if (VerboseDebug)
-                Log.Debug("{0}: Storing new coordinator state [{1}]", TypeName, State);
+            if (VerboseDebug.HasValue)
+                Log.Log(VerboseDebug.Value, null, "{0}: Storing new coordinator state [{1}]", TypeName, State);
             _replicator.Tell(Dsl.Update(
                 _coordinatorStateKey,
                 new LWWRegister<CoordinatorState>(_selfUniqueAddress, _initEmptyState),

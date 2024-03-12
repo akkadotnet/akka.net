@@ -42,7 +42,7 @@ namespace Akka.Cluster.Sharding
 
         private readonly ShardCoordinator _baseImpl;
 
-        private bool VerboseDebug => _baseImpl.VerboseDebug;
+        private LogLevel? VerboseDebug => _baseImpl.VerboseDebug;
         private string TypeName => _baseImpl.TypeName;
         private ClusterShardingSettings Settings => _baseImpl.Settings;
         private CoordinatorState State { get => _baseImpl.State; set => _baseImpl.State = value; }
@@ -54,7 +54,7 @@ namespace Akka.Cluster.Sharding
             )
         {
             var log = Context.GetLogger();
-            var verboseDebug = Context.System.Settings.Config.GetBoolean("akka.cluster.sharding.verbose-debug-logging");
+            var verboseDebug = InternalConfigUtilities.ParseVerboseLogSettings(Context.System.Settings.Config);
 
             _baseImpl = new ShardCoordinator(typeName, settings, allocationStrategy,
                 Context, log, verboseDebug, Update, UnstashOneGetShardHomeRequest);
@@ -83,8 +83,8 @@ namespace Akka.Cluster.Sharding
                       "state-store is set to persistence but a migration has taken place to remember-entities-store=eventsourced. You can not downgrade.");
 
                 case IDomainEvent evt:
-                    if (VerboseDebug)
-                        Log.Debug("{0}: receiveRecover {1}", TypeName, evt);
+                    if (VerboseDebug.HasValue)
+                        Log.Log(VerboseDebug.Value, null, "{0}: receiveRecover {1}", TypeName, evt);
 
                     switch (evt)
                     {
@@ -127,8 +127,8 @@ namespace Akka.Cluster.Sharding
                     }
                     return false;
                 case SnapshotOffer { Snapshot: CoordinatorState state }:
-                    if (VerboseDebug)
-                        Log.Debug("{0}: receiveRecover SnapshotOffer {1}", TypeName, state);
+                    if (VerboseDebug.HasValue)
+                        Log.Log(VerboseDebug.Value, null, "{0}: receiveRecover SnapshotOffer {1}", TypeName, state);
                     State = state.WithRememberEntities(Settings.RememberEntities);
                     // Old versions of the state object may not have unallocatedShard set,
                     // thus it will be null.

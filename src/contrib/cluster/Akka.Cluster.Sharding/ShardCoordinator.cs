@@ -1628,7 +1628,7 @@ namespace Akka.Cluster.Sharding
         internal ClusterShardingSettings Settings { get; }
         internal IShardAllocationStrategy AllocationStrategy { get; }
         internal ILoggingAdapter Log { get; }
-        internal bool VerboseDebug { get; }
+        internal LogLevel? VerboseDebug { get; }
         internal CoordinatorState State { get; set; }
 
 
@@ -1639,7 +1639,7 @@ namespace Akka.Cluster.Sharding
 
             IActorContext context,
             ILoggingAdapter log,
-            bool verboseDebug,
+            LogLevel? verboseDebug,
             Action<IDomainEvent, Action<IDomainEvent>> update,
             Action unstashOneGetShardHomeRequest
 
@@ -1868,18 +1868,21 @@ namespace Akka.Cluster.Sharding
                     {
                         if (State.Regions.TryGetValue(m.ShardRegion, out var shards))
                         {
-                            if (Log.IsDebugEnabled)
+                            if (VerboseDebug.HasValue)
                             {
-                                if (VerboseDebug)
-                                    Log.Debug("{0}: Graceful shutdown of{1} region [{2}] with [{3}] shards [{4}] started",
-                                        TypeName,
-                                        m.ShardRegion.Path.Address.HasLocalScope ? " local" : "",
-                                        m.ShardRegion,
-                                        shards.Count,
-                                        string.Join(", ", shards));
-                                else
-                                    Log.Debug("{0}: Graceful shutdown of region [{1}] with [{2}] shards", TypeName, m.ShardRegion, shards.Count);
+                                Log.Log(VerboseDebug.Value, null, "{0}: Graceful shutdown of{1} region [{2}] with [{3}] shards [{4}] started",
+                                    TypeName,
+                                    m.ShardRegion.Path.Address.HasLocalScope ? " local" : "",
+                                    m.ShardRegion,
+                                    shards.Count,
+                                    string.Join(", ", shards));
                             }
+                            else if (Log.IsDebugEnabled)
+                            {
+                                // default debug logging
+                                Log.Debug("{0}: Graceful shutdown of region [{1}] with [{2}] shards", TypeName, m.ShardRegion, shards.Count);
+                            }
+                            
                             _gracefulShutdownInProgress = _gracefulShutdownInProgress.Add(m.ShardRegion);
                             ShutdownShards(m.ShardRegion, shards.ToImmutableHashSet());
                         }
@@ -1947,17 +1950,19 @@ namespace Akka.Cluster.Sharding
             {
                 if (_rebalanceInProgress.Count == 0)
                     Log.Debug("{0}: Received termination message.", TypeName);
+                else if (VerboseDebug.HasValue)
+                {
+                    Log.Log(VerboseDebug.Value, null, "{0}: Received termination message. Rebalance in progress of [{1}] shards [{2}].",
+                        TypeName,
+                        _rebalanceInProgress.Count,
+                        string.Join(", ", _rebalanceInProgress.Keys));                        
+                }
                 else if (Log.IsDebugEnabled)
                 {
-                    if (VerboseDebug)
-                        Log.Debug("{0}: Received termination message. Rebalance in progress of [{1}] shards [{2}].",
-                            TypeName,
-                            _rebalanceInProgress.Count,
-                            string.Join(", ", _rebalanceInProgress.Keys));
-                    else
-                        Log.Debug("{0}: Received termination message. Rebalance in progress of [{1}] shards.",
-                            TypeName,
-                            _rebalanceInProgress.Count);
+                    // default debug logging
+                    Log.Debug("{0}: Received termination message. Rebalance in progress of [{1}] shards.",
+                        TypeName,
+                        _rebalanceInProgress.Count);
                 }
                 _context.Stop(_context.Self);
             }
@@ -1978,12 +1983,24 @@ namespace Akka.Cluster.Sharding
 
         private void DeferGetShardHomeRequest(ShardId shard, IActorRef from)
         {
-            Log.Debug(
-                "{0}: GetShardHome [{1}] request from [{2}] deferred, because rebalance is in progress for this shard. " +
-                "It will be handled when rebalance is done.",
-                TypeName,
-                shard,
-                from);
+            if (VerboseDebug.HasValue)
+            {
+                Log.Log(VerboseDebug.Value, null, "{0}: GetShardHome [{1}] request from [{2}] deferred, because rebalance is in progress for this shard. " +
+                                                  "It will be handled when rebalance is done.",
+                    TypeName,
+                    shard,
+                    from);
+            }
+            else if(Log.IsDebugEnabled)
+            {
+                Log.Debug(
+                    "{0}: GetShardHome [{1}] request from [{2}] deferred, because rebalance is in progress for this shard. " +
+                    "It will be handled when rebalance is done.",
+                    TypeName,
+                    shard,
+                    from);
+            }
+           
             _rebalanceInProgress = _rebalanceInProgress.SetItem(shard, _rebalanceInProgress.GetValueOrDefault(shard, ImmutableHashSet<IActorRef>.Empty).Add(from));
         }
 
@@ -2003,10 +2020,21 @@ namespace Akka.Cluster.Sharding
             }
             else if (!HasAllRegionsRegistered())
             {
-                Log.Debug("{0}: GetShardHome [{1}] request from [{2}] ignored, because not all regions have registered yet.",
-                    TypeName,
-                    shard,
-                    _context.Sender);
+                if (VerboseDebug.HasValue)
+                {
+                    Log.Log(VerboseDebug.Value, null, "{0}: GetShardHome [{1}] request from [{2}] ignored, because not all regions have registered yet.",
+                        TypeName,
+                        shard,
+                        _context.Sender);
+                }
+                else if (Log.IsDebugEnabled)
+                {
+                    Log.Debug("{0}: GetShardHome [{1}] request from [{2}] ignored, because not all regions have registered yet.",
+                        TypeName,
+                        shard,
+                        _context.Sender);
+                }
+                
                 return true;
             }
             else
@@ -2014,10 +2042,24 @@ namespace Akka.Cluster.Sharding
                 if (State.Shards.TryGetValue(shard, out var shardRegionRef))
                 {
                     if (_regionTerminationInProgress.Contains(shardRegionRef))
-                        Log.Debug("{0}: GetShardHome [{1}] request ignored, due to region [{2}] termination in progress.",
-                            TypeName,
-                            shard,
-                            shardRegionRef);
+                    {
+                        if (VerboseDebug.HasValue)
+                        {
+                            Log.Log(VerboseDebug.Value, null, "{0}: GetShardHome [{1}] request ignored, due to region [{2}] termination in progress.",
+                                TypeName,
+                                shard,
+                                shardRegionRef);
+                        }
+                        else if (Log.IsDebugEnabled)
+                        {
+                            Log.Debug("{0}: GetShardHome [{1}] request ignored, due to region [{2}] termination in progress.",
+                                TypeName,
+                                shard,
+                                shardRegionRef);
+                        }
+                        
+                    }
+                        
                     else
                         _context.Sender.Tell(new ShardHome(shard, shardRegionRef));
 
@@ -2053,7 +2095,14 @@ namespace Akka.Cluster.Sharding
                     return true;
 
                 case RegionStopped s:
-                    Log.Debug("{0}: ShardRegion stopped: [{1}]", TypeName, s.ShardRegion);
+                    if (VerboseDebug.HasValue)
+                    {
+                        Log.Log(VerboseDebug.Value, null, "{0}: ShardRegion stopped: [{1}]", TypeName, s.ShardRegion);
+                    }
+                    else if (Log.IsDebugEnabled)
+                    {
+                        Log.Debug("{0}: ShardRegion stopped: [{1}]", TypeName, s.ShardRegion);
+                    }
                     RegionTerminated(s.ShardRegion);
                     return true;
 
@@ -2127,7 +2176,14 @@ namespace Akka.Cluster.Sharding
                 rw.Tell(new RebalanceWorker.ShardRegionTerminated(@ref));
             if (State.Regions.TryGetValue(@ref, out var shards))
             {
-                if (Log.IsDebugEnabled)
+                if (VerboseDebug.HasValue)
+                {
+                    Log.Log(VerboseDebug.Value, null, "{0}: ShardRegion terminated{1}: [{2}]",
+                        TypeName,
+                        _gracefulShutdownInProgress.Contains(@ref) ? " (gracefully)" : "",
+                        @ref);
+                }
+                else if (Log.IsDebugEnabled)
                 {
                     Log.Debug("{0}: ShardRegion terminated{1}: [{2}]",
                         TypeName,
@@ -2227,13 +2283,13 @@ namespace Akka.Cluster.Sharding
                     }
                     else
                     {
-                        if (VerboseDebug)
-                            Log.Debug("{0}: Allocated region [{1}] for shard [{2}] is not (any longer) one of the registered regions: {3}",
+                        if (VerboseDebug.HasValue)
+                            Log.Log(VerboseDebug.Value, null, "{0}: Allocated region [{1}] for shard [{2}] is not (any longer) one of the registered regions: {3}",
                                 TypeName,
                                 region,
                                 shard,
                                 State);
-                        else
+                        else if(Log.IsDebugEnabled)
                             Log.Debug("{0}: Allocated region [{1}] for shard [{2}] is not (any longer) one of the registered regions.",
                               TypeName,
                               region,
@@ -2288,12 +2344,27 @@ namespace Akka.Cluster.Sharding
                 {
                     if (State.Shards.TryGetValue(shard, out var region))
                     {
-                        Log.Debug("{0}: Rebalance shard [{1}] from [{2}]", TypeName, shard, region);
+                        if (VerboseDebug.HasValue)
+                        {
+                            Log.Log(VerboseDebug.Value, null, "{0}: Rebalance shard [{1}] from [{2}]", TypeName, shard, region);
+                        }
+                        else if (Log.IsDebugEnabled)
+                        {
+                            Log.Debug("{0}: Rebalance shard [{1}] from [{2}]", TypeName, shard, region);
+                        }
+                        
                         StartShardRebalanceIfNeeded(shard, region, Settings.TuningParameters.HandOffTimeout, isRebalance: true);
                     }
                     else
                     {
-                        Log.Debug("{0}: Rebalance of non-existing shard [{1}] is ignored", TypeName, shard);
+                        if (VerboseDebug.HasValue)
+                        {
+                            Log.Log(VerboseDebug.Value, null, "{0}: Rebalance of non-existing shard [{1}] is ignored", TypeName, shard);
+                        }
+                        else if (Log.IsDebugEnabled)
+                        {
+                            Log.Debug("{0}: Rebalance of non-existing shard [{1}] is ignored", TypeName, shard);
+                        }
                     }
                 }
             }
