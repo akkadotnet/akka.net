@@ -24,7 +24,7 @@ internal static class InternalConfigUtilities
     /// <exception cref="ArgumentException"></exception>
     public static LogLevel? ParseVerboseLogSettings(Config coordinatorHocon)
     {
-        var logLevel = coordinatorHocon.GetString("akka.cluster.sharding.verbose-debug-logging");
+        var logLevel = coordinatorHocon.GetString("akka.cluster.sharding.verbose-debug-logging").ToLowerInvariant();
         return logLevel switch
         {
             "off" => null,
