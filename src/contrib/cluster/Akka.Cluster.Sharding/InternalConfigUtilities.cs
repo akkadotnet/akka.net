@@ -28,7 +28,9 @@ internal static class InternalConfigUtilities
         return logLevel switch
         {
             "off" => null,
+            "false" => null,
             "on" => LogLevel.DebugLevel,
+            "true" => LogLevel.DebugLevel,
             "error" => LogLevel.ErrorLevel,
             "warning" => LogLevel.WarningLevel,
             "info" => LogLevel.InfoLevel,
