@@ -138,31 +138,30 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            switch (message)
-            {
-                case Get msg:
-                    return (msg.Id, message);
-                case Add msg:
-                    return (msg.Id, message);
-            }
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    Get msg => msg.Id,
+                    Add msg => msg.Id,
+                    _ => null
+                };
 
-        private ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case Get msg:
-                    return msg.Id[0].ToString();
-                case Add msg:
-                    return msg.Id[0].ToString();
-                case ShardRegion.StartEntity se:
-                    return se.EntityId;
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    Get msg => msg.Id[0].ToString(),
+                    Add msg => msg.Id[0].ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => entityId[0].ToString();
+        }
 
         private readonly Lazy<IActorRef> _region;
 
@@ -179,8 +178,7 @@ namespace Akka.Cluster.Sharding.Tests
                     Sys,
                     typeName: "Entity",
                     entityProps: Props.Create(() => new Entity()),
-                    extractEntityId: extractEntityId,
-                    extractShardId: extractShardId)
+                    messageExtractor: new MessageExtractor())
                 );
         }
 

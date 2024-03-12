@@ -1710,6 +1710,7 @@ namespace Akka.Actor
         public bool DebugEventStream { get; }
         public bool DebugLifecycle { get; }
         public bool DebugRouterMisconfiguration { get; }
+        public bool DebugTimerScheduler { get; }
         public bool DebugUnhandledMessage { get; }
         public int DefaultVirtualNodesFactor { get; }
         public bool EmitActorTelemetry { get; }

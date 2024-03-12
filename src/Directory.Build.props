@@ -20,11 +20,11 @@
   <PropertyGroup>
     <XunitVersion>2.5.3</XunitVersion>
     <XunitRunnerVersion>2.5.3</XunitRunnerVersion>
-    <TestSdkVersion>17.8.0</TestSdkVersion>
+    <TestSdkVersion>17.9.0</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
-    <ProtobufVersion>3.25.2</ProtobufVersion>
+    <ProtobufVersion>3.25.3</ProtobufVersion>
     <BenchmarkDotNetVersion>0.13.12</BenchmarkDotNetVersion>
     <NetTestVersion>net8.0</NetTestVersion>
     <FsharpVersion>6.0.5</FsharpVersion>
@@ -39,7 +39,7 @@
     <MultiNodeAdapterVersion>1.5.13</MultiNodeAdapterVersion>
     <MicrosoftLibVersion>[6.0.*,)</MicrosoftLibVersion>
     <MsExtVersion>[6.0.*,)</MsExtVersion>
-    <AkkaAnalyzerVersion>0.2.2</AkkaAnalyzerVersion>
+    <AkkaAnalyzerVersion>0.2.3.1</AkkaAnalyzerVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>

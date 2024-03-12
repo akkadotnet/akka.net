@@ -69,6 +69,19 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
             _log.Debug("Consumer terminated before initialized.");
             Context.Stop(Self);
         });
+        
+        ReceiveAny(msg =>
+        {
+            if (Settings.AllowBypass)
+            {
+                _consumer.Forward(msg);
+            }
+            else
+            {
+                _log.Warning($"Message unhandled [{msg}]. If you need to pass this message to the consumer sharding entity actor, set \"akka.reliable-delivery.sharding.consumer-controller.allow-bypass\" to true");
+                Unhandled(msg);
+            }
+        });
     }
 
     private void Active()
@@ -126,6 +139,19 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
                 {
                     _log.Debug("Unknown [{0}] terminated.", t.ActorRef);
                 }
+            }
+        });
+        
+        ReceiveAny(msg =>
+        {
+            if (Settings.AllowBypass)
+            {
+                _consumer.Forward(msg);
+            }
+            else
+            {
+                _log.Warning($"Message unhandled [{msg}]. If you need to pass this message to the consumer sharding entity actor, set \"akka.reliable-delivery.sharding.consumer-controller.allow-bypass\" to true");
+                Unhandled(msg);
             }
         });
     }
