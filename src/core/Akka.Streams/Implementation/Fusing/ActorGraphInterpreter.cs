@@ -10,7 +10,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
@@ -23,39 +22,6 @@ using static Akka.Streams.Implementation.Fusing.GraphInterpreter;
 // ReSharper disable MemberHidesStaticFromOuterClass
 namespace Akka.Streams.Implementation.Fusing
 {
-    [InternalApi]
-    public sealed class ImperfectPerformantPool<T>
-    {
-        private readonly int _maxItems;
-        private readonly ConcurrentQueue<T> _itemSet;
-        private int _curr = 0;
-
-        public ImperfectPerformantPool(int? maxItems = null)
-        {
-            _maxItems = maxItems ?? Environment.ProcessorCount;
-            _itemSet = new ConcurrentQueue<T>();
-        }
-
-        public void TryAdd(T item)
-        {
-            if (_curr + 1 <= _maxItems)
-            {
-                _curr = _curr + 1;
-                _itemSet.Enqueue(item);
-            }
-        }
-
-        public bool TryGetValue(out T item)
-        {
-            if (_itemSet.TryDequeue(out item))
-            {
-                _curr = _curr - 1;
-                return true;
-            }
-
-            return false;
-        }
-    }
     /// <summary>
     /// INTERNAL API
     /// </summary>
@@ -138,7 +104,6 @@ namespace Akka.Streams.Implementation.Fusing
             where T : struct, ActorGraphInterpreter.IBoundaryEvent
         {
             public T Boxed { get; private set; }
-
             public BoxedBoundaryEvent()
             {
                 
@@ -158,12 +123,12 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Shape _shape;
         private readonly ActorMaterializerSettings _settings;
 
-        private readonly ImperfectPerformantPool<BoxedBoundaryEvent<ActorGraphInterpreter.OnNext>> _onNextPool =
-            new ImperfectPerformantPool<BoxedBoundaryEvent<ActorGraphInterpreter.OnNext>>();
-        private readonly ImperfectPerformantPool<BoxedBoundaryEvent<ActorGraphInterpreter.RequestMore>> _requestMorePool =
-            new ImperfectPerformantPool<BoxedBoundaryEvent<ActorGraphInterpreter.RequestMore>>();
-        private readonly ImperfectPerformantPool<BoxedBoundaryEvent<ActorGraphInterpreter.AsyncInput>>
-            _asyncInputPool = new ImperfectPerformantPool<BoxedBoundaryEvent<ActorGraphInterpreter.AsyncInput>>();
+        private readonly ObjectPoolStuff.ObjectPoolV2<ActorGraphInterpreter.OnNext> _onNextPool =
+            new (Environment.ProcessorCount*2);
+        private readonly ObjectPoolStuff.ObjectPoolV2<ActorGraphInterpreter.RequestMore> _requestMorePool =
+            new (Environment.ProcessorCount*2);
+        private readonly ObjectPoolStuff.ObjectPoolV2<ActorGraphInterpreter.AsyncInput>
+            _asyncInputPool = new (Environment.ProcessorCount*2);
         private readonly ActorGraphInterpreter.Resume _resume;
         /// <summary>
         /// TBD
@@ -327,7 +292,7 @@ namespace Akka.Streams.Implementation.Fusing
                 case BoxedBoundaryEvent<ActorGraphInterpreter.OnNext> bOn:
                     var asO = bOn.Boxed;
                     bOn.SetBox(default);
-                    _onNextPool.TryAdd(bOn);
+                    _onNextPool.TryPush(bOn);
                     return RunOnNextMeth(asO);
                     break;
                 // Case unused:
@@ -339,7 +304,7 @@ namespace Akka.Streams.Implementation.Fusing
                 case BoxedBoundaryEvent<ActorGraphInterpreter.RequestMore> bRm:
                     var asR = bRm.Boxed;
                     bRm.SetBox(default);
-                    _requestMorePool.TryAdd(bRm);
+                    _requestMorePool.TryPush(bRm);
                     return RunRequestMore(asR);
                 
                 case ActorGraphInterpreter.Resume _:
@@ -351,7 +316,7 @@ namespace Akka.Streams.Implementation.Fusing
                 case BoxedBoundaryEvent<ActorGraphInterpreter.AsyncInput> bAi:
                     var asI = bAi.Boxed;
                     bAi.SetBox(default);
-                    _asyncInputPool.TryAdd(bAi);
+                    _asyncInputPool.TryPush(bAi);
                     return RunAsyncInputMeth(asI); 
                 
                 //case ActorGraphInterpreter.AsyncInput asyncInput:
@@ -504,7 +469,7 @@ namespace Akka.Streams.Implementation.Fusing
             return new GraphInterpreter(_assembly, Materializer, Log, _logics, _connections,
                 (logic, @event, handler) =>
                 {
-                    if (_asyncInputPool.TryGetValue(out var bAi) == false)
+                    if (_asyncInputPool.TryPop(out var bAi) == false)
                     {
                         bAi = new();
                     }
@@ -539,7 +504,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         internal BoxedBoundaryEvent<ActorGraphInterpreter.OnNext> GetNextBuffer()
         {
-            if (_onNextPool.TryGetValue(out var rV) == false)
+            if (_onNextPool.TryPop(out var rV) == false)
             {
                 rV = new BoxedBoundaryEvent<ActorGraphInterpreter.OnNext>();
             }
@@ -549,7 +514,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         internal BoxedBoundaryEvent<ActorGraphInterpreter.RequestMore> GetNextRequestMore()
         {
-            if (_requestMorePool.TryGetValue(out var rV) == false)
+            if (_requestMorePool.TryPop(out var rV) == false)
             {
                 rV = new();
             }
@@ -1620,9 +1585,9 @@ namespace Akka.Streams.Implementation.Fusing
         {
             switch (message)
             {
-                case IBoundaryEvent _:
+                case IBoundaryEvent ba:
                     _currentLimit = _eventLimit;
-                    ProcessEvent((IBoundaryEvent)message);
+                    ProcessEvent(ba);
                     if (_shortCircuitBuffer != null)
                         ShortCircuitBatch();
                     return true;
