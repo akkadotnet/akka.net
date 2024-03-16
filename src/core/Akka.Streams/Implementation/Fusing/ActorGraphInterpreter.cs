@@ -133,15 +133,17 @@ namespace Akka.Streams.Implementation.Fusing
     [InternalApi]
     public sealed class GraphInterpreterShell
     {
-        internal sealed class BoxedRequestMore : ActorGraphInterpreter.IBoundaryEvent
+        internal sealed class
+            BoxedBoundaryEvent<T> : ActorGraphInterpreter.IBoundaryEvent 
+            where T : struct, ActorGraphInterpreter.IBoundaryEvent
         {
-            public ActorGraphInterpreter.RequestMore Boxed { get; private set; }
+            public T Boxed { get; private set; }
 
-            public BoxedRequestMore()
+            public BoxedBoundaryEvent()
             {
                 
             }
-            public BoxedRequestMore SetBox(ActorGraphInterpreter.RequestMore value)
+            public BoxedBoundaryEvent<T> SetBox(T value)
             {
                 Boxed = value;
                 return this;
@@ -149,47 +151,20 @@ namespace Akka.Streams.Implementation.Fusing
 
             public GraphInterpreterShell Shell => Boxed.Shell;
         }
-        internal sealed class BoxedOnNext : ActorGraphInterpreter.IBoundaryEvent
-        {
-            public ActorGraphInterpreter.OnNext Boxed { get; private set; }
-
-            public BoxedOnNext()
-            {
-                
-            }
-            public BoxedOnNext SetBox(ActorGraphInterpreter.OnNext value)
-            {
-                Boxed = value;
-                return this;
-            }
-
-            public GraphInterpreterShell Shell => Boxed.Shell;
-        }
-        private sealed class BoxedAsyncInput : ActorGraphInterpreter.IBoundaryEvent
-        {
-            public ActorGraphInterpreter.AsyncInput Boxed { get; private set; }
-            public BoxedAsyncInput()
-            {
-            
-            }
-            public BoxedAsyncInput SetBox(ActorGraphInterpreter.AsyncInput value)
-            {
-                Boxed = value;
-                return this;
-            }
-
-            public GraphInterpreterShell Shell => Boxed.Shell;
-        }
+        
         private readonly GraphAssembly _assembly;
         private readonly Connection[] _connections;
         private readonly GraphStageLogic[] _logics;
         private readonly Shape _shape;
         private readonly ActorMaterializerSettings _settings;
 
-        private readonly ImperfectPerformantPool<BoxedOnNext> _onNextPool =
-            new ImperfectPerformantPool<BoxedOnNext>();
-        private readonly ImperfectPerformantPool<BoxedRequestMore> _requestMorePool =
-            new ImperfectPerformantPool<BoxedRequestMore>();
+        private readonly ImperfectPerformantPool<BoxedBoundaryEvent<ActorGraphInterpreter.OnNext>> _onNextPool =
+            new ImperfectPerformantPool<BoxedBoundaryEvent<ActorGraphInterpreter.OnNext>>();
+        private readonly ImperfectPerformantPool<BoxedBoundaryEvent<ActorGraphInterpreter.RequestMore>> _requestMorePool =
+            new ImperfectPerformantPool<BoxedBoundaryEvent<ActorGraphInterpreter.RequestMore>>();
+        private readonly ImperfectPerformantPool<BoxedBoundaryEvent<ActorGraphInterpreter.AsyncInput>>
+            _asyncInputPool = new ImperfectPerformantPool<BoxedBoundaryEvent<ActorGraphInterpreter.AsyncInput>>();
+        private readonly ActorGraphInterpreter.Resume _resume;
         /// <summary>
         /// TBD
         /// </summary>
@@ -214,7 +189,6 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly int _abortLimit;
         private readonly ActorGraphInterpreter.BatchingActorInputBoundary[] _inputs;
         private readonly ActorGraphInterpreter.IActorOutputBoundary[] _outputs;
-
         private ILoggingAdapter _log;
         private GraphInterpreter _interpreter;
         private int _subscribersPending;
@@ -223,10 +197,7 @@ namespace Akka.Streams.Implementation.Fusing
         private bool _waitingForShutdown;
         private Action<object> _enqueueToShortCircuit;
         private bool _interpreterCompleted;
-        private readonly ActorGraphInterpreter.Resume _resume;
-
-        private readonly ImperfectPerformantPool<BoxedAsyncInput>
-            _asyncInputPool = new ImperfectPerformantPool<BoxedAsyncInput>();
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -353,7 +324,7 @@ namespace Akka.Streams.Implementation.Fusing
             // Cases that are most likely on the hot path, in decreasing order of frequency
             switch (e)
             {
-                case BoxedOnNext bOn:
+                case BoxedBoundaryEvent<ActorGraphInterpreter.OnNext> bOn:
                     var asO = bOn.Boxed;
                     bOn.SetBox(default);
                     _onNextPool.TryAdd(bOn);
@@ -365,7 +336,7 @@ namespace Akka.Streams.Implementation.Fusing
 
                 //case ActorGraphInterpreter.RequestMore requestMore:
                 //    return RunRequestMore(requestMore);
-                case BoxedRequestMore bRm:
+                case BoxedBoundaryEvent<ActorGraphInterpreter.RequestMore> bRm:
                     var asR = bRm.Boxed;
                     bRm.SetBox(default);
                     _requestMorePool.TryAdd(bRm);
@@ -377,7 +348,7 @@ namespace Akka.Streams.Implementation.Fusing
                         return RunBatch(eventLimit);
                     return eventLimit;
                 
-                case BoxedAsyncInput bAi:
+                case BoxedBoundaryEvent<ActorGraphInterpreter.AsyncInput> bAi:
                     var asI = bAi.Boxed;
                     bAi.SetBox(default);
                     _asyncInputPool.TryAdd(bAi);
@@ -535,7 +506,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     if (_asyncInputPool.TryGetValue(out var bAi) == false)
                     {
-                        bAi = new BoxedAsyncInput();
+                        bAi = new();
                     }
                     var currentInterpreter = CurrentInterpreterOrNull;
                     if (currentInterpreter == null ||
@@ -566,21 +537,21 @@ namespace Akka.Streams.Implementation.Fusing
         /// <returns>TBD</returns>
         public override string ToString() => $"GraphInterpreterShell\n  {_assembly.ToString().Replace("\n", "\n  ")}";
 
-        internal BoxedOnNext GetNextBuffer()
+        internal BoxedBoundaryEvent<ActorGraphInterpreter.OnNext> GetNextBuffer()
         {
             if (_onNextPool.TryGetValue(out var rV) == false)
             {
-                rV = new BoxedOnNext();
+                rV = new BoxedBoundaryEvent<ActorGraphInterpreter.OnNext>();
             }
 
             return rV;
         }
 
-        internal BoxedRequestMore GetNextRequestMore()
+        internal BoxedBoundaryEvent<ActorGraphInterpreter.RequestMore> GetNextRequestMore()
         {
             if (_requestMorePool.TryGetValue(out var rV) == false)
             {
-                rV = new BoxedRequestMore();
+                rV = new();
             }
 
             return rV;
