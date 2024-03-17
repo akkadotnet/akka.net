@@ -111,10 +111,9 @@ internal sealed class ObjectPoolStuff
 */
 
     internal sealed class ObjectPoolV2<T>
-        where T : struct, ActorGraphInterpreter.IBoundaryEvent
     {
         private readonly int _limit;
-        private readonly ConcurrentQueue<GraphInterpreterShell.BoxedBoundaryEvent<T>> _items = new();
+        private readonly ConcurrentQueue<T> _items = new();
         //private readonly decimal _softLimit = default;
         //private readonly decimal _softLimit2 = default;
         //private readonly decimal _softLimit3 = default;
@@ -129,7 +128,7 @@ internal sealed class ObjectPoolStuff
             _limit = size+3;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryPop([NotNullWhen(true)] out GraphInterpreterShell.BoxedBoundaryEvent<T>? result)
+        public bool TryPop([NotNullWhen(true)] out T? result)
         {
             // Instead of lock, use CompareExchange gate.
             // In a worst case, missed cached object(create new one) but it's not a big deal.
@@ -143,7 +142,7 @@ internal sealed class ObjectPoolStuff
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void TryPush(GraphInterpreterShell.BoxedBoundaryEvent<T> item)
+        public void TryPush(T item)
         {
             if (Interlocked.Increment(ref _size) <= _limit)
             {

@@ -123,11 +123,11 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly Shape _shape;
         private readonly ActorMaterializerSettings _settings;
 
-        private readonly ObjectPoolStuff.ObjectPoolV2<ActorGraphInterpreter.OnNext> _onNextPool =
+        private readonly ObjectPoolStuff.ObjectPoolV2<BoxedBoundaryEvent<ActorGraphInterpreter.OnNext>> _onNextPool =
             new (Environment.ProcessorCount*2);
-        private readonly ObjectPoolStuff.ObjectPoolV2<ActorGraphInterpreter.RequestMore> _requestMorePool =
+        private readonly ObjectPoolStuff.ObjectPoolV2<BoxedBoundaryEvent<ActorGraphInterpreter.RequestMore>> _requestMorePool =
             new (Environment.ProcessorCount*2);
-        private readonly ObjectPoolStuff.ObjectPoolV2<ActorGraphInterpreter.AsyncInput>
+        private readonly ObjectPoolStuff.ObjectPoolV2<BoxedBoundaryEvent<ActorGraphInterpreter.AsyncInput>>
             _asyncInputPool = new (Environment.ProcessorCount*2);
         private readonly ActorGraphInterpreter.Resume _resume;
         /// <summary>
@@ -291,8 +291,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 case BoxedBoundaryEvent<ActorGraphInterpreter.OnNext> bOn:
                     var asO = bOn.Boxed;
-                    bOn.SetBox(default);
-                    _onNextPool.TryPush(bOn);
+                    _onNextPool.TryPush(bOn.SetBox(default));
                     return RunOnNextMeth(asO);
                     break;
                 // Case unused:
@@ -303,8 +302,7 @@ namespace Akka.Streams.Implementation.Fusing
                 //    return RunRequestMore(requestMore);
                 case BoxedBoundaryEvent<ActorGraphInterpreter.RequestMore> bRm:
                     var asR = bRm.Boxed;
-                    bRm.SetBox(default);
-                    _requestMorePool.TryPush(bRm);
+                    _requestMorePool.TryPush(bRm.SetBox(default));
                     return RunRequestMore(asR);
                 
                 case ActorGraphInterpreter.Resume _:
@@ -315,8 +313,7 @@ namespace Akka.Streams.Implementation.Fusing
                 
                 case BoxedBoundaryEvent<ActorGraphInterpreter.AsyncInput> bAi:
                     var asI = bAi.Boxed;
-                    bAi.SetBox(default);
-                    _asyncInputPool.TryPush(bAi);
+                    _asyncInputPool.TryPush(bAi.SetBox(default));
                     return RunAsyncInputMeth(asI); 
                 
                 //case ActorGraphInterpreter.AsyncInput asyncInput:
