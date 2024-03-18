@@ -13,7 +13,9 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.2.2" />
         <PackageReference Include="Hyperion" Version="$(HyperionVersion)"/>
+        <PackageReference Include="NonBlocking" Version="2.1.2" />
     </ItemGroup>
 
 </Project>

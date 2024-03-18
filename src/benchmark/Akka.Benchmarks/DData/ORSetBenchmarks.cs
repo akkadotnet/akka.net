@@ -13,7 +13,9 @@ using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using Akka.Cluster;
 using Akka.DistributedData;
+using Akka.DistributedData.Serialization;
 using BenchmarkDotNet.Attributes;
+using static Akka.Benchmarks.DData.RDDBenchTypes;
 
 namespace Akka.Benchmarks.DData
 {

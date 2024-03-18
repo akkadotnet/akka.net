@@ -9,6 +9,7 @@ using Akka.DistributedData.Internal;
 using Akka.Serialization;
 using Akka.Util.Internal;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Google.Protobuf;
@@ -541,7 +542,7 @@ namespace Akka.DistributedData.Serialization
                 case GetFailureManifest: return GetFailureFromBinary(bytes);
                 case SubscribeManifest: return SubscribeFromBinary(bytes);
                 case UnsubscribeManifest: return UnsubscribeFromBinary(bytes);
-                case GossipManifest: return GossipFromBinary(SerializationSupport.Decompress(bytes));
+                case GossipManifest: return GossipFromBinary(SerializationSupport.DecompressWithRentedPool(bytes));
                 case WriteNackManifest: return WriteNack.Instance;
                 case DeltaNackManifest: return DeltaNack.Instance;
 
@@ -549,9 +550,13 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
-        private Gossip GossipFromBinary(byte[] bytes)
+        private Gossip GossipFromBinary(IMemoryOwner<byte> bytes)
         {
-            var proto = Proto.Msg.Gossip.Parser.ParseFrom(bytes);
+            Proto.Msg.Gossip proto = null;
+            using (bytes)
+            {
+                proto = Proto.Msg.Gossip.Parser.ParseFrom(bytes.Memory.Span);   
+            }
             var builder = ImmutableDictionary<string, DataEnvelope>.Empty.ToBuilder();
             foreach (var entry in proto.Entries)
             {

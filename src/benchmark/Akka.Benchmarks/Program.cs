@@ -5,7 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Reflection;
+using System.Threading;
+using Akka.Benchmarks.DData;
 using BenchmarkDotNet.Running;
 
 namespace Akka.Benchmarks
@@ -14,6 +17,15 @@ namespace Akka.Benchmarks
     {
         static void Main(string[] args)
         {
+            //var w = new SerializerORDictionaryBenchmarks();
+            //w.NumElements = 25;
+            //w.NumNodes = 30;
+            //w.SetupSystem();
+            //Console.WriteLine("Running");
+            //while (true)
+            //{
+            //    w.Serialize_ORDictionary();
+            //}
             BenchmarkSwitcher.FromAssembly(Assembly.GetExecutingAssembly()).Run(args);
         }
     }

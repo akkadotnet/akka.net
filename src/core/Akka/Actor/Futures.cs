@@ -149,6 +149,7 @@ namespace Akka.Actor
             }
 
             var future = provider.CreateFutureRef(result);
+            
             var path = future.Path;
 
             //The future actor needs to be unregistered in the temp container
