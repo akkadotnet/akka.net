@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Configuration;
 using Akka.Event;
 using Xunit.Abstractions;
 
@@ -72,23 +73,42 @@ namespace Akka.Persistence.TestKit.Tests
                     return;
             }
         }
+
+        protected override void PostStop()
+        {
+            _log.Info("Shutting down");
+        }
+        
+        protected override void PreStart()
+        {
+            _log.Info("Starting up");
+        }
     }
 
     public class CounterActorTests : PersistenceTestKit
     {
-        public CounterActorTests(ITestOutputHelper output) : base(output:output){}
+        // create a Config that enables debug mode on the TestJournal
+        private static readonly Config Config =
+            ConfigurationFactory.ParseString("""
+                                             akka.persistence.journal.test.debug = on
+                                             akka.persistence.snapshot-store.test.debug = on
+                                             """);
+        
+        public CounterActorTests(ITestOutputHelper output) : base(Config, output:output){}
         
         [Fact]
         public Task CounterActor_internal_state_will_be_lost_if_underlying_persistence_store_is_not_available()
         {
             return WithJournalWrite(write => write.Fail(), async () => 
             {
-                var counterProps = Props.Create(() => new CounterActor("test"));
+                var counterProps = Props.Create(() => new CounterActor("test"))
+                    .WithDispatcher("akka.actor.internal-dispatcher");
                 var actor = ActorOf(counterProps, "counter");
                 
-                Watch(actor);
+                Sys.Log.Info("Messaging actor");
+                await WatchAsync(actor);
                 actor.Tell("inc", TestActor);
-                await ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(3));
+                await ExpectTerminatedAsync(actor);
 
                 // need to restart actor
                 actor = ActorOf(counterProps, "counter1");

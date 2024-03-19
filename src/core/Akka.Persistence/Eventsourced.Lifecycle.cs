@@ -21,7 +21,9 @@ namespace Akka.Persistence
 
         private void StartRecovery(Recovery recovery)
         {
+            Log.Info("Recovery granted");
             ChangeState(RecoveryStarted(recovery.ReplayMax));
+            Log.Info("Telling SnapshotStore to load snapshot");
             LoadSnapshot(SnapshotterId, recovery.FromSnapshot, recovery.ToSequenceNr);
         }
 
