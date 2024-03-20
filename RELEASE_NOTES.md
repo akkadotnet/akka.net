@@ -1,3 +1,20 @@
+#### 1.5.19 March 13th 2024 ####
+
+**Placeholder for nightlies**
+
+#### 1.5.18 March 13th 2024 ####
+
+Akka.NET v1.5.17.1 is a patch release for Akka.NET with a feature addition.
+
+* [Migrate all internal dispatchers to default thread pool dispatcher](https://github.com/akkadotnet/akka.net/pull/7117)
+
+| COMMITS | LOC+ | LOC- | AUTHOR          |
+|---------|------|------|-----------------|
+| 1       | 9    | 9    | Aaron Stannard  |
+| 1       | 1    | 1    | dependabot[bot] |
+
+You can [see the full set of changes for Akka.NET v1.5.18 here](https://github.com/akkadotnet/akka.net/milestones/1.5.18).
+
 #### 1.5.17.1 March 1st 2024 ####
 
 Akka.NET v1.5.17.1 is a patch release for Akka.NET with a bug fix.
