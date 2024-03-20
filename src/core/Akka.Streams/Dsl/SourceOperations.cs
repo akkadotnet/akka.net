@@ -281,6 +281,11 @@ namespace Akka.Streams.Dsl
         {
             return (Source<TOut, TMat>)InternalFlowOperations.SelectAsync(flow, parallelism, asyncMapper);
         }
+        
+        public static Source<TOut, TMat> SelectValueTaskAsync<TIn, TOut, TMat>(this Source<TIn, TMat> flow, int parallelism, Func<TIn, ValueTask<TOut>> asyncMapper)
+        {
+            return (Source<TOut, TMat>)InternalFlowOperations.SelectValueTaskAsync(flow, parallelism, asyncMapper);
+        }
 
         /// <summary>
         /// Transform this stream by applying the given function <paramref name="asyncMapper"/> to each of the elements
