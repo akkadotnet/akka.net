@@ -1175,6 +1175,7 @@ namespace Akka.Actor
     }
     public interface ITimerScheduler
     {
+        System.Collections.Immutable.ImmutableArray<object> ActiveTimers { get; }
         void Cancel(object key);
         void CancelAll();
         bool IsTimerActive(object key);
