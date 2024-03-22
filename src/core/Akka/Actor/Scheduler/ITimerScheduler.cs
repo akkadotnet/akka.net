@@ -6,9 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Immutable;
-using Akka.Actor.Scheduler;
-using Akka.Event;
+using System.Collections.Generic;
 
 namespace Akka.Actor
 {
@@ -76,7 +74,7 @@ namespace Akka.Actor
         /// <summary>
         /// Retrieves all current active timer keys
         /// </summary>
-        public ImmutableArray<object> ActiveTimers { get; }
+        public IReadOnlyCollection<object> ActiveTimers { get; }
         
         /// <summary>
         /// Cancel a timer with a given <paramref name="key"/>.

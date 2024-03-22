@@ -82,8 +82,8 @@ public class ActorLifeCycleFlowSpec : AkkaSpec
                    $"{nameof(ActiveTimers)} = [{string.Join(", ", ActiveTimers)}] }}";
         }
     }
-    
-    internal class LifeCycleActor : UntypedActor, IWithTimers
+
+    private class LifeCycleActor : UntypedActor, IWithTimers
     {
         private readonly int _id;
         private readonly IActorRef _probe;
@@ -246,7 +246,6 @@ public class ActorLifeCycleFlowSpec : AkkaSpec
     [Fact(DisplayName = "ActorBase with manual timer trigger, Lifecycle flow during actor restart, Timers must be reset")]
     public async Task ActorLifecycleWithTimerAssert()
     {
-        // var timerKeys = new[] { new Msg.StartTimer("AroundPreStart", Msg.CallTime.Single) }.ToImmutableArray();
         var testActor = Sys.ActorOf(Props.Create(() => new LifeCycleActor(TestActor, 1, _emptyTimers)));
         await AssertActorStartFlow(1, _emptyTimers);
 
@@ -260,34 +259,13 @@ public class ActorLifeCycleFlowSpec : AkkaSpec
         testActor.Tell(new Msg.Crash("I crashed"));
         await ExpectMsgAsync(new Msg.Crashed(1));
         await AssertActorRestartFlow(1, startedKeys, _emptyTimers);
+        
         testActor.Tell(new Msg.GetTimers());
         timers = await ExpectMsgAsync<Msg.Timers>();
         timers.ActiveTimers.Length.Should().Be(0);
         
         testActor.Tell(new Msg.Stop());
         await AssertActorStopFlow(1, _emptyTimers, _emptyTimers);
-    }
-
-    [Fact(DisplayName = "ActorBase with timers declared in [AroundPreStart], Lifecycle flow during actor restart, Timers must be reset")]
-    public async Task ActorLifecycleWithAroundPreStartTimerAssert()
-    {
-        var timerKeys = new[]
-        {
-            new Msg.StartTimer(Msg.Methods.AroundPreRestart, Msg.CallTime.PreBase)
-        }.ToImmutableArray();
-        var testActor = Sys.ActorOf(Props.Create(() => new LifeCycleActor(TestActor, 1, timerKeys)));
-        await AssertActorStartFlow(1, timerKeys);
-
-        testActor.Tell(new Msg.Crash("I crashed"));
-        await ExpectMsgAsync(new Msg.Crashed(1));
-        await AssertActorRestartFlow(1, _emptyTimers, timerKeys);
-
-        testActor.Tell(new Msg.GetTimers());
-        var timers = await ExpectMsgAsync<Msg.Timers>();
-        timers.ActiveTimers.Length.Should().Be(0);
-        
-        testActor.Tell(new Msg.Stop());
-        await AssertActorStopFlow(1, _emptyTimers, timerKeys);
     }
 
     [Fact(DisplayName = "ActorBase with timers declared in [AroundPreRestart, PreRestart], Lifecycle flow during actor restart, Timers must be reset")]
