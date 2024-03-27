@@ -26,7 +26,7 @@ namespace Akka.Persistence.TestKit
         public Task SetInterceptorAsync(IJournalInterceptor interceptor)
             => _journal.Ask<TestJournal.Ack>(
                 new TestJournal.UseRecoveryInterceptor(interceptor),
-                TimeSpan.FromSeconds(3)
+                TimeSpan.FromSeconds(0.5)
             );
     }
 }

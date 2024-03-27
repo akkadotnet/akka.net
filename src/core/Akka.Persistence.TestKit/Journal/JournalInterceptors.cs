@@ -16,7 +16,7 @@ namespace Akka.Persistence.TestKit
         {
             public static readonly IJournalInterceptor Instance = new Noop();
 
-            public Task InterceptAsync(IPersistentRepresentation message) => Task.FromResult(true);
+            public Task InterceptAsync(IPersistentRepresentation message) => Task.CompletedTask;
         }
 
         internal class Failure : IJournalInterceptor

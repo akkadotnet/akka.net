@@ -7,6 +7,7 @@
 
 using Akka.Actor.Setup;
 using Akka.Configuration;
+using Akka.Event;
 
 namespace Akka.Persistence.TestKit
 {
@@ -111,6 +112,11 @@ namespace Akka.Persistence.TestKit
                 await behaviorSelector(Journal.OnRecovery);
                 await execution();
             }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during execution of WithJournalRecovery");
+                throw;
+            }
             finally
             {
                 await Journal.OnRecovery.Pass();
@@ -136,6 +142,11 @@ namespace Akka.Persistence.TestKit
                 await behaviorSelector(Journal.OnWrite);
                 await execution();
             }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during execution of WithJournalWrite");
+                throw;
+            }
             finally
             {
                 await Journal.OnWrite.Pass();
@@ -157,7 +168,7 @@ namespace Akka.Persistence.TestKit
                 if (execution == null) throw new ArgumentNullException(nameof(execution));
 
                 execution();
-                return Task.FromResult(new object());
+                return Task.CompletedTask;
             });
 
         /// <summary>
@@ -175,7 +186,7 @@ namespace Akka.Persistence.TestKit
                 if (execution == null) throw new ArgumentNullException(nameof(execution));
 
                 execution();
-                return Task.FromResult(new object());
+                return Task.CompletedTask;
             });
 
         /// <summary>
@@ -196,6 +207,11 @@ namespace Akka.Persistence.TestKit
             {
                 await behaviorSelector(Snapshots.OnSave);
                 await execution();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during execution of WithSnapshotSave");
+                throw;
             }
             finally
             {
@@ -222,6 +238,11 @@ namespace Akka.Persistence.TestKit
                 await behaviorSelector(Snapshots.OnLoad);
                 await execution();
             }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during execution of WithSnapshotLoad");
+                throw;
+            }
             finally
             {
                 await Snapshots.OnLoad.Pass();
@@ -247,6 +268,11 @@ namespace Akka.Persistence.TestKit
                 await behaviorSelector(Snapshots.OnDelete);
                 await execution();
             }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during execution of WithSnapshotDelete");
+                throw;
+            }
             finally
             {
                 await Snapshots.OnDelete.Pass();
@@ -268,7 +294,7 @@ namespace Akka.Persistence.TestKit
                 if (execution == null) throw new ArgumentNullException(nameof(execution));
 
                 execution();
-                return Task.FromResult(true);
+                return Task.CompletedTask;
             });
 
         /// <summary>
@@ -286,7 +312,7 @@ namespace Akka.Persistence.TestKit
                 if (execution == null) throw new ArgumentNullException(nameof(execution));
 
                 execution();
-                return Task.FromResult(true);
+                return Task.CompletedTask;
             });
 
         /// <summary>
@@ -304,7 +330,7 @@ namespace Akka.Persistence.TestKit
                 if (execution == null) throw new ArgumentNullException(nameof(execution));
 
                 execution();
-                return Task.FromResult(true);
+                return Task.CompletedTask;
             });
 
         /// <summary>
@@ -348,7 +374,7 @@ namespace Akka.Persistence.TestKit
         {
             var defaultConfig = ConfigurationFactory.FromResource<TestJournal>("Akka.Persistence.TestKit.config.conf");
             if (customConfig == Config.Empty) return defaultConfig;
-            else return defaultConfig.SafeWithFallback(customConfig);
+            else return customConfig.WithFallback(defaultConfig);
         }        
     }
 }

@@ -46,10 +46,15 @@ namespace Akka.Persistence.TCK.Tests
             ExpectMsg<SaveSnapshotSuccess>();
 
             SnapshotStore.Tell(new LoadSnapshot(pid, SnapshotSelectionCriteria.Latest, long.MaxValue), TestActor);
-            ExpectMsg<LoadSnapshotResult>(res => 
-                res.Snapshot.Snapshot.Equals("sample data") 
-                && res.Snapshot.Metadata.PersistenceId == pid
-                && res.Snapshot.Metadata.SequenceNr == 1);
+            ExpectMsg<LoadSnapshotResult>(IsMessage);
+            bool IsMessage(LoadSnapshotResult res)
+            {
+                var result = res.Snapshot.Snapshot.Equals("sample data") 
+                       && res.Snapshot.Metadata.PersistenceId == pid
+                       && res.Snapshot.Metadata.SequenceNr == 1;
+                
+                return result;
+            }
         }
     }
 }
