@@ -4,7 +4,11 @@ title: Akka.Cluster.Sharding - Reliable, Automatic State Distribution with Akka.
 ---
 # Akka.Cluster.Sharding
 
-Cluster sharding is useful in cases when you want to contact with cluster actors using their logical id's, but don't want to care about their physical location inside the cluster or manage their creation. Moreover it's able to re-balance them, as nodes join/leave the cluster. It's often used to represent i.e. Aggregate Roots in Domain Driven Design terminology.
+Cluster sharding is useful in cases when you want to contact with cluster actors using their logical id's, but don't want to care about their physical location inside the cluster or manage their creation. Moreover it's able to re-balance them, as nodes join/leave the cluster.
+
+<!-- markdownlint-disable MD033 -->
+<iframe width="560" height="315" src="https://www.youtube.com/embed/2apFt9v0Vjw?si=1CEHMstm6GSXizSu" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+ <!-- markdownlint-enable MD033 -->
 
 > [!IMPORTANT]
 > Interested in upgrading an Akka.NET v1.4 Cluster.Sharding application to v1.5? [Please read our Akka.Cluster.Sharding v1.5 migration guide](xref:akkadotnet-v15-upgrade-advisories#akkaclustersharding-state-storage).
