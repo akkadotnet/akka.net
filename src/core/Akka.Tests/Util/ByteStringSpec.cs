@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using System.Text;
 using Akka.IO;
@@ -14,15 +15,10 @@ using Xunit;
 
 namespace Akka.Tests.Util
 {
-
-    /// <summary>
-    /// TODO: Should we use the FsCheck.XUnit integration when they upgrade to xUnit 2
-    /// </summary>
     public class ByteStringSpec
     {
         class Generators
         {
-
             // TODO: Align with JVM Akka Generator
             public static Arbitrary<ByteString> ByteStrings()
             {
@@ -45,7 +41,7 @@ namespace Akka.Tests.Util
         [Fact]
         public void A_ByteString_must_have_correct_size_when_slicing_from_index()
         {
-            var a = ByteString.FromBytes(new byte[]{ 1, 2, 3, 4, 5, 6, 7, 8, 9} );
+            var a = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
             var b = ByteString.FromBytes(new byte[] { 10, 11, 12, 13, 14, 15, 16, 17, 18 });
 
             (a + b).Slice(b.Count).Count.Should().Be(a.Count);
@@ -54,32 +50,24 @@ namespace Akka.Tests.Util
         [Fact]
         public void A_ByteString_must_be_sequential_when_slicing_from_start()
         {
-            Prop.ForAll((ByteString a, ByteString b) => (a + b).Slice(0, a.Count).SequenceEqual(a))
+            Prop.ForAll((ByteString a, ByteString b) =>
+                    (a + b).Slice(0, a.Count).Memory.Span.SequenceEqual(a.Memory.Span))
                 .QuickCheckThrowOnFailure();
         }
+
         [Fact]
         public void A_ByteString_must_be_sequential_when_slicing_from_index()
         {
-            var a = ByteString.FromBytes(new byte[]{ 1, 2, 3, 4, 5, 6, 7, 8, 9} );
+            var a = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
             var b = ByteString.FromBytes(new byte[] { 10, 11, 12, 13, 14, 15, 16, 17, 18 });
 
             (a + b).Slice(a.Count).Should().BeEquivalentTo(b);
         }
 
         [Fact]
-        public void A_ByteString_must_be_equal_to_the_original_when_compacting()
-        {
-            Prop.ForAll((ByteString xs) =>
-            {
-                var ys = xs.Compact();
-                return xs.SequenceEqual(ys) && ys.IsCompact;
-            }).QuickCheckThrowOnFailure();
-        }
-
-        [Fact]
         public void A_ByteString_must_be_equal_to_the_original_when_recombining()
         {
-            var xs = ByteString.FromBytes(new byte[]{ 1, 2, 3, 4, 5, 6, 7, 8, 9} );
+            var xs = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
             var tmp1 = xs.Slice(0, xs.Count / 2);
             var tmp2 = xs.Slice(xs.Count / 2);
             var tmp11 = tmp1.Slice(0, tmp1.Count / 2);
@@ -90,32 +78,24 @@ namespace Akka.Tests.Util
         [Fact]
         public void A_ByteString_must_behave_as_expected_when_created_from_and_decoding_to_String()
         {
-            Prop.ForAll((string s) => ByteString.FromString(s, Encoding.UTF8).ToString(Encoding.UTF8) == (s ?? "")) // TODO: What should we do with null string?
+            Prop.ForAll((string s) =>
+                    ByteString.FromString(s, Encoding.UTF8).ToString(Encoding.UTF8) ==
+                    (s ?? "")) // TODO: What should we do with null string?
                 .QuickCheckThrowOnFailure();
         }
 
         [Fact]
         public void A_ByteString_must_behave_as_expected_when_created_from_and_decoding_to_unicode_String()
         {
-            Prop.ForAll((string s) => ByteString.FromString(s, Encoding.Unicode).ToString(Encoding.Unicode) == (s ?? "")) // TODO: What should we do with null string?
+            Prop.ForAll(
+                    (string s) =>
+                        ByteString.FromString(s, Encoding.Unicode).ToString(Encoding.Unicode) ==
+                        (s ?? "")) // TODO: What should we do with null string?
                 .QuickCheckThrowOnFailure();
         }
 
-        [Fact]
-        public void A_ByteString_must_behave_as_expected_when_compacting()
-        {
-            Prop.ForAll((ByteString a) =>
-            {
-                var wasCompact = a.IsCompact;
-                var b = a.Compact();
-                return ((!wasCompact) || (b == a)) &&
-                       b.SequenceEqual(a) &&
-                       b.IsCompact &&
-                       b.Compact() == b;
-            }).QuickCheckThrowOnFailure();
-        }
-
-        [Fact(DisplayName = @"A concatenated byte string should return the index of a byte in one the two byte strings.")]
+        [Fact(DisplayName =
+            @"A concatenated byte string should return the index of a byte in one the two byte strings.")]
         public void A_concatenated_bytestring_must_return_correct_index_of_elements_in_string()
         {
             var b = ByteString.FromBytes(new byte[] { 1 }) + ByteString.FromBytes(new byte[] { 2 });
@@ -124,7 +104,8 @@ namespace Akka.Tests.Util
             Assert.Equal(1, offset);
         }
 
-        [Fact(DisplayName = @"A concatenated byte string should return -1 when it was not found in the concatenated byte strings")]
+        [Fact(DisplayName =
+            @"A concatenated byte string should return -1 when it was not found in the concatenated byte strings")]
         public void A_concatenated_bytestring_must_return_negative_one_when_an_element_was_not_found()
         {
             var b = ByteString.FromBytes(new byte[] { 1 }) + ByteString.FromBytes(new byte[] { 2 });
@@ -133,7 +114,8 @@ namespace Akka.Tests.Util
             Assert.Equal(-1, offset);
         }
 
-        [Fact(DisplayName = "A concatenated byte string composed of partial characters must return the correct string for ToString(Unicode)")]
+        [Fact(DisplayName =
+            "A concatenated byte string composed of partial characters must return the correct string for ToString(Unicode)")]
         public void A_concatenated_ByteString_with_partial_characters_must_return_correct_string_for_ToString_Unicode()
         {
             // In Unicode encoding, characters present in the ASCII character set are 2 bytes long.
@@ -152,7 +134,8 @@ namespace Akka.Tests.Util
             Assert.Equal(expected, actual);
         }
 
-        [Fact(DisplayName = "A concatenated byte string composed of partial characters must return the correct string for ToString(UTF8)")]
+        [Fact(DisplayName =
+            "A concatenated byte string composed of partial characters must return the correct string for ToString(UTF8)")]
         public void A_concatenated_ByteString_with_partial_characters_must_return_correct_string_for_ToString_UTF8()
         {
             // In UTF-8 encoding, characters present in the ASCII character set are only 1 byte long.
