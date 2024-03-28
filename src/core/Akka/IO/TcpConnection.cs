@@ -945,6 +945,7 @@ namespace Akka.IO
             {
                 try
                 {
+                    // TODO: avoid use of SocketAsyncEventArgs on newer platforms
                     _sendArgs.SetBuffer(_dataToSend);
                     if (!_connection.Socket.SendAsync(_sendArgs))
                         _self.Tell(SocketSent.Instance);
