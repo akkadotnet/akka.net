@@ -66,6 +66,7 @@ namespace Akka.IO
                 DoConnect(new IPEndPoint(r.Addr, remoteAddress.Port));
                 return true;
             }
+
             return false;
         };
 
@@ -106,62 +107,66 @@ namespace Akka.IO
         {
             switch (message)
             {
-                case SuspendReading _: _readingSuspended = true; return true;
+                case SuspendReading _:
+                    _readingSuspended = true;
+                    return true;
                 case ResumeReading _:
+                {
+                    _readingSuspended = false;
+                    if (_pendingRead != null)
                     {
-                        _readingSuspended = false;
-                        if (_pendingRead != null)
-                        {
-                            _connect.Handler.Tell(_pendingRead);
-                            _pendingRead = null;
-                            ReceiveAsync();
-                        }
-                        return true;
+                        _connect.Handler.Tell(_pendingRead);
+                        _pendingRead = null;
+                        ReceiveAsync();
                     }
-                
+
+                    return true;
+                }
+
                 case SocketReceived socketReceived:
                     _pendingReceive = null;
-                    DoRead(socketReceived, _connect.Handler); 
+                    DoRead(socketReceived, _connect.Handler);
                     return true;
-                
+
                 case Disconnect _:
-                    {
-                        Log.Debug("Closing UDP connection to [{0}]", _connect.RemoteAddress);
+                {
+                    Log.Debug("Closing UDP connection to [{0}]", _connect.RemoteAddress);
 
-                        _socket.Dispose();
+                    _socket.Dispose();
 
-                        Sender.Tell(Disconnected.Instance);
-                        Log.Debug("Connection closed to [{0}], stopping listener", _connect.RemoteAddress);
-                        Context.Stop(Self);
-                        return true;
-                    }
+                    Sender.Tell(Disconnected.Instance);
+                    Log.Debug("Connection closed to [{0}], stopping listener", _connect.RemoteAddress);
+                    Context.Stop(Self);
+                    return true;
+                }
                 case Send send:
+                {
+                    if (WritePending)
                     {
-                        if (WritePending)
+                        if (Udp.Settings.TraceLogging) Log.Debug("Dropping write because queue is full");
+                        Sender.Tell(new CommandFailed(send));
+                    }
+                    else
+                    {
+                        if (!send.Payload.IsEmpty)
                         {
-                            if (Udp.Settings.TraceLogging) Log.Debug("Dropping write because queue is full");
-                            Sender.Tell(new CommandFailed(send));
+                            _pendingSend = (send, Sender);
+                            DoWrite();
                         }
                         else
                         {
-                            if (!send.Payload.IsEmpty)
-                            {
-                                _pendingSend = (send, Sender);
-                                DoWrite();
-                            }
-                            else
-                            {
-                                if (send.WantsAck)
-                                    Sender.Tell(send.Ack);
-                            }
+                            if (send.WantsAck)
+                                Sender.Tell(send.Ack);
                         }
-                        return true;
                     }
+
+                    return true;
+                }
                 case SocketSent sent:
                 {
                     if (_pendingSend == null)
                         throw new Exception("There are no pending sent");
-                    
+
                     var (send, sender) = _pendingSend.Value;
                     if (send.WantsAck)
                         sender.Tell(send.Ack);
@@ -193,7 +198,13 @@ namespace Akka.IO
                 var (send, sender) = _pendingSend.Value;
                 var data = send.Payload;
 
-                var bytesWritten = _socket.Send(data.Buffers);
+#if NET6_0_OR_GREATER
+                var bytesWritten = _socket.Send(data.Memory.Span);
+#else
+                // pay the .NET Framework performance penalty
+                var array = data.ToArray();
+                var bytesWritten = _socket.Send(array);
+#endif
                 if (Udp.Settings.TraceLogging)
                     Log.Debug("Wrote [{0}] bytes to socket", bytesWritten);
 
@@ -232,19 +243,20 @@ namespace Akka.IO
             }
             catch (Exception e)
             {
-                Log.Error(e, "Failure while connecting UDP channel to remote address [{0}] local address [{1}]", _connect.RemoteAddress, _connect.LocalAddress);
+                Log.Error(e, "Failure while connecting UDP channel to remote address [{0}] local address [{1}]",
+                    _connect.RemoteAddress, _connect.LocalAddress);
                 _commander.Tell(new CommandFailed(_connect));
                 Context.Stop(Self);
             }
         }
 
         private SocketAsyncEventArgs _pendingReceive;
-        
+
         private void ReceiveAsync()
         {
             if (_pendingReceive != null)
                 return;
-            
+
             var e = Udp.SocketEventArgsPool.Acquire(Self);
             _pendingReceive = e;
             if (!_socket.ReceiveAsync(e))
