@@ -428,6 +428,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var firstGroup = (Source<IEnumerable<byte>, NotUsed>)Source.FromPublisher(publisherProbe)
                     .GroupBy(256, element => element[0])
+                    .Select(b => b.ToArray()) // have to convert to an array
                     .Select(b => b.Reverse())
                     .MergeSubstreams();
                 var secondGroup = (Source<IEnumerable<byte>, NotUsed>)firstGroup.GroupBy(256, bytes => bytes.First())
