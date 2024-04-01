@@ -240,14 +240,9 @@ namespace Akka.IO
             return message =>
             {
                 if (handleWrite(message)) return true;
-                var cmd = message as CloseCommand;
-                if (cmd != null)
-                {
-                    HandleClose(info, Sender, cmd.Event);
-                    return true;
-                }
-                if (message is ResumeReading) return true;
-                return false;
+                if (message is not CloseCommand cmd) return message is ResumeReading;
+                HandleClose(info, Sender, cmd.Event);
+                return true;
             };
         }
 

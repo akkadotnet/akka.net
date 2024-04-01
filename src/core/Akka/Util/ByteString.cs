@@ -514,6 +514,7 @@ namespace Akka.IO
         /// writeable <paramref name="stream"/>.
         /// </summary>
         /// <param name="stream"></param>
+        [Obsolete("This method will be removed in future versions of Akka.NET.")]
         public void WriteTo(Stream stream)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
@@ -528,6 +529,7 @@ namespace Akka.IO
         /// to a provided writeable <paramref name="stream"/>.
         /// </summary>
         /// <param name="stream"></param>
+        [Obsolete("This method will be removed in future versions of Akka.NET.")]
         public Task WriteToAsync(Stream stream)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));

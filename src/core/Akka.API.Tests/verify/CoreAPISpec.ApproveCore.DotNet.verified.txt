@@ -3653,14 +3653,17 @@ namespace Akka.IO
         BigEndian = 0,
         LittleEndian = 1,
     }
-    [System.Diagnostics.DebuggerDisplayAttribute("(Count = {_count}, Buffers = {_buffers})")]
-    public sealed class ByteString : System.Collections.Generic.IEnumerable<byte>, System.Collections.IEnumerable, System.IEquatable<Akka.IO.ByteString>
+    [System.Diagnostics.DebuggerDisplayAttribute("(Count = {Count}, Buffer = {Memory})")]
+    public sealed class ByteString : System.IEquatable<Akka.IO.ByteString>
     {
         public int Count { get; }
         public static Akka.IO.ByteString Empty { get; }
+        [System.ObsoleteAttribute("This property will be removed in future versions of Akka.NET.")]
         public bool IsCompact { get; }
         public bool IsEmpty { get; }
         public byte this[int index] { get; }
+        public System.ReadOnlyMemory<byte> Memory { get; }
+        [System.ObsoleteAttribute("This method will be removed in future versions of Akka.NET.")]
         public Akka.IO.ByteString Compact() { }
         public Akka.IO.ByteString Concat(Akka.IO.ByteString other) { }
         public static Akka.IO.ByteString CopyFrom(byte[] array) { }
@@ -3672,9 +3675,13 @@ namespace Akka.IO
         public static Akka.IO.ByteString CopyFrom(System.Span<byte> span, int offset, int count) { }
         public static Akka.IO.ByteString CopyFrom(System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> buffers) { }
         public int CopyTo(byte[] buffer, int index, int count) { }
+        [System.ObsoleteAttribute("This method will be removed in future versions of Akka.NET.")]
         public int CopyTo(ref System.Memory<byte> buffer) { }
+        [System.ObsoleteAttribute("This method will be removed in future versions of Akka.NET.")]
         public int CopyTo(ref System.Memory<byte> buffer, int index, int count) { }
+        [System.ObsoleteAttribute("This method will be removed in future versions of Akka.NET.")]
         public int CopyTo(ref System.Span<byte> buffer) { }
+        [System.ObsoleteAttribute("This method will be removed in future versions of Akka.NET.")]
         public int CopyTo(ref System.Span<byte> buffer, int index, int count) { }
         public override bool Equals(object obj) { }
         public bool Equals(Akka.IO.ByteString other) { }
@@ -3684,7 +3691,6 @@ namespace Akka.IO
         public static Akka.IO.ByteString FromBytes(System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> buffers) { }
         public static Akka.IO.ByteString FromString(string str) { }
         public static Akka.IO.ByteString FromString(string str, System.Text.Encoding encoding) { }
-        public System.Collections.Generic.IEnumerator<byte> GetEnumerator() { }
         public override int GetHashCode() { }
         public bool HasSubstring(Akka.IO.ByteString other, int index) { }
         public int IndexOf(byte b) { }
@@ -3694,12 +3700,16 @@ namespace Akka.IO
         public byte[] ToArray() { }
         public override string ToString() { }
         public string ToString(System.Text.Encoding encoding) { }
+        [System.ObsoleteAttribute("This method will be removed in future versions of Akka.NET.")]
         public void WriteTo(System.IO.Stream stream) { }
+        [System.ObsoleteAttribute("This method will be removed in future versions of Akka.NET.")]
         public System.Threading.Tasks.Task WriteToAsync(System.IO.Stream stream) { }
         public static Akka.IO.ByteString +(Akka.IO.ByteString x, Akka.IO.ByteString y) { }
         public static bool ==(Akka.IO.ByteString x, Akka.IO.ByteString y) { }
         public static Akka.IO.ByteString op_Explicit(byte[] bytes) { }
         public static byte[] op_Explicit(Akka.IO.ByteString byteString) { }
+        public static Akka.IO.ByteString op_Explicit(System.Memory<byte> memory) { }
+        public static Akka.IO.ByteString op_Explicit(System.ReadOnlyMemory<byte> memory) { }
         public static bool !=(Akka.IO.ByteString x, Akka.IO.ByteString y) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
