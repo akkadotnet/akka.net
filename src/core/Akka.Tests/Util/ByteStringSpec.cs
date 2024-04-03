@@ -150,7 +150,7 @@ namespace Akka.Tests.Util
             data += ByteString.CopyFrom(rawData, 1, 3); // One and a half characters
             Assert.Equal(rawData.Length, data.Count);
 
-            string actual = data.ToString(encoding);
+            var actual = data.ToString(encoding);
             Assert.Equal(expected, actual);
         }
 
@@ -173,6 +173,31 @@ namespace Akka.Tests.Util
             Assert.Equal(expectedLeft, actualLeft);
             Assert.Equal(expectedRight, actualRight);
         }
+        
+        // generate a test case for the ByteString.HasSubstring method, when one big ByteString contains another ByteString
+        [Fact]
+        public void A_ByteString_must_return_true_when_containing_another_ByteString()
+        {
+            Prop.ForAll((ByteString a, ByteString b) =>
+                {
+                    var big = a + b + a;
+                    return ByteStringHasSubstringZeroIndex().Label($"big: {big}, b: {b}")
+                        .And(ByteStringHasSubstringNonZeroIndex().Label($"big: {big}, b: {b}"));
+
+                    bool ByteStringHasSubstringZeroIndex()
+                    {
+                        return big.HasSubstring(b, 0);
+                    }
+                    
+                    bool ByteStringHasSubstringNonZeroIndex()
+                    {
+                        return big.HasSubstring(b, a.Count);
+                    }
+                    
+                })
+                .QuickCheckThrowOnFailure();
+        }
+        
 
 #if !NETFRAMEWORK
         [Fact(DisplayName = "A sliced byte string using Range must return the correct string for ToString")]
