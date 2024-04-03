@@ -169,39 +169,60 @@ namespace Akka.Streams.Dsl
             protected FramingException(SerializationInfo info, StreamingContext context) : base(info, context) { }
         }
 
-        private static readonly Func<IEnumerator<byte>, int, int> BigEndianDecoder = (enumerator, length) =>
+        private static readonly Func<ReadOnlyMemory<byte>, int, int> BigEndianDecoder = (byteData, length) =>
         {
-            var count = length;
-            var decoded = 0;
-            while (count > 0)
+            if (length < 1 || length > 4)
             {
+                throw new ArgumentOutOfRangeException(nameof(length), "Length must be between 1 and 4.");
+            }
+
+            if (byteData.Length < length)
+            {
+                throw new IndexOutOfRangeException("BigEndianDecoder does not have enough bytes to decode.");
+            }
+
+            var decoded = 0;
+            for (int i = 0; i < length; i++)
+            {
+                // Shift the previously accumulated value to the left, making space for the next byte
                 decoded <<= 8;
-                if (!enumerator.MoveNext()) throw new IndexOutOfRangeException("LittleEndianDecoder reached end of byte string");
-                decoded |= enumerator.Current & 0xFF;
-                count--;
+        
+                // Read the next byte and add it to the result
+                decoded |= byteData.Span[i] & 0xFF;
             }
 
             return decoded;
         };
 
-        private static readonly Func<IEnumerator<byte>, int, int> LittleEndianDecoder = (enumerator, length) =>
+
+        private static readonly Func<ReadOnlyMemory<byte>, int, int> LittleEndianDecoder = (byteData, length) =>
         {
-            var highestOcted = (length - 1) << 3;
-            var mask = (int) (1L << (length << 3)) - 1;
-            var count = length;
+            if (length < 1 || length > 4)
+            {
+                throw new ArgumentOutOfRangeException(nameof(length), "Length must be between 1 and 4.");
+            }
+
+            var highestOctet = (length - 1) << 3;
+            var mask = (int)(1L << (length << 3)) - 1;
             var decoded = 0;
 
-            while (count > 0)
+            for (int i = 0; i < length; i++)
             {
-                // decoded >>>= 8 on the jvm
-                decoded = (int) ((uint) decoded >> 8);
-                if (!enumerator.MoveNext()) throw new IndexOutOfRangeException("LittleEndianDecoder reached end of byte string");
-                decoded += (enumerator.Current & 0xFF) << highestOcted;
-                count--;
+                if (i >= byteData.Length)
+                {
+                    throw new IndexOutOfRangeException("LittleEndianDecoder reached end of byte array.");
+                }
+        
+                // Shift the previously processed bytes to the right, making space for the next byte
+                decoded = (int)((uint)decoded >> 8);
+        
+                // Read the next byte and insert it into the correct position
+                decoded += (byteData.Span[i] & 0xFF) << highestOctet;
             }
 
             return decoded & mask;
         };
+
 
         private sealed class SimpleFramingProtocolEncoderStage : SimpleLinearGraphStage<ByteString>
         {
@@ -440,7 +461,7 @@ namespace Akka.Streams.Dsl
                         PushFrame();
                     else if (bufferSize >= _stage._minimumChunkSize)
                     {
-                        var iterator = _buffer.Slice(_stage._lengthFieldOffset).GetEnumerator();
+                        var iterator = _buffer.Memory.Slice(_stage._lengthFieldOffset);
                         var parsedLength = _stage._intDecoder(iterator, _stage._lengthFieldLength);
 
                         _frameSize = _stage._computeFrameSize.HasValue
@@ -480,7 +501,7 @@ namespace Akka.Streams.Dsl
             private readonly int _maximumFramelength;
             private readonly int _lengthFieldOffset;
             private readonly int _minimumChunkSize;
-            private readonly Func<IEnumerator<byte>, int, int> _intDecoder;
+            private readonly Func<ReadOnlyMemory<byte>, int, int> _intDecoder;
             private readonly Option<Func<IReadOnlyList<byte>, int, int>> _computeFrameSize;
 
             // For the sake of binary compatibility
