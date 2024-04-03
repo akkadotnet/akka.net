@@ -226,6 +226,19 @@ namespace Akka.Tests.Util
                 })
                 .QuickCheckThrowOnFailure();
         }
+        
+        // write a unit test for the IndexOf method when we're looking for a single byte - do it without using FsCheck
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        public void A_ByteString_must_return_correct_index_when_containing_a_single_byte(int startingIndex)
+        {
+            var a = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+            var b = ByteString.FromBytes(new byte[] { 5 });
+
+            var i = a.IndexOf(b, startingIndex);
+            Assert.Equal(4, i);
+        }
 
 
 #if !NETFRAMEWORK

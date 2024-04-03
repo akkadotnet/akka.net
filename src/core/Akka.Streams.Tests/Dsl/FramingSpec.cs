@@ -126,21 +126,20 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Delimiter_bytes_based_framing_must_work_with_various_delimiters_and_test_sequences()
+        public async Task Delimiter_bytes_based_framing_must_work_with_various_delimiters_and_test_sequences()
         {
             for (var i = 1; i <= 100; i++)
             {
                 foreach (var delimiter in DelimiterBytes)
                 {
                     var testSequence = CompleteTestSequence(delimiter).ToList();
-                    var task = Source.From(testSequence)
+                    var task = await Source.From(testSequence)
                         .Select(x => x + delimiter)
                         .Via(Rechunk)
                         .Via(Framing.Delimiter(delimiter, 256))
                         .RunWith(Sink.Seq<ByteString>(), Materializer);
-
-                    task.Wait(TimeSpan.FromDays(3)).Should().BeTrue();
-                    task.Result.Should().BeEquivalentTo(testSequence);
+                    
+                    task.Should().BeEquivalentTo(testSequence);
                 }
             }
         }
