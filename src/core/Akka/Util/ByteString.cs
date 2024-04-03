@@ -371,20 +371,12 @@ namespace Akka.IO
         {
             return _memory.Span[from..].IndexOf(b);
         }
-
-        /// <summary>
-        /// Checks if a subsequence determined by the <paramref name="other"/> 
-        /// byte string is can be found in current one, starting from provided 
-        /// <paramref name="index"/>.
-        /// </summary>
-        /// <param name="other"></param>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        public bool HasSubstring(ByteString other, int index)
+        
+        public int IndexOf(ByteString other, int index = 0)
         {
-            if (other.Count == 0) return true; // Empty spans are always "found".
+            if (other.Count == 0) return index; // Empty spans are always "found".
             if (index < 0 || index > Count) throw new ArgumentOutOfRangeException(nameof(index), "Start index is out of range.");
-            if (Count - index < other.Count) return false; // Can't find if `toFind` is larger considering the start index.
+            if (Count - index < other.Count) return -1; // Can't find if `toFind` is larger considering the start index.
 
             for (var i = index; i <= Count - other.Count; i++)
             {
@@ -398,10 +390,23 @@ namespace Akka.IO
                         break;
                     }
                 }
-                if (found) return true;
+                if (found) return i;
             }
 
-            return false;
+            return -1;
+        }
+
+        /// <summary>
+        /// Checks if a subsequence determined by the <paramref name="other"/> 
+        /// byte string is can be found in current one, starting from provided 
+        /// <paramref name="index"/>.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public bool HasSubstring(ByteString other, int index)
+        {
+            return IndexOf(other, index) > -1;
         }
 
         /// <summary>

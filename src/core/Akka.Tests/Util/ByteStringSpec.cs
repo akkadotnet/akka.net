@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Text;
+using Akka.Actor;
 using Akka.IO;
 using FluentAssertions;
 using FsCheck;
@@ -173,7 +174,7 @@ namespace Akka.Tests.Util
             Assert.Equal(expectedLeft, actualLeft);
             Assert.Equal(expectedRight, actualRight);
         }
-        
+
         // generate a test case for the ByteString.HasSubstring method, when one big ByteString contains another ByteString
         [Fact]
         public void A_ByteString_must_return_true_when_containing_another_ByteString()
@@ -188,16 +189,44 @@ namespace Akka.Tests.Util
                     {
                         return big.HasSubstring(b, 0);
                     }
-                    
+
                     bool ByteStringHasSubstringNonZeroIndex()
                     {
                         return big.HasSubstring(b, a.Count);
                     }
-                    
                 })
                 .QuickCheckThrowOnFailure();
         }
-        
+
+        // generate a test case for ByteString.IndexOf of another ByteString and ensure that the index is correct (should match the beginning of the other ByteString)
+        [Fact]
+        public void A_ByteString_must_return_correct_index_when_containing_another_ByteString()
+        {
+            Prop.ForAll((ByteString a, ByteString b) =>
+                {
+                    return Prop.When(b.Count > 0, () =>
+                    {
+                        var big = a + b + a;
+                        var i = ByteStringIndexOfZeroIndex();
+                        var g = ByteStringIndexOfNonZeroIndex();
+
+                        return (i == a.Count).Label($"big: {big}, b: {b}, expected start: {a.Count}, actual start: {i}")
+                            .And((g == a.Count).Label($"big: {big}, b: {b}, expected start: {a.Count}, actual start: {g}"));
+
+                        int ByteStringIndexOfZeroIndex()
+                        {
+                            return big.IndexOf(b, 0);
+                        }
+
+                        int ByteStringIndexOfNonZeroIndex()
+                        {
+                            return big.IndexOf(b, a.Count);
+                        }
+                    });
+                })
+                .QuickCheckThrowOnFailure();
+        }
+
 
 #if !NETFRAMEWORK
         [Fact(DisplayName = "A sliced byte string using Range must return the correct string for ToString")]
