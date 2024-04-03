@@ -369,7 +369,8 @@ namespace Akka.IO
         /// <returns></returns>
         public int IndexOf(byte b, int from)
         {
-            return _memory.Span[from..].IndexOf(b);
+            var rValue = _memory.Span[from..].IndexOf(b);
+            return rValue == -1 ? -1 : rValue + from;
         }
         
         public int IndexOf(ByteString other, int index = 0)
