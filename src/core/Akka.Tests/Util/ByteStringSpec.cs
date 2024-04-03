@@ -238,6 +238,37 @@ namespace Akka.Tests.Util
 
             var i = a.IndexOf(b, startingIndex);
             Assert.Equal(4, i);
+            
+            // also do the comparison with the byte value
+            var j = a.IndexOf(5, startingIndex);
+            Assert.Equal(4, j);
+        }
+        
+        [Fact]
+        public void A_ByteString_must_return_correct_index_when_containing_a_single_byte_front()
+        {
+            var a = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+            var b = ByteString.FromBytes(new byte[] { 1 });
+
+            var i = a.IndexOf(b);
+            Assert.Equal(0, i);
+            
+            // also do the comparison with the byte value
+            var j = a.IndexOf(1);
+            Assert.Equal(0, j);
+        }
+        
+        [Fact]
+        public void A_ByteString_must_return_correct_index_when_containing_a_single_byte_back()
+        {
+            var a = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+            var b = ByteString.FromBytes(new byte[] { 9 });
+
+            var i = a.IndexOf(b);
+            Assert.Equal(8, i);
+            
+            // also do the comparison with the byte value
+            var j = a.IndexOf(9);
         }
 
 
