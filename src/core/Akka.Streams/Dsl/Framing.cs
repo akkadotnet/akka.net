@@ -169,45 +169,39 @@ namespace Akka.Streams.Dsl
             protected FramingException(SerializationInfo info, StreamingContext context) : base(info, context) { }
         }
 
-        private static int BigEndianDecoder(ref ReadOnlySpan<byte> enumerator, int length)
+        private static readonly Func<IEnumerator<byte>, int, int> BigEndianDecoder = (enumerator, length) =>
         {
-            if (length > enumerator.Length)
-            {
-                throw new ArgumentException("Length exceeds the size of the enumerator.");
-            }
-
-            var result = 0;
-
-            // Assuming 'length' is 4 for a 32-bit integer.
-            // Adjust the loop and shift amounts if dealing with different sizes.
-            for (var i = 0; i < length; i++)
-            {
-                result |= enumerator[i] << ((length - 1 - i) * 8);
-            }
-
-            return result;
-        }
-
-        private static int LittleEndianDecoder(ref ReadOnlySpan<byte> span, int length)
-        {
-            if (length > span.Length)
-            {
-                throw new IndexOutOfRangeException("LittleEndianDecoder reached end of byte span");
-            }
-
+            var count = length;
             var decoded = 0;
-            var highestOctetShift = (length - 1) << 3;
-            var mask = (int)(1L << (length << 3)) - 1;
-
-            for (var i = 0; i < length; i++)
+            while (count > 0)
             {
-                // Shift and add the ith byte to 'decoded'. No need for >>>= as in JVM; just shift appropriately.
-                var shiftAmount = highestOctetShift - (i << 3);
-                decoded |= (span[i] & 0xFF) << shiftAmount;
+                decoded <<= 8;
+                if (!enumerator.MoveNext()) throw new IndexOutOfRangeException("LittleEndianDecoder reached end of byte string");
+                decoded |= enumerator.Current & 0xFF;
+                count--;
+            }
+
+            return decoded;
+        };
+
+        private static readonly Func<IEnumerator<byte>, int, int> LittleEndianDecoder = (enumerator, length) =>
+        {
+            var highestOcted = (length - 1) << 3;
+            var mask = (int) (1L << (length << 3)) - 1;
+            var count = length;
+            var decoded = 0;
+
+            while (count > 0)
+            {
+                // decoded >>>= 8 on the jvm
+                decoded = (int) ((uint) decoded >> 8);
+                if (!enumerator.MoveNext()) throw new IndexOutOfRangeException("LittleEndianDecoder reached end of byte string");
+                decoded += (enumerator.Current & 0xFF) << highestOcted;
+                count--;
             }
 
             return decoded & mask;
-        }
+        };
 
         private sealed class SimpleFramingProtocolEncoderStage : SimpleLinearGraphStage<ByteString>
         {
@@ -348,8 +342,8 @@ namespace Akka.Streams.Dsl
                         else if (_buffer.HasSubstring(_stage._separatorBytes, possibleMatchPosition))
                         {
                             // Found a match
-                            var parsedFrame = _buffer.Slice(0, possibleMatchPosition);
-                            _buffer = _buffer.Slice(possibleMatchPosition + _stage._separatorBytes.Count);
+                            var parsedFrame = _buffer.Slice(0, possibleMatchPosition).Compact();
+                            _buffer = _buffer.Slice(possibleMatchPosition + _stage._separatorBytes.Count).Compact();
                             _nextPossibleMatch = 0;
                             Push(_stage.Outlet, parsedFrame);
 
@@ -428,7 +422,7 @@ namespace Akka.Streams.Dsl
                 /// </summary>
                 private void PushFrame()
                 {
-                    var emit = _buffer.Slice(0, _frameSize);
+                    var emit = _buffer.Slice(0, _frameSize).Compact();
                     _buffer = _buffer.Slice(_frameSize);
                     _frameSize = int.MaxValue;
                     Push(_stage.Outlet, emit);
@@ -446,14 +440,9 @@ namespace Akka.Streams.Dsl
                         PushFrame();
                     else if (bufferSize >= _stage._minimumChunkSize)
                     {
-                        var iterator = _buffer.Memory.Span.Slice(_stage._lengthFieldOffset);
-                        var parsedLength = _stage._byteOrder switch {
-                            ByteOrder.BigEndian => BigEndianDecoder(ref iterator, _stage._lengthFieldLength),
-                            ByteOrder.LittleEndian => LittleEndianDecoder(ref iterator, _stage._lengthFieldLength),
-                            _ => throw new NotSupportedException($"ByteOrder {_stage._byteOrder} is not supported")
-                        }; 
+                        var iterator = _buffer.Slice(_stage._lengthFieldOffset).GetEnumerator();
+                        var parsedLength = _stage._intDecoder(iterator, _stage._lengthFieldLength);
 
-                        // TODO: AVOID ARRAY COPYING AGAIN HERE
                         _frameSize = _stage._computeFrameSize.HasValue
                             ? _stage._computeFrameSize.Value(_buffer.Slice(0, _stage._lengthFieldOffset).ToArray(), parsedLength)
                             : parsedLength + _stage._minimumChunkSize;
@@ -491,7 +480,7 @@ namespace Akka.Streams.Dsl
             private readonly int _maximumFramelength;
             private readonly int _lengthFieldOffset;
             private readonly int _minimumChunkSize;
-            private readonly ByteOrder _byteOrder;
+            private readonly Func<IEnumerator<byte>, int, int> _intDecoder;
             private readonly Option<Func<IReadOnlyList<byte>, int, int>> _computeFrameSize;
 
             // For the sake of binary compatibility
@@ -511,7 +500,7 @@ namespace Akka.Streams.Dsl
                 _lengthFieldOffset = lengthFieldOffset;
                 _minimumChunkSize = lengthFieldOffset + lengthFieldLength;
                 _computeFrameSize = computeFrameSize;
-                _byteOrder = byteOrder;
+                _intDecoder = byteOrder == ByteOrder.BigEndian ? BigEndianDecoder : LittleEndianDecoder;
             }
 
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
