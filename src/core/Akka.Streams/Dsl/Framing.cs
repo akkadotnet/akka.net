@@ -326,7 +326,7 @@ namespace Akka.Streams.Dsl
                         else
                             FailStage(
                                 new FramingException(
-                                    "Stream finished but there was a truncated final frame in the buffer"));
+                                    $"Stream finished but there was a truncated final frame in the buffer + [{_buffer.ToString()}]"));
                     }
                     else
                     {
@@ -344,26 +344,13 @@ namespace Akka.Streams.Dsl
                     // check to see if the buffer is big enough to contain the separator
                     if (_buffer.Count < _stage._separatorBytes.Count)
                     {
-                        if (IsClosed(_stage.Inlet))
-                        {
-                            if (_stage._allowTruncation)
-                            {
-                                Push(_stage.Outlet, _buffer);
-                                CompleteStage();
-                            }
-                            else
-                                FailStage(
-                                    new FramingException(
-                                        "Stream finished but there was a truncated final frame in the buffer"));
-                        }
-                        else
-                            TryPull();
+                        TryPull();
 
                         return;
                     }
 
                     // search for the separator within the buffer
-                    var definiteMatch = _buffer.IndexOf(_stage._separatorBytes, index: _nextPossibleMatch);
+                    var definiteMatch = _buffer.IndexOf(_stage._separatorBytes, _nextPossibleMatch);
                     if (definiteMatch > _stage._maximumLineBytes)
                     {
                         FailStage(
@@ -371,6 +358,7 @@ namespace Akka.Streams.Dsl
                                 $"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
                         return;
                     }
+
                     if (definiteMatch == -1)
                     {
                         if (_buffer.Count > _stage._maximumLineBytes)
@@ -389,14 +377,15 @@ namespace Akka.Streams.Dsl
                     else
                     {
                         // Found a match
-                        var parsedFrame = _buffer.Slice(0, definiteMatch).Compact();
-                        _buffer = _buffer.Slice(definiteMatch + _stage._separatorBytes.Count).Compact();
+                        var parsedFrame = _buffer.Slice(0, definiteMatch);
+                        _buffer = _buffer.Slice(definiteMatch + _stage._separatorBytes.Count);
                         _nextPossibleMatch = 0;
                         Push(_stage.Outlet, parsedFrame);
 
                         if (IsClosed(_stage.Inlet) && _buffer.IsEmpty)
                             CompleteStage();
                     }
+
 
                     //     var possibleMatchPosition = _buffer.IndexOf(_firstSeparatorByte, from: _nextPossibleMatch);
                     //

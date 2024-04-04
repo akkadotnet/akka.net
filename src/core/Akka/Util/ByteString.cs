@@ -378,23 +378,12 @@ namespace Akka.IO
             if (other.Count == 0) return index; // Empty spans are always "found".
             if (index < 0 || index > Count) throw new ArgumentOutOfRangeException(nameof(index), "Start index is out of range.");
             if (Count - index < other.Count) return -1; // Can't find if `toFind` is larger considering the start index.
+            
+            var span = _memory.Span;
+            var otherSpan = other._memory.Span;
 
-            for (var i = index; i <= Count - other.Count; i++)
-            {
-                // Check if `toFind` starts at position `i` in `container`.
-                var found = true;
-                for (var j = 0; j < other.Count; j++)
-                {
-                    if (this[i + j] != other[j])
-                    {
-                        found = false;
-                        break;
-                    }
-                }
-                if (found) return i;
-            }
-
-            return -1;
+            var indexOf = span.Slice(index).IndexOf(otherSpan);
+            return indexOf == -1 ? -1 : indexOf + index;
         }
 
         /// <summary>
