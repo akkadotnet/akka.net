@@ -395,52 +395,6 @@ namespace Akka.Streams.Dsl
                         if (IsClosed(_stage.Inlet) && _buffer.IsEmpty)
                             CompleteStage();
                     }
-
-
-                    //     var possibleMatchPosition = _buffer.IndexOf(_firstSeparatorByte, from: _nextPossibleMatch);
-                    //
-                    //     if (possibleMatchPosition > _stage._maximumLineBytes)
-                    //     {
-                    //         FailStage(new FramingException($"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
-                    //     }
-                    //     else if (possibleMatchPosition == -1)
-                    //     {
-                    //         if (_buffer.Count > _stage._maximumLineBytes)
-                    //             FailStage(new FramingException($"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
-                    //         else
-                    //         {
-                    //             // No matching character, we need to accumulate more bytes into the buffer 
-                    //             _nextPossibleMatch = _buffer.Count;
-                    //             TryPull();
-                    //         }
-                    //     }
-                    //     else if (possibleMatchPosition + _stage._separatorBytes.Count > _buffer.Count)
-                    //     {
-                    //         // We have found a possible match (we found the first character of the terminator 
-                    //         // sequence) but we don't have yet enough bytes. We remember the position to 
-                    //         // retry from next time.
-                    //         _nextPossibleMatch = possibleMatchPosition;
-                    //         TryPull();
-                    //     }
-                    //     else if (_buffer.HasSubstring(_stage._separatorBytes, possibleMatchPosition))
-                    //     {
-                    //         // Found a match
-                    //         var parsedFrame = _buffer.Slice(0, possibleMatchPosition).Compact();
-                    //         _buffer = _buffer.Slice(possibleMatchPosition + _stage._separatorBytes.Count).Compact();
-                    //         _nextPossibleMatch = 0;
-                    //         Push(_stage.Outlet, parsedFrame);
-                    //
-                    //         if (IsClosed(_stage.Inlet) && _buffer.IsEmpty)
-                    //             CompleteStage();
-                    //     }
-                    //     else
-                    //     {
-                    //         // possibleMatchPos was not actually a match 
-                    //         _nextPossibleMatch++;
-                    //         continue;
-                    //     }
-                    //
-                    //     break;
                 }
             }
 
