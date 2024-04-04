@@ -370,7 +370,17 @@ namespace Akka.Streams.Dsl
                         else
                         {
                             // No matching character, we need to accumulate more bytes into the buffer 
-                            _nextPossibleMatch = _buffer.Count;
+                            /*
+                             * NOTE: so this was a tad tricky to catch in the original code - this is a performance
+                             * optimization designed to avoid re-searching through a buffer that has already been
+                             * searched.
+                             *
+                             * However, if we don't find a match we need to remember the position we started searching
+                             * MINUS the length of the delimiter - just in case we only received a _partial_ delimiter
+                             * earlier. If we use just the _buffer.Count, we will end up missing and losing messages
+                             * eventually.
+                             */
+                            _nextPossibleMatch = _buffer.Count - _stage._separatorBytes.Count;
                             TryPull();
                         }
                     }

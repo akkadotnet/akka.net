@@ -82,8 +82,8 @@ namespace Akka.Streams.Tests.Dsl
                         var nextChunkSize = _buffer.IsEmpty
                             ? 0
                             : ThreadLocalRandom.Current.Next(0, _buffer.Count + 1);
-                        var newChunk = _buffer.Slice(0, nextChunkSize).Compact();
-                        _buffer = _buffer.Slice(nextChunkSize).Compact();
+                        var newChunk = _buffer.Slice(0, nextChunkSize);
+                        _buffer = _buffer.Slice(nextChunkSize);
 
                         Push(_stage.Outlet, newChunk);
 
@@ -127,7 +127,7 @@ namespace Akka.Streams.Tests.Dsl
 
         public static readonly TheoryData<ByteString> DelimiterBytesData = new()
         {
-            ByteString.FromString("\n"), ByteString.FromString("\r\n"), ByteString.FromString("FOO")
+            ByteString.FromString("\n"), ByteString.FromString("\r\n"), ByteString.FromString("FOO"), ByteString.FromString("FOUR")
         };
 
         [Theory]
