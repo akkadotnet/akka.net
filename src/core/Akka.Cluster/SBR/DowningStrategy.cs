@@ -233,8 +233,6 @@ namespace Akka.Cluster.SBR
                     r =>
                         // we only retain records for addresses that are still downable
                         downable.Contains(r.Observer) && downable.Contains(r.Subject) &&
-                        // Filter out all records where both observer AND subject are unreachable
-                        !(originalUnreachable.Contains(r.Observer) && originalUnreachable.Contains(r.Subject)) &&
                         // remove records between the indirectly connected
                         !(intersectionOfObserversAndSubjects.Contains(r.Observer) &&
                           intersectionOfObserversAndSubjects.Contains(r.Subject) ||
