@@ -28,6 +28,7 @@ public class BugFix7141
     public BugFix7141(ITestOutputHelper output)
     {
         _log = output;
+        // create split brain resolver
         _resolver = new Akka.Cluster.SBR.KeepMajority(string.Empty);
     }
 
@@ -35,9 +36,6 @@ public class BugFix7141
     public void ShouldWork()
     {
         // arrange
-
-        // create split brain resolver
-        var resolver = new Akka.Cluster.SBR.KeepMajority(string.Empty);
 
         // create unique addresses for members
         var address1 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 6001), 1);
@@ -95,18 +93,18 @@ public class BugFix7141
         SeenBy(address1);
         
         // reachability changed, unreachable: 1 -> 3
-        resolver.SetReachability(Reachability.Empty.Unreachable(address1, address3));
+        _resolver.SetReachability(Reachability.Empty.Unreachable(address1, address3));
         
         // seen changed
         SeenBy(address5, address1);
         
         // reachability changed, unreachable: 1 -> 3, 5 -> 3
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address3)
             .Unreachable(address5, address3));
         
         // reachability changed, unreachable: 1 -> 3, 5 -> 3, happened twice
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address3)
             .Unreachable(address5, address3));
         
@@ -114,7 +112,7 @@ public class BugFix7141
         SeenBy(address1);
         
         // reachability changed, unreachable: 1 -> 3, 5 -> 3, 2 -> 3
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address3)
             .Unreachable(address5, address3)
             .Unreachable(address2, address3));
@@ -123,13 +121,13 @@ public class BugFix7141
         SeenBy(address1, address2);
         
         // reachability changed, unreachable: 1 -> 3, 5 -> 3, 2 -> 3
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address3)
             .Unreachable(address5, address3)
             .Unreachable(address2, address3));
         
         // reachability changed, unreachable: 1 -> 3, 5 -> 3, 6-> 3, 2 -> 3
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address3)
             .Unreachable(address5, address3)
             .Unreachable(address6, address3)
@@ -139,7 +137,7 @@ public class BugFix7141
         SeenBy(address5, address6, address1, address2);
         
         // reachability changed, unreachable: 1 -> 3, 5 -> 3, 6-> 3, 2 -> 3, happened twice
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address3)
             .Unreachable(address5, address3)
             .Unreachable(address6, address3)
@@ -149,20 +147,20 @@ public class BugFix7141
         SeenBy(address5, address6, address1, address2);
 
         // reachability changed, unreachable: 1 -> 3, 5 -> 3, 6-> 3, 2 -> 3, happened thrice
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address3)
             .Unreachable(address5, address3)
             .Unreachable(address6, address3)
             .Unreachable(address2, address3));
 
         // Second unreachable
-        resolver.AddUnreachable(member4);
+        Unreachable(address4);
         
         // seen changed
         SeenBy(address1);
         
         // reachability changed, unreachable: 1 -> 4, 1 -> 3, 5 -> 3, 6-> 3, 2 -> 3
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address4)
             .Unreachable(address1, address3)
             .Unreachable(address5, address3)
@@ -170,7 +168,7 @@ public class BugFix7141
             .Unreachable(address2, address3));
         
         // reachability changed, unreachable: 1 -> 4, 1 -> 3, 5 -> 3, 6-> 3, 2 -> 4, 2 -> 3
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address4)
             .Unreachable(address1, address3)
             .Unreachable(address5, address3)
@@ -179,7 +177,7 @@ public class BugFix7141
             .Unreachable(address2, address3));
         
         // reachability changed, unreachable: 1 -> 4, 1 -> 3, 5 -> 3, 6 -> 4, 6-> 3, 2 -> 4, 2 -> 3
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address4)
             .Unreachable(address1, address3)
             .Unreachable(address5, address3)
@@ -192,7 +190,7 @@ public class BugFix7141
         SeenBy(address6, address1);
         
         // reachability changed, unreachable: 1 -> 4, 1 -> 3, 5 -> 3, 6 -> 4, 6-> 3, 2 -> 4, 2 -> 3, happened twice
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address4)
             .Unreachable(address1, address3)
             .Unreachable(address5, address3)
@@ -205,7 +203,7 @@ public class BugFix7141
         SeenBy(address6, address1, address2);
         
         // reachability changed, unreachable: 1 -> 4, 1 -> 3, 5 -> 3, 6 -> 4, 6-> 3, 2 -> 4, 2 -> 3, happened thrice
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address4)
             .Unreachable(address1, address3)
             .Unreachable(address5, address3)
@@ -221,7 +219,7 @@ public class BugFix7141
         SeenBy(address1);
 
         // reachability changed, unreachable: 1 -> 4, 1 -> 5, 1 -> 3, 5 -> 3, 6 -> 4, 6-> 3, 2 -> 4, 2 -> 3
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address4)
             .Unreachable(address1, address5)
             .Unreachable(address1, address3)
@@ -235,7 +233,7 @@ public class BugFix7141
         SeenBy(address1, address2);
         
         // reachability changed, unreachable: 1 -> 4, 1 -> 5, 1 -> 3, 5 -> 3, 6 -> 4, 6-> 3, 2 -> 4, 2 -> 3, happened twice
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address4)
             .Unreachable(address1, address5)
             .Unreachable(address1, address3)
@@ -249,7 +247,7 @@ public class BugFix7141
         SeenBy(address6, address1, address2);
         
         // reachability changed, unreachable: 1 -> 4, 1 -> 5, 1 -> 3, 5 -> 3, 6 -> 4, 6 -> 5, 6-> 3, 2 -> 4, 2 -> 5, 2 -> 3
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address4)
             .Unreachable(address1, address5)
             .Unreachable(address1, address3)
@@ -263,7 +261,7 @@ public class BugFix7141
         
         
         // reachability changed, unreachable: 1 -> 4, 1 -> 5, 1 -> 3, 5 -> 3, 6 -> 4, 6 -> 5, 6-> 3, 2 -> 4, 2 -> 5, 2 -> 3, happened twice
-        resolver.SetReachability(Reachability.Empty
+        _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address4)
             .Unreachable(address1, address5)
             .Unreachable(address1, address3)
@@ -276,18 +274,9 @@ public class BugFix7141
             .Unreachable(address2, address3));
         #endregion
         
-        
-        // set reachability
-        resolver.AddReachable(member1);
-        resolver.AddUnreachable(member2);
-        resolver.AddUnreachable(member3);
-        resolver.AddUnreachable(member4);
-        resolver.AddReachable(member5);
-        resolver.AddReachable(member6);
-
         var expectedDown = new[] { address2, address3, address4 }.ToImmutableHashSet();
         ImmutableHashSet<UniqueAddress> downedNodes = null;
-        Invoking(() => downedNodes = resolver.NodesToDown()).Should().NotThrow();
+        Invoking(() => downedNodes = _resolver.NodesToDown()).Should().NotThrow();
         downedNodes.Should().BeEquivalentTo(expectedDown);
     }
 
