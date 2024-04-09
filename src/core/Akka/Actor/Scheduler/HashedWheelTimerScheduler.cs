@@ -137,35 +137,41 @@ namespace Akka.Actor
         private readonly HashSet<SchedulerRegistration> _rescheduleRegistrations = new();
         
 #if NET6_0_OR_GREATER
+        private readonly object _lock = new ();
         private PeriodicTimer? _timer;
         private readonly CancellationTokenSource _cts = new();
 
         private void Start()
         {
-            if (_workerState == WORKER_STATE_STARTED)
+            var start = false;
+            lock (_lock)
             {
-            } // do nothing
-            else if (_workerState == WORKER_STATE_INIT)
-            {
-                if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
-                    WORKER_STATE_INIT)
+                switch (_workerState)
                 {
-                    var t = TimeSpan.FromTicks(_tickDuration);
-                    _timer = new PeriodicTimer(t);
-                    
-                    Task.Run(() => RunAsync(_cts.Token)); // start the clock
+                    case WORKER_STATE_STARTED:
+                        // do nothing
+                        break;
+                
+                    case WORKER_STATE_INIT:
+                        _workerState = WORKER_STATE_STARTED;
+                        start = true;
+                        break;
+                
+                    case WORKER_STATE_SHUTDOWN:
+                        throw new SchedulerException("cannot enqueue after timer shutdown");
+                
+                    default:
+                        throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
                 }
             }
-            else if (_workerState == WORKER_STATE_SHUTDOWN)
+
+            if (start)
             {
-                throw new SchedulerException("cannot enqueue after timer shutdown");
+                var timerDuration = TimeSpan.FromTicks(_tickDuration);
+                _timer ??= new PeriodicTimer(timerDuration);
+                Task.Run(() => RunAsync(_cts.Token)); // start the clock
             }
             else
-            {
-                throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
-            }
-                    
-            while (_startTime == 0)
             {
                 _workerInitialized.Wait();
             }
@@ -248,7 +254,7 @@ namespace Akka.Actor
             if (_workerState == WORKER_STATE_STARTED) { } // do nothing
             else if (_workerState == WORKER_STATE_INIT)
             {
-                _worker = new Thread(Run) { IsBackground = true };
+                _worker ??= new Thread(Run) { IsBackground = true };
                 if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
                     WORKER_STATE_INIT)
                 {
