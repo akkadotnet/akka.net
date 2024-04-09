@@ -24,7 +24,7 @@ namespace Akka.Cluster.Tests.MultiNode.SBR;
 
     public class DownUnreachableIndirectlyConnected15NodeSpecConfig : MultiNodeConfig
     {
-        public RoleName Node1 { get; }
+        public RoleName Leader { get; }
         public RoleName Node2 { get; }
         public RoleName Node3 { get; }
         public RoleName Node4 { get; }
@@ -44,7 +44,7 @@ namespace Akka.Cluster.Tests.MultiNode.SBR;
 
         public DownUnreachableIndirectlyConnected15NodeSpecConfig()
         {
-            Node1 = Role("node1");
+            Leader = Role("leader");
             Node2 = Role("node2");
             Node3 = Role("node3");
             Node4 = Role("node4");
@@ -62,7 +62,7 @@ namespace Akka.Cluster.Tests.MultiNode.SBR;
 
             Nodes = new[]
             {
-                Node1, Node2, Node3, Node4, Node5, 
+                Leader, Node2, Node3, Node4, Node5, 
                 Node6, Node7, Node8, Node9, Node10, 
                 Node11, Node12, Node13, Node14, Node15
             };
@@ -120,12 +120,12 @@ namespace Akka.Cluster.Tests.MultiNode.SBR;
             RunOn(() =>
             {
                 cluster.Join(cluster.SelfAddress);
-            }, _config.Node1);
+            }, _config.Leader);
             EnterBarrier("node1 joined");
             
             RunOn(() =>
             {
-                cluster.Join(Node(_config.Node1).Address);
+                cluster.Join(Node(_config.Leader).Address);
             }, 
                 _config.Node2, 
                 _config.Node3,
@@ -168,7 +168,7 @@ namespace Akka.Cluster.Tests.MultiNode.SBR;
                 }
                 await Task.WhenAll(tasks);
                 
-            }, _config.Node1);
+            }, _config.Leader);
             
             EnterBarrier("long-delay-process-kill");
 
