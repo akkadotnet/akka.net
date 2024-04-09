@@ -5,388 +5,37 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
+using System.Text;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Util;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
+using Xunit.Abstractions;
 using static FluentAssertions.FluentActions;
 
 namespace Akka.Cluster.Tests.SBR;
 
 public class BugFix7141
 {
-    private class ReachabilityData
+    private readonly ITestOutputHelper _log;
+    private readonly Akka.Cluster.SBR.KeepMajority _resolver;
+
+    public BugFix7141(ITestOutputHelper output)
     {
-        public Reachability.Record[] Records { get; set; }
-        public VersionData[] Versions { get; set; }
-        public Address[] SeenBy { get; set; }
+        _log = output;
+        _resolver = new Akka.Cluster.SBR.KeepMajority(string.Empty);
     }
-    
-    private class VersionData
-    {
-        public UniqueAddress Address { get; set; }
-        public long Version { get; set; }
-    }
-    
-    private const string RecordData = """
-{
-  "Records": [
-    {
-      "Observer":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6005,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 5
-      },
-      "Subject":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6003,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 3
-      },
-      "Status": 1,
-      "Version": 1
-    },
-    {
-      "Observer":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6006,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 6
-      },
-      "Subject":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6003,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 3
-      },
-      "Status": 1,
-      "Version": 1
-    },
-    {
-      "Observer":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6006,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 6
-      },
-      "Subject":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6005,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 5
-      },
-      "Status": 1,
-      "Version": 3
-    },
-    {
-      "Observer":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6006,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 6
-      },
-      "Subject":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6004,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 4
-      },
-      "Status": 1,
-      "Version": 2
-    },
-    {
-      "Observer":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6002,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 2
-      },
-      "Subject":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6003,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 3
-      },
-      "Status": 1,
-      "Version": 1
-    },
-    {
-      "Observer":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6002,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 2
-      },
-      "Subject":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6005,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 5
-      },
-      "Status": 1,
-      "Version": 3
-    },
-    {
-      "Observer":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6002,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 2
-      },
-      "Subject":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6004,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 4
-      },
-      "Status": 1,
-      "Version": 2
-    },
-    {
-      "Observer":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6001,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 1
-      },
-      "Subject":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6003,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 3
-      },
-      "Status": 1,
-      "Version": 1
-    },
-    {
-      "Observer":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6001,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 1
-      },
-      "Subject":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6005,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 5
-      },
-      "Status": 1,
-      "Version": 3
-    },
-    {
-      "Observer":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6001,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 1
-      },
-      "Subject":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6004,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 4
-      },
-      "Status": 1,
-      "Version": 2
-    }
-  ],
-  "Versions": [
-    {
-      "Address":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6005,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 5
-      },
-      "Version": 1
-    },
-    {
-      "Address":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6006,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 6
-      },
-      "Version": 3
-    },
-    {
-      "Address":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6002,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 2
-      },
-      "Version": 3
-    },
-    {
-      "Address":
-      {
-        "Address":
-        {
-          "Host": "localhost",
-          "Port": 6001,
-          "System": "Sys",
-          "Protocol": "akka.tcp"
-        },
-        "Uid": 1
-      },
-      "Version": 3
-    }
-  ],
-  "SeenBy": [
-    {
-      "Host": "localhost",
-      "Port": 6002,
-      "System": "Sys",
-      "Protocol": "akka.tcp"
-    },
-    {
-      "Host": "localhost",
-      "Port": 6006,
-      "System": "Sys",
-      "Protocol": "akka.tcp"
-    },
-    {
-      "Host": "localhost",
-      "Port": 6001,
-      "System": "Sys",
-      "Protocol": "akka.tcp"
-    }
-  ]
-}
-""";
 
     [Fact]
     public void ShouldWork()
     {
         // arrange
 
-        var data = JsonConvert.DeserializeObject<ReachabilityData>(
-            RecordData, 
-            new JsonSerializerSettings
-            {
-                TypeNameHandling = TypeNameHandling.All
-            });
-        
         // create split brain resolver
         var resolver = new Akka.Cluster.SBR.KeepMajority(string.Empty);
 
@@ -406,13 +55,227 @@ public class BugFix7141
         var member5 = new Member(address5, 1, MemberStatus.Up, ImmutableHashSet.Create("role1"), AppVersion.Zero);
         var member6 = new Member(address6, 0, MemberStatus.Up, ImmutableHashSet.Create("role1"), AppVersion.Zero);
 
-        // all other nodes up
-        resolver.Add(Up(address1));
-        resolver.Add(Up(address2));
-        resolver.Add(Up(address3));
-        resolver.Add(Up(address4));
-        resolver.Add(Up(address5));
-        resolver.Add(Up(address6));
+        #region Cluster events reproduction
+
+        // Node 1 went up
+        Up(address1);
+
+        // Leader changed to Node 1
+        // Seen changed
+        SeenBy(address1);
+        
+        // Rest of cluster joining
+        Joining(address6);
+        Joining(address3);
+        Joining(address2);
+        Joining(address5);
+        Joining(address4);
+        
+        // Rest of cluster up
+        Up(address3);
+        Up(address5);
+        Up(address2);
+        Up(address4);
+        Up(address6);
+        
+        // Leader changed to node 3
+        // Seen changed
+        SeenBy(address1);
+        SeenBy(address1, address2);
+        SeenBy(address6, address1, address2);
+        SeenBy(address3, address6, address1, address2);
+        SeenBy(address3, address6, address4, address1, address2);
+        SeenBy(address3, address5, address6, address4, address1, address2);
+        
+        // First unreachable reported
+        Unreachable(address3);
+        
+        // Leader passed back to node 1
+        // seen changed
+        SeenBy(address1);
+        
+        // reachability changed, unreachable: 1 -> 3
+        resolver.SetReachability(Reachability.Empty.Unreachable(address1, address3));
+        
+        // seen changed
+        SeenBy(address5, address1);
+        
+        // reachability changed, unreachable: 1 -> 3, 5 -> 3
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3));
+        
+        // reachability changed, unreachable: 1 -> 3, 5 -> 3, happened twice
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3));
+        
+        // seen changed
+        SeenBy(address1);
+        
+        // reachability changed, unreachable: 1 -> 3, 5 -> 3, 2 -> 3
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address2, address3));
+        
+        // seen changed
+        SeenBy(address1, address2);
+        
+        // reachability changed, unreachable: 1 -> 3, 5 -> 3, 2 -> 3
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address2, address3));
+        
+        // reachability changed, unreachable: 1 -> 3, 5 -> 3, 6-> 3, 2 -> 3
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address6, address3)
+            .Unreachable(address2, address3));
+        
+        // seen changed
+        SeenBy(address5, address6, address1, address2);
+        
+        // reachability changed, unreachable: 1 -> 3, 5 -> 3, 6-> 3, 2 -> 3, happened twice
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address6, address3)
+            .Unreachable(address2, address3));
+        
+        // seen changed
+        SeenBy(address5, address6, address1, address2);
+
+        // reachability changed, unreachable: 1 -> 3, 5 -> 3, 6-> 3, 2 -> 3, happened thrice
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address6, address3)
+            .Unreachable(address2, address3));
+
+        // Second unreachable
+        resolver.AddUnreachable(member4);
+        
+        // seen changed
+        SeenBy(address1);
+        
+        // reachability changed, unreachable: 1 -> 4, 1 -> 3, 5 -> 3, 6-> 3, 2 -> 3
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address4)
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address6, address3)
+            .Unreachable(address2, address3));
+        
+        // reachability changed, unreachable: 1 -> 4, 1 -> 3, 5 -> 3, 6-> 3, 2 -> 4, 2 -> 3
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address4)
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address6, address3)
+            .Unreachable(address2, address4)
+            .Unreachable(address2, address3));
+        
+        // reachability changed, unreachable: 1 -> 4, 1 -> 3, 5 -> 3, 6 -> 4, 6-> 3, 2 -> 4, 2 -> 3
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address4)
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address6, address4)
+            .Unreachable(address6, address3)
+            .Unreachable(address2, address4)
+            .Unreachable(address2, address3));
+        
+        // seen changed
+        SeenBy(address6, address1);
+        
+        // reachability changed, unreachable: 1 -> 4, 1 -> 3, 5 -> 3, 6 -> 4, 6-> 3, 2 -> 4, 2 -> 3, happened twice
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address4)
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address6, address4)
+            .Unreachable(address6, address3)
+            .Unreachable(address2, address4)
+            .Unreachable(address2, address3));
+
+        // seen changed
+        SeenBy(address6, address1, address2);
+        
+        // reachability changed, unreachable: 1 -> 4, 1 -> 3, 5 -> 3, 6 -> 4, 6-> 3, 2 -> 4, 2 -> 3, happened thrice
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address4)
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address6, address4)
+            .Unreachable(address6, address3)
+            .Unreachable(address2, address4)
+            .Unreachable(address2, address3));
+        
+        // Third unreachable
+        Unreachable(address5);
+        
+        // seen changed
+        SeenBy(address1);
+
+        // reachability changed, unreachable: 1 -> 4, 1 -> 5, 1 -> 3, 5 -> 3, 6 -> 4, 6-> 3, 2 -> 4, 2 -> 3
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address4)
+            .Unreachable(address1, address5)
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address6, address4)
+            .Unreachable(address6, address3)
+            .Unreachable(address2, address4)
+            .Unreachable(address2, address3));
+        
+        // seen changed
+        SeenBy(address1, address2);
+        
+        // reachability changed, unreachable: 1 -> 4, 1 -> 5, 1 -> 3, 5 -> 3, 6 -> 4, 6-> 3, 2 -> 4, 2 -> 3, happened twice
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address4)
+            .Unreachable(address1, address5)
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address6, address4)
+            .Unreachable(address6, address3)
+            .Unreachable(address2, address4)
+            .Unreachable(address2, address3));
+        
+        // seen changed
+        SeenBy(address6, address1, address2);
+        
+        // reachability changed, unreachable: 1 -> 4, 1 -> 5, 1 -> 3, 5 -> 3, 6 -> 4, 6 -> 5, 6-> 3, 2 -> 4, 2 -> 5, 2 -> 3
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address4)
+            .Unreachable(address1, address5)
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address6, address4)
+            .Unreachable(address6, address5)
+            .Unreachable(address6, address3)
+            .Unreachable(address2, address4)
+            .Unreachable(address2, address5)
+            .Unreachable(address2, address3));
+        
+        
+        // reachability changed, unreachable: 1 -> 4, 1 -> 5, 1 -> 3, 5 -> 3, 6 -> 4, 6 -> 5, 6-> 3, 2 -> 4, 2 -> 5, 2 -> 3, happened twice
+        resolver.SetReachability(Reachability.Empty
+            .Unreachable(address1, address4)
+            .Unreachable(address1, address5)
+            .Unreachable(address1, address3)
+            .Unreachable(address5, address3)
+            .Unreachable(address6, address4)
+            .Unreachable(address6, address5)
+            .Unreachable(address6, address3)
+            .Unreachable(address2, address4)
+            .Unreachable(address2, address5)
+            .Unreachable(address2, address3));
+        #endregion
+        
         
         // set reachability
         resolver.AddReachable(member1);
@@ -422,19 +285,21 @@ public class BugFix7141
         resolver.AddReachable(member5);
         resolver.AddReachable(member6);
 
-        var reachability = new Reachability(
-            data.Records.ToImmutableList(), 
-            data.Versions.ToImmutableDictionary(d => d.Address, d => d.Version));
-        
-        resolver.SetSeenBy(data.SeenBy.ToImmutableHashSet());
-        resolver.SetReachability(reachability);
-        
         var expectedDown = new[] { address2, address3, address4 }.ToImmutableHashSet();
         ImmutableHashSet<UniqueAddress> downedNodes = null;
         Invoking(() => downedNodes = resolver.NodesToDown()).Should().NotThrow();
         downedNodes.Should().BeEquivalentTo(expectedDown);
     }
 
-    private Member Up(UniqueAddress address)
-        => Member.Create(address, 0, MemberStatus.Up, ImmutableHashSet.Create("role1"), AppVersion.Zero);
+    private void Joining(UniqueAddress address)
+        => _resolver.Add(Member.Create(address, 0, MemberStatus.Joining, ImmutableHashSet.Create("role1"), AppVersion.Zero));
+    
+    private void Up(UniqueAddress address)
+        => _resolver.Add(Member.Create(address, 0, MemberStatus.Up, ImmutableHashSet.Create("role1"), AppVersion.Zero));
+    
+    private void Unreachable(UniqueAddress address)
+        => _resolver.AddUnreachable(Member.Create(address, 0, MemberStatus.Up, ImmutableHashSet.Create("role1"), AppVersion.Zero));
+
+    private void SeenBy(params UniqueAddress[] addresses)
+        => _resolver.SetSeenBy(addresses.Select(a => a.Address).ToImmutableHashSet());
 }
