@@ -138,12 +138,6 @@ namespace Akka.Cluster
 
         private void AssertInvariants()
         {
-            void IfTrueThrow(bool func, string expected, string actual)
-            {
-                if (func) throw new ArgumentException($"{expected}, but found [{actual}]");
-            }
-
-
             IfTrueThrow(_members.Any(m => m.Status == MemberStatus.Removed),
                 expected: "Live members must not have status [Removed]",
                 actual: string.Join(", ",
@@ -165,6 +159,12 @@ namespace Akka.Cluster
             IfTrueThrow(!seenButNotMember.IsEmpty,
                 expected: "Nodes not part of cluster have marked the Gossip as seen",
                 actual: string.Join(", ", seenButNotMember.Select(a => a.ToString())));
+            return;
+
+            void IfTrueThrow(bool func, string expected, string actual)
+            {
+                if (func) throw new ArgumentException($"{expected}, but found [{actual}]");
+            }
         }
 
         //TODO: Serializer should ignore

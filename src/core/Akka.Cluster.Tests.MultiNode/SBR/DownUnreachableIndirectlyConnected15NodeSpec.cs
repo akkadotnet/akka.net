@@ -69,7 +69,7 @@ namespace Akka.Cluster.Tests.MultiNode.SBR;
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka {
-                    loglevel = INFO
+                    loglevel = DEBUG
                     cluster {
                         downing-provider-class = ""Akka.Cluster.SBR.SplitBrainResolverProvider""
                         failure-detector.acceptable-heartbeat-pause = 3s
@@ -78,6 +78,15 @@ namespace Akka.Cluster.Tests.MultiNode.SBR;
                         split-brain-resolver.down-all-when-unstable = off
 
                         run-coordinated-shutdown-when-down = off
+                        log-info-verbose = on
+
+                        debug {
+                          # log heartbeat events (very verbose, useful mostly when debugging heartbeating issues)
+                          verbose-heartbeat-logging = off
+
+	                      # log gossip merge events (very verbose, useful when debugging convergence issues)
+	                      verbose-receive-gossip-logging = on
+                        }
                     }
 
                     actor.provider = cluster
