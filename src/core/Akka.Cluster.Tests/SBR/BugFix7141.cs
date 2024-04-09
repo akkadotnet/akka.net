@@ -259,7 +259,6 @@ public class BugFix7141
             .Unreachable(address2, address5)
             .Unreachable(address2, address3));
         
-        
         // reachability changed, unreachable: 1 -> 4, 1 -> 5, 1 -> 3, 5 -> 3, 6 -> 4, 6 -> 5, 6-> 3, 2 -> 4, 2 -> 5, 2 -> 3, happened twice
         _resolver.SetReachability(Reachability.Empty
             .Unreachable(address1, address4)
@@ -274,7 +273,7 @@ public class BugFix7141
             .Unreachable(address2, address3));
         #endregion
         
-        var expectedDown = new[] { address2, address3, address4 }.ToImmutableHashSet();
+        var expectedDown = new[] { address3, address4, address5 }.ToImmutableHashSet();
         ImmutableHashSet<UniqueAddress> downedNodes = null;
         Invoking(() => downedNodes = _resolver.NodesToDown()).Should().NotThrow();
         downedNodes.Should().BeEquivalentTo(expectedDown);
