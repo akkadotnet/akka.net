@@ -149,21 +149,21 @@ namespace Akka.Actor
         {
             if (_workerState != WORKER_STATE_STARTED)
             {
-                switch (_workerState)
+                if (_workerState == WORKER_STATE_INIT)
                 {
-                    case WORKER_STATE_INIT:
-                        if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) == WORKER_STATE_INIT)
-                        {
-                            _timer ??= new PeriodicTimer(_timerDuration);
-                            Task.Run(() => RunAsync(_cts.Token)); // start the clock
-                        }
-                        break;
-                
-                    case WORKER_STATE_SHUTDOWN:
-                        throw new SchedulerException("cannot enqueue after timer shutdown");
-                
-                    default:
-                        throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
+                    if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) == WORKER_STATE_INIT)
+                    {
+                        _timer ??= new PeriodicTimer(_timerDuration);
+                        Task.Run(() => RunAsync(_cts.Token)); // start the clock
+                    }
+                }
+                else if (_workerState == WORKER_STATE_SHUTDOWN)
+                {
+                    throw new SchedulerException("cannot enqueue after timer shutdown");
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
                 }
             }
 
