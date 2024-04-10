@@ -14,7 +14,7 @@ jobs:
     runs-on: windows-latest
     if: github.repository == 'akkadotnet/akka.net'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Setup .NET 5
       uses: actions/setup-dotnet@v4
       with:
