@@ -2509,7 +2509,7 @@ namespace Akka.Cluster
         /// <param name="latestGossip"></param>
         /// <param name="exitingMembers"></param>
         /// <returns></returns>
-        public static IEnumerable<Member> GossipTargetsForExitingMembers(Gossip latestGossip, IReadOnlyCollection<Member> exitingMembers)
+        public static IReadOnlyCollection<Member> GossipTargetsForExitingMembers(Gossip latestGossip, IReadOnlyCollection<Member> exitingMembers)
         {
             if (exitingMembers.Count > 0)
             {

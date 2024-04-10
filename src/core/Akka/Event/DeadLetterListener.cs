@@ -34,20 +34,14 @@ namespace Akka.Event
         protected override void PreRestart(Exception reason, object message)
         {
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override void PreStart()
         {
             _eventStream.Subscribe(Self, typeof(DeadLetter));
             _eventStream.Subscribe(Self, typeof(Dropped));
             _eventStream.Subscribe(Self, typeof(UnhandledMessage));
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override void PostStop()
         {
             _eventStream.Unsubscribe(Self);
@@ -65,12 +59,6 @@ namespace Akka.Event
                 _count++;
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
             if (_isAlwaysLoggingDeadLetters)
