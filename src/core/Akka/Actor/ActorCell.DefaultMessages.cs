@@ -249,7 +249,7 @@ namespace Akka.Actor
                 {
                     switch (message)
                     {
-                        case SystemMessage sm when ShouldStash(sm, currentState):
+                        case not null when ShouldStash(message, currentState):
                             Stash(message);
                             break;
                         case ActorTaskSchedulerMessage atsm:

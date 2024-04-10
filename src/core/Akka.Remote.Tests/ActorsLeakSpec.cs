@@ -39,6 +39,7 @@ namespace Akka.Remote.Tests
                         akka.test.filter-leeway = 12 s
                     
             """);
+        private static readonly string[] SourceArray = { "/system/endpointManager", "/system/transports" };
 
         public ActorsLeakSpec(ITestOutputHelper output) : base(Config, output)
         {
@@ -95,7 +96,7 @@ namespace Akka.Remote.Tests
             var actorRef = Sys.ActorOf(EchoActor.Props(this, true), "echo");
             var echoPath = new RootActorPath(RARP.For(Sys).Provider.DefaultAddress)/"user"/"echo";
 
-            var targets = await Task.WhenAll(new[] { "/system/endpointManager", "/system/transports" }.Select(
+            var targets = await Task.WhenAll(SourceArray.Select(
                 async x =>
                 {
                     Sys.ActorSelection(x).Tell(new Identify(0));

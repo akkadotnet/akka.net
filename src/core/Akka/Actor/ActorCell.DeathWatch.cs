@@ -91,8 +91,7 @@ namespace Akka.Actor
             if (!_state.ContainsTerminated(t.ActorRef))
                 return;
 
-            Option<object> customTerminatedMessage;
-            (_state, customTerminatedMessage) = _state.RemoveTerminated(t.ActorRef); // here we know that it is the SAME ref which was put in
+            (_state, var customTerminatedMessage) = _state.RemoveTerminated(t.ActorRef); // here we know that it is the SAME ref which was put in
             ReceiveMessage(customTerminatedMessage.GetOrElse(t));
         }
 
@@ -339,7 +338,7 @@ namespace Akka.Actor
                 return true;
 
             var a = @ref as IInternalActorRef;
-            return a != null && !a.IsLocal;
+            return a is { IsLocal: false };
         }
 
         private bool HasNonLocalAddress()
