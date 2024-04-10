@@ -4,13 +4,12 @@
 //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Linq;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
@@ -25,6 +24,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public IActorRef Watch(IActorRef subject)
         {
+            if(subject is null) throw new ArgumentNullException(nameof(subject), "subject must not be null");
             var a = (IInternalActorRef)subject;
 
             if (!a.Equals(Self) && !WatchingContains(a))
@@ -46,6 +46,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public IActorRef WatchWith(IActorRef subject, object message)
         {
+            if(subject is null) throw new ArgumentNullException(nameof(subject), "subject must not be null");
             if (message == null)
                 throw new ArgumentNullException(nameof(message), "message must not be null");
 
@@ -69,6 +70,8 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public IActorRef Unwatch(IActorRef subject)
         {
+            if(subject is null) throw new ArgumentNullException(nameof(subject), "subject must not be null");
+            
             var a = (IInternalActorRef)subject;
             if (!a.Equals(Self) && WatchingContains(a))
             {
@@ -243,7 +246,8 @@ namespace Akka.Actor
             }
             else
             {
-                Publish(new Warning(Self.Path.ToString(), Actor.GetType(), string.Format("BUG: illegal Watch({0},{1} for {2}", watchee, watcher, Self)));
+                Publish(new Warning(Self.Path.ToString(), Actor.GetType(),
+                    $"BUG: illegal Watch({watchee},{watcher} for {Self}"));
             }
         }
 
@@ -254,6 +258,7 @@ namespace Akka.Actor
         /// <param name="watcher">TBD</param>
         protected void RemWatcher(IActorRef watchee, IActorRef watcher)
         {
+            // assert that watchee and watcher are not null
             var watcheeSelf = watchee.Equals(Self);
             var watcherSelf = watcher.Equals(Self);
 
@@ -272,7 +277,8 @@ namespace Akka.Actor
             }
             else
             {
-                Publish(new Warning(Self.Path.ToString(), Actor.GetType(), string.Format("BUG: illegal Unwatch({0},{1} for {2}", watchee, watcher, Self)));
+                Publish(new Warning(Self.Path.ToString(), Actor.GetType(),
+                    $"BUG: illegal Unwatch({watchee},{watcher} for {Self}"));
             }
         }
 
@@ -313,7 +319,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="block">TBD</param>
         /// <param name="change">TBD</param>
-        private void MaintainAddressTerminatedSubscription(Action block, IActorRef change = null)
+        private void MaintainAddressTerminatedSubscription(Action block, IActorRef? change = null)
         {
             if (IsNonLocal(change))
             {
@@ -332,7 +338,7 @@ namespace Akka.Actor
             }
         }
 
-        private static bool IsNonLocal(IActorRef @ref)
+        private static bool IsNonLocal(IActorRef? @ref)
         {
             if (@ref == null)
                 return true;
