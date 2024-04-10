@@ -2234,8 +2234,7 @@ namespace Akka.Cluster
             var localOverview = localGossip.Overview;
             var localSeen = localOverview.Seen;
 
-            bool enoughMembers = IsMinNrOfMembersFulfilled();
-            bool IsJoiningUp(Member m) => m.Status is MemberStatus.Joining or MemberStatus.WeaklyUp && enoughMembers;
+            var enoughMembers = IsMinNrOfMembersFulfilled();
 
             var removedUnreachable =
                 localOverview.Reachability.AllUnreachableOrTerminated.Select(localGossip.GetMember)
@@ -2341,6 +2340,10 @@ namespace Akka.Cluster
                 PublishMembershipState();
                 GossipExitingMembersToOldest(changedMembers.Where(i => i.Status == MemberStatus.Exiting).ToArray());
             }
+
+            return;
+
+            bool IsJoiningUp(Member m) => m.Status is MemberStatus.Joining or MemberStatus.WeaklyUp && enoughMembers;
         }
 
         /// <summary>

@@ -395,15 +395,10 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class MemberRemoved : MemberStatusChange
         {
-            readonly MemberStatus _previousStatus;
-
             /// <summary>
             /// The status of the node before the state change event.
             /// </summary>
-            public MemberStatus PreviousStatus
-            {
-                get { return _previousStatus; }
-            }
+            public MemberStatus PreviousStatus { get; }
 
             /// <summary>
             /// Initializes a new instance of the <see cref="MemberRemoved"/> class.
@@ -418,15 +413,14 @@ namespace Akka.Cluster
             {
                 if (member.Status != MemberStatus.Removed)
                     throw new ArgumentException($"Expected Removed status, got {member}");
-                _previousStatus = previousStatus;
+                PreviousStatus = previousStatus;
             }
 
             /// <inheritdoc/>
             public override bool Equals(object obj)
             {
-                var other = obj as MemberRemoved;
-                if (other == null) return false;
-                return _member.Equals(other._member) && _previousStatus == other._previousStatus;
+                if (obj is not MemberRemoved other) return false;
+                return _member.Equals(other._member) && PreviousStatus == other.PreviousStatus;
             }
 
             /// <inheritdoc/>
@@ -436,7 +430,7 @@ namespace Akka.Cluster
                 {
                     var hash = 17;
                     hash = hash * +base.GetHashCode();
-                    hash = hash * 23 + _previousStatus.GetHashCode();
+                    hash = hash * 23 + PreviousStatus.GetHashCode();
                     return hash;
                 }
             }
@@ -1056,17 +1050,17 @@ namespace Akka.Cluster
             receiver.Tell(state);
         }
 
-        private void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initMode, IEnumerable<Type> to)
+        private void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initMode, ImmutableHashSet<Type> to)
         {
             if (initMode == ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents)
             {
-                Action<object> pub = @event =>
+                void Pub(object @event)
                 {
                     var eventType = @event.GetType();
-                    if (to.Any(o => o.IsAssignableFrom(eventType)))
-                        subscriber.Tell(@event);
-                };
-                PublishDiff(_emptyMembershipState, _membershipState, pub);
+                    if (to.Any(o => o.IsAssignableFrom(eventType))) subscriber.Tell(@event);
+                }
+
+                PublishDiff(_emptyMembershipState, _membershipState, Pub);
             }
             else if (initMode == ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot)
             {
@@ -1090,7 +1084,7 @@ namespace Akka.Cluster
             PublishDiff(oldState, newState, Publish);
         }
 
-        private void PublishDiff(MembershipState oldState, MembershipState newState, Action<object> pub)
+        private static void PublishDiff(MembershipState oldState, MembershipState newState, Action<object> pub)
         {
             foreach (var @event in ClusterEvent.DiffMemberEvents(oldState, newState)) pub(@event);
             foreach (var @event in ClusterEvent.DiffUnreachable(oldState, newState)) pub(@event);
