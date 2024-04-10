@@ -16,7 +16,10 @@ using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
+using Akka.TestKit.Internal;
+using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestActors;
+using Akka.TestKit.TestEvent;
 using Xunit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
@@ -85,7 +88,7 @@ namespace Akka.Remote.Tests
             }
         }
 
-        private void AssertActors(ImmutableHashSet<IActorRef> expected, ImmutableHashSet<IActorRef> actual)
+        private static void AssertActors(ImmutableHashSet<IActorRef> expected, ImmutableHashSet<IActorRef> actual)
         {
             expected.Should().BeEquivalentTo(actual);
         }
@@ -166,6 +169,10 @@ namespace Akka.Remote.Tests
                 }
                 Assert.True(await remoteSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10)));
             }
+            
+            // Bugfix: need to filter out the AssociationTermination messages for remote@127.0.0.1:2553 from the quarantine
+            // case, otherwise those logs might get picked up during the next text case
+            Sys.EventStream.Publish(new Mute(new WarningFilter( new ContainsString("Association with remote system akka.trttl.tcp://remote@127.0.0.1:2553 has failed"))));
 
             // Missing SHUTDOWN case
             for (var i = 1; i <= 3; i++)
