@@ -1051,7 +1051,7 @@ namespace Akka.Cluster
             });
         }
 
-        private ActorSelection ClusterCore(Address address)
+        private static ActorSelection ClusterCore(Address address)
         {
             return Context.ActorSelection(new RootActorPath(address) / "system" / "cluster" / "core" / "daemon");
         }
