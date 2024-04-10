@@ -404,37 +404,28 @@ namespace Akka.Remote
         #region Internal message classes
 
         /// <summary>
-        /// TBD
+        /// Query if the <see cref="ReliableDeliverySupervisor"/> is idle
         /// </summary>
         public class IsIdle
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static readonly IsIdle Instance = new();
             private IsIdle() { }
         }
 
         /// <summary>
-        /// TBD
+        /// Response to a <see cref="IsIdle"/> query
         /// </summary>
         public class Idle
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static readonly Idle Instance = new();
             private Idle() { }
         }
 
         /// <summary>
-        /// TBD
+        /// Triggers a <see cref="HopelessAssociation"/> exception when the <see cref="ReliableDeliverySupervisor"/> has been idle for too long
         /// </summary>
         public class TooLongIdle
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static readonly TooLongIdle Instance = new();
             private TooLongIdle() { }
         }
@@ -453,16 +444,16 @@ namespace Akka.Remote
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
 
         /// <summary>
-        /// TBD
+        /// Creates a new instance of the <see cref="ReliableDeliverySupervisor"/> class.
         /// </summary>
-        /// <param name="handleOrActive">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="refuseUid">TBD</param>
-        /// <param name="transport">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="codec">TBD</param>
-        /// <param name="receiveBuffers">TBD</param>
+        /// <param name="handleOrActive">The Akka.Remote protocol handle for sending messages</param>
+        /// <param name="localAddress">Our local address per the <see cref="transport"/></param>
+        /// <param name="remoteAddress">The remote address we're communicating with</param>
+        /// <param name="refuseUid">Optional - the quarantined UID for the <see cref="remoteAddress"/>, if we've previously quarantined it.</param>
+        /// <param name="transport">The underlying transport.</param>
+        /// <param name="settings">The general Akka.Remote transport settings.</param>
+        /// <param name="codec">The Akka.Remote protocol codec for encoding and decoding messages.</param>
+        /// <param name="receiveBuffers">The set of receive buffers for resending messages in the event that the connection to <see cref="remoteAddress"/> is disrupted.</param>
         public ReliableDeliverySupervisor(
                     AkkaProtocolHandle handleOrActive,
                     Address localAddress,
@@ -483,7 +474,7 @@ namespace Akka.Remote
             _receiveBuffers = receiveBuffers;
             Reset(); // needs to be called at startup
             _writer = CreateWriter(); // need to create writer at startup
-            Uid = handleOrActive != null ? (int?)handleOrActive.HandshakeInfo.Uid : null;
+            Uid = handleOrActive?.HandshakeInfo.Uid;
             UidConfirmed = Uid.HasValue && (Uid != _refuseUid);
 
             if (Uid.HasValue && Uid == _refuseUid)
