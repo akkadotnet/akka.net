@@ -25,3 +25,7 @@ updates:
   - dependency-name: FluentAssertions
     versions:
     - 5.9.0
+- package-ecosystem: github-actions
+  schedule:
+    interval: daily
+    time: "11:00"
