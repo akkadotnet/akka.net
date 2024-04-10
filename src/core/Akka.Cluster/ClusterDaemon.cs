@@ -2339,7 +2339,7 @@ namespace Akka.Cluster
                 }
 
                 PublishMembershipState();
-                GossipExitingMembersToOldest(changedMembers.Where(i => i.Status == MemberStatus.Exiting));
+                GossipExitingMembersToOldest(changedMembers.Where(i => i.Status == MemberStatus.Exiting).ToArray());
             }
         }
 
@@ -2347,7 +2347,7 @@ namespace Akka.Cluster
         /// Gossip the Exiting change to the two oldest nodes for quick dissemination to potential Singleton nodes
         /// </summary>
         /// <param name="exitingMembers"></param>
-        private void GossipExitingMembersToOldest(IEnumerable<Member> exitingMembers)
+        private void GossipExitingMembersToOldest(IReadOnlyCollection<Member> exitingMembers)
         {
             var targets = GossipTargetsForExitingMembers(LatestGossip, exitingMembers);
             if (targets != null && targets.Any())
@@ -2509,9 +2509,9 @@ namespace Akka.Cluster
         /// <param name="latestGossip"></param>
         /// <param name="exitingMembers"></param>
         /// <returns></returns>
-        public static IEnumerable<Member> GossipTargetsForExitingMembers(Gossip latestGossip, IEnumerable<Member> exitingMembers)
+        public static IEnumerable<Member> GossipTargetsForExitingMembers(Gossip latestGossip, IReadOnlyCollection<Member> exitingMembers)
         {
-            if (exitingMembers.Any())
+            if (exitingMembers.Count > 0)
             {
                 var roles = exitingMembers.SelectMany(m => m.Roles);
                 var membersSortedByAge = latestGossip.Members
