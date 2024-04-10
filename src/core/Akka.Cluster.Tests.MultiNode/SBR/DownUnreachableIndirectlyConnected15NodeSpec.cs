@@ -167,6 +167,12 @@ namespace Akka.Cluster.Tests.MultiNode.SBR;
 
             await RunOnAsync(async () =>
             {
+                var log = Logging.GetLogger(Sys, "MNTR");
+                foreach (var node in _config.Nodes)
+                {
+                    log.Info($"Cluster node address [{node}] -> {GetAddress(node)}");
+                }
+                
                 var rnd = new Random();
 
                 var tasks = new List<Task>();
@@ -177,6 +183,7 @@ namespace Akka.Cluster.Tests.MultiNode.SBR;
                 }
                 await Task.WhenAll(tasks);
                 
+                log.Info($"Cluster leader: {cluster.State.Leader}");
             }, _config.Node1);
             
             EnterBarrier("long-delay-process-kill");
