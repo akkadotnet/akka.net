@@ -490,7 +490,7 @@ namespace Akka.Remote
         private readonly ICancelable _autoResendTimer;
 
         /// <summary>
-        /// TBD
+        /// The UID of the remote system we're communicating with.
         /// </summary>
         public int? Uid { get; set; }
 
@@ -703,7 +703,7 @@ namespace Akka.Remote
                     // remote address at the EndpointManager level stopping this actor. In case the remote system becomes reachable
                     // again it will be immediately quarantined due to out-of-sync system message buffer and becomes quarantined.
                     // In other words, this action is safe.
-                    if (_bailoutAt != null && _bailoutAt.IsOverdue)
+                    if (_bailoutAt is { IsOverdue: true })
                     {
                         throw new HopelessAssociation(_localAddress, _remoteAddress, Uid,
                             new TimeoutException("Delivery of system messages timed out and they were dropped"));
