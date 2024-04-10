@@ -27,7 +27,6 @@ namespace ShoppingCart
         public override object EntityMessage(object message)
             => message switch
             {
-                ShardingEnvelope e => e.Message,
                 _ => message
             };
     }
