@@ -32,15 +32,24 @@ public class HashedWheelTimerSchedulerContentionSpec: TestKit.Xunit2.TestKit
     [Fact]
     public void SchedulerContentionTest()
     {
+        var collector = CreateTestProbe();
         foreach (var i in Enumerable.Range(0, TotalActor))
         {
-            Sys.ActorOf(Props.Create(() => new DoStuffActor(TestActor)), i.ToString());
+            Sys.ActorOf(Props.Create(() => new DoStuffActor(TestActor, collector)), i.ToString());
         }
+
+        Within(10.Seconds(), () =>
+        {
+            for (var x = 0; x < TotalActor; x++)
+            {
+                ExpectMsg<Done>();
+            }
+        });
 
         object? received = null;
         do
         {
-            received = ReceiveOne(TimeSpan.Zero);
+            received = collector.ReceiveOne(TimeSpan.Zero);
             if (received is long value)
             {
                 value.Should().BeLessThan(200, "Scheduler should not experience resource contention");
@@ -52,6 +61,7 @@ public class HashedWheelTimerSchedulerContentionSpec: TestKit.Xunit2.TestKit
     [Fact]
     public void SchedulerContentionThreadedTest()
     {
+        var collector = CreateTestProbe();
         var threads = new List<Thread>();
         
         foreach (var j in Enumerable.Range(0, TotalThreads))
@@ -69,10 +79,18 @@ public class HashedWheelTimerSchedulerContentionSpec: TestKit.Xunit2.TestKit
             thread.Join();
         }
 
+        Within(10.Seconds(), () =>
+        {
+            for (var x = 0; x < TotalActor; x++)
+            {
+                ExpectMsg<Done>();
+            }
+        });
+
         object? received = null;
         do
         {
-            received = ReceiveOne(TimeSpan.Zero);
+            received = collector.ReceiveOne(TimeSpan.Zero);
             if (received is long value)
             {
                 value.Should().BeLessThan(200, "Scheduler should not experience resource contention");
@@ -86,22 +104,30 @@ public class HashedWheelTimerSchedulerContentionSpec: TestKit.Xunit2.TestKit
             n *= ActorsPerThread;
             for (var i = 0; i < ActorsPerThread; i++)
             {
-                Sys.ActorOf(Props.Create(() => new DoStuffActor(TestActor)), (n + i).ToString());
+                Sys.ActorOf(Props.Create(() => new DoStuffActor(TestActor, collector)), (n + i).ToString());
             }
         }
     }
     
     public class DoStuffActor : ReceiveActor, IWithTimers
     {
+        private readonly IActorRef _collector;
         public ITimerScheduler Timers { get; set; }
 
-        public DoStuffActor(IActorRef probe)
+        public DoStuffActor(IActorRef probe, IActorRef collector)
         {
+            _collector = collector;
+            
             Receive<Done>(d =>
             {
                 Context.Stop(Self);
+                probe.Tell(d);
             });
+        }
 
+        protected override void PreStart()
+        {
+            base.PreStart();
             var sw = Stopwatch.StartNew();
             Timers.StartSingleTimer("Test", Done.Instance, TimeSpan.FromSeconds(3));
             sw.Stop();
@@ -109,7 +135,7 @@ public class HashedWheelTimerSchedulerContentionSpec: TestKit.Xunit2.TestKit
             if (sw.ElapsedMilliseconds > 0)
             {
                 Context.GetLogger().Info($"{sw.ElapsedMilliseconds}");
-                probe.Tell(sw.ElapsedMilliseconds);
+                _collector.Tell(sw.ElapsedMilliseconds);
             }
         }
     }
