@@ -1187,7 +1187,7 @@ namespace Akka.Remote
             {
                 // Assert handle == None?
                 Context.Parent.Tell(
-                    new ReliableDeliverySupervisor.GotUid((int)handle.ProtocolHandle.HandshakeInfo.Uid, RemoteAddress));
+                    new ReliableDeliverySupervisor.GotUid(handle.ProtocolHandle.HandshakeInfo.Uid, RemoteAddress));
                 _handle = handle.ProtocolHandle;
                 _reader = StartReadEndpoint(_handle);
                 EventPublisher.NotifyListeners(new AssociatedEvent(LocalAddress, RemoteAddress, Inbound));
