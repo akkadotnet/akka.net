@@ -253,20 +253,23 @@ namespace Akka.TestKit
             if (maxDuration.IsZero())
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue. Will not wait.");
-                var didTake = _testState.Queue.TryTake(out var item, cancellationToken);
+                var didTake = _testState.Queue.Reader.TryRead(out var item);
                 take = (didTake, item);
             }
             else if (maxDuration.IsPositiveFinite())
             {
+                using var secondCts = new CancellationTokenSource(maxDuration);
+                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(secondCts.Token, cancellationToken);
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue within {0}", maxDuration);
-                take = await _testState.Queue.TryTakeAsync((int)maxDuration.TotalMilliseconds, cancellationToken)
-                    ;
+                await _testState.Queue.Reader.WaitToReadAsync(linkedCts.Token);
+                var didTake = _testState.Queue.Reader.TryRead(out var item);
+                take = (didTake, item);
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
                 Log.Warning("Trying to receive message from TestActor queue with infinite timeout! Will wait indefinitely!");
-                take = await _testState.Queue.TryTakeAsync(-1, cancellationToken)
-                    ;
+                var readItem = await _testState.Queue.Reader.ReadAsync(cancellationToken);
+                take = (true, readItem);
             }
             else
             {
@@ -276,8 +279,7 @@ namespace Akka.TestKit
             }
 
             _testState.LastWasNoMsg = false;
-            if (take.env == null)
-                take.env = NullMessageEnvelope.Instance;
+            take.env ??= NullMessageEnvelope.Instance;
 
             _testState.LastMessage = take.env;
 
@@ -383,20 +385,24 @@ namespace Akka.TestKit
             if (maxDuration.IsZero())
             {
                 ConditionalLog(shouldLog, "Trying to peek message from TestActor queue. Will not wait.");
-                var didPeek = _testState.Queue.TryPeek(out var item);
+                var didPeek = _testState.Queue.Reader.TryPeek(out var item);
                 peek = (didPeek, item);
             }
             else if (maxDuration.IsPositiveFinite())
             {
                 ConditionalLog(shouldLog, "Trying to peek message from TestActor queue within {0}", maxDuration);
-                peek = await _testState.Queue.TryPeekAsync((int)maxDuration.TotalMilliseconds, cancellationToken)
-                    ;
+                using var secondCts = new CancellationTokenSource(maxDuration);
+                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(secondCts.Token, cancellationToken);
+                await _testState.Queue.Reader.WaitToReadAsync(linkedCts.Token);
+                var didPeek = _testState.Queue.Reader.TryPeek(out var item);
+                peek = (didPeek, item);
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
                 Log.Warning("Trying to peek message from TestActor queue with infinite timeout! Will wait indefinitely!");
-                peek = await _testState.Queue.TryPeekAsync(-1, cancellationToken)
-                    ;
+                await _testState.Queue.Reader.WaitToReadAsync(cancellationToken);
+                var didPeek = _testState.Queue.Reader.TryPeek(out var item);
+                peek = (didPeek, item);
             }
             else
             {
@@ -697,7 +703,7 @@ namespace Akka.TestKit
         private void PopPeekedEnvelope(MessageEnvelope envelope)
         {
             // This should happen immediately (zero timespan). Something is wrong if this fails.
-            var success = _testState.Queue.TryTake(out var receivedEnvelope);
+            var success = _testState.Queue.Reader.TryRead(out var receivedEnvelope);
             if (!success)
                 throw new InvalidOperationException("[RACY] Could not dequeue an item from test queue.");
 
