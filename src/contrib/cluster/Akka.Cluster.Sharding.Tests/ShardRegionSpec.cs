@@ -44,7 +44,6 @@ namespace Akka.Cluster.Sharding.Tests
                 => message switch
                 {
                     int i => (i % 10).ToString(),
-                    ShardRegion.StartEntity se => (int.Parse(se.EntityId) % numberOfShards).ToString(),
                     _ => null
                 };
 

@@ -1051,7 +1051,7 @@ namespace Akka.Cluster
             });
         }
 
-        private ActorSelection ClusterCore(Address address)
+        private static ActorSelection ClusterCore(Address address)
         {
             return Context.ActorSelection(new RootActorPath(address) / "system" / "cluster" / "core" / "daemon");
         }
@@ -2234,8 +2234,7 @@ namespace Akka.Cluster
             var localOverview = localGossip.Overview;
             var localSeen = localOverview.Seen;
 
-            bool enoughMembers = IsMinNrOfMembersFulfilled();
-            bool IsJoiningUp(Member m) => m.Status is MemberStatus.Joining or MemberStatus.WeaklyUp && enoughMembers;
+            var enoughMembers = IsMinNrOfMembersFulfilled();
 
             var removedUnreachable =
                 localOverview.Reachability.AllUnreachableOrTerminated.Select(localGossip.GetMember)
@@ -2339,15 +2338,19 @@ namespace Akka.Cluster
                 }
 
                 PublishMembershipState();
-                GossipExitingMembersToOldest(changedMembers.Where(i => i.Status == MemberStatus.Exiting));
+                GossipExitingMembersToOldest(changedMembers.Where(i => i.Status == MemberStatus.Exiting).ToArray());
             }
+
+            return;
+
+            bool IsJoiningUp(Member m) => m.Status is MemberStatus.Joining or MemberStatus.WeaklyUp && enoughMembers;
         }
 
         /// <summary>
         /// Gossip the Exiting change to the two oldest nodes for quick dissemination to potential Singleton nodes
         /// </summary>
         /// <param name="exitingMembers"></param>
-        private void GossipExitingMembersToOldest(IEnumerable<Member> exitingMembers)
+        private void GossipExitingMembersToOldest(IReadOnlyCollection<Member> exitingMembers)
         {
             var targets = GossipTargetsForExitingMembers(LatestGossip, exitingMembers);
             if (targets != null && targets.Any())
@@ -2509,9 +2512,9 @@ namespace Akka.Cluster
         /// <param name="latestGossip"></param>
         /// <param name="exitingMembers"></param>
         /// <returns></returns>
-        public static IEnumerable<Member> GossipTargetsForExitingMembers(Gossip latestGossip, IEnumerable<Member> exitingMembers)
+        public static IReadOnlyCollection<Member> GossipTargetsForExitingMembers(Gossip latestGossip, IReadOnlyCollection<Member> exitingMembers)
         {
-            if (exitingMembers.Any())
+            if (exitingMembers.Count > 0)
             {
                 var roles = exitingMembers.SelectMany(m => m.Roles);
                 var membersSortedByAge = latestGossip.Members
