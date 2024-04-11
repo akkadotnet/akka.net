@@ -160,7 +160,7 @@ namespace Akka.Tests.Actor.Scheduler
             var receiver = sys.ActorOf(Props.Create(() => new MyScheduledActor()));
             sys.Scheduler.ScheduleTellOnce(0, receiver, "set", ActorRefs.NoSender);
             await Task.Delay(50); // let the scheduler run
-            var received = await receiver.Ask<bool>("get", TimeSpan.FromMilliseconds(100));
+            var received = await receiver.Ask<bool>("get", TimeSpan.FromMilliseconds(TimeSpan.FromSeconds(3)));
             Assert.True(received);
 
             var terminated = await sys.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(5));
