@@ -72,7 +72,16 @@ namespace Akka.Cluster.Tests.MultiNode.SBR;
                     loglevel = DEBUG
                     cluster {
                         downing-provider-class = ""Akka.Cluster.SBR.SplitBrainResolverProvider""
-                        failure-detector.acceptable-heartbeat-pause = 3s
+
+                        # THIS IS PART OF THE FIX
+                        # All nodes need to be able to record all possible unreachable nodes in the cluster,
+                        # in essence, we need to be able to see the full reachability graph of the cluster for this
+                        # fix to work. (monitored-by-nr-of-members = cluster size)
+                        failure-detector.monitored-by-nr-of-members = 15
+
+                        # Shorten the acceptable heartbeat pause to detect unreachable nodes faster (just for test)
+                        failure-detector.acceptable-heartbeat-pause = 2s
+
                         split-brain-resolver.active-strategy = keep-majority
                         split-brain-resolver.stable-after = 10s
                         split-brain-resolver.down-all-when-unstable = off
@@ -82,7 +91,7 @@ namespace Akka.Cluster.Tests.MultiNode.SBR;
 
                         debug {
                           # log heartbeat events (very verbose, useful mostly when debugging heartbeating issues)
-                          verbose-heartbeat-logging = off
+                          verbose-heartbeat-logging = on
 
 	                      # log gossip merge events (very verbose, useful when debugging convergence issues)
 	                      verbose-receive-gossip-logging = on
@@ -97,7 +106,27 @@ namespace Akka.Cluster.Tests.MultiNode.SBR;
                 .WithFallback(DebugConfig(true))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
-            TestTransport = true;
+            // Use akka.tcp, not akka.ttrtl.tcp
+            TestTransport = false;
+
+            // Comment these `NodeConfig()` calls if port collisions are happening in the CI/CD system
+            #region Local debug settings
+            NodeConfig( new[]{ Node1 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6001" });
+            NodeConfig( new[]{ Node2 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6002" });
+            NodeConfig( new[]{ Node3 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6003" });
+            NodeConfig( new[]{ Node4 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6004" });
+            NodeConfig( new[]{ Node5 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6005" });
+            NodeConfig( new[]{ Node6 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6006" });
+            NodeConfig( new[]{ Node7 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6007" });
+            NodeConfig( new[]{ Node8 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6008" });
+            NodeConfig( new[]{ Node9 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6009" });
+            NodeConfig( new[]{ Node10 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6010" });
+            NodeConfig( new[]{ Node11 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6011" });
+            NodeConfig( new[]{ Node12 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6012" });
+            NodeConfig( new[]{ Node13 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6013" });
+            NodeConfig( new[]{ Node14 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6014" });
+            NodeConfig( new[]{ Node15 }, new Config[]{ "akka.remote.dot-netty.tcp.port = 6015" });
+            #endregion
         }
     }
 
@@ -190,19 +219,16 @@ namespace Akka.Cluster.Tests.MultiNode.SBR;
 
             // stable-after delay
             await Task.Delay(10.Seconds());
-            
-            Within(TimeSpan.FromSeconds(10), () =>
+
+            await AwaitAssertAsync(() =>
             {
-                AwaitAssert(() =>
+                cluster.State.Members.Count.Should().Be(10);
+                foreach (var m in cluster.State.Members)
                 {
-                    cluster.State.Members.Count.Should().Be(10);
-                    foreach (var m in cluster.State.Members)
-                    {
-                        m.Status.Should().Be(MemberStatus.Up);
-                    }
-                });
-                LogClusterInfos(cluster);
-            });
+                    m.Status.Should().Be(MemberStatus.Up);
+                }
+            }, 10.Seconds(), 200.Milliseconds());
+            LogClusterInfos(cluster);
             EnterBarrier("unreachable-indirect-clean-SBR-decision");
 
             EnterBarrier("done");

@@ -229,10 +229,40 @@ namespace Akka.Cluster.SBR
             {
                 var intersectionOfObserversAndSubjects = IndirectlyConnectedFromIntersectionOfObserversAndSubjects;
                 var haveSeenCurrentGossip = IndirectlyConnectedFromSeenCurrentGossip;
+
+                // Detect floating unreachable islands in the reachability graph.
+                #region Unreachable island detection
+                
+                // Collect all nodes that are reported as both record observer and unreachable 
+                // (possible indirect connection)
+                var possibleIndirect = originalReachability.Records
+                    .Where(r => originalUnreachable.Contains(r.Observer))
+                    .Select(r => r.Observer)
+                    .ToImmutableHashSet(); 
+
+                // For each possible islands, reach a consensus with all nodes in the SeenBy list
+                // (reachable from the leader) that they also could not see the possible island node.
+                var localSeenBy = SeenBy;
+                var pruneList = new List<UniqueAddress>();
+                foreach (var address in possibleIndirect)
+                {
+                    var records = originalReachability.Records
+                        .Where(r => localSeenBy.Contains(r.Observer.Address) && r.Subject.Equals(address))
+                        .Select(r => r.Observer)
+                        .ToImmutableHashSet();
+                    
+                    // Add the node to the prune list if we reach a consensus
+                    if(records.Count == localSeenBy.Count)
+                        pruneList.Add(address);
+                }
+                #endregion
+                
                 Reachability = Reachability.FilterRecords(
                     r =>
                         // we only retain records for addresses that are still downable
                         downable.Contains(r.Observer) && downable.Contains(r.Subject) &&
+                        // prune out records that are known to be disconnected islands
+                        !pruneList.Contains(r.Observer) &&
                         // remove records between the indirectly connected
                         !(intersectionOfObserversAndSubjects.Contains(r.Observer) &&
                           intersectionOfObserversAndSubjects.Contains(r.Subject) ||
