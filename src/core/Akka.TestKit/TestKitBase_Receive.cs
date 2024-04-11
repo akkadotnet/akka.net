@@ -401,11 +401,21 @@ namespace Akka.TestKit
             else if (maxDuration.IsPositiveFinite())
             {
                 ConditionalLog(shouldLog, "Trying to peek message from TestActor queue within {0}", maxDuration);
-                using var secondCts = new CancellationTokenSource(maxDuration);
-                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(secondCts.Token, cancellationToken);
-                await _testState.Queue.Reader.WaitToReadAsync(linkedCts.Token);
-                var didPeek = _testState.Queue.Reader.TryPeek(out var item);
-                peek = (didPeek, item);
+                var delayTask = Task.Delay(maxDuration, cancellationToken);
+                var readTask = _testState.Queue.Reader.WaitToReadAsync(cancellationToken).AsTask();
+                var completedTask = await Task.WhenAny(readTask, delayTask);
+
+                if (completedTask == readTask && readTask.Result)
+                {
+                    // Data is available within the timeout.
+                    var didTake = _testState.Queue.Reader.TryPeek(out var item);
+                    peek = (didTake, item);
+                }
+                else
+                {
+                    // Timeout occurred before data was available.
+                    peek = (false, default);
+                }
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
@@ -570,8 +580,7 @@ namespace Akka.TestKit
                 cancellationToken.ThrowIfCancellationRequested();
                 
                 // Peek the message on the front of the queue
-                var (success, envelope) = await TryPeekOneAsync((stop - Now).Min(idleValue), cancellationToken)
-                    ;
+                var (success, envelope) = await TryPeekOneAsync((stop - Now).Min(idleValue), cancellationToken);
                 if (!success)
                 {
                     _testState.LastMessage = msg;
@@ -584,8 +593,7 @@ namespace Akka.TestKit
                 if (result != null)
                 {
                     // This should happen immediately (zero timespan). Something is wrong if this fails.
-                    var (receiveSuccess, receiveEnvelope) = await InternalTryReceiveOneAsync(TimeSpan.Zero, true, cancellationToken)
-                        ;
+                    var (receiveSuccess, receiveEnvelope) = await InternalTryReceiveOneAsync(TimeSpan.Zero, true, cancellationToken);
                     if (!receiveSuccess)
                         throw new InvalidOperationException("[RACY] Could not dequeue an item from test queue.");
 
