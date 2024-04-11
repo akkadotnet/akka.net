@@ -258,12 +258,22 @@ namespace Akka.TestKit
             }
             else if (maxDuration.IsPositiveFinite())
             {
-                using var secondCts = new CancellationTokenSource(maxDuration);
-                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(secondCts.Token, cancellationToken);
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue within {0}", maxDuration);
-                await _testState.Queue.Reader.WaitToReadAsync(linkedCts.Token);
-                var didTake = _testState.Queue.Reader.TryRead(out var item);
-                take = (didTake, item);
+                var delayTask = Task.Delay(maxDuration, cancellationToken);
+                var readTask = _testState.Queue.Reader.WaitToReadAsync(cancellationToken).AsTask();
+                var completedTask = await Task.WhenAny(readTask, delayTask);
+
+                if (completedTask == readTask && readTask.Result)
+                {
+                    // Data is available within the timeout.
+                    var didTake = _testState.Queue.Reader.TryRead(out var item);
+                    take = (didTake, item);
+                }
+                else
+                {
+                    // Timeout occurred before data was available.
+                    take = (false, null);
+                }
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
