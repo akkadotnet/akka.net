@@ -26,17 +26,19 @@ namespace Akka.Remote.Tests
 {
     public class ActorsLeakSpec : AkkaSpec
     {
-        private static readonly Config Config = ConfigurationFactory.ParseString(@"
-            akka.actor.provider = remote
-            akka.loglevel = INFO
-            akka.remote.dot-netty.tcp.applied-adapters = [trttl]
-            akka.remote.dot-netty.tcp.hostname = 127.0.0.1
-            akka.remote.log-lifecycle-events = on
-            akka.remote.transport-failure-detector.heartbeat-interval = 1 s
-            akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s
-            akka.remote.quarantine-after-silence = 3 s
-            akka.test.filter-leeway = 12 s
-        ");
+        private static readonly Config Config = ConfigurationFactory.ParseString("""
+            
+                        akka.actor.provider = remote
+                        akka.loglevel = INFO
+                        akka.remote.dot-netty.tcp.applied-adapters = [trttl]
+                        akka.remote.dot-netty.tcp.hostname = 127.0.0.1
+                        akka.remote.log-lifecycle-events = on
+                        akka.remote.transport-failure-detector.heartbeat-interval = 1 s
+                        akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s
+                        akka.remote.quarantine-after-silence = 3 s
+                        akka.test.filter-leeway = 12 s
+                    
+            """);
 
         public ActorsLeakSpec(ITestOutputHelper output) : base(Config, output)
         {
@@ -211,7 +213,7 @@ namespace Akka.Remote.Tests
                 // Watch a remote actor - this results in system message traffic
                 Sys.ActorSelection(new RootActorPath(idleRemoteAddress) / "user" / "stoppable").Tell(new Identify(1));
                 var remoteActor = (await ExpectMsgAsync<ActorIdentity>()).Subject;
-                Watch(remoteActor);
+                await WatchAsync(remoteActor);
                 remoteActor.Tell("stop");
                 await ExpectTerminatedAsync(remoteActor);
                 // All system messages have been acked now on this side
