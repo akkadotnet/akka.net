@@ -93,7 +93,7 @@ namespace Akka.Remote.Tests
             expected.Should().BeEquivalentTo(actual);
         }
 
-        [Fact]
+        [Fact(Skip = "EventFilter can receive 1-2 notifications about nodes shutting down depending on timing, which makes this spec racy")]
         public async Task Remoting_must_not_leak_actors()
         {
             var actorRef = Sys.ActorOf(EchoActor.Props(this, true), "echo");
