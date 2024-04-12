@@ -9,6 +9,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
@@ -36,7 +37,7 @@ namespace Akka.TestKit
 
             public ActorSystem System { get; set; }
             public TestKitSettings TestKitSettings { get; set; }
-            public ITestQueue<MessageEnvelope> Queue { get; set; }
+            public Channel<MessageEnvelope> Queue { get; set; }
             public MessageEnvelope LastMessage  { get; set; }
             public IActorRef TestActor { get; set; }
             public TimeSpan? End { get; set; }
@@ -113,9 +114,7 @@ namespace Akka.TestKit
 
         protected TestKitBase(ITestKitAssertions assertions, ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName)
         {
-            if(assertions == null) throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
-
-            _assertions = assertions;
+            _assertions = assertions ?? throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
             
             InitializeTest(system, config, actorSystemName, testActorName);
         }
@@ -160,7 +159,7 @@ namespace Akka.TestKit
             system.RegisterExtension(new TestKitAssertionsExtension(_assertions));
 
             _testState.TestKitSettings = TestKitExtension.For(_testState.System);
-            _testState.Queue = new AsyncQueue<MessageEnvelope>();
+            _testState.Queue = Channel.CreateUnbounded<MessageEnvelope>();
             _testState.Log = Logging.GetLogger(system, GetType());
             _testState.EventFilterFactory = new EventFilterFactory(this);
 
@@ -203,7 +202,7 @@ namespace Akka.TestKit
             {
                 while (stopwatch.Elapsed < deadline)
                 {
-                    ready = !(testActor is IRepointableRef repRef) || repRef.IsStarted;
+                    ready = testActor is not IRepointableRef repRef || repRef.IsStarted;
                     if (ready) break;
                     Thread.Sleep(10);
                 }
@@ -308,7 +307,7 @@ namespace Akka.TestKit
         /// </value>
         public bool HasMessages
         {
-            get { return _testState.Queue.Count > 0; }
+            get { return _testState.Queue.Reader.Count > 0; }
         }
 
         /// <summary>
@@ -701,7 +700,7 @@ namespace Akka.TestKit
 
         private IActorRef CreateTestActor(ActorSystem system, string name)
         {
-            var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_testState.Queue)))
+            var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
             var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
             return testActor;

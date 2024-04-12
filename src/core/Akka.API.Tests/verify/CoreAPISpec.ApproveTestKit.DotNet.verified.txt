@@ -622,84 +622,6 @@ namespace Akka.TestKit.Extensions
 }
 namespace Akka.TestKit.Internal
 {
-    public class AsyncQueue<T> : Akka.TestKit.Internal.ITestQueue<T>
-        where T :  class
-    {
-        public AsyncQueue() { }
-        public int Count { get; }
-        public void Enqueue(T item) { }
-        public System.Threading.Tasks.ValueTask EnqueueAsync(T item) { }
-        public T Peek(System.Threading.CancellationToken cancellationToken) { }
-        public System.Threading.Tasks.ValueTask<T> PeekAsync(System.Threading.CancellationToken cancellationToken) { }
-        public T Take(System.Threading.CancellationToken cancellationToken) { }
-        public System.Threading.Tasks.ValueTask<T> TakeAsync(System.Threading.CancellationToken cancellationToken) { }
-        public System.Collections.Generic.List<T> ToList() { }
-        public bool TryEnqueue(T item, int millisecondsTimeout, System.Threading.CancellationToken cancellationToken) { }
-        public System.Threading.Tasks.ValueTask<bool> TryEnqueueAsync(T item, int millisecondsTimeout, System.Threading.CancellationToken cancellationToken) { }
-        public bool TryPeek(out T item) { }
-        public bool TryPeek(out T item, int millisecondsTimeout, System.Threading.CancellationToken cancellationToken) { }
-        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
-                "success",
-                "item"})]
-        public System.Threading.Tasks.ValueTask<System.ValueTuple<bool, T>> TryPeekAsync(System.Threading.CancellationToken cancellationToken) { }
-        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
-                "success",
-                "item"})]
-        public System.Threading.Tasks.ValueTask<System.ValueTuple<bool, T>> TryPeekAsync(int millisecondsTimeout, System.Threading.CancellationToken cancellationToken) { }
-        public bool TryTake(out T item, System.Threading.CancellationToken cancellationToken = null) { }
-        public bool TryTake(out T item, int millisecondsTimeout, System.Threading.CancellationToken cancellationToken) { }
-        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
-                "success",
-                "item"})]
-        public System.Threading.Tasks.ValueTask<System.ValueTuple<bool, T>> TryTakeAsync(System.Threading.CancellationToken cancellationToken) { }
-        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
-                "success",
-                "item"})]
-        public System.Threading.Tasks.ValueTask<System.ValueTuple<bool, T>> TryTakeAsync(int millisecondsTimeout, System.Threading.CancellationToken cancellationToken) { }
-    }
-    public class BlockingCollectionTestActorQueue<T> : Akka.TestKit.Internal.ITestActorQueueProducer<T>, Akka.TestKit.Internal.ITestActorQueue<T>
-    {
-        public BlockingCollectionTestActorQueue(Akka.TestKit.Internal.ITestQueue<T> queue) { }
-        public void Enqueue(T item) { }
-        public System.Collections.Generic.IEnumerable<T> GetAll() { }
-        public System.Collections.Generic.List<T> ToList() { }
-    }
-    public class BlockingQueue<T> : Akka.TestKit.Internal.ITestQueue<T>
-    {
-        public BlockingQueue() { }
-        public int Count { get; }
-        [System.ObsoleteAttribute("This method will be removed from the public API in the future")]
-        public void AddFirst(T item) { }
-        public void Enqueue(T item) { }
-        public System.Threading.Tasks.ValueTask EnqueueAsync(T item) { }
-        public T Peek(System.Threading.CancellationToken cancellationToken) { }
-        public System.Threading.Tasks.ValueTask<T> PeekAsync(System.Threading.CancellationToken cancellationToken) { }
-        public T Take(System.Threading.CancellationToken cancellationToken) { }
-        public System.Threading.Tasks.ValueTask<T> TakeAsync(System.Threading.CancellationToken cancellationToken) { }
-        public System.Collections.Generic.List<T> ToList() { }
-        public bool TryEnqueue(T item, int millisecondsTimeout, System.Threading.CancellationToken cancellationToken) { }
-        public System.Threading.Tasks.ValueTask<bool> TryEnqueueAsync(T item, int millisecondsTimeout, System.Threading.CancellationToken cancellationToken) { }
-        public bool TryPeek(out T item) { }
-        public bool TryPeek(out T item, int millisecondsTimeout, System.Threading.CancellationToken cancellationToken) { }
-        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
-                "success",
-                "item"})]
-        public System.Threading.Tasks.ValueTask<System.ValueTuple<bool, T>> TryPeekAsync(System.Threading.CancellationToken cancellationToken) { }
-        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
-                "success",
-                "item"})]
-        public System.Threading.Tasks.ValueTask<System.ValueTuple<bool, T>> TryPeekAsync(int millisecondsTimeout, System.Threading.CancellationToken cancellationToken) { }
-        public bool TryTake(out T item, System.Threading.CancellationToken cancellationToken = null) { }
-        public bool TryTake(out T item, int millisecondsTimeout, System.Threading.CancellationToken cancellationToken) { }
-        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
-                "success",
-                "item"})]
-        public System.Threading.Tasks.ValueTask<System.ValueTuple<bool, T>> TryTakeAsync(System.Threading.CancellationToken cancellationToken) { }
-        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
-                "success",
-                "item"})]
-        public System.Threading.Tasks.ValueTask<System.ValueTuple<bool, T>> TryTakeAsync(int millisecondsTimeout, System.Threading.CancellationToken cancellationToken) { }
-    }
     public class CustomEventFilter : Akka.TestKit.Internal.EventFilterBase
     {
         public CustomEventFilter(System.Predicate<Akka.Event.LogEvent> predicate) { }
@@ -731,50 +653,6 @@ namespace Akka.TestKit.Internal
         public override string ToString() { }
     }
     public delegate void EventMatched(Akka.TestKit.Internal.EventFilterBase eventFilter, Akka.Event.LogEvent logEvent);
-    public interface ITestActorQueueProducer<in T>
-    {
-        void Enqueue(T item);
-    }
-    public interface ITestActorQueue<T> : Akka.TestKit.Internal.ITestActorQueueProducer<T>
-    {
-        System.Collections.Generic.IEnumerable<T> GetAll();
-        [System.ObsoleteAttribute("This method will be removed in the future")]
-        System.Collections.Generic.List<T> ToList();
-    }
-    public interface ITestQueue<T>
-    {
-        int Count { get; }
-        void Enqueue(T item);
-        System.Threading.Tasks.ValueTask EnqueueAsync(T item);
-        T Peek(System.Threading.CancellationToken cancellationToken);
-        System.Threading.Tasks.ValueTask<T> PeekAsync(System.Threading.CancellationToken cancellationToken);
-        T Take(System.Threading.CancellationToken cancellationToken);
-        System.Threading.Tasks.ValueTask<T> TakeAsync(System.Threading.CancellationToken cancellationToken);
-        [System.ObsoleteAttribute("This method will be removed in the future")]
-        System.Collections.Generic.List<T> ToList();
-        bool TryEnqueue(T item, int millisecondsTimeout, System.Threading.CancellationToken cancellationToken);
-        System.Threading.Tasks.ValueTask<bool> TryEnqueueAsync(T item, int millisecondsTimeout, System.Threading.CancellationToken cancellationToken);
-        bool TryPeek(out T item);
-        bool TryPeek(out T item, int millisecondsTimeout, System.Threading.CancellationToken cancellationToken);
-        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
-                "success",
-                "item"})]
-        System.Threading.Tasks.ValueTask<System.ValueTuple<bool, T>> TryPeekAsync(System.Threading.CancellationToken cancellationToken);
-        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
-                "success",
-                "item"})]
-        System.Threading.Tasks.ValueTask<System.ValueTuple<bool, T>> TryPeekAsync(int millisecondsTimeout, System.Threading.CancellationToken cancellationToken);
-        bool TryTake(out T item, System.Threading.CancellationToken cancellationToken = null);
-        bool TryTake(out T item, int millisecondsTimeout, System.Threading.CancellationToken cancellationToken);
-        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
-                "success",
-                "item"})]
-        System.Threading.Tasks.ValueTask<System.ValueTuple<bool, T>> TryTakeAsync(System.Threading.CancellationToken cancellationToken);
-        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
-                "success",
-                "item"})]
-        System.Threading.Tasks.ValueTask<System.ValueTuple<bool, T>> TryTakeAsync(int millisecondsTimeout, System.Threading.CancellationToken cancellationToken);
-    }
     public class InfoFilter : Akka.TestKit.Internal.EventFilterBase
     {
         public InfoFilter(Akka.TestKit.Internal.StringMatcher.IStringMatcher messageMatcher = null, Akka.TestKit.Internal.StringMatcher.IStringMatcher sourceMatcher = null) { }
@@ -830,11 +708,6 @@ namespace Akka.TestKit.Internal
             public int ReceivedCount { get; }
             public virtual void HandleEvent(Akka.TestKit.Internal.EventFilterBase eventFilter, Akka.Event.LogEvent logEvent) { }
         }
-    }
-    public class InternalTestActor : Akka.Actor.UntypedActor
-    {
-        public InternalTestActor(Akka.TestKit.Internal.ITestActorQueue<Akka.TestKit.MessageEnvelope> queue) { }
-        protected override void OnReceive(object message) { }
     }
     public class InternalTestActorRef : Akka.Actor.LocalActorRef
     {
