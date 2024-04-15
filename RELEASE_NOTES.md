@@ -10,6 +10,22 @@ Akka.NET v1.5.19 is a patch release for Akka.NET with a few bug fixes.
 * [Core: Fix resource contention problem with HashedWheelTimerScheduler during start-up](https://github.com/akkadotnet/akka.net/pull/7144)
 * [TestKit: Fix async deadlock by replacing IAsyncQueue with System.Threading.Channel](https://github.com/akkadotnet/akka.net/pull/7157)
 
+**Akka.Analyzers**
+
+We've added 3 new analyzer rules to `Akka.Analyzers`:
+
+* **AK1004**
+
+  AK1004 warns users to replace any `ScheduleTellOnce()` and `ScheduleTellRepeatedly()` invocation inside an actor to implement `IWithTimers` interface instead. Documentation can be read [here](https://getakka.net/articles/debugging/rules/AK1004.html)
+
+* **AK1005**
+
+  AK1005 warns users about improper `Sender` and `Self` access from inside an async lambda callbacks inside actor implementation. Documentation can be read [here](https://getakka.net/articles/debugging/rules/AK1005.html)
+
+* **AK1007**
+
+  AK1007 is an error message for any `Timers.StartSingleTimer()` and `Timers.StartPeriodicTimer()` invocation from inside the actor `PreRestart()` and `AroundPreRestart()` lifecycle callback methods.  Documentation can be read [here](https://getakka.net/articles/debugging/rules/AK1007.html)
+
 | COMMITS | LOC+ | LOC- | AUTHOR              |
 |---------|------|------|---------------------|
 | 9       | 366  | 1951 | Aaron Stannard      |
