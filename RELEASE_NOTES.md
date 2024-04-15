@@ -1,10 +1,26 @@
-#### 1.5.19 March 13th 2024 ####
+#### 1.5.19 April 15th 2024 ####
 
-**Placeholder for nightlies**
+Akka.NET v1.5.19 is a patch release for Akka.NET with a few bug fixes.
+
+* [Persistence.SQLite: Bump Microsoft.Data.SQLite to 8.0.4](https://github.com/akkadotnet/akka.net/pull/7148)
+* [Core: Bump Google.Protobuf to 3.26.1](https://github.com/akkadotnet/akka.net/pull/7138)
+* [Core: Bump Akka.Analyzer to 0.2.4](https://github.com/akkadotnet/akka.net/pull/7143)
+* [Remote: Improve logging](https://github.com/akkadotnet/akka.net/pull/7149)
+* [Cluster: Improve logging](https://github.com/akkadotnet/akka.net/pull/7149)
+* [Core: Fix resource contention problem with HashedWheelTimerScheduler during start-up](https://github.com/akkadotnet/akka.net/pull/7144)
+* [TestKit: Fix async deadlock by replacing IAsyncQueue with System.Threading.Channel](https://github.com/akkadotnet/akka.net/pull/7157)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 9       | 366  | 1951 | Aaron Stannard      |
+| 9       | 14   | 14   | dependabot[bot]     |
+| 2       | 516  | 30   | Gregorius Soedharmo |
+
+You can [see the full set of changes for Akka.NET v1.5.19 here](https://github.com/akkadotnet/akka.net/milestones/1.5.19).
 
 #### 1.5.18 March 13th 2024 ####
 
-Akka.NET v1.5.17.1 is a patch release for Akka.NET with a feature addition.
+Akka.NET v1.5.18 is a patch release for Akka.NET with a feature addition.
 
 * [Migrate all internal dispatchers to default thread pool dispatcher](https://github.com/akkadotnet/akka.net/pull/7117)
 
