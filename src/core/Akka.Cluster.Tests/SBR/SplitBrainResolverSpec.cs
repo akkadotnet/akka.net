@@ -25,6 +25,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Akka.Util;
 using Akka.Coordination.Tests;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests.SBR
 {
@@ -2007,6 +2008,117 @@ namespace Akka.Cluster.Tests.SBR
             setup.ExpectNoDecision(TimeSpan.FromMilliseconds(100));
         }
 
+        [Fact(DisplayName = "Split Brain Resolver must down correct nodes when Reachability records is polluted and consensus is reached")]
+        public async Task BugFix7141Consensus()
+        {
+            var setup = new SetupKeepMajority(this, 2.Seconds(), MemberA.UniqueAddress, null, null, 100.Seconds());
+            setup.MemberUp(MemberA, MemberB, MemberC, MemberD, MemberE, MemberF);
+            setup.Leader(MemberA);
+            
+            // First unreachable reported
+            setup.Unreachable(MemberC);
+            
+            await Task.Delay(500.Milliseconds());
+            setup.ReachabilityChanged(
+                (MemberA, MemberC),
+                (MemberB, MemberC),
+                (MemberE, MemberC), // Poison record
+                (MemberF, MemberC));
+            
+            await Task.Delay(500.Milliseconds());
+            
+            // Second unreachable reported
+            setup.Unreachable(MemberD);
+            
+            await Task.Delay(500.Milliseconds());
+            setup.ReachabilityChanged(
+                (MemberA, MemberC),
+                (MemberA, MemberD),
+                (MemberB, MemberC),
+                (MemberB, MemberD),
+                (MemberE, MemberC), // Poison record
+                (MemberF, MemberC),
+                (MemberF, MemberD));
+            
+            await Task.Delay(500.Milliseconds());
+            
+            // Third unreachable reported
+            setup.Unreachable(MemberD);
+            
+            await Task.Delay(500.Milliseconds());
+            setup.ReachabilityChanged(
+                (MemberA, MemberC),
+                (MemberA, MemberD),
+                (MemberA, MemberE),
+                (MemberB, MemberC),
+                (MemberB, MemberD),
+                (MemberB, MemberE),
+                (MemberE, MemberC), // Poison record
+                (MemberF, MemberC),
+                (MemberF, MemberD),
+                (MemberF, MemberE));
+            
+            Thread.Sleep(3000);
+            setup.Tick();
+            setup.ExpectDownCalled(MemberC, MemberD, MemberE);
+        }
+
+        [Fact(DisplayName = "Split Brain Resolver must down all nodes when Reachability records is polluted and no consensus is reached")]
+        public async Task BugFix7141NoConsensus()
+        {
+            var setup = new SetupKeepMajority(this, 2.Seconds(), MemberA.UniqueAddress, null, null, 100.Seconds());
+            setup.MemberUp(MemberA, MemberB, MemberC, MemberD, MemberE, MemberF);
+            setup.Leader(MemberA);
+            
+            // First unreachable reported
+            setup.Unreachable(MemberC);
+            
+            await Task.Delay(500.Milliseconds());
+            setup.ReachabilityChanged(
+                (MemberA, MemberC),
+                (MemberB, MemberC),
+                (MemberE, MemberC), // Poison record
+                (MemberF, MemberC));
+            
+            await Task.Delay(500.Milliseconds());
+            
+            // Second unreachable reported
+            setup.Unreachable(MemberD);
+            
+            await Task.Delay(500.Milliseconds());
+            setup.ReachabilityChanged(
+                (MemberA, MemberC),
+                (MemberA, MemberD),
+                (MemberB, MemberC),
+                (MemberB, MemberD),
+                (MemberE, MemberC), // Poison record
+                (MemberF, MemberC),
+                (MemberF, MemberD));
+            
+            await Task.Delay(500.Milliseconds());
+            
+            // Third unreachable reported
+            setup.Unreachable(MemberD);
+            
+            await Task.Delay(500.Milliseconds());
+            
+            // F did not report that E is unreachable
+            setup.ReachabilityChanged(
+                (MemberA, MemberC),
+                (MemberA, MemberD),
+                (MemberA, MemberE),
+                (MemberB, MemberC),
+                (MemberB, MemberD),
+                (MemberB, MemberE),
+                (MemberE, MemberC), // Poison record
+                (MemberF, MemberC),
+                (MemberF, MemberD));
+            
+            Thread.Sleep(3000);
+            setup.Tick();
+            setup.ExpectDownCalled(MemberA, MemberB, MemberC, MemberD, MemberE, MemberF);
+        }
+        
         [Fact]
         public void Split_Brain_Resolver_must_down_other_side_when_lease_can_be_acquired()
         {
