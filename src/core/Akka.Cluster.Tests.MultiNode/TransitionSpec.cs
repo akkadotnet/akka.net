@@ -71,14 +71,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 .Select(m => m.Status)
                 .ToList();
 
-            if (status.Any())
-            {
-                return status.First();
-            }
-            else
-            {
-                return Akka.Cluster.MemberStatus.Removed;
-            }
+            return status.Count != 0 ? status.First() : Akka.Cluster.MemberStatus.Removed;
         }
 
         private ImmutableHashSet<Address> MemberAddresses()

@@ -311,5 +311,19 @@ namespace Akka.Cluster.Tests
             r2.AllObservers.Should().BeEquivalentTo(ImmutableList.Create(nodeD));
             r2.Versions.Keys.Should().BeEquivalentTo(ImmutableList.Create(nodeD));
         }
+
+        [Fact]
+        public void ReachabilityTable_must_be_able_to_filter_records()
+        {
+            var r = Reachability.Empty.
+                Unreachable(nodeC, nodeB).
+                Unreachable(nodeB, nodeA).
+                Unreachable(nodeB, nodeC);
+            
+            var filtered = r.FilterRecords(x => x.Observer != nodeC);
+            filtered.IsReachable(nodeB).Should().BeTrue();
+            filtered.IsReachable(nodeA).Should().BeFalse();
+            filtered.AllObservers.Should().BeEquivalentTo(ImmutableHashSet.Create(nodeB));
+        }
     }
 }
