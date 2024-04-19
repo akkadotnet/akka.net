@@ -407,6 +407,7 @@ namespace Akka.Cluster.Sharding.Delivery
         [System.Runtime.CompilerServices.NullableAttribute(0)]
         public sealed class Settings : System.IEquatable<Akka.Cluster.Sharding.Delivery.ShardingConsumerController.Settings>
         {
+            public bool AllowBypass { get; set; }
             public int BufferSize { get; set; }
             public Akka.Delivery.ConsumerController.Settings ConsumerControllerSettings { get; set; }
             public static Akka.Cluster.Sharding.Delivery.ShardingConsumerController.Settings Create(Akka.Actor.ActorSystem system) { }

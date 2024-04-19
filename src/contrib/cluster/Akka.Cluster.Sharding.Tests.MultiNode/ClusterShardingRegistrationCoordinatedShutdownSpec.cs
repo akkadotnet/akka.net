@@ -88,9 +88,7 @@ namespace Akka.Cluster.Sharding.Tests
                 StartSharding(
                     Sys,
                     typeName: "Entity",
-                    entityProps: Props.Create(() => new ShardedEntity()),
-                    extractEntityId: IntExtractEntityId,
-                    extractShardId: IntExtractShardId);
+                    entityProps: Props.Create(() => new ShardedEntity()));
 
                 EnterBarrier("before-shutdown");
 

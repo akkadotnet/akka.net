@@ -229,10 +229,14 @@ namespace Akka.Cluster.SBR
             {
                 var intersectionOfObserversAndSubjects = IndirectlyConnectedFromIntersectionOfObserversAndSubjects;
                 var haveSeenCurrentGossip = IndirectlyConnectedFromSeenCurrentGossip;
+                var pruneList = PruneUnreachableNodes(originalReachability, originalUnreachable);
+                
                 Reachability = Reachability.FilterRecords(
                     r =>
                         // we only retain records for addresses that are still downable
                         downable.Contains(r.Observer) && downable.Contains(r.Subject) &&
+                        // prune out records that are known to be disconnected islands
+                        !pruneList.Contains(r.Observer) &&
                         // remove records between the indirectly connected
                         !(intersectionOfObserversAndSubjects.Contains(r.Observer) &&
                           intersectionOfObserversAndSubjects.Contains(r.Subject) ||
@@ -255,6 +259,51 @@ namespace Akka.Cluster.SBR
                 Reachability = originalReachability;
             }
         }
+
+        #region Unreachable island detection
+        /// <summary>
+        /// Detect floating unreachable islands in the reachability graph.
+        /// 
+        /// Note, this is a potentially expensive operation to perform, this is designed to be called by
+        /// `AdditionalNodesToDownWhenIndirectlyConnected()` which is very rarely called, do not call this anywhere else.
+        /// </summary>
+        /// <param name="reachability">Local copy of the reachability graph</param>
+        /// <param name="unreachable">Local copy of the unreachable addresses</param>
+        /// <returns>Hash set of detected disconnected addresses</returns>
+        private ImmutableHashSet<UniqueAddress> PruneUnreachableNodes(
+            Reachability reachability,
+            ImmutableHashSet<UniqueAddress> unreachable)
+        {
+            // Get all reachable nodes
+            var allReachable = AllMembers.Select(m => m.UniqueAddress)
+                .Where(a => !unreachable.Contains(a))
+                .ToImmutableHashSet();
+                
+            // Collect all nodes that are reported as both record observer and unreachable 
+            // (possible indirect connection)
+            var possibleIndirect = reachability.Records
+                .Where(r => unreachable.Contains(r.Observer))
+                .Select(r => r.Observer)
+                .ToImmutableHashSet(); 
+
+            // For each possible islands, reach a consensus with all nodes that are still reachable
+            // that they also could not see the possible island node.
+            var pruneList = new List<UniqueAddress>();
+            foreach (var address in possibleIndirect)
+            {
+                var records = reachability.Records
+                    .Where(r => allReachable.Contains(r.Observer) && r.Subject.Equals(address))
+                    .Select(r => r.Observer)
+                    .ToImmutableHashSet();
+                    
+                // Add the node to the prune list if we reach a consensus
+                if(records.Count == allReachable.Count)
+                    pruneList.Add(address);
+            }
+
+            return pruneList.ToImmutableHashSet();
+        }
+        #endregion
 
         public bool IsAllUnreachableDownOrExiting =>
             Unreachable.IsEmpty ||

@@ -93,30 +93,37 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
         
+        private sealed class TestMessageExtractor: IMessageExtractor
+        {
+            public string EntityId(object message)
+                => message switch
+                {
+                    EntityEnvelope env => env.Id.ToString(),
+                    _ => null
+                };
+
+            public object EntityMessage(object message)
+                => message switch
+                {
+                    EntityEnvelope env => env.Payload,
+                    _ => message
+                };
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    EntityEnvelope msg => msg.Id.ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => entityId;
+        }
+        
         [Theory(DisplayName = "Persistent shard must recover from transient failures inside sharding entity constructor and PreStart method")]
         [MemberData(nameof(PropsFactory))]
         public async Task Persistent_Shard_must_recover_from_failing_entity(Props entityProp)
         {
-            ExtractEntityId extractEntityId = message =>
-            {
-                switch (message)
-                {
-                    case EntityEnvelope env:
-                        return (env.Id.ToString(), env.Payload);
-                }
-                return Option<(string, object)>.None;
-            };
-
-            ExtractShardId extractShardId = message =>
-            {
-                switch (message)
-                {
-                    case EntityEnvelope msg:
-                        return msg.Id.ToString();
-                }
-                return null;
-            };            
-
             var settings = ClusterShardingSettings.Create(Sys);
             settings = settings.WithTuningParameters(settings.TuningParameters.WithEntityRestartBackoff(1.Seconds()));
             var provider = new EventSourcedRememberEntitiesProvider("cats", settings);
@@ -126,7 +133,7 @@ namespace Akka.Cluster.Sharding.Tests
                 "shard-1",
                 _ => entityProp,
                 settings,
-                new ExtractorAdapter(new DeprecatedHandlerExtractorAdapter(extractEntityId, extractShardId)),
+                new TestMessageExtractor(),
                 PoisonPill.Instance,
                 provider
             ));

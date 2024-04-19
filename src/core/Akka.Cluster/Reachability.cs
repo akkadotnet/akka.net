@@ -363,8 +363,7 @@ namespace Akka.Cluster
         /// <inheritdoc />
         public override bool Equals(object obj)
         {
-            var other = obj as Reachability;
-            if (other == null) return false;
+            if (obj is not Reachability other) return false;
             return Records.Count == other.Records.Count &&
                    Versions.Equals(other.Versions) &&
                    _cache.Value.ObserverRowMap.Equals(other._cache.Value.ObserverRowMap);

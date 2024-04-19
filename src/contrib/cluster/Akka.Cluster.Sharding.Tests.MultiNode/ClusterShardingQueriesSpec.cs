@@ -51,25 +51,28 @@ namespace Akka.Cluster.Sharding.Tests
     {
         #region setup
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            switch (message)
-            {
-                case PingPongActor.Ping msg:
-                    return (msg.Id.ToString(), message);
-            }
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    PingPongActor.Ping p => p.Id.ToString(),
+                    _ => null
+                };
 
-        private ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case PingPongActor.Ping msg:
-                    return (msg.Id % NumberOfShards).ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    PingPongActor.Ping p => (p.Id % NumberOfShards).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % NumberOfShards).ToString();
+        }
 
         private const int NumberOfShards = 6;
         private const string ShardTypeName = "DatatypeA";
@@ -108,8 +111,7 @@ namespace Akka.Cluster.Sharding.Tests
                     Sys,
                     typeName: ShardTypeName,
                     role: "shard",
-                    extractEntityId: extractEntityId,
-                    extractShardId: extractShardId);
+                    messageExtractor: new MessageExtractor());
             }, Config.Controller);
 
             RunOn(() =>
@@ -119,8 +121,7 @@ namespace Akka.Cluster.Sharding.Tests
                     typeName: ShardTypeName,
                     entityProps: Props.Create(() => new PingPongActor()),
                     settings: Settings.Value.WithRole("shard"),
-                    extractEntityId: extractEntityId,
-                    extractShardId: extractShardId);
+                    messageExtractor: new MessageExtractor());
             }, Config.Busy, Config.Second, Config.Third);
 
             EnterBarrier("sharding started");
