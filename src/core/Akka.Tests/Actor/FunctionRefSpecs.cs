@@ -130,9 +130,9 @@ namespace Akka.Tests.Actor
             akka.actor.debug.receive = on
             ");
         
-        public FunctionRefSpec(ITestOutputHelper output) : base(output, Config)
+        public FunctionRefSpec(ITestOutputHelper output) : base(output)
         {
-            Sys.Log.Info("Starting FunctionRefSpec");
+            //Sys.Log.Info("Starting FunctionRefSpec");
         }
 
         #region top level
@@ -151,13 +151,11 @@ namespace Akka.Tests.Actor
         public async Task FunctionRef_created_by_top_level_actor_must_be_watchable()
         {
             var s = SuperActor();
-            var forwarder = GetFunctionRef(s);
-
-            s.Tell(new GetForwarder(TestActor));
-            var f = await ExpectMsgAsync<FunctionRef>();
-            await WatchAsync(f);
-            s.Tell(new DropForwarder(f));
-            await ExpectTerminatedAsync(f);
+            var forwarder = await GetFunctionRef(s);
+            
+            await WatchAsync(forwarder);
+            s.Tell(new DropForwarder(forwarder));
+            await ExpectTerminatedAsync(forwarder);
         }
 
         [Fact]
@@ -179,7 +177,7 @@ namespace Akka.Tests.Actor
             var s = SuperActor();
             var forwarder = await GetFunctionRef(s);
 
-            Watch(forwarder);
+            await WatchAsync(forwarder);
             s.Tell(PoisonPill.Instance);
             await ExpectTerminatedAsync(forwarder);
         }
@@ -211,12 +209,10 @@ namespace Akka.Tests.Actor
         {
             var s = SupSuperActor();
             var forwarder = await GetFunctionRef(s);
-
-            s.Tell(new GetForwarder(TestActor));
-            var f = await ExpectMsgAsync<FunctionRef>();
-            await WatchAsync(f);
-            s.Tell(new DropForwarder(f));
-            await ExpectTerminatedAsync(f);
+            
+            await WatchAsync(forwarder);
+            s.Tell(new DropForwarder(forwarder));
+            await ExpectTerminatedAsync(forwarder);
         }
 
         [Fact]
@@ -238,7 +234,7 @@ namespace Akka.Tests.Actor
             var s = SupSuperActor();
             var forwarder = await GetFunctionRef(s);
 
-            Watch(forwarder);
+            await WatchAsync(forwarder);
             s.Tell(PoisonPill.Instance);
             await ExpectTerminatedAsync(forwarder);
         }
