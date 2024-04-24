@@ -386,10 +386,18 @@ namespace Akka.Streams.Implementation
         /// <returns>The newly created logging adapter.</returns>
         public override ILoggingAdapter MakeLogger(object logSource)
         {
-            if (logSource is not LogSource s) return Logging.GetLogger(System, logSource);
-            var actorPath = $"{s.Source}({LogSource.FromActorRef(_supervisor, System)})";
-            var newLogSource = LogSource.Create(actorPath, s.Type);
-            return Logging.GetLogger(System, newLogSource);
+            string actorPath;
+            LogSource newSource;
+            if (logSource is not LogSource s)
+            {
+                actorPath = $"{s}({LogSource.FromActorRef(_supervisor, System)})";
+                newSource = LogSource.Create(actorPath, s.Type);
+                return Logging.GetLogger(System, newSource);
+            }
+            
+            actorPath = $"{s.Source}({LogSource.FromActorRef(_supervisor, System)})";
+            newSource = LogSource.Create(actorPath, s.Type);
+            return Logging.GetLogger(System, newSource);
         }
 
         /// <summary>
