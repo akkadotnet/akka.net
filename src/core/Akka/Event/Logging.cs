@@ -73,6 +73,11 @@ namespace Akka.Event
             }
         }
 
+        public static LogSource Create(string source, Type t)
+        {
+            return new LogSource(source, t);
+        }
+
         public static Type SourceType(object o)
         {
             switch (o)

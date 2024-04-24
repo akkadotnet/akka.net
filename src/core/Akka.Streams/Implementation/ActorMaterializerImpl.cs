@@ -384,7 +384,13 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="logSource">The source that produces the log events.</param>
         /// <returns>The newly created logging adapter.</returns>
-        public override ILoggingAdapter MakeLogger(object logSource) => Logging.GetLogger(System, logSource);
+        public override ILoggingAdapter MakeLogger(object logSource)
+        {
+            if (logSource is not LogSource s) return Logging.GetLogger(System, logSource);
+            var actorPath = $"{s.Source}({LogSource.FromActorRef(_supervisor, System)})";
+            var newLogSource = LogSource.Create(actorPath, s.Type);
+            return Logging.GetLogger(System, newLogSource);
+        }
 
         /// <summary>
         /// TBD
@@ -402,7 +408,7 @@ namespace Akka.Streams.Implementation
                 Supervisor.Tell(PoisonPill.Instance);
         }
 
-        private ILoggingAdapter GetLogger() => _system.Log;
+        private ILoggingAdapter GetLogger() => MakeLogger(_supervisor);
     }
 
     /// <summary>
