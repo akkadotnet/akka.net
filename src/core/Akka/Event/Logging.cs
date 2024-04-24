@@ -47,7 +47,7 @@ namespace Akka.Event
                     return new LogSource(actorRef.Path.ToString(), SourceType(actorRef));
                 case string str:
                     return new LogSource(str, SourceType(str));
-                case System.Type t:
+                case Type t:
                     return new LogSource(Logging.SimpleName(t), t);
                 default:
                     return new LogSource(Logging.SimpleName(o), SourceType(o));
@@ -64,8 +64,10 @@ namespace Akka.Event
                     return new LogSource(FromActorRef(actorRef, system), SourceType(actorRef));
                 case string str:
                     return new LogSource(FromString(str, system), SourceType(str));
-                case System.Type t:
+                case Type t:
                     return new LogSource(FromType(t, system), t);
+                case LogSource logSource:
+                    return logSource; // if someone's already created a LogSource, just use it
                 default:
                     return new LogSource(FromType(o.GetType(), system), SourceType(o));
             }
@@ -75,7 +77,7 @@ namespace Akka.Event
         {
             switch (o)
             {
-                case System.Type t:
+                case Type t:
                     return t;
                 case IActorContext context:
                     return context.Props.Type;
