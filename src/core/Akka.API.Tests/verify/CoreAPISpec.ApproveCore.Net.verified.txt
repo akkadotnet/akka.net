@@ -3430,6 +3430,7 @@ namespace Akka.Event
         public System.Type Type { get; }
         public static Akka.Event.LogSource Create(object o) { }
         public static Akka.Event.LogSource Create(object o, Akka.Actor.ActorSystem system) { }
+        public static Akka.Event.LogSource Create(string source, System.Type t) { }
         public static string FromActor(Akka.Actor.IActorContext actor, Akka.Actor.ActorSystem system) { }
         public static string FromActorRef(Akka.Actor.IActorRef a, Akka.Actor.ActorSystem system) { }
         public static string FromString(string source, Akka.Actor.ActorSystem system) { }
