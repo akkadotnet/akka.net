@@ -9,6 +9,7 @@ using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,9 +18,10 @@ namespace Akka.Tests.Actor
 {
     public class FunctionRefSpec : AkkaSpec
     {
+        
         #region internal classes
 
-        sealed class GetForwarder : IEquatable<GetForwarder>
+        private sealed class GetForwarder : IEquatable<GetForwarder>
         {
             public IActorRef ReplyTo { get; }
 
@@ -40,7 +42,7 @@ namespace Akka.Tests.Actor
             public override int GetHashCode() => (ReplyTo != null ? ReplyTo.GetHashCode() : 0);
         }
 
-        sealed class DropForwarder : IEquatable<DropForwarder>
+        private sealed class DropForwarder : IEquatable<DropForwarder>
         {
             public FunctionRef Ref { get; }
 
@@ -61,7 +63,7 @@ namespace Akka.Tests.Actor
             public override int GetHashCode() => (Ref != null ? Ref.GetHashCode() : 0);
         }
 
-        sealed class Forwarded : IEquatable<Forwarded>
+        private sealed class Forwarded : IEquatable<Forwarded>
         {
             public object Message { get; }
             public IActorRef Sender { get; }
@@ -90,7 +92,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        sealed class Super : ReceiveActor
+        private sealed class Super : ReceiveActor, ILogReceive
         {
             public Super()
             {
@@ -121,8 +123,16 @@ namespace Akka.Tests.Actor
 
         #endregion
 
-        public FunctionRefSpec(ITestOutputHelper output) : base(output, null)
+        // create HOCON to enable debug loglevel and have all actors log received messages
+        private static readonly Config Config = ConfigurationFactory.ParseString(@"
+            akka.loglevel = DEBUG
+            akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
+            akka.actor.debug.receive = on
+            ");
+        
+        public FunctionRefSpec(ITestOutputHelper output) : base(output)
         {
+            //Sys.Log.Info("Starting FunctionRefSpec");
         }
 
         #region top level
@@ -141,13 +151,11 @@ namespace Akka.Tests.Actor
         public async Task FunctionRef_created_by_top_level_actor_must_be_watchable()
         {
             var s = SuperActor();
-            var forwarder = GetFunctionRef(s);
-
-            s.Tell(new GetForwarder(TestActor));
-            var f = await ExpectMsgAsync<FunctionRef>();
-            Watch(f);
-            s.Tell(new DropForwarder(f));
-            await ExpectTerminatedAsync(f);
+            var forwarder = await GetFunctionRef(s);
+            
+            await WatchAsync(forwarder);
+            s.Tell(new DropForwarder(forwarder));
+            await ExpectTerminatedAsync(forwarder);
         }
 
         [Fact]
@@ -169,7 +177,7 @@ namespace Akka.Tests.Actor
             var s = SuperActor();
             var forwarder = await GetFunctionRef(s);
 
-            Watch(forwarder);
+            await WatchAsync(forwarder);
             s.Tell(PoisonPill.Instance);
             await ExpectTerminatedAsync(forwarder);
         }
@@ -201,12 +209,10 @@ namespace Akka.Tests.Actor
         {
             var s = SupSuperActor();
             var forwarder = await GetFunctionRef(s);
-
-            s.Tell(new GetForwarder(TestActor));
-            var f = await ExpectMsgAsync<FunctionRef>();
-            Watch(f);
-            s.Tell(new DropForwarder(f));
-            await ExpectTerminatedAsync(f);
+            
+            await WatchAsync(forwarder);
+            s.Tell(new DropForwarder(forwarder));
+            await ExpectTerminatedAsync(forwarder);
         }
 
         [Fact]
@@ -228,7 +234,7 @@ namespace Akka.Tests.Actor
             var s = SupSuperActor();
             var forwarder = await GetFunctionRef(s);
 
-            Watch(forwarder);
+            await WatchAsync(forwarder);
             s.Tell(PoisonPill.Instance);
             await ExpectTerminatedAsync(forwarder);
         }
