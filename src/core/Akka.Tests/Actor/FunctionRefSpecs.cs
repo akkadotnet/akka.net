@@ -17,9 +17,10 @@ namespace Akka.Tests.Actor
 {
     public class FunctionRefSpec : AkkaSpec
     {
+        
         #region internal classes
 
-        sealed class GetForwarder : IEquatable<GetForwarder>
+        private sealed class GetForwarder : IEquatable<GetForwarder>
         {
             public IActorRef ReplyTo { get; }
 
@@ -40,7 +41,7 @@ namespace Akka.Tests.Actor
             public override int GetHashCode() => (ReplyTo != null ? ReplyTo.GetHashCode() : 0);
         }
 
-        sealed class DropForwarder : IEquatable<DropForwarder>
+        private sealed class DropForwarder : IEquatable<DropForwarder>
         {
             public FunctionRef Ref { get; }
 
@@ -61,7 +62,7 @@ namespace Akka.Tests.Actor
             public override int GetHashCode() => (Ref != null ? Ref.GetHashCode() : 0);
         }
 
-        sealed class Forwarded : IEquatable<Forwarded>
+        private sealed class Forwarded : IEquatable<Forwarded>
         {
             public object Message { get; }
             public IActorRef Sender { get; }
@@ -90,7 +91,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        sealed class Super : ReceiveActor
+        private sealed class Super : ReceiveActor, ILogReceive
         {
             public Super()
             {
@@ -121,7 +122,14 @@ namespace Akka.Tests.Actor
 
         #endregion
 
-        public FunctionRefSpec(ITestOutputHelper output) : base(output, null)
+        // create HOCON to enable debug loglevel and have all actors log received messages
+        private static readonly Config Config = ConfigurationFactory.ParseString(@"
+            akka.loglevel = DEBUG
+            akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
+            akka.actor.debug.receive = on
+            ");
+        
+        public FunctionRefSpec(ITestOutputHelper output) : base(output, Config)
         {
         }
 
@@ -145,7 +153,7 @@ namespace Akka.Tests.Actor
 
             s.Tell(new GetForwarder(TestActor));
             var f = await ExpectMsgAsync<FunctionRef>();
-            Watch(f);
+            await WatchAsync(f);
             s.Tell(new DropForwarder(f));
             await ExpectTerminatedAsync(f);
         }
@@ -204,7 +212,7 @@ namespace Akka.Tests.Actor
 
             s.Tell(new GetForwarder(TestActor));
             var f = await ExpectMsgAsync<FunctionRef>();
-            Watch(f);
+            await WatchAsync(f);
             s.Tell(new DropForwarder(f));
             await ExpectTerminatedAsync(f);
         }
