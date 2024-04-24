@@ -9,6 +9,7 @@ using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
@@ -131,6 +132,7 @@ namespace Akka.Tests.Actor
         
         public FunctionRefSpec(ITestOutputHelper output) : base(output, Config)
         {
+            Sys.Log.Info("Starting FunctionRefSpec");
         }
 
         #region top level
