@@ -114,7 +114,7 @@ namespace Akka.Actor
         /// <summary>
         /// 0 - init, 1 - started, 2 - shutdown
         /// </summary>
-        private volatile int _workerState = WORKER_STATE_INIT;
+        private int _workerState = WORKER_STATE_INIT;
 
         private static Bucket[] CreateWheel(int ticksPerWheel, ILoggingAdapter log)
         {
