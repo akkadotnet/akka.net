@@ -208,7 +208,13 @@ public sealed class LogFilterEvaluator
         else
         {
             // allocate the message just once
-            expandedLogMessage = evt.Message.ToString();
+            var nullCheck = evt.Message.ToString();
+            
+            if(nullCheck == null)
+                return false; // no message to filter
+            
+            expandedLogMessage = nullCheck;
+            
             foreach (var filter in _filters)
             {
                 if (filter.ShouldKeepMessage(LogFilterType.Message, expandedLogMessage) == LogFilterDecision.Drop)
@@ -219,7 +225,7 @@ public sealed class LogFilterEvaluator
         // expand the message if we haven't already
         // NOTE: might result in duplicate allocations in third party logging libraries. They'll have to adjust their
         // code accordingly after this feature ships.
-        expandedLogMessage = string.IsNullOrEmpty(expandedLogMessage) ? evt.Message.ToString() : expandedLogMessage;
+        expandedLogMessage = (string.IsNullOrEmpty(expandedLogMessage) ? evt.Message.ToString() : expandedLogMessage)!;
         return true;
     }
 }

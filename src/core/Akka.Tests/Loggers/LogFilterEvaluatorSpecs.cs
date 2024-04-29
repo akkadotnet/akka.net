@@ -14,6 +14,7 @@ namespace Akka.Tests.Loggers;
 /// <summary>
 /// Goal of these specs are mostly to make sure our default <see cref="Regex"/>s are working as expected
 /// </summary>
+// ReSharper disable once ClassNeverInstantiated.Global
 public class LogFilterEvaluatorSpecs
 {
     public class LogSourceCases

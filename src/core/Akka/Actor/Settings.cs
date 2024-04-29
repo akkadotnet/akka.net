@@ -197,6 +197,17 @@ namespace Akka.Actor
 
             const string key = "akka.log-dead-letters-suspend-duration";
             LogDeadLettersSuspendDuration = Config.GetString(key, null) == "infinite" ? Timeout.InfiniteTimeSpan : Config.GetTimeSpan(key);
+            
+            // check to see if we have a LogFilterSetup in the ActorSystemSetup
+            var logFilterSetup = Setup.Get<LogFilterSetup>();
+            if (logFilterSetup.HasValue)
+            {
+                LogFilter = logFilterSetup.Value.CreateEvaluator();
+            }
+            else
+            {
+                LogFilter = LogFilterEvaluator.NoFilters;
+            }
 
             AddLoggingReceive = Config.GetBoolean("akka.actor.debug.receive", false);
             DebugAutoReceive = Config.GetBoolean("akka.actor.debug.autoreceive", false);
@@ -361,6 +372,14 @@ namespace Akka.Actor
         /// Can be overridden on individual `Context.GetLogger()` calls.
         /// </remarks>
         public ILogMessageFormatter LogFormatter { get; }
+        
+        /// <summary>
+        /// Used to filter log messages based on the log source and message content.
+        /// </summary>
+        /// <remarks>
+        /// Not enabled by default and may not be supported in all third party logging implementations.
+        /// </remarks>
+        public LogFilterEvaluator LogFilter { get; }
 
         /// <summary>
         ///     Gets a value indicating whether [log serializer override on start].

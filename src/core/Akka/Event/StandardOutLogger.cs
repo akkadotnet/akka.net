@@ -55,7 +55,9 @@ namespace Akka.Event
     /// </summary>
     public class StandardOutLogger : MinimalLogger
     {
-
+        private readonly LogFilterEvaluator _filter;
+        
+        
         /// <summary>
         /// Initializes the <see cref="StandardOutLogger"/> class.
         /// </summary>
@@ -66,6 +68,19 @@ namespace Akka.Event
             WarningColor = ConsoleColor.Yellow;
             ErrorColor = ConsoleColor.Red;
             UseColors = true;
+        }
+
+        /// <summary>
+        /// Backwards compat
+        /// </summary>
+        public StandardOutLogger() : this(LogFilterEvaluator.NoFilters)
+        {
+            
+        }
+
+        public StandardOutLogger(LogFilterEvaluator filter)
+        {
+            _filter = filter;
         }
 
         /// <summary>
@@ -80,7 +95,7 @@ namespace Akka.Event
             switch (message)
             {
                 case LogEvent logEvent:
-                    PrintLogEvent(logEvent);
+                    PrintLogEvent(logEvent, LogFilterEvaluator.NoFilters);
                     break;
                 
                 default:
@@ -118,10 +133,15 @@ namespace Akka.Event
         /// Prints a specified event to the console.
         /// </summary>
         /// <param name="logEvent">The event to print</param>
-        internal static void PrintLogEvent(LogEvent logEvent)
+        /// <param name="filter"></param>
+        internal static void PrintLogEvent(LogEvent logEvent, LogFilterEvaluator filter)
         {
             try
             {
+                // short circuit if we're not going to print this message
+                if (!filter.ShouldTryKeepMessage(logEvent, out var expandedLogMessage))
+                    return;
+                
                 ConsoleColor? color = null;
 
                 if (UseColors)
@@ -144,7 +164,7 @@ namespace Akka.Event
                     }
                 }
 
-                StandardOutWriter.WriteLine(logEvent.ToString(), color);
+                StandardOutWriter.WriteLine(expandedLogMessage, color);
             }
             catch (FormatException ex)
             {
