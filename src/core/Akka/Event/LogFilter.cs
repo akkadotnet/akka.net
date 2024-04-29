@@ -228,6 +228,8 @@ public sealed class LogFilterEvaluator
 public sealed class LogFilterSetup : Setup
 {
     public LogFilterBase[] Filters { get; }
+    
+    public LogFilterEvaluator CreateEvaluator() => new(Filters);
 
     public LogFilterSetup(LogFilterBase[] filters)
     {
