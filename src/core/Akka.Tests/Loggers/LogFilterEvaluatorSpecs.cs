@@ -79,7 +79,7 @@ public class LogFilterEvaluatorSpecs
             var loggingAdapter2 = Logging.GetLogger(Sys, "Akka.Util.Test2");
             
             // should be filtered out based on Source
-            loggingAdapter1.Warning("foo-bar");
+            loggingAdapter1.Warning("test");
             
             // should be filtered out based on message content
             loggingAdapter2.Warning("foo-bar");

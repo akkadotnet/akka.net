@@ -193,8 +193,19 @@ public class LogFilterEvaluator
 
             foreach (var filter in _filters)
             {
-                if (filter.ShouldKeepMessage(LogFilterType.Message, expandedLogMessage) == LogFilterDecision.Drop)
-                    return false;
+                switch (filter.FilterType)
+                {
+                    case LogFilterType.Source:
+                        if (filter.ShouldKeepMessage(LogFilterType.Source, evt.LogSource) == LogFilterDecision.Drop)
+                            return false;
+                        break;
+                    case LogFilterType.Message:
+                        if (filter.ShouldKeepMessage(LogFilterType.Message, expandedLogMessage) == LogFilterDecision.Drop)
+                            return false;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(filter), "Unknown filter type: " + filter.FilterType);
+                }
             }
         }
 
