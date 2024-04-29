@@ -4,6 +4,7 @@
 //      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using System.Collections.Generic;
@@ -148,10 +149,10 @@ public sealed class RegexLogMessageFilter : LogFilterBase
 /// <summary>
 /// Runs inside the logging actor and evaluates if a log message should be kept.
 /// </summary>
-public sealed class LogFilterEvaluator
+public class LogFilterEvaluator
 {
-    public static readonly LogFilterEvaluator NoFilters = new(Array.Empty<LogFilterBase>());
-    
+    public static readonly LogFilterEvaluator NoFilters = EmptyLogFilterEvaluator.Instance;
+
     private readonly LogFilterBase[] _filters;
 
 
@@ -166,10 +167,10 @@ public sealed class LogFilterEvaluator
         EvaluatesLogSourcesOnly = filters.All(x => x.FilterType == LogFilterType.Source);
     }
 
-    public bool ShouldTryKeepMessage(LogEvent evt, out string expandedLogMessage)
+    public virtual bool ShouldTryKeepMessage(LogEvent evt, out string expandedLogMessage)
     {
         expandedLogMessage = string.Empty;
-        
+
         // fast and slow paths available here
         if (EvaluatesLogSourcesOnly)
         {
@@ -184,12 +185,12 @@ public sealed class LogFilterEvaluator
         {
             // allocate the message just once
             var nullCheck = evt.Message.ToString();
-            
-            if(nullCheck == null)
+
+            if (nullCheck == null)
                 return false; // no message to filter
-            
+
             expandedLogMessage = nullCheck;
-            
+
             foreach (var filter in _filters)
             {
                 if (filter.ShouldKeepMessage(LogFilterType.Message, expandedLogMessage) == LogFilterDecision.Drop)
@@ -203,6 +204,24 @@ public sealed class LogFilterEvaluator
         expandedLogMessage = (string.IsNullOrEmpty(expandedLogMessage) ? evt.Message.ToString() : expandedLogMessage)!;
         return true;
     }
+
+    /// <summary>
+    /// INTERNAL API - used to prevent unnecessary iterations when no filters are present
+    /// </summary>
+    private class EmptyLogFilterEvaluator : LogFilterEvaluator
+    {
+        public static readonly EmptyLogFilterEvaluator Instance = new();
+
+        private EmptyLogFilterEvaluator() : base(Array.Empty<LogFilterBase>())
+        {
+        }
+
+        public override bool ShouldTryKeepMessage(LogEvent evt, out string expandedLogMessage)
+        {
+            expandedLogMessage = evt.Message.ToString()!;
+            return true;
+        }
+    }
 }
 
 /// <summary>
@@ -211,7 +230,7 @@ public sealed class LogFilterEvaluator
 public sealed class LogFilterSetup : Setup
 {
     public LogFilterBase[] Filters { get; }
-    
+
     public LogFilterEvaluator CreateEvaluator() => new(Filters);
 
     public LogFilterSetup(LogFilterBase[] filters)
@@ -226,31 +245,32 @@ public sealed class LogFilterSetup : Setup
 public sealed class LogFilterBuilder
 {
     private readonly List<LogFilterBase> _filters = new();
-    
-    public LogFilterBuilder ExcludeSourceExactly(string source, StringComparison comparison = StringComparison.OrdinalIgnoreCase)
+
+    public LogFilterBuilder ExcludeSourceExactly(string source,
+        StringComparison comparison = StringComparison.OrdinalIgnoreCase)
     {
         _filters.Add(new ExactMatchLogSourceFilter(source, comparison));
         return this;
     }
-    
+
     public LogFilterBuilder ExcludeSourceStartingWith(string sourceStart)
     {
         _filters.Add(new RegexLogSourceFilter(new Regex($"^{Regex.Escape(sourceStart)}", RegexOptions.Compiled)));
         return this;
     }
-    
+
     public LogFilterBuilder ExcludeSourceContaining(string sourcePart)
     {
         _filters.Add(new RegexLogSourceFilter(new Regex(Regex.Escape(sourcePart), RegexOptions.Compiled)));
         return this;
     }
-    
+
     public LogFilterBuilder ExcludeSourceEndingWith(string sourceEnd)
     {
         _filters.Add(new RegexLogSourceFilter(new Regex($"{Regex.Escape(sourceEnd)}$", RegexOptions.Compiled)));
         return this;
     }
-    
+
     /// <summary>
     /// Performance boost: use your own pre-compiled Regex instance to filter log sources.
     /// </summary>
@@ -259,7 +279,7 @@ public sealed class LogFilterBuilder
         _filters.Add(new RegexLogSourceFilter(regex));
         return this;
     }
-    
+
     /// <summary>
     /// Performance boost: use your own pre-compiled Regex instance to filter log messages.
     /// </summary>
@@ -268,7 +288,7 @@ public sealed class LogFilterBuilder
         _filters.Add(new RegexLogMessageFilter(regex));
         return this;
     }
-    
+
     public LogFilterBuilder ExcludeMessageContaining(string messagePart)
     {
         _filters.Add(new RegexLogMessageFilter(new Regex(Regex.Escape(messagePart), RegexOptions.Compiled)));
