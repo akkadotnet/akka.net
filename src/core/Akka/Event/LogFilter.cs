@@ -114,7 +114,7 @@ public sealed class RegexLogSourceFilter : LogFilterBase
     public override LogFilterDecision ShouldKeepMessage(LogFilterType part, string content)
     {
         if (part == LogFilterType.Source)
-            return _sourceRegex.IsMatch(content) ? LogFilterDecision.Keep : LogFilterDecision.Drop;
+            return _sourceRegex.IsMatch(content) ? LogFilterDecision.Drop : LogFilterDecision.Keep;
         return LogFilterDecision.NoDecision;
     }
 }
@@ -140,7 +140,7 @@ public sealed class ExactMatchLogSourceFilter : LogFilterBase
     public override LogFilterDecision ShouldKeepMessage(LogFilterType part, string content)
     {
         if (part == LogFilterType.Source)
-            return content == _source ? LogFilterDecision.Keep : LogFilterDecision.Drop;
+            return content == _source ? LogFilterDecision.Drop : LogFilterDecision.Keep;
         return LogFilterDecision.NoDecision;
     }
 }
@@ -165,7 +165,7 @@ public sealed class RegexLogMessageFilter : LogFilterBase
     public override LogFilterDecision ShouldKeepMessage(LogFilterType part, string content)
     {
         if (part == LogFilterType.Message)
-            return _messageRegex.IsMatch(content) ? LogFilterDecision.Keep : LogFilterDecision.Drop;
+            return _messageRegex.IsMatch(content) ? LogFilterDecision.Drop : LogFilterDecision.Keep;
         return LogFilterDecision.NoDecision;
     }
 }

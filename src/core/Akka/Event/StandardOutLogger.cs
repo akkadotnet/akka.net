@@ -9,12 +9,13 @@ using System;
 using Akka.Actor;
 using Akka.Util;
 using System.Text;
-using System.Threading;
 
 namespace Akka.Event
 {
     public abstract class MinimalLogger : MinimalActorRef
     {
+        public LogFilterEvaluator Filter { get; internal set; } = LogFilterEvaluator.NoFilters;
+        
         /// <summary>
         /// N/A
         /// </summary>
@@ -55,9 +56,6 @@ namespace Akka.Event
     /// </summary>
     public class StandardOutLogger : MinimalLogger
     {
-        private readonly LogFilterEvaluator _filter;
-        
-        
         /// <summary>
         /// Initializes the <see cref="StandardOutLogger"/> class.
         /// </summary>
@@ -68,19 +66,6 @@ namespace Akka.Event
             WarningColor = ConsoleColor.Yellow;
             ErrorColor = ConsoleColor.Red;
             UseColors = true;
-        }
-
-        /// <summary>
-        /// Backwards compat
-        /// </summary>
-        public StandardOutLogger() : this(LogFilterEvaluator.NoFilters)
-        {
-            
-        }
-
-        public StandardOutLogger(LogFilterEvaluator filter)
-        {
-            _filter = filter;
         }
 
         /// <summary>
@@ -95,7 +80,7 @@ namespace Akka.Event
             switch (message)
             {
                 case LogEvent logEvent:
-                    PrintLogEvent(logEvent, LogFilterEvaluator.NoFilters);
+                    PrintLogEvent(logEvent, Filter);
                     break;
                 
                 default:
