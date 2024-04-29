@@ -5,9 +5,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using FluentAssertions;
 using Akka.Actor;
 using Akka.Actor.Setup;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
@@ -21,45 +24,79 @@ namespace Akka.Tests.Loggers;
 // ReSharper disable once ClassNeverInstantiated.Global
 public class LogFilterEvaluatorSpecs
 {
-    // public class LogFilterSetupSpecs : AkkaSpec
-    // {
-    //     public static Setup LoggerSetup()
-    //     {
-    //         var builder = new LogFilterBuilder();
-    //         builder.ExcludeSourceContaining("Akka.Tests")
-    //             .ExcludeMessageContaining("foo-bar");
-    //         return builder.Build();
-    //     }
-    //
-    //     public LogFilterSetupSpecs(ITestOutputHelper output) : base(ActorSystemSetup.Create(LoggerSetup()),
-    //         output: output)
-    //     {
-    //         
-    //     }
-    //     
-    //     [Fact]
-    //     public async Task LogFilterEnd2EndSpec()
-    //     {
-    //         // subscribe to warning level log events
-    //         Sys.EventStream.Subscribe(TestActor, typeof(Warning));
-    //         
-    //         // produce three warning messages - that hits the source filter, another that hits the message filter, and a third that hits neither
-    //         var loggingAdapter1 = Logging.GetLogger(Sys, "Akka.Tests.Test1");
-    //         var loggingAdapter2 = Logging.GetLogger(Sys, "Akka.Util.Test2");
-    //         
-    //         // should be filtered out based on Source
-    //         loggingAdapter1.Warning("foo-bar");
-    //         
-    //         // should be filtered out based on message content
-    //         loggingAdapter2.Warning("foo-bar");
-    //         
-    //         // should be allowed through
-    //         loggingAdapter2.Warning("baz");
-    //         
-    //         // expect only the last message to be received
-    //         await ExpectMsgAsync<Warning>(w => w.Message.ToString() == "baz" && !w.LogSource.Contains("Akka.Tests"));
-    //     }
-    // }
+    public class LogFilterSetupSpecs : AkkaSpec
+    {
+        public static Setup LoggerSetup()
+        {
+            var builder = new LogFilterBuilder();
+            builder.ExcludeSourceContaining("Akka.Tests")
+                .ExcludeMessageContaining("foo-bar");
+            return builder.Build();
+        }
+        
+        public static ActorSystemSetup CustomLoggerSetup()
+        {
+            var hocon = @$"akka.stdout-logger-class = ""{typeof(CustomLogger).AssemblyQualifiedName}""";
+            var bootstrapSetup = BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString(hocon));
+            return ActorSystemSetup.Create(bootstrapSetup, LoggerSetup());
+        }
+        
+        // create a custom MinimalLogger that subclasses StandardOutLogger
+        public class CustomLogger : StandardOutLogger
+        {
+            protected override void Log(object message)
+            {
+                if (message is LogEvent e)
+                {
+                    if (Filter.ShouldTryKeepMessage(e, out _))
+                    {
+                        _events.Add(e);
+                    }
+                }
+               
+            }
+            
+            private readonly List<LogEvent> _events = new();
+            public IReadOnlyList<LogEvent> Events => _events;
+        }
+    
+        public LogFilterSetupSpecs(ITestOutputHelper output) : base(CustomLoggerSetup(),
+            output: output)
+        {
+            _logger = (CustomLogger)Sys.Settings.StdoutLogger;
+        }
+
+        private readonly CustomLogger _logger;
+        
+        [Fact]
+        public void LogFilterEnd2EndSpec()
+        {
+            // subscribe to warning level log events
+            Sys.EventStream.Subscribe(TestActor, typeof(Warning));
+            
+            // produce three warning messages - that hits the source filter, another that hits the message filter, and a third that hits neither
+            var loggingAdapter1 = Logging.GetLogger(Sys, "Akka.Tests.Test1");
+            var loggingAdapter2 = Logging.GetLogger(Sys, "Akka.Util.Test2");
+            
+            // should be filtered out based on Source
+            loggingAdapter1.Warning("foo-bar");
+            
+            // should be filtered out based on message content
+            loggingAdapter2.Warning("foo-bar");
+            
+            // should be allowed through
+            loggingAdapter2.Warning("baz");
+            
+            // expect only the last message to be received
+            ReceiveN(3);
+            
+            // check that the last message was the one that was allowed through
+            _logger.Events.Count.Should().Be(1);
+            var msg = _logger.Events[0];
+            msg.Message.Should().Be("baz");
+            msg.LogSource.Should().StartWith("Akka.Util.Test2");
+        }
+    }
 
     public class LogSourceCases
     {
