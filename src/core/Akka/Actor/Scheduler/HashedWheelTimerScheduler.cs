@@ -248,8 +248,10 @@ namespace Akka.Actor
 
         private void Start()
         {
-            if (_workerState == WORKER_STATE_STARTED) { } // do nothing
-            else if (_workerState == WORKER_STATE_INIT)
+            // only read the worker state once so it can't be a moving target for else-branch
+            var workerStateRead = _workerState;
+            if (workerStateRead == WORKER_STATE_STARTED) { } // do nothing
+            else if (workerStateRead == WORKER_STATE_INIT)
             {
                 _worker ??= new Thread(Run) { IsBackground = true };
                 if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
@@ -258,7 +260,7 @@ namespace Akka.Actor
                     _worker.Start();
                 }
             }
-            else if (_workerState is WORKER_STATE_SHUTDOWN)
+            else if (workerStateRead is WORKER_STATE_SHUTDOWN)
             {
                 throw new SchedulerException("cannot enqueue after timer shutdown");
             }
