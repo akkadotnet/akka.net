@@ -1,6 +1,20 @@
 #### 1.5.20 April 29th 2024 ####
 
-Placeholder for nightlies.
+Akka.NET v1.5.20 is a patch release for Akka.NET with a few bug fixes and Akka.Streams quality of life improvement.
+
+* [Cluster: Fix split brain resolver downing all nodes when failure detector records are unclean/poisoned](https://github.com/akkadotnet/akka.net/pull/7141)
+* [TestKit: Fix `AkkaEqualException` message formatting](https://github.com/akkadotnet/akka.net/pull/7164)
+* [Core: Generate Protobuf code automatically during build](https://github.com/akkadotnet/akka.net/pull/7063)
+* [Streams: `LogSource` quality of life improvement](https://github.com/akkadotnet/akka.net/pull/7168)
+* [Core: Fix `HashedWheelTimer` startup crash](https://github.com/akkadotnet/akka.net/pull/7174)
+
+| COMMITS | LOC+ | LOC-  | AUTHOR              |
+|---------|------|-------|---------------------|
+| 5       | 360  | 93    | Aaron Stannard      |
+| 3       | 187  | 20    | Gregorius Soedharmo |
+| 1       | 81   | 41827 | Yan Pitangui        |
+
+You can [see the full set of changes for Akka.NET v1.5.20 here](https://github.com/akkadotnet/akka.net/milestones/1.5.20).
 
 #### 1.5.19 April 15th 2024 ####
 
