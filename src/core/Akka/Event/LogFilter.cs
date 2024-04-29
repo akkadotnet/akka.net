@@ -76,15 +76,6 @@ public abstract class LogFilterBase : INoSerializationVerificationNeeded, IDeadL
     public abstract LogFilterType FilterType { get; }
 
     /// <summary>
-    /// Returns <c>true</c> if the message should be kept, <c>false</c> if it should be dropped.
-    /// </summary>
-    /// <param name="evt">The <see cref="LogEvent"/> being evaluated.</param>
-    /// <remarks>
-    /// If there are multiple filters, all of them must return <c>true</c> for the message to be kept.
-    /// </remarks>
-    public abstract bool ShouldKeepMessage(LogEvent evt);
-
-    /// <summary>
     /// Fast path designed to avoid allocating strings if we're filtering on the message content.
     /// </summary>
     /// <param name="part">The part of the message to evaluate.</param>
@@ -105,11 +96,6 @@ public sealed class RegexLogSourceFilter : LogFilterBase
     }
 
     public override LogFilterType FilterType => LogFilterType.Source;
-
-    public override bool ShouldKeepMessage(LogEvent evt)
-    {
-        return _sourceRegex.IsMatch(evt.LogSource);
-    }
 
     public override LogFilterDecision ShouldKeepMessage(LogFilterType part, string content)
     {
@@ -132,11 +118,6 @@ public sealed class ExactMatchLogSourceFilter : LogFilterBase
 
     public override LogFilterType FilterType => LogFilterType.Source;
 
-    public override bool ShouldKeepMessage(LogEvent evt)
-    {
-        return string.Equals(evt.LogSource, _source, _comparison);
-    }
-
     public override LogFilterDecision ShouldKeepMessage(LogFilterType part, string content)
     {
         if (part == LogFilterType.Source)
@@ -155,12 +136,6 @@ public sealed class RegexLogMessageFilter : LogFilterBase
     }
 
     public override LogFilterType FilterType => LogFilterType.Message;
-
-    public override bool ShouldKeepMessage(LogEvent evt)
-    {
-        // NEGATIVE PERFORMANCE HIT: this will allocate a string
-        return _messageRegex.IsMatch(evt.Message.ToString());
-    }
 
     public override LogFilterDecision ShouldKeepMessage(LogFilterType part, string content)
     {

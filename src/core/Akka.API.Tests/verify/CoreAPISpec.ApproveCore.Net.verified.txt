@@ -3371,7 +3371,6 @@ namespace Akka.Event
     {
         public ExactMatchLogSourceFilter(string source, System.StringComparison comparison = 5) { }
         public override Akka.Event.LogFilterType FilterType { get; }
-        public override bool ShouldKeepMessage(Akka.Event.LogEvent evt) { }
         public override Akka.Event.LogFilterDecision ShouldKeepMessage(Akka.Event.LogFilterType part, string content) { }
     }
     public interface IDeadLetterSuppression { }
@@ -3419,7 +3418,6 @@ namespace Akka.Event
     {
         protected LogFilterBase() { }
         public abstract Akka.Event.LogFilterType FilterType { get; }
-        public abstract bool ShouldKeepMessage(Akka.Event.LogEvent evt);
         public abstract Akka.Event.LogFilterDecision ShouldKeepMessage(Akka.Event.LogFilterType part, string content);
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
@@ -3641,7 +3639,6 @@ namespace Akka.Event
     {
         public RegexLogMessageFilter(System.Text.RegularExpressions.Regex messageRegex) { }
         public override Akka.Event.LogFilterType FilterType { get; }
-        public override bool ShouldKeepMessage(Akka.Event.LogEvent evt) { }
         public override Akka.Event.LogFilterDecision ShouldKeepMessage(Akka.Event.LogFilterType part, string content) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
@@ -3649,7 +3646,6 @@ namespace Akka.Event
     {
         public RegexLogSourceFilter(System.Text.RegularExpressions.Regex sourceRegex) { }
         public override Akka.Event.LogFilterType FilterType { get; }
-        public override bool ShouldKeepMessage(Akka.Event.LogEvent evt) { }
         public override Akka.Event.LogFilterDecision ShouldKeepMessage(Akka.Event.LogFilterType part, string content) { }
     }
     public class StandardOutLogger : Akka.Event.MinimalLogger
