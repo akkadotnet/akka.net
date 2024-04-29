@@ -175,6 +175,8 @@ public sealed class RegexLogMessageFilter : LogFilterBase
 /// </summary>
 public sealed class LogFilterEvaluator
 {
+    public static readonly LogFilterEvaluator NoFilters = new(Array.Empty<LogFilterBase>());
+    
     private readonly LogFilterBase[] _filters;
 
 
