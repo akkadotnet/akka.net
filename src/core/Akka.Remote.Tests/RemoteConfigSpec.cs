@@ -165,7 +165,15 @@ namespace Akka.Remote.Tests
            //Non-specified hostnames should default to IPAddress.Any
            Assert.Equal(IPAddress.Any.ToString(), s.Hostname);
            Assert.Equal(IPAddress.Any.ToString(), s.PublicHostname);
-      }
+        }
+
+        [Fact]
+        public void Remoting_should_contain_correct_PrimitiveSerializer_settings_in_ReferenceConf()
+        {
+            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.actor.serialization-settings.primitive");
+            c.Should().NotBeNull();
+            c.GetBoolean("use-legacy-behavior").Should().BeTrue();
+        }
    }
 }
 
