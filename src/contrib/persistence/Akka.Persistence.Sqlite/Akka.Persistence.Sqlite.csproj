@@ -4,7 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.Sqlite</AssemblyTitle>
     <Description>Akka.NET Persistence journal and snapshot store backed by SQLite.</Description>
-    <TargetFrameworks>net452;netstandard1.6</TargetFrameworks>
+    <TargetFrameworks>net451;netstandard1.6</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;sqlite</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
