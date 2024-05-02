@@ -1,3 +1,11 @@
+#### 1.3.19 May 03 2024 ####
+
+1.3.19 consists of non-breaking update to the remoting primitive serializer.
+
+* [Akka.Remote: Port cross-platform primitives serializer](https://github.com/akkadotnet/akka.net/issues/7182)
+
+To [see the full set of changes in Akka.NET v1.3.19, click here](https://github.com/akkadotnet/akka.net/releases/tag/1.3.19).
+
 #### 1.3.18 March 09 2020 ####
 **Maintenance Release for Akka.NET 1.3**
 
