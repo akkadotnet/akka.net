@@ -4,7 +4,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.FSharp</AssemblyTitle>
     <Description>F# API for persistence actors in Akka.NET</Description>
-    <TargetFrameworks>net452;netstandard2.0</TargetFrameworks>
     <TargetFrameworks>net45</TargetFrameworks>
     <PackageTags>akka;actors;actor model;Akka;concurrency;F#;Fsharp;persistence;eventsource</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
