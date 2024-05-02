@@ -168,6 +168,16 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
+        public void Remoting_should_contain_correct_BatchWriter_settings_in_ReferenceConf()
+        {
+            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            var s = DotNettyTransportSettings.Create(c);
+
+            s.BatchWriterSettings.EnableBatching.Should().BeTrue();
+            s.BatchWriterSettings.MaxExplicitFlushes.Should().Be(BatchWriterSettings.DefaultMaxPendingWrites);
+        }
+        
+        [Fact]
         public void Remoting_should_contain_correct_PrimitiveSerializer_settings_in_ReferenceConf()
         {
             var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.actor.serialization-settings.primitive");
