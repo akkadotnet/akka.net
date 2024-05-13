@@ -493,7 +493,7 @@ namespace Akka.Event
         public static void Error<T1, T2, T3, T4>(this ILoggingAdapter log, Exception cause, string format, T1 arg1,
             T2 arg2, T3 arg3, T4 arg4)
         {
-            if (!log.IsInfoEnabled)
+            if (!log.IsErrorEnabled)
                 return;
 
             log.Log(LogLevel.ErrorLevel, cause, format, arg1, arg2, arg3, arg4);
