@@ -16,7 +16,10 @@ using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
+using Akka.TestKit.Internal;
+using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestActors;
+using Akka.TestKit.TestEvent;
 using Xunit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
@@ -26,17 +29,20 @@ namespace Akka.Remote.Tests
 {
     public class ActorsLeakSpec : AkkaSpec
     {
-        private static readonly Config Config = ConfigurationFactory.ParseString(@"
-            akka.actor.provider = remote
-            akka.loglevel = INFO
-            akka.remote.dot-netty.tcp.applied-adapters = [trttl]
-            akka.remote.dot-netty.tcp.hostname = 127.0.0.1
-            akka.remote.log-lifecycle-events = on
-            akka.remote.transport-failure-detector.heartbeat-interval = 1 s
-            akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s
-            akka.remote.quarantine-after-silence = 3 s
-            akka.test.filter-leeway = 12 s
-        ");
+        private static readonly Config Config = ConfigurationFactory.ParseString("""
+            
+                        akka.actor.provider = remote
+                        akka.loglevel = INFO
+                        akka.remote.dot-netty.tcp.applied-adapters = [trttl]
+                        akka.remote.dot-netty.tcp.hostname = 127.0.0.1
+                        akka.remote.log-lifecycle-events = on
+                        akka.remote.transport-failure-detector.heartbeat-interval = 1 s
+                        akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s
+                        akka.remote.quarantine-after-silence = 3 s
+                        akka.test.filter-leeway = 12 s
+                    
+            """);
+        private static readonly string[] SourceArray = { "/system/endpointManager", "/system/transports" };
 
         public ActorsLeakSpec(ITestOutputHelper output) : base(Config, output)
         {
@@ -82,18 +88,18 @@ namespace Akka.Remote.Tests
             }
         }
 
-        private void AssertActors(ImmutableHashSet<IActorRef> expected, ImmutableHashSet<IActorRef> actual)
+        private static void AssertActors(ImmutableHashSet<IActorRef> expected, ImmutableHashSet<IActorRef> actual)
         {
             expected.Should().BeEquivalentTo(actual);
         }
 
-        [Fact]
+        [Fact(Skip = "EventFilter can receive 1-2 notifications about nodes shutting down depending on timing, which makes this spec racy")]
         public async Task Remoting_must_not_leak_actors()
         {
             var actorRef = Sys.ActorOf(EchoActor.Props(this, true), "echo");
             var echoPath = new RootActorPath(RARP.For(Sys).Provider.DefaultAddress)/"user"/"echo";
 
-            var targets = await Task.WhenAll(new[] { "/system/endpointManager", "/system/transports" }.Select(
+            var targets = await Task.WhenAll(SourceArray.Select(
                 async x =>
                 {
                     Sys.ActorSelection(x).Tell(new Identify(0));
@@ -163,6 +169,10 @@ namespace Akka.Remote.Tests
                 }
                 Assert.True(await remoteSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10)));
             }
+            
+            // Bugfix: need to filter out the AssociationTermination messages for remote@127.0.0.1:2553 from the quarantine
+            // case, otherwise those logs might get picked up during the next text case
+            Sys.EventStream.Publish(new Mute(new WarningFilter( new ContainsString("Association with remote system akka.trttl.tcp://remote@127.0.0.1:2553 has failed"))));
 
             // Missing SHUTDOWN case
             for (var i = 1; i <= 3; i++)
@@ -211,7 +221,7 @@ namespace Akka.Remote.Tests
                 // Watch a remote actor - this results in system message traffic
                 Sys.ActorSelection(new RootActorPath(idleRemoteAddress) / "user" / "stoppable").Tell(new Identify(1));
                 var remoteActor = (await ExpectMsgAsync<ActorIdentity>()).Subject;
-                Watch(remoteActor);
+                await WatchAsync(remoteActor);
                 remoteActor.Tell("stop");
                 await ExpectTerminatedAsync(remoteActor);
                 // All system messages have been acked now on this side

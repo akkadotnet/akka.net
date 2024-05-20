@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
@@ -335,10 +336,10 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(() => {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
-                var queue = new BlockingQueue<(TaskCompletionSource<int>, long)>();
+                var queue = Channel.CreateUnbounded<(TaskCompletionSource<int>, long)>();
                 var cancellation = new CancellationTokenSource();
 
-                Task.Run(() =>
+                Task.Run(async () =>
                 {
                     var delay = 500; // 50000 nanoseconds
                     var count = 0;
@@ -347,7 +348,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         try
                         {
-                            var t = queue.Take(cancellation.Token);
+                            var t = await queue.Reader.ReadAsync(cancellation.Token);
                             var promise = t.Item1;
                             var enqueued = t.Item2;
                             var wakeup = enqueued + delay;
@@ -363,21 +364,26 @@ namespace Akka.Streams.Tests.Dsl
                     }
                 }, cancellation.Token);
 
-                Func<Task<int>> deferred = () =>
+                Task<int> Deferred()
                 {
                     var promise = new TaskCompletionSource<int>();
                     if (counter.IncrementAndGet() > parallelism)
                         promise.SetException(new Exception("parallelism exceeded"));
                     else
-                        queue.Enqueue((promise, DateTime.Now.Ticks));
+                    {
+                        var write = queue.Writer.TryWrite((promise, DateTime.Now.Ticks));
+                        if (!write)
+                            promise.SetException(new Exception("Failed to write to queue"));
+                    }
+                       
                     return promise.Task;
-                };
+                }
 
                 try
                 {
                     const int n = 10000;
                     var task = Source.From(Enumerable.Range(1, n))
-                        .SelectAsyncUnordered(parallelism, _ => deferred())
+                        .SelectAsyncUnordered(parallelism, _ => Deferred())
                         .RunAggregate(0, (c, _) => c + 1, Materializer);
 
                     task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();

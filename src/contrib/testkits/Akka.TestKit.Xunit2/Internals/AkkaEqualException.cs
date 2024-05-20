@@ -40,9 +40,9 @@ namespace Akka.TestKit.Xunit2.Internals
             var actualText = actual as string ?? ArgumentFormatter.Format(actual);
 
             return new AkkaEqualException(
-                @$"Assert.Equal() Failure: {format ?? "Values differ"}Environment.NewLine
-Expected: {expectedText.Replace(Environment.NewLine, NewLineAndIndent)}{Environment.NewLine}
-Actual:   {actualText.Replace(Environment.NewLine, NewLineAndIndent)}",
+                "Assert.Equal() Failure: " + (format ?? "Values differ") + Environment.NewLine +
+                "Expected: " + expectedText.Replace(Environment.NewLine, NewLineAndIndent) + Environment.NewLine +
+                "Actual:   " + actualText.Replace(Environment.NewLine, NewLineAndIndent),
                 args
             );
         }
