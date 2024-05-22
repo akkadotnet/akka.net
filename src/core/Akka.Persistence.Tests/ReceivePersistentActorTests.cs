@@ -31,9 +31,9 @@ namespace Akka.Persistence.Tests
             //Given
             var pid = "p-1";
             WriteEvents(pid, 1, 2, 3);
-            var actor = Sys.ActorOf(Props.Create(() => new NoCommandActor(pid)), "no-receive-specified");
             Sys.EventStream.Subscribe(TestActor, typeof(UnhandledMessage));
-
+            var actor = Sys.ActorOf(Props.Create(() => new NoCommandActor(pid)), "no-receive-specified");
+          
             //When
             actor.Tell("Something");
 
@@ -50,8 +50,8 @@ namespace Akka.Persistence.Tests
             WriteEvents(pid, "Something");
 
             // when
-            var actor = Sys.ActorOf(Props.Create(() => new NoEventActor(pid)), "no-receive-specified");
             Sys.EventStream.Subscribe(TestActor, typeof(UnhandledMessage));
+            var actor = Sys.ActorOf(Props.Create(() => new NoEventActor(pid)), "no-receive-specified");
             
             //Then
             ExpectMsg<UnhandledMessage>(m => ((string)m.Message) == "Something" && Equals(m.Recipient, actor));
