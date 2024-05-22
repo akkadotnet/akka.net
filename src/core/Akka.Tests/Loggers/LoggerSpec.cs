@@ -127,7 +127,7 @@ akka.stdout-loglevel = DEBUG");
         public void StandardOutLogger_PrintLogEvent_WithBadLogFormattingMustNotThrow(LogEvent @event)
         {
             var obj = new object();
-            obj.Invoking(_ => StandardOutLogger.PrintLogEvent(@event)).Should().NotThrow();
+            obj.Invoking(_ => StandardOutLogger.PrintLogEvent(@event, LogFilterEvaluator.NoFilters)).Should().NotThrow();
         }
 
         public static IEnumerable<object[]> LogEventFactory()
