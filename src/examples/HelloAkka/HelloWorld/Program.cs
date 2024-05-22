@@ -10,7 +10,7 @@ using Akka.Actor;
 using HelloWorld;
 
 // ReSharper disable SuggestVarOrType_SimpleTypes
-
+#region akka-hello-world-main
 ActorSystem system = ActorSystem.Create("the-universe");
 
 // create actor and get a reference to it.
@@ -22,9 +22,10 @@ IActorRef greeter = system.ActorOf<GreetingActor>("greeter");
 // send a message to the actor
 greeter.Tell(new Greet("World"));
 
-//this is for demonstration purposes
+// give the actor a moment to process the message
+// (it should process it in under a micro-second, but it happens asynchronously)
 await Task.Delay(TimeSpan.FromSeconds(1));
 system.Stop(greeter);
 
-// prevent the application from exiting before message is handled            
-await system.WhenTerminated;
+await system.Terminate();
+#endregion
