@@ -31,9 +31,12 @@ public enum LogFilterType
     Source,
 
     /// <summary>
-    /// Filter log messages based on their message
+    /// Filter log messages based on their content: message, exception, etc.
     /// </summary>
-    Message
+    /// <remarks>
+    /// This is the slowest filter type, as it requires fully expanding the log message.
+    /// </remarks>
+    Content
 }
 
 public enum LogFilterDecision
@@ -49,6 +52,7 @@ public enum LogFilterDecision
     NoDecision
 }
 
+// <LogFilterBase>
 /// <summary>
 /// Base class for all log filters
 /// </summary>
@@ -81,8 +85,10 @@ public abstract class LogFilterBase : INoSerializationVerificationNeeded, IDeadL
     /// </summary>
     /// <param name="part">The part of the message to evaluate.</param>
     /// <param name="content">Usually the fully expanded message content.</param>
-    public abstract LogFilterDecision ShouldKeepMessage(LogFilterType part, string content);
+    /// <param name="expandedMessage">The fully expanded message, optional.</param>
+    public abstract LogFilterDecision ShouldKeepMessage(LogEvent content, string? expandedMessage = null);
 }
+// </LogFilterBase>
 
 /// <summary>
 /// Uses a regular expression to filter log messages based on their source.
@@ -98,11 +104,9 @@ public sealed class RegexLogSourceFilter : LogFilterBase
 
     public override LogFilterType FilterType => LogFilterType.Source;
 
-    public override LogFilterDecision ShouldKeepMessage(LogFilterType part, string content)
+    public override LogFilterDecision ShouldKeepMessage(LogEvent content, string? expandedMessage = null)
     {
-        if (part == LogFilterType.Source)
-            return _sourceRegex.IsMatch(content) ? LogFilterDecision.Drop : LogFilterDecision.Keep;
-        return LogFilterDecision.NoDecision;
+        return _sourceRegex.IsMatch(content.LogSource) ? LogFilterDecision.Drop : LogFilterDecision.Keep;
     }
 }
 
@@ -119,11 +123,10 @@ public sealed class ExactMatchLogSourceFilter : LogFilterBase
 
     public override LogFilterType FilterType => LogFilterType.Source;
 
-    public override LogFilterDecision ShouldKeepMessage(LogFilterType part, string content)
+    public override LogFilterDecision ShouldKeepMessage(LogEvent content,
+        string? expandedMessage = null)
     {
-        if (part == LogFilterType.Source)
-            return content == _source ? LogFilterDecision.Drop : LogFilterDecision.Keep;
-        return LogFilterDecision.NoDecision;
+        return content.LogSource == _source ? LogFilterDecision.Drop : LogFilterDecision.Keep;
     }
 }
 
@@ -136,12 +139,16 @@ public sealed class RegexLogMessageFilter : LogFilterBase
         _messageRegex = messageRegex;
     }
 
-    public override LogFilterType FilterType => LogFilterType.Message;
+    public override LogFilterType FilterType => LogFilterType.Content;
 
-    public override LogFilterDecision ShouldKeepMessage(LogFilterType part, string content)
+    public override LogFilterDecision ShouldKeepMessage(LogEvent content,
+        string? expandedMessage = null)
     {
-        if (part == LogFilterType.Message)
-            return _messageRegex.IsMatch(content) ? LogFilterDecision.Drop : LogFilterDecision.Keep;
+        if(expandedMessage is not null)
+            return _messageRegex.IsMatch(expandedMessage ?? string.Empty)
+                ? LogFilterDecision.Drop
+                : LogFilterDecision.Keep;
+        
         return LogFilterDecision.NoDecision;
     }
 }
@@ -177,7 +184,7 @@ public class LogFilterEvaluator
             foreach (var filter in _filters)
             {
                 // saves on allocations in negative cases, where we can avoid expanding the message
-                if (filter.ShouldKeepMessage(LogFilterType.Source, evt.LogSource) == LogFilterDecision.Drop)
+                if (filter.ShouldKeepMessage(evt) == LogFilterDecision.Drop)
                     return false;
             }
         }
@@ -193,19 +200,8 @@ public class LogFilterEvaluator
 
             foreach (var filter in _filters)
             {
-                switch (filter.FilterType)
-                {
-                    case LogFilterType.Source:
-                        if (filter.ShouldKeepMessage(LogFilterType.Source, evt.LogSource) == LogFilterDecision.Drop)
-                            return false;
-                        break;
-                    case LogFilterType.Message:
-                        if (filter.ShouldKeepMessage(LogFilterType.Message, expandedLogMessage) == LogFilterDecision.Drop)
-                            return false;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(filter), "Unknown filter type: " + filter.FilterType);
-                }
+                if (filter.ShouldKeepMessage(evt, expandedLogMessage) == LogFilterDecision.Drop)
+                    return false;
             }
         }
 

@@ -3371,7 +3371,7 @@ namespace Akka.Event
     {
         public ExactMatchLogSourceFilter(string source, System.StringComparison comparison = 5) { }
         public override Akka.Event.LogFilterType FilterType { get; }
-        public override Akka.Event.LogFilterDecision ShouldKeepMessage(Akka.Event.LogFilterType part, string content) { }
+        public override Akka.Event.LogFilterDecision ShouldKeepMessage(Akka.Event.LogEvent content, [System.Runtime.CompilerServices.NullableAttribute(2)] string expandedMessage = null) { }
     }
     public interface IDeadLetterSuppression { }
     public interface ILogMessageFormatter
@@ -3418,7 +3418,7 @@ namespace Akka.Event
     {
         protected LogFilterBase() { }
         public abstract Akka.Event.LogFilterType FilterType { get; }
-        public abstract Akka.Event.LogFilterDecision ShouldKeepMessage(Akka.Event.LogFilterType part, string content);
+        public abstract Akka.Event.LogFilterDecision ShouldKeepMessage(Akka.Event.LogEvent content, [System.Runtime.CompilerServices.NullableAttribute(2)] string expandedMessage = null);
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class LogFilterBuilder
@@ -3459,7 +3459,7 @@ namespace Akka.Event
     public enum LogFilterType
     {
         Source = 0,
-        Message = 1,
+        Content = 1,
     }
     public enum LogLevel
     {
@@ -3639,14 +3639,14 @@ namespace Akka.Event
     {
         public RegexLogMessageFilter(System.Text.RegularExpressions.Regex messageRegex) { }
         public override Akka.Event.LogFilterType FilterType { get; }
-        public override Akka.Event.LogFilterDecision ShouldKeepMessage(Akka.Event.LogFilterType part, string content) { }
+        public override Akka.Event.LogFilterDecision ShouldKeepMessage(Akka.Event.LogEvent content, [System.Runtime.CompilerServices.NullableAttribute(2)] string expandedMessage = null) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class RegexLogSourceFilter : Akka.Event.LogFilterBase
     {
         public RegexLogSourceFilter(System.Text.RegularExpressions.Regex sourceRegex) { }
         public override Akka.Event.LogFilterType FilterType { get; }
-        public override Akka.Event.LogFilterDecision ShouldKeepMessage(Akka.Event.LogFilterType part, string content) { }
+        public override Akka.Event.LogFilterDecision ShouldKeepMessage(Akka.Event.LogEvent content, [System.Runtime.CompilerServices.NullableAttribute(2)] string expandedMessage = null) { }
     }
     public class StandardOutLogger : Akka.Event.MinimalLogger
     {
