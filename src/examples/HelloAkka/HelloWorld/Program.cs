@@ -5,37 +5,27 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#region akka-hello-world-main
-using System;
+
 using Akka.Actor;
 using HelloWorld;
 
-namespace HelloAkka
-{
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            // create a new actor system (a container for actors)
-            var system = ActorSystem.Create("the-universe");
+// ReSharper disable SuggestVarOrType_SimpleTypes
+#region akka-hello-world-main
+ActorSystem system = ActorSystem.Create("the-universe");
 
-            // create actor and get a reference to it.
-            // this will be an "ActorRef", which is not a 
-            // reference to the actual actor instance
-            // but rather a client or proxy to it
-            var greeter = system.ActorOf<GreetingActor>("greeter");
+// create actor and get a reference to it.
+// this will be an "ActorRef", which is not a 
+// reference to the actual actor instance
+// but rather a client or proxy to it
+IActorRef greeter = system.ActorOf<GreetingActor>("greeter");
 
-            // send a message to the actor
-            greeter.Tell(new Greet("World"));
+// send a message to the actor
+greeter.Tell(new Greet("World"));
 
-            //this is for demostration purposes
-            Thread.Sleep(5000);
-            system.Stop(greeter);
+// give the actor a moment to process the message
+// (it should process it in under a micro-second, but it happens asynchronously)
+await Task.Delay(TimeSpan.FromSeconds(1));
+system.Stop(greeter);
 
-            // prevent the application from exiting before message is handled            
-            Console.ReadLine();
-        }
-    }
-}
-
+await system.Terminate();
 #endregion
