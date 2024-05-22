@@ -7,6 +7,7 @@
 
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Akka.Actor;
 using Akka.Actor.Setup;
@@ -26,20 +27,25 @@ public class LogFilterEvaluatorSpecs
 {
     public class LogFilterSetupSpecs : AkkaSpec
     {
+        // <CreateLoggerSetup>
         public static Setup LoggerSetup()
         {
+            
             var builder = new LogFilterBuilder();
             builder.ExcludeSourceContaining("Akka.Tests")
                 .ExcludeMessageContaining("foo-bar");
             return builder.Build();
         }
+        // </CreateLoggerSetup>
         
+        // <ActorSystemSetup>
         public static ActorSystemSetup CustomLoggerSetup()
         {
             var hocon = @$"akka.stdout-logger-class = ""{typeof(CustomLogger).AssemblyQualifiedName}""";
             var bootstrapSetup = BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString(hocon));
             return ActorSystemSetup.Create(bootstrapSetup, LoggerSetup());
         }
+        // </ActorSystemSetup>
         
         // create a custom MinimalLogger that subclasses StandardOutLogger
         public class CustomLogger : StandardOutLogger
@@ -69,7 +75,7 @@ public class LogFilterEvaluatorSpecs
         private readonly CustomLogger _logger;
         
         [Fact]
-        public void LogFilterEnd2EndSpec()
+        public async Task LogFilterEnd2EndSpec()
         {
             // subscribe to warning level log events
             Sys.EventStream.Subscribe(TestActor, typeof(Warning));
@@ -91,7 +97,7 @@ public class LogFilterEvaluatorSpecs
             ReceiveN(3);
             
             // check that the last message was the one that was allowed through
-            _logger.Events.Count.Should().Be(1);
+            await AwaitAssertAsync(() => _logger.Events.Count.Should().Be(1));
             var msg = _logger.Events[0];
             msg.Message.Should().Be("baz");
             msg.LogSource.Should().StartWith("Akka.Util.Test2");
