@@ -203,11 +203,11 @@ The goal of this feature is to allow users to run Akka.NET at more verbose loggi
 
 ### Configuring Log Filtering
 
-[!code-csharp[Create LoggerSetup](../../../src/core/Akka.Tests/Loggers/LogFilterEvaluatorSpec.cs?name=CreateLoggerSetup)]
+[!code-csharp[Create LoggerSetup](../../../src/core/Akka.Tests/Loggers/LogFilterEvaluatorSpecs.cs?name=CreateLoggerSetup)]
 
 We create a [`LogFilterBuilder`](xref:Akka.Event.LogFilterBuilder) prior to starting the `ActorSystem` and provide it with rules for which logs _should be excluded_ from any of Akka.NET's logged output - this uses the [`ActorSystemSetup`](xref:Akka.Actor.Setup.ActorSystemSetup) class functionality that Akka.NET supports for programmatic `ActorSystem` configuration:
 
-[!code-csharp[Create ActorSystemSetup](../../../src/core/Akka.Tests/Loggers/LogFilterEvaluatorSpec.cs?name=ActorSystemSetup)]
+[!code-csharp[Create ActorSystemSetup](../../../src/core/Akka.Tests/Loggers/LogFilterEvaluatorSpecs.cs?name=ActorSystemSetup)]
 
 From there, we can create our `ActorSystem` with these rules enabled:
 
