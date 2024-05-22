@@ -3450,12 +3450,12 @@ namespace Akka.Event
         NoDecision = 2,
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
-    public sealed class LogFilterEvaluator
+    public class LogFilterEvaluator
     {
         public static readonly Akka.Event.LogFilterEvaluator NoFilters;
         public LogFilterEvaluator(Akka.Event.LogFilterBase[] filters) { }
         public bool EvaluatesLogSourcesOnly { get; }
-        public bool ShouldTryKeepMessage(Akka.Event.LogEvent evt, out string expandedLogMessage) { }
+        public virtual bool ShouldTryKeepMessage(Akka.Event.LogEvent evt, out string expandedLogMessage) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class LogFilterSetup : Akka.Actor.Setup.Setup
