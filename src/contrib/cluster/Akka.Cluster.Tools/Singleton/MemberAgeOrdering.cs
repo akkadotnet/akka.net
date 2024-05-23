@@ -4,13 +4,13 @@
 //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System.Collections.Generic;
 
 namespace Akka.Cluster.Tools.Singleton
 {
     /// <summary>
-    /// TBD
+    /// Responsible for sorting members based on their age, with the option to consider the app version.
     /// </summary>
     internal sealed class MemberAgeOrdering : IComparer<Member>
     {
@@ -39,17 +39,11 @@ namespace Akka.Cluster.Tools.Singleton
                 ? (_ascending ? 1 : -1)
                 : (_ascending ? -1 : 1);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public static readonly MemberAgeOrdering Ascending = new(true, false);
 
         public static readonly MemberAgeOrdering AscendingWithAppVersion = new(true, true);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public static readonly MemberAgeOrdering Descending = new(false, false);
         
         public static readonly MemberAgeOrdering DescendingWithAppVersion = new(false, true);
