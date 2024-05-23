@@ -42,7 +42,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             var config = Sys.Settings.Config.GetConfig("akka.cluster.singleton");
             Assert.False(config.IsNullOrEmpty());
             config.GetInt("min-number-of-hand-over-retries", 0).ShouldBe(15);
-            clusterSingletonManagerSettings.ConsiderAppVersion.ShouldBeFalse();
+            clusterSingletonManagerSettings.ConsiderAppVersion.ShouldBeTrue();
         }
 
         [Fact]
@@ -55,7 +55,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             clusterSingletonProxySettings.Role.ShouldBe(null);
             clusterSingletonProxySettings.SingletonIdentificationInterval.TotalSeconds.ShouldBe(1);
             clusterSingletonProxySettings.BufferSize.ShouldBe(1000);
-            clusterSingletonProxySettings.ConsiderAppVersion.ShouldBeFalse();
+            clusterSingletonProxySettings.ConsiderAppVersion.ShouldBeTrue();
         }
     }
 }
