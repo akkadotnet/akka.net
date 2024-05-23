@@ -13,23 +13,51 @@ using Akka.Event;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 {
-    public class WrappedMessage : RouterEnvelope
+    public class WrappedMessage : RouterEnvelope, IEquatable<WrappedMessage>
     {
         public WrappedMessage(string message) : base(message)
         {
         }
+
+        public bool Equals(WrappedMessage other) => other is not null && other.Message.Equals(Message);
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is WrappedMessage wrapped && Equals(wrapped);
+        }
+
+        public override int GetHashCode() => Message != null ? Message.GetHashCode() : 0;
     }
 
-    public class UnwrappedMessage
+    public class UnwrappedMessage: IEquatable<UnwrappedMessage>
     {
         public string Message { get; }
 
         public UnwrappedMessage(string message)
         {
             Message = message;
+        }
+
+        public bool Equals(UnwrappedMessage other)
+        {
+            if (ReferenceEquals(this, other)) return true;
+            return other is not null && Message == other.Message;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is WrappedMessage wrapped && Equals(wrapped);
+        }
+
+        public override int GetHashCode()
+        {
+            return Message != null ? Message.GetHashCode() : 0;
         }
     }
 
@@ -38,7 +66,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
         private IActorRef mediator;
         private string path;
 
-        public DistributedPubSubMediatorRouterSpec(Config config) : base(config)
+        public DistributedPubSubMediatorRouterSpec(Config config, ITestOutputHelper output) : base(config, output)
         {
             mediator = DistributedPubSub.Get(Sys).Mediator;
             path = TestActor.Path.ToStringWithoutAddress();
@@ -114,7 +142,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 
     public class DistributedPubSubMediatorWithRandomRouterSpec : DistributedPubSubMediatorRouterSpec
     {
-        public DistributedPubSubMediatorWithRandomRouterSpec() : base(DistributedPubSubMediatorRouterConfig.GetConfig("random"))
+        public DistributedPubSubMediatorWithRandomRouterSpec(ITestOutputHelper output) : base(DistributedPubSubMediatorRouterConfig.GetConfig("random"), output)
         {
         }
 
@@ -135,7 +163,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 
     public class DistributedPubSubMediatorWithRoundRobinRouterSpec : DistributedPubSubMediatorRouterSpec
     {
-        public DistributedPubSubMediatorWithRoundRobinRouterSpec() : base(DistributedPubSubMediatorRouterConfig.GetConfig("round-robin"))
+        public DistributedPubSubMediatorWithRoundRobinRouterSpec(ITestOutputHelper output) : base(DistributedPubSubMediatorRouterConfig.GetConfig("round-robin"), output)
         {
         }
 
@@ -156,7 +184,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 
     public class DistributedPubSubMediatorWithBroadcastRouterSpec : DistributedPubSubMediatorRouterSpec
     {
-        public DistributedPubSubMediatorWithBroadcastRouterSpec() : base(DistributedPubSubMediatorRouterConfig.GetConfig("broadcast"))
+        public DistributedPubSubMediatorWithBroadcastRouterSpec(ITestOutputHelper output) : base(DistributedPubSubMediatorRouterConfig.GetConfig("broadcast"), output)
         {
         }
 
@@ -213,6 +241,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             return ConfigurationFactory.ParseString($@"
                 akka.loglevel = INFO
                 akka.actor.provider = cluster
+                akka.actor.serialize-messages = on
                 akka.remote.dot-netty.tcp.port = 0
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.pub-sub.routing-logic = {routingLogic}
