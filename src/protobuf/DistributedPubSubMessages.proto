@@ -47,6 +47,7 @@ message SendToAll {
 message Publish {
   string topic = 1;
   Akka.Remote.Serialization.Proto.Msg.Payload payload = 3; 
+  bool sendOneMessageToEachGroup = 4;
 }
 
 // Send a message to only one subscriber of a group.
