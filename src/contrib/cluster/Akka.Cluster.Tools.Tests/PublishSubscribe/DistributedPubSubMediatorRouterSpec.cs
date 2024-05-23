@@ -46,7 +46,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
         public bool Equals(UnwrappedMessage other)
         {
             if (ReferenceEquals(this, other)) return true;
-            return other is not null && Message == other.Message;
+            return other is not null && Message.Equals(other.Message);
         }
 
         public override bool Equals(object obj)
@@ -72,7 +72,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             path = TestActor.Path.ToStringWithoutAddress();
         }
 
-        protected void NonUnwrappingPubSub(object msg)
+        protected void NonUnwrappingPubSub<T>(T msg)
         {
             Keep_the_RouterEnvelope_when_sending_to_local_logical_path(msg);
             Keep_the_RouterEnvelope_when_sending_to_logical_path(msg);
@@ -82,7 +82,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             Send_message_to_dead_letters_if_no_recipients_available(msg);
         }
 
-        private void Keep_the_RouterEnvelope_when_sending_to_local_logical_path(object msg)
+        private void Keep_the_RouterEnvelope_when_sending_to_local_logical_path<T>(T msg)
         {
             mediator.Tell(new Put(TestActor));
             mediator.Tell(new Send(path, msg, localAffinity: true));
@@ -90,7 +90,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             mediator.Tell(new Remove(path));
         }
 
-        private void Keep_the_RouterEnvelope_when_sending_to_logical_path(object msg)
+        private void Keep_the_RouterEnvelope_when_sending_to_logical_path<T>(T msg)
         {
             mediator.Tell(new Put(TestActor));
             mediator.Tell(new Send(path, msg, localAffinity: false));
@@ -98,7 +98,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             mediator.Tell(new Remove(path));
         }
 
-        private void Keep_the_RouterEnvelope_when_sending_to_all_actors_on_logical_path(object msg)
+        private void Keep_the_RouterEnvelope_when_sending_to_all_actors_on_logical_path<T>(T msg)
         {
             mediator.Tell(new Put(TestActor));
             mediator.Tell(new SendToAll(path, msg));
@@ -106,7 +106,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             mediator.Tell(new Remove(path));
         }
 
-        private void Keep_the_RouterEnvelope_when_sending_to_topic(object msg)
+        private void Keep_the_RouterEnvelope_when_sending_to_topic<T>(T msg)
         {
             mediator.Tell(new Subscribe("topic", TestActor));
             ExpectMsg<SubscribeAck>();
@@ -118,7 +118,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             ExpectMsg<UnsubscribeAck>();
         }
 
-        private void Keep_the_RouterEnvelope_when_sending_to_topic_for_group(object msg)
+        private void Keep_the_RouterEnvelope_when_sending_to_topic_for_group<T>(T msg)
         {
             mediator.Tell(new Subscribe("topic", TestActor, "group"));
             ExpectMsg<SubscribeAck>();
@@ -130,7 +130,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             ExpectMsg<UnsubscribeAck>();
         }
 
-        private void Send_message_to_dead_letters_if_no_recipients_available(object msg)
+        private void Send_message_to_dead_letters_if_no_recipients_available<T>(T msg)
         {
             var probe = CreateTestProbe();
             Sys.EventStream.Subscribe(probe.Ref, typeof(DeadLetter));
