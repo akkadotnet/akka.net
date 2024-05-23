@@ -529,7 +529,7 @@ namespace Akka.Actor
             object deserializedMsg;
             try
             {
-                deserializedMsg = SerializeAndDeserializePayload(unwrapped);
+                deserializedMsg = SerializeAndDeserializePayload(envelope.Message);
             }
             catch (Exception e)
             {
