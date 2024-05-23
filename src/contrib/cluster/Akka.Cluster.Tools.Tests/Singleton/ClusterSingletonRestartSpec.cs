@@ -28,7 +28,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         public ClusterSingletonRestartSpec() : base(@"
               akka.loglevel = INFO
               akka.actor.provider = ""cluster""
-              akka.cluster.auto-down-unreachable-after = 2s
+              #akka.cluster.auto-down-unreachable-after = 2s
               akka.remote {
                 dot-netty.tcp {
                   hostname = ""127.0.0.1""
