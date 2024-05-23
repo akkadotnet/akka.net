@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -398,9 +398,9 @@ namespace Akka.Cluster.Tools.Singleton
     [Serializable]
     internal sealed class AcquireLeaseFailure : IDeadLetterSuppression, INoSerializationVerificationNeeded
     {
-        public Exception Failure { get; }
+        public Exception? Failure { get; }
 
-        public AcquireLeaseFailure(Exception failure)
+        public AcquireLeaseFailure(Exception? failure)
         {
             Failure = failure;
         }
@@ -409,9 +409,9 @@ namespace Akka.Cluster.Tools.Singleton
     [Serializable]
     internal sealed class ReleaseLeaseFailure : IDeadLetterSuppression, INoSerializationVerificationNeeded
     {
-        public Exception Failure { get; }
+        public Exception? Failure { get; }
 
-        public ReleaseLeaseFailure(Exception failure)
+        public ReleaseLeaseFailure(Exception? failure)
         {
             Failure = failure;
         }
@@ -420,9 +420,9 @@ namespace Akka.Cluster.Tools.Singleton
     [Serializable]
     internal sealed class LeaseLost : IDeadLetterSuppression, INoSerializationVerificationNeeded
     {
-        public Exception Reason { get; }
+        public Exception? Reason { get; }
 
-        public LeaseLost(Exception reason)
+        public LeaseLost(Exception? reason)
         {
             Reason = reason;
         }
@@ -622,7 +622,7 @@ namespace Akka.Cluster.Tools.Singleton
         private bool _selfExited;
 
         // started when self member is Up
-        private IActorRef _oldestChangedBuffer;
+        private IActorRef? _oldestChangedBuffer;
         // keep track of previously removed members
         private ImmutableDictionary<UniqueAddress, Deadline> _removed = ImmutableDictionary<UniqueAddress, Deadline>.Empty;
         private readonly TimeSpan _removalMargin;
@@ -630,24 +630,14 @@ namespace Akka.Cluster.Tools.Singleton
         private readonly int _maxTakeOverRetries;
         private readonly Cluster _cluster = Cluster.Get(Context.System);
         private readonly UniqueAddress _selfUniqueAddress;
-        private ILoggingAdapter _log;
 
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
         private readonly TaskCompletionSource<Done> _memberExitingProgress = new();
 
-        private readonly string singletonLeaseName;
-        private readonly Lease lease;
-        private readonly TimeSpan leaseRetryInterval = TimeSpan.FromSeconds(5); // won't be used
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="singletonProps">TBD</param>
-        /// <param name="terminationMessage">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <exception cref="ConfigurationException">TBD</exception>
-        /// <returns>TBD</returns>
+        private readonly string _singletonLeaseName;
+        private readonly Lease? _lease;
+        private readonly TimeSpan _leaseRetryInterval = TimeSpan.FromSeconds(5); // won't be used
+        
         public ClusterSingletonManager(Props singletonProps, object terminationMessage, ClusterSingletonManagerSettings settings)
         {
             var role = settings.Role;
@@ -657,13 +647,13 @@ namespace Akka.Cluster.Tools.Singleton
             _singletonProps = singletonProps;
             _terminationMessage = terminationMessage;
             _settings = settings;
-            singletonLeaseName = $"{Context.System.Name}-singleton-{Self.Path}";
+            _singletonLeaseName = $"{Context.System.Name}-singleton-{Self.Path}";
 
             if (settings.LeaseSettings != null)
             {
-                lease = LeaseProvider.Get(Context.System)
-                    .GetLease(singletonLeaseName, settings.LeaseSettings.LeaseImplementation, _cluster.SelfAddress.HostPort());
-                leaseRetryInterval = settings.LeaseSettings.LeaseRetryInterval;
+                _lease = LeaseProvider.Get(Context.System)
+                    .GetLease(_singletonLeaseName, settings.LeaseSettings.LeaseImplementation, _cluster.SelfAddress.HostPort());
+                _leaseRetryInterval = settings.LeaseSettings.LeaseRetryInterval;
             }
 
             _removalMargin = (settings.RemovalMargin <= TimeSpan.Zero) ? _cluster.DowningProvider.DownRemovalMargin : settings.RemovalMargin;
@@ -707,7 +697,7 @@ namespace Akka.Cluster.Tools.Singleton
             });
         }
 
-        private ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
+        private ILoggingAdapter Log { get; } = Context.GetLogger();
 
         /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void PreStart()
@@ -716,7 +706,7 @@ namespace Akka.Cluster.Tools.Singleton
                 throw new ActorInitializationException("Cluster node must not be terminated");
 
             // subscribe to cluster changes, re-subscribe when restart
-            _cluster.Subscribe(Self, ClusterEvent.InitialStateAsEvents, typeof(ClusterEvent.MemberRemoved), typeof(ClusterEvent.MemberDowned));
+            _cluster.Subscribe(Self, InitialStateAsEvents, typeof(MemberRemoved), typeof(MemberDowned));
 
             SetTimer(CleanupTimer, Cleanup.Instance, TimeSpan.FromMinutes(1.0), repeat: true);
 
@@ -769,7 +759,7 @@ namespace Akka.Cluster.Tools.Singleton
         private State<ClusterSingletonState, IClusterSingletonData> TryAcquireLease()
         {
             var self = Self;
-            lease.Acquire(reason =>
+            _lease.Acquire(reason =>
             {
                 self.Tell(new LeaseLost(reason));
             }).ContinueWith(r =>
@@ -786,7 +776,7 @@ namespace Akka.Cluster.Tools.Singleton
         private State<ClusterSingletonState, IClusterSingletonData> TryGotoOldest()
         {
             // check if lease
-            if (lease == null)
+            if (_lease == null)
                 return GoToOldest();
             else
             {
@@ -809,7 +799,7 @@ namespace Akka.Cluster.Tools.Singleton
             Log.Info("{0} observed OldestChanged: [{1} -> {2}]", StateName, _cluster.SelfAddress, oldest?.Address);
             switch (oldest)
             {
-                case UniqueAddress a when a.Equals(_cluster.SelfUniqueAddress):
+                case { } a when a.Equals(_cluster.SelfUniqueAddress):
                     // already oldest
                     return Stay();
                 case UniqueAddress a when !_selfExited && _removed.ContainsKey(a):
@@ -1115,7 +1105,7 @@ namespace Akka.Cluster.Tools.Singleton
                     }
                     else
                     {
-                        SetTimer(LeaseRetryTimer, LeaseRetry.Instance, leaseRetryInterval, repeat: false);
+                        SetTimer(LeaseRetryTimer, LeaseRetry.Instance, _leaseRetryInterval, repeat: false);
                         return Stay().Using(new AcquiringLeaseData(false, null));
                     }
                 }
@@ -1131,7 +1121,7 @@ namespace Akka.Cluster.Tools.Singleton
                 else if (e.FsmEvent is AcquireLeaseFailure alf)
                 {
                     Log.Error(alf.Failure, "Failed to get lease (will be retried)");
-                    SetTimer(LeaseRetryTimer, LeaseRetry.Instance, leaseRetryInterval, repeat: false);
+                    SetTimer(LeaseRetryTimer, LeaseRetry.Instance, _leaseRetryInterval, repeat: false);
                     return Stay().Using(new AcquiringLeaseData(false, null));
                 }
 
@@ -1459,9 +1449,9 @@ namespace Akka.Cluster.Tools.Singleton
                     if (StateData is AcquiringLeaseData ald && ald.LeaseRequestInProgress)
                     {
                         Log.Info("Releasing lease as leaving AcquiringLease going to [{0}]", to);
-                        if (lease != null)
+                        if (_lease != null)
                         {
-                            lease.Release().ContinueWith(r =>
+                            _lease.Release().ContinueWith(r =>
                             {
                                 if (r.IsCanceled || r.IsFaulted)
                                     return (object)new ReleaseLeaseFailure(r.Exception);
@@ -1471,10 +1461,10 @@ namespace Akka.Cluster.Tools.Singleton
                     }
                 }
 
-                if (from == ClusterSingletonState.Oldest && lease != null)
+                if (from == ClusterSingletonState.Oldest && _lease != null)
                 {
                     Log.Info("Releasing lease as leaving Oldest");
-                    lease.Release().ContinueWith(r => new ReleaseLeaseResult(r.Result)).PipeTo(Self);
+                    _lease.Release().ContinueWith(r => new ReleaseLeaseResult(r.Result)).PipeTo(Self);
                 }
 
                 if (to is ClusterSingletonState.Younger or ClusterSingletonState.Oldest) GetNextOldestChanged();
