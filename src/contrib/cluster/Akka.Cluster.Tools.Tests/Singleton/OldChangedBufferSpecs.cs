@@ -26,14 +26,13 @@ namespace Akka.Cluster.Tools.Tests.Singleton;
 public class OldChangedBufferSpecs : AkkaSpec
 {
     private readonly ActorSystem _hostNodeV1;
-    private readonly ActorSystem _otherNodeV2;
+    private readonly ActorSystem _hostNodeV2;
 
     private static Config OriginalNodeConfig() => """
                                                   
                                                                 akka.loglevel = INFO
                                                                 akka.actor.provider = "cluster"
                                                                 akka.cluster.roles = [non-singleton]
-                                                                akka.cluster.auto-down-unreachable-after = 2s
                                                                 akka.cluster.singleton.min-number-of-hand-over-retries = 5
                                                                 akka.cluster.app-version = "1.0.0"
                                                                 akka.remote {
@@ -51,8 +50,10 @@ public class OldChangedBufferSpecs : AkkaSpec
     {
         _hostNodeV1 = ActorSystem.Create(Sys.Name,
             ConfigurationFactory.ParseString("akka.cluster.roles = [singleton]").WithFallback(Sys.Settings.Config));
-        _otherNodeV2 = ActorSystem.Create(Sys.Name,
+        InitializeLogger(_hostNodeV1);
+        _hostNodeV2 = ActorSystem.Create(Sys.Name,
             ConfigurationFactory.ParseString("akka.cluster.roles = [singleton]").WithFallback(V2NodeConfig(Sys)));
+        InitializeLogger(_hostNodeV2);
     }
 
     [Fact(DisplayName =
@@ -69,8 +70,8 @@ public class OldChangedBufferSpecs : AkkaSpec
         // confirm that singleton is on _hostNodeV1
         await AssertSingletonHostedOn(proxy, _hostNodeV1);
         
-        // have _otherNodeV2 join the cluster
-        await JoinAsync(_otherNodeV2, Sys);
+        // have _hostNodeV2 join the cluster
+        await JoinAsync(_hostNodeV2, Sys);
         
         // confirm that singleton is STILL on _hostNodeV1
         await AssertSingletonHostedOn(proxy, _hostNodeV1);
@@ -88,8 +89,8 @@ public class OldChangedBufferSpecs : AkkaSpec
             });
         });
         
-        // validate that the singleton has moved to _otherNodeV2
-        await AssertSingletonHostedOn(proxy, _otherNodeV2);
+        // validate that the singleton has moved to _hostNodeV2
+        await AssertSingletonHostedOn(proxy, _hostNodeV2);
     }
 
     private async Task AssertSingletonHostedOn(IActorRef proxy, ActorSystem targetNode)
@@ -145,7 +146,7 @@ public class OldChangedBufferSpecs : AkkaSpec
     protected override void AfterAll()
     {
         Shutdown(_hostNodeV1);
-            Shutdown(_otherNodeV2);
+            Shutdown(_hostNodeV2);
         base.AfterAll();
     }
 }
