@@ -194,3 +194,42 @@ In your log, expect to see a line such as:
 `[DEBUG]... received handled message hello from akka://test/deadLetters`
 
 This logging can be toggled by configuring `akka.actor.debug.receive`.
+
+## Filtering Log Messages
+
+Since v1.5.21, Akka.NET supports for filtering log messages based on the `LogSource` or the content of a log message.
+
+The goal of this feature is to allow users to run Akka.NET at more verbose logging settings (i.e. `LogLevel.Debug`) while not getting completely flooded with unhelpful noise from the Akka.NET logging system. You can use the [`LogFilterBuilder`](xref:Akka.Event.LogFilterBuilder) to exclude messages don't need while still keeping ones that you do.
+
+### Configuring Log Filtering
+
+[!code-csharp[Create LoggerSetup](../../../src/core/Akka.Tests/Loggers/LogFilterEvaluatorSpecs.cs?name=CreateLoggerSetup)]
+
+We create a [`LogFilterBuilder`](xref:Akka.Event.LogFilterBuilder) prior to starting the `ActorSystem` and provide it with rules for which logs _should be excluded_ from any of Akka.NET's logged output - this uses the [`ActorSystemSetup`](xref:Akka.Actor.Setup.ActorSystemSetup) class functionality that Akka.NET supports for programmatic `ActorSystem` configuration:
+
+[!code-csharp[Create ActorSystemSetup](../../../src/core/Akka.Tests/Loggers/LogFilterEvaluatorSpecs.cs?name=ActorSystemSetup)]
+
+From there, we can create our `ActorSystem` with these rules enabled:
+
+```csharp
+ActorSystemSetup completeSetup = CustomLoggerSetup();
+
+// start the ActorSystem with the LogFilterBuilder rules enabled
+ActorSystem mySystem = ActorSystem.Create("MySys", completeSetup);
+```
+
+### Log Filtering Rules
+
+There are two built-in types of log filtering rules:
+
+* `ExcludeSource___` - filters logs based on the `LogSource`; this type of filtering is _very_ resource efficient because it doesn't require the log message to be expanded in order for filtering to work.
+* `ExcludeMessage___` - filters logs based on the content of the message. More resource-intensive as it does require log messages to be fully expanded prior to filtering.
+
+> [!NOTE]
+> For an Akka.NET log to be excluded from the output logs, only one filter rule has to return a `LogFilterDecision.Drop`.
+
+However, if that's not sufficient for your purposes we also support defining custom rules via the `LogFilterBase` class:
+
+[!code-csharp[LogFilterBase](../../../src/core/Akka/Event/LogFilter.cs?name=LogFilterBase)]
+
+You can filter log messages based on any of the accessibly properties, and for performance reasons any `LogFilterBase` that looks at `LogFilterType.Content` will be passed in the fully expanded log message as a `string?` via the optional `expandedMessage` property. This is done in order to avoid allocating the log message every time for each possible rule that might be evaluated.
