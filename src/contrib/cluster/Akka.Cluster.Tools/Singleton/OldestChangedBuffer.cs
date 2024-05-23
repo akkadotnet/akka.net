@@ -11,7 +11,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Util.Internal;
 
 namespace Akka.Cluster.Tools.Singleton
 {
@@ -34,15 +33,12 @@ namespace Akka.Cluster.Tools.Singleton
         [Serializable]
         public sealed class GetNext
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static GetNext Instance { get; } = new();
             private GetNext() { }
         }
 
         /// <summary>
-        /// TBD
+        /// The first event for determining the oldest member.
         /// </summary>
         [Serializable]
         public sealed class InitialOldestState
@@ -53,15 +49,10 @@ namespace Akka.Cluster.Tools.Singleton
             public List<UniqueAddress> Oldest { get; }
 
             /// <summary>
-            /// TBD
+            /// When <c>true</c>, it's safe to be oldest immediately (no older nodes are in process of leaving)
             /// </summary>
             public bool SafeToBeOldest { get; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="oldest">TBD</param>
-            /// <param name="safeToBeOldest">TBD</param>
+            
             public InitialOldestState(List<UniqueAddress> oldest, bool safeToBeOldest)
             {
                 Oldest = oldest;
@@ -81,7 +72,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// </summary>
             public UniqueAddress? Oldest { get; }
             
-            public OldestChanged(UniqueAddress oldest)
+            public OldestChanged(UniqueAddress? oldest)
             {
                 Oldest = oldest;
             }
@@ -91,6 +82,8 @@ namespace Akka.Cluster.Tools.Singleton
 
         private readonly MemberAgeOrdering _memberAgeComparer;
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
+        
+        public OldestChangedBufferState State { get; set; }
 
         /// <summary>
         /// Creates a new instance of the <see cref="OldestChangedBuffer"/>.
@@ -99,11 +92,12 @@ namespace Akka.Cluster.Tools.Singleton
         /// <param name="considerAppVersion">Should cluster AppVersion be considered when sorting member age</param>
         public OldestChangedBuffer(string role, bool considerAppVersion)
         {
-            _role = role;
             _memberAgeComparer = considerAppVersion
                 ? MemberAgeOrdering.DescendingWithAppVersion
                 : MemberAgeOrdering.Descending;
-            _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(_memberAgeComparer);
+            var membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(_memberAgeComparer);
+            
+            State = new OldestChangedBufferState(membersByAge, role);
             
             SetupCoordinatedShutdown();
         }
@@ -132,45 +126,35 @@ namespace Akka.Cluster.Tools.Singleton
                 }
             });
         }
-
-        private readonly string _role;
-        private ImmutableSortedSet<Member> _membersByAge;
+        
         private ImmutableQueue<object> _changes = ImmutableQueue<object>.Empty;
 
         private readonly Cluster _cluster = Cluster.Get(Context.System);
-
-        private void TrackChanges(Action block)
-        {
-            var before = _membersByAge.FirstOrDefault();
-            block();
-            var after = _membersByAge.FirstOrDefault();
-
-            // todo: fix neq comparison
-            if (!Equals(before, after))
-                _changes = _changes.Enqueue(new OldestChanged(after?.UniqueAddress));
-        }
-
-        private bool MatchingRole(Member member)
-        {
-            return string.IsNullOrEmpty(_role) || member.HasRole(_role);
-        }
-
-        private void HandleInitial(ClusterEvent.CurrentClusterState state)
+        
+        private void HandleInitial(ClusterEvent.CurrentClusterState clusterState)
         {
             // all members except Joining and WeaklyUp
-            _membersByAge = state.Members
-                .Where(m => m.UpNumber != int.MaxValue && MatchingRole(m))
+            var newMembersByAge = clusterState.Members
+                .Where(m => m.UpNumber != int.MaxValue && State.MatchingRole(m))
                 .ToImmutableSortedSet(_memberAgeComparer);
+            
+           State = State with { MembersByAge = newMembersByAge };
+           
+           // compute the initial oldest - doesn't matter if it's not "safe" or not. That's our parent's problem.
+           // The subsequent `MemberRemoved` emits that will be emitted if an older node is leaving or downed
+           // will clean that up inside our state.
+           var (newState, oldestChanged) = State.ComputeNextOldest();
+           State = newState;
 
             // If there is some removal in progress of an older node it's not safe to immediately become oldest,
             // removal of younger nodes doesn't matter. Note that it can also be started via restart after
             // ClusterSingletonManagerIsStuck.
-            var selfUpNumber = state.Members
+            var selfUpNumber = clusterState.Members
                 .Where(m => m.UniqueAddress == _cluster.SelfUniqueAddress)
                 .Select(m => (int?)m.UpNumber)
                 .FirstOrDefault() ?? int.MaxValue;
 
-            var oldest = _membersByAge.TakeWhile(m => m.UpNumber <= selfUpNumber).ToList();
+            var oldest = State.MembersByAge.TakeWhile(m => m.UpNumber <= selfUpNumber).ToList();
             var safeToBeOldest = !oldest.Any(m => m.Status is MemberStatus.Down or MemberStatus.Exiting or MemberStatus.Leaving);
             var initial = new InitialOldestState(oldest.Select(m => m.UniqueAddress).ToList(), safeToBeOldest);
             _changes = _changes.Enqueue(initial);
@@ -178,19 +162,28 @@ namespace Akka.Cluster.Tools.Singleton
 
         private void Add(Member member)
         {
-            if (MatchingRole(member))
-                TrackChanges(() =>
+            if (State.MatchingRole(member))
+            {
+                var (newState, oldestChanged) = State.AddMember(member);
+                State = newState;
+                if (oldestChanged)
                 {
-                    // replace, it's possible that the upNumber is changed
-                    _membersByAge = _membersByAge.Remove(member);
-                    _membersByAge = _membersByAge.Add(member);
-                });
+                    _changes = _changes.Enqueue(new OldestChanged(State.CurrentOldest?.UniqueAddress));
+                }
+            }
         }
 
         private void Remove(Member member)
         {
-            if (MatchingRole(member))
-                TrackChanges(() => _membersByAge = _membersByAge.Remove(member));
+            if (State.MatchingRole(member))
+            {
+                var (newState, oldestChanged) = State.RemoveMember(member);
+                State = newState;
+                if (oldestChanged)
+                {
+                    _changes = _changes.Enqueue(new OldestChanged(State.CurrentOldest?.UniqueAddress));
+                }
+            }
         }
 
         private void SendFirstChange()
