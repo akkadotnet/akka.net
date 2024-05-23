@@ -397,6 +397,7 @@ namespace Akka.Cluster.Tools.Singleton
         public ClusterSingletonProvider() { }
         public override Akka.Cluster.Tools.Singleton.ClusterSingleton CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class ClusterSingletonProxy : Akka.Actor.ReceiveActor
     {
         public ClusterSingletonProxy(string singletonManagerPath, Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings settings) { }
