@@ -519,6 +519,10 @@ namespace Akka.Actor
         #nullable enable
         private Envelope SerializeAndDeserialize(Envelope envelope)
         {
+            // in case someone has an IWrappedMessage that ALSO implements INoSerializationVerificationNeeded
+            if(envelope.Message is INoSerializationVerificationNeeded)
+                return envelope;
+            
             // recursively unwraps message, no need to check for DeadLetter because DeadLetter inherits IWrappedMessage
             var unwrapped = WrappedMessage.Unwrap(envelope.Message);
             
