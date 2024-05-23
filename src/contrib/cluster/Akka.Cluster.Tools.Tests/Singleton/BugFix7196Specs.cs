@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//  <copyright file="OldChangedBufferSpecs.cs" company="Akka.NET Project">
+//  <copyright file="BugFix7196Specs.cs" company="Akka.NET Project">
 //      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
 //      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
@@ -23,9 +23,10 @@ namespace Akka.Cluster.Tools.Tests.Singleton;
 /// <summary>
 /// Reproduction for https://github.com/akkadotnet/akka.net/issues/7196 - clearly, what we did
 /// </summary>
-public class OldChangedBufferSpecs : AkkaSpec
+public class BugFix7196Specs : AkkaSpec
 {
     private readonly ActorSystem _hostNodeV1;
+    private readonly ActorSystem _hostNode2V1;
     private readonly ActorSystem _hostNodeV2;
 
     private static Config OriginalNodeConfig() => """
@@ -46,11 +47,14 @@ public class OldChangedBufferSpecs : AkkaSpec
     private static Config V2NodeConfig(ActorSystem originalSys) => ConfigurationFactory.ParseString(
         "akka.cluster.app-version = \"1.0.2\"").WithFallback(originalSys.Settings.Config);
 
-    public OldChangedBufferSpecs(ITestOutputHelper output) : base(OriginalNodeConfig(), output)
+    public BugFix7196Specs(ITestOutputHelper output) : base(OriginalNodeConfig(), output)
     {
         _hostNodeV1 = ActorSystem.Create(Sys.Name,
             ConfigurationFactory.ParseString("akka.cluster.roles = [singleton]").WithFallback(Sys.Settings.Config));
         InitializeLogger(_hostNodeV1);
+        _hostNode2V1 = ActorSystem.Create(Sys.Name,
+            ConfigurationFactory.ParseString("akka.cluster.roles = [singleton]").WithFallback(Sys.Settings.Config));
+        InitializeLogger(_hostNode2V1);
         _hostNodeV2 = ActorSystem.Create(Sys.Name,
             ConfigurationFactory.ParseString("akka.cluster.roles = [singleton]").WithFallback(V2NodeConfig(Sys)));
         InitializeLogger(_hostNodeV2);
@@ -62,6 +66,7 @@ public class OldChangedBufferSpecs : AkkaSpec
     {
         await JoinAsync(Sys, Sys); // have to do a self join first
         await JoinAsync(_hostNodeV1, Sys);
+        await JoinAsync(_hostNode2V1, Sys);
 
         var proxy = Sys.ActorOf(
             ClusterSingletonProxy.Props("user/echo",
@@ -91,6 +96,12 @@ public class OldChangedBufferSpecs : AkkaSpec
         
         // validate that the singleton has moved to _hostNodeV2
         await AssertSingletonHostedOn(proxy, _hostNodeV2);
+        
+        /*
+         * NOTE: an important detail here: _hostNode2V1 is actually OLDER than _hostNodeV2,
+         * but when selecting a new "oldest" node after the previous one dies Akka.Cluster.Tools.Singleton
+         * will always prefer to move onto the new version of the software.
+         */
     }
 
     private async Task AssertSingletonHostedOn(IActorRef proxy, ActorSystem targetNode)
@@ -146,7 +157,8 @@ public class OldChangedBufferSpecs : AkkaSpec
     protected override void AfterAll()
     {
         Shutdown(_hostNodeV1);
-            Shutdown(_hostNodeV2);
+        Shutdown(_hostNode2V1);
+        Shutdown(_hostNodeV2);
         base.AfterAll();
     }
 }

@@ -30,7 +30,7 @@ public class OldestChangedBufferStateSpecs
             .Add(Create(winningAddress, roles:targetRoles, upNumber: 3))
             .Add(Create(Address.Parse("akka://sys@darkstar:1113"), roles:nonTargetRoles, upNumber: 1))
             .Add(Create(Address.Parse("akka://sys@darkstar:1111"), roles:targetRoles, upNumber: 9))
-            .WithComparer(MemberAgeOrdering.DescendingWithAppVersion);
+            .WithComparer(MemberAgeOrdering.OldestToYoungestWithAppVersion);
         
         // Act
         var state = new OldestChangedBufferState(initialMembersByAge, targetRole);
@@ -51,7 +51,7 @@ public class OldestChangedBufferStateSpecs
         var initialMembersByAge = ImmutableSortedSet<Member>.Empty
             .Add(Create(winningAddress, upNumber: 3, appVersion: appVersion1))
             .Add(Create(Address.Parse("akka://sys@darkstar:1111"), upNumber: 9, appVersion: appVersion1))
-            .WithComparer(MemberAgeOrdering.DescendingWithAppVersion);
+            .WithComparer(MemberAgeOrdering.OldestToYoungestWithAppVersion);
         
         // Act
         var state = new OldestChangedBufferState(initialMembersByAge, string.Empty);
@@ -95,7 +95,7 @@ public class OldestChangedBufferStateSpecs
         var initialMembersByAge = ImmutableSortedSet<Member>.Empty
             .Add(originalOldest)
             .Add(Create(Address.Parse("akka://sys@darkstar:1111"), upNumber: 9, appVersion: appVersion1))
-            .WithComparer(MemberAgeOrdering.DescendingWithAppVersion);
+            .WithComparer(MemberAgeOrdering.OldestToYoungestWithAppVersion);
         
         // Act
         var state = new OldestChangedBufferState(initialMembersByAge, string.Empty);
@@ -136,7 +136,7 @@ public class OldestChangedBufferStateSpecs
         var initialMembersByAge = ImmutableSortedSet<Member>.Empty
             .Add(Create(winningAddress, upNumber: 3, appVersion: appVersion1))
             .Add(Create(Address.Parse("akka://sys@darkstar:1111"), upNumber: 9, appVersion: appVersion1))
-            .WithComparer(MemberAgeOrdering.DescendingWithAppVersion);
+            .WithComparer(MemberAgeOrdering.OldestToYoungestWithAppVersion);
         
         // Act
         var state = new OldestChangedBufferState(initialMembersByAge, string.Empty);

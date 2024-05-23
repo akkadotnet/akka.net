@@ -29,7 +29,6 @@ namespace Akka.Cluster.Tools.Tests.Singleton
               akka.loglevel = DEBUG
               akka.actor.provider = ""cluster""
               akka.cluster.app-version = ""1.0.0""
-              #akka.cluster.auto-down-unreachable-after = 2s
               akka.cluster.singleton.min-number-of-hand-over-retries = 5
               akka.cluster.singleton.consider-app-version = true
               akka.remote {

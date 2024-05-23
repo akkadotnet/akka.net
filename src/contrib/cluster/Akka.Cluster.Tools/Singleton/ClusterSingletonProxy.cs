@@ -97,8 +97,8 @@ namespace Akka.Cluster.Tools.Singleton
             _identityId = CreateIdentifyId(_identityCounter);
 
             _memberAgeComparer = settings.ConsiderAppVersion
-                ? MemberAgeOrdering.DescendingWithAppVersion
-                : MemberAgeOrdering.Descending;
+                ? MemberAgeOrdering.OldestToYoungestWithAppVersion
+                : MemberAgeOrdering.OldestToYoungest;
             _state = new OldestChangedBufferState(ImmutableSortedSet<Member>.Empty.WithComparer(_memberAgeComparer),
                 settings.Role);
 

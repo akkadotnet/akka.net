@@ -21,7 +21,24 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         [Fact(DisplayName = "MemberAgeOrdering should sort based on UpNumber")]
         public void SortByUpNumberTest()
         {
-            var members = new SortedSet<Member>(MemberAgeOrdering.DescendingWithAppVersion)
+            var members = new SortedSet<Member>(MemberAgeOrdering.OldestToYoungest)
+            {
+                Create(Address.Parse("akka://sys@darkstar:1112"), upNumber: 3),
+                Create(Address.Parse("akka://sys@darkstar:1113"), upNumber: 1),
+                Create(Address.Parse("akka://sys@darkstar:1111"), upNumber: 9),
+            };
+
+            var seq = members.ToList();
+            seq.Count.Should().Be(3);
+            seq[0].Should().Be(Create(Address.Parse("akka://sys@darkstar:1113"), upNumber: 1));
+            seq[1].Should().Be(Create(Address.Parse("akka://sys@darkstar:1112"), upNumber: 3));
+            seq[2].Should().Be(Create(Address.Parse("akka://sys@darkstar:1111"), upNumber: 9));
+        }
+        
+        [Fact(DisplayName = "MemberAgeOrdering should sort based on UpNumber and AppVersion")]
+        public void SortByUpNumberAndAppVersionTest()
+        {
+            var members = new SortedSet<Member>(MemberAgeOrdering.OldestToYoungestWithAppVersion)
             {
                 Create(Address.Parse("akka://sys@darkstar:1112"), upNumber: 3),
                 Create(Address.Parse("akka://sys@darkstar:1113"), upNumber: 1),
@@ -38,7 +55,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         [Fact(DisplayName = "MemberAgeOrdering should sort based on Address if UpNumber is the same")]
         public void SortByAddressTest()
         {
-            var members = new SortedSet<Member>(MemberAgeOrdering.DescendingWithAppVersion)
+            var members = new SortedSet<Member>(MemberAgeOrdering.OldestToYoungestWithAppVersion)
             {
                 Create(Address.Parse("akka://sys@darkstar:1112"), upNumber: 1),
                 Create(Address.Parse("akka://sys@darkstar:1113"), upNumber: 1),
@@ -55,7 +72,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         [Fact(DisplayName = "MemberAgeOrdering should prefer AppVersion over UpNumber")]
         public void SortByAppVersionTest()
         {
-            var members = new SortedSet<Member>(MemberAgeOrdering.DescendingWithAppVersion)
+            var members = new SortedSet<Member>(MemberAgeOrdering.OldestToYoungestWithAppVersion)
             {
                 Create(Address.Parse("akka://sys@darkstar:1112"), upNumber: 3, appVersion: AppVersion.Create("1.0.0")),
                 Create(Address.Parse("akka://sys@darkstar:1113"), upNumber: 1, appVersion: AppVersion.Create("1.0.0")),

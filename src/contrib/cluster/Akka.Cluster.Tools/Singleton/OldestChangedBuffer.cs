@@ -93,8 +93,8 @@ namespace Akka.Cluster.Tools.Singleton
         public OldestChangedBuffer(string role, bool considerAppVersion)
         {
             _memberAgeComparer = considerAppVersion
-                ? MemberAgeOrdering.DescendingWithAppVersion
-                : MemberAgeOrdering.Descending;
+                ? MemberAgeOrdering.OldestToYoungestWithAppVersion
+                : MemberAgeOrdering.OldestToYoungest;
             var membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(_memberAgeComparer);
             
             State = new OldestChangedBufferState(membersByAge, role);

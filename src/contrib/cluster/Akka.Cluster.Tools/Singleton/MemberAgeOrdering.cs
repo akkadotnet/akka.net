@@ -24,8 +24,19 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <inheritdoc/>
-        public int Compare(Member x, Member y)
+        public int Compare(Member? x, Member? y)
         {
+            switch (x)
+            {
+                // add null checks here
+                case null when y is null:
+                    return 0;
+                case null:
+                    return _ascending ? -1 : 1;
+            }
+
+            if (y is null) return _ascending ? 1 : -1;
+            
             if (_considerAppVersion)
             {
                 // prefer nodes with the highest app version, even if they're younger
@@ -40,12 +51,8 @@ namespace Akka.Cluster.Tools.Singleton
                 : (_ascending ? -1 : 1);
         }
         
-        public static readonly MemberAgeOrdering Ascending = new(true, false);
-
-        public static readonly MemberAgeOrdering AscendingWithAppVersion = new(true, true);
+        public static readonly MemberAgeOrdering OldestToYoungest = new(false, false);
         
-        public static readonly MemberAgeOrdering Descending = new(false, false);
-        
-        public static readonly MemberAgeOrdering DescendingWithAppVersion = new(false, true);
+        public static readonly MemberAgeOrdering OldestToYoungestWithAppVersion = new(false, true);
     }
 }
