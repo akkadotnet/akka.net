@@ -252,7 +252,7 @@ To run `markdownlint` locally you'll want to have [Node.JS](https://nodejs.org/e
 **Installation**
 To install `markdownlint-cli` execute this command to add it globally to your `npm` command line:
 
-    npm install -g markdownlint-cli markdownlint-rule-titlecase
+    npm install -g markdownlint-cli@0.31.0 markdownlint-rule-titlecase@0.1.0
 
 **Run**
 To run the markdown linting rules for Akka.NET's documentation, in the root directory of the Akka.NET GitHub repository:
