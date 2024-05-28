@@ -16,6 +16,14 @@ You can now filter out unwanted log messages based on either its source or messa
 
 Added AK1006 rule to suggest user to use `PersistAll()` and `PersistAllAsync()` when applicable. Documentation can be read in the [documentation](https://getakka.net/articles/debugging/rules/AK1006.html)
 
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 7       | 900  | 53   | Aaron Stannard      |
+| 5       | 497  | 1187 | Gregorius Soedharmo |
+| 1       | 1    | 1    | Åsmund              |
+
+You can [see the full set of changes for Akka.NET v1.5.21 here](https://github.com/akkadotnet/akka.net/milestones/1.5.21).
+
 #### 1.5.20 April 29th 2024 ####
 
 Akka.NET v1.5.20 is a patch release for Akka.NET with a few bug fixes and Akka.Streams quality of life improvement.
