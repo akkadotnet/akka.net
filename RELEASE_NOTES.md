@@ -1,6 +1,20 @@
-#### 1.5.21 April 29th 2024 ####
+#### 1.5.21 May 28th 2024 ####
 
-Placeholder for nightlies
+Akka.NET v1.5.21 is a significant release for Akka.NET with a major feature additions and bug fixes.
+
+* [Core: Fix error logging bug](https://github.com/akkadotnet/akka.net/pull/7186)
+* [Core: Add log filtering feature](https://github.com/akkadotnet/akka.net/pull/7179)
+* [Pub-Sub: Fix missing SendOneMessageToEachGroup property](https://github.com/akkadotnet/akka.net/pull/7202)
+* [Core: Fix incorrect IWrappedMessage deserialization when serialize-messages setting is on](https://github.com/akkadotnet/akka.net/pull/7200)
+* [Core: Bump Akka.Analyzers to 0.2.5](https://github.com/akkadotnet/akka.net/pull/7206)
+
+**Log Message Filtering**
+
+You can now filter out unwanted log messages based on either its source or message content. Documentation can be read in the [logging documentation](https://getakka.net/articles/utilities/logging.html#filtering-log-messages).
+
+**New Akka.Analyzers Rule**
+
+Added AK1006 rule to suggest user to use `PersistAll()` and `PersistAllAsync()` when applicable. Documentation can be read in the [documentation](https://getakka.net/articles/debugging/rules/AK1006.html)
 
 #### 1.5.20 April 29th 2024 ####
 
