@@ -3295,10 +3295,13 @@ namespace Akka.Event
     public sealed class BusLogging : Akka.Event.LoggingAdapterBase
     {
         public BusLogging(Akka.Event.LoggingBus bus, string logSource, System.Type logClass, Akka.Event.ILogMessageFormatter logMessageFormatter) { }
+        public Akka.Event.LoggingBus Bus { get; }
         public override bool IsDebugEnabled { get; }
         public override bool IsErrorEnabled { get; }
         public override bool IsInfoEnabled { get; }
         public override bool IsWarningEnabled { get; }
+        public System.Type LogClass { get; }
+        public string LogSource { get; }
         protected override void NotifyLog(Akka.Event.LogLevel logLevel, object message, System.Exception cause = null) { }
     }
     public sealed class DeadLetter : Akka.Event.AllDeadLetters
