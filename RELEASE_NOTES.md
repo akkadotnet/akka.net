@@ -1,3 +1,7 @@
+#### 1.5.22 May 28th 2024 ####
+
+*Placeholder for nightlies*
+
 #### 1.5.21 May 28th 2024 ####
 
 Akka.NET v1.5.21 is a significant release for Akka.NET with a major feature additions and bug fixes.
