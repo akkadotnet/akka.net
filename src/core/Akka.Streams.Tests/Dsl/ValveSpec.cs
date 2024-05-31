@@ -42,21 +42,21 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Closed_Valve_should_emit_only_5_elements_when_the_valve_is_switched_to_open()
         {
-            var t = Source.From(Enumerable.Range(1, 5))
+            // <OpenValve>
+            var (switchTask, probe) = Source.From(Enumerable.Range(1, 5))
                 .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                 .Run(Sys.Materializer());
-
-            var switchTask = t.Item1;
-            var probe = t.Item2;
-
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+            
+            IValveSwitch valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
             probe.Request(2);
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-            var flip = valveSwitch.Flip(SwitchMode.Open);
+            Task<bool> flip = valveSwitch.Flip(SwitchMode.Open);
             var complete = await flip.ShouldCompleteWithin(3.Seconds());
+            // valve is now open
             complete.Should().BeTrue();
+            // </OpenValve>
 
             probe.ExpectNext(1, 2);
 
