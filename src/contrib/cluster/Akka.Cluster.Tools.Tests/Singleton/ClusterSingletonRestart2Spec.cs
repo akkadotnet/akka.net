@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
 {
@@ -25,18 +26,20 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         private readonly ActorSystem _sys3;
         private ActorSystem _sys4 = null;
 
-        public ClusterSingletonRestart2Spec() : base(@"
-              akka.loglevel = INFO
-              akka.actor.provider = ""cluster""
-              akka.cluster.roles = [singleton]
-              #akka.cluster.auto-down-unreachable-after = 2s
-              akka.cluster.singleton.min-number-of-hand-over-retries = 5
-              akka.remote {
-                dot-netty.tcp {
-                  hostname = ""127.0.0.1""
-                  port = 0
-                }
-              }")
+        public ClusterSingletonRestart2Spec(ITestOutputHelper output) : base("""
+                                                                             
+                                                                                           akka.loglevel = INFO
+                                                                                           akka.actor.provider = "cluster"
+                                                                                           akka.cluster.roles = [singleton]
+                                                                                           #akka.cluster.auto-down-unreachable-after = 2s
+                                                                                           akka.cluster.singleton.min-number-of-hand-over-retries = 5
+                                                                                           akka.remote {
+                                                                                             dot-netty.tcp {
+                                                                                               hostname = "127.0.0.1"
+                                                                                               port = 0
+                                                                                             }
+                                                                                           }
+                                                                             """, output)
         {
             _sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
             _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
