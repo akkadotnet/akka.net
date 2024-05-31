@@ -104,14 +104,14 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
 
             Cluster.Get(_sys1).Leave(Cluster.Get(_sys1).SelfAddress);
-
+            
+            // ReSharper disable once PossibleInvalidOperationException
+            var sys2Port = Cluster.Get(_sys2).SelfAddress.Port.Value; // grab value before shutdown
             // at the same time, shutdown sys2, which would be the expected next singleton node
             Shutdown(_sys2);
             // it will be downed by the join attempts of the new incarnation
 
             // then restart it
-            // ReSharper disable once PossibleInvalidOperationException
-            var sys2Port = Cluster.Get(_sys2).SelfAddress.Port.Value;
             var sys4Config = ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port=" + sys2Port)
                 .WithFallback(_sys1.Settings.Config);
             _sys4 = ActorSystem.Create(_sys1.Name, sys4Config);
