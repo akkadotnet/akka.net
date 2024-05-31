@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
 {
@@ -25,26 +26,33 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         private readonly ActorSystem _sys3;
         private ActorSystem _sys4 = null;
 
-        public ClusterSingletonRestart2Spec() : base(@"
-              akka.loglevel = INFO
-              akka.actor.provider = ""cluster""
-              akka.cluster.roles = [singleton]
-              akka.cluster.auto-down-unreachable-after = 2s
-              akka.cluster.singleton.min-number-of-hand-over-retries = 5
-              akka.remote {
-                dot-netty.tcp {
-                  hostname = ""127.0.0.1""
-                  port = 0
-                }
-              }")
+        public ClusterSingletonRestart2Spec(ITestOutputHelper output) : base("""
+                                                                             
+                                                                                           akka.loglevel = INFO
+                                                                                           akka.actor.provider = "cluster"
+                                                                                           akka.cluster.roles = [singleton]
+                                                                                           #akka.cluster.auto-down-unreachable-after = 2s
+                                                                                           akka.cluster.singleton.min-number-of-hand-over-retries = 5
+                                                                                           akka.remote {
+                                                                                             dot-netty.tcp {
+                                                                                               hostname = "127.0.0.1"
+                                                                                               port = 0
+                                                                                             }
+                                                                                           }
+                                                                             """, output)
         {
             _sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
             _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
             _sys3 = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString("akka.cluster.roles = [other]")
                 .WithFallback(Sys.Settings.Config));
+            
+            // ensure xunit output is captured
+            InitializeLogger(_sys1);
+            InitializeLogger(_sys2);
+            InitializeLogger(_sys3);
         }
 
-        public void Join(ActorSystem from, ActorSystem to)
+        public Task Join(ActorSystem from, ActorSystem to)
         {
             if (Cluster.Get(from).SelfRoles.Contains("singleton"))
             {
@@ -54,9 +62,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }
 
 
-            Within(TimeSpan.FromSeconds(45), () =>
+            return WithinAsync(TimeSpan.FromSeconds(45), () =>
             {
-                AwaitAssert(() =>
+                return AwaitAssertAsync(() =>
                 {
                     Cluster.Get(from).Join(Cluster.Get(to).SelfAddress);
                     Cluster.Get(from).State.Members.Select(x => x.UniqueAddress).Should().Contain(Cluster.Get(from).SelfUniqueAddress);
@@ -70,56 +78,61 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
 
         [Fact]
-        public void Restarting_cluster_node_during_hand_over_must_restart_singletons_in_restarted_node()
+        public async Task Restarting_cluster_node_during_hand_over_must_restart_singletons_in_restarted_node()
         {
-            Join(_sys1, _sys1);
-            Join(_sys2, _sys1);
-            Join(_sys3, _sys1);
+            var joinTasks = new[]
+            {
+                Join(_sys1, _sys1),
+                Join(_sys2, _sys1),
+                Join(_sys3, _sys1)
+            };
+            await Task.WhenAll(joinTasks);
 
             var proxy3 = _sys3.ActorOf(
                 ClusterSingletonProxy.Props("user/echo", ClusterSingletonProxySettings.Create(_sys3).WithRole("singleton")), "proxy3");
 
-            Within(TimeSpan.FromSeconds(5), () =>
+            await WithinAsync(TimeSpan.FromSeconds(5), () =>
             {
-                AwaitAssert(() =>
+                return AwaitAssertAsync(async () =>
                 {
                     var probe = CreateTestProbe(_sys3);
                     proxy3.Tell("hello", probe.Ref);
-                    probe.ExpectMsg<UniqueAddress>(TimeSpan.FromSeconds(1))
-                        .Should()
+                    var msg = await probe.ExpectMsgAsync<UniqueAddress>(TimeSpan.FromSeconds(1));
+                    msg.Should()
                         .Be(Cluster.Get(_sys1).SelfUniqueAddress);
                 });
             });
 
             Cluster.Get(_sys1).Leave(Cluster.Get(_sys1).SelfAddress);
-
+            
+            // ReSharper disable once PossibleInvalidOperationException
+            var sys2Port = Cluster.Get(_sys2).SelfAddress.Port.Value; // grab value before shutdown
             // at the same time, shutdown sys2, which would be the expected next singleton node
             Shutdown(_sys2);
             // it will be downed by the join attempts of the new incarnation
 
             // then restart it
-            // ReSharper disable once PossibleInvalidOperationException
-            var sys2Port = Cluster.Get(_sys2).SelfAddress.Port.Value;
             var sys4Config = ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port=" + sys2Port)
                 .WithFallback(_sys1.Settings.Config);
             _sys4 = ActorSystem.Create(_sys1.Name, sys4Config);
+            InitializeLogger(_sys4); // ensure xunit output is captured
 
-            Join(_sys4, _sys3);
+            await Join(_sys4, _sys3);
 
             // let it stabilize
-            Task.Delay(TimeSpan.FromSeconds(5)).Wait();
+            //Task.Delay(TimeSpan.FromSeconds(5)).Wait();
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), () =>
             {
-                AwaitAssert(() =>
+                return AwaitAssertAsync(async () =>
                 {
                     var probe = CreateTestProbe(_sys3);
                     proxy3.Tell("hello2", probe.Ref);
 
                     // note that sys3 doesn't have the required singleton role, so singleton instance should be
                     // on the restarted node
-                    probe.ExpectMsg<UniqueAddress>(TimeSpan.FromSeconds(1))
-                        .Should()
+                    var msg = await probe.ExpectMsgAsync<UniqueAddress>(TimeSpan.FromSeconds(1));
+                    msg.Should()
                         .Be(Cluster.Get(_sys4).SelfUniqueAddress);
                 });
             });
