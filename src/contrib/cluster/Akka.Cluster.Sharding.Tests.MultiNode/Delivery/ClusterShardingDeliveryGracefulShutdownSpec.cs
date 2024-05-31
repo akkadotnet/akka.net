@@ -189,7 +189,7 @@ akka.reliable-delivery.sharding.consumer-controller.allow-bypass = true
         #endregion
 
         [MultiNodeFact]
-        public void ClusterShardingGracefulShutdownSpecs()
+        public void ClusterShardingDeliveryGracefulShutdownSpecs()
         {
             Cluster_sharding_must_join_cluster();
             Cluster_sharding_must_start_some_shards_in_both_regions();
