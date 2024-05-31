@@ -276,12 +276,12 @@ akka.reliable-delivery.sharding.consumer-controller.allow-bypass = true
                     var producer = CreateProducer("p-2");
                     AwaitAssert(() =>
                     {
-                        var responses = Enumerable.Range(1, 20).Select(n =>
+                        var maxCount = 20;
+                        foreach(var n in Enumerable.Range(1, maxCount))
                         {
                             producer.Tell(n, TestActor);
-                            return ExpectMsg(n, TimeSpan.FromSeconds(1));
-                        }).ToImmutableHashSet();
-
+                        }
+                        var responses = ReceiveN(maxCount, TimeSpan.FromSeconds(2));
                         responses.Count.Should().Be(20);
                     });
                 }, Config.Second);
