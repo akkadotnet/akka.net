@@ -102,5 +102,7 @@ namespace Akka.TestKit.Internal
                 }
             }
         }
+
+        protected override SupervisorStrategy SupervisorStrategy() => _supervisorStrategy;
     }
 }
