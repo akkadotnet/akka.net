@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -82,6 +83,11 @@ namespace Akka.Remote.Serialization
             message.StackTrace = exception.StackTrace ?? "";
             message.Source = exception.Source ?? "";
             message.InnerException = ExceptionToProto(exception.InnerException);
+            
+            var forwardedFrom = exceptionType.GetCustomAttribute<TypeForwardedFromAttribute>();
+            message.TypeForwardedFrom = forwardedFrom is not null 
+                ? forwardedFrom.AssemblyFullName[..forwardedFrom.AssemblyFullName.IndexOf(',')] 
+                : string.Empty;
 
             var serializable = exception as ISerializable;
             var serializationInfo = new SerializationInfo(exceptionType, _defaultFormatterConverter);
@@ -110,7 +116,19 @@ namespace Akka.Remote.Serialization
             if (string.IsNullOrEmpty(proto.TypeName))
                 return null;
 
-            Type exceptionType = Type.GetType(proto.TypeName);
+            var exceptionType = Type.GetType(proto.TypeName);
+            
+            // If type loading failed and type was forwarded from an older assembly,
+            // retry by loading the type from the older assembly name
+            if (exceptionType is null && proto.TypeForwardedFrom != string.Empty)
+            {
+                var typeName = $"{proto.TypeName[..proto.TypeName.IndexOf(',')]}, {proto.TypeForwardedFrom}";
+                exceptionType = Type.GetType(typeName);
+            }
+
+            // If we still fail, throw.
+            if (exceptionType is null)
+                throw new SerializationException($"Failed to deserialize ExceptionData. Could not load {proto.TypeName}. {proto}");
 
             var serializationInfo = new SerializationInfo(exceptionType, _defaultFormatterConverter);
 
