@@ -1,6 +1,49 @@
-#### 1.5.22 May 28th 2024 ####
+#### 1.5.22 June 4th 2024 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.22 is a patch release for Akka.NET with a few bug fixes and logging improvement.
+
+* [Streams: Bump Reactive.Streams to 1.0.4](https://github.com/akkadotnet/akka.net/pull/7213)
+* [Remote: Bump DotNetty.Handlers to 0.7.6](https://github.com/akkadotnet/akka.net/pull/7198)
+* [Core: Resolve CVE-2018-8292 for Akka.Streams and Akka.Remote](https://github.com/akkadotnet/akka.net/issues/7191)
+* [Core: Expose `BusLogging` `EventStream` as public API](https://github.com/akkadotnet/akka.net/pull/7210)
+* [Remote: Add cross-platform support to the exception serializer](https://github.com/akkadotnet/akka.net/pull/7222)
+
+**On Resolving CVE-2018-8292**
+
+In order to resolve this CVE, we had to update `DotNetty.Handlers` to the latest version and unfortunately, this comes with about 10% network throughput performance hit. We are looking into possible replacement for `DotNetty` to improve this performance lost in the future (see [`#7225`](https://github.com/akkadotnet/akka.net/issues/7225) for updates).
+
+**Before**
+
+```
+Num clients, Total [msg], Msgs/sec, Total [ms], Start Threads, End Threads  
+         1,  200000,    125000,    1600.62,            46,              76  
+         5, 1000000,    494072,    2024.04,            84,              95  
+        10, 2000000,    713013,    2805.73,           103,             107  
+        15, 3000000,    724463,    4141.38,           115,             115  
+        20, 4000000,    714669,    5597.66,           123,             123  
+        25, 5000000,    684932,    7300.37,           131,             107  
+        30, 6000000,    694525,    8639.88,           115,              93  
+```
+
+**After**
+
+```
+Num clients, Total [msg], Msgs/sec, Total [ms], Start Threads, End Threads
+         1,  200000,    123763,    1616.32,            46,              73
+         5, 1000000,    386101,    2590.66,            81,              90
+        10, 2000000,    662691,    3018.54,            98,             104
+        15, 3000000,    666223,    4503.86,           112,             113
+        20, 4000000,    669681,    5973.89,           121,             113
+        25, 5000000,    669255,    7471.86,           121,             105
+        30, 6000000,    669121,    8967.61,           113,              92
+```
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 6       | 167  | 188  | Aaron Stannard      |
+| 3       | 93   | 10   | Gregorius Soedharmo |
+
+You can [see the full set of changes for Akka.NET v1.5.22 here](https://github.com/akkadotnet/akka.net/milestones/1.5.22).
 
 #### 1.5.21 May 28th 2024 ####
 
