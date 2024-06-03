@@ -242,6 +242,7 @@ Target "RunTests" (fun _ ->
                             | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
                                    -- "./src/**/*.Tests.MultiNode.csproj"
                                    -- "./src/examples/**"
+                                   -- "./src/**/*.Remote.Tests/csproj" // Exclude Akka.Remote.Tests in linux
         rawProjects |> Seq.choose filterProjects
 
     let runSingleProject project =
