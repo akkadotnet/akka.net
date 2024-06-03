@@ -1,6 +1,17 @@
-#### 1.5.22 May 28th 2024 ####
+#### 1.5.22 June 4th 2024 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.22 is a patch release for Akka.NET with a few bug fixes and logging improvement.
+
+* [Streams: Bump Reactive.Streams to 1.0.4](https://github.com/akkadotnet/akka.net/pull/7213)
+* [Core: Expose `BusLogging` `EventStream` as public API](https://github.com/akkadotnet/akka.net/pull/7210)
+* [Remote: Add cross-platform support to the exception serializer](https://github.com/akkadotnet/akka.net/pull/7222)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 6       | 167  | 188  | Aaron Stannard      |
+| 3       | 93   | 10   | Gregorius Soedharmo |
+
+You can [see the full set of changes for Akka.NET v1.5.22 here](https://github.com/akkadotnet/akka.net/milestones/1.5.22).
 
 #### 1.5.21 May 28th 2024 ####
 
