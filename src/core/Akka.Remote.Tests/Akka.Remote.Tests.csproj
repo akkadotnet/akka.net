@@ -2,7 +2,14 @@
   <Import Project="..\..\xunitSettings.props" />
 
   <PropertyGroup>
-    <TargetFrameworks>$(NetTestVersion);$(NetFrameworkTestVersion)</TargetFrameworks>
+    <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+      <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+    </PropertyGroup>
+
+    <!-- disable .NET Framework on Linux-->
+    <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+      <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
+    </PropertyGroup>    
   </PropertyGroup>
 
   <ItemGroup>
