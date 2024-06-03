@@ -10,7 +10,7 @@ Akka.NET v1.5.22 is a patch release for Akka.NET with a few bug fixes and loggin
 
 **On Resolving CVE-2018-8292**
 
-In order to resolve this CVE, we had to update `DotNetty.Handlers` to the latest version and unfortunately, this comes with about 10% network throughput performance hit. We are looking into possible replacement for `DotNetty` to improve this performance lost in the future.
+In order to resolve this CVE, we had to update `DotNetty.Handlers` to the latest version and unfortunately, this comes with about 10% network throughput performance hit. We are looking into possible replacement for `DotNetty` to improve this performance lost in the future (see [`#7225`](https://github.com/akkadotnet/akka.net/issues/7225) for updates).
 
 **Before**
 
