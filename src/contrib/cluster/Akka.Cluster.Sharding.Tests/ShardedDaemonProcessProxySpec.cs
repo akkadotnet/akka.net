@@ -25,7 +25,7 @@ public class ShardedDaemonProcessProxySpec : AkkaSpec
                 akka.loglevel = DEBUG
                 akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0
-                akka.remote.dot-netty.tcp.hostname = 127.0.0.1
+                akka.remote.dot-netty.tcp.hostname = localhost
 
                 # ping often/start fast for test
                 akka.cluster.sharded-daemon-process.keep-alive-interval = 1s
@@ -44,10 +44,8 @@ public class ShardedDaemonProcessProxySpec : AkkaSpec
     {
         _proxySystem = ActorSystem.Create(Sys.Name,
             ConfigurationFactory
-                .ParseString(@"
-                    akka.remote.dot-netty.tcp.hostname = ""localhost""
-                    akka.cluster.roles=[proxy]").WithFallback(Sys.Settings.Config));
-        InitializeLogger(_proxySystem);
+                .ParseString("akka.cluster.roles=[proxy]").WithFallback(Sys.Settings.Config));
+        InitializeLogger(_proxySystem, "PROXY");
     }
     
     private class EchoActor : ReceiveActor
@@ -79,7 +77,7 @@ public class ShardedDaemonProcessProxySpec : AkkaSpec
         var targetRole = "workers";
         var numWorkers = 10;
         var settings = ShardedDaemonProcessSettings.Create(Sys).WithRole(targetRole);
-        var host = ShardedDaemonProcess.Get(Sys).Init(name, numWorkers, EchoActor.EchoProps, settings);
+        var host = ShardedDaemonProcess.Get(Sys).Init(name, numWorkers, EchoActor.EchoProps, settings, PoisonPill.Instance);
         
         // ping some of the workers via the host
         for(var i = 0; i < numWorkers; i++)
@@ -92,11 +90,11 @@ public class ShardedDaemonProcessProxySpec : AkkaSpec
         var proxy = ShardedDaemonProcess.Get(_proxySystem).InitProxy(name, numWorkers, targetRole);
         
         // ping some of the workers via the proxy
-        // for(var i = 0; i < numWorkers; i++)
-        // {
-        //     var result = await proxy.Ask<int>(i);
-        //     result.Should().Be(i);
-        // }
+        for(var i = 0; i < numWorkers; i++)
+        {
+            var result = await proxy.Ask<int>(i);
+            result.Should().Be(i);
+        }
     }
 
     protected override void AfterAll()
