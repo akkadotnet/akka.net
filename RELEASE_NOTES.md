@@ -1,3 +1,7 @@
+#### 1.5.23 June 4th 2024 ####
+
+*Placeholder for nightlies*
+
 #### 1.5.22 June 4th 2024 ####
 
 Akka.NET v1.5.22 is a patch release for Akka.NET with a few bug fixes and logging improvement.
