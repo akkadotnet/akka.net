@@ -83,9 +83,9 @@ public class ShardedDaemonProcessProxySpec : AkkaSpec
         }
         
         // start the proxy on the proxy system
-        // var proxy = ShardedDaemonProcess.Get(_proxySystem).InitProxy(name, numWorkers, targetRole);
-        //
-        // // ping some of the workers via the proxy
+        var proxy = ShardedDaemonProcess.Get(_proxySystem).InitProxy(name, numWorkers, targetRole);
+        
+        // ping some of the workers via the proxy
         // for(var i = 0; i < numWorkers; i++)
         // {
         //     var result = await proxy.Ask<int>(i);

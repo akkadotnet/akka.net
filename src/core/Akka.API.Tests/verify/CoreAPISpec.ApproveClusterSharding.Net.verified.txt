@@ -309,10 +309,13 @@ namespace Akka.Cluster.Sharding
         public override Akka.Cluster.Sharding.ShardedDaemonProcess CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
     [Akka.Annotations.ApiMayChangeAttribute()]
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class ShardedDaemonProcessSettings
     {
         public readonly System.TimeSpan KeepAliveInterval;
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
         public readonly string Role;
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
         public readonly Akka.Cluster.Sharding.ClusterShardingSettings ShardingSettings;
         public static Akka.Cluster.Sharding.ShardedDaemonProcessSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Sharding.ShardedDaemonProcessSettings FromConfig(Akka.Configuration.Config config) { }
