@@ -5,6 +5,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
@@ -21,6 +22,7 @@ public class ShardedDaemonProcessProxySpec : AkkaSpec
     private static Config GetConfig()
     {
         return ConfigurationFactory.ParseString(@"
+                akka.loglevel = DEBUG
                 akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0
                 akka.remote.dot-netty.tcp.hostname = 127.0.0.1
@@ -31,7 +33,8 @@ public class ShardedDaemonProcessProxySpec : AkkaSpec
                 akka.coordinated-shutdown.terminate-actor-system = off
                 akka.coordinated-shutdown.run-by-actor-system-terminate = off")
             .WithFallback(ClusterSharding.DefaultConfig())
-            .WithFallback(ClusterSingletonProxy.DefaultConfig());
+            .WithFallback(ClusterSingletonProxy.DefaultConfig())
+            .WithFallback(DistributedData.DistributedData.DefaultConfig());
     }
 
     private readonly ActorSystem _proxySystem;
@@ -41,7 +44,10 @@ public class ShardedDaemonProcessProxySpec : AkkaSpec
     {
         _proxySystem = ActorSystem.Create(Sys.Name,
             ConfigurationFactory
-                .ParseString("akka.cluster.roles=[proxy]").WithFallback(GetConfig()));
+                .ParseString(@"
+                    akka.remote.dot-netty.tcp.hostname = ""localhost""
+                    akka.cluster.roles=[proxy]").WithFallback(Sys.Settings.Config));
+        InitializeLogger(_proxySystem);
     }
     
     private class EchoActor : ReceiveActor
@@ -61,11 +67,11 @@ public class ShardedDaemonProcessProxySpec : AkkaSpec
         Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
         Cluster.Get(_proxySystem).Join(Cluster.Get(Sys).SelfAddress);
         
-        // validate that we have a 2 node cluster
+        // validate that we have a 2 node cluster with both members marked as up
         await AwaitAssertAsync(() =>
         {
-            Cluster.Get(Sys).State.Members.Count.Should().Be(2);
-            Cluster.Get(_proxySystem).State.Members.Count.Should().Be(2);
+            Cluster.Get(Sys).State.Members.Count(x => x.Status == MemberStatus.Up).Should().Be(2);
+            Cluster.Get(_proxySystem).State.Members.Count(x => x.Status == MemberStatus.Up).Should().Be(2);
         });
         
         // start the daemon process on the host
