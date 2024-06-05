@@ -1179,60 +1179,58 @@ namespace Akka.Cluster.Tools.Singleton
 
             When(ClusterSingletonState.Oldest, e =>
             {
-                if (e.FsmEvent is OldestChangedBuffer.OldestChanged oldestChanged && e.StateData is OldestData oldestData)
+                switch (e.FsmEvent)
                 {
-                    return HandleOldestChanged(oldestData.Singleton, oldestChanged.Oldest);
-                }
-                else if (e.FsmEvent is HandOverToMe && e.StateData is OldestData oldest)
-                {
-                    return GoToHandingOver(oldest.Singleton, Sender);
-                }
-                else if (e.FsmEvent is TakeOverFromMe)
-                {
-                    // already oldest, so confirm and continue like that
-                    Sender.Tell(HandOverToMe.Instance);
-                    return Stay();
-                }
-                else if (e.FsmEvent is Terminated terminated && e.StateData is OldestData o && terminated.ActorRef.Equals(o.Singleton))
-                {
-                    Log.Info("Singleton actor [{0}] was terminated", o.Singleton.Path);
-                    return Stay().Using(new OldestData(null));
-                }
-                else if (e.FsmEvent is SelfExiting)
-                {
-                    SelfMemberExited();
-                    // complete _memberExitingProgress when HandOverDone
-                    Sender.Tell(Done.Instance); // reply to ask
-                    return Stay();
-                }
-                else if (e.FsmEvent is MemberDowned memberDowned && e.StateData is OldestData od && memberDowned.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
-                {
-                    if (od.Singleton == null)
-                    {
-                        Log.Info("Self downed, stopping ClusterSingletonManager");
-                        return Stop();
-                    }
-                    else
-                    {
+                    case OldestChangedBuffer.OldestChanged oldestChanged when e.StateData is OldestData oldestData:
+                        return HandleOldestChanged(oldestData.Singleton, oldestChanged.Oldest);
+                    
+                    case HandOverToMe when e.StateData is OldestData oldest:
+                        return GoToHandingOver(oldest.Singleton, Sender);
+                    
+                    case TakeOverFromMe:
+                        // already oldest, so confirm and continue like that
+                        Sender.Tell(HandOverToMe.Instance);
+                        return Stay();
+                    
+                    case Terminated terminated when e.StateData is OldestData o && terminated.ActorRef.Equals(o.Singleton):
+                        Log.Info("Singleton actor [{0}] was terminated", o.Singleton.Path);
+                        return Stay().Using(new OldestData(null));
+                    
+                    case SelfExiting:
+                        SelfMemberExited();
+                        // complete _memberExitingProgress when HandOverDone
+                        Sender.Tell(Done.Instance); // reply to ask
+                        return Stay();
+                    
+                    case MemberDowned memberDowned when e.StateData is OldestData od && memberDowned.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress):
+                        if (od.Singleton == null)
+                        {
+                            Log.Info("Self downed, stopping ClusterSingletonManager");
+                            return Stop();
+                        }
+
                         Log.Info("Self downed, stopping");
                         return GoToStopping(od.Singleton);
-                    }
-                }
-                else if (e.FsmEvent is LeaseLost ll && e.StateData is OldestData od2)
-                {
-                    Log.Warning(ll.Reason, "Lease has been lost. Terminating singleton and trying to re-acquire lease");
-                    if (od2.Singleton != null)
-                    {
-                        od2.Singleton.Tell(_terminationMessage);
-                        return GoTo(ClusterSingletonState.AcquiringLease).Using(new AcquiringLeaseData(false, od2.Singleton));
-                    }
-                    else
-                    {
-                        return TryAcquireLease();
-                    }
-                }
+                    
+                    case LeaseLost ll when e.StateData is OldestData od2:
+                        Log.Warning(ll.Reason, "Lease has been lost. Terminating singleton and trying to re-acquire lease");
+                        if (od2.Singleton != null)
+                        {
+                            od2.Singleton.Tell(_terminationMessage);
+                            return GoTo(ClusterSingletonState.AcquiringLease).Using(new AcquiringLeaseData(false, od2.Singleton));
+                        }
 
-                return null;
+                        return TryAcquireLease();
+                    
+                    case HandOverDone:
+                        // no-op, the HandOverDone message can be sent multiple times if HandOverToMe
+                        // was sent multiple times (retried)
+                        // https://github.com/akka/akka/pull/29216/files#r440062592
+                        return Stay();
+                    
+                    default:
+                        return null;
+                }
             });
 
             When(ClusterSingletonState.WasOldest, e =>
