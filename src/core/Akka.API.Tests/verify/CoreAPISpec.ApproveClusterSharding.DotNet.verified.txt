@@ -287,14 +287,21 @@ namespace Akka.Cluster.Sharding
     }
     [Akka.Annotations.ApiMayChangeAttribute()]
     [Akka.Annotations.DoNotInheritAttribute()]
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class ShardedDaemonProcess : Akka.Actor.IExtension
     {
         public ShardedDaemonProcess(Akka.Actor.ExtendedActorSystem system) { }
         public static Akka.Cluster.Sharding.ShardedDaemonProcess Get(Akka.Actor.ActorSystem system) { }
-        public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory) { }
-        public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, object stopMessage) { }
-        public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, Akka.Cluster.Sharding.ShardedDaemonProcessSettings settings, object stopMessage) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
+        public Akka.Actor.IActorRef Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
+        public Akka.Actor.IActorRef Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, [System.Runtime.CompilerServices.NullableAttribute(2)] object stopMessage) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
+        public Akka.Actor.IActorRef Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, Akka.Cluster.Sharding.ShardedDaemonProcessSettings settings, [System.Runtime.CompilerServices.NullableAttribute(2)] object stopMessage) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1})]
     public class ShardedDaemonProcessExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Sharding.ShardedDaemonProcess>
     {
         public ShardedDaemonProcessExtensionProvider() { }
