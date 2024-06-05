@@ -113,7 +113,9 @@ namespace Akka.Cluster.Sharding
         protected override void OnReceive(object message)
         {
             var nextId = _entityIds[_index % _entityIds.Length];
-            _shardingRef.Tell(new ShardingEnvelope(nextId, message));
+            
+            // have to remember to always allow the sharding envelope to be forwarded
+            _shardingRef.Forward(new ShardingEnvelope(nextId, message));
             if (_index == int.MaxValue) _index = 0;
             else _index++;
         }
@@ -243,7 +245,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="role">The role where the worker actors are hosted.</param>
         /// <returns>A reference to a router actor that will distribute all messages evenly across the workers
         /// using round-robin message routing.</returns>
-        IActorRef InitProxy(string name, int numberOfInstances, string role)
+        public IActorRef InitProxy(string name, int numberOfInstances, string role)
         {
             // create a shard region proxy so we can access daemon workers running in a different role
             var sharding = ClusterSharding.Get(_system);

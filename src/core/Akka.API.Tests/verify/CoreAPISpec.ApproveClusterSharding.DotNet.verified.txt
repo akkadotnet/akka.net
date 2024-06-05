@@ -298,6 +298,7 @@ namespace Akka.Cluster.Sharding
         public Akka.Actor.IActorRef Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, [System.Runtime.CompilerServices.NullableAttribute(2)] object stopMessage) { }
         [return: System.Runtime.CompilerServices.NullableAttribute(2)]
         public Akka.Actor.IActorRef Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, Akka.Cluster.Sharding.ShardedDaemonProcessSettings settings, [System.Runtime.CompilerServices.NullableAttribute(2)] object stopMessage) { }
+        public Akka.Actor.IActorRef InitProxy(string name, int numberOfInstances, string role) { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
             0,
