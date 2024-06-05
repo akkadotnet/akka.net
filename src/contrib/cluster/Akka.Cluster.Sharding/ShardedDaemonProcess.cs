@@ -211,7 +211,7 @@ namespace Akka.Cluster.Sharding
             {
                 var sharding = ClusterSharding.Get(_system);
                 var shardingRef = sharding.Start(
-                    typeName: $"sharded-daemon-process-{name}",
+                    typeName: FormatWorkerProcessName(name),
                     entityPropsFactory: entityId => propsFactory(int.Parse(entityId)),
                     settings: shardingSettings,
                     messageExtractor: new MessageExtractor(numberOfShards),
@@ -234,6 +234,8 @@ namespace Akka.Cluster.Sharding
 
             return null;
         }
+        
+        private static string FormatWorkerProcessName(string name) => $"sharded-daemon-process-{name}";
 
         /// <summary>
         /// Starts a proxy for a sharded daemon process running in a different role.
@@ -250,7 +252,7 @@ namespace Akka.Cluster.Sharding
             // create a shard region proxy so we can access daemon workers running in a different role
             var sharding = ClusterSharding.Get(_system);
             var shardingRef = sharding.StartProxy(
-                typeName: $"sharded-daemon-process-{name}",
+                typeName: FormatWorkerProcessName(name),
                 role: role,
                 messageExtractor: new MessageExtractor(numberOfInstances));
 
