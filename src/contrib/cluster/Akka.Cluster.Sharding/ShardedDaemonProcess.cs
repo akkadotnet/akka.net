@@ -4,17 +4,18 @@
 //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
+using Akka.Routing;
 using Akka.Util.Internal;
 
 namespace Akka.Cluster.Sharding
 {
-    internal class KeepAlivePinger : UntypedActor, IWithTimers
+    internal sealed class KeepAlivePinger : UntypedActor, IWithTimers
     {
         private sealed class Tick
         {
@@ -27,7 +28,7 @@ namespace Akka.Cluster.Sharding
         public IActorRef ShardingRef { get; }
         public ShardedDaemonProcessSettings Settings { get; }
 
-        public ITimerScheduler Timers { get; set; }
+        public ITimerScheduler Timers { get; set; } = null!; // gets set by Akka.NET
 
         public static Props Props(ShardedDaemonProcessSettings settings, string name, string[] identities, IActorRef shardingRef) =>
             Actor.Props.Create(() => new KeepAlivePinger(settings, name, identities, shardingRef));
@@ -52,7 +53,7 @@ namespace Akka.Cluster.Sharding
 
         protected override void OnReceive(object message)
         {
-            if (message is Tick _)
+            if (message is Tick)
             {
                 TriggerStartAll();
                 Context.System.Log.Debug("Periodic ping sent to [{0}] processes", Identities.Length);
@@ -68,16 +69,49 @@ namespace Akka.Cluster.Sharding
             : base(maxNumberOfShards)
         { }
 
-        public override string EntityId(object message) => (message as ShardingEnvelope)?.EntityId;
-        public override object EntityMessage(object message) => (message as ShardingEnvelope)?.Message;
-        public override string ShardId(string entityId, object messageHint = null)
+        public override string? EntityId(object message) => (message as ShardingEnvelope)?.EntityId;
+        public override object? EntityMessage(object message) => (message as ShardingEnvelope)?.Message;
+        public override string ShardId(string entityId, object? messageHint = null)
         {
             return entityId;
         }
     }
 
     /// <summary>
-    /// <para>This extension runs a pre set number of actors in a cluster.</para>
+    /// Used to support push-based communication with the <see cref="ShardedDaemonProcess"/> - uses
+    /// round-robin messaging to distribute messages to the actors in the cluster.
+    /// </summary>
+    /// <remarks>
+    /// NOTE: does not use a traditional <see cref="Router"/> to distribute messages because we want to use the
+    /// <see cref="ShardRegion"/> mechanism in order to piggyback off of its reliability and message buffering
+    /// features, which <see cref="Router"/> and <see cref="ActorSelection"/> do not support.
+    /// </remarks>
+    internal sealed class DaemonMessageRouter : UntypedActor
+    {
+        private readonly string[] _entityIds;
+        private readonly IActorRef _shardingRef;
+        private int _index = 0;
+
+        public DaemonMessageRouter(string[] entityIds, IActorRef shardingRef)
+        {
+            _entityIds = entityIds;
+            // validate that we have at least 1 entityId
+            if (_entityIds.Length == 0)
+                throw new ArgumentException("At least one entityId must be provided", nameof(entityIds));
+            _shardingRef = shardingRef;
+        }
+
+        protected override void OnReceive(object message)
+        {
+            var nextId = _entityIds[_index % _entityIds.Length];
+            _shardingRef.Tell(new ShardingEnvelope(nextId, message));
+            if(_index == int.MaxValue) _index = 0;
+            else _index++;
+        }
+    }
+
+    /// <summary>
+    /// <para>This extension runs a pre-set number of actors in a cluster.</para>
     /// <para>
     /// The typical use case is when you have a task that can be divided in a number of workers, each doing a
     /// sharded part of the work, for example consuming the read side events from Akka Persistence through
@@ -106,7 +140,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="name">TBD</param>
         /// <param name="numberOfInstances">TBD</param>
         /// <param name="propsFactory">Given a unique id of `0` until `numberOfInstance` create an entity actor.</param>
-        public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory) => 
+        public IActorRef Init(string name, int numberOfInstances, Func<int, Props> propsFactory) => 
             Init(name, numberOfInstances, propsFactory, ShardedDaemonProcessSettings.Create(_system), null);
 
         /// <summary>
@@ -116,18 +150,18 @@ namespace Akka.Cluster.Sharding
         /// <param name="numberOfInstances">TBD</param>
         /// <param name="propsFactory">Given a unique id of `0` until `numberOfInstance` create an entity actor.</param>
         /// <param name="stopMessage">Sent to the actors when they need to stop because of a rebalance across the nodes of the cluster or cluster shutdown.</param>
-        public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory, object stopMessage) => 
+        public IActorRef Init(string name, int numberOfInstances, Func<int, Props> propsFactory, object? stopMessage) => 
             Init(name, numberOfInstances, propsFactory, ShardedDaemonProcessSettings.Create(_system), stopMessage);
 
         /// <summary>
         /// Start a specific number of actors, each with a unique numeric id in the set, that is then kept alive in the cluster.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="numberOfInstances">TBD</param>
+        /// <param name="name">The name of this sharded daemon set</param>
+        /// <param name="numberOfInstances">The number of instances to run</param>
         /// <param name="propsFactory">Given a unique id of `0` until `numberOfInstance` create an entity actor.</param>
-        /// <param name="settings">TBD</param>
+        /// <param name="settings">The settings for configuring this sharded daemon process.</param>
         /// <param name="stopMessage">If defined sent to the actors when they need to stop because of a rebalance across the nodes of the cluster or cluster shutdown.</param>
-        public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory, ShardedDaemonProcessSettings settings, object stopMessage)
+        public IActorRef Init(string name, int numberOfInstances, Func<int, Props> propsFactory, ShardedDaemonProcessSettings settings, object stopMessage)
         {
             // One shard per actor identified by the numeric id encoded in the entity id
             var numberOfShards = numberOfInstances;
@@ -171,6 +205,9 @@ namespace Akka.Cluster.Sharding
         }
     }
 
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     public class ShardedDaemonProcessExtensionProvider : ExtensionIdProvider<ShardedDaemonProcess>
     {
         public override ShardedDaemonProcess CreateExtension(ExtendedActorSystem system) => new(system);
