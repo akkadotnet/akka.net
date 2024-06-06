@@ -4,24 +4,15 @@ title: Fault tolerance
 ---
 # Fault Tolerance
 
-As explained in [Actor Systems](xref:actor-systems) each actor is the supervisor of its
-children, and as such each actor defines fault handling supervisor strategy.
-This strategy cannot be changed afterwards as it is an integral part of the
-actor system's structure.
+As explained in [Actor Systems](xref:actor-systems), each actor is the supervisor of its
+children, and as such each actor defines a fault handling supervisor strategy.
+This strategy cannot be changed after a child actor is created.
 
 ## Fault Handling in Practice
 
-First, let us look at a sample that illustrates one way to handle data store errors,
-which is a typical source of failure in real world applications. Of course it depends
-on the actual application what is possible to do when the data store is unavailable,
-but in this sample we use a best effort re-connect approach.
+Let's set up an example strategy which will handle data store errors in a child actor. In this sample we use a best effort re-connect approach.
 
 ## Creating a Supervisor Strategy
-
-The following sections explain the fault handling mechanism and alternatives
-in more depth.
-
-For the sake of demonstration let us consider the following strategy:
 
 ```csharp
 protected override SupervisorStrategy SupervisorStrategy()
@@ -46,9 +37,7 @@ protected override SupervisorStrategy SupervisorStrategy()
 }
 ```
 
-I have chosen a few well-known exception types in order to demonstrate the application of the fault handling directives described in [Supervision and Monitoring](xref:supervision). First off, it is a one-for-one strategy, meaning that each child is treated separately (an all-for-one strategy works very similarly, the only difference is that any decision is applied to all children of the supervisor, not only the failing one). There are limits set on the restart frequency, namely maximum 10 restarts per minute; each of these settings could be left out, which means that the respective limit does not apply, leaving the possibility to specify an absolute upper limit on the restarts or to make the restarts work infinitely. The child actor is stopped if the limit is exceeded.
-
-This is the piece which maps child failure types to their corresponding directives.
+We will handle a few exception types to demonstrate some fault handling directives described in [Supervision and Monitoring](xref:supervision). This strategy is "one-for-one", meaning that each child is treated separately. The alternative is an "all-for-one" strategy, where a decision is applied to _all_ children of the supervisor, not only the failing one. We have chosen to set a limit of maximum 10 restarts per minute; The child actor is stopped if the limit is exceeded. We could have chosen to leave this argument out, which would have created a strategry where the child actor would restart indefinitely.
 
 > [!NOTE]
 > If the strategy is declared inside the supervising actor (as opposed to
@@ -65,10 +54,7 @@ exceptions are handled by default:
 * `ActorKilledException` will stop the failing child actor; and
 * Any other type of `Exception` will restart the failing child actor.
 
-If the exception escalate all the way up to the root guardian it will handle it
-in the same way as the default strategy defined above.
-
-You can combine your own strategy with the default strategy:
+You can combine your own strategy with the default strategy like this:
 
 ```csharp
 protected override SupervisorStrategy SupervisorStrategy()
