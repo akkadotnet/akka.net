@@ -72,12 +72,13 @@ public class ShardedDaemonProcessProxySpec : AkkaSpec
             Cluster.Get(_proxySystem).State.Members.Count(x => x.Status == MemberStatus.Up).Should().Be(2);
         });
         
+        // <PushDaemon>
         // start the daemon process on the host
         var name = "daemonTest";
         var targetRole = "workers";
         var numWorkers = 10;
         var settings = ShardedDaemonProcessSettings.Create(Sys).WithRole(targetRole);
-        var host = ShardedDaemonProcess.Get(Sys).Init(name, numWorkers, EchoActor.EchoProps, settings, PoisonPill.Instance);
+        IActorRef host = ShardedDaemonProcess.Get(Sys).Init(name, numWorkers, EchoActor.EchoProps, settings, PoisonPill.Instance);
         
         // ping some of the workers via the host
         for(var i = 0; i < numWorkers; i++)
@@ -85,9 +86,11 @@ public class ShardedDaemonProcessProxySpec : AkkaSpec
             var result = await host.Ask<int>(i);
             result.Should().Be(i);
         }
+        // </PushDaemon>
         
-        // start the proxy on the proxy system
-        var proxy = ShardedDaemonProcess.Get(_proxySystem).InitProxy(name, numWorkers, targetRole);
+        // <PushDaemonProxy>
+        // start the proxy on the proxy system, which runs on a different role not capable of hosting workers
+        IActorRef proxy = ShardedDaemonProcess.Get(_proxySystem).InitProxy(name, numWorkers, targetRole);
         
         // ping some of the workers via the proxy
         for(var i = 0; i < numWorkers; i++)
@@ -95,6 +98,7 @@ public class ShardedDaemonProcessProxySpec : AkkaSpec
             var result = await proxy.Ask<int>(i);
             result.Should().Be(i);
         }
+        // </PushDaemonProxy>
     }
 
     protected override void AfterAll()
