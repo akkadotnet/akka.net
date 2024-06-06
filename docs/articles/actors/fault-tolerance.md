@@ -76,7 +76,7 @@ protected override SupervisorStrategy SupervisorStrategy()
 
 ### Stopping Supervisor Strategy
 
-Closer to the Erlang way is the strategy to just stop children when they fail
+An alternative which is closer to the Erlang way is to stop children when they fail
 and then take corrective action in the supervisor when DeathWatch signals the
 loss of the child. This strategy is also provided pre-packaged as
 `SupervisorStrategy.StoppingStrategy` with an accompanying
@@ -85,17 +85,13 @@ loss of the child. This strategy is also provided pre-packaged as
 
 ### Logging of Actor Failures
 
-By default the `SupervisorStrategy` logs failures unless they are escalated.
-Escalated failures are supposed to be handled, and potentially logged, at a level
-higher in the hierarchy.
-
-You can mute the default logging of a `SupervisorStrategy` by setting
+The default strategy logs failures unless they are escalated. You can mute the default logging of a `SupervisorStrategy` by setting
 `loggingEnabled` to `false` when instantiating it. Customized logging
 can be done inside the `Decider`. Note that the reference to the currently
 failed child is available as the `Sender` when the `SupervisorStrategy` is
 declared inside the supervising actor.
 
-You may also customize the logging in your own ``SupervisorStrategy`` implementation
+You can also customize the logging in your own ``SupervisorStrategy`` implementation
 by overriding the `logFailure` method.
 
 ## Supervision of Top-Level Actors
@@ -107,8 +103,7 @@ strategy.
 
 ## Test Application
 
-The following section shows the effects of the different directives in practice,
-wherefor a test setup is needed. First off, we need a suitable supervisor:
+Consider this custom `SupervisorStrategy`:
 
 ```csharp
 public class Supervisor : UntypedActor
@@ -145,7 +140,7 @@ public class Supervisor : UntypedActor
 }
 ```
 
-This supervisor will be used to create a child, with which we can experiment:
+This supervisor will be used to create a child actor:
 
 ```csharp
 public class Child : UntypedActor
@@ -170,9 +165,9 @@ public class Child : UntypedActor
 }
 ```
 
-The test is easier by using the utilities described in [Akka-Testkit](xref:testing-actor-systems).
+We'll use the utilities in [Akka-Testkit](xref:testing-actor-systems) to help us describe and test the expected behavior.
 
-Let us create actors:
+First, we'll create actors:
 
 ```csharp
 var supervisor = system.ActorOf<Supervisor>("supervisor");
@@ -181,8 +176,7 @@ supervisor.Tell(Props.Create<Child>());
 var child = ExpectMsg<IActorRef>(); // retrieve answer from TestKit’s TestActor
 ```
 
-The first test shall demonstrate the `Resume` directive, so we try it out by
-setting some non-initial state in the actor and have it fail:
+Our first test will demonstrate `Directive.Resume`, so we set some non-initial state in the child actor and cause it to fail:
 
 ```csharp
 child.Tell(42); // set state to 42
@@ -194,9 +188,9 @@ child.Tell("get");
 ExpectMsg(42);
 ```
 
-As you can see the value 42 survives the fault handling directive because we're using the `Resume` directive, which does not cause the actor to restart. Now, if we
-change the failure to a more serious `NullReferenceException`, that will no
-longer be the case:
+As you can see the value 42 survives the fault handling directive because we're using the `Resume` directive, which does not cause the actor to restart. 
+
+If we change the failure to a more serious `NullReferenceException`, which we defined above to result in a `Restart` directive, that will no longer be the case:
 
 ```csharp
 child.Tell(new NullReferenceException());
@@ -204,10 +198,9 @@ child.Tell("get");
 ExpectMsg(0);
 ```
 
-This is because the actor has restarted and the original `Child` actor instance that was processing messages will be destroyed and replaced by a brand-new instance defined using the original `Props` passed to its parent.
+This is because the actor has restarted and the original `Child` actor instance that was processing messages will be destroyed and replaced by a brand-new instance defined using the same `Props`.
 
-And finally in case of the fatal `IllegalArgumentException` the child will be
-terminated by the supervisor:
+And finally in case of the fatal `ArgumentException`, our strategy will return a stop directive, and the child will be terminated by the supervisor:
 
 ```csharp
 Watch(child); // have testActor watch "child"
@@ -215,9 +208,7 @@ child.Tell(new ArgumentException()); // break it
 ExpectMsg<Terminated>().ActorRef.Should().Be(child);
 ```
 
-Up to now the supervisor was completely unaffected by the child's failure,
-because the directives set did handle it. In case of an `Exception`, this is not
-true anymore and the supervisor escalates the failure.
+Up to now the supervisor was completely unaffected by the child's failure, because the directives in our strategy handled the exception. However, if we cause an `Exception`, none of our handlers are invoked and the supervisor escalates the failure.
 
 ```csharp
 supervisor.Tell(Props.Create<Child>()); // create new child
@@ -233,14 +224,12 @@ message.ExistenceConfirmed.Should().BeTrue();
 ```
 
 The supervisor itself is supervised by the top-level actor provided by the
-`ActorSystem`, which has the default policy to restart in case of all
-`Exception` cases (with the notable exceptions of
-`ActorInitializationException` and `ActorKilledException`). Since the
-default directive in case of a restart is to kill all children, we expected our poor
-child not to survive this failure.
+`ActorSystem`. This has the default policy to restart as a result of all
+`Exception`s except `ActorInitializationException` and `ActorKilledException`. Since the
+default directive in case of a restart is to kill all children, our poor
+child did not survive this failure.
 
-In case this is not desired (which depends on the use case), we need to use a
-different supervisor which overrides this behavior.
+If we don't want our children to be restarted we can override `PreRestart` in the Supervisor:
 
 ```csharp
 public class Supervisor2 : UntypedActor
@@ -282,7 +271,7 @@ public class Supervisor2 : UntypedActor
 ```
 
 With this parent, the child survives the escalated restart, as demonstrated in
-the last test:
+this last test:
 
 ```csharp
 var supervisor2 = system.ActorOf<Supervisor2>("supervisor2");
