@@ -188,7 +188,7 @@ child.Tell("get");
 ExpectMsg(42);
 ```
 
-As you can see the value 42 survives the fault handling directive because we're using the `Resume` directive, which does not cause the actor to restart. 
+As you can see the value 42 survives the fault handling directive because we're using the `Resume` directive, which does not cause the actor to restart.
 
 If we change the failure to a more serious `NullReferenceException`, which we defined above to result in a `Restart` directive, that will no longer be the case:
 
