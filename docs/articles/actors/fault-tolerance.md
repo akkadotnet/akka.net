@@ -37,7 +37,7 @@ protected override SupervisorStrategy SupervisorStrategy()
 }
 ```
 
-We will handle a few exception types to demonstrate some fault handling directives described in [Supervision and Monitoring](xref:supervision). This strategy is "one-for-one", meaning that each child is treated separately. The alternative is an "all-for-one" strategy, where a decision is applied to _all_ children of the supervisor, not only the failing one. We have chosen to set a limit of maximum 10 restarts per minute; The child actor is stopped if the limit is exceeded. We could have chosen to leave this argument out, which would have created a strategry where the child actor would restart indefinitely.
+We will handle a few exception types to demonstrate some fault handling directives described in [Supervision and Monitoring](xref:supervision). This strategy is "one-for-one", meaning that each child is treated separately. The alternative is an "all-for-one" strategy, where a decision is applied to _all_ children of the supervisor, not only the failing one. We have chosen to set a limit of maximum 10 restarts per minute; The child actor is stopped if the limit is exceeded. We could have chosen to leave this argument out, which would have created a strategy where the child actor would restart indefinitely.
 
 > [!NOTE]
 > If the strategy is declared inside the supervising actor (as opposed to
