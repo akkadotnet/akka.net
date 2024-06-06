@@ -14,13 +14,11 @@ using Akka.Benchmarks.Configurations;
 using Akka.Cluster.Sharding;
 using Akka.Routing;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Diagnostics.dotTrace;
 using BenchmarkDotNet.Engines;
 using static Akka.Cluster.Benchmarks.Sharding.ShardingHelper;
 
 namespace Akka.Cluster.Benchmarks.Sharding
 {
-    [DotTraceDiagnoser]
     [Config(typeof(MonitoringConfig))]
     [SimpleJob(RunStrategy.Monitoring, launchCount: 10, warmupCount: 10)]
     public class ShardMessageRoutingBenchmarks
