@@ -1,6 +1,15 @@
 #### 1.5.23 June 4th 2024 ####
 
-*Placeholder for nightlies*
+* [Fix missing `HandOverDone` handler in ClusterSingletonManager](https://github.com/akkadotnet/akka.net/pull/7230)
+* [Add push mode to `ShardedDaemonProcess`](https://github.com/akkadotnet/akka.net/pull/7229)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 2       | 299  | 44   | Aaron Stannard      |
+| 1       | 47   | 49   | Gregorius Soedharmo |
+| 1       | 1    | 1    | Hassan Abu Bakar    |
+
+You can [see the full set of changes for Akka.NET v1.5.23 here](https://github.com/akkadotnet/akka.net/milestones/1.5.23).
 
 #### 1.5.22 June 4th 2024 ####
 
