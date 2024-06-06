@@ -541,9 +541,7 @@ namespace Akka.Actor
             }
 
             // special case handling for DeadLetters
-            return envelope.Message is DeadLetter deadLetter 
-                ? new Envelope(new DeadLetter(deserializedMsg, deadLetter.Sender, deadLetter.Recipient), envelope.Sender) 
-                : new Envelope(deserializedMsg, envelope.Sender);
+            return new Envelope(deserializedMsg, envelope.Sender);
         }
         #nullable restore
 
