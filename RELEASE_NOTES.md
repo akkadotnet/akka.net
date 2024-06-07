@@ -1,3 +1,7 @@
+#### 1.5.25 June 7th 2024 ####
+
+*Placeholder for nightlies*
+
 #### 1.5.24 June 7th 2024 ####
 
 Akka.NET v1.5.24 is a patch release for Akka.NET that addresses CVE-2018-8292 and also adds a quality of life improvement to IActorRef serialization.
