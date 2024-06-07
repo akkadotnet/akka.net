@@ -1,3 +1,19 @@
+#### 1.5.24 June 7th 2024 ####
+
+Akka.NET v1.5.22 is a patch release for Akka.NET that addresses CVE-2018-8292 and also adds a quality of life improvement to IActorRef serialization.
+
+* [Fix invalid serializer was being used when serialize-message is set to true](https://github.com/akkadotnet/akka.net/pull/7236)
+* [Add Serialization.DeserializeActorRef() QoL method](https://github.com/akkadotnet/akka.net/pull/7237)
+* Resolve CVE-2018-8292 in [this PR](https://github.com/akkadotnet/akka.net/pull/7235) and [this PR](https://github.com/akkadotnet/akka.net/pull/7238)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 3       | 35   | 22   | Gregorius Soedharmo |
+| 1       | 26   | 51   | Mike Perrin         |
+| 1       | 15   | 2    | Aaron Stannard      |
+
+You can [see the full set of changes for Akka.NET v1.5.24 here](https://github.com/akkadotnet/akka.net/milestones/1.5.24).
+
 #### 1.5.23 June 4th 2024 ####
 
 * [Fix missing `HandOverDone` handler in ClusterSingletonManager](https://github.com/akkadotnet/akka.net/pull/7230)
