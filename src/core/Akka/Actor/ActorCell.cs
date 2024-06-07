@@ -533,17 +533,23 @@ namespace Akka.Actor
             object deserializedMsg;
             try
             {
-                deserializedMsg = SerializeAndDeserializePayload(envelope.Message);
+                deserializedMsg = SerializeAndDeserializePayload(unwrapped);
             }
             catch (Exception e)
             {
                 throw new SerializationException($"Failed to serialize and deserialize payload object [{unwrapped.GetType()}]. Envelope: [{envelope}], Actor type: [{Actor.GetType()}]", e);
             }
 
-            // special case handling for DeadLetters
-            return envelope.Message is DeadLetter deadLetter 
-                ? new Envelope(new DeadLetter(deserializedMsg, deadLetter.Sender, deadLetter.Recipient), envelope.Sender) 
-                : new Envelope(deserializedMsg, envelope.Sender);
+            // Check that this message was ever wrapped
+            if (ReferenceEquals(envelope.Message, unwrapped))
+                return new Envelope(deserializedMsg, envelope.Sender);
+
+            // In the case above this one, we're able to deserialize the message, and we returned that
+            // (a new copy of the message), however, when we're dealing with wrapped messages, it's impossible to
+            // reconstruct the russian dolls together again, so we just return the original envelope.
+            // We guarantee that we can de/serialize in innermost message, but we can not guarantee to return
+            // a new copy.
+            return envelope;
         }
         #nullable restore
 
