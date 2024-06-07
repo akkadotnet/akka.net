@@ -13,6 +13,12 @@
 
     <ItemGroup>
         <PackageReference Include="System.Data.Common" Version="4.3.0"/>
+      
+        <!--
+          This reference is added to resolve CVE-2018-8292 because System.Data.Common references the bad version
+          of this package. This can be removed if System.Data.Common ever release a clean version in the future
+        -->
+        <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
     </ItemGroup>
 
 </Project>
