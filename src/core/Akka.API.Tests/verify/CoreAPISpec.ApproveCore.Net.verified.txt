@@ -5218,6 +5218,7 @@ namespace Akka.Serialization
         public void AddSerializer(string name, Akka.Serialization.Serializer serializer) { }
         public object Deserialize(byte[] bytes, int serializerId, System.Type type) { }
         public object Deserialize(byte[] bytes, int serializerId, string manifest) { }
+        public Akka.Actor.IActorRef DeserializeActorRef(string path) { }
         public Akka.Serialization.Serializer FindSerializerFor(object obj, string defaultSerializerName = null) { }
         public Akka.Serialization.Serializer FindSerializerForType(System.Type objectType, string defaultSerializerName = null) { }
         public static Akka.Serialization.Information GetCurrentTransportInformation() { }
