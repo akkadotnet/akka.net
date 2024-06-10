@@ -52,6 +52,8 @@ namespace Akka.Benchmarks.Actor
         
         [Params(10, 100)]
         public int ActorCount { get; set; }
+
+        private Task[] _askTasks;
         
         [GlobalSetup]
         public void Setup()
@@ -75,9 +77,10 @@ namespace Akka.Benchmarks.Actor
         public void PerInvokeSetup()
         {
             _actorEntryPoint = _sys.ActorOf(Props.Create<MyActor>().WithRouter(new BroadcastPool(ActorCount)));
+            _askTasks = new Task[MsgCount];
         }
 
-        [Benchmark]
+        [Benchmark(Baseline = true)]
         public Task PushMsgs()
         {
             for (var i = 0; i < MsgCount; i++)
@@ -86,6 +89,18 @@ namespace Akka.Benchmarks.Actor
             }
 
             return Task.CompletedTask;
+        }
+        
+        [Benchmark]
+        public Task AskMsgs()
+        {
+            for (var i = 0; i < MsgCount; i++)
+            {
+                _askTasks[i] = _actorEntryPoint.Ask<string>(Msg);
+            }
+
+            _actorEntryPoint.Tell(StopActor.Instance);
+            return Task.WhenAll(_askTasks);
         }
     }
 }
