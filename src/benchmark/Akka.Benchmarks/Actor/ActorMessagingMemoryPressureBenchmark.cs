@@ -98,8 +98,7 @@ namespace Akka.Benchmarks.Actor
             {
                 _askTasks[i] = _actorEntryPoint.Ask<string>(Msg);
             }
-
-            _actorEntryPoint.Tell(StopActor.Instance);
+            
             return Task.WhenAll(_askTasks);
         }
     }
