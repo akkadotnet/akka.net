@@ -14,7 +14,7 @@ using BenchmarkDotNet.Attributes;
 
 namespace Akka.Benchmarks.Actor
 {
-    [Config(typeof(MicroBenchmarkConfig))]
+    [Config(typeof(MonitoringConfig))]
     public class ActorMessagingMemoryPressureBenchmark
     {
         #region Classes
@@ -46,9 +46,8 @@ namespace Akka.Benchmarks.Actor
         private IActorRef _actorEntryPoint;
 
         private const string Msg = "hit";
-        
-        [Params(100_000)]
-        public int MsgCount { get; set; }
+
+        public const int MsgCount = 100_000;
         
         [Params(10, 100)]
         public int ActorCount { get; set; }
@@ -80,7 +79,7 @@ namespace Akka.Benchmarks.Actor
             _askTasks = new Task[MsgCount];
         }
 
-        [Benchmark(Baseline = true)]
+        [Benchmark(Baseline = true, OperationsPerInvoke = MsgCount)]
         public Task PushMsgs()
         {
             for (var i = 0; i < MsgCount; i++)
@@ -91,7 +90,7 @@ namespace Akka.Benchmarks.Actor
             return Task.CompletedTask;
         }
         
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = MsgCount)]
         public Task AskMsgs()
         {
             for (var i = 0; i < MsgCount; i++)
