@@ -94,7 +94,8 @@ namespace Akka.Benchmarks.Configurations
                 .WithIterationCount(25)
                 .RunOncePerIteration()
                 .WithStrategy(RunStrategy.Monitoring)
-                .WithAffinity(IntPtr.Zero));
+                //.WithAffinity(IntPtr.Zero)
+            );
         }
     }
 }
