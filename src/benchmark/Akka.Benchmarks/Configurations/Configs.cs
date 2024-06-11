@@ -10,7 +10,9 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnosers;
+using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Exporters;
+using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Loggers;
 using BenchmarkDotNet.Reports;
 using BenchmarkDotNet.Running;
@@ -76,6 +78,21 @@ namespace Akka.Benchmarks.Configurations
         {
             AddExporter(MarkdownExporter.GitHub);
             AddColumn(new RequestsPerSecondColumn());
+        }
+    }
+
+    public class MacroBenchmarkConfig : ManualConfig
+    {
+        public MacroBenchmarkConfig()
+        {
+            AddExporter(MarkdownExporter.GitHub);
+            AddColumn(new RequestsPerSecondColumn());
+            AddJob(Job.LongRun
+                .WithGcMode(new GcMode { Server = true, Concurrent = true })
+                .WithWarmupCount(10)
+                .WithIterationCount(25)
+                .RunOncePerIteration()
+                .WithStrategy(RunStrategy.Monitoring));
         }
     }
 }
