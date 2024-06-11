@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Columns;
@@ -92,7 +93,8 @@ namespace Akka.Benchmarks.Configurations
                 .WithWarmupCount(10)
                 .WithIterationCount(25)
                 .RunOncePerIteration()
-                .WithStrategy(RunStrategy.Monitoring));
+                .WithStrategy(RunStrategy.Monitoring)
+                .WithAffinity(IntPtr.Zero));
         }
     }
 }
