@@ -75,7 +75,7 @@ namespace Akka.Benchmarks.Actor
 
         public const int MsgCount = 100_000;
 
-        [Params(10, 100)]
+        [Params(1, 10, 100)]
         public int ActorCount { get; set; }
 
         private Task[] _askTasks;
@@ -96,13 +96,17 @@ namespace Akka.Benchmarks.Actor
         public void PerInvokeCleanup()
         {
             _actorEntryPoint.GracefulStop(TimeSpan.FromSeconds(5)).Wait();
+            _terminationActor.GracefulStop(TimeSpan.FromSeconds(5)).Wait();
         }
 
         [IterationSetup]
         public void PerInvokeSetup()
         {
             _taskCompletionSource = new TaskCompletionSource();
-            _actorEntryPoint = _sys.ActorOf(Props.Create<MyActor>().WithRouter(new BroadcastPool(ActorCount)));
+            if(ActorCount == 1)
+                _actorEntryPoint = _sys.ActorOf(Props.Create<MyActor>());
+            else if(ActorCount > 1)
+                _actorEntryPoint = _sys.ActorOf(Props.Create<MyActor>().WithRouter(new BroadcastPool(ActorCount)));
             _terminationActor = _sys.ActorOf(Props.Create(() =>
                 new TerminationActor(_taskCompletionSource, MsgCount)));
             _askTasks = new Task[MsgCount];
