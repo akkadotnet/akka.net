@@ -90,8 +90,8 @@ namespace Akka.Benchmarks.Configurations
             AddColumn(new RequestsPerSecondColumn());
             AddJob(Job.LongRun
                 .WithGcMode(new GcMode { Server = true, Concurrent = true })
-                .WithWarmupCount(10)
-                .WithIterationCount(25)
+                .WithWarmupCount(25)
+                .WithIterationCount(50)
                 .RunOncePerIteration()
                 .WithStrategy(RunStrategy.Monitoring)
                 //.WithAffinity(IntPtr.Zero)
