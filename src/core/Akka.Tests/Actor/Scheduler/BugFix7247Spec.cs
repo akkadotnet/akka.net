@@ -56,9 +56,9 @@ public class BugFix7247Spec : AkkaSpec {
         
         // act
         var msg = "hit";
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(0.5));
         Sys.Scheduler.ScheduleTellOnce(TimeSpan.FromMicroseconds(1), router, msg, ActorRefs.NoSender);
-        await tcs.Task; // will time out if we don't get our msg
+        await tcs.Task.WithCancellation(cts.Token); // will time out if we don't get our msg
         var respMsg = await tcs.Task;
         
         // assert
