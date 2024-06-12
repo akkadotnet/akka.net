@@ -6,6 +6,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -43,9 +44,15 @@ public class BugFix7247Spec : AkkaSpec {
         // arrange
         var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         var noCellRef = Sys.As<ExtendedActorSystem>().Provider.CreateFutureRef(tcs);
-        var router = Sys.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(noCellRef.Path.ToSerializationFormat())));
-        var selection = Sys.ActorSelection(noCellRef.Path.ToSerializationFormat());
-        selection.Tell("hit");
+        var router = Sys.ActorOf(Props.Empty.WithRouter(new BroadcastGroup()));
+        var routee = Routee.FromActorRef(noCellRef);
+        router.Tell(new AddRoutee(routee));
+
+        await AwaitAssertAsync(async () =>
+        {
+            var allRoutees = await router.Ask<Routees>(GetRoutees.Instance);
+            allRoutees.Members.Count().ShouldBeGreaterThan(0);
+        });
         
         // act
         var msg = "hit";
