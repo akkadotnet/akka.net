@@ -6,9 +6,13 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Routing;
 using Akka.TestKit;
+using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Tests.Actor.Scheduler;
@@ -37,13 +41,15 @@ public class BugFix7247Spec : AkkaSpec {
     public async Task ShouldNotSendScheduledTellMsgToNoCellActorRefs()
     {
         // arrange
-        var noCellPath = new RootActorPath(Address.AllSystems);
         var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var noCellRef = new NoCellActorRef(noCellPath, tcs);
+        var noCellRef = Sys.As<ExtendedActorSystem>().Provider.CreateFutureRef(tcs);
+        var router = Sys.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(noCellRef.Path.ToString())));
         
         // act
         var msg = "hit";
-        Sys.Scheduler.ScheduleTellOnce(TimeSpan.FromMicroseconds(1), noCellRef, msg, ActorRefs.NoSender);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(0.5));
+        Sys.Scheduler.ScheduleTellOnce(TimeSpan.FromMicroseconds(1), router, msg, ActorRefs.NoSender);
+        await tcs.Task.WithCancellation(cts.Token); // will time out if we don't get our msg
         var respMsg = await tcs.Task;
         
         // assert
