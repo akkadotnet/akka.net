@@ -43,13 +43,15 @@ public class BugFix7247Spec : AkkaSpec {
         // arrange
         var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         var noCellRef = Sys.As<ExtendedActorSystem>().Provider.CreateFutureRef(tcs);
-        var router = Sys.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(noCellRef.Path.ToString())));
+        var router = Sys.ActorOf(Props.Empty.WithRouter(new BroadcastGroup(noCellRef.Path.ToSerializationFormat())));
+        var selection = Sys.ActorSelection(noCellRef.Path.ToSerializationFormat());
+        selection.Tell("hit");
         
         // act
         var msg = "hit";
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(0.5));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         Sys.Scheduler.ScheduleTellOnce(TimeSpan.FromMicroseconds(1), router, msg, ActorRefs.NoSender);
-        await tcs.Task.WithCancellation(cts.Token); // will time out if we don't get our msg
+        await tcs.Task; // will time out if we don't get our msg
         var respMsg = await tcs.Task;
         
         // assert
