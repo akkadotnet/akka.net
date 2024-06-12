@@ -133,16 +133,5 @@ namespace Akka.Benchmarks.Actor
 
             return Task.WhenAll(_askTasks);
         }
-        
-        [Benchmark(OperationsPerInvoke = MsgCount)]
-        public Task AskMsgs()
-        {
-            for (var i = 0; i < MsgCount; i++)
-            {
-                _askTasks[i] = _actorEntryPoint.Ask<string>(Msg);
-            }
-            
-            return Task.WhenAll(_askTasks);
-        }
     }
 }
