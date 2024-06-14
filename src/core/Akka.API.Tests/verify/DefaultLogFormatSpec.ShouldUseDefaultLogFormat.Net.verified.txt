@@ -2,3 +2,15 @@
 [INFO][DateTime][Thread 0001][ActorSystem(test)] This is a test 1
 [WARNING][DateTime][Thread 0001][ActorSystem(test)] This is a test 1
 [ERROR][DateTime][Thread 0001][ActorSystem(test)] This is a test 1
+[DEBUG][DateTime][Thread 0001][ActorSystem(test)] This is a test 1 cheese
+Cause: System.Exception: boom!
+   at Akka.API.Tests.DefaultLogFormatSpec.<ShouldUseDefaultLogFormat>d__2.MoveNext()
+[INFO][DateTime][Thread 0001][ActorSystem(test)] This is a test 1
+Cause: System.Exception: boom!
+   at Akka.API.Tests.DefaultLogFormatSpec.<ShouldUseDefaultLogFormat>d__2.MoveNext() in {ProjectDirectory}LogFormatSpec.cs:line 67
+[WARNING][DateTime][Thread 0001][ActorSystem(test)] This is a test 1
+Cause: System.Exception: boom!
+   at Akka.API.Tests.DefaultLogFormatSpec.<ShouldUseDefaultLogFormat>d__2.MoveNext() in {ProjectDirectory}LogFormatSpec.cs:line 67
+[ERROR][DateTime][Thread 0001][ActorSystem(test)] This is a test 1
+Cause: System.Exception: boom!
+   at Akka.API.Tests.DefaultLogFormatSpec.<ShouldUseDefaultLogFormat>d__2.MoveNext() in {ProjectDirectory}LogFormatSpec.cs:line 67

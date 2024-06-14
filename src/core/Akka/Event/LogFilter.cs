@@ -191,7 +191,7 @@ public class LogFilterEvaluator
         else
         {
             // allocate the message just once
-            var nullCheck = evt.Message.ToString();
+            var nullCheck = evt.ToString();
 
             if (nullCheck == null)
                 return false; // no message to filter
@@ -225,7 +225,7 @@ public class LogFilterEvaluator
 
         public override bool ShouldTryKeepMessage(LogEvent evt, out string expandedLogMessage)
         {
-            expandedLogMessage = evt.Message.ToString()!;
+            expandedLogMessage = evt.ToString()!;
             return true;
         }
     }
