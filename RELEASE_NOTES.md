@@ -1,6 +1,24 @@
-#### 1.5.25 June 7th 2024 ####
+#### 1.5.25 June 14th 2024 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.25 includes a critical bug fix for logging and some other minor fixes.
+
+**Logging Errors Introduced in v1.5.21**
+
+Versions [v1.5.21,v1.5.24] are all affected by [Akka.Logging: v1.5.21 appears to have truncated log source, timestamps, etc from all log messages](https://github.com/akkadotnet/akka.net/issues/7255) - this was a bug introduced when we added [the log-filtering feature we shipped in Akka.NET v1.5.21](https://getakka.net/articles/utilities/logging.html#filtering-log-messages).
+
+This issue has been resolved in v1.5.25 and we've [added regression tests to ensure that the log format gets version-checked just like our APIs going forward](https://github.com/akkadotnet/akka.net/pull/7256).
+
+Other fixes:
+
+* [Akka.Router: sending a message to a remote actor via `IScheduledTellMsg` results in serialization error](https://github.com/akkadotnet/akka.net/issues/7247)
+* [Akka.Discovery: Make Akka.Discovery less coupled with Akka.Management](https://github.com/akkadotnet/akka.net/issues/7242)
+
+You can [see the full set of changes for Akka.NET v1.5.25 here](https://github.com/akkadotnet/akka.net/milestones/1.5.25).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 6 | 347 | 44 | Aaron Stannard |
+| 2 | 1197 | 1015 | Gregorius Soedharmo |
 
 #### 1.5.24 June 7th 2024 ####
 
