@@ -7,11 +7,13 @@
 
 using System;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Akka.Event;
 using FluentAssertions;
+using VerifyTests;
 using VerifyXunit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.API.Tests;
 
@@ -20,6 +22,7 @@ namespace Akka.API.Tests;
 ///
 /// Need to assert that the default log format is still working as expected.
 /// </summary>
+[UsesVerify]
 public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
 {
     public DefaultLogFormatSpec() : base("akka.loglevel = DEBUG")
@@ -49,10 +52,12 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
     }
     
     [Fact]
-    public void ShouldUseDefaultLogFormat()
+    public async Task ShouldUseDefaultLogFormat()
     {
         // arrange
         var filePath = Path.GetTempFileName();
+        var probe = CreateTestProbe();
+        Sys.EventStream.Subscribe(probe.Ref, typeof(LogEvent));
 
         // act
         using (new OutputRedirector(filePath))
@@ -73,9 +78,15 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
                 Sys.Log.Warning(ex, "This is a test {0}", 1);
                 Sys.Log.Error(ex, "This is a test {0}", 1);
             }
+
+            // force all logs to be received
+            await probe.ReceiveNAsync(8).ToListAsync();
         }
 
         // assert
+        // var verifySettings = new VerifySettings();
+        // verifySettings.UseDirectory("logs");
+        // verifySettings.UseFileName("DefaultLogFormatSpec");
         Verifier.VerifyFile(filePath);
     }
 }
