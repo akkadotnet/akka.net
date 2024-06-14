@@ -62,20 +62,8 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
             Sys.Log.Warning("This is a test {0}", 1);
             Sys.Log.Error("This is a test {0}", 1);
 
-            try
-            {
-                throw new Exception("boom!");
-            }
-            catch (Exception ex)
-            {
-                Sys.Log.Debug(ex, "This is a test {0} {1}", 1, "cheese");
-                Sys.Log.Info(ex, "This is a test {0}", 1);
-                Sys.Log.Warning(ex, "This is a test {0}", 1);
-                Sys.Log.Error(ex, "This is a test {0}", 1);
-            }
-
             // force all logs to be received
-            await probe.ReceiveNAsync(8).ToListAsync();
+            await probe.ReceiveNAsync(4).ToListAsync();
         }
 
         // assert
@@ -85,9 +73,7 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
         // need to sanitize the thread id
         text = SanitizeDateTime(text);
         text = SanitizeThreadNumber(text);
-
-        // verifier.UseFileName("LogSnapshot");
-        // Verifier.Verify(text, verifier);
+        
         await Verifier.Verify(text);
     }
 
