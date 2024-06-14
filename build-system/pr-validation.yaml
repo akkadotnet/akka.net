@@ -80,10 +80,25 @@ jobs:
           contents: "*"
           targetFolder: $(Build.ArtifactStagingDirectory)
           continueOnError: boolean # 'true' if future steps should run even if this step fails; defaults to 'false'
+
       - task: PublishBuildArtifacts@1
         inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
           artifactName: "incrementalistOutput-$(Build.BuildId)"
+
+      - task: CopyFiles@2
+        inputs:
+          SourceFolder: '$(Build.SourcesDirectory)'
+          Contents: '**/*.received.*'
+          TargetFolder: '$(Build.ArtifactStagingDirectory)/verify'
+        displayName: 'Copy .received. files to artifact staging directory'
+      
+      - task: PublishBuildArtifacts@1
+        inputs:
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)/verify'
+          ArtifactName: 'verify-$(Build.BuildId)'
+        displayName: 'Publish Verify Artifacts'
+        
       - script: "echo 1>&2"
         failOnStderr: true
         displayName: "If above is partially succeeded, then fail"
