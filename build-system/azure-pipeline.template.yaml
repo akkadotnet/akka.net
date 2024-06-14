@@ -70,9 +70,9 @@ jobs:
       - task: PublishBuildArtifacts@1
         inputs:
           PathtoPublish: '$(Build.ArtifactStagingDirectory)/verify'
-          ArtifactName: 'verify-$(Build.BuildId)'
+          ArtifactName: '${{ parameters.artifactName }}-verify'
         displayName: 'Publish Verify Artifacts'
-        
+
       - script: 'echo 1>&2'
         failOnStderr: true
         displayName: 'If above is partially succeeded, then fail'
