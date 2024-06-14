@@ -55,7 +55,7 @@ let runIncrementally = hasBuildParam "incremental"
 let incrementalistReport = output @@ "incrementalist.txt"
 
 // Configuration values for tests
-let testNetFrameworkVersion = "net471"
+let testNetFrameworkVersion = "net48"
 let testNetVersion = "net8.0"
 
 Target "Clean" (fun _ ->
