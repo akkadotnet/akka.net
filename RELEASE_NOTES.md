@@ -15,6 +15,11 @@ Other fixes:
 
 You can [see the full set of changes for Akka.NET v1.5.25 here](https://github.com/akkadotnet/akka.net/milestones/1.5.25).
 
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 6 | 347 | 44 | Aaron Stannard |
+| 2 | 1197 | 1015 | Gregorius Soedharmo |
+
 #### 1.5.24 June 7th 2024 ####
 
 Akka.NET v1.5.24 is a patch release for Akka.NET that addresses CVE-2018-8292 and also adds a quality of life improvement to IActorRef serialization.
