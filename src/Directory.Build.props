@@ -18,8 +18,8 @@
     <LangVersion>11.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <XunitVersion>2.5.3</XunitVersion>
-    <XunitRunnerVersion>2.5.3</XunitRunnerVersion>
+    <XunitVersion>2.8.1</XunitVersion>
+    <XunitRunnerVersion>2.8.1</XunitRunnerVersion>
     <TestSdkVersion>17.9.0</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
@@ -29,7 +29,7 @@
     <BenchmarkDotNetVersion>0.13.12</BenchmarkDotNetVersion>
     <NetTestVersion>net8.0</NetTestVersion>
     <FsharpVersion>6.0.5</FsharpVersion>
-    <NetFrameworkTestVersion>net471</NetFrameworkTestVersion>
+    <NetFrameworkTestVersion>net48</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
     <NetLibVersion>net6.0</NetLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>

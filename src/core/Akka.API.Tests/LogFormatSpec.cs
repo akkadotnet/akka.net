@@ -8,10 +8,9 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Event;
-using FluentAssertions;
-using VerifyTests;
 using VerifyXunit;
 using Xunit;
 
@@ -22,13 +21,12 @@ namespace Akka.API.Tests;
 ///
 /// Need to assert that the default log format is still working as expected.
 /// </summary>
-[UsesVerify]
 public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
 {
     public DefaultLogFormatSpec() : base("akka.loglevel = DEBUG")
     {
     }
-    
+
     public class OutputRedirector : IDisposable
     {
         private readonly TextWriter _originalOutput;
@@ -37,10 +35,7 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
         public OutputRedirector(string filePath)
         {
             _originalOutput = Console.Out;
-            _writer = new StreamWriter(filePath)
-            {
-                AutoFlush = true
-            };
+            _writer = new StreamWriter(filePath) { AutoFlush = true };
             Console.SetOut(_writer);
         }
 
@@ -50,7 +45,7 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
             _writer.Dispose();
         }
     }
-    
+
     [Fact]
     public async Task ShouldUseDefaultLogFormat()
     {
@@ -84,9 +79,34 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
         }
 
         // assert
-        // var verifySettings = new VerifySettings();
-        // verifySettings.UseDirectory("logs");
-        // verifySettings.UseFileName("DefaultLogFormatSpec");
-        Verifier.VerifyFile(filePath);
+        // ReSharper disable once MethodHasAsyncOverload
+        var text = File.ReadAllText(filePath);
+
+        // need to sanitize the thread id
+        text = SanitizeDateTime(text);
+        text = SanitizeThreadNumber(text);
+
+        // verifier.UseFileName("LogSnapshot");
+        // Verifier.Verify(text, verifier);
+        await Verifier.Verify(text);
+    }
+
+    static string SanitizeThreadNumber(string log)
+    {
+        string pattern = @"(\[Thread )\d+(\])";
+        string replacement = "[Thread 0001]";
+        string result = Regex.Replace(log, pattern, replacement);
+        return result;
+    }
+
+    static string SanitizeDateTime(string logs, string replacement = "DateTime")
+    {
+        // Regular expression to match the datetime
+        string pattern = @"\[\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}\.\d{3}Z\]";
+
+        // Replace all occurrences of the datetime with the constant value
+        string result = Regex.Replace(logs, pattern, $"[{replacement}]", RegexOptions.Multiline);
+
+        return result;
     }
 }

@@ -28,7 +28,6 @@ using VerifyXunit;
 
 namespace Akka.API.Tests
 {
-    [UsesVerify]
     public class CoreAPISpec
     {
         static Task VerifyAssembly<T>()
