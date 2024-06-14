@@ -222,7 +222,7 @@ namespace Akka.Remote.Tests.Transport
             });
         }
 
-        #if !NET471
+        #if !NET480 // has text formatting issues on .NET Framework
         [Fact]
         public async Task If_EnableSsl_configuration_is_true_but_not_valid_certificate_is_provided_than_ArgumentNullException_should_be_thrown()
         {
