@@ -11,53 +11,63 @@ using Akka.Cluster.Routing;
 using Akka.Event;
 using Akka.Routing;
 
-namespace ClusterToolsExample.Shared
+namespace ClusterToolsExample.Shared;
+
+public class WorkerManager : ReceiveActor, IWithTimers
 {
-    public class WorkerManager : ReceiveActor
+    private const string BatchKey = nameof(BatchKey);
+    private const string ReportKey = nameof(ReportKey);
+    
+    private readonly Random _random = new();
+    
+    public WorkerManager()
     {
-        private readonly Random random = new Random();
-        public WorkerManager()
+        var log = Context.GetLogger();
+        var counter = Context.ActorOf<WorkLoadCounter>(name: "workload-counter");
+        var workerRouter = GetWorkerRouter(counter);
+
+        Receive<Batch>(batch =>
         {
-            var log = Context.GetLogger();
-            var counter = Context.ActorOf<WorkLoadCounter>(name: "workload-counter");
-            var workerRouter = GetWorkerRouter(counter);
+            log.Info("Generating a batch of size {0}", batch.Size);
+            for (var i = 0; i < batch.Size; i++)
+                workerRouter.Tell(new Work(i));
 
-            Receive<Batch>(batch =>
-            {
-                log.Info("Generating a batch of size {0}", batch.Size);
-                for (int i = 0; i < batch.Size; i++)
-                    workerRouter.Tell(new Work(i));
+            Timers.StartSingleTimer(BatchKey, GetBatch(), TimeSpan.FromSeconds(10));
+        });
 
-                Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromSeconds(10), Self, GetBatch(), Self);
-            });
-
-            Receive<Report>(report =>
-            {
-                foreach (var entry in report.Counts)
-                {
-                    var key = entry.Key;
-                    var value = entry.Value;
-                    var name = (string.IsNullOrEmpty(key.Path.Address.Host) ? "local/" : key.Path.Address.Host + ":" + key.Path.Address.Port + "/") + key.Path.Name;
-
-                    log.Info("{0} -> {1}", name, value);
-                }
-            });
-
-            Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromSeconds(3), Self, GetBatch(), Self);
-            Context.System.Scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10), counter, SendReport.Instance, Self);
-        }
-
-        private IActorRef GetWorkerRouter(IActorRef counter)
+        Receive<Report>(report =>
         {
-            return Context.ActorOf(new ClusterRouterPool(
+            foreach (var (actor, count) in report.Counts)
+            {
+                var name = (string.IsNullOrEmpty(actor.Path.Address.Host) 
+                    ? "local/" 
+                    : actor.Path.Address.Host + ":" + actor.Path.Address.Port + "/") + actor.Path.Name;
+
+                log.Info("{0} -> {1}", name, count);
+            }
+        });
+
+        Receive<SendReport>(msg =>
+        {
+            counter.Tell(msg);
+        });
+
+        Timers.StartSingleTimer(BatchKey, GetBatch(), TimeSpan.FromSeconds(3));
+        Timers.StartPeriodicTimer(ReportKey, SendReport.Instance, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10));
+    }
+
+    public ITimerScheduler Timers { get; set; }
+
+    private IActorRef GetWorkerRouter(IActorRef counter)
+    {
+        return Context.ActorOf(new ClusterRouterPool(
                 local: new RoundRobinPool(10),
                 settings: new ClusterRouterPoolSettings(30, 10, true, null))
-                .Props(Props.Create(() => new Worker(counter))));
-        }
+            .Props(Props.Create(() => new Worker(counter))));
+    }
 
-        private Batch GetBatch()
-        {
-            return new Batch(random.Next(5) + 5);
-        }
+    private Batch GetBatch()
+    {
+        return new Batch(_random.Next(5) + 5);
     }
 }

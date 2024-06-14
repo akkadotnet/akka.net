@@ -279,31 +279,34 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private static readonly ExtractEntityId ExtractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            switch (message)
-            {
-                case EntityEnvelope env:
-                    return (env.Id.ToString(), env.Payload);
-                case Get msg:
-                    return (msg.CounterId.ToString(), message);
-            }
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    EntityEnvelope env => env.Id.ToString(),
+                    Get msg => msg.CounterId.ToString(),
+                    _ => null
+                };
 
-        private static readonly ExtractShardId ExtractShardId = message =>
-        {
-            switch (message)
-            {
-                case EntityEnvelope msg:
-                    return (msg.Id % NumberOfShards).ToString();
-                case Get msg:
-                    return (msg.CounterId % NumberOfShards).ToString();
-                case ShardRegion.StartEntity msg:
-                    return (long.Parse(msg.EntityId) % NumberOfShards).ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message switch
+                {
+                    EntityEnvelope env => env.Payload,
+                    _ => message
+                };
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    EntityEnvelope env => (env.Id % NumberOfShards).ToString(),
+                    Get msg => (msg.CounterId % NumberOfShards).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (long.Parse(entityId) % NumberOfShards).ToString();
+        }
 
         private const int NumberOfShards = 12;
 
@@ -523,7 +526,7 @@ namespace Akka.Cluster.Sharding.Tests
                     entityProps: _ => QualifiedCounter.Props(typeName),
                     settings: settings,
                     coordinatorPath: "/user/" + typeName + "Coordinator/singleton/coordinator",
-                    new DeprecatedHandlerExtractorAdapter(ExtractEntityId, ExtractShardId),
+                    new MessageExtractor(),
                     handOffStopMessage: PoisonPill.Instance,
                     rememberEntitiesProvider: rememberEntitiesProvider),
                 name: typeName + "Region");
@@ -683,7 +686,7 @@ namespace Akka.Cluster.Sharding.Tests
                         typeName: "counter",
                         settings: settings,
                         coordinatorPath: "/user/counterCoordinator/singleton/coordinator",
-                        new DeprecatedHandlerExtractorAdapter(ExtractEntityId, ExtractShardId)),
+                        new MessageExtractor()),
                         "regionProxy");
 
                     proxy.Tell(new Get(1));
@@ -899,24 +902,21 @@ namespace Akka.Cluster.Sharding.Tests
                         typeName: "Counter",
                         entityProps: Counter.Props(),
                         settings: ClusterShardingSettings.Create(Sys),
-                        extractEntityId: ExtractEntityId,
-                        extractShardId: ExtractShardId);
+                        messageExtractor: new MessageExtractor());
 
                     //#counter-start
                     ClusterSharding.Get(Sys).Start(
                         typeName: "AnotherCounter",
                         entityProps: AnotherCounter.Props(),
                         settings: ClusterShardingSettings.Create(Sys),
-                        extractEntityId: ExtractEntityId,
-                        extractShardId: ExtractShardId);
+                        messageExtractor: new MessageExtractor());
 
                     //#counter-supervisor-start
                     ClusterSharding.Get(Sys).Start(
                         typeName: "SupervisedCounter",
                         entityProps: CounterSupervisor.Props(),
                         settings: ClusterShardingSettings.Create(Sys),
-                        extractEntityId: ExtractEntityId,
-                        extractShardId: ExtractShardId);
+                        messageExtractor: new MessageExtractor());
                 }, Config.Third, Config.Fourth, Config.Fifth, Config.Sixth);
                 EnterBarrier("extension-started");
 
@@ -965,8 +965,7 @@ namespace Akka.Cluster.Sharding.Tests
                         typeName: "ApiTest",
                         entityProps: Counter.Props(),
                         settings: ClusterShardingSettings.Create(Sys),
-                        extractEntityId: ExtractEntityId,
-                        extractShardId: ExtractShardId);
+                        messageExtractor: new MessageExtractor());
 
                     var counterRegionViaGet = ClusterSharding.Get(Sys).ShardRegion("ApiTest");
 

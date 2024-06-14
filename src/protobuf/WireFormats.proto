@@ -6,7 +6,8 @@ syntax = "proto3";
 package Akka.Remote.Serialization.Proto.Msg;
 
 import 'ContainerFormats.proto';
-import 'duration.proto';
+import "google/protobuf/duration.proto";
+
 
 /******************************************
  * Remoting message formats

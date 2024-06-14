@@ -191,8 +191,6 @@ namespace Akka.Cluster.Sharding.Tests
                     Sys,
                     typeName: "Entity",
                     entityProps: SimpleEchoActor.Props(),
-                    extractEntityId: IntExtractEntityId,
-                    extractShardId: IntExtractShardId,
                     allocationStrategy: new TestAllocationStrategy(_allocator.Value))
                 );
         }

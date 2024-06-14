@@ -33,27 +33,25 @@ namespace Akka.Coordination.Tests
             return system.WithExtension<TestLeaseExt, TestLeaseExtExtensionProvider>();
         }
 
-        private readonly ExtendedActorSystem _system;
-        private readonly ConcurrentDictionary<string, TestLease> testLeases = new();
+        private readonly ConcurrentDictionary<string, TestLease> _testLeases = new();
 
         public TestLeaseExt(ExtendedActorSystem system)
         {
-            _system = system;
-            _system.Settings.InjectTopLevelFallback(LeaseProvider.DefaultConfig());
+            system.Settings.InjectTopLevelFallback(LeaseProvider.DefaultConfig());
         }
 
         public TestLease GetTestLease(string name)
         {
-            if (!testLeases.TryGetValue(name, out var lease))
+            if (!_testLeases.TryGetValue(name, out var lease))
             {
-                throw new InvalidOperationException($"Test lease {name} has not been set yet. Current leases {string.Join(",", testLeases.Keys)}");
+                throw new InvalidOperationException($"Test lease {name} has not been set yet. Current leases {string.Join(",", _testLeases.Keys)}");
             }
             return lease;
         }
 
         public void SetTestLease(string name, TestLease lease)
         {
-            testLeases[name] = lease;
+            _testLeases[name] = lease;
         }
     }
 

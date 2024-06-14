@@ -242,13 +242,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             var protoMessage = new Proto.Msg.Publish();
             protoMessage.Topic = publish.Topic;
             protoMessage.Payload = _payloadSupport.PayloadToProto(publish.Message);
+            protoMessage.SendOneMessageToEachGroup = publish.SendOneMessageToEachGroup;
             return protoMessage.ToByteArray();
         }
 
         private Publish PublishFrom(byte[] bytes)
         {
             var publishProto = Proto.Msg.Publish.Parser.ParseFrom(bytes);
-            return new Publish(publishProto.Topic, _payloadSupport.PayloadFrom(publishProto.Payload));
+            return new Publish(publishProto.Topic, _payloadSupport.PayloadFrom(publishProto.Payload), publishProto.SendOneMessageToEachGroup);
         }
 
         private byte[] SendToOneSubscriberToProto(SendToOneSubscriber sendToOneSubscriber)

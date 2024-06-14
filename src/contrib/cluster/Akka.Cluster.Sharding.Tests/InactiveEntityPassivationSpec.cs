@@ -89,11 +89,28 @@ namespace Akka.Cluster.Sharding.Tests
         protected ClusterShardingSettings settings;
         protected readonly TimeSpan smallTolerance = TimeSpan.FromMilliseconds(300);
 
-        private readonly ExtractEntityId _extractEntityId = message =>
-            message is int msg ? (msg.ToString(), message) : Option<(string, object)>.None;
+        private sealed class MessageExtractor: IMessageExtractor
+        {
+            public string EntityId(object message)
+                => message switch
+                {
+                    int msg => msg.ToString(),
+                    _ => null
+                };
 
-        private readonly ExtractShardId _extractShard = message =>
-            message is int msg ? (msg % 10).ToString(CultureInfo.InvariantCulture) : null;
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    int msg => (msg % 10).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % 10).ToString(CultureInfo.InvariantCulture);
+        }
 
         private static Config SpecConfig =>
             ConfigurationFactory.ParseString(@"
@@ -123,8 +140,7 @@ namespace Akka.Cluster.Sharding.Tests
                 "myType",
                 Entity.Props(probe.Ref),
                 settings,
-                _extractEntityId,
-                _extractShard,
+                new MessageExtractor(),
                 ClusterSharding.Get(Sys).DefaultShardAllocationStrategy(settings),
                 Passivate.Instance);
         }

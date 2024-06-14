@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace Akka.Cluster.Sharding.Tests
     /// </summary>
     public class StartEntitySpec : AkkaSpec
     {
-        internal class EntityEnvelope
+        private class EntityEnvelope
         {
             public EntityEnvelope(string id, object msg)
             {
@@ -71,24 +72,34 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            if (message is EntityEnvelope e)
-                return (e.Id, e.Msg);
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    EntityEnvelope msg => msg.Id,
+                    _ => null
+                };
 
-        private ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case EntityEnvelope e:
-                    return "1"; // single shard for all entities
-                case ShardRegion.StartEntity se:
-                    return "1";
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message switch
+                {
+                    EntityEnvelope msg => msg.Msg,
+                    _ => message
+                };
+
+            // single shard for all entities
+            public string ShardId(object message)
+                => message switch
+                {
+                    EntityEnvelope => "1",
+                    _ => null
+                };
+
+            // single shard for all entities
+            public string ShardId(string entityId, object messageHint = null)
+                => "1";
+        }
 
         private static Config SpecConfig =>
             ConfigurationFactory.ParseString(@"
@@ -127,8 +138,7 @@ namespace Akka.Cluster.Sharding.Tests
                 "start-entity-1",
                 EntityActor.Props(),
                 ClusterShardingSettings.Create(Sys),
-                extractEntityId,
-                extractShardId);
+                new MessageExtractor());
 
             sharding.Tell(new EntityEnvelope("1", "ping"));
             ExpectMsg("pong");
@@ -163,8 +173,7 @@ namespace Akka.Cluster.Sharding.Tests
                 "start-entity-2",
                 EntityActor.Props(),
                 ClusterShardingSettings.Create(Sys),
-                extractEntityId,
-                extractShardId);
+                new MessageExtractor());
             sharding.Tell(new EntityEnvelope("1", "ping"));
             ExpectMsg("pong");
             var entity = LastSender;
@@ -203,8 +212,7 @@ namespace Akka.Cluster.Sharding.Tests
                 "start-entity-3",
                 EntityActor.Props(),
                 ClusterShardingSettings.Create(Sys),
-                extractEntityId,
-                extractShardId);
+                new MessageExtractor());
             sharding.Tell(new EntityEnvelope("1", "ping"));
             ExpectMsg("pong");
             var entity = LastSender;

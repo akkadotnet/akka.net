@@ -107,21 +107,21 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_not_load_a_snapshot_given_an_invalid_persistence_id()
+        public virtual void SnapshotStore_should_not_load_a_snapshot_given_an_invalid_persistence_id()
         {
             SnapshotStore.Tell(new LoadSnapshot("invalid", SnapshotSelectionCriteria.Latest, long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => result.Snapshot == null && result.ToSequenceNr == long.MaxValue);
         }
 
         [Fact]
-        public void SnapshotStore_should_not_load_a_snapshot_given_non_matching_timestamp_criteria()
+        public virtual void SnapshotStore_should_not_load_a_snapshot_given_non_matching_timestamp_criteria()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(long.MaxValue, new DateTime(100000)), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => result.Snapshot == null && result.ToSequenceNr == long.MaxValue);
         }
 
         [Fact]
-        public void SnapshotStore_should_not_load_a_snapshot_given_non_matching_sequence_number_criteria()
+        public virtual void SnapshotStore_should_not_load_a_snapshot_given_non_matching_sequence_number_criteria()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(7), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => result.Snapshot == null && result.ToSequenceNr == long.MaxValue);
@@ -131,7 +131,7 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_load_the_most_recent_snapshot()
+        public virtual void SnapshotStore_should_load_the_most_recent_snapshot()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => 
@@ -142,7 +142,7 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_bound()
+        public virtual void SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_bound()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(13), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
@@ -160,7 +160,7 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_and_timestamp_bound()
+        public virtual void SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_and_timestamp_bound()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(13, Metadata[2].Timestamp), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
@@ -178,7 +178,7 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_delete_a_single_snapshot_identified_by_SequenceNr_in_snapshot_metadata()
+        public virtual void SnapshotStore_should_delete_a_single_snapshot_identified_by_SequenceNr_in_snapshot_metadata()
         {
             var md = Metadata[2];
             md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr); // don't care about timestamp for delete of a single snap
@@ -199,7 +199,7 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_delete_all_snapshots_matching_upper_sequence_number_and_timestamp_bounds()
+        public virtual void SnapshotStore_should_delete_all_snapshots_matching_upper_sequence_number_and_timestamp_bounds()
         {
             var md = Metadata[2];
             var command = new DeleteSnapshots(Pid, new SnapshotSelectionCriteria(md.SequenceNr, md.Timestamp));
@@ -223,7 +223,7 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_not_delete_snapshots_with_non_matching_upper_timestamp_bounds()
+        public virtual void SnapshotStore_should_not_delete_snapshots_with_non_matching_upper_timestamp_bounds()
         {
             var md = Metadata[3];
             var criteria = new SnapshotSelectionCriteria(md.SequenceNr, md.Timestamp.Subtract(TimeSpan.FromTicks(1)));
@@ -244,7 +244,7 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_save_and_overwrite_snapshot_with_same_sequence_number()
+        public virtual void SnapshotStore_should_save_and_overwrite_snapshot_with_same_sequence_number()
         {
             var md = Metadata[4];
             SnapshotStore.Tell(new SaveSnapshot(md, "s-5-modified"), _senderProbe.Ref);
@@ -258,7 +258,7 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_save_bigger_size_snapshot()
+        public virtual void SnapshotStore_should_save_bigger_size_snapshot()
         {
             var metadata = new SnapshotMetadata(Pid, 100);
             var bigSnapshot = new byte[SnapshotByteSizeLimit];
@@ -269,7 +269,7 @@ namespace Akka.Persistence.TCK.Snapshot
 
 
         [Fact]
-        public void ShouldSerializeSnapshots()
+        public virtual void ShouldSerializeSnapshots()
         {
             if (!SupportsSerialization) return;
 

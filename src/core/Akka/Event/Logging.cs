@@ -47,7 +47,7 @@ namespace Akka.Event
                     return new LogSource(actorRef.Path.ToString(), SourceType(actorRef));
                 case string str:
                     return new LogSource(str, SourceType(str));
-                case System.Type t:
+                case Type t:
                     return new LogSource(Logging.SimpleName(t), t);
                 default:
                     return new LogSource(Logging.SimpleName(o), SourceType(o));
@@ -64,18 +64,25 @@ namespace Akka.Event
                     return new LogSource(FromActorRef(actorRef, system), SourceType(actorRef));
                 case string str:
                     return new LogSource(FromString(str, system), SourceType(str));
-                case System.Type t:
+                case Type t:
                     return new LogSource(FromType(t, system), t);
+                case LogSource logSource:
+                    return logSource; // if someone's already created a LogSource, just use it
                 default:
                     return new LogSource(FromType(o.GetType(), system), SourceType(o));
             }
+        }
+
+        public static LogSource Create(string source, Type t)
+        {
+            return new LogSource(source, t);
         }
 
         public static Type SourceType(object o)
         {
             switch (o)
             {
-                case System.Type t:
+                case Type t:
                     return t;
                 case IActorContext context:
                     return context.Props.Type;
@@ -105,14 +112,8 @@ namespace Akka.Event
 
         public static string FromActorRef(IActorRef a, ActorSystem system)
         {
-            try
-            {
-                return a.Path.ToStringWithAddress(system.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress);
-            }
-            catch // can fail if the ActorSystem (remoting) is not completely started yet
-            {
-                return a.Path.ToString();
-            }
+            var defaultAddress = system.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
+            return defaultAddress is null ? a.Path.ToString() : a.Path.ToStringWithAddress(defaultAddress);
         }
     }
 

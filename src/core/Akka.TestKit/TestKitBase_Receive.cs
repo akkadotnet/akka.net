@@ -253,20 +253,33 @@ namespace Akka.TestKit
             if (maxDuration.IsZero())
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue. Will not wait.");
-                var didTake = _testState.Queue.TryTake(out var item, cancellationToken);
+                var didTake = _testState.Queue.Reader.TryRead(out var item);
                 take = (didTake, item);
             }
             else if (maxDuration.IsPositiveFinite())
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue within {0}", maxDuration);
-                take = await _testState.Queue.TryTakeAsync((int)maxDuration.TotalMilliseconds, cancellationToken)
-                    ;
+                var delayTask = Task.Delay(maxDuration, cancellationToken);
+                var readTask = _testState.Queue.Reader.WaitToReadAsync(cancellationToken).AsTask();
+                var completedTask = await Task.WhenAny(readTask, delayTask);
+
+                if (completedTask == readTask && readTask.Result)
+                {
+                    // Data is available within the timeout.
+                    var didTake = _testState.Queue.Reader.TryRead(out var item);
+                    take = (didTake, item);
+                }
+                else
+                {
+                    // Timeout occurred before data was available.
+                    take = (false, null);
+                }
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
                 Log.Warning("Trying to receive message from TestActor queue with infinite timeout! Will wait indefinitely!");
-                take = await _testState.Queue.TryTakeAsync(-1, cancellationToken)
-                    ;
+                var readItem = await _testState.Queue.Reader.ReadAsync(cancellationToken);
+                take = (true, readItem);
             }
             else
             {
@@ -276,8 +289,7 @@ namespace Akka.TestKit
             }
 
             _testState.LastWasNoMsg = false;
-            if (take.env == null)
-                take.env = NullMessageEnvelope.Instance;
+            take.env ??= NullMessageEnvelope.Instance;
 
             _testState.LastMessage = take.env;
 
@@ -383,20 +395,34 @@ namespace Akka.TestKit
             if (maxDuration.IsZero())
             {
                 ConditionalLog(shouldLog, "Trying to peek message from TestActor queue. Will not wait.");
-                var didPeek = _testState.Queue.TryPeek(out var item);
+                var didPeek = _testState.Queue.Reader.TryPeek(out var item);
                 peek = (didPeek, item);
             }
             else if (maxDuration.IsPositiveFinite())
             {
                 ConditionalLog(shouldLog, "Trying to peek message from TestActor queue within {0}", maxDuration);
-                peek = await _testState.Queue.TryPeekAsync((int)maxDuration.TotalMilliseconds, cancellationToken)
-                    ;
+                var delayTask = Task.Delay(maxDuration, cancellationToken);
+                var readTask = _testState.Queue.Reader.WaitToReadAsync(cancellationToken).AsTask();
+                var completedTask = await Task.WhenAny(readTask, delayTask);
+
+                if (completedTask == readTask && readTask.Result)
+                {
+                    // Data is available within the timeout.
+                    var didTake = _testState.Queue.Reader.TryPeek(out var item);
+                    peek = (didTake, item);
+                }
+                else
+                {
+                    // Timeout occurred before data was available.
+                    peek = (false, default);
+                }
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
                 Log.Warning("Trying to peek message from TestActor queue with infinite timeout! Will wait indefinitely!");
-                peek = await _testState.Queue.TryPeekAsync(-1, cancellationToken)
-                    ;
+                await _testState.Queue.Reader.WaitToReadAsync(cancellationToken);
+                var didPeek = _testState.Queue.Reader.TryPeek(out var item);
+                peek = (didPeek, item);
             }
             else
             {
@@ -554,8 +580,7 @@ namespace Akka.TestKit
                 cancellationToken.ThrowIfCancellationRequested();
                 
                 // Peek the message on the front of the queue
-                var (success, envelope) = await TryPeekOneAsync((stop - Now).Min(idleValue), cancellationToken)
-                    ;
+                var (success, envelope) = await TryPeekOneAsync((stop - Now).Min(idleValue), cancellationToken);
                 if (!success)
                 {
                     _testState.LastMessage = msg;
@@ -568,8 +593,7 @@ namespace Akka.TestKit
                 if (result != null)
                 {
                     // This should happen immediately (zero timespan). Something is wrong if this fails.
-                    var (receiveSuccess, receiveEnvelope) = await InternalTryReceiveOneAsync(TimeSpan.Zero, true, cancellationToken)
-                        ;
+                    var (receiveSuccess, receiveEnvelope) = await InternalTryReceiveOneAsync(TimeSpan.Zero, true, cancellationToken);
                     if (!receiveSuccess)
                         throw new InvalidOperationException("[RACY] Could not dequeue an item from test queue.");
 
@@ -697,7 +721,7 @@ namespace Akka.TestKit
         private void PopPeekedEnvelope(MessageEnvelope envelope)
         {
             // This should happen immediately (zero timespan). Something is wrong if this fails.
-            var success = _testState.Queue.TryTake(out var receivedEnvelope);
+            var success = _testState.Queue.Reader.TryRead(out var receivedEnvelope);
             if (!success)
                 throw new InvalidOperationException("[RACY] Could not dequeue an item from test queue.");
 

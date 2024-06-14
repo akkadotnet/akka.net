@@ -34,6 +34,7 @@ namespace Akka.Actor
     public sealed class HashedWheelTimerScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider, IDisposable
     {
         private readonly TimeSpan _shutdownTimeout;
+        private readonly TimeSpan _timerDuration;
         private readonly long _tickDuration; // a timespan expressed as ticks
 
         static HashedWheelTimerScheduler()
@@ -65,17 +66,17 @@ namespace Akka.Actor
                     "Cannot be greater than 2^30.");
             // ReSharper restore NotResolvedInText
             
-            var tickDuration = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration", TimeSpan.Zero);
-            if (tickDuration.TotalMilliseconds < 10.0d)
+            _timerDuration = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration", TimeSpan.Zero);
+            if (_timerDuration.TotalMilliseconds < 10.0d)
             {
                 // ReSharper disable NotResolvedInText
-                throw new ArgumentOutOfRangeException("akka.scheduler.tick-duration", tickDuration.TotalMilliseconds,
+                throw new ArgumentOutOfRangeException("akka.scheduler.tick-duration", _timerDuration.TotalMilliseconds,
                     "minimum supported akka.scheduler.tick-duration on Windows is 10ms");
                 // ReSharper restore NotResolvedInText
             }
 
             // convert tick-duration to ticks
-            _tickDuration = tickDuration.Ticks;
+            _tickDuration = _timerDuration.Ticks;
 
             // Normalize ticks per wheel to power of two and create the wheel
             _wheel = CreateWheel(ticksPerWheel, log);
@@ -96,7 +97,11 @@ namespace Akka.Actor
         private long _startTime;
         private long _tick;
         private readonly int _mask;
+#if NET6_0_OR_GREATER
+        private readonly TaskCompletionSource _workerInitialized = new();
+#else
         private readonly CountdownEvent _workerInitialized = new(1);
+#endif
         private readonly ConcurrentQueue<SchedulerRegistration> _registrations = new();
         private readonly Bucket[] _wheel;
 
@@ -142,33 +147,31 @@ namespace Akka.Actor
 
         private void Start()
         {
-            if (_workerState == WORKER_STATE_STARTED)
+            // only read the worker state once so it can't be a moving target for else-branch
+            var workerStateRead = _workerState;
+            if (workerStateRead == WORKER_STATE_STARTED)
             {
-            } // do nothing
-            else if (_workerState == WORKER_STATE_INIT)
+                // do nothing
+            }
+            else if (workerStateRead == WORKER_STATE_INIT)
             {
-                if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
-                    WORKER_STATE_INIT)
+                if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) == WORKER_STATE_INIT)
                 {
-                    var t = TimeSpan.FromTicks(_tickDuration);
-                    _timer = new PeriodicTimer(t);
-                    
-                    Task.Run(() => RunAsync(_cts.Token)); // start the clock
+                    _timer ??= new PeriodicTimer(_timerDuration);
+                    Task.Run(() => RunAsync(_cts.Token).ConfigureAwait(false)); // start the clock
                 }
             }
-            else if (_workerState == WORKER_STATE_SHUTDOWN)
+            else if (workerStateRead == WORKER_STATE_SHUTDOWN)
             {
                 throw new SchedulerException("cannot enqueue after timer shutdown");
             }
             else
             {
-                throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
+                throw new InvalidOperationException($"Worker in invalid state: {workerStateRead}");
             }
-                    
-            while (_startTime == 0)
-            {
-                _workerInitialized.Wait();
-            }
+
+            if(_startTime == 0)
+                _workerInitialized.Task.Wait();
         }
 
         private async Task RunAsync(CancellationToken token)
@@ -184,7 +187,7 @@ namespace Akka.Actor
                 _startTime = 1;
             }
 
-            _workerInitialized.Signal();
+            _workerInitialized.SetResult();
 
             try
             {
@@ -248,7 +251,7 @@ namespace Akka.Actor
             if (_workerState == WORKER_STATE_STARTED) { } // do nothing
             else if (_workerState == WORKER_STATE_INIT)
             {
-                _worker = new Thread(Run) { IsBackground = true };
+                _worker ??= new Thread(Run) { IsBackground = true };
                 if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
                     WORKER_STATE_INIT)
                 {

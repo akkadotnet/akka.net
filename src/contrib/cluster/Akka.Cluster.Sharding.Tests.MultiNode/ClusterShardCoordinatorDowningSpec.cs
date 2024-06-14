@@ -143,25 +143,28 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            switch (message)
-            {
-                case Ping p:
-                    return (p.Id, message);
-            }
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    Ping p => p.Id,
+                    _ => null
+                };
 
-        internal ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case Ping p:
-                    return p.Id[0].ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    Ping p => p.Id[0].ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => entityId[0].ToString();
+        }
 
         private readonly Lazy<IActorRef> _region;
 
@@ -177,8 +180,7 @@ namespace Akka.Cluster.Sharding.Tests
               Sys,
               typeName: "Entity",
               entityProps: Props.Create(() => new Entity()),
-              extractEntityId: extractEntityId,
-              extractShardId: extractShardId);
+              messageExtractor: new MessageExtractor());
         }
 
         #endregion

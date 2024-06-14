@@ -42,9 +42,20 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private readonly ExtractEntityId _extractEntityId = message => (message.ToString(), message);
+        private sealed class MessageExtractor: IMessageExtractor
+        {
+            public string EntityId(object message)
+                => message.ToString();
 
-        private readonly ExtractShardId _extractShard = message => (MurmurHash.StringHash(message.ToString())).ToString();
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => MurmurHash.StringHash(message.ToString()).ToString();
+
+            public string ShardId(string entityId, object messageHint = null)
+                => MurmurHash.StringHash(entityId).ToString();
+        }
 
         private static Config SpecConfig =>
             ConfigurationFactory.ParseString(@"
@@ -68,20 +79,17 @@ namespace Akka.Cluster.Sharding.Tests
                 "type1",
                 props,
                 ClusterShardingSettings.Create(_sys1),
-                _extractEntityId,
-                _extractShard);
+                new MessageExtractor());
             _region2 = ClusterSharding.Get(_sys2).Start(
                 "type1",
                 props,
                 ClusterShardingSettings.Create(_sys2),
-                _extractEntityId,
-                _extractShard);
+                new MessageExtractor());
             _region3 = ClusterSharding.Get(_sys3).Start(
                 "type1",
                 props,
                 ClusterShardingSettings.Create(_sys3),
-                _extractEntityId,
-                _extractShard);
+                new MessageExtractor());
 
             _probe1 = CreateTestProbe(_sys1);
             _probe2 = CreateTestProbe(_sys2);
