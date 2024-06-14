@@ -55,10 +55,6 @@ jobs:
           contents: '**'
           targetFolder: $(Build.ArtifactStagingDirectory)
           continueOnError: boolean  # 'true' if future steps should run even if this step fails; defaults to 'false'
-      - task: PublishBuildArtifacts@1
-        inputs:
-          pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-          artifactName: ${{ parameters.artifactName }}
 
       - task: CopyFiles@2
         inputs:
@@ -66,12 +62,11 @@ jobs:
           Contents: '**/*.received.*'
           TargetFolder: '$(Build.ArtifactStagingDirectory)/verify'
         displayName: 'Copy .received. files to artifact staging directory'
-      
+
       - task: PublishBuildArtifacts@1
         inputs:
-          PathtoPublish: '$(Build.ArtifactStagingDirectory)/verify'
-          ArtifactName: '${{ parameters.artifactName }}-verify'
-        displayName: 'Publish Verify Artifacts'
+          pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+          artifactName: ${{ parameters.artifactName }}
 
       - script: 'echo 1>&2'
         failOnStderr: true
