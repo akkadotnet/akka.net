@@ -274,7 +274,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 
         private IActorRef NewGroupActor(string encodedGroup)
         {
-            var g = Context.ActorOf(Props.Create(() => new Group(EmptyTimeToLive, _routingLogic, SendToDeadLettersWhenNoSubscribers)), encodedGroup);
+            var g = Context.ActorOf(
+                Props.Create(() => new Group(EmptyTimeToLive, _routingLogic, SendToDeadLettersWhenNoSubscribers))
+                    .WithDeploy(Deploy.Local),
+                encodedGroup);
             Context.Watch(g);
             Context.Parent.Tell(new RegisterTopic(g));
             return g;

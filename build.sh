@@ -78,29 +78,6 @@ if [ ! -f "$FAKE_EXE" ]; then
 fi
 
 ###########################################################################
-# INSTALL PROTOC
-###########################################################################
-
-if [[ $(uname -s) == Darwin* ]]; then
-    PROTOC_EXE="src/packages/Google.Protobuf.Tools/tools/macosx_x64/protoc"
-else
-    PROTOC_EXE="src/packages/Google.Protobuf.Tools/tools/linux_x64/protoc"
-fi
-
-if [ ! -f "$PROTOC_EXE" ]; then
-    mono "$NUGET_EXE" install Google.Protobuf.Tools -ExcludeVersion -Version $PROTOBUF_VERSION -OutputDirectory "src/packages"
-    if [ $? -ne 0 ]; then
-        echo "An error occured while installing protobuf"
-        exit 1
-    fi
-    chmod a+x $PROTOC_EXE
-    if [ $? -ne 0 ]; then
-        echo "An error occured while making protoc executable"
-        exit 1
-    fi
-fi
-
-###########################################################################
 # INSTALL Incrementalist
 ###########################################################################
 if [ ! -f "$INCREMENTALIST_EXE" ]; then

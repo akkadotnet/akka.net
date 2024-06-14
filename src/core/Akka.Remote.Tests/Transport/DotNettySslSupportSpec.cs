@@ -164,7 +164,7 @@ namespace Akka.Remote.Tests.Transport
         private string Thumbprint { get; set; }
 
 
-
+#if !NET471
         [Fact]
         public async Task Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
         {
@@ -181,6 +181,7 @@ namespace Akka.Remote.Tests.Transport
                 await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
             }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
         }
+#endif
 
         [LocalFact(SkipLocal = "Racy in Azure AzDo CI/CD")]
         public async Task Secure_transport_should_be_possible_between_systems_using_thumbprint()
@@ -221,6 +222,7 @@ namespace Akka.Remote.Tests.Transport
             });
         }
 
+        #if !NET471
         [Fact]
         public async Task If_EnableSsl_configuration_is_true_but_not_valid_certificate_is_provided_than_ArgumentNullException_should_be_thrown()
         {
@@ -236,6 +238,7 @@ namespace Akka.Remote.Tests.Transport
             Assert.NotNull(realException);
             Assert.Equal("Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`) (Parameter 'certificatePath')", realException.Message);
         }
+        #endif
 
         [Fact]
         public async Task If_EnableSsl_configuration_is_true_but_not_valid_certificate_password_is_provided_than_WindowsCryptographicException_should_be_thrown()

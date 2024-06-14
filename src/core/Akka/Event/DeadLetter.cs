@@ -83,6 +83,7 @@ namespace Akka.Event
         /// </exception>
         public DeadLetter(object message, IActorRef sender, IActorRef recipient) : base(message, sender, recipient)
         {
+            System.Diagnostics.Debug.Assert(message is not DeadLetter, "DeadLetter inside DeadLetter");
             if (sender == null) throw new ArgumentNullException(nameof(sender), "DeadLetter sender may not be null");
             if (recipient == null) throw new ArgumentNullException(nameof(recipient), "DeadLetter recipient may not be null");
         }

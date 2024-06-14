@@ -574,6 +574,17 @@ namespace Akka.Serialization
             AddSerializationMap(type, serializer);
             return serializer;
         }
+        
+        /// <summary>
+        /// Deserializes an <see cref="IActorRef"/> from its string representation.
+        /// </summary>
+        /// <param name="path">The serialized path of the actor represented as a string.</param>
+        /// <returns>The <see cref="IActorRef"/>. If no such actor exists, it will be (equivalent to) a dead letter reference.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IActorRef DeserializeActorRef(string path)
+        {
+            return System.Provider.ResolveActorRef(path);
+        }
 
         /// <summary>
         /// The serialized path of an actorRef, based on the current transport serialization information.
@@ -589,7 +600,7 @@ namespace Akka.Serialization
         public static string SerializedActorPath(IActorRef actorRef)
         {
             if (Equals(actorRef, ActorRefs.NoSender))
-                return String.Empty;
+                return string.Empty;
 
             var path = actorRef.Path;
             ExtendedActorSystem originalSystem = null;

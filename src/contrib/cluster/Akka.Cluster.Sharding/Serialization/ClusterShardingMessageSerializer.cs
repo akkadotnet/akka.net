@@ -699,7 +699,7 @@ namespace Akka.Cluster.Sharding.Serialization
 
         private IActorRef ResolveActorRef(string path)
         {
-            return system.Provider.ResolveActorRef(path);
+            return system.Serialization.DeserializeActorRef(path);
         }
     }
 }

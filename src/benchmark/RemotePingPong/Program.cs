@@ -70,7 +70,14 @@ namespace RemotePingPong
 
         private static async Task Main(params string[] args)
         {
-            Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
+            try
+            {
+                Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
+            }
+            catch (Exception ex)
+            {
+                await Console.Error.WriteLineAsync($"Attempted to elevate process priority, but failed due to {ex.Message} - carrying on at normal process priority.");
+            }
             if (args.Length == 0 || !uint.TryParse(args[0], out var timesToRun))
             {
                 timesToRun = 1u;
