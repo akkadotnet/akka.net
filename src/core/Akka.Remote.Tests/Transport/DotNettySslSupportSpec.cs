@@ -162,9 +162,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         private string Thumbprint { get; set; }
-
-
-#if !NET471
+        
         [Fact]
         public async Task Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
         {
@@ -181,7 +179,6 @@ namespace Akka.Remote.Tests.Transport
                 await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
             }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
         }
-#endif
 
         [LocalFact(SkipLocal = "Racy in Azure AzDo CI/CD")]
         public async Task Secure_transport_should_be_possible_between_systems_using_thumbprint()
