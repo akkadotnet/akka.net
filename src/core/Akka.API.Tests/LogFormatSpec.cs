@@ -6,10 +6,15 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Actor.Setup;
+using Akka.Configuration;
 using Akka.Event;
 using VerifyXunit;
 using Xunit;
@@ -23,8 +28,36 @@ namespace Akka.API.Tests;
 /// </summary>
 public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
 {
-    public DefaultLogFormatSpec() : base("akka.loglevel = DEBUG")
+    public DefaultLogFormatSpec() : base(CustomLoggerSetup())
     {
+        _logger = (CustomLogger)Sys.Settings.StdoutLogger;
+    }
+    
+    private readonly CustomLogger _logger;
+    
+    public class CustomLogger : StandardOutLogger
+    {
+        protected override void Log(object message)
+        {
+            base.Log(message); // log first, just so we can be sure it's hit STDOUT
+            if (message is LogEvent e)
+            {
+                _events.Add(e);
+            }
+           
+        }
+            
+        private readonly ConcurrentBag<LogEvent> _events = new();
+        public IReadOnlyCollection<LogEvent> Events => _events;
+    }
+    
+    public static ActorSystemSetup CustomLoggerSetup()
+    {
+        var hocon = @$"
+            akka.loglevel = DEBUG
+            akka.stdout-logger-class = ""{typeof(CustomLogger).AssemblyQualifiedName}""";
+        var bootstrapSetup = BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString(hocon));
+        return ActorSystemSetup.Create(bootstrapSetup);
     }
 
     public class OutputRedirector : IDisposable
@@ -51,8 +84,6 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
     {
         // arrange
         var filePath = Path.GetTempFileName();
-        var probe = CreateTestProbe();
-        Sys.EventStream.Subscribe(probe.Ref, typeof(LogEvent));
 
         // act
         using (new OutputRedirector(filePath))
@@ -63,7 +94,10 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
             Sys.Log.Error("This is a test {0}", 1);
 
             // force all logs to be received
-            await probe.ReceiveNAsync(4).ToListAsync();
+            await AwaitConditionAsync(() =>
+            {
+                return _logger.Events.Count(c => c.Message.ToString()!.Contains("This is a test")) == 4;
+            });
         }
 
         // assert
