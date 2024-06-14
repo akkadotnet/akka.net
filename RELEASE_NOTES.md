@@ -1,3 +1,7 @@
+#### 1.5.26 June 14th 2024 ####
+
+*Placeholder for nightlies*
+
 #### 1.5.25 June 14th 2024 ####
 
 Akka.NET v1.5.25 includes a critical bug fix for logging and some other minor fixes.
