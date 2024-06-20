@@ -42,6 +42,8 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
             clusterClientSettings.HeartbeatInterval.Should().Be(2.Seconds());
             clusterClientSettings.AcceptableHeartbeatPause.Should().Be(13.Seconds());
             clusterClientSettings.BufferSize.Should().Be(1000);
+            clusterClientSettings.UseInitialContactDiscovery.Should().BeFalse();
+            clusterClientSettings.DiscoverySettings.Should().Be(ClusterClientDiscoverySettings.Empty);
         }
 
         [Theory]

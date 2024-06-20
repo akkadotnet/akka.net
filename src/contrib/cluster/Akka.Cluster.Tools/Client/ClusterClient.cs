@@ -10,10 +10,12 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Discovery;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util.Internal;
 
+#nullable enable
 namespace Akka.Cluster.Tools.Client;
 
 /// <summary>
@@ -74,14 +76,14 @@ public sealed class ClusterClient : ActorBase
             LocalAffinity = localAffinity;
         }
 
-        public bool Equals(Send other)
+        public bool Equals(Send? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return Path == other.Path && Equals(Message, other.Message) && LocalAffinity == other.LocalAffinity;
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return ReferenceEquals(this, obj) || obj is Send other && Equals(other);
         }
@@ -124,14 +126,14 @@ public sealed class ClusterClient : ActorBase
             Message = message;
         }
 
-        public bool Equals(SendToAll other)
+        public bool Equals(SendToAll? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return Path == other.Path && Equals(Message, other.Message);
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return ReferenceEquals(this, obj) || obj is SendToAll other && Equals(other);
         }
@@ -172,14 +174,14 @@ public sealed class ClusterClient : ActorBase
             Message = message;
         }
 
-        public bool Equals(Publish other)
+        public bool Equals(Publish? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return Topic == other.Topic && Equals(Message, other.Message);
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return ReferenceEquals(this, obj) || obj is Publish other && Equals(other);
         }
@@ -205,9 +207,9 @@ public sealed class ClusterClient : ActorBase
         public static RefreshContactsTick Instance { get; } = new();
         private RefreshContactsTick() { }
             
-        public bool Equals(RefreshContactsTick other) => other != null;
+        public bool Equals(RefreshContactsTick? other) => other != null;
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return ReferenceEquals(this, obj) || obj is RefreshContactsTick;
         }
@@ -227,9 +229,9 @@ public sealed class ClusterClient : ActorBase
         public static HeartbeatTick Instance { get; } = new();
         private HeartbeatTick() { }
 
-        public bool Equals(HeartbeatTick other) => other != null;
+        public bool Equals(HeartbeatTick? other) => other != null;
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return ReferenceEquals(this, obj) || obj is HeartbeatTick;
         }
@@ -249,9 +251,9 @@ public sealed class ClusterClient : ActorBase
         public static ReconnectTimeout Instance { get; } = new();
         private ReconnectTimeout() { }
 
-        public bool Equals(ReconnectTimeout other) => other != null;
+        public bool Equals(ReconnectTimeout? other) => other != null;
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return ReferenceEquals(this, obj) || obj is ReconnectTimeout;
         }
@@ -259,8 +261,55 @@ public sealed class ClusterClient : ActorBase
         public override int GetHashCode() => 0;
     }
 
+    #region Discovery messages
+
+    internal sealed class DiscoverTick: IEquatable<DiscoverTick>
+    {
+        public static readonly DiscoverTick Instance = new();
+
+        private DiscoverTick() { }
+        public bool Equals(DiscoverTick? other) => other is not null;
+        public override bool Equals(object? obj) => ReferenceEquals(this, obj) || obj is DiscoverTick;
+        public override int GetHashCode() => 0;
+    }
+
+    internal sealed record DiscoveryFailure(Exception Cause);
+
+    #endregion
+    
     #endregion
 
+    private sealed class Contact: IEquatable<Contact>
+    {
+        public ActorPath Path { get; }
+        public ActorSelection Selection { get; }
+        public string Id { get; }
+        
+        public Contact(ActorPath path, ActorSelection selection)
+        {
+            Path = path;
+            Selection = selection;
+            Id = path.Address.ToString();
+        }
+
+        public bool Equals(Contact? other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Id == other.Id;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return ReferenceEquals(this, obj) || obj is Contact other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode();
+        }
+    }
+    
     /// <summary>
     /// Factory method for <see cref="ClusterClient"/> <see cref="Actor.Props"/>.
     /// </summary>
@@ -277,33 +326,35 @@ public sealed class ClusterClient : ActorBase
         return Actor.Props.Create(() => new ClusterClient(settings)).WithDeploy(Deploy.Local);
     }
 
-    private ILoggingAdapter _log = Context.GetLogger();
+    private readonly ILoggingAdapter _log = Context.GetLogger();
+    private readonly EventStream _eventStream = Context.System.EventStream;
     private readonly ClusterClientSettings _settings;
     private readonly DeadlineFailureDetector _failureDetector;
-    private ImmutableHashSet<ActorPath> _contactPaths;
-    private readonly ActorSelection[] _initialContactsSelections;
-    private ActorSelection[] _contacts;
-    private ImmutableHashSet<ActorPath> _contactPathsPublished;
+    private ImmutableHashSet<Contact> _initialContactsSelections;
+    private ImmutableHashSet<Contact> _contacts;
+    private ImmutableHashSet<Contact> _contactsPublished;
     private ImmutableList<IActorRef> _subscribers;
     private readonly ICancelable _heartbeatTask;
-    private ICancelable _refreshContactsCancelable;
+    private ICancelable? _refreshContactsCancelable;
     private readonly Queue<(object, IActorRef)> _buffer;
+
+    private readonly ClusterClientDiscoverySettings _discoverySettings;
+    private readonly ServiceDiscovery? _serviceDiscovery;
+    private readonly Lookup? _lookup;
+    private readonly TimeSpan _discoveryTimeout = TimeSpan.Zero;
+    private ICancelable? _discoveryCancelable;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClusterClient" /> class.
     /// </summary>
     /// <param name="settings">The settings used to configure the client.</param>
     /// <exception cref="ArgumentException">
-    /// This exception is thrown when the settings contains no initial contacts.
+    /// This exception is thrown when the settings contain no initial contacts and initial contact discovery was not used.
     /// </exception>
     public ClusterClient(ClusterClientSettings settings)
     {
-        if (settings.InitialContacts.Count == 0)
-        {
-            throw new ArgumentException("Initial contacts for cluster client cannot be empty");
-        }
-
         _settings = settings;
+        _discoverySettings = settings.DiscoverySettings;
 
         if (_settings.UseLegacySerialization)
         {
@@ -312,13 +363,53 @@ public sealed class ClusterClient : ActorBase
             
         _failureDetector = new DeadlineFailureDetector(_settings.AcceptableHeartbeatPause, _settings.HeartbeatInterval);
 
-        _contactPaths = settings.InitialContacts.ToImmutableHashSet();
-        _initialContactsSelections = _contactPaths.Select(Context.ActorSelection).ToArray();
-        _contacts = _initialContactsSelections;
+        if (_settings.UseInitialContactDiscovery)
+        {
+            // UseInitialContactDiscovery was set, we will use it to discover potential contacts
+            if(_settings.InitialContacts.Count > 0)
+                _log.Warning("Initial contacts is being ignored because ClusterClient contacts discovery is being used");
 
-        SendGetContacts();
+            var discoveryMethod = _discoverySettings.DiscoveryMethod;
+            if(string.IsNullOrWhiteSpace(discoveryMethod) || discoveryMethod == "<method>")
+                discoveryMethod = Context.System.Settings.Config.GetString("akka.discovery.method");
+            if (string.IsNullOrWhiteSpace(discoveryMethod) || discoveryMethod == "<method>")
+            {
+                _log.Warning(
+                    "No default initial contacts discovery implementation configured in both\n" +
+                    "`akka.cluster.client.discovery.method` and `akka.discovery.method`.\n" +
+                    "Make sure to configure this setting to your preferred implementation such as 'config'\n" +
+                    "in your application.conf (from the akka-discovery module). Falling back to default config\n" +
+                    "based discovery method");
+                discoveryMethod = "config";
+            }
 
-        _contactPathsPublished = _contactPaths;
+            _lookup = new Lookup(_discoverySettings.ServiceName, _discoverySettings.PortName);
+            _serviceDiscovery = Discovery.Discovery.Get(Context.System)
+                .LoadServiceDiscovery(discoveryMethod);
+            _discoveryTimeout = _discoverySettings.DiscoveryTimeout;
+            
+            _initialContactsSelections = ImmutableHashSet<Contact>.Empty;
+            _contacts = ImmutableHashSet<Contact>.Empty;
+            _contactsPublished = ImmutableHashSet<Contact>.Empty;
+            
+            Self.Tell(DiscoverTick.Instance);
+            Rediscover();
+        }
+        else
+        {
+            // UseInitialContactDiscovery was NOT set, use the InitialContacts to retrieve receptionist contacts
+            if (_settings.InitialContacts.Count == 0)
+                throw new ArgumentException("Initial contacts for cluster client cannot be empty if ClusterClient contacts discovery is not being used.");
+
+            _initialContactsSelections = settings.InitialContacts
+                .Select(ap => new Contact(ap, Context.ActorSelection(ap))).ToImmutableHashSet();
+            _contacts = _initialContactsSelections;
+            _contactsPublished = _contacts;
+
+            SendGetContacts();
+            Become(Establishing);
+        }
+
         _subscribers = ImmutableList<IActorRef>.Empty;
 
         _heartbeatTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
@@ -328,7 +419,6 @@ public sealed class ClusterClient : ActorBase
             HeartbeatTick.Instance,
             Self);
 
-        _refreshContactsCancelable = null;
         ScheduleRefreshContactsTick(settings.EstablishingGetContactsInterval);
         Self.Tell(RefreshContactsTick.Instance);
 
@@ -351,19 +441,26 @@ public sealed class ClusterClient : ActorBase
             Self);
     }
 
+    protected override void PreStart()
+    {
+        base.PreStart();
+        _eventStream.Subscribe(Self, typeof(DeadLetter));
+    }
+
     /// <summary>
     /// TBD
     /// </summary>
     protected override void PostStop()
     {
         base.PostStop();
+        _eventStream.Unsubscribe(Self);
         _heartbeatTask.Cancel();
 
-        if (_refreshContactsCancelable != null)
-        {
-            _refreshContactsCancelable.Cancel();
-            _refreshContactsCancelable = null;
-        }
+        _refreshContactsCancelable?.Cancel();
+        _refreshContactsCancelable = null;
+        
+        _discoveryCancelable?.Cancel();
+        _discoveryCancelable = null;
     }
 
     /// <summary>
@@ -373,12 +470,103 @@ public sealed class ClusterClient : ActorBase
     /// <returns>TBD</returns>
     protected override bool Receive(object message)
     {
-        return Establishing(message);
+        throw new Exception("Should never reach this code");
+    }
+
+    private ActorPath ResolvedTargetToReceptionistActorPath(ServiceDiscovery.ResolvedTarget target)
+    {
+        var actorSystemName = string.IsNullOrWhiteSpace(_discoverySettings.ActorSystemName) 
+            ? Context.System.Name : _discoverySettings.ActorSystemName;
+        var networkAddress = string.IsNullOrWhiteSpace(target.Host) ? target.Address.ToString() : target.Host;
+        var port = target.Port.HasValue ? $":{target.Port}" : string.Empty;
+        return ActorPath.Parse(
+            $"akka.tcp://{ actorSystemName }@{ networkAddress }{ port }/system/{ _discoverySettings.ReceptionistName }"); 
+    }
+    
+    private bool Discovering(object message)
+    {
+        switch (message)
+        {
+            case DiscoverTick:
+                Rediscover();
+                return true;
+            
+            case ServiceDiscovery.Resolved resolved:
+                if (resolved.Addresses.Count == 0)
+                {
+                    // discovery didn't find any contacts, retry discovery
+                    _discoveryCancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(
+                        delay: _settings.DiscoverySettings.DiscoveryRetryInterval, 
+                        receiver: Self,
+                        message: DiscoverTick.Instance,
+                        sender: Self);
+                    return true;
+                }
+
+                _contacts = resolved.Addresses.Select(address => {
+                        var path = ResolvedTargetToReceptionistActorPath(address);
+                        return new Contact(path, Context.ActorSelection(path));
+                    }).ToImmutableHashSet();
+                
+                _log.Info(_contacts.ToString());
+                
+                Reestablish();
+                return true;
+            
+            case DiscoveryFailure fail:
+                _log.Warning(fail.Cause, "Cluster.Client contact point service discovery phase failed, will try again.");
+                _discoveryCancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(
+                    delay: _settings.DiscoverySettings.DiscoveryRetryInterval, 
+                    receiver: Self,
+                    message: DiscoverTick.Instance,
+                    sender: Self);
+                return true;
+            
+            case DeadLetter:
+                // ignored, we're re-discovering
+                return true;
+            
+            case ClusterReceptionist.Contacts:
+                // ignored, we're re-discovering
+                return true;
+                
+            case HeartbeatTick:
+                // keep the failure detector happy while we're discovering
+                _failureDetector.HeartBeat();
+                return true;
+                
+            case RefreshContactsTick:
+                // no-op
+                return true;
+                
+            case Send send:
+                Buffer(new PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity));
+                return true;
+                
+            case SendToAll sendToAll:
+                Buffer(new PublishSubscribe.SendToAll(sendToAll.Path, sendToAll.Message));
+                return true;
+                
+            case Publish publish:
+                Buffer(new PublishSubscribe.Publish(publish.Topic, publish.Message));
+                return true;
+                
+            case ReconnectTimeout:
+                // we're re-discovering, so this is fine.
+                return true;
+                
+            case ClusterReceptionist.ReceptionistShutdown:
+                // ok, we're re-discovering and haven't chosen a new receptionist yet
+                return true;
+                
+            default:
+                return ContactPointMessages(message);
+        }
     }
 
     private bool Establishing(object message)
     {
-        ICancelable connectTimerCancelable = null;
+        ICancelable? connectTimerCancelable = null;
         if (_settings.ReconnectTimeout.HasValue)
         {
             connectTimerCancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(
@@ -390,16 +578,16 @@ public sealed class ClusterClient : ActorBase
 
         switch (message)
         {
+            case DeadLetter { Message: ClusterReceptionist.GetContacts } dl:
+                PruneContacts(dl.Recipient.Path.Address.ToString());
+                return true;
+            
             case ClusterReceptionist.Contacts contacts:
             {
-                if (contacts.ContactPoints.Count > 0)
-                {
-                    _contactPaths = contacts.ContactPoints.Select(ActorPath.Parse).ToImmutableHashSet();
-                    _contacts = _contactPaths.Select(Context.ActorSelection).ToArray();
-                    _contacts.ForEach(c => c.Tell(new Identify(null)));
-                }
+                if (contacts.ContactPoints.Count == 0)
+                    return true;
 
-                PublishContactPoints();
+                MergeContacts(contacts);
                 return true;
             }
                 
@@ -419,7 +607,8 @@ public sealed class ClusterClient : ActorBase
                 }
                 else
                 {
-                    // ok, use another instead
+                    // prune out actors that failed to be identified
+                    PruneContacts((string) actorIdentify.MessageId);
                 }
 
                 return true;
@@ -496,18 +685,19 @@ public sealed class ClusterClient : ActorBase
                     
                 case ClusterReceptionist.Contacts contacts:
                 {
+                    if (contacts.ContactPoints.Count == 0)
+                        return true;
+                    
                     // refresh of contacts
-                    if (contacts.ContactPoints.Count > 0)
-                    {
-                        _contactPaths = contacts.ContactPoints.Select(ActorPath.Parse).ToImmutableHashSet();
-                        _contacts = _contactPaths.Select(Context.ActorSelection).ToArray();
-                    }
-                    PublishContactPoints();
+                    MergeContacts(contacts);
                     return true;
                 }
                     
-                case ActorIdentity:
-                    // ok, from previous establish, already handled
+                case ActorIdentity actorIdentify:
+                    // prune out actors that failed to be identified
+                    if (actorIdentify.Subject is null)
+                        PruneContacts((string) actorIdentify.MessageId);
+
                     return true;
                     
                 case ClusterReceptionist.ReceptionistShutdown:
@@ -515,6 +705,7 @@ public sealed class ClusterClient : ActorBase
                     if (receptionist.Equals(Sender))
                     {
                         _log.Info("Receptionist [{0}] is shutting down, reestablishing connection", receptionist);
+                        PruneContacts(Sender.Path.Address.ToString());
                         Reestablish();
                     }
 
@@ -527,6 +718,44 @@ public sealed class ClusterClient : ActorBase
         };
     }
 
+    private void MergeContacts(ClusterReceptionist.Contacts contacts)
+    {
+        var receivedContacts = contacts.ContactPoints.Select(cp =>
+        {
+            var path = ActorPath.Parse(cp);
+            return new Contact(path, Context.ActorSelection(path));
+        }).ToArray();
+        var newContacts = _contacts.Except(receivedContacts);
+        _contacts = _contacts.Union(receivedContacts);
+        
+        newContacts.ForEach(c => c.Selection.Tell(new Identify(c.Id)));
+
+        PublishContactPoints();
+    }
+    
+    private void PruneContacts(string id)
+    {
+        var foundItem = _initialContactsSelections.FirstOrDefault(s => s.Id == id);
+        if (foundItem is not null)
+            _initialContactsSelections = _initialContactsSelections.Remove(foundItem);
+        
+        foundItem = _contacts.FirstOrDefault(s => s.Id == id);
+        if (foundItem is not null)
+            _contacts = _contacts.Remove(foundItem);
+                
+        PublishContactPoints();
+        
+        if(_initialContactsSelections.Count == 0 && _contacts.Count == 0)
+            Rediscover();
+    }
+    
+    private void Rediscover()
+    {
+        Become(Discovering);
+        _serviceDiscovery!.Lookup(_lookup, _discoveryTimeout)
+            .PipeTo(Self, failure: cause => new DiscoveryFailure(cause));
+    }
+    
     private void Reestablish()
     {
         SendGetContacts();
@@ -542,7 +771,7 @@ public sealed class ClusterClient : ActorBase
             case SubscribeContactPoints:
             {
                 var subscriber = Sender;
-                subscriber.Tell(new ContactPoints(_contactPaths));
+                subscriber.Tell(new ContactPoints(_contacts.Select(c => c.Path).ToImmutableHashSet()));
                 _subscribers = _subscribers.Add(subscriber);
                 Context.Watch(subscriber);
                 return true;
@@ -560,7 +789,7 @@ public sealed class ClusterClient : ActorBase
                 return true;
                 
             case GetContactPoints:
-                Sender.Tell(new ContactPoints(_contactPaths));
+                Sender.Tell(new ContactPoints(_contacts.Select(c => c.Path).ToImmutableHashSet()));
                 return true;
                 
             default:
@@ -570,17 +799,23 @@ public sealed class ClusterClient : ActorBase
 
     private void SendGetContacts()
     {
-        var sendTo = _contacts.Length switch
+        var sendTo = _contacts.Count switch
         {
             0 => _initialContactsSelections,
-            1 => _initialContactsSelections.Union(_contacts).ToArray(),
+            1 => _initialContactsSelections.Union(_contacts),
             _ => _contacts
         };
 
-        if (_log.IsDebugEnabled)
-            _log.Debug("Sending GetContacts to [{0}]", string.Join(", ", sendTo.AsEnumerable()));
+        if (sendTo.Count == 0)
+        {
+            _log.Debug("Could not send GetContacts, _initialContactsSelections and _contacts are empty.");
+            return;
+        }
 
-        sendTo.ForEach(c => c.Tell(ClusterReceptionist.GetContacts.Instance));
+        if (_log.IsDebugEnabled)
+            _log.Debug("Sending GetContacts to [{0}]", string.Join(", ", sendTo.Select(c => c.Path).AsEnumerable()));
+
+        sendTo.ForEach(c => c.Selection.Tell(ClusterReceptionist.GetContacts.Instance));
     }
 
     private void Buffer(object message)
@@ -615,25 +850,25 @@ public sealed class ClusterClient : ActorBase
 
     private void PublishContactPoints()
     {
-        foreach (var cp in _contactPaths)
+        foreach (var cp in _contacts)
         {
-            if (!_contactPathsPublished.Contains(cp))
+            if (!_contactsPublished.Contains(cp))
             {
-                var contactPointAdded = new ContactPointAdded(cp);
+                var contactPointAdded = new ContactPointAdded(cp.Path);
                 _subscribers.ForEach(s => s.Tell(contactPointAdded));
             }
         }
 
-        foreach (var cp in _contactPathsPublished)
+        foreach (var cp in _contactsPublished)
         {
-            if (!_contactPaths.Contains(cp))
+            if (!_contacts.Contains(cp))
             {
-                var contactPointRemoved = new ContactPointRemoved(cp);
+                var contactPointRemoved = new ContactPointRemoved(cp.Path);
                 _subscribers.ForEach(s => s.Tell(contactPointRemoved));
             }
         }
 
-        _contactPathsPublished = _contactPaths;
+        _contactsPublished = _contacts;
     }
 }
 
