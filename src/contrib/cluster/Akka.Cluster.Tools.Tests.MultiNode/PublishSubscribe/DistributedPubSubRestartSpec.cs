@@ -29,13 +29,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             Second = Role("second");
             Third = Role("third");
 
-            CommonConfig = ConfigurationFactory.ParseString(@"
+            CommonConfig = DebugConfig(true).WithFallback(ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.actor.provider = cluster
                 akka.cluster.pub-sub.gossip-interval = 500ms
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = off
-            ").WithFallback(DistributedPubSub.DefaultConfig());
+            ").WithFallback(DistributedPubSub.DefaultConfig()));
 
             TestTransport = true;
         }
