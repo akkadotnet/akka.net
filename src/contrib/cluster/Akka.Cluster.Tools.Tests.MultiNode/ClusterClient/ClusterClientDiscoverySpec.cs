@@ -65,7 +65,7 @@ akka
   cluster.client.discovery
   {
     service-name = test-cluster
-    discovery-timeout = 2s
+    discovery-timeout = 10s
   }
 
   discovery

@@ -492,6 +492,9 @@ public sealed class ClusterClient : ActorBase
                 return true;
             
             case ServiceDiscovery.Resolved resolved:
+                _discoveryCancelable?.Cancel();
+                _discoveryCancelable = null;
+                
                 if (resolved.Addresses.Count == 0)
                 {
                     // discovery didn't find any contacts, retry discovery
@@ -507,8 +510,6 @@ public sealed class ClusterClient : ActorBase
                         var path = ResolvedTargetToReceptionistActorPath(address);
                         return new Contact(path, Context.ActorSelection(path));
                     }).ToImmutableHashSet();
-                
-                _log.Info(_contacts.ToString());
                 
                 Reestablish();
                 return true;
@@ -578,6 +579,10 @@ public sealed class ClusterClient : ActorBase
 
         switch (message)
         {
+            case ServiceDiscovery.Resolved:
+                // Ignored, we're already in establishing state
+                return true;
+            
             case DeadLetter { Message: ClusterReceptionist.GetContacts } dl:
                 PruneContacts(dl.Recipient.Path.Address.ToString());
                 return true;
@@ -706,6 +711,8 @@ public sealed class ClusterClient : ActorBase
                     {
                         _log.Info("Receptionist [{0}] is shutting down, reestablishing connection", receptionist);
                         PruneContacts(Sender.Path.Address.ToString());
+                        if (_initialContactsSelections.Count == 0 && _contacts.Count == 0)
+                            return true;
                         Reestablish();
                     }
 
@@ -725,21 +732,16 @@ public sealed class ClusterClient : ActorBase
             var path = ActorPath.Parse(cp);
             return new Contact(path, Context.ActorSelection(path));
         }).ToArray();
-        var newContacts = _contacts.Except(receivedContacts);
         _contacts = _contacts.Union(receivedContacts);
         
-        newContacts.ForEach(c => c.Selection.Tell(new Identify(c.Id)));
+        _contacts.ForEach(c => c.Selection.Tell(new Identify(c.Id)));
 
         PublishContactPoints();
     }
     
     private void PruneContacts(string id)
     {
-        var foundItem = _initialContactsSelections.FirstOrDefault(s => s.Id == id);
-        if (foundItem is not null)
-            _initialContactsSelections = _initialContactsSelections.Remove(foundItem);
-        
-        foundItem = _contacts.FirstOrDefault(s => s.Id == id);
+        var foundItem = _contacts.FirstOrDefault(s => s.Id == id);
         if (foundItem is not null)
             _contacts = _contacts.Remove(foundItem);
                 
