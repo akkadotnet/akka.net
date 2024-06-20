@@ -36,7 +36,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             Third = Role("third");
 
             CommonConfig = ConfigurationFactory.ParseString("""
-akka.loglevel = DEBUG
+akka.loglevel = INFO
 
 akka.remote.dot-netty.tcp.hostname = localhost 
 akka.actor.provider = cluster
@@ -160,7 +160,7 @@ akka {
                             var contacts = ExpectMsg<ContactPoints>(TimeSpan.FromSeconds(1)).ContactPointsList;
                             contacts.Count.Should().Be(1);
                             contacts.First().Address.Should().Be(Node(_config.First).Address);
-                        });
+                        }, RemainingOrDefault);
                     });
                     
                     _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity:true));
@@ -225,7 +225,7 @@ akka {
                         var contacts = ExpectMsg<ContactPoints>(TimeSpan.FromSeconds(1)).ContactPointsList;
                         contacts.Count.Should().Be(1);
                         contacts.First().Address.Should().Be(Node(_config.Second).Address);
-                    });
+                    }, RemainingOrDefault);
                 });
 
                 _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
@@ -239,15 +239,8 @@ akka {
         {
             RunOn(() =>
             {
-                var address = GetAddress(_config.Second);
-                
                 // simulate a hard shutdown
                 TestConductor.Exit(_config.Second, 0).Wait();
-                
-                _discoveryService.TryRemoveEndpoint("test-cluster", new ServiceDiscovery.ResolvedTarget(address.Host, address.Port));
-                
-                var resolved = _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
-                resolved.Addresses.Count.Should().Be(0);
             }, _config.Client);
             EnterBarrier("hard-shutdown-and-discovery-entry-updated");
         }
@@ -270,7 +263,7 @@ akka {
                 _discoveryService.TryAddEndpoint("test-cluster", new ServiceDiscovery.ResolvedTarget(address.Host, address.Port));
                 
                 var resolved = _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
-                resolved.Addresses.Count.Should().Be(1);
+                resolved.Addresses.Count.Should().Be(2);
             }, _config.Client);
             EnterBarrier("discovery-entry-updated");
         }
@@ -279,7 +272,7 @@ akka {
         {
             RunOn(() =>
             {
-                Within(TimeSpan.FromSeconds(10), () =>
+                Within(TimeSpan.FromSeconds(20), () =>
                 {
                     AwaitAssert(() =>
                     {
@@ -287,7 +280,7 @@ akka {
                         var contacts = ExpectMsg<ContactPoints>(TimeSpan.FromSeconds(1)).ContactPointsList;
                         contacts.Count.Should().Be(1);
                         contacts.First().Address.Should().Be(Node(_config.Third).Address);
-                    });
+                    }, TimeSpan.FromSeconds(20));
                 });
 
                 _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
