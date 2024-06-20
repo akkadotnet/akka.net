@@ -173,7 +173,7 @@ namespace Akka.Cluster.Tools.Client
         /// <param name="reconnectTimeout">TBD</param>
         /// <param name="useLegacySerialization">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
-        [Obsolete("Use constructor with useInitialContactsDiscovery and discoverySettings argument instead. Since 1.5.24")]
+        [Obsolete("Use constructor with useInitialContactsDiscovery and discoverySettings argument instead. Since 1.5.25")]
         public ClusterClientSettings(
             IImmutableSet<ActorPath> initialContacts,
             TimeSpan establishingGetContactsInterval,
