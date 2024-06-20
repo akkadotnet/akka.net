@@ -6,11 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Client;
@@ -18,7 +14,6 @@ using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Configuration;
 using Akka.Discovery;
 using Akka.Discovery.Config;
-using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit.TestActors;
@@ -31,12 +26,14 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
         public RoleName Client { get; }
         public RoleName First { get; }
         public RoleName Second { get; }
+        public RoleName Third { get; }
 
         public ClusterClientDiscoverySpecConfig()
         {
             Client = Role("client");
             First = Role("first");
             Second = Role("second");
+            Third = Role("third");
 
             CommonConfig = ConfigurationFactory.ParseString("""
 akka.loglevel = DEBUG
@@ -59,14 +56,18 @@ akka.test.filter-leeway = 10s
             NodeConfig(new[]{ Client }, 
                 new []{
                     ConfigurationFactory.ParseString("""
-akka 
-{
-  cluster.client.use-initial-contacts-discovery = true
-  cluster.client.discovery
-  {
-    service-name = test-cluster
-    discovery-timeout = 10s
+akka {
+  cluster.client {
+    heartbeat-interval = 1s
+    acceptable-heartbeat-pause = 2s
+    use-initial-contacts-discovery = true
+    discovery
+    {
+      service-name = test-cluster
+      discovery-timeout = 10s
+    }
   }
+  
 
   discovery
   {
@@ -81,6 +82,7 @@ akka
     public class ClusterClientDiscoverySpec : MultiNodeClusterSpec
     {
         private readonly ClusterClientDiscoverySpecConfig _config;
+        private ConfigServiceDiscovery _discoveryService;
 
         public ClusterClientDiscoverySpec() : this(new ClusterClientDiscoverySpecConfig()) { }
 
@@ -112,6 +114,9 @@ akka
             ClusterClient_must_down_existing_cluster();
             ClusterClient_second_node_must_form_a_new_cluster();
             ClusterClient_must_re_establish_on_cluster_restart();
+            ClusterClient_must_simulate_a_cluster_forced_shutdown();
+            ClusterClient_third_node_formed_a_cluster();
+            ClusterClient_must_re_establish_on_cluster_restart_after_hard_shutdown();
         }
         
         private void ClusterClient_must_startup_cluster_with_single_node()
@@ -129,12 +134,12 @@ akka
                 
                 RunOn(() =>
                 {
-                    var discoveryService =
+                    _discoveryService =
                         (ConfigServiceDiscovery)Discovery.Discovery.Get(Sys).LoadServiceDiscovery("config");
                     var address = GetAddress(_config.First);
-                    discoveryService.TryAddEndpoint("test-cluster", new ServiceDiscovery.ResolvedTarget(address.Host, address.Port));
+                    _discoveryService.TryAddEndpoint("test-cluster", new ServiceDiscovery.ResolvedTarget(address.Host, address.Port));
                     
-                    var resolved = discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
+                    var resolved = _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
                     resolved.Addresses.Count.Should().Be(1);
                 }, _config.Client);
                 EnterBarrier("discovery-entry-added");
@@ -175,15 +180,14 @@ akka
             
             RunOn(() =>
             {
-                var discoveryService =
-                    (ConfigServiceDiscovery)Discovery.Discovery.Get(Sys).LoadServiceDiscovery("config");
                 var address = GetAddress(_config.First);
-                discoveryService.TryRemoveEndpoint("test-cluster", new ServiceDiscovery.ResolvedTarget(address.Host, address.Port));
+                _discoveryService.TryRemoveEndpoint("test-cluster", new ServiceDiscovery.ResolvedTarget(address.Host, address.Port));
                 
-                var resolved = discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
+                var resolved = _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
                 resolved.Addresses.Count.Should().Be(0);
             }, _config.Client);
             EnterBarrier("discovery-entry-removed");
+            
         }
         
         private void ClusterClient_second_node_must_form_a_new_cluster()
@@ -200,12 +204,10 @@ akka
             
             RunOn(() =>
             {
-                var discoveryService =
-                    (ConfigServiceDiscovery)Discovery.Discovery.Get(Sys).LoadServiceDiscovery("config");
                 var address = GetAddress(_config.Second);
-                discoveryService.TryAddEndpoint("test-cluster", new ServiceDiscovery.ResolvedTarget(address.Host, address.Port));
+                _discoveryService.TryAddEndpoint("test-cluster", new ServiceDiscovery.ResolvedTarget(address.Host, address.Port));
                 
-                var resolved = discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
+                var resolved = _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
                 resolved.Addresses.Count.Should().Be(1);
             }, _config.Client);
             EnterBarrier("discovery-entry-updated");
@@ -232,5 +234,68 @@ akka
             }, _config.Client);
             EnterBarrier("re-establish-successful");
         }
+
+        private void ClusterClient_must_simulate_a_cluster_forced_shutdown()
+        {
+            RunOn(() =>
+            {
+                var address = GetAddress(_config.Second);
+                
+                // simulate a hard shutdown
+                TestConductor.Exit(_config.Second, 0).Wait();
+                
+                _discoveryService.TryRemoveEndpoint("test-cluster", new ServiceDiscovery.ResolvedTarget(address.Host, address.Port));
+                
+                var resolved = _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
+                resolved.Addresses.Count.Should().Be(0);
+            }, _config.Client);
+            EnterBarrier("hard-shutdown-and-discovery-entry-updated");
+        }
+
+        private void ClusterClient_third_node_formed_a_cluster()
+        {
+            Join(_config.Third, _config.Third);
+            RunOn(() =>
+            {
+                var service = Sys.ActorOf(EchoActor.Props(this), "testService");
+                ClusterClientReceptionist.Get(Sys).RegisterService(service);
+                AwaitMembersUp(1);
+            }, _config.Third);
+            
+            EnterBarrier("cluster-restarted");
+            
+            RunOn(() =>
+            {
+                var address = GetAddress(_config.Third);
+                _discoveryService.TryAddEndpoint("test-cluster", new ServiceDiscovery.ResolvedTarget(address.Host, address.Port));
+                
+                var resolved = _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
+                resolved.Addresses.Count.Should().Be(1);
+            }, _config.Client);
+            EnterBarrier("discovery-entry-updated");
+        }
+        
+        private void ClusterClient_must_re_establish_on_cluster_restart_after_hard_shutdown()
+        {
+            RunOn(() =>
+            {
+                Within(TimeSpan.FromSeconds(10), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        _clusterClient.Tell(GetContactPoints.Instance, TestActor);
+                        var contacts = ExpectMsg<ContactPoints>(TimeSpan.FromSeconds(1)).ContactPointsList;
+                        contacts.Count.Should().Be(1);
+                        contacts.First().Address.Should().Be(Node(_config.Third).Address);
+                    });
+                });
+
+                _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
+                ExpectMsg<string>().Should().Be("hello");
+               
+            }, _config.Client);
+            EnterBarrier("re-establish-successful");
+        }
+
     }
 }

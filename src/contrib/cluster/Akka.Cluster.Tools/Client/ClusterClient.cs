@@ -330,7 +330,7 @@ public sealed class ClusterClient : ActorBase
     private readonly EventStream _eventStream = Context.System.EventStream;
     private readonly ClusterClientSettings _settings;
     private readonly DeadlineFailureDetector _failureDetector;
-    private ImmutableHashSet<Contact> _initialContactsSelections;
+    private readonly ImmutableHashSet<Contact> _initialContactsSelections;
     private ImmutableHashSet<Contact> _contacts;
     private ImmutableHashSet<Contact> _contactsPublished;
     private ImmutableList<IActorRef> _subscribers;
@@ -673,6 +673,10 @@ public sealed class ClusterClient : ActorBase
                     
                 case HeartbeatTick when !_failureDetector.IsAvailable:
                     _log.Info("Lost contact with [{0}], reestablishing connection", receptionist);
+                    PruneContacts(receptionist.Path.Address.ToString());
+                    if (_initialContactsSelections.Count == 0 && _contacts.Count == 0)
+                        return true;
+                    
                     Reestablish();
                     return true;
                     
