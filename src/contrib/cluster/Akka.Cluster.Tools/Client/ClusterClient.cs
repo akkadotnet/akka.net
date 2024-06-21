@@ -346,6 +346,8 @@ public sealed class ClusterClient : ActorBase
     private readonly Lookup? _lookup;
     private readonly TimeSpan _discoveryTimeout = TimeSpan.Zero;
     private ICancelable? _discoveryCancelable;
+    private readonly string _targetActorSystemName;
+    private readonly string _transportProtocol;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClusterClient" /> class.
@@ -386,6 +388,16 @@ public sealed class ClusterClient : ActorBase
                 discoveryMethod = "config";
             }
 
+            if (string.IsNullOrWhiteSpace(_discoverySettings.ActorSystemName))
+            {
+                _log.Warning(
+                    "No target ActorSystem name configured in `akka.cluster.client.discovery.actor-system-name`,\n" +
+                    "falling back to this ActorSystem name ({0}) instead.", Context.System.Name);
+            }
+            _targetActorSystemName = string.IsNullOrWhiteSpace(_discoverySettings.ActorSystemName) 
+                ? Context.System.Name : _discoverySettings.ActorSystemName;
+            _transportProtocol = ((ExtendedActorSystem)Context.System).Provider.DefaultAddress.Protocol;
+
             _lookup = new Lookup(_discoverySettings.ServiceName, _discoverySettings.PortName);
             _serviceDiscovery = Discovery.Discovery.Get(Context.System)
                 .LoadServiceDiscovery(discoveryMethod);
@@ -401,6 +413,9 @@ public sealed class ClusterClient : ActorBase
         else
         {
             // UseInitialContactDiscovery was NOT set, use the InitialContacts to retrieve receptionist contacts
+            _targetActorSystemName = string.Empty;
+            _transportProtocol = string.Empty;
+            
             if (_settings.InitialContacts.Count == 0)
                 throw new ArgumentException("Initial contacts for cluster client cannot be empty if ClusterClient contacts discovery is not being used.");
 
@@ -471,11 +486,8 @@ public sealed class ClusterClient : ActorBase
 
     private ActorPath ResolvedTargetToReceptionistActorPath(ServiceDiscovery.ResolvedTarget target)
     {
-        var protocol = ((ExtendedActorSystem)Context.System).Provider.DefaultAddress.Protocol;
-        var actorSystemName = string.IsNullOrWhiteSpace(_discoverySettings.ActorSystemName) 
-            ? Context.System.Name : _discoverySettings.ActorSystemName;
         var networkAddress = string.IsNullOrWhiteSpace(target.Host) ? target.Address.ToString() : target.Host;
-        var address = new Address(protocol, actorSystemName, networkAddress, target.Port);
+        var address = new Address(_transportProtocol, _targetActorSystemName, networkAddress, target.Port);
         return new RootActorPath(address) / "system" / _discoverySettings.ReceptionistName;
     }
     
