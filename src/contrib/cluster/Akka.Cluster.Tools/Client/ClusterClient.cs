@@ -9,6 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Discovery;
 using Akka.Event;
@@ -273,8 +275,10 @@ public sealed class ClusterClient : ActorBase
         public override int GetHashCode() => 0;
     }
 
-    internal sealed record DiscoveryFailure(Exception Cause);
+    private sealed record DiscoveryFailure(Exception Cause);
 
+    private sealed record ResolveResult(Contact Contact, IActorRef? Subject);
+    
     #endregion
     
     #endregion
@@ -327,7 +331,6 @@ public sealed class ClusterClient : ActorBase
     }
 
     private readonly ILoggingAdapter _log = Context.GetLogger();
-    private readonly EventStream _eventStream = Context.System.EventStream;
     private readonly ClusterClientSettings _settings;
     private readonly DeadlineFailureDetector _failureDetector;
     private readonly ImmutableHashSet<Contact> _initialContactsSelections;
@@ -441,19 +444,12 @@ public sealed class ClusterClient : ActorBase
             Self);
     }
 
-    protected override void PreStart()
-    {
-        base.PreStart();
-        _eventStream.Subscribe(Self, typeof(DeadLetter));
-    }
-
     /// <summary>
     /// TBD
     /// </summary>
     protected override void PostStop()
     {
         base.PostStop();
-        _eventStream.Unsubscribe(Self);
         _heartbeatTask.Cancel();
 
         _refreshContactsCancelable?.Cancel();
@@ -483,6 +479,19 @@ public sealed class ClusterClient : ActorBase
         return new RootActorPath(address) / "system" / _discoverySettings.ReceptionistName;
     }
     
+    private static async Task<ResolveResult> ResolveContact(Contact contact, TimeSpan timeout, CancellationToken ct)
+    {
+        try
+        {
+            var identity = await contact.Selection.Ask<ActorIdentity>(new Identify(null), timeout, ct);
+            return new ResolveResult(contact, identity.Subject);
+        }
+        catch (Exception)
+        {
+            return new ResolveResult(contact, null);
+        }
+    }
+    
     private bool Discovering(object message)
     {
         switch (message)
@@ -507,11 +516,36 @@ public sealed class ClusterClient : ActorBase
                 }
 
                 _contacts = resolved.Addresses.Select(address => {
-                        var path = ResolvedTargetToReceptionistActorPath(address);
-                        return new Contact(path, Context.ActorSelection(path));
-                    }).ToImmutableHashSet();
+                    var path = ResolvedTargetToReceptionistActorPath(address);
+                    return new Contact(path, Context.ActorSelection(path));
+                }).ToImmutableHashSet();
+
+                VerifyContacts().PipeTo(Self, Self);
                 
-                Reestablish();
+                async Task<ResolveResult[]> VerifyContacts()
+                {
+                    var tasks = _contacts.Select(c => ResolveContact(c, TimeSpan.FromSeconds(1), default));
+                    return await Task.WhenAll(tasks);
+                }
+                
+                return true;
+            
+            case ResolveResult[] resolved:
+                _contacts = resolved.Where(r => r.Subject is not null).Select(r => r.Contact).ToImmutableHashSet();
+                if (_contacts.Count == 0)
+                {
+                    _log.Warning("Cluster.Client contact point resolution phase failed, will try again.");
+                    _discoveryCancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(
+                        delay: _settings.DiscoverySettings.DiscoveryRetryInterval, 
+                        receiver: Self,
+                        message: DiscoverTick.Instance,
+                        sender: Self);
+                }
+                else
+                {
+                    Reestablish();
+                }
+                
                 return true;
             
             case DiscoveryFailure fail:
@@ -521,10 +555,6 @@ public sealed class ClusterClient : ActorBase
                     receiver: Self,
                     message: DiscoverTick.Instance,
                     sender: Self);
-                return true;
-            
-            case DeadLetter:
-                // ignored, we're re-discovering
                 return true;
             
             case ClusterReceptionist.Contacts:
@@ -583,12 +613,6 @@ public sealed class ClusterClient : ActorBase
                 // Ignored, we're already in establishing state
                 return true;
             
-            case DeadLetter { Message: ClusterReceptionist.GetContacts } dl:
-                PruneContacts(dl.Recipient.Path.Address.ToString());
-                if(_initialContactsSelections.Count == 0 && _contacts.Count == 0)
-                    Rediscover();
-                return true;
-            
             case ClusterReceptionist.Contacts contacts:
             {
                 if (contacts.ContactPoints.Count == 0)
@@ -598,16 +622,13 @@ public sealed class ClusterClient : ActorBase
                 return true;
             }
                 
-            case ActorIdentity actorIdentify:
-            {
-                var receptionist = actorIdentify.Subject;
-
+            case ResolveResult(var contact, var receptionist) result:
                 if (receptionist != null)
                 {
                     _log.Info("Connected to [{0}]", receptionist.Path);
                     ScheduleRefreshContactsTick(_settings.RefreshContactsInterval);
                     SendBuffered(receptionist);
-                    Context.Become(Active(receptionist));
+                    Context.Become(Active(result));
                     connectTimerCancelable?.Cancel();
                     _failureDetector.HeartBeat();
                     Self.Tell(HeartbeatTick.Instance); // will register us as active client of the selected receptionist
@@ -615,13 +636,11 @@ public sealed class ClusterClient : ActorBase
                 else
                 {
                     // prune out actors that failed to be identified
-                    PruneContacts((string) actorIdentify.MessageId);
+                    PruneContacts(contact);
                     if(_initialContactsSelections.Count == 0 && _contacts.Count == 0)
                         Rediscover();
                 }
-
                 return true;
-            }
                 
             case HeartbeatTick:
                 _failureDetector.HeartBeat();
@@ -657,8 +676,9 @@ public sealed class ClusterClient : ActorBase
         }
     }
 
-    private Receive Active(IActorRef receptionist)
+    private Receive Active(ResolveResult resolvedContact)
     {
+        var receptionist = resolvedContact.Subject!;
         return message =>
         {
             switch (message)
@@ -677,7 +697,7 @@ public sealed class ClusterClient : ActorBase
                     
                 case HeartbeatTick when !_failureDetector.IsAvailable:
                     _log.Info("Lost contact with [{0}], reestablishing connection", receptionist);
-                    PruneContacts(receptionist.Path.Address.ToString());
+                    PruneContacts(resolvedContact.Contact);
                     if(_initialContactsSelections.Count == 0 && _contacts.Count == 0)
                     {
                         Rediscover();
@@ -709,15 +729,15 @@ public sealed class ClusterClient : ActorBase
                     MergeContacts(contacts);
                     return true;
                 }
+                
+                case ResolveResult(var contact, var subject):
+                    if (subject is not null) 
+                        return true;
                     
-                case ActorIdentity actorIdentify:
                     // prune out actors that failed to be identified
-                    if (actorIdentify.Subject is null)
-                    {
-                        PruneContacts((string)actorIdentify.MessageId);
-                        if(_initialContactsSelections.Count == 0 && _contacts.Count == 0)
-                            Rediscover();
-                    }
+                    PruneContacts(contact);
+                    if(_initialContactsSelections.Count == 0 && _contacts.Count == 0)
+                        Rediscover();
 
                     return true;
                     
@@ -726,7 +746,7 @@ public sealed class ClusterClient : ActorBase
                     if (receptionist.Equals(Sender))
                     {
                         _log.Info("Receptionist [{0}] is shutting down, reestablishing connection", receptionist);
-                        PruneContacts(Sender.Path.Address.ToString());
+                        PruneContacts(resolvedContact.Contact);
                         if(_initialContactsSelections.Count == 0 && _contacts.Count == 0)
                         {
                             Rediscover();
@@ -754,18 +774,26 @@ public sealed class ClusterClient : ActorBase
             return new Contact(path, Context.ActorSelection(path));
         }).ToArray();
         _contacts = _contacts.Union(receivedContacts);
-        
-        _contacts.ForEach(c => c.Selection.Tell(new Identify(c.Id)));
+
+        foreach (var contact in _contacts)
+        {
+            ResolveContact(contact, TimeSpan.FromSeconds(1), default).PipeTo(Self, Self);
+        }
 
         PublishContactPoints();
     }
     
     private void PruneContacts(string id)
     {
-        var foundItem = _contacts.FirstOrDefault(s => s.Id == id);
-        if (foundItem is not null)
-            _contacts = _contacts.Remove(foundItem);
-                
+        PruneContacts(_contacts.FirstOrDefault(s => s.Id == id));
+    }
+    
+    private void PruneContacts(Contact? contact)
+    {
+        if(contact is null)
+            return;
+        
+        _contacts = _contacts.Remove(contact);
         PublishContactPoints();
     }
     
@@ -773,7 +801,7 @@ public sealed class ClusterClient : ActorBase
     {
         Become(Discovering);
         _serviceDiscovery!.Lookup(_lookup, _discoveryTimeout)
-            .PipeTo(Self, failure: cause => new DiscoveryFailure(cause));
+            .PipeTo(Self, Self, failure: cause => new DiscoveryFailure(cause));
     }
     
     private void Reestablish()
