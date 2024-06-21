@@ -475,12 +475,12 @@ public sealed class ClusterClient : ActorBase
 
     private ActorPath ResolvedTargetToReceptionistActorPath(ServiceDiscovery.ResolvedTarget target)
     {
+        var protocol = ((ExtendedActorSystem)Context.System).Provider.DefaultAddress.Protocol;
         var actorSystemName = string.IsNullOrWhiteSpace(_discoverySettings.ActorSystemName) 
             ? Context.System.Name : _discoverySettings.ActorSystemName;
         var networkAddress = string.IsNullOrWhiteSpace(target.Host) ? target.Address.ToString() : target.Host;
-        var port = target.Port.HasValue ? $":{target.Port}" : string.Empty;
-        return ActorPath.Parse(
-            $"akka.tcp://{ actorSystemName }@{ networkAddress }{ port }/system/{ _discoverySettings.ReceptionistName }"); 
+        var address = new Address(protocol, actorSystemName, networkAddress, target.Port);
+        return new RootActorPath(address) / "system" / _discoverySettings.ReceptionistName;
     }
     
     private bool Discovering(object message)
