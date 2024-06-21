@@ -11,7 +11,6 @@ namespace Akka.Cluster.Tools.Client
     {
         public ClusterClient(Akka.Cluster.Tools.Client.ClusterClientSettings settings) { }
         protected override void PostStop() { }
-        protected override void PreStart() { }
         public static Akka.Actor.Props Props(Akka.Cluster.Tools.Client.ClusterClientSettings settings) { }
         protected override bool Receive(object message) { }
         [System.Runtime.CompilerServices.NullableAttribute(0)]
