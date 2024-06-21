@@ -585,6 +585,8 @@ public sealed class ClusterClient : ActorBase
             
             case DeadLetter { Message: ClusterReceptionist.GetContacts } dl:
                 PruneContacts(dl.Recipient.Path.Address.ToString());
+                if(_initialContactsSelections.Count == 0 && _contacts.Count == 0)
+                    Rediscover();
                 return true;
             
             case ClusterReceptionist.Contacts contacts:
@@ -614,6 +616,8 @@ public sealed class ClusterClient : ActorBase
                 {
                     // prune out actors that failed to be identified
                     PruneContacts((string) actorIdentify.MessageId);
+                    if(_initialContactsSelections.Count == 0 && _contacts.Count == 0)
+                        Rediscover();
                 }
 
                 return true;
@@ -674,10 +678,14 @@ public sealed class ClusterClient : ActorBase
                 case HeartbeatTick when !_failureDetector.IsAvailable:
                     _log.Info("Lost contact with [{0}], reestablishing connection", receptionist);
                     PruneContacts(receptionist.Path.Address.ToString());
-                    if (_initialContactsSelections.Count == 0 && _contacts.Count == 0)
-                        return true;
-                    
-                    Reestablish();
+                    if(_initialContactsSelections.Count == 0 && _contacts.Count == 0)
+                    {
+                        Rediscover();
+                    }
+                    else
+                    {
+                        Reestablish();
+                    }
                     return true;
                     
                 case HeartbeatTick:
@@ -705,7 +713,11 @@ public sealed class ClusterClient : ActorBase
                 case ActorIdentity actorIdentify:
                     // prune out actors that failed to be identified
                     if (actorIdentify.Subject is null)
-                        PruneContacts((string) actorIdentify.MessageId);
+                    {
+                        PruneContacts((string)actorIdentify.MessageId);
+                        if(_initialContactsSelections.Count == 0 && _contacts.Count == 0)
+                            Rediscover();
+                    }
 
                     return true;
                     
@@ -715,9 +727,14 @@ public sealed class ClusterClient : ActorBase
                     {
                         _log.Info("Receptionist [{0}] is shutting down, reestablishing connection", receptionist);
                         PruneContacts(Sender.Path.Address.ToString());
-                        if (_initialContactsSelections.Count == 0 && _contacts.Count == 0)
-                            return true;
-                        Reestablish();
+                        if(_initialContactsSelections.Count == 0 && _contacts.Count == 0)
+                        {
+                            Rediscover();
+                        }
+                        else
+                        {
+                            Reestablish();
+                        }
                     }
 
                     return true;
@@ -750,9 +767,6 @@ public sealed class ClusterClient : ActorBase
             _contacts = _contacts.Remove(foundItem);
                 
         PublishContactPoints();
-        
-        if(_initialContactsSelections.Count == 0 && _contacts.Count == 0)
-            Rediscover();
     }
     
     private void Rediscover()
