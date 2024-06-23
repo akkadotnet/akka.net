@@ -85,6 +85,7 @@ namespace Akka.Discovery.Config
             _log.Debug($"Config discovery serving: {string.Join(", ", _resolvedServices.Values)}");
         }
 
+        [InternalStableApi]
         public bool TryRemoveEndpoint(string serviceName, ResolvedTarget target)
         {
             if (!_resolvedServices.TryGetValue(serviceName, out var resolved))
@@ -107,6 +108,7 @@ namespace Akka.Discovery.Config
             return true;
         }
 
+        [InternalStableApi]
         public bool TryAddEndpoint(string serviceName, ResolvedTarget target)
         {
             if (!_resolvedServices.TryGetValue(serviceName, out var resolved))
