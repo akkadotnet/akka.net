@@ -4,6 +4,7 @@
         <OutputType>Exe</OutputType>
         <TargetFramework>$(NetTestVersion)</TargetFramework>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
