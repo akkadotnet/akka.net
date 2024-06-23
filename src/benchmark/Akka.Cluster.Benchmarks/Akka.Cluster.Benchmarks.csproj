@@ -2,6 +2,7 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
