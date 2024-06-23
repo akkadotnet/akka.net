@@ -61,6 +61,8 @@ akka {
     heartbeat-interval = 1s
     acceptable-heartbeat-pause = 2s
     use-initial-contacts-discovery = true
+    reconnect-timeout = 4s
+    verbose-logging = true
     discovery
     {
       service-name = test-cluster

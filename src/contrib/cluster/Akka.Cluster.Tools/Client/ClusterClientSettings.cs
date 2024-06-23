@@ -73,7 +73,8 @@ namespace Akka.Cluster.Tools.Client
                 config.GetBoolean("use-legacy-serialization"),
                 config.GetBoolean("use-initial-contacts-discovery"),
                 ClusterClientDiscoverySettings.Create(config),
-                reconnectTimeout);
+                reconnectTimeout,
+                config.GetBoolean("verbose-logging"));
         }
 
         /// <summary>
@@ -128,6 +129,8 @@ namespace Akka.Cluster.Tools.Client
         public bool UseInitialContactDiscovery { get; }
         
         public ClusterClientDiscoverySettings DiscoverySettings { get; }
+        
+        public bool VerboseLogging { get; }
         
         /// <summary>
         /// TBD
@@ -221,7 +224,8 @@ namespace Akka.Cluster.Tools.Client
             bool useLegacySerialization,
             bool useInitialContactsDiscovery,
             ClusterClientDiscoverySettings? discoverySettings = null,
-            TimeSpan? reconnectTimeout = null)
+            TimeSpan? reconnectTimeout = null,
+            bool verboseLogging = false)
         {
             if (bufferSize is < 0 or > 10000)
             {
@@ -238,6 +242,7 @@ namespace Akka.Cluster.Tools.Client
             UseLegacySerialization = useLegacySerialization;
             UseInitialContactDiscovery = useInitialContactsDiscovery;
             DiscoverySettings = discoverySettings ?? ClusterClientDiscoverySettings.Empty;
+            VerboseLogging = verboseLogging;
         }
         
         /// <summary>

@@ -17,7 +17,7 @@ using Akka.Event;
 #nullable enable
 namespace Akka.Cluster.Tools.Client;
 
-public class ClusterClientDiscovery: ActorBase, IWithUnboundedStash
+public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTimers
 {
     #region Discovery messages
 
@@ -45,9 +45,12 @@ public class ClusterClientDiscovery: ActorBase, IWithUnboundedStash
     private readonly ServiceDiscovery? _serviceDiscovery;
     private readonly Lookup? _lookup;
     private readonly TimeSpan _discoveryTimeout;
-    private ICancelable? _discoveryCancelable;
+    private readonly TimeSpan _discoveryRetryInterval;
     private readonly string _targetActorSystemName;
+    private readonly string _receptionistName;
     private readonly string _transportProtocol;
+
+    private readonly bool _verboseLogging;
     
     public ClusterClientDiscovery(ClusterClientSettings settings)
     {
@@ -59,7 +62,13 @@ public class ClusterClientDiscovery: ActorBase, IWithUnboundedStash
         
         var discoveryMethod = _discoverySettings.DiscoveryMethod;
         if(string.IsNullOrWhiteSpace(discoveryMethod) || discoveryMethod == "<method>")
+        {
+            _log.Info(
+                "No default initial contacts discovery implementation configured in\n" +
+                "`akka.cluster.client.discovery.method`. Trying to Fall back to default\n" +
+                "discovery method declared in `akka.discovery.method`");
             discoveryMethod = Context.System.Settings.Config.GetString("akka.discovery.method");
+        }
         if (string.IsNullOrWhiteSpace(discoveryMethod) || discoveryMethod == "<method>")
         {
             _log.Warning(
@@ -85,31 +94,40 @@ public class ClusterClientDiscovery: ActorBase, IWithUnboundedStash
             _log.Warning(
                 "No target ActorSystem name configured in `akka.cluster.client.discovery.actor-system-name`,\n" +
                 "falling back to this ActorSystem name ({0}) instead.", Context.System.Name);
+            _targetActorSystemName = Context.System.Name;
         }
-        _targetActorSystemName = string.IsNullOrWhiteSpace(_discoverySettings.ActorSystemName) 
-            ? Context.System.Name : _discoverySettings.ActorSystemName;
+        else
+        {
+            _targetActorSystemName = _discoverySettings.ActorSystemName!;
+        }
+        
         _transportProtocol = ((ExtendedActorSystem)Context.System).Provider.DefaultAddress.Protocol;
+        _receptionistName = settings.DiscoverySettings.ReceptionistName;
 
         _lookup = new Lookup(_discoverySettings.ServiceName, _discoverySettings.PortName);
-        _serviceDiscovery = Discovery.Discovery.Get(Context.System)
-            .LoadServiceDiscovery(discoveryMethod);
+        _serviceDiscovery = Discovery.Discovery.Get(Context.System).LoadServiceDiscovery(discoveryMethod);
+        _discoveryRetryInterval = _settings.DiscoverySettings.DiscoveryRetryInterval;
         _discoveryTimeout = _discoverySettings.DiscoveryTimeout;
+
+        _verboseLogging = _settings.VerboseLogging;
         
-        Rediscover();
+        Become(Discovering);
     }
 
     public IStash Stash { get; set; } = null!;
+    public ITimerScheduler Timers { get; set; } = null!;
     
-    protected override bool Receive(object message)
+    protected override void OnReceive(object message)
     {
         throw new NotImplementedException("Should never reach this code");
     }
 
-    protected override void PostStop()
+    protected override void PreStart()
     {
-        _discoveryCancelable?.Cancel();
-        _discoveryCancelable = null;
-        base.PostStop();
+        base.PreStart();
+        
+        // Kickoff discovery lookup
+        Self.Tell(DiscoverTick.Instance);
     }
 
     private ActorPath ResolvedTargetToReceptionistActorPath(ServiceDiscovery.ResolvedTarget target)
@@ -144,22 +162,23 @@ public class ClusterClientDiscovery: ActorBase, IWithUnboundedStash
         switch (message)
         {
             case DiscoverTick:
+                if(_verboseLogging && _log.IsDebugEnabled)
+                    _log.Debug("Discovering initial contacts");
+        
                 Rediscover();
                 return true;
 
             case ServiceDiscovery.Resolved resolved:
             {
-                _discoveryCancelable?.Cancel();
-                _discoveryCancelable = null;
+                Timers.CancelAll();
                 
                 if (resolved.Addresses.Count == 0)
                 {
+                    if(_verboseLogging && _log.IsInfoEnabled)
+                        _log.Info("No initial contact were discovered. Will try again.");
+        
                     // discovery didn't find any contacts, retry discovery
-                    _discoveryCancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(
-                        delay: _settings.DiscoverySettings.DiscoveryRetryInterval, 
-                        receiver: Self,
-                        message: DiscoverTick.Instance,
-                        sender: Self);
+                    Timers.StartSingleTimer(DiscoverTick.Instance, DiscoverTick.Instance, _discoveryRetryInterval);
                     return true;
                 }
 
@@ -168,6 +187,9 @@ public class ClusterClientDiscovery: ActorBase, IWithUnboundedStash
                     return new Contact(path, Context.ActorSelection(path));
                 }).ToImmutableHashSet();
 
+                if(_verboseLogging && _log.IsDebugEnabled)
+                    _log.Debug("Initial contacts are discovered at [{0}], verifying existence.", string.Join(", ", contacts.Select(c => c.Path)));
+        
                 VerifyContacts().PipeTo(Self, Self);
 
                 return true;
@@ -184,15 +206,16 @@ public class ClusterClientDiscovery: ActorBase, IWithUnboundedStash
                 var contacts = resolved.Where(r => r.Subject is not null).Select(r => r.Contact).ToArray();
                 if (contacts.Length == 0)
                 {
-                    _log.Warning("Cluster.Client contact point resolution phase failed, will try again.");
-                    _discoveryCancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(
-                        delay: _settings.DiscoverySettings.DiscoveryRetryInterval, 
-                        receiver: Self,
-                        message: DiscoverTick.Instance,
-                        sender: Self);
+                    if(_verboseLogging && _log.IsInfoEnabled)
+                        _log.Info("Cluster client contact point resolution phase failed, will try again.");
+                    
+                    Timers.StartSingleTimer(DiscoverTick.Instance, DiscoverTick.Instance, _discoveryRetryInterval);
                 }
                 else
                 {
+                    if(_log.IsInfoEnabled)
+                        _log.Info("Cluster client initial contacts are verified at [{0}], starting cluster client actor.", string.Join(", ", contacts.Select(c => c.Path)));
+                    
                     Become(Active(contacts));
                 }
                 
@@ -200,12 +223,10 @@ public class ClusterClientDiscovery: ActorBase, IWithUnboundedStash
             }
             
             case DiscoveryFailure fail:
-                _log.Warning(fail.Cause, "Cluster.Client contact point service discovery phase failed, will try again.");
-                _discoveryCancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(
-                    delay: _settings.DiscoverySettings.DiscoveryRetryInterval, 
-                    receiver: Self,
-                    message: DiscoverTick.Instance,
-                    sender: Self);
+                if(_verboseLogging && _log.IsInfoEnabled)
+                    _log.Info(fail.Cause, "Cluster client contact point service discovery phase failed, will try again.");
+                
+                Timers.StartSingleTimer(DiscoverTick.Instance, DiscoverTick.Instance, _discoveryRetryInterval);
                 return true;
             
             default:
@@ -216,8 +237,17 @@ public class ClusterClientDiscovery: ActorBase, IWithUnboundedStash
 
     private Receive Active(Contact[] contacts)
     {
+        if(_verboseLogging && _log.IsDebugEnabled)
+            _log.Debug("Entering active state");
+        
+        Timers.CancelAll();
+        
+        // Setup cluster client initial contacts
         var currentSettings = _settings.WithInitialContacts(contacts.Select(c => c.Path).ToImmutableHashSet());
-        var clusterClient = Context.System.ActorOf(ClusterClient.Props(currentSettings), "clusterClient");
+        
+        var clusterClient = Context.System.ActorOf(
+            Props.Create(() => new ClusterClient(currentSettings)).WithDeploy(Deploy.Local), 
+            $"cluster-client-{_targetActorSystemName}-{_receptionistName}-contact-discovery");
         Context.Watch(clusterClient);
         Stash.UnstashAll();
 
@@ -228,6 +258,11 @@ public class ClusterClientDiscovery: ActorBase, IWithUnboundedStash
                 case Terminated terminated:
                     if (terminated.ActorRef.Equals(clusterClient))
                     {
+                        if(_verboseLogging && _log.IsInfoEnabled)
+                            _log.Info("Cluster client failed to reconnect to all receptionists, rediscovering.");
+                        
+                        // Kickoff discovery lookup
+                        Self.Tell(DiscoverTick.Instance);
                         Become(Discovering);
                     }
                     else
