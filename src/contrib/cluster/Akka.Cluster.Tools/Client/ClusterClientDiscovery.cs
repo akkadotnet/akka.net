@@ -241,7 +241,7 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
         
         var clusterClient = Context.System.ActorOf(
             Props.Create(() => new ClusterClient(currentSettings)).WithDeploy(Deploy.Local), 
-            $"cluster-client-{_targetActorSystemName}-{_receptionistName}-contact-discovery");
+            $"cluster-client-{_targetActorSystemName}-{_receptionistName}");
         Context.Watch(clusterClient);
         Stash.UnstashAll();
 
