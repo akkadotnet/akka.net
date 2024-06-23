@@ -150,13 +150,6 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
         }
     }
     
-    private void Rediscover()
-    {
-        Become(Discovering);
-        _serviceDiscovery!.Lookup(_lookup, _discoveryTimeout)
-            .PipeTo(Self, Self, failure: cause => new DiscoveryFailure(cause));
-    }
-    
     private bool Discovering(object message)
     {
         switch (message)
@@ -165,7 +158,8 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
                 if(_verboseLogging && _log.IsDebugEnabled)
                     _log.Debug("Discovering initial contacts");
         
-                Rediscover();
+                _serviceDiscovery!.Lookup(_lookup, _discoveryTimeout)
+                    .PipeTo(Self, Self, failure: cause => new DiscoveryFailure(cause));
                 return true;
 
             case ServiceDiscovery.Resolved resolved:
