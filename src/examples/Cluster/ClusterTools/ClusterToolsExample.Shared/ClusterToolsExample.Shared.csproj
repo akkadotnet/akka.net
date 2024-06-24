@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
