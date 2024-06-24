@@ -22,7 +22,9 @@ namespace Akka.Discovery.Config
     {
         public ConfigServiceDiscovery(Akka.Actor.ExtendedActorSystem system) { }
         public override System.Threading.Tasks.Task<Akka.Discovery.ServiceDiscovery.Resolved> Lookup(Akka.Discovery.Lookup lookup, System.TimeSpan resolveTimeout) { }
+        [Akka.Annotations.InternalStableApiAttribute()]
         public bool TryAddEndpoint(string serviceName, Akka.Discovery.ServiceDiscovery.ResolvedTarget target) { }
+        [Akka.Annotations.InternalStableApiAttribute()]
         public bool TryRemoveEndpoint(string serviceName, Akka.Discovery.ServiceDiscovery.ResolvedTarget target) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
