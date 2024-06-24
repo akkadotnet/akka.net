@@ -274,7 +274,9 @@ public sealed class ClusterClient : ActorBase
         if (settings == null)
             throw new ArgumentNullException(nameof(settings));
 
-        return Actor.Props.Create(() => new ClusterClient(settings)).WithDeploy(Deploy.Local);
+        return settings.UseInitialContactDiscovery 
+            ? Actor.Props.Create(() => new ClusterClientDiscovery(settings)).WithDeploy(Deploy.Local)
+            : Actor.Props.Create(() => new ClusterClient(settings)).WithDeploy(Deploy.Local);
     }
 
     private ILoggingAdapter _log = Context.GetLogger();

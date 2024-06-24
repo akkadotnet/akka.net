@@ -15,6 +15,7 @@
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <ProjectReference Include="..\..\..\core\Akka.Discovery\Akka.Discovery.csproj" />
     </ItemGroup>
 
   <ItemGroup>
