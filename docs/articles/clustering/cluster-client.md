@@ -135,13 +135,14 @@ It is possible to make the cluster client stop entirely if it cannot find a rece
 
 > [!NOTE]
 > This feature is currently considered as an advanced feature and is not currently compatible with Akka.Discovery Akka.Hosting extensions.
-> 
+>
 > This feature should not be used until Akka.Management 1.5.26 is released.
 
 This feature is added in Akka.NET 1.5.26. Instead of watching for actor termination manually, you can leverage [Akka.Discovery](../discovery/index.md) to discover cluster client contact points inside a dynamic environment such as [Kubernetes](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/kubernetes.md), [AWS](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/aws.md), or anywhere else with [Azure Table](https://github.com/akkadotnet/Akka.Management/blob/dev/src/discovery/azure/Akka.Discovery.Azure/README.md)
 
 The HOCON configuration to set these are:
-```
+
+```text
 akka.cluster.client
 {
   use-initial-contacts-discovery = false
@@ -163,11 +164,11 @@ To enable contact auto-discovery, you will need to:
 
 * Set `akka.cluster.client.use-initial-contacts-discovery` to true.
 * Set `akka.cluster.client.discovery.service-name` that matches the service name of the Akka.Discovery extension that you used:
-   * For [Akka.Discovery.KubernetesApi](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/kubernetes.md), this is the `pod-label-selector` HOCON setting or the `KubernetesDiscoveryOptions.PodLabelSelector` options property.
-   * For [Akka.Discovery.AwsApi](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/aws.md), this is
-     * **EC2**: the `akka.discovery.aws-api-ec2-tag-based.tag-key` HOCON setting or the Akka.Hosting `Ec2ServiceDiscoveryOptions.TagKey` options property.
-     * **ECS**: the `akka.discovery.aws-api-ecs.tags` HOCON setting or the Akka.Hosting `EcsServiceDiscoveryOptions.Tags` options property.
-   * For [Akka.Discovery.Azure](https://github.com/akkadotnet/Akka.Management/blob/dev/src/discovery/azure/Akka.Discovery.Azure/README.md), this is the `service-name` HOCON setting or the `AkkaDiscoveryOptions.ServiceName` options property.
+  * For [Akka.Discovery.KubernetesApi](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/kubernetes.md), this is the `pod-label-selector` HOCON setting or the `KubernetesDiscoveryOptions.PodLabelSelector` options property.
+  * For [Akka.Discovery.AwsApi](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/aws.md), this is
+    * **EC2**: the `akka.discovery.aws-api-ec2-tag-based.tag-key` HOCON setting or the Akka.Hosting `Ec2ServiceDiscoveryOptions.TagKey` options property.
+    * **ECS**: the `akka.discovery.aws-api-ecs.tags` HOCON setting or the Akka.Hosting `EcsServiceDiscoveryOptions.Tags` options property.
+  * For [Akka.Discovery.Azure](https://github.com/akkadotnet/Akka.Management/blob/dev/src/discovery/azure/Akka.Discovery.Azure/README.md), this is the `service-name` HOCON setting or the `AkkaDiscoveryOptions.ServiceName` options property.
 * Set `akka.cluster.client.discovery.method` to a valid discovery method name listed under `akka.discovery`.
 * Set `akka.cluster.client.discovery.actor-system-name` to the target cluster ActorSystem name.
 * **OPTIONAL**. Set `akka.cluster.client.discovery,port-name` if the discovery extension that you're using depends on port names.
@@ -175,20 +176,23 @@ To enable contact auto-discovery, you will need to:
 
 ### Using Akka.Discovery For Both Akka.Cluster.Tools.Client And Akka.Management.Cluster.Bootstrap
 
-If you need to use Akka.Discovery with both ClusterClient AND ClusterBootstrap, you will have to **make sure** that you have **TWO** different Akka.Discovery settings living side-by-side under the `akka.discovery` HOCON setting object. 
+If you need to use Akka.Discovery with both ClusterClient AND ClusterBootstrap, you will have to **make sure** that you have **TWO** different Akka.Discovery settings living side-by-side under the `akka.discovery` HOCON setting object.
 
 #### Akka.Discovery.KubernetesApi Example
 
 In your YAML file:
 
 * Make sure that you tag the instances that will run the cluster client receptionists with an extra tag. If your ClusterBootstrap is tagged with the YAML value `metadata.labels.app: cluster`, then you will need to add another tag to the instances that runs the Receptionists, e.g. `metadata.labels.contact: cluster-client` like so:
+
   ```yaml
   metadata:
     labels:
       app: cluster
       contact: cluster-client
   ```
+
 * Make sure you name the Akka remoting port
+
   ```yaml
   spec:
     template:
@@ -220,6 +224,7 @@ In your cluster receptionist Akka.NET node HOCON settings:
 * Change `akka.discovery.azure-cluster-client.service-name` to "cluster-client". The name does not matter, what matters is that this name **HAS** to match the service name we'll be using in `akka.cluster.client.discovery.service-name`.
 * **[OPTIONAL]** change `akka.discovery.azure-cluster-client.table-name` to `akkaclusterreceptionists` to separate the discovery table from ClusterBootstrap entries.
 * Make sure that you start the discovery extension in the receptionist side. This needs to be done because the extension is responsible for updating the Azure table.
+
   ```csharp
   Discovery.Get(myActorSystem).LoadServiceDiscovery("azure-cluster-client");
   ```
