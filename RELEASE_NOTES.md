@@ -1,6 +1,22 @@
-#### 1.5.26 June 14th 2024 ####
+#### 1.5.26 June 27th 2024 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.26 introduces a new Akka.Cluster.Tools feature and a logging improvement.
+
+* [Add ClusterClient initial contact auto-discovery feature](https://github.com/akkadotnet/akka.net/issues/7261)
+* [Improve traceability of `ITimerMsg`](https://github.com/akkadotnet/akka.net/issues/7262)
+
+**Preliminary ClusterClient Initial Contact Auto-Discovery Feature**
+
+This feature allows ClusterClient to use Akka.Discovery to automatically query for cluster client receptionists inside a dynamic environment such as Kubernetes.
+
+The preliminary documentation for this feature can be read [here](https://getakka.net/articles/clustering/cluster-client.html#contact-auto-discovery-using-akkadiscovery)
+
+You can [see the full set of changes for Akka.NET v1.5.26 here](https://github.com/akkadotnet/akka.net/milestones/1.5.26).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 3       | 45   | 11   | Aaron Stannard      |
+| 2       | 945  | 15   | Gregorius Soedharmo |
 
 #### 1.5.25 June 14th 2024 ####
 
