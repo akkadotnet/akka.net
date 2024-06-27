@@ -18,9 +18,10 @@ public sealed record ClusterClientDiscoverySettings(
     string ReceptionistName,
     string? PortName,
     TimeSpan DiscoveryRetryInterval,
-    TimeSpan DiscoveryTimeout)
+    TimeSpan DiscoveryTimeout,
+    int NumberOfContacts)
 {
-    public static readonly ClusterClientDiscoverySettings Empty = new ("<method>", null, null, "receptionist", null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(60));
+    public static readonly ClusterClientDiscoverySettings Empty = new ("<method>", null, null, "receptionist", null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(60), 3);
     
     public static ClusterClientDiscoverySettings Create(Config clusterClientConfig)
     {
@@ -35,7 +36,8 @@ public sealed record ClusterClientDiscoverySettings(
             config.GetString("receptionist-name", "receptionist"),
             config.GetString("port-name"),
             config.GetTimeSpan("discovery-retry-interval", TimeSpan.FromSeconds(1)),
-            config.GetTimeSpan("discovery-timeout", TimeSpan.FromSeconds(60))
+            config.GetTimeSpan("discovery-timeout", TimeSpan.FromSeconds(60)),
+            config.GetInt("number-of-contacts", 3)
         );
     }
 }
