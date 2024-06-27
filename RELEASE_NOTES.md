@@ -1,3 +1,7 @@
+#### 1.5.27 June 27th 2024 ####
+
+*Placeholder for nightlies*
+
 #### 1.5.26 June 27th 2024 ####
 
 Akka.NET v1.5.26 introduces a new Akka.Cluster.Tools feature and a logging improvement.
