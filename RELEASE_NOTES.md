@@ -7,6 +7,8 @@ Akka.NET v1.5.26 introduces a new Akka.Cluster.Tools feature and a logging impro
 
 **Preliminary ClusterClient Initial Contact Auto-Discovery Feature**
 
+> To use this feature, you will need to use Akka.Discovery implementation (Kubernetes or Azure) version 1.5.26-beta1 or higher
+
 This feature allows ClusterClient to use Akka.Discovery to automatically query for cluster client receptionists inside a dynamic environment such as Kubernetes.
 
 The preliminary documentation for this feature can be read [here](https://getakka.net/articles/clustering/cluster-client.html#contact-auto-discovery-using-akkadiscovery)
