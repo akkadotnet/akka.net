@@ -14,6 +14,7 @@ using Akka.Actor;
 using Akka.Discovery;
 using Akka.Event;
 using Akka.Util;
+using Akka.Util.Internal;
 
 #nullable enable
 namespace Akka.Cluster.Tools.Client;
@@ -248,28 +249,10 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
         if (fullContact.Length <= count)
             return fullContact;
         
-        Shuffle(fullContact);
+        fullContact.Shuffle();
         return fullContact.Take(count).ToArray();
     }
 
-    /// <summary>
-    /// Fisher-Yates in-place array shuffle algorithm
-    /// </summary>
-    /// <param name="array"></param>
-    /// <typeparam name="T"></typeparam>
-    private static void Shuffle<T>(T[] array)
-    {
-        var rnd = ThreadLocalRandom.Current;
-        var n = array.Length;
-        for (var i = 0; i < (n - 1); i++)
-        {
-            var r = i + rnd.Next(n - i);
-            var t = array[r];
-            array[r] = array[i];
-            array[i] = t;
-        }
-    }
-    
     private Receive Active(Contact[] contacts)
     {
         if(_verboseLogging && _log.IsDebugEnabled)
