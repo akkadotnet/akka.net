@@ -21,6 +21,7 @@ namespace Akka.Discovery.Config
     public class ConfigServiceDiscovery : Akka.Discovery.ServiceDiscovery
     {
         public ConfigServiceDiscovery(Akka.Actor.ExtendedActorSystem system) { }
+        public ConfigServiceDiscovery(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
         public override System.Threading.Tasks.Task<Akka.Discovery.ServiceDiscovery.Resolved> Lookup(Akka.Discovery.Lookup lookup, System.TimeSpan resolveTimeout) { }
         [Akka.Annotations.InternalStableApiAttribute()]
         public bool TryAddEndpoint(string serviceName, Akka.Discovery.ServiceDiscovery.ResolvedTarget target) { }
