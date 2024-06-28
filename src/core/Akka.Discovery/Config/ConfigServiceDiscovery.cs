@@ -40,16 +40,24 @@ namespace Akka.Discovery.Config
     [InternalApi]
     public class ConfigServiceDiscovery : ServiceDiscovery
     {
+        private const string DefaultPath = "config";
+        private const string DefaultConfigPath = "akka.discovery." + DefaultPath;
+        
         private readonly ILoggingAdapter _log;
         private ImmutableDictionary<string, Resolved> _resolvedServices;
 
+        // Backward compatibility constructor
         public ConfigServiceDiscovery(ExtendedActorSystem system)
+            : this(system, system.Settings.Config.GetConfig(DefaultConfigPath))
         {
+        }
+        
+        public ConfigServiceDiscovery(ExtendedActorSystem system, Configuration.Config config)
+        {
+            if(config is null)
+                throw new ArgumentException("Config based discovery HOCON config is null");
+                
             _log = Logging.GetLogger(system, nameof(ConfigServiceDiscovery));
-            
-            var config = system.Settings.Config.GetConfig("akka.discovery.config") ??
-                throw new ArgumentException(
-                    "Could not load config based discovery config from path [akka.discovery.config]");
             
             var servicePath = config.GetString("services-path");
             if (string.IsNullOrWhiteSpace(servicePath))
