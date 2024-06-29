@@ -213,6 +213,7 @@ namespace Akka.Cluster.Tools.Client
         /// <param name="discoverySettings">TBD</param>
         /// <param name="reconnectTimeout">TBD</param>
         /// <param name="useLegacySerialization">TBD</param>
+        /// <param name="verboseLogging">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
         public ClusterClientSettings(
             IImmutableSet<ActorPath> initialContacts,
@@ -329,7 +330,8 @@ namespace Akka.Cluster.Tools.Client
             bool? useLegacySerialization = null,
             bool? useInitialContactsDiscovery = null,
             ClusterClientDiscoverySettings? discoverySettings = null,
-            TimeSpan? reconnectTimeout = null)
+            TimeSpan? reconnectTimeout = null,
+            bool? verboseLogging = null)
         {
             return new ClusterClientSettings(
                 initialContacts ?? InitialContacts,
@@ -341,7 +343,8 @@ namespace Akka.Cluster.Tools.Client
                 useLegacySerialization ?? UseLegacySerialization,
                 useInitialContactsDiscovery ?? UseInitialContactDiscovery,
                 discoverySettings ?? DiscoverySettings,
-                reconnectTimeout ?? ReconnectTimeout);
+                reconnectTimeout ?? ReconnectTimeout,
+                verboseLogging ?? VerboseLogging);
         }
     }
 }
