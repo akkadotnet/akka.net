@@ -11,7 +11,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,16 +24,26 @@ namespace Akka.Persistence.TestKit.Tests
     /// </summary>
     public class Bug4762FixSpec : PersistenceTestKit
     {
-        public Bug4762FixSpec(ITestOutputHelper outputHelper) : base(output: outputHelper)
+        // create a Config that enables debug mode on the TestJournal
+        private static readonly Config Config =
+            ConfigurationFactory.ParseString("""
+                                             akka.loglevel = DEBUG
+                                             akka.persistence.journal.test.debug = on
+                                             akka.persistence.journal.test.replay-filter.debug = on
+                                             akka.persistence.snapshot-store.test.debug = on
+                                             """);
+
+        public Bug4762FixSpec(ITestOutputHelper outputHelper) : base(Config, output: outputHelper)
         {
-            
         }
-        
+
         private class WriteMessage
-        { }
+        {
+        }
 
         private class TestEvent
-        { }
+        {
+        }
 
         private class TestActor2 : UntypedPersistentActor
         {
@@ -48,22 +60,25 @@ namespace Akka.Persistence.TestKit.Tests
             protected override void OnCommand(object message)
             {
                 _log.Info("Received command {0}", message);
-                
+
                 switch (message)
                 {
                     case WriteMessage _:
                         var event1 = new TestEvent();
                         var event2 = new TestEvent();
                         var events = new List<TestEvent> { event1, event2 };
-                        PersistAll(events, _ =>
-                        {
-                            _probe.Tell(Done.Instance);
-                        });
+                        PersistAll(events, _ => { _probe.Tell(Done.Instance); });
                         break;
 
                     default:
                         return;
                 }
+            }
+
+            protected override void PreStart()
+            {
+                _log.Info("Starting up and beginning recovery");
+                base.PreStart();
             }
 
             protected override void OnRecover(object message)
@@ -79,13 +94,14 @@ namespace Akka.Persistence.TestKit.Tests
             var probe = CreateTestProbe();
             return WithJournalWrite(write => write.Pass(), async () =>
             {
-                var actor = ActorOf(() => new TestActor2(probe));
-                Watch(actor);
+                var actor = Sys.ActorOf(
+                    Props.Create(() => new TestActor2(probe))
+                        .WithDispatcher("akka.actor.internal-dispatcher"), "test-actor");
 
                 var command = new WriteMessage();
                 actor.Tell(command, actor);
 
-                await probe.ExpectMsgAsync<RecoveryCompleted>();
+                await probe.ExpectMsgAsync<RecoveryCompleted>(10.Seconds());
                 await probe.ExpectMsgAsync<Done>();
                 await probe.ExpectMsgAsync<Done>();
                 await probe.ExpectNoMsgAsync(3000);

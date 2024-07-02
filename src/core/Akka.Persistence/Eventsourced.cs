@@ -618,6 +618,7 @@ namespace Akka.Persistence
         {
             try
             {
+                Log.Info($"Stashing [{currentMessage}]");
                 _internalStash.Stash();
             }
             catch (StashOverflowException e)
