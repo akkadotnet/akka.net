@@ -419,7 +419,7 @@ try
 }
 catch (Exception e)
 {
-    Sender.Tell(new Failure { Exception = e }, Self);
+    Sender.Tell(new Akka.Actor.Status.Failure(e), Self);
 }
 ```
 
