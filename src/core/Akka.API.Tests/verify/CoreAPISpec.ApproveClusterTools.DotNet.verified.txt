@@ -55,11 +55,12 @@ namespace Akka.Cluster.Tools.Client
     {
         [System.Runtime.CompilerServices.NullableAttribute(1)]
         public static readonly Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings Empty;
-        public ClusterClientDiscoverySettings(string DiscoveryMethod, string ActorSystemName, string ServiceName, [System.Runtime.CompilerServices.NullableAttribute(1)] string ReceptionistName, string PortName, System.TimeSpan DiscoveryRetryInterval, System.TimeSpan DiscoveryTimeout) { }
+        public ClusterClientDiscoverySettings(string DiscoveryMethod, string ActorSystemName, string ServiceName, [System.Runtime.CompilerServices.NullableAttribute(1)] string ReceptionistName, string PortName, System.TimeSpan DiscoveryRetryInterval, System.TimeSpan DiscoveryTimeout, int NumberOfContacts) { }
         public string ActorSystemName { get; set; }
         public string DiscoveryMethod { get; set; }
         public System.TimeSpan DiscoveryRetryInterval { get; set; }
         public System.TimeSpan DiscoveryTimeout { get; set; }
+        public int NumberOfContacts { get; set; }
         public string PortName { get; set; }
         [System.Runtime.CompilerServices.NullableAttribute(1)]
         public string ReceptionistName { get; set; }

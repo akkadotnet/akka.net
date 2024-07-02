@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Discovery;
 using Akka.Event;
+using Akka.Util;
+using Akka.Util.Internal;
 
 #nullable enable
 namespace Akka.Cluster.Tools.Client;
@@ -49,6 +51,7 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
     private readonly string _targetActorSystemName;
     private readonly string _receptionistName;
     private readonly string _transportProtocol;
+    private readonly int _numberOfContacts;
 
     private readonly bool _verboseLogging;
     
@@ -109,6 +112,8 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
         _discoveryRetryInterval = _settings.DiscoverySettings.DiscoveryRetryInterval;
         _discoveryTimeout = _discoverySettings.DiscoveryTimeout;
 
+        _numberOfContacts = _discoverySettings.NumberOfContacts;
+        
         _verboseLogging = _settings.VerboseLogging;
         
         Become(Discovering);
@@ -134,7 +139,7 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
     {
         var networkAddress = string.IsNullOrWhiteSpace(target.Host) ? target.Address.ToString() : target.Host;
         var address = new Address(_transportProtocol, _targetActorSystemName, networkAddress, target.Port);
-        return new RootActorPath(address) / "system" / _discoverySettings.ReceptionistName;
+        return new RootActorPath(address) / "system" / _receptionistName;
     }
     
     private static async Task<ResolveResult> ResolveContact(Contact contact, TimeSpan timeout, CancellationToken ct)
@@ -207,10 +212,13 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
                 }
                 else
                 {
+                    var filteredContacts = TrimContacts(contacts, _numberOfContacts);
                     if(_log.IsInfoEnabled)
-                        _log.Info("Cluster client initial contacts are verified at [{0}], starting cluster client actor.", string.Join(", ", contacts.Select(c => c.Path)));
+                        _log.Info(
+                            "Cluster client initial contacts are verified at [{0}], starting cluster client actor.", 
+                            string.Join(", ", filteredContacts.Select(c => c.Path)));
                     
-                    Become(Active(contacts));
+                    Become(Active(filteredContacts));
                 }
                 
                 return true;
@@ -227,6 +235,22 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
                 Stash.Stash();
                 return true;
         }
+    }
+
+    /// <summary>
+    /// Trim the number of Contact in the `fullContact` array to `count` length
+    /// by picking random elements while avoiding repeating elements from being returned
+    /// </summary>
+    /// <param name="fullContact">Array of Contacts</param>
+    /// <param name="count">The number of elements to return</param>
+    /// <returns></returns>
+    private static Contact[] TrimContacts(Contact[] fullContact, int count)
+    {
+        if (fullContact.Length <= count)
+            return fullContact;
+        
+        fullContact.Shuffle();
+        return fullContact.Take(count).ToArray();
     }
 
     private Receive Active(Contact[] contacts)
