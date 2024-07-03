@@ -36,6 +36,7 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
     }
 
     private sealed record DiscoveryFailure(Exception Cause);
+    private sealed record ContactVerificationFailure(Exception Cause);
     private sealed record ReceptionistHttpPayload(string ReceptionistPath);
     
     #endregion
@@ -273,7 +274,7 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
                 if(_verboseLogging && _log.IsDebugEnabled)
                     _log.Debug("Initial contacts are discovered at [{0}], verifying existence.", string.Join(", ", resolved.Addresses));
         
-                VerifyContacts().PipeTo(Self, Self);
+                VerifyContacts().PipeTo(Self, Self, failure: cause => new ContactVerificationFailure(cause));
 
                 return true;
 
@@ -312,6 +313,14 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
             case DiscoveryFailure fail:
                 if(_verboseLogging && _log.IsInfoEnabled)
                     _log.Info(fail.Cause, "Cluster client contact point service discovery phase failed, will try again.");
+
+                _discoveryFailedBackoffCounter++;
+                StartSingleDiscoveryTimer();
+                return true;
+            
+            case ContactVerificationFailure fail:
+                if(_verboseLogging && _log.IsInfoEnabled)
+                    _log.Info(fail.Cause, "Cluster client receptionist path verification phase failed, will try again.");
 
                 _discoveryFailedBackoffCounter++;
                 StartSingleDiscoveryTimer();
