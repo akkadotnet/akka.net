@@ -102,7 +102,7 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
         _http = new HttpClient();
         _http.Timeout = _settings.DiscoverySettings.ProbeTimeout;
         
-        _lookup = new Lookup(discoverySettings.ServiceName);
+        _lookup = new Lookup(discoverySettings.ServiceName, discoverySettings.PortName);
         _serviceDiscovery = Discovery.Discovery.Get(Context.System).LoadServiceDiscovery(discoveryMethod);
         _discoveryRetryInterval = _settings.DiscoverySettings.Interval;
         _discoveryTimeout = discoverySettings.ResolveTimeout;
