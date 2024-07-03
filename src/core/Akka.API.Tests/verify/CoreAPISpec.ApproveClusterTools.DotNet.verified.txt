@@ -48,6 +48,7 @@ namespace Akka.Cluster.Tools.Client
         public Akka.Actor.IStash Stash { get; set; }
         public Akka.Actor.ITimerScheduler Timers { get; set; }
         protected override void OnReceive(object message) { }
+        protected override void PostStop() { }
         protected override void PreStart() { }
     }
     [System.Runtime.CompilerServices.NullableAttribute(0)]
@@ -55,15 +56,15 @@ namespace Akka.Cluster.Tools.Client
     {
         [System.Runtime.CompilerServices.NullableAttribute(1)]
         public static readonly Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings Empty;
-        public ClusterClientDiscoverySettings(string DiscoveryMethod, string ActorSystemName, string ServiceName, [System.Runtime.CompilerServices.NullableAttribute(1)] string ReceptionistName, string PortName, System.TimeSpan DiscoveryRetryInterval, System.TimeSpan DiscoveryTimeout, int NumberOfContacts) { }
-        public string ActorSystemName { get; set; }
+        public ClusterClientDiscoverySettings(string DiscoveryMethod, string ServiceName, string PortName, int NumberOfContacts, System.TimeSpan Interval, double ExponentialBackoffJitter, System.TimeSpan ExponentialBackoffMax, System.TimeSpan ResolveTimeout, System.TimeSpan ProbeTimeout) { }
         public string DiscoveryMethod { get; set; }
-        public System.TimeSpan DiscoveryRetryInterval { get; set; }
-        public System.TimeSpan DiscoveryTimeout { get; set; }
+        public double ExponentialBackoffJitter { get; set; }
+        public System.TimeSpan ExponentialBackoffMax { get; set; }
+        public System.TimeSpan Interval { get; set; }
         public int NumberOfContacts { get; set; }
         public string PortName { get; set; }
-        [System.Runtime.CompilerServices.NullableAttribute(1)]
-        public string ReceptionistName { get; set; }
+        public System.TimeSpan ProbeTimeout { get; set; }
+        public System.TimeSpan ResolveTimeout { get; set; }
         public string ServiceName { get; set; }
         public static Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings Create(Akka.Configuration.Config clusterClientConfig) { }
     }

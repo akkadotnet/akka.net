@@ -7,21 +7,38 @@
 
 using System;
 using Akka.Configuration;
+using Akka.Discovery;
 
 namespace Akka.Cluster.Tools.Client;
 
 #nullable enable
 public sealed record ClusterClientDiscoverySettings(
     string? DiscoveryMethod,
-    string? ActorSystemName,
     string? ServiceName,
-    string ReceptionistName,
     string? PortName,
-    TimeSpan DiscoveryRetryInterval,
-    TimeSpan DiscoveryTimeout,
-    int NumberOfContacts)
+    int NumberOfContacts,
+    TimeSpan Interval,
+    double ExponentialBackoffJitter,
+    TimeSpan ExponentialBackoffMax,
+    TimeSpan ResolveTimeout,
+    TimeSpan ProbeTimeout)
 {
-    public static readonly ClusterClientDiscoverySettings Empty = new ("<method>", null, null, "receptionist", null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(60), 3);
+    public static readonly ClusterClientDiscoverySettings Empty;
+
+    static ClusterClientDiscoverySettings()
+    {
+        var config = DiscoveryProvider.DefaultConfiguration();
+        Empty = new ClusterClientDiscoverySettings(
+            DiscoveryMethod: config.GetString("method"),
+            ServiceName: config.GetString("service-name"),
+            PortName: config.GetString("port-name"),
+            NumberOfContacts: config.GetInt("number-of-contacts"),
+            Interval: config.GetTimeSpan("interval"),
+            ExponentialBackoffJitter: config.GetDouble("exponential-backoff-random-factor"),
+            ExponentialBackoffMax: config.GetTimeSpan("exponential-backoff-max"),
+            ResolveTimeout: config.GetTimeSpan("resolve-timeout"),
+            ProbeTimeout: config.GetTimeSpan("probe-timeout"));
+    }
     
     public static ClusterClientDiscoverySettings Create(Config clusterClientConfig)
     {
@@ -30,14 +47,15 @@ public sealed record ClusterClientDiscoverySettings(
             return Empty;
         
         return new ClusterClientDiscoverySettings(
-            config.GetString("method"),
-            config.GetString("actor-system-name"),
-            config.GetString("service-name"),
-            config.GetString("receptionist-name", "receptionist"),
-            config.GetString("port-name"),
-            config.GetTimeSpan("discovery-retry-interval", TimeSpan.FromSeconds(1)),
-            config.GetTimeSpan("discovery-timeout", TimeSpan.FromSeconds(60)),
-            config.GetInt("number-of-contacts", 3)
+            DiscoveryMethod: config.GetString("method", Empty.DiscoveryMethod),
+            ServiceName: config.GetString("service-name", Empty.ServiceName),
+            PortName: config.GetString("port-name", Empty.PortName),
+            NumberOfContacts: config.GetInt("number-of-contacts", Empty.NumberOfContacts),
+            Interval: config.GetTimeSpan("interval", Empty.Interval),
+            ExponentialBackoffJitter: config.GetDouble("exponential-backoff-random-factor", Empty.ExponentialBackoffJitter),
+            ExponentialBackoffMax: config.GetTimeSpan("exponential-backoff-max", Empty.ExponentialBackoffMax),
+            ResolveTimeout: config.GetTimeSpan("resolve-timeout", Empty.ResolveTimeout),
+            ProbeTimeout: config.GetTimeSpan("probe-timeout", Empty.ProbeTimeout)
         );
     }
 }
