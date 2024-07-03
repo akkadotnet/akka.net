@@ -1,3 +1,11 @@
+#### 1.5.27-beta2 July 3rd 2024 ####
+
+* [Cluster.Tools: Fix missing port name argument in ClusterClientDiscovery](https://github.com/akkadotnet/akka.net/issues/7276)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 1    | 1    | Gregorius Soedharmo |
+
 #### 1.5.27-beta1 July 3rd 2024 ####
 
 Akka.NET v1.5.27-beta1 improves upon the new ClusterClient initial contact auto-discovery feature to make it more robust in implementation.
