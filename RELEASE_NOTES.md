@@ -1,6 +1,17 @@
-#### 1.5.27 June 27th 2024 ####
+#### 1.5.27-beta1 July 3rd 2024 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.27-beta1 improves upon the new ClusterClient initial contact auto-discovery feature to make it more robust in implementation.
+
+* [Akka.Discovery: Add multi-config support to config-based discovery](https://github.com/akkadotnet/akka.net/issues/7271)
+* [Cluster.Tools: Fix missing VerboseLogging in ClusterClientSettings.Copy method](https://github.com/akkadotnet/akka.net/issues/7272)
+* [Cluster.Tools: Improve ClusterClientDiscovery to avoid thundering herd problem](https://github.com/akkadotnet/akka.net/issues/7270)
+* [Cluster.Tools: Change ClusterClientDiscovery to use the new Akka.Management "/cluster-client/receptionist" endpoint](https://github.com/akkadotnet/akka.net/issues/7274)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 5       | 422  | 183  | Gregorius Soedharmo |
+| 1       | 4    | 0    | Aaron Stannard      |
+| 1       | 1    | 1    | Sean Killeen        |
 
 #### 1.5.26 June 27th 2024 ####
 
