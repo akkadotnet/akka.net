@@ -7,6 +7,7 @@
 
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Benchmarks.Configurations;
 using Akka.Cluster.Serialization;
 using Akka.Cluster.Tests;
 using Akka.Util;
@@ -14,7 +15,8 @@ using BenchmarkDotNet.Attributes;
 
 namespace Akka.Cluster.Benchmarks.Serialization;
 
-public sealed class ClusterMessageSerializerBenchmarks
+[Config(typeof(MicroBenchmarkConfig))]
+public class ClusterMessageSerializerBenchmarks
 {
     private ExtendedActorSystem _system;
     private ClusterMessageSerializer _clusterMessageSerializer;
