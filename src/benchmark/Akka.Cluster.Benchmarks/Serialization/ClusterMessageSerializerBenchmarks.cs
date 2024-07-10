@@ -16,122 +16,120 @@ namespace Akka.Cluster.Benchmarks.Serialization;
 
 public sealed class ClusterMessageSerializerBenchmarks
 {
-    private ExtendedActorSystem system;
-    private ClusterMessageSerializer clusterMessageSerializer;
+    private ExtendedActorSystem _system;
+    private ClusterMessageSerializer _clusterMessageSerializer;
 
-    private static readonly Member a1 = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552),
+    private static readonly Member A1 = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552),
         MemberStatus.Joining, appVersion: AppVersion.Create("1.0.0"));
 
-    private static readonly Member b1 = TestMember.Create(new Address("akka.tcp", "sys", "b", 2552), MemberStatus.Up,
+    private static readonly Member B1 = TestMember.Create(new Address("akka.tcp", "sys", "b", 2552), MemberStatus.Up,
         ImmutableHashSet.Create("r1"), appVersion: AppVersion.Create("1.1.0"));
 
-    private static readonly Member c1 = TestMember.Create(new Address("akka.tcp", "sys", "c", 2552),
+    private static readonly Member C1 = TestMember.Create(new Address("akka.tcp", "sys", "c", 2552),
         MemberStatus.Leaving, ImmutableHashSet.Create("r2"), appVersion: AppVersion.Create("1.1.0"));
 
-    private static readonly Member d1 = TestMember.Create(new Address("akka.tcp", "sys", "d", 2552),
+    private static readonly Member D1 = TestMember.Create(new Address("akka.tcp", "sys", "d", 2552),
         MemberStatus.Exiting, ImmutableHashSet.Create("r1", "r2"));
 
-    private static readonly Member e1 = TestMember.Create(new Address("akka.tcp", "sys", "e", 2552), MemberStatus.Down,
+    private static readonly Member E1 = TestMember.Create(new Address("akka.tcp", "sys", "e", 2552), MemberStatus.Down,
         ImmutableHashSet.Create("r3"));
 
     [GlobalSetup]
     public void Setup()
     {
-        system = (ExtendedActorSystem)ActorSystem.Create("system", "akka.actor.provider=cluster");
-        clusterMessageSerializer = new ClusterMessageSerializer(system);
+        _system = (ExtendedActorSystem)ActorSystem.Create("system", "akka.actor.provider=cluster");
+        _clusterMessageSerializer = new ClusterMessageSerializer(_system);
     }
 
-    private static readonly ClusterHeartbeatSender.Heartbeat heartbeat =
-        new ClusterHeartbeatSender.Heartbeat(a1.UniqueAddress.Address, 10, 3);
+    private static readonly ClusterHeartbeatSender.Heartbeat Heartbeat = new(A1.UniqueAddress.Address, 10, 3);
 
-    private static readonly ClusterHeartbeatSender.HeartbeatRsp heartbeatRsp =
-        new ClusterHeartbeatSender.HeartbeatRsp(b1.UniqueAddress, 10, 3);
+    private static readonly ClusterHeartbeatSender.HeartbeatRsp HeartbeatRsp = new(B1.UniqueAddress, 10, 3);
 
     [Benchmark]
     public byte[] Serialize_Heartbeat()
     {
-        return clusterMessageSerializer.ToBinary(heartbeat);
+        return _clusterMessageSerializer.ToBinary(Heartbeat);
     }
 
     [Benchmark]
     public object Deserialize_Heartbeat()
     {
-        return clusterMessageSerializer.FromBinary(clusterMessageSerializer.ToBinary(heartbeat),
-            clusterMessageSerializer.Manifest(heartbeat));
+        return _clusterMessageSerializer.FromBinary(_clusterMessageSerializer.ToBinary(Heartbeat),
+            _clusterMessageSerializer.Manifest(Heartbeat));
     }
 
     [Benchmark]
     public byte[] Serialize_HeartbeatRsp()
     {
-        return clusterMessageSerializer.ToBinary(heartbeatRsp);
+        return _clusterMessageSerializer.ToBinary(HeartbeatRsp);
     }
 
     [Benchmark]
     public object Deserialize_HeartbeatRsp()
     {
-        return clusterMessageSerializer.FromBinary(clusterMessageSerializer.ToBinary(heartbeatRsp),
-            clusterMessageSerializer.Manifest(heartbeatRsp));
+        return _clusterMessageSerializer.FromBinary(_clusterMessageSerializer.ToBinary(HeartbeatRsp),
+            _clusterMessageSerializer.Manifest(HeartbeatRsp));
     }
 
-    private static readonly GossipEnvelope _gossipEnvelope = new GossipEnvelope(a1.UniqueAddress, c1.UniqueAddress,
-        new Gossip(ImmutableSortedSet.Create(a1, b1, c1, d1)).Increment(new VectorClock.Node("node1"))
+    private static readonly GossipEnvelope GossipEnvelope = new(A1.UniqueAddress, C1.UniqueAddress,
+        new Gossip(ImmutableSortedSet.Create(A1, B1, C1, D1)).Increment(new VectorClock.Node("node1"))
             .Increment(new VectorClock.Node("node2"))
-            .Seen(a1.UniqueAddress)
-            .Seen(b1.UniqueAddress));
-    private static readonly Gossip _gossip2 = _gossipEnvelope.Gossip
+            .Seen(A1.UniqueAddress)
+            .Seen(B1.UniqueAddress));
+    private static readonly Gossip Gossip2 = GossipEnvelope.Gossip
         .Increment(new VectorClock.Node("node3"))
         .Increment(new VectorClock.Node("node4"))
-        .Seen(a1.UniqueAddress).Seen(c1.UniqueAddress);
-    private static readonly Reachability _reachability = Reachability.Empty.Unreachable(a1.UniqueAddress, e1.UniqueAddress).Unreachable(b1.UniqueAddress, e1.UniqueAddress);
+        .Seen(A1.UniqueAddress).Seen(C1.UniqueAddress);
+    private static readonly Reachability Reachability = Reachability.Empty.Unreachable(A1.UniqueAddress, E1.UniqueAddress).Unreachable(B1.UniqueAddress, E1.UniqueAddress);
 
-    private static readonly Gossip _gossip3 = _gossip2.Copy(ImmutableSortedSet.Create(a1, b1, c1, d1, e1),
-        overview: _gossip2.Overview.Copy(reachability: _reachability));
+    private static readonly Gossip Gossip3 = Gossip2.Copy(ImmutableSortedSet.Create(A1, B1, C1, D1, E1),
+        overview: Gossip2.Overview.Copy(reachability: Reachability));
     
-    private static readonly GossipStatus _gossipStatus = new GossipStatus(a1.UniqueAddress, _gossip3.Version);
-    private static readonly InternalClusterAction.Welcome _welcome = new InternalClusterAction.Welcome(a1.UniqueAddress, _gossip3);
+    private static readonly GossipStatus GossipStatus = new(A1.UniqueAddress, Gossip3.Version);
+    private static readonly InternalClusterAction.Welcome Welcome = new(A1.UniqueAddress, Gossip3);
     
     [Benchmark]
     public byte[] Serialize_GossipEnvelope()
     {
-        return clusterMessageSerializer.ToBinary(_gossipEnvelope);
+        return _clusterMessageSerializer.ToBinary(GossipEnvelope);
     }
     
     [Benchmark]
     public object Deserialize_GossipEnvelope()
     {
-        return clusterMessageSerializer.FromBinary(clusterMessageSerializer.ToBinary(_gossipEnvelope),
-            clusterMessageSerializer.Manifest(_gossipEnvelope));
+        return _clusterMessageSerializer.FromBinary(_clusterMessageSerializer.ToBinary(GossipEnvelope),
+            _clusterMessageSerializer.Manifest(GossipEnvelope));
     }
     
     [Benchmark]
     public byte[] Serialize_GossipStatus()
     {
-        return clusterMessageSerializer.ToBinary(_gossipStatus);
+        return _clusterMessageSerializer.ToBinary(GossipStatus);
     }
     
     [Benchmark]
     public object Deserialize_GossipStatus()
     {
-        return clusterMessageSerializer.FromBinary(clusterMessageSerializer.ToBinary(_gossipStatus),
-            clusterMessageSerializer.Manifest(_gossipStatus));
+        return _clusterMessageSerializer.FromBinary(_clusterMessageSerializer.ToBinary(GossipStatus),
+            _clusterMessageSerializer.Manifest(GossipStatus));
     }
     
     [Benchmark]
     public byte[] Serialize_Welcome()
     {
-        return clusterMessageSerializer.ToBinary(_welcome);
+        return _clusterMessageSerializer.ToBinary(Welcome);
     }
     
     [Benchmark]
     public object Deserialize_Welcome()
     {
-        return clusterMessageSerializer.FromBinary(clusterMessageSerializer.ToBinary(_welcome),
-            clusterMessageSerializer.Manifest(_welcome));
+        return _clusterMessageSerializer.FromBinary(_clusterMessageSerializer.ToBinary(Welcome),
+            _clusterMessageSerializer.Manifest(Welcome));
     }
 
     [GlobalCleanup]
     public void Cleanup()
     {
-        system.Dispose();
+        _system.Dispose();
     }
 }
