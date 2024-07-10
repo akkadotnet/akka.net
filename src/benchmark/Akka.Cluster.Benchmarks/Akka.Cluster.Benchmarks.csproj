@@ -15,6 +15,9 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Compile Include="..\..\core\Akka.Cluster.Tests\TestMember.cs">
+        <Link>TestMember.cs</Link>
+      </Compile>
       <Compile Include="..\Akka.Benchmarks\Configurations\Configs.cs">
         <Link>Configs.cs</Link>
       </Compile>
