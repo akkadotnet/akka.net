@@ -12,6 +12,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Benchmarks")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests.Performance")]
 [assembly: InternalsVisibleTo("Akka.Cluster.TestKit")]
