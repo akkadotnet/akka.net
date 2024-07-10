@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+      <PackageReference Include="Akka.Management" Version="1.5.26-beta3" />
       <PackageReference Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
       <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
