@@ -14,6 +14,7 @@ using Akka.Cluster.Tools.Client.Serialization;
 using Akka.Configuration;
 using Akka.Remote;
 
+#nullable enable
 namespace Akka.Cluster.Tools.Client
 {
     /// <summary>
@@ -56,7 +57,7 @@ namespace Akka.Cluster.Tools.Client
             var initialContacts = config.GetStringList("initial-contacts", new string[] { }).Select(ActorPath.Parse).ToImmutableSortedSet();
 
             var useReconnect = config.GetString("reconnect-timeout", "").ToLowerInvariant();
-            TimeSpan? reconnectTimeout = 
+            var reconnectTimeout = 
                 useReconnect.Equals("off") ||
                 useReconnect.Equals("false") ||
                 useReconnect.Equals("no") ? 
@@ -70,7 +71,10 @@ namespace Akka.Cluster.Tools.Client
                 config.GetTimeSpan("acceptable-heartbeat-pause"),
                 config.GetInt("buffer-size"),
                 config.GetBoolean("use-legacy-serialization"),
-                reconnectTimeout);
+                config.GetBoolean("use-initial-contacts-discovery"),
+                ClusterClientDiscoverySettings.Create(config),
+                reconnectTimeout,
+                config.GetBoolean("verbose-logging"));
         }
 
         /// <summary>
@@ -122,6 +126,12 @@ namespace Akka.Cluster.Tools.Client
         /// </summary>
         public bool UseLegacySerialization { get; }
         
+        public bool UseInitialContactDiscovery { get; }
+        
+        public ClusterClientDiscoverySettings DiscoverySettings { get; }
+        
+        public bool VerboseLogging { get; }
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -166,6 +176,7 @@ namespace Akka.Cluster.Tools.Client
         /// <param name="reconnectTimeout">TBD</param>
         /// <param name="useLegacySerialization">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
+        [Obsolete("Use constructor with useInitialContactsDiscovery and discoverySettings argument instead. Since 1.5.25")]
         public ClusterClientSettings(
             IImmutableSet<ActorPath> initialContacts,
             TimeSpan establishingGetContactsInterval,
@@ -175,6 +186,47 @@ namespace Akka.Cluster.Tools.Client
             int bufferSize,
             bool useLegacySerialization,
             TimeSpan? reconnectTimeout = null)
+            : this(
+                initialContacts: initialContacts,
+                establishingGetContactsInterval: establishingGetContactsInterval,
+                refreshContactsInterval: refreshContactsInterval,
+                heartbeatInterval: heartbeatInterval,
+                acceptableHeartbeatPause: acceptableHeartbeatPause,
+                bufferSize: bufferSize,
+                useLegacySerialization: useLegacySerialization,
+                useInitialContactsDiscovery: false,
+                discoverySettings: null,
+                reconnectTimeout: reconnectTimeout)
+        {
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="initialContacts">TBD</param>
+        /// <param name="establishingGetContactsInterval">TBD</param>
+        /// <param name="refreshContactsInterval">TBD</param>
+        /// <param name="heartbeatInterval">TBD</param>
+        /// <param name="acceptableHeartbeatPause">TBD</param>
+        /// <param name="bufferSize">TBD</param>
+        /// <param name="useInitialContactsDiscovery">TBD</param>
+        /// <param name="discoverySettings">TBD</param>
+        /// <param name="reconnectTimeout">TBD</param>
+        /// <param name="useLegacySerialization">TBD</param>
+        /// <param name="verboseLogging">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        public ClusterClientSettings(
+            IImmutableSet<ActorPath> initialContacts,
+            TimeSpan establishingGetContactsInterval,
+            TimeSpan refreshContactsInterval,
+            TimeSpan heartbeatInterval,
+            TimeSpan acceptableHeartbeatPause,
+            int bufferSize,
+            bool useLegacySerialization,
+            bool useInitialContactsDiscovery,
+            ClusterClientDiscoverySettings? discoverySettings = null,
+            TimeSpan? reconnectTimeout = null,
+            bool verboseLogging = false)
         {
             if (bufferSize is < 0 or > 10000)
             {
@@ -189,6 +241,9 @@ namespace Akka.Cluster.Tools.Client
             BufferSize = bufferSize;
             ReconnectTimeout = reconnectTimeout;
             UseLegacySerialization = useLegacySerialization;
+            UseInitialContactDiscovery = useInitialContactsDiscovery;
+            DiscoverySettings = discoverySettings ?? ClusterClientDiscoverySettings.Empty;
+            VerboseLogging = verboseLogging;
         }
         
         /// <summary>
@@ -260,15 +315,23 @@ namespace Akka.Cluster.Tools.Client
         public ClusterClientSettings WithUseLegacySerialization(bool useLegacySerialization)
             => Copy(useLegacySerialization: useLegacySerialization);
 
+        public ClusterClientSettings WithInitialContactsDiscovery(
+            bool useInitialContactsDiscovery, 
+            ClusterClientDiscoverySettings? discoverySettings = null)
+            => Copy(useInitialContactsDiscovery: useInitialContactsDiscovery, discoverySettings: discoverySettings);
+        
         private ClusterClientSettings Copy(
-            IImmutableSet<ActorPath> initialContacts = null,
+            IImmutableSet<ActorPath>? initialContacts = null,
             TimeSpan? establishingGetContactsInterval = null,
             TimeSpan? refreshContactsInterval = null,
             TimeSpan? heartbeatInterval = null,
             TimeSpan? acceptableHeartbeatPause = null,
             int? bufferSize = null,
             bool? useLegacySerialization = null,
-            TimeSpan? reconnectTimeout = null)
+            bool? useInitialContactsDiscovery = null,
+            ClusterClientDiscoverySettings? discoverySettings = null,
+            TimeSpan? reconnectTimeout = null,
+            bool? verboseLogging = null)
         {
             return new ClusterClientSettings(
                 initialContacts ?? InitialContacts,
@@ -278,7 +341,10 @@ namespace Akka.Cluster.Tools.Client
                 acceptableHeartbeatPause ?? AcceptableHeartbeatPause,
                 bufferSize ?? BufferSize,
                 useLegacySerialization ?? UseLegacySerialization,
-                reconnectTimeout ?? ReconnectTimeout);
+                useInitialContactsDiscovery ?? UseInitialContactDiscovery,
+                discoverySettings ?? DiscoverySettings,
+                reconnectTimeout ?? ReconnectTimeout,
+                verboseLogging ?? VerboseLogging);
         }
     }
 }

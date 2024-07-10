@@ -204,7 +204,7 @@ namespace Akka.Serialization.Hyperion.Tests
                 Assert.NotEmpty(overrides);
                 var @override = overrides[0];
 
-#if NET471
+#if NET48
                 Assert.Equal("acc", @override("abc"));
                 Assert.Equal("bcd", @override("bcd"));
 #elif NETCOREAPP3_1

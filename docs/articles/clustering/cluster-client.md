@@ -121,10 +121,125 @@ The 'akka.cluster.client' configuration properties are read by the `ClusterClien
 
 ## Failure Handling
 
-When the cluster client is started it must be provided with a list of initial contacts which are cluster nodes where receptionists are running. It will then repeatedly (with an interval configurable by `establishing-get-contacts-interval`) try to contact those until it gets in contact with one of them. While running, the list of contacts are continuously updated with data from the receptionists (again, with an interval configurable with `refresh-contacts-interval`), so that if there are more receptionists in the cluster than the initial contacts provided to the client the client will learn about them.
+When the cluster client is started it must be provided with a list of initial contacts which are cluster nodes where receptionists are running. It will then repeatedly (with an interval configurable by `establishing-get-contacts-interval`) try to contact those until it gets in contact with one of them. While running, the list of contacts are continuously updated with data from the receptionists (again, with an interval configurable with `refresh-contacts-interval`), so that if there are more receptionists in the cluster than the initial contacts provided to the client, the client will learn about them.
 
-While the client is running it will detect failures in its connection to the receptionist by heartbeats if more than a configurable amount of heartbeats are missed the client will try to reconnect to its known set of contacts to find a receptionist it can access.
+While the client is running it will detect failures in its connection to the receptionist by heartbeats if more than a configurable amount of heartbeats is missed the client will try to reconnect to its known set of contacts to find a receptionist it can access.
 
 ## When the Cluster Cannot Be Reached at All
 
+### Watching ClusterClient Actor Termination
+
 It is possible to make the cluster client stop entirely if it cannot find a receptionist it can talk to within a configurable interval. This is configured with the `reconnect-timeout`, which defaults to off. This can be useful when initial contacts are provided from some kind of service registry, cluster node addresses are entirely dynamic and the entire cluster might shut down or crash, be restarted on new addresses. Since the client will be stopped in that case a monitoring actor can watch it and upon `Terminate` a new set of initial contacts can be fetched and a new cluster client started.
+
+### Contact Auto-Discovery Using Akka.Discovery
+
+> [!NOTE]
+> This feature is currently considered as an advanced feature and is not currently compatible with Akka.Discovery Akka.Hosting extensions.
+>
+> This feature should not be used until Akka.Management 1.5.26 is released.
+
+This feature is added in Akka.NET 1.5.26. Instead of watching for actor termination manually, you can leverage [Akka.Discovery](../discovery/index.md) to discover cluster client contact points inside a dynamic environment such as [Kubernetes](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/kubernetes.md), [AWS](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/aws.md), or anywhere else with [Azure Table](https://github.com/akkadotnet/Akka.Management/blob/dev/src/discovery/azure/Akka.Discovery.Azure/README.md)
+
+The HOCON configuration to set these are:
+
+```text
+akka.cluster.client
+{
+  use-initial-contacts-discovery = false
+
+  discovery
+  {
+    method = <method>
+    actor-system-name = null
+    receptionist-name = receptionist
+    service-name = null
+    port-name = null
+    discovery-retry-interval = 1s
+    discovery-timeout = 60s
+  }
+}
+```
+
+To enable contact auto-discovery, you will need to:
+
+* Set `akka.cluster.client.use-initial-contacts-discovery` to true.
+* Set `akka.cluster.client.discovery.service-name` that matches the service name of the Akka.Discovery extension that you used:
+  * For [Akka.Discovery.KubernetesApi](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/kubernetes.md), this is the `pod-label-selector` HOCON setting or the `KubernetesDiscoveryOptions.PodLabelSelector` options property.
+  * For [Akka.Discovery.AwsApi](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/aws.md), this is
+    * **EC2**: the `akka.discovery.aws-api-ec2-tag-based.tag-key` HOCON setting or the Akka.Hosting `Ec2ServiceDiscoveryOptions.TagKey` options property.
+    * **ECS**: the `akka.discovery.aws-api-ecs.tags` HOCON setting or the Akka.Hosting `EcsServiceDiscoveryOptions.Tags` options property.
+  * For [Akka.Discovery.Azure](https://github.com/akkadotnet/Akka.Management/blob/dev/src/discovery/azure/Akka.Discovery.Azure/README.md), this is the `service-name` HOCON setting or the `AkkaDiscoveryOptions.ServiceName` options property.
+* Set `akka.cluster.client.discovery.method` to a valid discovery method name listed under `akka.discovery`.
+* Set `akka.cluster.client.discovery.actor-system-name` to the target cluster ActorSystem name.
+* **OPTIONAL**. Set `akka.cluster.client.discovery,port-name` if the discovery extension that you're using depends on port names.
+* **OPTIONAL**. Set `akka.cluster.client.discovery.receptionist-name` if you're using a non-default receptionist name.
+
+### Using Akka.Discovery For Both Akka.Cluster.Tools.Client And Akka.Management.Cluster.Bootstrap
+
+If you need to use Akka.Discovery with both ClusterClient AND ClusterBootstrap, you will have to **make sure** that you have **TWO** different Akka.Discovery settings living side-by-side under the `akka.discovery` HOCON setting object.
+
+#### Akka.Discovery.KubernetesApi Example
+
+In your YAML file:
+
+* Make sure that you tag the instances that will run the cluster client receptionists with an extra tag. If your ClusterBootstrap is tagged with the YAML value `metadata.labels.app: cluster`, then you will need to add another tag to the instances that runs the Receptionists, e.g. `metadata.labels.contact: cluster-client` like so:
+
+  ```yaml
+  metadata:
+    labels:
+      app: cluster
+      contact: cluster-client
+  ```
+
+* Make sure you name the Akka remoting port
+
+  ```yaml
+  spec:
+    template:
+      spec:
+        containers:
+          ports:
+          - containerPort: 2552 # This is the remoting port, change this to match yours
+            protocol: TCP
+            name: akka-remote # this is important
+  ```
+
+In your cluster client Akka.NET node HOCON settings:
+
+* Copy the `akka.discovery.kubernetes-api` HOCON section and paste it above or under the original settings. You can also copy the value from [here](https://github.com/akkadotnet/Akka.Management/blob/dev/src/discovery/kubernetes/Akka.Discovery.KubernetesApi/reference.conf)
+* Rename the HOCON section to `akka.discovery.kubernetes-api-cluster-client`. The key name does not matter, what matters is that the name does not collide with any other setting section name under `akka.discovery`.
+* Make sure you change `akka.discovery.kubernetes-api-cluster-client.pod-label-selector` to "contact={0}" to match what we have in the YAML file.
+* Make sure you change `akka.cluster.client.discovery.service-name` to "cluster-client" to match what we have in the YAML file.
+* Make sure you change `akka.cluster.client.discovery.port-name` value to "akka-remote" to match what we have in the YAML file.
+* Keep the `akka.discovery.method` HOCON value to "kubernetes-api", this is the discovery extension that will be used by ClusterBootstrap.
+* Change the `akka.cluster.client.discovery.method` value from "\<method>" to "kubernetes-api-cluster-client", this is the discovery extension that will be used by ClusterClient. If not set, this will default to the value set in `akka.discovery.method`, which is **NOT** what we want.
+
+#### Akka.Discovery.Azure Example
+
+In your cluster receptionist Akka.NET node HOCON settings:
+
+* Copy the `akka.discovery.azure` HOCON section and paste it above or under the original settings. You can also copy the value from [here](https://github.com/akkadotnet/Akka.Management/blob/dev/src/discovery/azure/Akka.Discovery.Azure/reference.conf)
+* Rename the HOCON section to `akka.discovery.azure-cluster-client`. The key name does not matter, what matters is that the name does not collide with any other setting section name under `akka.discovery`.
+* Change `akka.discovery.azure-cluster-client.public-port` to the remoting port of the Akka.NET node.
+* Change `akka.discovery.azure-cluster-client.service-name` to "cluster-client". The name does not matter, what matters is that this name **HAS** to match the service name we'll be using in `akka.cluster.client.discovery.service-name`.
+* **[OPTIONAL]** change `akka.discovery.azure-cluster-client.table-name` to `akkaclusterreceptionists` to separate the discovery table from ClusterBootstrap entries.
+* Make sure that you start the discovery extension in the receptionist side. This needs to be done because the extension is responsible for updating the Azure table.
+
+  ```csharp
+  Discovery.Get(myActorSystem).LoadServiceDiscovery("azure-cluster-client");
+  ```
+
+In your cluster client Akka.NET node HOCON settings:
+
+* If you're **USING** ClusterBootstrap in the cluster client side:
+  * You **WILL NEED** to perform the same HOCON configuration cloning process above.
+  * Make sure you change `akka.cluster.client.discovery.service-name` to "cluster-client" to match what we have in the receptionist node HOCON file.
+  * You **WILL NEED** to keep the `akka.discovery.method` HOCON value to "azure", this is the discovery extension that will be used by ClusterBootstrap.
+  * Change the `akka.cluster.client.discovery.method` value from "\<method>" to "azure-cluster-client", this is the discovery extension that will be used by ClusterClient. If not set, this will default to the value set in `akka.discovery.method`, which is **NOT** what we want.
+  * **[OPTIONAL]** **IF** you opt to change the table name in the receptionist side, you **WILL NEED** to change `akka.discovery.azure-cluster-client.table-name` to match the table name with the receptionist side, it was `akkaclusterreceptionists` in our example above
+* If you're **NOT USING** ClusterBootstrap in the cluster client side:
+  * You **DO NOT NEED** to perform the HOCON configuration cloning process as you're not using ClusterBootstrap.
+  * Make sure you change `akka.cluster.client.discovery.service-name` to "cluster-client" to match what we have in the receptionist node HOCON file.
+  * You can keep the `akka.discovery.method` HOCON value to "azure".
+  * You can change the `akka.cluster.client.discovery.method` value from "\<method>" to "azure", this is the discovery extension that will be used by ClusterClient. If not set, this will default to the value set in `akka.discovery.method`, which will be the same.
+  * **[OPTIONAL]** **IF** you opt to change the table name in the receptionist side, you **WILL NEED** to change `akka.discovery.azure-cluster-client.table-name` to match the table name with the receptionist side, it was `akkaclusterreceptionists` in our example above.

@@ -5,9 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.IO;
-using System.Reflection;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster;
@@ -28,7 +25,6 @@ using VerifyXunit;
 
 namespace Akka.API.Tests
 {
-    [UsesVerify]
     public class CoreAPISpec
     {
         static Task VerifyAssembly<T>()

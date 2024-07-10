@@ -69,6 +69,7 @@ message ExceptionData {
   string source = 4;
   ExceptionData innerException = 5;
   map<string, Payload> customFields = 6;
+  string typeForwardedFrom = 7;
 }
 
 message StatusSuccess{

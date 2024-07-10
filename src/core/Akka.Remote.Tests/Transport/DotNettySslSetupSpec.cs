@@ -72,6 +72,7 @@ akka {{
         {
         }
 
+        #if !NET471
         [Fact]
         public async Task Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
         {
@@ -88,6 +89,7 @@ akka {{
                 await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
             }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
         }
+        #endif
 
         [Fact]
         public async Task Secure_transport_should_NOT_be_possible_between_systems_using_SSL_and_one_not_using_it()

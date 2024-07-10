@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -39,48 +40,103 @@ namespace Akka.Discovery.Config
     [InternalApi]
     public class ConfigServiceDiscovery : ServiceDiscovery
     {
-        private readonly Dictionary<string, Resolved> _resolvedServices;
+        private const string DefaultPath = "config";
+        private const string DefaultConfigPath = "akka.discovery." + DefaultPath;
+        
+        private readonly ILoggingAdapter _log;
+        private ImmutableDictionary<string, Resolved> _resolvedServices;
 
+        // Backward compatibility constructor
         public ConfigServiceDiscovery(ExtendedActorSystem system)
+            : this(system, system.Settings.Config.GetConfig(DefaultConfigPath))
         {
-            var log = Logging.GetLogger(system, nameof(ConfigServiceDiscovery));
-            
-            var config = system.Settings.Config.GetConfig("akka.discovery.config") ??
-                throw new ArgumentException(
-                    "Could not load config based discovery config from path [akka.discovery.config]");
+        }
+        
+        public ConfigServiceDiscovery(ExtendedActorSystem system, Configuration.Config config)
+        {
+            if(config is null)
+                throw new ArgumentException("Config based discovery HOCON config is null");
+                
+            _log = Logging.GetLogger(system, nameof(ConfigServiceDiscovery));
             
             var servicePath = config.GetString("services-path");
             if (string.IsNullOrWhiteSpace(servicePath))
             {
-                log.Warning(
+                _log.Warning(
                     "The config path [akka.discovery.config] must contain field `service-path` that points to a " +
                     "configuration path that contains an array of node services for Discovery to contact.");
-                _resolvedServices = new Dictionary<string, Resolved>();
+                _resolvedServices = ImmutableDictionary<string, Resolved>.Empty;
             }
             else
             {
                 var services = system.Settings.Config.GetConfig(servicePath);
                 if (services == null)
                 {
-                    log.Warning(
+                    _log.Warning(
                         "You are trying to use config based discovery service and the settings path described in\n" +
                         $"`akka.discovery.config.services-path` does not exists. Make sure that [{servicePath}] path \n" +
                         "exists and to fill this setting with pre-defined node addresses to make sure that a cluster \n" +
                         "can be formed");
-                    _resolvedServices = new Dictionary<string, Resolved>();
+                    _resolvedServices = ImmutableDictionary<string, Resolved>.Empty;
                 }
                 else
                 {
-                    _resolvedServices = ConfigServicesParser.Parse(services);
+                    _resolvedServices = ConfigServicesParser.Parse(services).ToImmutableDictionary();
                     if(_resolvedServices.Count == 0)
-                        log.Warning(
+                        _log.Warning(
                             $"You are trying to use config based discovery service and the settings path [{servicePath}]\n" +
                             "described `akka.discovery.config.services-path` is empty. Make sure to fill this setting \n" +
                             "with pre-defined node addresses to make sure that a cluster can be formed.");
                 }
             }
 
-            log.Debug($"Config discovery serving: {string.Join(", ", _resolvedServices.Values)}");
+            _log.Debug($"Config discovery serving: {string.Join(", ", _resolvedServices.Values)}");
+        }
+
+        [InternalStableApi]
+        public bool TryRemoveEndpoint(string serviceName, ResolvedTarget target)
+        {
+            if (!_resolvedServices.TryGetValue(serviceName, out var resolved))
+            {
+                _log.Info($"Could not find service {serviceName}, adding a new service. Available services: {string.Join(", ", _resolvedServices.Keys)}");
+                resolved = new Resolved(serviceName);
+                _resolvedServices = _resolvedServices.SetItem(serviceName, resolved);
+            }
+
+            if (!resolved.Addresses.Contains(target))
+            {
+                _log.Info($"ResolvedTarget was not in service {serviceName}, nothing to remove.");
+                return false;
+            }
+
+            var newResolved = new Resolved(serviceName, resolved.Addresses.Remove(target));
+            _resolvedServices = _resolvedServices.SetItem(serviceName, newResolved);
+            
+            _log.Debug($"ResolvedTarget {target} has been removed from service {serviceName}");
+            return true;
+        }
+
+        [InternalStableApi]
+        public bool TryAddEndpoint(string serviceName, ResolvedTarget target)
+        {
+            if (!_resolvedServices.TryGetValue(serviceName, out var resolved))
+            {
+                _log.Info($"Could not find service {serviceName}, adding a new service. Available services: {string.Join(", ", _resolvedServices.Keys)}");
+                resolved = new Resolved(serviceName);
+                _resolvedServices = _resolvedServices.SetItem(serviceName, resolved);
+            }
+
+            if (resolved.Addresses.Contains(target))
+            {
+                _log.Info($"ResolvedTarget is already in service {serviceName}, nothing to add.");
+                return false;
+            }
+            
+            var newResolved = new Resolved(serviceName, resolved.Addresses.Add(target));
+            _resolvedServices = _resolvedServices.SetItem(serviceName, newResolved);
+            
+            _log.Debug($"ResolvedTarget {target} has been added to service {serviceName}");
+            return true;
         }
 
         public override Task<Resolved> Lookup(Lookup lookup, TimeSpan resolveTimeout)

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,9 +12,11 @@
   </ItemGroup>
 
   <ItemGroup>
+      <PackageReference Include="Akka.Management" Version="1.5.26-beta3" />
       <PackageReference Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+      <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+      <PackageReference Include="xunit" Version="$(XunitVersion)"/>
       <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVersion)">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

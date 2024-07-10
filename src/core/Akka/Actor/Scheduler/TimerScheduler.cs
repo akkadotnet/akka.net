@@ -41,36 +41,39 @@ namespace Akka.Actor.Scheduler
             }
         }
 
-        public interface ITimerMsg
+        public interface ITimerMsg : IWrappedMessage, INoSerializationVerificationNeeded
         {
             object Key { get; }
             int Generation { get; }
             TimerScheduler Owner { get; }
         }
 
-        private class TimerMsg : ITimerMsg, INoSerializationVerificationNeeded
+        private class TimerMsg : ITimerMsg
         {
             public object Key { get; }
             public int Generation { get; }
             public TimerScheduler Owner { get; }
 
-            public TimerMsg(object key, int generation, TimerScheduler owner)
+            public TimerMsg(object key, int generation, TimerScheduler owner, object message)
             {
-                this.Key = key;
-                this.Generation = generation;
-                this.Owner = owner;
+                Key = key;
+                Generation = generation;
+                Owner = owner;
+                Message = message;
             }
+            
+            public object Message { get; }
 
             public override string ToString()
             {
-                return $"TimerMsg(key={Key}, generation={Generation}, owner={Owner})";
+                return $"TimerMsg(key={Key}, generation={Generation}, owner={Owner}, message={Message})";
             }
         }
 
         private class TimerMsgNotInfluenceReceiveTimeout : TimerMsg, INotInfluenceReceiveTimeout
         {
-            public TimerMsgNotInfluenceReceiveTimeout(object key, int generation, TimerScheduler owner)
-                : base(key, generation, owner)
+            public TimerMsgNotInfluenceReceiveTimeout(object key, int generation, TimerScheduler owner, object message)
+                : base(key, generation, owner, message)
             {
             }
         }
@@ -201,9 +204,9 @@ namespace Akka.Actor.Scheduler
 
             ITimerMsg timerMsg;
             if (msg is INotInfluenceReceiveTimeout)
-                timerMsg = new TimerMsgNotInfluenceReceiveTimeout(key, nextGen, this);
+                timerMsg = new TimerMsgNotInfluenceReceiveTimeout(key, nextGen, this, msg);
             else
-                timerMsg = new TimerMsg(key, nextGen, this);
+                timerMsg = new TimerMsg(key, nextGen, this, msg);
 
             ICancelable task;
             if (repeat)

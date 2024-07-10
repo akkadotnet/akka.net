@@ -41,6 +41,33 @@ namespace Akka.Cluster.Tools.Client
             public override int GetHashCode() { }
         }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class ClusterClientDiscovery : Akka.Actor.UntypedActor, Akka.Actor.IActorStash, Akka.Actor.IWithTimers, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
+    {
+        public ClusterClientDiscovery(Akka.Cluster.Tools.Client.ClusterClientSettings settings) { }
+        public Akka.Actor.IStash Stash { get; set; }
+        public Akka.Actor.ITimerScheduler Timers { get; set; }
+        protected override void OnReceive(object message) { }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class ClusterClientDiscoverySettings : System.IEquatable<Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings>
+    {
+        [System.Runtime.CompilerServices.NullableAttribute(1)]
+        public static readonly Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings Empty;
+        public ClusterClientDiscoverySettings(string DiscoveryMethod, string ServiceName, string PortName, int NumberOfContacts, System.TimeSpan Interval, double ExponentialBackoffJitter, System.TimeSpan ExponentialBackoffMax, System.TimeSpan ResolveTimeout, System.TimeSpan ProbeTimeout) { }
+        public string DiscoveryMethod { get; set; }
+        public double ExponentialBackoffJitter { get; set; }
+        public System.TimeSpan ExponentialBackoffMax { get; set; }
+        public System.TimeSpan Interval { get; set; }
+        public int NumberOfContacts { get; set; }
+        public string PortName { get; set; }
+        public System.TimeSpan ProbeTimeout { get; set; }
+        public System.TimeSpan ResolveTimeout { get; set; }
+        public string ServiceName { get; set; }
+        public static Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings Create(Akka.Configuration.Config clusterClientConfig) { }
+    }
     public sealed class ClusterClientReceptionist : Akka.Actor.IExtension
     {
         public ClusterClientReceptionist(Akka.Actor.ExtendedActorSystem system) { }
@@ -58,25 +85,33 @@ namespace Akka.Cluster.Tools.Client
         public ClusterClientReceptionistExtensionProvider() { }
         public override Akka.Cluster.Tools.Client.ClusterClientReceptionist CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class ClusterClientSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
         [System.ObsoleteAttribute("Use constructor with useLegacySerialization argument instead. Since 1.5.15")]
         public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize, System.Nullable<System.TimeSpan> reconnectTimeout = null) { }
+        [System.ObsoleteAttribute("Use constructor with useInitialContactsDiscovery and discoverySettings argument i" +
+            "nstead. Since 1.5.25")]
         public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize, bool useLegacySerialization, System.Nullable<System.TimeSpan> reconnectTimeout = null) { }
+        public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize, bool useLegacySerialization, bool useInitialContactsDiscovery, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings discoverySettings = null, System.Nullable<System.TimeSpan> reconnectTimeout = null, bool verboseLogging = False) { }
         public System.TimeSpan AcceptableHeartbeatPause { get; }
         public int BufferSize { get; }
+        public Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings DiscoverySettings { get; }
         public System.TimeSpan EstablishingGetContactsInterval { get; }
         public System.TimeSpan HeartbeatInterval { get; }
         public System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> InitialContacts { get; }
         public System.Nullable<System.TimeSpan> ReconnectTimeout { get; }
         public System.TimeSpan RefreshContactsInterval { get; }
+        public bool UseInitialContactDiscovery { get; }
         public bool UseLegacySerialization { get; }
+        public bool VerboseLogging { get; }
         public static Akka.Cluster.Tools.Client.ClusterClientSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Tools.Client.ClusterClientSettings Create(Akka.Configuration.Config config) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithBufferSize(int bufferSize) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithEstablishingGetContactsInterval(System.TimeSpan value) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithHeartbeatInterval(System.TimeSpan value) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithInitialContacts(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts) { }
+        public Akka.Cluster.Tools.Client.ClusterClientSettings WithInitialContactsDiscovery(bool useInitialContactsDiscovery, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings discoverySettings = null) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithReconnectTimeout(System.Nullable<System.TimeSpan> reconnectTimeout) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithRefreshContactsInterval(System.TimeSpan value) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithUseLegacySerialization(bool useLegacySerialization) { }

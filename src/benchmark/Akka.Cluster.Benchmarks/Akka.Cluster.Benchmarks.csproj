@@ -2,11 +2,11 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="BenchmarkDotNet" Version="$(BenchmarkDotNetVersion)" />
-        <PackageReference Include="BenchmarkDotNet.Diagnostics.dotTrace" Version="0.13.12" />
     </ItemGroup>
 
     <ItemGroup>
@@ -15,6 +15,9 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Compile Include="..\..\core\Akka.Cluster.Tests\TestMember.cs">
+        <Link>TestMember.cs</Link>
+      </Compile>
       <Compile Include="..\Akka.Benchmarks\Configurations\Configs.cs">
         <Link>Configs.cs</Link>
       </Compile>

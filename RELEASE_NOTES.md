@@ -1,6 +1,171 @@
-#### 1.5.21 April 29th 2024 ####
+#### 1.5.27-beta2 July 3rd 2024 ####
 
-Placeholder for nightlies
+* [Cluster.Tools: Fix missing port name argument in ClusterClientDiscovery](https://github.com/akkadotnet/akka.net/issues/7276)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 1    | 1    | Gregorius Soedharmo |
+
+#### 1.5.27-beta1 July 3rd 2024 ####
+
+Akka.NET v1.5.27-beta1 improves upon the new ClusterClient initial contact auto-discovery feature to make it more robust in implementation.
+
+* [Akka.Discovery: Add multi-config support to config-based discovery](https://github.com/akkadotnet/akka.net/issues/7271)
+* [Cluster.Tools: Fix missing VerboseLogging in ClusterClientSettings.Copy method](https://github.com/akkadotnet/akka.net/issues/7272)
+* [Cluster.Tools: Improve ClusterClientDiscovery to avoid thundering herd problem](https://github.com/akkadotnet/akka.net/issues/7270)
+* [Cluster.Tools: Change ClusterClientDiscovery to use the new Akka.Management "/cluster-client/receptionist" endpoint](https://github.com/akkadotnet/akka.net/issues/7274)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 5       | 422  | 183  | Gregorius Soedharmo |
+| 1       | 4    | 0    | Aaron Stannard      |
+| 1       | 1    | 1    | Sean Killeen        |
+
+#### 1.5.26 June 27th 2024 ####
+
+Akka.NET v1.5.26 introduces a new Akka.Cluster.Tools feature and a logging improvement.
+
+* [Add ClusterClient initial contact auto-discovery feature](https://github.com/akkadotnet/akka.net/issues/7261)
+* [Improve traceability of `ITimerMsg`](https://github.com/akkadotnet/akka.net/issues/7262)
+
+**Preliminary ClusterClient Initial Contact Auto-Discovery Feature**
+
+> To use this feature, you will need to use Akka.Discovery implementation (Kubernetes or Azure) version 1.5.26-beta1 or higher
+
+This feature allows ClusterClient to use Akka.Discovery to automatically query for cluster client receptionists inside a dynamic environment such as Kubernetes.
+
+The preliminary documentation for this feature can be read [here](https://getakka.net/articles/clustering/cluster-client.html#contact-auto-discovery-using-akkadiscovery)
+
+You can [see the full set of changes for Akka.NET v1.5.26 here](https://github.com/akkadotnet/akka.net/milestones/1.5.26).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 3       | 45   | 11   | Aaron Stannard      |
+| 2       | 945  | 15   | Gregorius Soedharmo |
+
+#### 1.5.25 June 14th 2024 ####
+
+Akka.NET v1.5.25 includes a critical bug fix for logging and some other minor fixes.
+
+**Logging Errors Introduced in v1.5.21**
+
+Versions [v1.5.21,v1.5.24] are all affected by [Akka.Logging: v1.5.21 appears to have truncated log source, timestamps, etc from all log messages](https://github.com/akkadotnet/akka.net/issues/7255) - this was a bug introduced when we added [the log-filtering feature we shipped in Akka.NET v1.5.21](https://getakka.net/articles/utilities/logging.html#filtering-log-messages).
+
+This issue has been resolved in v1.5.25 and we've [added regression tests to ensure that the log format gets version-checked just like our APIs going forward](https://github.com/akkadotnet/akka.net/pull/7256).
+
+Other fixes:
+
+* [Akka.Router: sending a message to a remote actor via `IScheduledTellMsg` results in serialization error](https://github.com/akkadotnet/akka.net/issues/7247)
+* [Akka.Discovery: Make Akka.Discovery less coupled with Akka.Management](https://github.com/akkadotnet/akka.net/issues/7242)
+
+You can [see the full set of changes for Akka.NET v1.5.25 here](https://github.com/akkadotnet/akka.net/milestones/1.5.25).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 6 | 347 | 44 | Aaron Stannard |
+| 2 | 1197 | 1015 | Gregorius Soedharmo |
+
+#### 1.5.24 June 7th 2024 ####
+
+Akka.NET v1.5.24 is a patch release for Akka.NET that addresses CVE-2018-8292 and also adds a quality of life improvement to IActorRef serialization.
+
+* [Fix invalid serializer was being used when serialize-message is set to true](https://github.com/akkadotnet/akka.net/pull/7236)
+* [Add Serialization.DeserializeActorRef() QoL method](https://github.com/akkadotnet/akka.net/pull/7237)
+* Resolve CVE-2018-8292 in [this PR](https://github.com/akkadotnet/akka.net/pull/7235) and [this PR](https://github.com/akkadotnet/akka.net/pull/7238)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 3       | 35   | 22   | Gregorius Soedharmo |
+| 1       | 26   | 51   | Mike Perrin         |
+| 1       | 15   | 2    | Aaron Stannard      |
+
+You can [see the full set of changes for Akka.NET v1.5.24 here](https://github.com/akkadotnet/akka.net/milestones/1.5.24).
+
+#### 1.5.23 June 4th 2024 ####
+
+* [Fix missing `HandOverDone` handler in ClusterSingletonManager](https://github.com/akkadotnet/akka.net/pull/7230)
+* [Add push mode to `ShardedDaemonProcess`](https://github.com/akkadotnet/akka.net/pull/7229)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 2       | 299  | 44   | Aaron Stannard      |
+| 1       | 47   | 49   | Gregorius Soedharmo |
+| 1       | 1    | 1    | Hassan Abu Bakar    |
+
+You can [see the full set of changes for Akka.NET v1.5.23 here](https://github.com/akkadotnet/akka.net/milestones/1.5.23).
+
+#### 1.5.22 June 4th 2024 ####
+
+Akka.NET v1.5.22 is a patch release for Akka.NET with a few bug fixes and logging improvement.
+
+* [Streams: Bump Reactive.Streams to 1.0.4](https://github.com/akkadotnet/akka.net/pull/7213)
+* [Remote: Bump DotNetty.Handlers to 0.7.6](https://github.com/akkadotnet/akka.net/pull/7198)
+* [Core: Resolve CVE-2018-8292 for Akka.Streams and Akka.Remote](https://github.com/akkadotnet/akka.net/issues/7191)
+* [Core: Expose `BusLogging` `EventStream` as public API](https://github.com/akkadotnet/akka.net/pull/7210)
+* [Remote: Add cross-platform support to the exception serializer](https://github.com/akkadotnet/akka.net/pull/7222)
+
+**On Resolving CVE-2018-8292**
+
+In order to resolve this CVE, we had to update `DotNetty.Handlers` to the latest version and unfortunately, this comes with about 10% network throughput performance hit. We are looking into possible replacement for `DotNetty` to improve this performance lost in the future (see [`#7225`](https://github.com/akkadotnet/akka.net/issues/7225) for updates).
+
+**Before**
+
+```
+Num clients, Total [msg], Msgs/sec, Total [ms], Start Threads, End Threads  
+         1,  200000,    125000,    1600.62,            46,              76  
+         5, 1000000,    494072,    2024.04,            84,              95  
+        10, 2000000,    713013,    2805.73,           103,             107  
+        15, 3000000,    724463,    4141.38,           115,             115  
+        20, 4000000,    714669,    5597.66,           123,             123  
+        25, 5000000,    684932,    7300.37,           131,             107  
+        30, 6000000,    694525,    8639.88,           115,              93  
+```
+
+**After**
+
+```
+Num clients, Total [msg], Msgs/sec, Total [ms], Start Threads, End Threads
+         1,  200000,    123763,    1616.32,            46,              73
+         5, 1000000,    386101,    2590.66,            81,              90
+        10, 2000000,    662691,    3018.54,            98,             104
+        15, 3000000,    666223,    4503.86,           112,             113
+        20, 4000000,    669681,    5973.89,           121,             113
+        25, 5000000,    669255,    7471.86,           121,             105
+        30, 6000000,    669121,    8967.61,           113,              92
+```
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 6       | 167  | 188  | Aaron Stannard      |
+| 3       | 93   | 10   | Gregorius Soedharmo |
+
+You can [see the full set of changes for Akka.NET v1.5.22 here](https://github.com/akkadotnet/akka.net/milestones/1.5.22).
+
+#### 1.5.21 May 28th 2024 ####
+
+Akka.NET v1.5.21 is a significant release for Akka.NET with a major feature additions and bug fixes.
+
+* [Core: Fix error logging bug](https://github.com/akkadotnet/akka.net/pull/7186)
+* [Core: Add log filtering feature](https://github.com/akkadotnet/akka.net/pull/7179)
+* [Pub-Sub: Fix missing SendOneMessageToEachGroup property](https://github.com/akkadotnet/akka.net/pull/7202)
+* [Core: Fix incorrect IWrappedMessage deserialization when serialize-messages setting is on](https://github.com/akkadotnet/akka.net/pull/7200)
+* [Core: Bump Akka.Analyzers to 0.2.5](https://github.com/akkadotnet/akka.net/pull/7206)
+
+**Log Message Filtering**
+
+You can now filter out unwanted log messages based on either its source or message content. Documentation can be read in the [logging documentation](https://getakka.net/articles/utilities/logging.html#filtering-log-messages).
+
+**New Akka.Analyzers Rule**
+
+Added AK1006 rule to suggest user to use `PersistAll()` and `PersistAllAsync()` when applicable. Documentation can be read in the [documentation](https://getakka.net/articles/debugging/rules/AK1006.html)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 7       | 900  | 53   | Aaron Stannard      |
+| 5       | 497  | 1187 | Gregorius Soedharmo |
+| 1       | 1    | 1    | Åsmund              |
+
+You can [see the full set of changes for Akka.NET v1.5.21 here](https://github.com/akkadotnet/akka.net/milestones/1.5.21).
 
 #### 1.5.20 April 29th 2024 ####
 
