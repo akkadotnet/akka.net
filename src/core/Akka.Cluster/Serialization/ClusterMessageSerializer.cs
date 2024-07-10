@@ -323,33 +323,28 @@ namespace Akka.Cluster.Serialization
 
         private static Proto.Msg.Gossip GossipToProto(Gossip gossip)
         {
-            var allMembers = gossip.Members.ToList();
-            var allAddresses = gossip.Members.Select(x => x.UniqueAddress).ToList();
+            var allMembers = gossip.Members;
+            
+            // rather than call a bunch of individual LINQ operations, we're going to do it all in one go
+            var allRoles = new HashSet<string>();
+            var allAddresses = new List<UniqueAddress>();
+            var allAppVersions = new HashSet<string>();
+
+            foreach (var m in allMembers)
+            {
+                allAddresses.Add(m.UniqueAddress);
+                allRoles.UnionWith(m.Roles);
+                allAppVersions.Add(m.AppVersion.Version);
+            }
+            
             var addressMapping = allAddresses.ZipWithIndex();
-            var allRoles = allMembers.Aggregate(ImmutableHashSet.Create<string>(), (set, member) => set.Union(member.Roles));
             var roleMapping = allRoles.ZipWithIndex();
             var allHashes = gossip.Version.Versions.Keys.Select(x => x.ToString()).ToList();
             var hashMapping = allHashes.ZipWithIndex();
-            var allAppVersions = allMembers.Select(i => i.AppVersion.Version).ToImmutableHashSet();
             var appVersionMapping = allAppVersions.ZipWithIndex();
 
-            int MapUniqueAddress(UniqueAddress address) => MapWithErrorMessage(addressMapping, address, "address");
-
-            int MapAppVersion(AppVersion appVersion) => MapWithErrorMessage(appVersionMapping, appVersion.Version, "appVersion");
-
-            Proto.Msg.Member MemberToProto(Member m)
-            {
-                var protoMember = new Proto.Msg.Member();
-                protoMember.AddressIndex = MapUniqueAddress(m.UniqueAddress);
-                protoMember.UpNumber = m.UpNumber;
-                protoMember.Status = (Proto.Msg.Member.Types.MemberStatus)m.Status;
-                protoMember.RolesIndexes.AddRange(m.Roles.Select(s => MapWithErrorMessage(roleMapping, s, "role")));
-                protoMember.AppVersionIndex = MapAppVersion(m.AppVersion);
-                return protoMember;
-            }
-
             var reachabilityProto = ReachabilityToProto(gossip.Overview.Reachability, addressMapping);
-            var membersProtos = gossip.Members.Select((Func<Member, Proto.Msg.Member>)MemberToProto);
+            var membersProtos = gossip.Members.Select(c => MemberToProto(c));
             var seenProtos = gossip.Overview.Seen.Select((Func<UniqueAddress, int>)MapUniqueAddress);
 
             var overview = new Proto.Msg.GossipOverview();
@@ -365,6 +360,21 @@ namespace Akka.Cluster.Serialization
             message.Version = VectorClockToProto(gossip.Version, hashMapping);
             message.AllAppVersions.AddRange(allAppVersions);
             return message;
+
+            int MapAppVersion(AppVersion appVersion) => MapWithErrorMessage(appVersionMapping, appVersion.Version, "appVersion");
+
+            int MapUniqueAddress(UniqueAddress address) => MapWithErrorMessage(addressMapping, address, "address");
+
+            Proto.Msg.Member MemberToProto(Member m)
+            {
+                var protoMember = new Proto.Msg.Member();
+                protoMember.AddressIndex = MapUniqueAddress(m.UniqueAddress);
+                protoMember.UpNumber = m.UpNumber;
+                protoMember.Status = (Proto.Msg.Member.Types.MemberStatus)m.Status;
+                protoMember.RolesIndexes.AddRange(m.Roles.Select(s => MapWithErrorMessage(roleMapping, s, "role")));
+                protoMember.AppVersionIndex = MapAppVersion(m.AppVersion);
+                return protoMember;
+            }
         }
 
         private static Gossip GossipFrom(Proto.Msg.Gossip gossip)
@@ -459,7 +469,7 @@ namespace Akka.Cluster.Serialization
 
         private static int MapWithErrorMessage<T>(Dictionary<T, int> map, T value, string unknown)
         {
-            if (map.TryGetValue(value, out int mapIndex))
+            if (map.TryGetValue(value, out var mapIndex))
                 return mapIndex;
 
             throw new ArgumentException($"Unknown {unknown} [{value}] in cluster message");
