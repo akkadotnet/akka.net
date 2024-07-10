@@ -1801,7 +1801,7 @@ namespace Akka.Cluster
             if (!envelope.To.Equals(_selfUniqueAddress))
             {
                 _cluster.LogInfo("Ignoring received gossip intended for someone else, from [{0}] to [{1}]. Our full address is [{2}]",
-                    from.Address, envelope.To, SelfUniqueAddress);
+                    from.Address, envelope.To, _selfUniqueAddress);
                 
                 // TODO: if the gossip is received for a version of ourselves with a different UID, do we issue a Down command?
                 
