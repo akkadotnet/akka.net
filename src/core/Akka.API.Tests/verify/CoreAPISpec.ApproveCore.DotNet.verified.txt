@@ -122,7 +122,7 @@ namespace Akka.Actor
         protected void SetTerminated() { }
         public virtual void Start() { }
         protected void Stash(Akka.Dispatch.SysMsg.SystemMessage msg) { }
-        public void Stop(Akka.Actor.IActorRef child) { }
+        public virtual void Stop(Akka.Actor.IActorRef child) { }
         public void Stop() { }
         protected void StopFunctionRefs() { }
         public void Suspend() { }
