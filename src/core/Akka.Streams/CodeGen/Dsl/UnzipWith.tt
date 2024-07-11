@@ -115,9 +115,9 @@ namespace Akka.Streams.Dsl
                     _pending<#=t#> = false;
                     if (_pendingCount == 0) Pull(stage.In);
                 },
-                onDownstreamFinish: () => {
+                onDownstreamFinish: cause => {
                     _downstreamRunning--;
-                    if (_downstreamRunning == 0) CompleteStage();
+                    if (_downstreamRunning == 0) CancelStage(cause);
                     else 
                     {
                         if (_pending<#=t#>) _pendingCount--;

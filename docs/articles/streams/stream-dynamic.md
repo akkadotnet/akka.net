@@ -3,9 +3,9 @@ uid: streams-dynamic-handling
 title: Dynamic stream handling
 ---
 
-# Dynamic stream handling
+# Dynamic Stream Handling
 
-## Controlling graph completion with KillSwitch
+## Controlling Graph Completion with KillSwitch
 
 A `KillSwitch` allows the completion of graphs of `FlowShape` from the outside. It consists of a flow element that
 can be linked to a graph of `FlowShape` needing completion control. The `IKillSwitch` interface allows to:
@@ -66,13 +66,13 @@ by the switch. Refer to the below for usage examples.
 > [!NOTE]
 > A `UniqueKillSwitch` is always a result of a materialization, whilst `SharedKillSwitch` needs to be constructed before any materialization takes place.
 
-### Using `CancellationToken`s as kill switches
+### Using `CancellationToken` as Kill Switches
 
 Plain old .NET cancellation tokens can also be used as kill switch stages via extension method: `cancellationToken.AsFlow(cancelGracefully: true)`. Their behavior is very similar to what a `SharedKillSwitch` has to offer with one exception - while normal kill switch recognizes difference between closing a stream gracefully (via. `Shutdown()`) and abruptly (via. `Abort(exception)`), .NET cancellation tokens have no such distinction.
 
 Therefore you need to explicitly specify at the moment of defining a flow stage, if cancellation token call should cause stream to close with completion or failure, by using `cancelGracefully` parameter. If it's set to `false`, calling cancel on a token's source will cause stream to fail with an `OperationCanceledException`.
 
-## Dynamic fan-in and fan-out with MergeHub and BroadcastHub
+## Dynamic Fan-in and Fan-Out with MergeHub and BroadcastHub
 
 There are many cases when consumers or producers of a certain service (represented as a Sink, Source, or possibly Flow) are dynamic and not known in advance. The Graph DSL does not allow to represent this, all connections of the graph must be known in advance and must be connected upfront. To allow dynamic fan-in and fan-out streaming, the Hubs should be used. They provide means to construct Sink and Source pairs that are “attached” to each other, but one of them can be materialized multiple times to implement dynamic fan-in or fan-out.
 
@@ -92,7 +92,7 @@ A `BroadcastHub` can be used to consume elements from a common producer by a dyn
 
 The resulting `Source` can be materialized any number of times, each materialization effectively attaching a new subscriber. If there are no subscribers attached to this hub then it will not drop any elements but instead backpressure the upstream producer until subscribers arrive. This behavior can be tweaked by using the combinators `Buffer` for example with a drop strategy, or just attaching a subscriber that drops all messages. If there are no other subscribers, this will ensure that the producer is kept drained (dropping all elements) and once a new subscriber arrives it will adaptively slow down, ensuring no more messages are dropped.
 
-### Combining dynamic stages to build a simple Publish-Subscribe service
+### Combining Dynamic Stages to Build a Simple Publish-Subscribe Service
 
 The features provided by the Hub implementations are limited by default. This is by design, as various combinations can be used to express additional features like unsubscribing producers or consumers externally. We show here an example that builds a `Flow` representing a publish-subscribe channel. The input of the `Flow` is published to all subscribers while the output streams all the elements published.
 

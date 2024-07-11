@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MatchExpressionBuilder_BuildLambdaExpression_Tests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -114,7 +114,7 @@ namespace Akka.Tests.MatchHandler
             Predicate<string> predicate1 = s => s.Length > 5 && s.Length < 15;
             var handler1 = PredicateAndHandler.CreateAction(action1, predicate: predicate1);
             stringHandler.Handlers.Add(handler1);
-            Action<string> action2 = s => { updatedValue = "action2"; };
+            Action<string> action2 = _ => { updatedValue = "action2"; };
             Predicate<string> predicate2 = s => s.Length >= 15 && s.Length < 20;
             var handler2 = PredicateAndHandler.CreateAction(action2, predicate: predicate2);
             stringHandler.Handlers.Add(handler2);
@@ -326,8 +326,8 @@ namespace Akka.Tests.MatchHandler
             //Handle a string with one action
             var typeHandlers = new List<TypeHandler>();
             var stringHandler = new TypeHandler(typeof(string));
-            Action<string> actionString = s => { };
-            Predicate<string> predicateString = s => false;
+            Action<string> actionString = _ => { };
+            Predicate<string> predicateString = _ => false;
             for(var i = 0; i < 7; i++)
             {
                 stringHandler.Handlers.Add(PredicateAndHandler.CreateAction(actionString, predicate: predicateString));
@@ -373,8 +373,8 @@ namespace Akka.Tests.MatchHandler
             //Handle a string with one action
             var typeHandlers = new List<TypeHandler>();
             var stringHandler = new TypeHandler(typeof(string));
-            Action<string> actionString = s => { };
-            Predicate<string> predicateString = s => false;
+            Action<string> actionString = _ => { };
+            Predicate<string> predicateString = _ => false;
             for(var i = 0; i < 7; i++)
             {
                 stringHandler.Handlers.Add(PredicateAndHandler.CreateAction(actionString, predicate: predicateString));
@@ -423,7 +423,7 @@ namespace Akka.Tests.MatchHandler
             //Handle a string with one action
             var typeHandlers = new List<TypeHandler>();
             var stringHandler = new TypeHandler(typeof(string));
-            Action<object> action = s => { updatedValue = s is string ? "WasString:" + (string)s : "WasNotString" + s.ToString(); };
+            Action<object> action = s => { updatedValue = s is string s1 ? "WasString:" + s1 : "WasNotString" + s.ToString(); };
             var handler = PredicateAndHandler.CreateAction(action, handlerFirstArgumentShouldBeBaseType: true);
             stringHandler.Handlers.Add(handler);
             typeHandlers.Add(stringHandler);

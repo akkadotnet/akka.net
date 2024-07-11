@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefSourceActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ namespace Akka.Streams.Implementation
                 throw new NotSupportedException("Backpressure overflow strategy not supported");
 
             var maxFixedBufferSize = settings.MaxFixedBufferSize;
-            return Actor.Props.Create(() => new ActorRefSourceActor<T>(bufferSize, overflowStrategy, maxFixedBufferSize));
+            return Actor.Props.Create<ActorRefSourceActor<T>>(bufferSize, overflowStrategy, maxFixedBufferSize);
         }
 
         /// <summary>
@@ -58,17 +58,18 @@ namespace Akka.Streams.Implementation
         /// <param name="bufferSize">TBD</param>
         /// <param name="overflowStrategy">TBD</param>
         /// <param name="maxFixedBufferSize">TBD</param>
+        /// If this changes you must also change <see cref="ActorRefSourceActor{T}.Props"/> as well!
         public ActorRefSourceActor(int bufferSize, OverflowStrategy overflowStrategy, int maxFixedBufferSize)
         {
             BufferSize = bufferSize;
             OverflowStrategy = overflowStrategy;
-            Buffer = bufferSize != 0 ?  Implementation.Buffer.Create<T>(bufferSize, maxFixedBufferSize) : null;
+            Buffer = bufferSize != 0 ? Implementation.Buffer.Create<T>(bufferSize, maxFixedBufferSize) : null;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         /// <summary>
         /// TBD
@@ -76,7 +77,7 @@ namespace Akka.Streams.Implementation
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
-            => DefaultReceive(message) || RequestElement(message) || (message is T && ReceiveElement((T) message));
+            => DefaultReceive(message) || RequestElement(message) || (message is T message1 && ReceiveElement(message1));
 
         /// <summary>
         /// TBD
@@ -90,12 +91,12 @@ namespace Akka.Streams.Implementation
             else if (message is Status.Success)
             {
                 if (BufferSize == 0 || Buffer.IsEmpty)
-                    Context.Stop(Self);  // will complete the stream successfully
+                    OnCompleteThenStop(); // will complete the stream successfully
                 else
                     Context.Become(DrainBufferThenComplete);
             }
-            else if (message is Status.Failure && IsActive)
-                OnErrorThenStop(((Status.Failure)message).Cause);
+            else if (message is Status.Failure failure && IsActive)
+                OnErrorThenStop(failure.Cause);
             else
                 return false;
             return true;
@@ -179,12 +180,14 @@ namespace Akka.Streams.Implementation
         private bool DrainBufferThenComplete(object message)
         {
             if (message is Cancel)
+            {
                 Context.Stop(Self);
-            else if (message is Status.Failure && IsActive)
+            }
+            else if (message is Status.Failure failure && IsActive)
             {
                 // errors must be signaled as soon as possible,
                 // even if previously valid completion was requested via Status.Success
-                OnErrorThenStop(((Status.Failure)message).Cause);
+                OnErrorThenStop(failure.Cause);
             }
             else if (message is Request)
             {
@@ -193,7 +196,7 @@ namespace Akka.Streams.Implementation
                     OnNext(Buffer.Dequeue());
 
                 if (Buffer.IsEmpty)
-                    Context.Stop(Self); // will complete the stream successfully
+                    OnCompleteThenStop(); // will complete the stream successfully
             }
             else if (IsActive)
                 Log.Debug(

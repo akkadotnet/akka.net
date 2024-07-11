@@ -1,15 +1,15 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
@@ -28,7 +28,7 @@ namespace Akka.Streams.Tests.Dsl
 
         public ActorMaterializer Materializer { get; }
 
-        public ActorRefSinkSpec(ITestOutputHelper output) : base(output, ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf"))
+        public ActorRefSinkSpec(ITestOutputHelper output) : base(output, StreamTestDefaultMailbox.DefaultConfig)
         {
             Materializer = Sys.Materializer();
         }
@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void ActorRefSink_should_send_elements_to_the_ActorRef()
         {
-            Source.From(new[] { 1, 2, 3 }).RunWith(Sink.ActorRef<int>(TestActor, onCompleteMessage: "done"), Materializer);
+            Source.From(new[] { 1, 2, 3 }).RunWith(Sink.ActorRef<int>(TestActor, onCompleteMessage: "done", _ => ""), Materializer);
 
             ExpectMsg(1);
             ExpectMsg(2);
@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.Dsl
         public void ActorRefSink_should_cancel_a_stream_when_actor_terminates()
         {
             var fw = Sys.ActorOf(Props.Create(() => new Fw(TestActor)).WithDispatcher("akka.test.stream-dispatcher"));
-            var publisher = this.SourceProbe<int>().To(Sink.ActorRef<int>(fw, onCompleteMessage: "done"))
+            var publisher = this.SourceProbe<int>().To(Sink.ActorRef<int>(fw, onCompleteMessage: "done", _ => ""))
                     .Run(Materializer)
                     .SendNext(1)
                     .SendNext(2);
@@ -57,6 +57,17 @@ namespace Akka.Streams.Tests.Dsl
             ExpectMsg(2);
             Sys.Stop(fw);
             publisher.ExpectCancellation();
+        }
+
+        [Fact]
+        public void ActorRefSink_should_sends_error_message_if_upstream_fails()
+        {
+            var actorProbe = CreateTestProbe();
+            var probe = this.SourceProbe<string>().To(Sink.ActorRef<string>(actorProbe.Ref, "complete", _ => "failure"))
+                .Run(Materializer);
+
+            probe.SendError(new Exception("oh dear"));
+            actorProbe.ExpectMsg("failure");
         }
     }
 }

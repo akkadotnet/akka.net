@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Tcp.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,12 +28,12 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
-        public override TcpExt CreateExtension(ExtendedActorSystem system) => new TcpExt(system);
+        public override TcpExt CreateExtension(ExtendedActorSystem system) => new(system);
 
         /// <summary>
         /// Represents a successful TCP server binding.
         /// </summary>
-        public struct ServerBinding
+        public readonly struct ServerBinding
         {
             private readonly Func<Task> _unbindAction;
 
@@ -63,7 +63,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Represents an accepted incoming TCP connection.
         /// </summary>
-        public struct IncomingConnection
+        public readonly struct IncomingConnection
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="IncomingConnection"/> class.
@@ -110,7 +110,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Represents a prospective outgoing TCP connection.
         /// </summary>
-        public struct OutgoingConnection
+        public readonly struct OutgoingConnection
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="OutgoingConnection"/> class.
@@ -277,8 +277,7 @@ namespace Akka.Streams.Dsl
 
         internal static EndPoint CreateEndpoint(string host, int port)
         {
-            IPAddress address;
-            return IPAddress.TryParse(host, out address)
+            return IPAddress.TryParse(host, out var address)
                 ? (EndPoint) new IPEndPoint(address, port)
                 : new DnsEndPoint(host, port);
         }
@@ -309,7 +308,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        protected TcpIdleTimeoutException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+        public TcpIdleTimeoutException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 
         public TimeSpan Duration { get; }
     }

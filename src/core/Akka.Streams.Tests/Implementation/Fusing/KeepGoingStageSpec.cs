@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="KeepGoingStageSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -35,28 +35,28 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         private sealed class Ping : IPingCmd
         {
-            public static Ping Instance { get; } = new Ping();
+            public static Ping Instance { get; } = new();
 
             private Ping() { }
         }
 
         private sealed class CompleteStage : IPingCmd
         {
-            public static CompleteStage Instance { get; } = new CompleteStage();
+            public static CompleteStage Instance { get; } = new();
 
             private CompleteStage() { }
         }
 
         private sealed class FailStage : IPingCmd
         {
-            public static FailStage Instance { get; } = new FailStage();
+            public static FailStage Instance { get; } = new();
 
             private FailStage() { }
         }
 
         private sealed class Throw : IPingCmd
         {
-            public static Throw Instance { get; } = new Throw();
+            public static Throw Instance { get; } = new();
 
             private Throw() { }
         }
@@ -65,28 +65,28 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
         private sealed class Pong : IPingEvt
         {
-            public static Pong Instance { get; } = new Pong();
+            public static Pong Instance { get; } = new();
 
             private Pong() { }
         }
 
         private sealed class PostStop : IPingEvt
         {
-            public static PostStop Instance { get; } = new PostStop();
+            public static PostStop Instance { get; } = new();
 
             private PostStop() { }
         }
 
         private sealed class UpstreamCompleted : IPingEvt
         {
-            public static UpstreamCompleted Instance { get; } = new UpstreamCompleted();
+            public static UpstreamCompleted Instance { get; } = new();
 
             private UpstreamCompleted() { }
         }
 
         private sealed class EndOfEventHandler : IPingEvt
         {
-            public static EndOfEventHandler Instance { get; } = new EndOfEventHandler();
+            public static EndOfEventHandler Instance { get; } = new();
 
             private EndOfEventHandler() { }
         }
@@ -142,21 +142,27 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 private void OnCommand(IPingCmd cmd)
                 {
-                    cmd.Match()
-                        .With<Register>(r => _listener = r.Probe)
-                        .With<Ping>(() => _listener.Tell(Pong.Instance))
-                        .With<CompleteStage>(() =>
-                        {
+                    switch (cmd)
+                    {
+                        case Register r:
+                            _listener = r.Probe;
+                            break;
+                        
+                        case Ping _:
+                            _listener.Tell(Pong.Instance);
+                            break;
+                        
+                        case CompleteStage _:
                             CompleteStage();
                             _listener.Tell(EndOfEventHandler.Instance);
-                        })
-                        .With<FailStage>(() =>
-                        {
+                            break;
+                        
+                        case FailStage _:
                             FailStage(new TestException("test"));
                             _listener.Tell(EndOfEventHandler.Instance);
-                        })
-                        .With<Throw>(() =>
-                        {
+                            break;
+                        
+                        case Throw _:
                             try
                             {
                                 throw new TestException("test");
@@ -165,20 +171,20 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                             {
                                 _listener.Tell(EndOfEventHandler.Instance);
                             }
-                        });
+                    }
                 }
             }
 
             #endregion
 
-            private readonly TaskCompletionSource<PingRef> _promise = new TaskCompletionSource<PingRef>();
+            private readonly TaskCompletionSource<PingRef> _promise = new();
 
             public PingableSink(bool keepAlive)
             {
                 _keepAlive = keepAlive;
             }
 
-            public override SinkShape<int> Shape { get; } = new SinkShape<int>(new Inlet<int>("ping.in"));
+            public override SinkShape<int> Shape { get; } = new(new Inlet<int>("ping.in"));
 
             public override ILogicAndMaterializedValue<Task<PingRef>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
             {
@@ -194,143 +200,137 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         }
 
         [Fact]
-        public void A_stage_with_keep_going_must_still_be_alive_after_all_ports_have_been_closed_until_explicity_closed()
+        public async Task A_stage_with_keep_going_must_still_be_alive_after_all_ports_have_been_closed_until_explicity_closed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var t = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
                 var maybePromise = t.Item1;
                 var pingerFuture = t.Item2;
                 pingerFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                var pinger = pingerFuture.Result;
+                var pinger = await pingerFuture;
 
                 pinger.Register(TestActor);
 
                 //Before completion
                 pinger.Ping();
-                ExpectMsg<Pong>();
+                await ExpectMsgAsync<Pong>();
 
                 pinger.Ping();
-                ExpectMsg<Pong>();
+                await ExpectMsgAsync<Pong>();
 
                 maybePromise.TrySetResult(0);
-                ExpectMsg<UpstreamCompleted>();
+                await ExpectMsgAsync<UpstreamCompleted>();
 
-                ExpectNoMsg(200);
+                await ExpectNoMsgAsync(200);
 
                 pinger.Ping();
-                ExpectMsg<Pong>();
+                await ExpectMsgAsync<Pong>();
 
                 pinger.Stop();
                 // PostStop should not be concurrent with the event handler. This event here tests this.
-                ExpectMsg<EndOfEventHandler>();
-                ExpectMsg<PostStop>();
+                await ExpectMsgAsync<EndOfEventHandler>();
+                await ExpectMsgAsync<PostStop>();
             }, Materializer);
         }
 
         [Fact]
-        public void A_stage_with_keep_going_must_still_be_alive_after_all_ports_have_been_closed_until_explicitly_failed()
+        public async Task A_stage_with_keep_going_must_still_be_alive_after_all_ports_have_been_closed_until_explicitly_failed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var t = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
                 var maybePromise = t.Item1;
                 var pingerFuture = t.Item2;
                 pingerFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                var pinger = pingerFuture.Result;
+                var pinger = await pingerFuture;
 
                 pinger.Register(TestActor);
 
                 //Before completion
                 pinger.Ping();
-                ExpectMsg<Pong>();
+                await ExpectMsgAsync<Pong>();
 
                 pinger.Ping();
-                ExpectMsg<Pong>();
+                await ExpectMsgAsync<Pong>();
 
                 maybePromise.TrySetResult(0);
-                ExpectMsg<UpstreamCompleted>();
+                await ExpectMsgAsync<UpstreamCompleted>();
 
-                ExpectNoMsg(200);
-
-                pinger.Ping();
-                ExpectMsg<Pong>();
+                await ExpectNoMsgAsync(200);
 
                 pinger.Ping();
-                ExpectMsg<Pong>();
+                await ExpectMsgAsync<Pong>();
+
+                pinger.Ping();
+                await ExpectMsgAsync<Pong>();
 
                 pinger.Fail();
                 // PostStop should not be concurrent with the event handler. This event here tests this.
-                ExpectMsg<EndOfEventHandler>();
-                ExpectMsg<PostStop>();
-
+                await ExpectMsgAsync<EndOfEventHandler>();
+                await ExpectMsgAsync<PostStop>();
             }, Materializer);
         }
 
         [Fact]
-        public void A_stage_with_keep_going_must_still_be_alive_after_all_ports_have_been_closed_until_implicity_failed_via_exception()
+        public async Task A_stage_with_keep_going_must_still_be_alive_after_all_ports_have_been_closed_until_implicity_failed_via_exception()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var t = Source.Maybe<int>().ToMaterialized(new PingableSink(true), Keep.Both).Run(Materializer);
                 var maybePromise = t.Item1;
                 var pingerFuture = t.Item2;
                 pingerFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                var pinger = pingerFuture.Result;
+                var pinger = await pingerFuture;
 
                 pinger.Register(TestActor);
 
                 //Before completion
                 pinger.Ping();
-                ExpectMsg<Pong>();
+                await ExpectMsgAsync<Pong>();
 
                 pinger.Ping();
-                ExpectMsg<Pong>();
+                await ExpectMsgAsync<Pong>();
 
                 maybePromise.TrySetResult(0);
-                ExpectMsg<UpstreamCompleted>();
+                await ExpectMsgAsync<UpstreamCompleted>();
 
                 ExpectNoMsg(200);
 
                 pinger.Ping();
-                ExpectMsg<Pong>();
+                await ExpectMsgAsync<Pong>();
 
                 pinger.Ping();
-                ExpectMsg<Pong>();
+                await ExpectMsgAsync<Pong>();
 
                 // We need to catch the exception otherwise the test fails
                 // ReSharper disable once EmptyGeneralCatchClause
-                try { pinger.ThrowEx();} catch { }
+                try { pinger.ThrowEx(); } catch { }
                 // PostStop should not be concurrent with the event handler. This event here tests this.
-                ExpectMsg<EndOfEventHandler>();
-                ExpectMsg<PostStop>();
-
+                await ExpectMsgAsync<EndOfEventHandler>();
+                await ExpectMsgAsync<PostStop>();
             }, Materializer);
         }
 
         [Fact]
-        public void A_stage_with_keep_going_must_close_down_earls_if_keepAlive_is_not_requested()
+        public async Task A_stage_with_keep_going_must_close_down_earls_if_keepAlive_is_not_requested()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var t = Source.Maybe<int>().ToMaterialized(new PingableSink(false), Keep.Both).Run(Materializer);
                 var maybePromise = t.Item1;
                 var pingerFuture = t.Item2;
                 pingerFuture.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                var pinger = pingerFuture.Result;
+                var pinger = await pingerFuture;
 
                 pinger.Register(TestActor);
 
                 //Before completion
                 pinger.Ping();
-                ExpectMsg<Pong>();
+                await ExpectMsgAsync<Pong>();
 
                 pinger.Ping();
-                ExpectMsg<Pong>();
+                await ExpectMsgAsync<Pong>();
 
                 maybePromise.TrySetResult(0);
-                ExpectMsg<UpstreamCompleted>();
-                ExpectMsg<PostStop>();
+                await ExpectMsgAsync<UpstreamCompleted>();
+                await ExpectMsgAsync<PostStop>();
             }, Materializer);
         }
     }

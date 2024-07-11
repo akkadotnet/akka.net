@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Player.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -320,15 +320,7 @@ namespace Akka.Remote.TestKit
         internal class Disconnected
         {
             private Disconnected() { }
-            private static readonly Disconnected _instance = new Disconnected();
-
-            public static Disconnected Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }            
+            public static Disconnected Instance { get; }  = new();
         }
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -628,7 +620,7 @@ namespace Akka.Remote.TestKit
         {
             _log.Debug("Connecting...");
             _nextAttempt = Deadline.Now + _backoff;
-            RemoteConnection.CreateConnection(Role.Client, _server, _poolSize, this).ContinueWith(tr =>
+            RemoteConnection.CreateConnection(Role.Client, _server, _poolSize, this).ContinueWith(_ =>
             {
                 _log.Debug("Failed to connect.... Retrying again in {0}s. {1} attempts left.", _nextAttempt.TimeLeft,_reconnects);
                 if (_reconnects > 0)
@@ -667,7 +659,9 @@ namespace Akka.Remote.TestKit
             Task.Factory.StartNew(() =>
             {
                 RemoteConnection.Shutdown(context.Channel);
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 RemoteConnection.ReleaseAll(); // yep, let it run asynchronously.
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
             context.FireChannelInactive();
         }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Inbox.Actor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,8 +17,8 @@ namespace Akka.Actor
     /// </summary>
     internal class InboxActor : ActorBase
     {
-        private readonly InboxQueue<object> _messages = new InboxQueue<object>();
-        private readonly InboxQueue<IQuery> _clients = new InboxQueue<IQuery>();
+        private readonly InboxQueue<object> _messages = new();
+        private readonly InboxQueue<IQuery> _clients = new();
 
         private readonly ISet<IQuery> _clientsByTimeout = new SortedSet<IQuery>(DeadlineComparer.Instance);
         private bool _printedWarning;

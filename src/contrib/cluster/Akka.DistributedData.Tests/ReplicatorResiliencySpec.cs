@@ -1,9 +1,9 @@
-// //-----------------------------------------------------------------------
-// // <copyright file="ReplicatorResiliencySpec.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ReplicatorResiliencySpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.DistributedData.Durable;
 using Akka.DistributedData.LightningDB;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.TestKit;
 using FluentAssertions;
@@ -197,8 +198,8 @@ namespace Akka.DistributedData.Tests
         {
             Context.System.Log.Info("FakeDurableStore Initialising");
             Receive<Store>(store => { store.Reply?.ReplyTo.Tell(store.Reply.SuccessMessage); });
-            Receive<LoadAll>( load=> { Sender.Tell(LoadAllCompleted.Instance); });
-            Receive<InitFail>( init => { throw new LoadFailedException("failed to load durable distributed-data"); });
+            Receive<LoadAll>( _=> { Sender.Tell(LoadAllCompleted.Instance); });
+            Receive<InitFail>( _ => { throw new LoadFailedException("failed to load durable distributed-data"); });
         }
 
     }

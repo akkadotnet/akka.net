@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FSM.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -58,15 +58,15 @@ namespace Akka.Actor
                 return Equals(FsmRef, other.FsmRef) && EqualityComparer<TS>.Default.Equals(State, other.State);
             }
 
-            /// <inheritdoc/>
+           
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is CurrentState<TS> && Equals((CurrentState<TS>)obj);
+                return obj is CurrentState<TS> state && Equals(state);
             }
 
-            /// <inheritdoc/>
+            
             public override int GetHashCode()
             {
                 unchecked
@@ -75,7 +75,7 @@ namespace Akka.Actor
                 }
             }
 
-            /// <inheritdoc/>
+            
             public override string ToString()
             {
                 return $"CurrentState <{State}>";
@@ -124,15 +124,15 @@ namespace Akka.Actor
                 return Equals(FsmRef, other.FsmRef) && EqualityComparer<TS>.Default.Equals(From, other.From) && EqualityComparer<TS>.Default.Equals(To, other.To);
             }
 
-            /// <inheritdoc/>
+            
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is Transition<TS> && Equals((Transition<TS>)obj);
+                return obj is Transition<TS> transition && Equals(transition);
             }
 
-            /// <inheritdoc/>
+            
             public override int GetHashCode()
             {
                 unchecked
@@ -144,7 +144,7 @@ namespace Akka.Actor
                 }
             }
 
-            /// <inheritdoc/>
+            
             public override string ToString()
             {
                 return $"Transition({From}, {To})";
@@ -206,12 +206,12 @@ namespace Akka.Actor
         /// </summary>
         public sealed class Normal : Reason
         {
-            internal Normal() { }
+            private Normal() { }
 
             /// <summary>
             /// Singleton instance of Normal
             /// </summary>
-            public static Normal Instance { get; } = new Normal();
+            public static Normal Instance { get; } = new();
         }
 
         /// <summary>
@@ -220,12 +220,12 @@ namespace Akka.Actor
         /// </summary>
         public sealed class Shutdown : Reason
         {
-            internal Shutdown() { }
+            private Shutdown() { }
 
             /// <summary>
             /// Singleton instance of Shutdown
             /// </summary>
-            public static Shutdown Instance { get; } = new Shutdown();
+            public static Shutdown Instance { get; } = new();
         }
 
         /// <summary>
@@ -249,7 +249,7 @@ namespace Akka.Actor
             /// </summary>
             public object Cause { get; }
 
-            /// <inheritdoc/>
+            
             public override string ToString() => $"Failure({Cause})";
         }
 
@@ -258,12 +258,12 @@ namespace Akka.Actor
         /// </summary>
         public sealed class StateTimeout
         {
-            internal StateTimeout() { }
+            private StateTimeout() { }
 
             /// <summary>
             /// Singleton instance of StateTimeout
             /// </summary>
-            public static StateTimeout Instance { get; } = new StateTimeout();
+            public static StateTimeout Instance { get; } = new();
         }
 
         /// <summary>
@@ -374,7 +374,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Log entry of the <see cref="ILoggingFSM"/> - can be obtained by calling <see cref="GetLog"/>
+        /// Log entry of the <see cref="ILoggingFSM"/> - can be obtained by calling 
         /// </summary>
         /// <typeparam name="TS">The name of the state</typeparam>
         /// <typeparam name="TD">The data of the state</typeparam>
@@ -408,7 +408,7 @@ namespace Akka.Actor
             /// </summary>
             public object FsmEvent { get; }
 
-            /// <inheritdoc/>
+            
             public override string ToString()
             {
                 return $"StateName: <{StateName}>, StateData: <{StateData}>, FsmEvent: <{FsmEvent}>";
@@ -422,7 +422,7 @@ namespace Akka.Actor
         /// </summary>
         /// <typeparam name="TS">The name of the state</typeparam>
         /// <typeparam name="TD">The data of the state</typeparam>
-        public class State<TS, TD> : IEquatable<State<TS, TD>>
+        public sealed class State<TS, TD> : IEquatable<State<TS, TD>>
         {
             /// <summary>
             /// Initializes a new instance of the State
@@ -435,7 +435,7 @@ namespace Akka.Actor
             /// <param name="notifies">TBD</param>
             public State(TS stateName, TD stateData, TimeSpan? timeout = null, Reason stopReason = null, IReadOnlyList<object> replies = null, bool notifies = true)
             {
-                Replies = replies ?? new List<object>();
+                Replies = replies ?? Array.Empty<object>();
                 StopReason = stopReason;
                 Timeout = timeout;
                 StateData = stateData;
@@ -444,32 +444,33 @@ namespace Akka.Actor
             }
 
             /// <summary>
-            /// TBD
+            /// The name of this state
             /// </summary>
             public TS StateName { get; }
 
             /// <summary>
-            /// TBD
+            /// The data belonging to this sate
             /// </summary>
             public TD StateData { get; }
 
             /// <summary>
-            /// TBD
+            /// Optional. The state timeout.
             /// </summary>
             public TimeSpan? Timeout { get; }
 
             /// <summary>
-            /// TBD
+            /// Optional - the reason why we're stopping.
             /// </summary>
             public Reason StopReason { get; }
 
             /// <summary>
-            /// TBD
+            /// Optional - the set of replies to send to subscribers.
             /// </summary>
-            public IReadOnlyList<object> Replies { get; protected set; }
+            public IReadOnlyList<object> Replies { get; }
 
             /// <summary>
-            /// TBD
+            /// INTERNAL API. Indicates whether or not we're sending transition notifications
+            /// for this state change.
             /// </summary>
             internal bool Notifies { get; }
 
@@ -482,7 +483,22 @@ namespace Akka.Actor
             /// <returns>TBD</returns>
             internal State<TS, TD> Copy(TimeSpan? timeout, Reason stopReason = null, IReadOnlyList<object> replies = null)
             {
+                // otherwise, return a new copy.
                 return new State<TS, TD>(StateName, StateData, timeout, stopReason ?? StopReason, replies ?? Replies, Notifies);
+            }
+
+            /// <summary>
+            /// Remove all of the unwanted bits we don't need during a Stay() operation.
+            /// </summary>
+            /// <remarks>
+            /// This is a performance optimization designed to 
+            /// </remarks>
+            /// <returns>Returns a "clean" copy of a state object the first time it's called. Idempotent after.</returns>
+            internal State<TS, TD> SpecialCopyForStay()
+            {
+                if(Replies.Count > 0 || StopReason != null || Timeout != null || Notifies)
+                    return new State<TS, TD>(StateName, StateData, notifies:false);
+                return this;
             }
 
             /// <summary>
@@ -539,16 +555,17 @@ namespace Akka.Actor
             /// </summary>
             internal State<TS, TD> WithNotification(bool notifies)
             {
+                // don't bother allocating even a stack type if the notifies value is identical.
+                if (Notifies == notifies)
+                    return this;
                 return new State<TS, TD>(StateName, StateData, Timeout, StopReason, Replies, notifies);
             }
 
-            /// <inheritdoc/>
             public override string ToString()
             {
                 return $"{StateName}, {StateData}";
             }
-
-            /// <inheritdoc/>
+            
             public bool Equals(State<TS, TD> other)
             {
                 if (ReferenceEquals(null, other)) return false;
@@ -556,7 +573,7 @@ namespace Akka.Actor
                 return EqualityComparer<TS>.Default.Equals(StateName, other.StateName) && EqualityComparer<TD>.Default.Equals(StateData, other.StateData) && Timeout.Equals(other.Timeout) && Equals(StopReason, other.StopReason) && Equals(Replies, other.Replies);
             }
 
-            /// <inheritdoc/>
+            
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
@@ -565,7 +582,7 @@ namespace Akka.Actor
                 return Equals((State<TS, TD>)obj);
             }
 
-            /// <inheritdoc/>
+            
             public override int GetHashCode()
             {
                 unchecked
@@ -585,13 +602,13 @@ namespace Akka.Actor
         /// which allows pattern matching to extract both state and data.
         /// </summary>
         /// <typeparam name="TD">The state data for this event</typeparam>
-        public sealed class Event<TD> : INoSerializationVerificationNeeded
+        public readonly struct Event<TD> : INoSerializationVerificationNeeded
         {
             /// <summary>
             /// Initializes a new instance of the Event
             /// </summary>
-            /// <param name="fsmEvent">TBD</param>
-            /// <param name="stateData">TBD</param>
+            /// <param name="fsmEvent">The message received by the FSM.</param>
+            /// <param name="stateData">The current state data of the FSM.</param>
             public Event(object fsmEvent, TD stateData)
             {
                 StateData = stateData;
@@ -599,16 +616,16 @@ namespace Akka.Actor
             }
 
             /// <summary>
-            /// TBD
+            /// The message received by the FSM.
             /// </summary>
             public object FsmEvent { get; }
 
             /// <summary>
-            /// TBD
+            /// The current state data of the FSM.
             /// </summary>
             public TD StateData { get; }
 
-            /// <inheritdoc/>
+            
             public override string ToString()
             {
                 return $"Event: <{FsmEvent}>, StateData: <{StateData}>";
@@ -650,7 +667,7 @@ namespace Akka.Actor
             /// </summary>
             public TD StateData { get; }
 
-            /// <inheritdoc/>
+            
             public override string ToString()
             {
                 return $"Reason: <{Reason}>, TerminatedState: <{TerminatedState}>, StateData: <{StateData}>";
@@ -750,7 +767,8 @@ namespace Akka.Actor
         /// <returns>Descriptor for staying in the current state.</returns>
         public State<TState, TData> Stay()
         {
-            return GoTo(_currentState.StateName).WithNotification(false);
+            // don't want to allocate a new state if we don't have to
+            return _currentState.SpecialCopyForStay();
         }
 
         /// <summary>
@@ -819,7 +837,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="func">TBD</param>
         /// <returns>TBD</returns>
-        public TransformHelper Transform(StateFunction func) => new TransformHelper(func);
+        public TransformHelper Transform(StateFunction func) => new(func);
 
         /// <summary>
         /// Schedule named timer to deliver message after given delay, possibly repeating.
@@ -940,7 +958,7 @@ namespace Akka.Actor
         {
             get
             {
-                if (_currentState != null)
+                if (_currentState != null) 
                     return _currentState.StateName;
                 throw new IllegalStateException("You must call StartWith before calling StateName.");
             }
@@ -985,7 +1003,7 @@ namespace Akka.Actor
         /// <summary>
         /// Retrieves the support needed to interact with an actor's listeners.
         /// </summary>
-        public ListenerSupport Listeners { get; } = new ListenerSupport();
+        public ListenerSupport Listeners { get; } = new();
 
         /// <summary>
         /// Can be set to enable debugging on certain actions taken by the FSM
@@ -1005,13 +1023,13 @@ namespace Akka.Actor
         /// Timer handling
         /// </summary>
         private readonly IDictionary<string, Timer> _timers = new Dictionary<string, Timer>();
-        private readonly AtomicCounter _timerGen = new AtomicCounter(0);
+        private readonly AtomicCounter _timerGen = new(0);
 
         /// <summary>
         /// State definitions
         /// </summary>
-        private readonly Dictionary<TState, StateFunction> _stateFunctions = new Dictionary<TState, StateFunction>();
-        private readonly Dictionary<TState, TimeSpan?> _stateTimeouts = new Dictionary<TState, TimeSpan?>();
+        private readonly Dictionary<TState, StateFunction> _stateFunctions = new();
+        private readonly Dictionary<TState, TimeSpan?> _stateTimeouts = new();
 
         private void Register(TState name, StateFunction function, TimeSpan? timeout)
         {
@@ -1046,7 +1064,7 @@ namespace Akka.Actor
 
         private StateFunction HandleEvent
         {
-            get { return _handleEvent ?? (_handleEvent = HandleEventDefault); }
+            get { return _handleEvent ??= HandleEventDefault; }
             set { _handleEvent = value; }
         }
 
@@ -1054,7 +1072,7 @@ namespace Akka.Actor
         /// <summary>
         /// Termination handling
         /// </summary>
-        private Action<StopEvent<TState, TData>> _terminateEvent = @event =>{};
+        private Action<StopEvent<TState, TData>> _terminateEvent = _ =>{};
 
         /// <summary>
         /// Transition handling
@@ -1175,7 +1193,7 @@ namespace Akka.Actor
             var stateFunc = _stateFunctions[_currentState.StateName];
             var oldState = _currentState;
 
-            State<TState, TData> nextState = null;
+            State<TState, TData> nextState = default;
 
             if (stateFunc != null)
             {
@@ -1195,7 +1213,7 @@ namespace Akka.Actor
             }
         }
 
-        private string GetSourceString(object source)
+        private static string GetSourceString(object source)
         {
             if (source is string s)
                 return s;
@@ -1244,12 +1262,14 @@ namespace Akka.Actor
                 {
                     Sender.Tell(nextState.Replies[i]);
                 }
-                if (!_currentState.StateName.Equals(nextState.StateName) || nextState.Notifies)
+                
+                // avoid boxing
+                if (!EqualityComparer<TState>.Default.Equals(_currentState.StateName, nextState.StateName) || nextState.Notifies)
                 {
                     _nextState = nextState;
                     HandleTransition(_currentState.StateName, nextState.StateName);
                     Listeners.Gossip(new Transition<TState>(Self, _currentState.StateName, nextState.StateName));
-                    _nextState = null;
+                    _nextState = default;
                 }
                 _currentState = nextState;
 
@@ -1312,9 +1332,9 @@ namespace Akka.Actor
         {
             if (reason is Failure failure)
             {
-                if (failure.Cause is Exception)
+                if (failure.Cause is Exception exception)
                 {
-                    _log.Error(failure.Cause.AsInstanceOf<Exception>(), "terminating due to Failure");
+                    _log.Error(exception, "terminating due to Failure");
                 }
                 else
                 {

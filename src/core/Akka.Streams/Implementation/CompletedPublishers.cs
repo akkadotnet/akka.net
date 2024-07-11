@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CompletedPublishers.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -129,7 +129,7 @@ namespace Akka.Streams.Implementation
                 if (!_done)
                 {
                     _done = true;
-                    _promise.Task.ContinueWith(t =>
+                    _promise.Task.ContinueWith(_ =>
                     {
                         if (!_promise.Task.Result.IsDefaultForType())
                         {
@@ -198,7 +198,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly CancelledSubscription Instance = new CancelledSubscription();
+        public static readonly CancelledSubscription Instance = new();
 
         private CancelledSubscription() { }
 

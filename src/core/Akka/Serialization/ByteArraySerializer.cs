@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ByteArraySerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,8 +42,8 @@ namespace Akka.Serialization
         {
             if (obj == null)
                 return null;
-            if (obj is byte[])
-                return (byte[]) obj;
+            if (obj is byte[] bytes)
+                return bytes;
             throw new NotSupportedException("The object to convert is not a byte array.");
         }
 

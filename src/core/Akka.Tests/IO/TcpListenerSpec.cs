@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpListenerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
@@ -30,38 +31,38 @@ namespace Akka.Tests.IO
         { }
 
         [Fact]
-        public void A_TCP_Listener_must_let_the_bind_commander_know_when_binding_is_complete()
+        public async Task A_TCP_Listener_must_let_the_bind_commander_know_when_binding_is_complete()
         {
-            new TestSetup(this, pullMode: false).Run(x =>
+            await new TestSetup(this, pullMode: false).RunAsync(async x =>
             {
-                x.BindCommander.ExpectMsg<Tcp.Bound>();
+                await x.BindCommander.ExpectMsgAsync<Tcp.Bound>();
             });           
         }
 
         [Fact]
-        public void A_TCP_Listener_must_continue_to_accept_connections_after_a_previous_accept()
+        public async Task A_TCP_Listener_must_continue_to_accept_connections_after_a_previous_accept()
         {
-            new TestSetup(this, pullMode: false).Run(x =>
+            await new TestSetup(this, pullMode: false).RunAsync(async x =>
             {
-                x.BindListener();
+                await x.BindListener();
 
-                x.AttemptConnectionToEndpoint();
-                x.AttemptConnectionToEndpoint();
+                await x.AttemptConnectionToEndpoint();
+                await x.AttemptConnectionToEndpoint();
             });
         }
 
         [Fact]
-        public void A_TCP_Listener_must_react_to_unbind_commands_by_replying_with_unbound_and_stopping_itself()
+        public async Task A_TCP_Listener_must_react_to_unbind_commands_by_replying_with_unbound_and_stopping_itself()
         {
-            new TestSetup(this, pullMode:false).Run(x =>
+            await new TestSetup(this, pullMode:false).RunAsync(async x =>
             {
-                x.BindListener();
+                await x.BindListener();
 
                 var unbindCommander = CreateTestProbe();
                 unbindCommander.Send(x.Listener, Tcp.Unbind.Instance);
 
-                unbindCommander.ExpectMsg(Tcp.Unbound.Instance);
-                x.Parent.ExpectTerminated(x.Listener);
+                await unbindCommander.ExpectMsgAsync(Tcp.Unbound.Instance);
+                await x.Parent.ExpectTerminatedAsync(x.Listener);
             });    
         }
 
@@ -75,7 +76,6 @@ namespace Akka.Tests.IO
             private readonly TestProbe _bindCommander;
             private readonly TestProbe _parent;
             private readonly TestProbe _selectorRouter;
-            private readonly IPEndPoint _endpoint;
             private readonly TestActorRef<ListenerParent> _parentRef;
             
             public TestSetup(TestKitBase kit, bool pullMode)
@@ -88,8 +88,6 @@ namespace Akka.Tests.IO
                 _bindCommander = kit.CreateTestProbe();
                 _parent = kit.CreateTestProbe();
                 _selectorRouter = kit.CreateTestProbe();
-                _endpoint = TestUtils.TemporaryServerAddress();
-
 
                 _parentRef = new TestActorRef<ListenerParent>(kit.Sys, Props.Create(() => new ListenerParent(this, pullMode)));
             }
@@ -98,15 +96,21 @@ namespace Akka.Tests.IO
             {
                 test(this);
             }
-
-            public void BindListener()
+            public async Task RunAsync(Func<TestSetup, Task> test)
             {
-                _bindCommander.ExpectMsg<Tcp.Bound>();
+                await test(this);
             }
 
-            public void AttemptConnectionToEndpoint()
+            public async Task BindListener()
             {
-                new Socket(_endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp).Connect(_endpoint);
+                var bound = await _bindCommander.ExpectMsgAsync<Tcp.Bound>();
+                LocalEndPoint = (IPEndPoint)bound.LocalAddress;
+            }
+
+            public async Task AttemptConnectionToEndpoint()
+            {
+                await new Socket(LocalEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
+                    .ConnectAsync(LocalEndPoint);
             }
 
             public IActorRef Listener { get { return _parentRef.UnderlyingActor.Listener; } }
@@ -119,6 +123,11 @@ namespace Akka.Tests.IO
             public TestProbe BindCommander { get { return _bindCommander; } }
             public TestProbe Parent { get { return _parent; } }
 
+            public IPEndPoint LocalEndPoint { get; private set; }
+
+            internal void AfterBind(Socket socket)
+                => LocalEndPoint = (IPEndPoint)socket.LocalEndPoint;
+
             class ListenerParent : ActorBase
             {
                 private readonly TestSetup _test;
@@ -130,12 +139,20 @@ namespace Akka.Tests.IO
                     _test = test;
                     _pullMode = pullMode;
 
+                    var endpoint = new IPEndPoint(IPAddress.Loopback, 0);
+
                     _listener = Context.ActorOf(Props.Create(() =>
                         new TcpListener(
                             Tcp.Instance.Apply(Context.System),
                             test._bindCommander.Ref,
-                            new Tcp.Bind(_test._handler.Ref, test._endpoint, 100, new Inet.SocketOption[]{}, pullMode)))
-                                                              .WithDeploy(Deploy.Local));
+                            new Tcp.Bind(
+                                _test._handler.Ref, 
+                                endpoint, 
+                                100, 
+                                new Inet.SocketOption[]{ new TestSocketOption(socket => _test.AfterBind(socket)) }, 
+                                pullMode)))
+                        .WithDeploy(Deploy.Local));
+                    
                     _test._parent.Watch(_listener);
                 }
 
@@ -152,6 +169,18 @@ namespace Akka.Tests.IO
                     return Akka.Actor.SupervisorStrategy.StoppingStrategy;
                 }
 
+                private class TestSocketOption : Inet.SocketOptionV2
+                {
+                    private readonly Action<Socket> _afterBindCallback;
+
+                    public TestSocketOption(Action<Socket> afterBindCallback)
+                    {
+                        _afterBindCallback = afterBindCallback;
+                    }
+
+                    public override void AfterBind(Socket s)
+                        => _afterBindCallback(s);
+                }
             }
         }
     }

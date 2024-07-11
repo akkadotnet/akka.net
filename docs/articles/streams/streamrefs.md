@@ -3,7 +3,7 @@ uid: stream-ref
 title: StreamRefs - Reactive Streams over the network
 ---
 
-# StreamRefs - Reactive Streams over the network
+# StreamRefs - Reactive Streams Over the Network
 
 Stream references, or “stream refs” for short, allow running Akka Streams across multiple nodes within an Akka Remote boundaries.
 
@@ -24,7 +24,7 @@ Stream refs are not persistent, however it is simple to build a recover-able str
 
 Since the two sides (“local” and “remote”) of each reference may be confusing to simply refer to as “remote” and “local” – since either side can be seen as “local” or “remote” depending how we look at it – we propose to use the terminology “origin” and “target”, which is defined by where the stream ref was created. For SourceRefs, the “origin” is the side which has the data that it is going to stream out. For SinkRefs the “origin” side is the actor system that is ready to receive the data and has allocated the ref. Those two may be seen as duals of each other, however to explain patterns about sharing references, we found this wording to be rather useful.
 
-### Source Refs - offering streaming data to a remote system
+### Source Refs - Offering Streaming Data to a Remote System
 
 A `SourceRef` can be offered to a remote actor system in order for it to consume some source of data that we have prepared locally.
 
@@ -43,7 +43,7 @@ The process of preparing and running a `ISourceRef<T>` powered distributed strea
 > [!WARNING]
 > A `ISourceRef<T>` is by design “single-shot”. i.e. it may only be materialized once. This is in order to not complicate the mental model what materializing such value would mean. While stream refs are designed to be single shot, you may use them to mimic multicast scenarios, simply by starting a `Broadcast` stage once, and attaching multiple new streams to it, for each emitting a new stream ref. This way each output of the broadcast is by itself an unique single-shot reference, however they can all be powered using a single `Source` – located before the `Broadcast` stage.
 
-### Sink Refs - offering to receive streaming data from a remote system
+### Sink Refs - Offering to Receive Streaming Data From a Remote System
 
 They can be used to offer the other side the capability to send to the origin side data in a streaming, flow-controlled fashion. The origin here allocates a Sink, which could be as simple as a `Sink.ForEach` or as advanced as a complex sink which streams the incoming data into various other systems (e.g. any of the Alpakka provided Sinks).
 
@@ -65,7 +65,7 @@ The process of preparing and running a `ISinkRef<>` powered distributed stream i
 
 ## Configuration
 
-### Stream reference subscription timeouts
+### Stream Reference Subscription Timeouts
 
 All stream references have a subscription timeout, which is intended to prevent resource leaks in situations in which a remote node would requests the allocation of many streams yet never actually run them. In order to prevent this, each stream reference has a default timeout (of 30 seconds), after which the origin will abort the stream offer if the target has not materialized the stream ref in time. After the timeout has triggered, materialization of the target side will fail pointing out that the origin is missing.
 

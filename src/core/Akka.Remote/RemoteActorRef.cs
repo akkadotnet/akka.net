@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -98,8 +98,9 @@ namespace Akka.Remote
         /// Obsolete. Use <see cref="Watch"/> or <see cref="ReceiveActor.Receive{T}(Action{T}, Predicate{T})">Receive&lt;<see cref="Akka.Actor.Terminated"/>&gt;</see>
         /// </summary>
         [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
+#pragma warning disable CS0809
         public override bool IsTerminated => false;
-
+#pragma warning restore CS0809
 
         /// <summary>
         /// Gets the child.
@@ -154,7 +155,7 @@ namespace Akka.Remote
             SendSystemMessage(new Akka.Dispatch.SysMsg.Suspend());
         }
 
-        /// <inheritdoc cref="IInternalActorRef"/>
+        
         public override bool IsLocal => false;
 
         /// <inheritdoc cref="IActorRef"/>

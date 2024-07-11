@@ -1,21 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-<Import Project="..\..\common.props" />
 <PropertyGroup>
   <Description>Akka.Remote x-plat performance benchmark</Description>
   <Copyright>Copyright (c) Akka.NET Team</Copyright>
-  <AssemblyTitle>RemotePingPong</AssemblyTitle>
-  <AssemblyName>RemotePingPong</AssemblyName>
   <Authors>Akka.NET Team</Authors>
-  <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+  <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);net6.0</TargetFrameworks>
   <OutputType>Exe</OutputType>
-</PropertyGroup>
-
-<PropertyGroup>
-  <PlatformTarget>x64</PlatformTarget>
+  <IsPackable>false</IsPackable>
 </PropertyGroup>
 
 <PropertyGroup>
   <ServerGarbageCollection>true</ServerGarbageCollection>
+  <TieredPGO>true</TieredPGO>
 </PropertyGroup>
 
 <ItemGroup>

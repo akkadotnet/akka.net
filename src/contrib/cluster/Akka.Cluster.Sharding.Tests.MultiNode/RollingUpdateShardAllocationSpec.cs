@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RollingUpdateShardAllocationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Util;
 using FluentAssertions;
@@ -48,52 +49,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
     }
 
-
-    public class RollingUpdateShardAllocationSpecMultiNode1 : RollingUpdateShardAllocationSpec
-    {
-        public RollingUpdateShardAllocationSpecMultiNode1() : this(new RollingUpdateShardAllocationSpecConfig())
-        {
-        }
-
-        protected RollingUpdateShardAllocationSpecMultiNode1(RollingUpdateShardAllocationSpecConfig config) : base(config, typeof(RollingUpdateShardAllocationSpecMultiNode1))
-        {
-        }
-    }
-
-    public class RollingUpdateShardAllocationSpecMultiNode2 : RollingUpdateShardAllocationSpec
-    {
-        public RollingUpdateShardAllocationSpecMultiNode2() : this(new RollingUpdateShardAllocationSpecConfig())
-        {
-        }
-
-        protected RollingUpdateShardAllocationSpecMultiNode2(RollingUpdateShardAllocationSpecConfig config) : base(config, typeof(RollingUpdateShardAllocationSpecMultiNode2))
-        {
-        }
-    }
-
-    public class RollingUpdateShardAllocationSpecMultiNode3 : RollingUpdateShardAllocationSpec
-    {
-        public RollingUpdateShardAllocationSpecMultiNode3() : this(new RollingUpdateShardAllocationSpecConfig())
-        {
-        }
-
-        protected RollingUpdateShardAllocationSpecMultiNode3(RollingUpdateShardAllocationSpecConfig config) : base(config, typeof(RollingUpdateShardAllocationSpecMultiNode3))
-        {
-        }
-    }
-
-    public class RollingUpdateShardAllocationSpecMultiNode4 : RollingUpdateShardAllocationSpec
-    {
-        public RollingUpdateShardAllocationSpecMultiNode4() : this(new RollingUpdateShardAllocationSpecConfig())
-        {
-        }
-
-        protected RollingUpdateShardAllocationSpecMultiNode4(RollingUpdateShardAllocationSpecConfig config) : base(config, typeof(RollingUpdateShardAllocationSpecMultiNode4))
-        {
-        }
-    }
-
-    public abstract class RollingUpdateShardAllocationSpec : MultiNodeClusterShardingSpec
+    public class RollingUpdateShardAllocationSpec : MultiNodeClusterShardingSpec<RollingUpdateShardAllocationSpecConfig>
     {
         protected class GiveMeYourHome : ActorBase
         {
@@ -117,25 +73,32 @@ namespace Akka.Cluster.Sharding.Tests
                 public Address Address { get; }
             }
 
-            static internal ExtractEntityId ExtractEntityId = message =>
+            public sealed class MessageExtractor: IMessageExtractor
             {
-                if (message is Get get)
-                    return (get.Id, get);
-                return Option<(string, object)>.None;
-            };
+                // shard == id to make testing easier
+                public string EntityId(object message)
+                    => message switch
+                    {
+                        Get g => g.Id,
+                        _ => null
+                    };
 
-            static internal ExtractShardId ExtractShardId = message =>
-            {
-                switch (message)
-                {
-                    case Get get:
-                        return get.Id;
-                }
-                return null;
-            };
+                public object EntityMessage(object message)
+                    => message;
+
+                public string ShardId(object message)
+                    => message switch
+                    {
+                        Get g => g.Id,
+                        _ => null
+                    };
+
+                public string ShardId(string entityId, object messageHint = null)
+                    => entityId;
+            }
 
             private ILoggingAdapter _log;
-            private ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+            private ILoggingAdapter Log => _log ??= Context.GetLogger();
 
             private Address SelfAddress => Cluster.Get(Context.System).SelfAddress;
 
@@ -158,21 +121,22 @@ namespace Akka.Cluster.Sharding.Tests
 
 
         private const string TypeName = "home";
-        private readonly RollingUpdateShardAllocationSpecConfig config;
         private readonly Lazy<IActorRef> shardRegion;
+
+        public RollingUpdateShardAllocationSpec()
+            : this(new RollingUpdateShardAllocationSpecConfig(), typeof(RollingUpdateShardAllocationSpec))
+        {
+        }
 
         protected RollingUpdateShardAllocationSpec(RollingUpdateShardAllocationSpecConfig config, Type type)
             : base(config, type)
         {
-            this.config = config;
-
             shardRegion = new Lazy<IActorRef>(() =>
                 StartSharding(
                     Sys,
                     typeName: TypeName,
                     entityProps: Props.Create(() => new GiveMeYourHome()),
-                    extractEntityId: GiveMeYourHome.ExtractEntityId,
-                    extractShardId: GiveMeYourHome.ExtractShardId));
+                    messageExtractor: new GiveMeYourHome.MessageExtractor()));
         }
 
         private IEnumerable<Member> UpMembers => Cluster.State.Members.Where(m => m.Status == MemberStatus.Up);
@@ -187,13 +151,13 @@ namespace Akka.Cluster.Sharding.Tests
             ClusterSharding_must_complete_a_rolling_upgrade();
         }
 
-        public void ClusterSharding_must_form_cluster()
+        private void ClusterSharding_must_form_cluster()
         {
-            AwaitClusterUp(config.First, config.Second);
+            AwaitClusterUp(Config.First, Config.Second);
             EnterBarrier("cluster-started");
         }
 
-        public void ClusterSharding_must_start_cluster_sharding_on_first()
+        private void ClusterSharding_must_start_cluster_sharding_on_first()
         {
             RunOn(() =>
             {
@@ -215,13 +179,13 @@ namespace Akka.Cluster.Sharding.Tests
 
                 // one on each node
                 ImmutableHashSet.Create(address1, address2).Should().HaveCount(2);
-            }, config.First, config.Second);
+            }, Config.First, Config.Second);
             EnterBarrier("first-version-started");
         }
 
-        public void ClusterSharding_must_start_a_rolling_upgrade()
+        private void ClusterSharding_must_start_a_rolling_upgrade()
         {
-            Join(config.Third, config.First);
+            Join(Config.Third, Config.First);
 
             RunOn(() =>
             {
@@ -237,14 +201,14 @@ namespace Akka.Cluster.Sharding.Tests
                     shardRegion.Value.Tell(GetCurrentRegions.Instance);
                     ExpectMsg<CurrentRegions>().Regions.Should().HaveCount(3);
                 });
-            }, config.First, config.Second, config.Third);
+            }, Config.First, Config.Second, Config.Third);
 
             EnterBarrier("third-region-registered");
             RunOn(() =>
             {
                 shardRegion.Value.Tell(new GiveMeYourHome.Get("id3"));
                 ExpectMsg<GiveMeYourHome.Home>();
-            }, config.First, config.Second);
+            }, Config.First, Config.Second);
             RunOn(() =>
             {
                 // now third region should be only option as the other two are old versions
@@ -256,26 +220,26 @@ namespace Akka.Cluster.Sharding.Tests
                     shardRegion.Value.Tell(new GiveMeYourHome.Get($"id{n}"));
                     ExpectMsg<GiveMeYourHome.Home>().Address.Should().Be(Cluster.Get(Sys).SelfAddress);
                 }
-            }, config.Third);
+            }, Config.Third);
             EnterBarrier("rolling-upgrade-in-progress");
         }
 
-        public void ClusterSharding_must_complete_a_rolling_upgrade()
+        private void ClusterSharding_must_complete_a_rolling_upgrade()
         {
-            Join(config.Fourth, config.First);
+            Join(Config.Fourth, Config.First);
 
             RunOn(() =>
             {
                 var cluster = Cluster.Get(Sys);
                 cluster.Leave(cluster.SelfAddress);
-            }, config.First);
+            }, Config.First);
             RunOn(() =>
             {
                 AwaitAssert(() =>
                 {
                     UpMembers.Count().Should().Be(3);
                 });
-            }, config.Second, config.Third, config.Fourth);
+            }, Config.Second, Config.Third, Config.Fourth);
             EnterBarrier("first-left");
 
             RunOn(() =>
@@ -286,7 +250,7 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectMsg<CurrentRegions>().Regions.Should().HaveCount(3);
 
                 }, TimeSpan.FromSeconds(30));
-            }, config.Second, config.Third, config.Fourth);
+            }, Config.Second, Config.Third, Config.Fourth);
             EnterBarrier("sharding-handed-off");
 
             // trigger allocation (no verification because we don't know which id was on node 1)
@@ -294,20 +258,20 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 AwaitAssert(() =>
                 {
-                    shardRegion.Value.Tell(new GiveMeYourHome.Get($"id1"));
+                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id1"));
                     ExpectMsg<GiveMeYourHome.Home>();
 
-                    shardRegion.Value.Tell(new GiveMeYourHome.Get($"id2"));
+                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id2"));
                     ExpectMsg<GiveMeYourHome.Home>();
                 });
-            }, config.Second, config.Third, config.Fourth);
+            }, Config.Second, Config.Third, Config.Fourth);
             EnterBarrier("first-allocated");
 
             RunOn(() =>
             {
                 var cluster = Cluster.Get(Sys);
                 cluster.Leave(cluster.SelfAddress);
-            }, config.Second);
+            }, Config.Second);
             RunOn(() =>
             {
                 // make sure coordinator has noticed there are only two regions
@@ -316,7 +280,7 @@ namespace Akka.Cluster.Sharding.Tests
                     shardRegion.Value.Tell(GetCurrentRegions.Instance);
                     ExpectMsg<CurrentRegions>().Regions.Should().HaveCount(2);
                 }, TimeSpan.FromSeconds(30));
-            }, config.Third, config.Fourth);
+            }, Config.Third, Config.Fourth);
             EnterBarrier("second-left");
 
             // trigger allocation and verify where each was started
@@ -324,15 +288,15 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 AwaitAssert(() =>
                 {
-                    shardRegion.Value.Tell(new GiveMeYourHome.Get($"id1"));
+                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id1"));
                     var address1 = ExpectMsg<GiveMeYourHome.Home>().Address;
                     UpMembers.Select(i => i.Address).Should().Contain(address1);
 
-                    shardRegion.Value.Tell(new GiveMeYourHome.Get($"id2"));
+                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id2"));
                     var address2 = ExpectMsg<GiveMeYourHome.Home>().Address;
                     UpMembers.Select(i => i.Address).Should().Contain(address2);
                 });
-            }, config.Third, config.Fourth);
+            }, Config.Third, Config.Fourth);
             EnterBarrier("completo");
         }
     }

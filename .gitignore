@@ -30,6 +30,13 @@ TestResults/
 PerfResults/
 *.lock.json
 
+# BenchmarkDotNet files
+[rR]esults/
+
+# dotTrace files
+*.dtp
+*.dtp.*
+
 # Visual Studo 2015 cache/options directory
 .vs/
 
@@ -224,3 +231,4 @@ launchSettings.json
 # NDepend
 *.ndproj
 /[Nn][Dd]epend[Oo]ut
+.ionide/symbolCache.db

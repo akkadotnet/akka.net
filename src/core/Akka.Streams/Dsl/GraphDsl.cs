@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphDsl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -58,7 +58,9 @@ namespace Akka.Streams.Dsl
             internal TShape Add<TShape, TMat, TMat2>(IGraph<TShape, TMat> graph, Func<TMat, TMat2> transform) where TShape : Shape
             {
                 if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                     StreamLayout.Validate(graph.Module);
+#pragma warning restore CS0162 // Unreachable code detected
 
                 var copy = graph.Module.CarbonCopy();
                 _moduleInProgress = _moduleInProgress.Compose<TMat,TMat2,TMat2>(copy.TransformMaterializedValue(transform), Keep.Right);
@@ -80,7 +82,9 @@ namespace Akka.Streams.Dsl
             internal TShape Add<TShape, TMat1, TMat2, TMat3>(IGraph<TShape> graph, Func<TMat1, TMat2, TMat3> combine) where TShape : Shape
             {
                 if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                     StreamLayout.Validate(graph.Module);
+#pragma warning restore CS0162 // Unreachable code detected
 
                 var copy = graph.Module.CarbonCopy();
                 _moduleInProgress = _moduleInProgress.Compose(copy, combine);
@@ -101,7 +105,9 @@ namespace Akka.Streams.Dsl
                 where TShape : Shape
             {
                 if (StreamLayout.IsDebug)
+#pragma warning disable CS0162 // Unreachable code detected
                     StreamLayout.Validate(graph.Module);
+#pragma warning restore CS0162 // Unreachable code detected
 
                 var copy = graph.Module.CarbonCopy();
                 _moduleInProgress = _moduleInProgress.Compose<object, TMat, object>(copy, Keep.Left);
@@ -136,8 +142,8 @@ namespace Akka.Streams.Dsl
                     * because that computation node would not be part of the tree and
                     * the source would not be triggered.
                     */
-                    if (_moduleInProgress is CopiedModule)
-                        _moduleInProgress = CompositeModule.Create((Module) _moduleInProgress, _moduleInProgress.Shape);
+                    if (_moduleInProgress is CopiedModule module)
+                        _moduleInProgress = CompositeModule.Create(module, module.Shape);
 
                     var source = new MaterializedValueSource<T>(_moduleInProgress.MaterializedValueComputation);
                     _moduleInProgress = _moduleInProgress.ComposeNoMaterialized(source.Module);

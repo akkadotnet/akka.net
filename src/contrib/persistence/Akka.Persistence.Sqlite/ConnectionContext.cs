@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConnectionContext.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ namespace Akka.Persistence.Sqlite
     /// </summary>
     internal static class ConnectionContext
     {
-        private static readonly ConcurrentDictionary<string, SqliteConnection> Remembered = new ConcurrentDictionary<string, SqliteConnection>();
+        private static readonly ConcurrentDictionary<string, SqliteConnection> Remembered = new();
 
         /// <summary>
         /// TBD
@@ -31,7 +31,7 @@ namespace Akka.Persistence.Sqlite
         {
             if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException(nameof(connectionString), "No connection string with connection to remember");
 
-            var conn = Remembered.GetOrAdd(connectionString, s => new SqliteConnection(connectionString));
+            var conn = Remembered.GetOrAdd(connectionString, _ => new SqliteConnection(connectionString));
 
             if (conn.State != ConnectionState.Open)
                 conn.Open();
@@ -45,8 +45,7 @@ namespace Akka.Persistence.Sqlite
         /// <param name="connectionString">TBD</param>
         public static void Forget(string connectionString)
         {
-            SqliteConnection conn;
-            if (Remembered.TryRemove(connectionString, out conn))
+            if (Remembered.TryRemove(connectionString, out var conn))
             {
                 conn.Dispose();
             }

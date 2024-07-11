@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FanoutProcessorImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Util.Internal;
 using Reactive.Streams;
@@ -227,7 +228,7 @@ namespace Akka.Streams.Implementation
         /// <param name="onTerminated">TBD</param>
         /// <returns>TBD</returns>
         public static Props Props(ActorMaterializerSettings settings, Action onTerminated = null)
-            => Actor.Props.Create(() => new FanoutProcessorImpl<T, TStreamBuffer>(settings, onTerminated)).WithDeploy(Deploy.Local);
+            => Actor.Props.Create<FanoutProcessorImpl<T, TStreamBuffer>>(settings, onTerminated).WithDeploy(Deploy.Local);
 
         /// <summary>
         /// TBD
@@ -239,6 +240,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="settings">TBD</param>
         /// <param name="onTerminated">TBD</param>
+        /// If this gets changed you must change <see cref="FanoutProcessorImpl{T,TStreamBuffer}.Props"/> as well!
         public FanoutProcessorImpl(ActorMaterializerSettings settings, Action onTerminated) : base(settings)
         {
             PrimaryOutputs = new FanoutOutputs<T, TStreamBuffer>(settings.MaxInputBufferSize,

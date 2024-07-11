@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -210,9 +210,9 @@ namespace Akka.Persistence.Tests
 
             private bool FailingRecover(object message)
             {
-                if (message is Evt)
+                if (message is Evt evt)
                 {
-                    if (((Evt) message).Data.Equals("bad"))
+                    if (evt.Data.Equals("bad"))
                         throw new SimulatedException("Simulated exception from receiveRecover");
                 }
                 return true;

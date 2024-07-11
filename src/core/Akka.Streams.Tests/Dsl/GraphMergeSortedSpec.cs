@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphMergeSortedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,10 +9,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Streams.Dsl;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
+using Akka.TestKit.Extensions;
 using Xunit.Abstractions;
+using FluentAssertions.Extensions;
+using System.Threading.Tasks;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -42,11 +45,11 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void MergeSorted_must_work_in_the_nominal_case()
+        public async Task MergeSorted_must_work_in_the_nominal_case()
         {
             var random = new Random();
             var gen = Enumerable.Range(1, 10)
-                .Select(i => Enumerable.Range(1, 1000)
+                .Select(_ => Enumerable.Range(1, 1000)
                     .Select(_ => random.Next(1, 3) == 2).ToList());
             foreach (var picks in gen)
             {
@@ -60,18 +63,20 @@ namespace Akka.Streams.Tests.Dsl
                     .Concat(Source.Single<IEnumerable<int>>(new List<int>()))
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                task.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(0, n), o => o.WithStrictOrdering());
+                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                complete.Should().BeEquivalentTo(Enumerable.Range(0, n), o => o.WithStrictOrdering());
             }
         }
 
         [Fact]
-        public void MergeSorted_must_work_with_custom_comparer()
+        public async Task MergeSorted_must_work_with_custom_comparer()
         {
             var task = Source.From(new[] { 1, 5 })
                     .MergeSorted(Source.From(new[] { 0, 1, 2, 7 }), (l, r) => 2 * l.CompareTo(r))
                     .RunWith(Sink.Seq<int>(), Materializer);
 
-            task.AwaitResult().Should().BeEquivalentTo(new[] { 0, 1, 1, 2, 5, 7 }, o => o.WithStrictOrdering());
+            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            complete.Should().BeEquivalentTo(new[] { 0, 1, 1, 2, 5, 7 }, o => o.WithStrictOrdering());
         }
     }
 }

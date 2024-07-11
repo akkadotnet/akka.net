@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AddressUidExtensionSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ namespace Akka.Remote.Tests
         {
             var values = new ConcurrentBag<int>();
             var parallelOps = 1000;
-            var loop = Parallel.For(0, parallelOps, i =>
+            var loop = Parallel.For(0, parallelOps, _ =>
             {
                 values.Add(AddressUidExtension.Uid(Sys));
             });
@@ -45,7 +45,7 @@ namespace Akka.Remote.Tests
             }
             finally
             {
-                sys2.Terminate().Wait();
+                Shutdown(sys2);
             }
         }
     }

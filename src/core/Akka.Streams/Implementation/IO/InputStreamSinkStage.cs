@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InputStreamSinkStage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ByteString>, Stream>
+    internal sealed class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ByteString>, Stream>
     {
         #region internal classes
 
@@ -33,12 +33,12 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal class ReadElementAcknowledgement : IAdapterToStageMessage
+        internal sealed class ReadElementAcknowledgement : IAdapterToStageMessage
         {
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ReadElementAcknowledgement Instance = new ReadElementAcknowledgement();
+            public static readonly ReadElementAcknowledgement Instance = new();
 
             private ReadElementAcknowledgement()
             {
@@ -49,12 +49,12 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Close : IAdapterToStageMessage
+        internal sealed class Close : IAdapterToStageMessage
         {
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Close Instance = new Close();
+            public static readonly Close Instance = new();
 
             private Close()
             {
@@ -72,7 +72,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal struct Data : IStreamToAdapterMessage
+        internal readonly struct Data : IStreamToAdapterMessage
         {
             /// <summary>
             /// TBD
@@ -92,12 +92,12 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Finished : IStreamToAdapterMessage
+        internal sealed class Finished : IStreamToAdapterMessage
         {
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Finished Instance = new Finished();
+            public static readonly Finished Instance = new();
 
             private Finished()
             {
@@ -108,12 +108,12 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Initialized : IStreamToAdapterMessage
+        internal sealed class Initialized : IStreamToAdapterMessage
         {
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Initialized Instance = new Initialized();
+            public static readonly Initialized Instance = new();
 
             private Initialized()
             {
@@ -124,7 +124,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal struct Failed : IStreamToAdapterMessage
+        internal readonly struct Failed : IStreamToAdapterMessage
         {
             /// <summary>
             /// TBD
@@ -221,7 +221,7 @@ namespace Akka.Streams.Implementation.IO
 
         #endregion
 
-        private readonly Inlet<ByteString> _in = new Inlet<ByteString>("InputStreamSink.in");
+        private readonly Inlet<ByteString> _in = new("InputStreamSink.in");
         private readonly TimeSpan _readTimeout;
         private BlockingCollection<IStreamToAdapterMessage> _dataQueue;
 
@@ -272,7 +272,7 @@ namespace Akka.Streams.Implementation.IO
     /// INTERNAL API
     /// InputStreamAdapter that interacts with InputStreamSinkStage
     /// </summary>
-    internal class InputStreamAdapter : Stream
+    internal sealed class InputStreamAdapter : Stream
     {
 #region not supported 
 

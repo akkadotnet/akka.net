@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManagerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal.StringMatcher;
@@ -68,7 +69,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class UnregisterConsumer
         {
-            public static readonly UnregisterConsumer Instance = new UnregisterConsumer();
+            public static readonly UnregisterConsumer Instance = new();
 
             private UnregisterConsumer()
             {
@@ -77,7 +78,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class RegisterConsumer
         {
-            public static readonly RegisterConsumer Instance = new RegisterConsumer();
+            public static readonly RegisterConsumer Instance = new();
 
             private RegisterConsumer()
             {
@@ -86,7 +87,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class RegistrationOk
         {
-            public static readonly RegistrationOk Instance = new RegistrationOk();
+            public static readonly RegistrationOk Instance = new();
 
             private RegistrationOk()
             {
@@ -95,7 +96,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class UnexpectedRegistration
         {
-            public static readonly UnexpectedRegistration Instance = new UnexpectedRegistration();
+            public static readonly UnexpectedRegistration Instance = new();
 
             private UnexpectedRegistration()
             {
@@ -104,7 +105,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class UnregistrationOk
         {
-            public static readonly UnregistrationOk Instance = new UnregistrationOk();
+            public static readonly UnregistrationOk Instance = new();
 
             private UnregistrationOk()
             {
@@ -113,7 +114,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class UnexpectedUnregistration
         {
-            public static readonly UnexpectedUnregistration Instance = new UnexpectedUnregistration();
+            public static readonly UnexpectedUnregistration Instance = new();
 
             private UnexpectedUnregistration()
             {
@@ -122,7 +123,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class Reset
         {
-            public static readonly Reset Instance = new Reset();
+            public static readonly Reset Instance = new();
 
             private Reset()
             {
@@ -131,7 +132,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class ResetOk
         {
-            public static readonly ResetOk Instance = new ResetOk();
+            public static readonly ResetOk Instance = new();
 
             private ResetOk()
             {
@@ -149,30 +150,34 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         private void Idle(object message)
         {
-            message.Match()
-                .With<RegisterConsumer>(_ =>
-                {
+            switch (message)
+            {
+                case RegisterConsumer _:
                     _log.Info("Register consumer [{0}]", Sender.Path);
                     Sender.Tell(RegistrationOk.Instance);
                     Context.Become(Active(Sender));
-                })
-                .With<UnregisterConsumer>(_ =>
-                {
+                    break;
+                case UnregisterConsumer _:
                     _log.Info("Unexpected unregistration: [{0}]", Sender.Path);
                     Sender.Tell(UnexpectedRegistration.Instance);
                     Context.Stop(Self);
-                })
-                .With<Reset>(_ => Sender.Tell(ResetOk.Instance))
-                .Default(msg => { });
+                    break;
+                case Reset _:
+                    Sender.Tell(ResetOk.Instance);
+                    break;
+                default:
+                    // no-op
+                    break;
+            }
         }
 
         private UntypedReceive Active(IActorRef consumer)
         {
             return message =>
             {
-                message.Match()
-                    .With<UnregisterConsumer>(_ =>
-                    {
+                switch (message)
+                {
+                    case UnregisterConsumer _:
                         if (Sender.Equals(consumer))
                         {
                             _log.Info("UnregistrationOk: [{0}]", Sender.Path);
@@ -185,19 +190,23 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                             Sender.Tell(UnexpectedUnregistration.Instance);
                             Context.Stop(Self);
                         }
-                    })
-                    .With<RegisterConsumer>(_ =>
-                    {
+                        break;
+                    
+                    case RegisterConsumer _:
                         _log.Info("Unexpected RegisterConsumer: [{0}], active consumer: [{1}]", Sender.Path, consumer.Path);
                         Sender.Tell(UnexpectedRegistration.Instance);
                         Context.Stop(Self);
-                    })
-                    .With<Reset>(_ =>
-                    {
+                        break;
+                    
+                    case Reset _:
                         Context.Become(Idle);
                         Sender.Tell(ResetOk.Instance);
-                    })
-                    .Default(msg => consumer.Tell(msg));
+                        break;
+                    
+                    default:
+                        consumer.Tell(message);
+                        break;
+                }
             };
         }
 
@@ -214,7 +223,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class Ping
         {
-            public static readonly Ping Instance = new Ping();
+            public static readonly Ping Instance = new();
 
             private Ping()
             {
@@ -223,7 +232,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class Pong
         {
-            public static readonly Pong Instance = new Pong();
+            public static readonly Pong Instance = new();
 
             private Pong()
             {
@@ -232,7 +241,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class End
         {
-            public static readonly End Instance = new End();
+            public static readonly End Instance = new();
 
             private End()
             {
@@ -241,7 +250,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
         public sealed class GetCurrent
         {
-            public static readonly GetCurrent Instance = new GetCurrent();
+            public static readonly GetCurrent Instance = new();
 
             private GetCurrent()
             {
@@ -258,7 +267,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             _queue = queue;
             _delegateTo = delegateTo;
 
-            Receive<int>(n => n <= _current, n => Context.Stop(Self));
+            Receive<int>(n => n <= _current, _ => Context.Stop(Self));
             Receive<int>(n =>
             {
                 _current = n;
@@ -613,7 +622,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             {
                 // mute logging of deadLetters during shutdown of systems
                 if (!Log.IsDebugEnabled)
-                    Sys.EventStream.Publish(new Mute(new DeadLettersFilter(new PredicateMatcher(s => true), new PredicateMatcher(s => true))));
+                    Sys.EventStream.Publish(new Mute(new DeadLettersFilter(new PredicateMatcher(_ => true), new PredicateMatcher(_ => true))));
                 EnterBarrier("logs-muted");
 
                 Crash(_second);

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SplitBrainResolver.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,22 +17,24 @@ namespace Akka.Cluster
 {
     public sealed class SplitBrainResolver : IDowningProvider
     {
-        private readonly ClusterSettings _clusterSettings;
+        private readonly ActorSystem _system;
+        private readonly Cluster _cluster;
 
-        public SplitBrainResolver(ActorSystem system)
+        public SplitBrainResolver(ActorSystem system, Cluster cluster)
         {
-            _clusterSettings = Cluster.Get(system).Settings;
+            _system = system;
             var config = system.Settings.Config.GetConfig("akka.cluster.split-brain-resolver");
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<SplitBrainResolver>("akka.cluster.split-brain-resolver");
 
             StableAfter = config.GetTimeSpan("stable-after", null);
             Strategy = ResolveSplitBrainStrategy(config);
+            _cluster = cluster;
         }
 
-        public TimeSpan DownRemovalMargin => _clusterSettings.DownRemovalMargin;
+        public TimeSpan DownRemovalMargin => Cluster.Get(_system).Settings.DownRemovalMargin;
         public TimeSpan StableAfter { get; }
-        public Props DowningActorProps => SplitBrainDecider.Props(StableAfter, Strategy);
+        public Props DowningActorProps => SplitBrainDecider.Props(StableAfter, Strategy, _cluster);
 
         internal ISplitBrainStrategy Strategy { get; }
 
@@ -137,7 +139,7 @@ namespace Akka.Cluster
 
             if (remaining.Count < unreachable.Count) return context.Remaining;
             if (remaining.Count > unreachable.Count) return context.Unreachable;
-            if (remaining.IsEmpty && unreachable.IsEmpty) return new Member[0];
+            if (remaining.IsEmpty && unreachable.IsEmpty) return Array.Empty<Member>();
 
             // if the parts are of equal size the part containing the node with the lowest address is kept.
             var oldest = remaining.Union(unreachable).First();
@@ -176,7 +178,7 @@ namespace Akka.Cluster
 
             if (remaining.IsEmpty && unreachable.IsEmpty) // prevent exception due to both lists being empty
             {
-                return new Member[0];
+                return Array.Empty<Member>();
             }
 
             var oldest = remaining.Union(unreachable).ToImmutableSortedSet(Member.AgeOrdering).First();
@@ -235,14 +237,14 @@ namespace Akka.Cluster
 
         private sealed class StabilityReached
         {
-            public static readonly StabilityReached Instance = new StabilityReached();
+            public static readonly StabilityReached Instance = new();
             private StabilityReached() { }
         }
 
         #endregion
 
-        public static Actor.Props Props(TimeSpan stableAfter, ISplitBrainStrategy strategy) =>
-            Actor.Props.Create(() => new SplitBrainDecider(stableAfter, strategy)).WithDeploy(Deploy.Local);
+        public static Actor.Props Props(TimeSpan stableAfter, ISplitBrainStrategy strategy, Cluster cluster) =>
+            Actor.Props.Create(() => new SplitBrainDecider(stableAfter, strategy, cluster)).WithDeploy(Deploy.Local);
 
         private readonly Cluster _cluster;
         private readonly TimeSpan _stabilityTimeout;
@@ -253,16 +255,16 @@ namespace Akka.Cluster
         private ICancelable _stabilityTask;
         private ILoggingAdapter _log;
 
-        public SplitBrainDecider(TimeSpan stableAfter, ISplitBrainStrategy strategy)
+        public SplitBrainDecider(TimeSpan stableAfter, ISplitBrainStrategy strategy, Cluster cluster)
         {
             if (strategy == null) throw new ArgumentNullException(nameof(strategy));
 
             _stabilityTimeout = stableAfter;
             _strategy = strategy;
-            _cluster = Cluster.Get(Context.System);
+            _cluster = cluster;
         }
 
-        public ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        public ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         protected override void PreStart()
         {

@@ -1,25 +1,23 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.Lifecycle.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
+using Akka.Event;
 
 namespace Akka.Persistence
 {
-    /// <summary>
-    /// TBD
-    /// </summary>
     public partial class Eventsourced
     {
         /// <summary>
-        /// TBD
+        /// Function used to filter out messages that should not be unstashed during recovery.
         /// </summary>
         public static readonly Func<Envelope, bool> UnstashFilterPredicate =
-            envelope => !(envelope.Message is WriteMessageSuccess || envelope.Message is ReplayedMessage);
+            envelope => envelope.Message is not (WriteMessageSuccess or ReplayedMessage);
 
         private void StartRecovery(Recovery recovery)
         {
@@ -63,10 +61,21 @@ namespace Akka.Persistence
             finally
             {
                 object inner;
-                if (message is WriteMessageSuccess) inner = (message as WriteMessageSuccess).Persistent;
-                else if (message is LoopMessageSuccess) inner = (message as LoopMessageSuccess).Message;
-                else if (message is ReplayedMessage) inner = (message as ReplayedMessage).Persistent;
-                else inner = message;
+                switch (message)
+                {
+                    case WriteMessageSuccess success:
+                        inner = success.Persistent;
+                        break;
+                    case LoopMessageSuccess success:
+                        inner = success.Message;
+                        break;
+                    case ReplayedMessage replayedMessage:
+                        inner = replayedMessage.Persistent;
+                        break;
+                    default:
+                        inner = message;
+                        break;
+                }
 
                 FlushJournalBatch();
                 base.AroundPreRestart(cause, inner);
@@ -97,31 +106,36 @@ namespace Akka.Persistence
         /// <inheritdoc/>
         protected override void Unhandled(object message)
         {
-            if (message is RecoveryCompleted) return; // ignore
-            if (message is SaveSnapshotFailure)
+            switch (message)
             {
-                var m = (SaveSnapshotFailure) message;
-                if (Log.IsWarningEnabled)
-                    Log.Warning("Failed to SaveSnapshot given metadata [{0}] due to: [{1}: {2}]", m.Metadata, m.Cause, m.Cause.Message);
+                case RecoveryCompleted _:
+                    return; // ignore
+                case SaveSnapshotFailure failure:
+                {
+                    if (Log.IsWarningEnabled)
+                        Log.Warning("Failed to SaveSnapshot given metadata [{0}] due to: [{1}: {2}]", failure.Metadata, failure.Cause, failure.Cause.Message);
+                    break;
+                }
+                case DeleteSnapshotFailure failure:
+                {
+                    if (Log.IsWarningEnabled)
+                        Log.Warning("Failed to DeleteSnapshot given metadata [{0}] due to: [{1}: {2}]", failure.Metadata, failure.Cause, failure.Cause.Message);
+                    break;
+                }
+                case DeleteSnapshotsFailure failure:
+                {
+                    if (Log.IsWarningEnabled)
+                        Log.Warning("Failed to DeleteSnapshots given criteria [{0}] due to: [{1}: {2}]", failure.Criteria, failure.Cause, failure.Cause.Message);
+                    break;
+                }
+                case DeleteMessagesFailure failure:
+                {
+                    if (Log.IsWarningEnabled)
+                        Log.Warning(failure.Cause, "Failed to DeleteMessages ToSequenceNr [{0}] for PersistenceId [{1}] due to: {2}", failure.ToSequenceNr, PersistenceId, failure.Cause.Message);
+                    break;
+                }
             }
-            if (message is DeleteSnapshotFailure)
-            {
-                var m = (DeleteSnapshotFailure) message;
-                if (Log.IsWarningEnabled)
-                    Log.Warning("Failed to DeleteSnapshot given metadata [{0}] due to: [{1}: {2}]", m.Metadata, m.Cause, m.Cause.Message);
-            }
-            if (message is DeleteSnapshotsFailure)
-            {
-                var m = (DeleteSnapshotsFailure) message;
-                if (Log.IsWarningEnabled)
-                    Log.Warning("Failed to DeleteSnapshots given criteria [{0}] due to: [{1}: {2}]", m.Criteria, m.Cause, m.Cause.Message);
-            }
-            if (message is DeleteMessagesFailure)
-            {
-                var m = (DeleteMessagesFailure) message;
-                if (Log.IsWarningEnabled)
-                    Log.Warning("Failed to DeleteMessages ToSequenceNr [{0}] for PersistenceId [{1}] due to: [{2}: {3}]", m.ToSequenceNr, PersistenceId, m.Cause, m.Cause.Message);
-            }
+
             base.Unhandled(message);
         }
     }

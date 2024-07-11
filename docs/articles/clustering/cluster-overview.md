@@ -5,13 +5,16 @@ title: Akka.Cluster Overview
 
 # Akka.Cluster Overview
 
-## What is a "Cluster"?
+> [!IMPORTANT]
+> See "[Reliable Akka.NET Message Delivery with Akka.Delivery](xref:reliable-delivery)" for tips on how to achieve reliable messaging over Akka.Remote and Akka.Cluster.
+
+## What Is a "Cluster"?
 
 A cluster represents a fault-tolerant, elastic, decentralized peer-to-peer network of Akka.NET applications with no single point of failure or bottleneck. Akka.Cluster is the module that gives you the ability to create these applications.
 
 ## What Does Akka.Cluster Do?
 
-The best way to begin introducing Akka.Cluster is with brief overview of what it does. Akka.Cluster is the [package](https://www.nuget.org/packages/Akka.Cluster/1.0.3.11-beta) that brings clustering support to Akka.NET, and it accomplishes this by adding the following capabilities to Akka.NET:
+The best way to begin introducing Akka.Cluster is with brief overview of what it does. Akka.Cluster is the [package](https://www.nuget.org/packages/Akka.Cluster/) that brings clustering support to Akka.NET, and it accomplishes this by adding the following capabilities to Akka.NET:
 
 * Makes it easy to create peer-to-peer networks of Akka.NET applications
 * Allows peers to automatically discover new nodes and removed dead ones automatically with no configuration changes
@@ -29,7 +32,7 @@ In short, these are the benefits of a properly designed cluster:
 * **Peer-to-peer**: New nodes can contact existing peers, be notified about other peers, and fully integrate themselves into the network without any configuration changes.
 * **No single point of failure/bottleneck**: multiple nodes are able to service requests, increasing throughput and fault tolerance.
 
-## How is Clustering Different From Remoting?
+## How Is Clustering Different From Remoting?
 
 Akka.Cluster is a layer of abstraction on top of Akka.Remote, that puts Remoting to use for a specific structure: clusters of applications. Under the hood, Akka.Remote powers Akka.Cluster, so anything you could do with Akka.Remote is also supported by Akka.Cluster.
 
@@ -83,7 +86,7 @@ The first step towards using Akka.Cluster is to install the [Akka.Cluster NuGet 
 PM> Install-Package Akka.Cluster
 ```
 
-Once you've installed Akka.Cluster, we need to update our HOCON configuration to turn on the [`ClusterActorRefProvider`](http://api.getakka.net/docs/stable/html/CC0676F0.htm "Akka.NET API Docs - ClusterActorRefProvider class"), configure an Akka.Remote transport, and enable at least 1 seed node.
+Once you've installed Akka.Cluster, we need to update our HOCON configuration to turn on the `akka.actor.provider = cluster`, configure an Akka.Remote transport, and enable at least 1 seed node.
 
 > [!NOTE]
 > Akka.Cluster depends on Akka.Remote.
@@ -236,6 +239,7 @@ A node might also exit the cluster gracefully, preventing it from being marked a
 <iframe width="560" height="315" src="https://www.youtube.com/embed/mUTKvGyxbOA" frameborder="0" allowfullscreen></iframe>
 <!-- markdownlint-enable MD033 -->
 
+* [Cluster Member Roles](xref:member-roles)
 * [How to Create Scalable Clustered Akka.NET Apps Using Akka.Cluster](https://petabridge.com/blog/intro-to-akka-cluster/)
 * [Video: Introduction to Akka.Cluster](https://www.youtube.com/watch?v=mUTKvGyxbOA)
 * [Gossip Protocol](https://en.wikipedia.org/wiki/Gossip_protocol)

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPublisher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -120,7 +120,7 @@ namespace Akka.Streams.Actors
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Cancel Instance = new Cancel();
+        public static readonly Cancel Instance = new();
         private Cancel() { }
     }
 
@@ -135,7 +135,7 @@ namespace Akka.Streams.Actors
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly SubscriptionTimeoutExceeded Instance = new SubscriptionTimeoutExceeded();
+        public static readonly SubscriptionTimeoutExceeded Instance = new();
         private SubscriptionTimeoutExceeded() { }
     }
 
@@ -243,7 +243,7 @@ namespace Akka.Streams.Actors
         /// is greater than zero.
         /// </summary>
         public bool IsActive
-            => _lifecycleState == LifecycleState.Active || _lifecycleState == LifecycleState.PreSubscriber;
+            => _lifecycleState is LifecycleState.Active or LifecycleState.PreSubscriber;
 
         /// <summary>
         /// Total number of requested elements from the stream subscriber.
@@ -486,9 +486,8 @@ namespace Akka.Streams.Actors
         /// <returns>TBD</returns>
         protected internal override bool AroundReceive(Receive receive, object message)
         {
-            if (message is Request)
+            if (message is Request req)
             {
-                var req = (Request) message;
                 if (req.IsProcessed)
                 {
                     // it's an unstashed Request, demand is already handled
@@ -507,13 +506,12 @@ namespace Akka.Streams.Actors
                         if (_demand < 0)
                             _demand = long.MaxValue; // long overflow: effectively unbounded
                         req.MarkProcessed();
-                        base.AroundReceive(receive, message);
+                        base.AroundReceive(receive, req);
                     }
                 }
             }
-            else if (message is Subscribe<T>)
+            else if (message is Subscribe<T> sub)
             {
-                var sub = (Subscribe<T>) message;
                 var subscriber = sub.Subscriber;
                 switch (_lifecycleState)
                 {
@@ -749,7 +747,7 @@ namespace Akka.Streams.Actors
     /// <summary>
     /// TBD
     /// </summary>
-    internal class ActorPublisherState : ExtensionIdProvider<ActorPublisherState>, IExtension
+    internal sealed class ActorPublisherState : ExtensionIdProvider<ActorPublisherState>, IExtension
     {
         /// <summary>
         /// TBD
@@ -783,12 +781,12 @@ namespace Akka.Streams.Actors
             }
         }
 
-        private readonly ConcurrentDictionary<IActorRef, State> _state = new ConcurrentDictionary<IActorRef, State>();
+        private readonly ConcurrentDictionary<IActorRef, State> _state = new();
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly ActorPublisherState Instance = new ActorPublisherState();
+        public static readonly ActorPublisherState Instance = new();
 
         private ActorPublisherState() { }
 
@@ -808,7 +806,7 @@ namespace Akka.Streams.Actors
         /// </summary>
         /// <param name="actorRef">TBD</param>
         /// <param name="s">TBD</param>
-        public void Set(IActorRef actorRef, State s) => _state.AddOrUpdate(actorRef, s, (@ref, oldState) => s);
+        public void Set(IActorRef actorRef, State s) => _state.AddOrUpdate(actorRef, s, (_, _) => s);
 
         /// <summary>
         /// TBD
@@ -817,8 +815,7 @@ namespace Akka.Streams.Actors
         /// <returns>TBD</returns>
         public State Remove(IActorRef actorRef)
         {
-            State s;
-            return _state.TryRemove(actorRef, out s) ? s : null;
+            return _state.TryRemove(actorRef, out var s) ? s : null;
         }
 
         /// <summary>
@@ -826,6 +823,6 @@ namespace Akka.Streams.Actors
         /// </summary>
         /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
-        public override ActorPublisherState CreateExtension(ExtendedActorSystem system) => new ActorPublisherState();
+        public override ActorPublisherState CreateExtension(ExtendedActorSystem system) => new();
     }
 }

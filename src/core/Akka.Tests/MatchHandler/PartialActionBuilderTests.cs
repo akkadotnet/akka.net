@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PartialActionBuilderTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ namespace Akka.Tests.MatchHandler
             object updatedValue = null;
             Func<object, bool> deleg = value => { updatedValue = value; return true; };
 
-            var partialAction = builder.Build<object>(new CompiledMatchHandlerWithArguments(deleg, new object[0]));
+            var partialAction = builder.Build<object>(new CompiledMatchHandlerWithArguments(deleg, Array.Empty<object>()));
             partialAction("value");
             Assert.Same(updatedValue, "value");
         }
@@ -448,7 +448,7 @@ namespace Akka.Tests.MatchHandler
         {
             for(int i = 0; i < delegateArguments.Length; i++)
             {
-                if(delegateArguments[i].GetType().GetTypeInfo().IsValueType)
+                if(delegateArguments[i].GetType().IsValueType)
                     Assert.Equal(delegateArguments[i], updatedArgs[i]);
                 else
                     Assert.Same(delegateArguments[i], updatedArgs[i]);

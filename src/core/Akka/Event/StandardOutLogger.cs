@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StandardOutLogger.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,12 +9,13 @@ using System;
 using Akka.Actor;
 using Akka.Util;
 using System.Text;
-using System.Threading;
 
 namespace Akka.Event
 {
     public abstract class MinimalLogger : MinimalActorRef
     {
+        public LogFilterEvaluator Filter { get; internal set; } = LogFilterEvaluator.NoFilters;
+        
         /// <summary>
         /// N/A
         /// </summary>
@@ -55,7 +56,6 @@ namespace Akka.Event
     /// </summary>
     public class StandardOutLogger : MinimalLogger
     {
-
         /// <summary>
         /// Initializes the <see cref="StandardOutLogger"/> class.
         /// </summary>
@@ -72,7 +72,6 @@ namespace Akka.Event
         /// Handles incoming log events by printing them to the console.
         /// </summary>
         /// <param name="message">The message to print</param>
-        /// <param name="sender">The actor that sent the message.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown if the given <paramref name="message"/> is undefined.
         /// </exception>
@@ -81,7 +80,7 @@ namespace Akka.Event
             switch (message)
             {
                 case LogEvent logEvent:
-                    PrintLogEvent(logEvent);
+                    PrintLogEvent(logEvent, Filter);
                     break;
                 
                 default:
@@ -119,10 +118,15 @@ namespace Akka.Event
         /// Prints a specified event to the console.
         /// </summary>
         /// <param name="logEvent">The event to print</param>
-        internal static void PrintLogEvent(LogEvent logEvent)
+        /// <param name="filter"></param>
+        internal static void PrintLogEvent(LogEvent logEvent, LogFilterEvaluator filter)
         {
             try
             {
+                // short circuit if we're not going to print this message
+                if (!filter.ShouldTryKeepMessage(logEvent, out var expandedLogMessage))
+                    return;
+                
                 ConsoleColor? color = null;
 
                 if (UseColors)
@@ -145,7 +149,7 @@ namespace Akka.Event
                     }
                 }
 
-                StandardOutWriter.WriteLine(logEvent.ToString(), color);
+                StandardOutWriter.WriteLine(expandedLogMessage, color);
             }
             catch (FormatException ex)
             {
@@ -166,7 +170,7 @@ namespace Akka.Event
                 switch (logEvent.Message)
                 {
                     case LogMessage formatted: // a parameterized log
-                        msg = " str=[" + formatted.Format + "], args=["+ string.Join(",", formatted.Args) +"]";
+                        msg = " str=[" + formatted.Format + "], args=["+ formatted.Unformatted() +"]";
                         break;
                     case string unformatted: // pre-formatted or non-parameterized log
                         msg = unformatted;

@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="GetChildBenchmark.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="GetChildBenchmark.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -93,17 +93,17 @@ namespace Akka.Benchmarks.Actor
         private ActorSystem _system;
         private IActorRef _parentActor;
 
-        private ActorWithChild.Get _getMessage = new ActorWithChild.Get("food");
-        private ActorWithChild.Create _createMessage = new ActorWithChild.Create("food");
+        private ActorWithChild.Get _getMessage = new("food");
+        private ActorWithChild.Create _createMessage = new("food");
 
         private IActorContext _cell;
         private RepointableActorRef _repointableActorRef;
         private LocalActorRef _localActorRef;
         private VirtualPathContainer _virtualPathContainer;
 
-        private List<string> _rpChildQueryPath = new List<string>() { "food", "ood", "od" };
-        private List<string> _lclChildQueryPath = new List<string>() { "ood", "od", "d" };
-        private List<string> _virtualPathContainerQueryPath = new List<string>() { "foo" };
+        private List<string> _rpChildQueryPath = new() { "food", "ood", "od" };
+        private List<string> _lclChildQueryPath = new() { "ood", "od", "d" };
+        private List<string> _virtualPathContainerQueryPath = new() { "foo" };
         
         [GlobalSetup]
         public async Task Setup()

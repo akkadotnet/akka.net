@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DataTypes.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,10 +27,10 @@ namespace Akka.Remote.TestKit
             return string.Equals(Name, other.Name);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj is RoleName role && Equals(role);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => (Name != null ? Name.GetHashCode() : 0);
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace Akka.Remote.TestKit
 
         public string Name { get; }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"RoleName({Name})";
     }
 
@@ -82,13 +82,13 @@ namespace Akka.Remote.TestKit
             get { return _msg; }
         }
 
-        /// <inheritdoc/>
+        
         protected bool Equals(ToClient<T> other)
         {
             return EqualityComparer<T>.Default.Equals(_msg, other._msg);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -97,7 +97,7 @@ namespace Akka.Remote.TestKit
             return Equals((ToClient<T>)obj);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return EqualityComparer<T>.Default.GetHashCode(_msg);
@@ -153,13 +153,13 @@ namespace Akka.Remote.TestKit
             get { return _msg; }
         }
 
-        /// <inheritdoc/>
+        
         protected bool Equals(ToServer<T> other)
         {
             return EqualityComparer<T>.Default.Equals(_msg, other._msg);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -168,7 +168,7 @@ namespace Akka.Remote.TestKit
             return Equals((ToServer<T>)obj);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return EqualityComparer<T>.Default.GetHashCode(_msg);
@@ -236,15 +236,15 @@ namespace Akka.Remote.TestKit
             return string.Equals(_name, other._name) && Equals(_address, other._address);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Hello && Equals((Hello)obj);
+            return obj is Hello hello && Equals(hello);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -308,15 +308,15 @@ namespace Akka.Remote.TestKit
             return string.Equals(_name, other._name) && _timeout.Equals(other._timeout);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is EnterBarrier && Equals((EnterBarrier)obj);
+            return obj is EnterBarrier barrier && Equals(barrier);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -377,15 +377,15 @@ namespace Akka.Remote.TestKit
             return string.Equals(_name, other._name);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is FailBarrier && Equals((FailBarrier)obj);
+            return obj is FailBarrier barrier && Equals(barrier);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return (_name != null ? _name.GetHashCode() : 0);
@@ -440,15 +440,15 @@ namespace Akka.Remote.TestKit
             return string.Equals(_name, other._name) && _success.Equals(other._success);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is BarrierResult && Equals((BarrierResult)obj);
+            return obj is BarrierResult result && Equals(result);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -520,15 +520,15 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node) && Equals(_target, other._target) && Equals(_direction, other._direction) && _rateMBit.Equals(other._rateMBit);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Throttle && Equals((Throttle)obj);
+            return obj is Throttle throttle && Equals(throttle);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -597,15 +597,15 @@ namespace Akka.Remote.TestKit
             return Equals(_target, other._target) && Equals(_direction, other._direction) && _rateMBit.Equals(other._rateMBit);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is ThrottleMsg && Equals((ThrottleMsg)obj);
+            return obj is ThrottleMsg msg && Equals(msg);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -673,15 +673,15 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node) && Equals(_target, other._target) && _abort.Equals(other._abort);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Disconnect && Equals((Disconnect)obj);
+            return obj is Disconnect disconnect && Equals(disconnect);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -742,15 +742,15 @@ namespace Akka.Remote.TestKit
             return Equals(_target, other._target) && _abort.Equals(other._abort);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is DisconnectMsg && Equals((DisconnectMsg)obj);
+            return obj is DisconnectMsg msg && Equals(msg);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -808,15 +808,15 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node) && Equals(_shutdownOrExit, other._shutdownOrExit);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Terminate && Equals((Terminate)obj);
+            return obj is Terminate terminate && Equals(terminate);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -867,15 +867,15 @@ namespace Akka.Remote.TestKit
             return Equals(_shutdownOrExit, other._shutdownOrExit);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is TerminateMsg && Equals((TerminateMsg)obj);
+            return obj is TerminateMsg msg && Equals(msg);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return (_shutdownOrExit != null ? _shutdownOrExit.GetHashCode() : 0);
@@ -923,15 +923,15 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is GetAddress && Equals((GetAddress)obj);
+            return obj is GetAddress address && Equals(address);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return (_node != null ? _node.GetHashCode() : 0);
@@ -986,15 +986,15 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node) && Equals(_addr, other._addr);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is AddressReply && Equals((AddressReply)obj);
+            return obj is AddressReply reply && Equals(reply);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -1029,15 +1029,7 @@ namespace Akka.Remote.TestKit
     public class Done : IServerOp, IUnconfirmedClientOp, INetworkOp
     {
         private Done() { }
-        private static readonly Done _instance = new Done();
-
-        public static Done Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static Done Instance { get; } = new();
     }
 
     sealed class Remove : ICommandOp
@@ -1059,15 +1051,15 @@ namespace Akka.Remote.TestKit
             return Equals(_node, other._node);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Remove && Equals((Remove)obj);
+            return obj is Remove remove && Equals(remove);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return (_node != null ? _node.GetHashCode() : 0);

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="VectorClock.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -141,13 +141,13 @@ namespace Akka.Cluster
                 }               
             }
 
-            /// <inheritdoc/>
+           
             public override int GetHashCode()
             {
                 return _computedHashValue;
             }
 
-            /// <inheritdoc/>
+           
             public override bool Equals(object obj)
             {
                 var that = obj as Node;
@@ -155,13 +155,13 @@ namespace Akka.Cluster
                 return _value.Equals(that._value);
             }
 
-            /// <inheritdoc/>
+           
             public override string ToString()
             {
                 return _value;
             }
 
-            /// <inheritdoc/>
+           
             public int CompareTo(Node other)
             {
                 return Comparer<String>.Default.Compare(_value, other._value);
@@ -476,7 +476,7 @@ namespace Akka.Cluster
             return this;
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             var versions = _versions.Select(p => p.Key + "->" + p.Value);

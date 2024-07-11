@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPathCache.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ namespace Akka.Remote.Serialization
     /// </summary>
     internal sealed class ActorPathThreadLocalCache : ExtensionIdProvider<ActorPathThreadLocalCache>, IExtension
     {
-        private readonly ThreadLocal<ActorPathCache> _current = new ThreadLocal<ActorPathCache>(() => new ActorPathCache());
+        private readonly ThreadLocal<ActorPathCache> _current = new(() => new ActorPathCache());
 
         public ActorPathCache Cache => _current.Value;
 
@@ -44,8 +44,6 @@ namespace Akka.Remote.Serialization
 
         protected override ActorPath Compute(string k)
         {
-            ActorPath actorPath;
-
             var path = k.AsSpan();
 
             if (!ActorPath.TryParseParts(path, out var addressSpan, out var absoluteUri))
@@ -70,7 +68,7 @@ namespace Akka.Remote.Serialization
             }
 
             //try lookup root in cache
-            if (!TryGet(rootPath, out actorPath))
+            if (!TryGet(rootPath, out var actorPath))
             {
                 if (!Address.TryParse(addressSpan, out var address))
                     return null;

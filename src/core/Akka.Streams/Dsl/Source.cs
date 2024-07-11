@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Source.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl.Internal;
@@ -116,7 +117,7 @@ namespace Akka.Streams.Dsl
         /// <param name="attributes">The attributes to add</param>
         /// <returns>A new Source with the added attributes</returns>
         public Source<TOut, TMat> WithAttributes(Attributes attributes)
-            => new Source<TOut, TMat>(Module.WithAttributes(attributes));
+            => new(Module.WithAttributes(attributes));
 
         /// <summary>
         /// Add the given attributes to this <see cref="IGraph{TShape}"/>.
@@ -193,7 +194,7 @@ namespace Akka.Streams.Dsl
                     switch (reply)
                     {
                         case TOut2 a: return a;
-                        case Status.Success s when s.Status is TOut2 a: return a;
+                        case Status.Success { Status: TOut2 a }: return a;
                         case Status.Failure f:
                             ExceptionDispatchInfo.Capture(f.Cause).Throw();
                             return default(TOut2);
@@ -278,7 +279,7 @@ namespace Akka.Streams.Dsl
         /// <param name="mapFunc">TBD</param>
         /// <returns>TBD</returns>
         public Source<TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
-            => new Source<TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
+            => new(Module.TransformMaterializedValue(mapFunc));
 
         /// <summary>
         ///  Materializes this Source immediately.
@@ -291,6 +292,18 @@ namespace Akka.Streams.Dsl
             var tup = ToMaterialized(Sink.AsPublisher<TOut>(fanout: true), Keep.Both).Run(materializer);
             return (tup.Item1, Source.FromPublisher(tup.Item2));
         }
+        
+        /// <summary>
+        ///  Materializes this Source immediately.
+        /// </summary>
+        /// <param name="actorSystem">The ActorSystem.</param>
+        /// <returns>A tuple containing the (1) materialized value and (2) a new <see cref="Source"/>
+        ///  that can be used to consume elements from the newly materialized <see cref="Source"/>.</returns>
+        public (TMat, Source<TOut, NotUsed>) PreMaterialize(ActorSystem actorSystem)
+        {
+            var tup = ToMaterialized(Sink.AsPublisher<TOut>(fanout: true), Keep.Both).Run(actorSystem);
+            return (tup.Item1, Source.FromPublisher(tup.Item2));
+        }
 
         /// <summary>
         /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/> and run it. The returned value is the materialized value
@@ -301,6 +314,17 @@ namespace Akka.Streams.Dsl
         /// <param name="materializer">TBD</param>
         /// <returns>TBD</returns>
         public TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
+            => ToMaterialized(sink, Keep.Right).Run(materializer);
+        
+        /// <summary>
+        /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/> and run it. The returned value is the materialized value
+        /// of the <see cref="Sink{TIn,TMat}"/> , e.g. the <see cref="IPublisher{TIn}"/> of a <see cref="Sink.Publisher{TIn}"/>.
+        /// </summary>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <param name="sink">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
+        public TMat2 RunWith<TMat2>(IGraph<SinkShape<TOut>, TMat2> sink, ActorSystem materializer)
             => ToMaterialized(sink, Keep.Right).Run(materializer);
 
         /// <summary>
@@ -318,6 +342,22 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Task<TOut2> RunAggregate<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, IMaterializer materializer)
             => RunWith(Sink.Aggregate(zero, aggregate), materializer);
+        
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a fold function.
+        /// The given function is invoked for every received element, giving it its previous
+        /// output (or the given <paramref name="zero"/> value) and the element as input.
+        /// The returned <see cref="Task{TOut2}"/> will be completed with value of the final
+        /// function evaluation when the input stream ends, or completed with Failure
+        /// if there is a failure signaled in the stream.
+        /// </summary>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <param name="zero">TBD</param>
+        /// <param name="aggregate">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
+        public Task<TOut2> RunAggregate<TOut2>(TOut2 zero, Func<TOut2, TOut, TOut2> aggregate, ActorSystem materializer)
+            => RunWith(Sink.Aggregate(zero, aggregate), materializer);
 
         /// <summary>
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a async <paramref name="aggregate"/> function.
@@ -334,6 +374,22 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, Func<TOut2, TOut, Task<TOut2>> aggregate, IMaterializer materializer)
             => RunWith(Sink.AggregateAsync(zero, aggregate), materializer);
+        
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a async <paramref name="aggregate"/> function.
+        /// The given function is invoked for every received element, giving it its previous
+        /// output (or the given <paramref name="zero"/> value) and the element as input.
+        /// The returned <see cref="Task{TOut2}"/> will be completed with value of the final
+        /// function evaluation when the input stream ends, or completed with Failure
+        /// if there is a failure signaled in the stream.
+        /// </summary>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <param name="zero">TBD</param>
+        /// <param name="aggregate">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
+        public Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, Func<TOut2, TOut, Task<TOut2>> aggregate, ActorSystem materializer)
+            => RunWith(Sink.AggregateAsync(zero, aggregate), materializer);
 
         /// <summary>
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a reduce function.
@@ -348,6 +404,21 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Task<TOut> RunSum(Func<TOut, TOut, TOut> reduce, IMaterializer materializer)
             => RunWith(Sink.Sum(reduce), materializer);
+        
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a reduce function.
+        /// The given function is invoked for every received element, giving it its previous
+        /// output (from the second element) and the element as input.
+        /// The returned <see cref="Task{TOut}"/> will be completed with value of the final
+        /// function evaluation when the input stream ends, or completed with Failure
+        /// if there is a failure signaled in the stream.
+        /// </summary>
+        /// <param name="reduce">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
+        public Task<TOut> RunSum(Func<TOut, TOut, TOut> reduce, ActorSystem materializer)
+            => RunWith(Sink.Sum(reduce), materializer);
+
 
         /// <summary>
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a foreach procedure. The given procedure is invoked
@@ -361,6 +432,77 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Task RunForeach(Action<TOut> action, IMaterializer materializer)
             => RunWith(Sink.ForEach(action), materializer);
+        
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> with a foreach procedure. The given procedure is invoked
+        /// for each received element.
+        /// The returned <see cref="Task"/> will be completed with Success when reaching the
+        /// normal end of the stream, or completed with Failure if there is a failure signaled in
+        /// the stream.
+        /// </summary>
+        /// <param name="action">TBD</param>
+        /// <param name="materializer">TBD</param>
+        /// <returns>TBD</returns>
+        public Task RunForeach(Action<TOut> action, ActorSystem materializer)
+            => RunWith(Sink.ForEach(action), materializer);
+
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
+        /// The given enumerable is re-runnable but will cause a re-materialization of the stream each time.
+        /// This is implemented using a SourceQueue and will buffer elements based on configured stream defaults.
+        /// For custom buffers Please use <see cref="RunAsAsyncEnumerableBuffer(IMaterializer, int, int)"/>
+        /// </summary>
+        /// <param name="materializer">The materializer to use for each enumeration</param>
+        /// <returns>A lazy <see cref="IAsyncEnumerable{T}"/> that will run each time it is enumerated.</returns>
+        public IAsyncEnumerable<TOut> RunAsAsyncEnumerable(
+            IMaterializer materializer) =>
+            new StreamsAsyncEnumerableRerunnable<TOut,TMat>(this, materializer);
+        
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
+        /// The given enumerable is re-runnable but will cause a re-materialization of the stream each time.
+        /// This is implemented using a SourceQueue and will buffer elements based on configured stream defaults.
+        /// For custom buffers Please use <see cref="RunAsAsyncEnumerableBuffer(IMaterializer, int, int)"/>
+        /// </summary>
+        /// <param name="materializer">The materializer to use for each enumeration</param>
+        /// <returns>A lazy <see cref="IAsyncEnumerable{T}"/> that will run each time it is enumerated.</returns>
+        public IAsyncEnumerable<TOut> RunAsAsyncEnumerable(
+            ActorSystem materializer) =>
+            new StreamsAsyncEnumerableRerunnable<TOut,TMat>(this, materializer.Materializer());
+
+
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
+        /// The given enumerable is re-runnable but will cause a re-materialization of the stream each time.
+        /// This is implemented using a SourceQueue and will buffer elements and/or backpressure,
+        /// based on the buffer values provided.
+        /// </summary>
+        /// <param name="materializer">The materializer to use for each enumeration</param>
+        /// <param name="minBuffer">The minimum input buffer size</param>
+        /// <param name="maxBuffer">The Max input buffer size.</param>
+        /// <returns>A lazy <see cref="IAsyncEnumerable{T}"/> that will run each time it is enumerated.</returns>
+        public IAsyncEnumerable<TOut> RunAsAsyncEnumerableBuffer(
+            IMaterializer materializer, int minBuffer = 4,
+            int maxBuffer = 16) =>
+            new StreamsAsyncEnumerableRerunnable<TOut,TMat>(
+                this, materializer,minBuffer,maxBuffer);
+        
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
+        /// The given enumerable is re-runnable but will cause a re-materialization of the stream each time.
+        /// This is implemented using a SourceQueue and will buffer elements and/or backpressure,
+        /// based on the buffer values provided.
+        /// </summary>
+        /// <param name="materializer">The materializer to use for each enumeration</param>
+        /// <param name="minBuffer">The minimum input buffer size</param>
+        /// <param name="maxBuffer">The Max input buffer size.</param>
+        /// <returns>A lazy <see cref="IAsyncEnumerable{T}"/> that will run each time it is enumerated.</returns>
+        public IAsyncEnumerable<TOut> RunAsAsyncEnumerableBuffer(
+            ActorSystem materializer, int minBuffer = 4,
+            int maxBuffer = 16) =>
+            new StreamsAsyncEnumerableRerunnable<TOut,TMat>(
+                this, materializer.Materializer(),minBuffer,maxBuffer);
+        
 
         /// <summary>
         /// Combines several sources with fun-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/>.
@@ -435,7 +577,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        public static SourceShape<T> Shape<T>(string name) => new SourceShape<T>(new Outlet<T>(name + ".out"));
+        public static SourceShape<T> Shape<T>(string name) => new(new Outlet<T>(name + ".out"));
 
         /// <summary>
         /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IPublisher{T}"/>.
@@ -449,7 +591,7 @@ namespace Akka.Streams.Dsl
         /// <param name="publisher">TBD</param>
         /// <returns>TBD</returns>
         public static Source<T, NotUsed> FromPublisher<T>(IPublisher<T> publisher)
-            => new Source<T, NotUsed>(new PublisherSource<T>(publisher, DefaultAttributes.PublisherSource, Shape<T>("PublisherSource")));
+            => new(new PublisherSource<T>(publisher, DefaultAttributes.PublisherSource, Shape<T>("PublisherSource")));
 
         /// <summary>
         /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IEnumerator{T}"/>.
@@ -496,6 +638,22 @@ namespace Akka.Streams.Dsl
         public static Source<T, NotUsed> From<T>(IEnumerable<T> enumerable)
             => Single(enumerable).SelectMany(x => x).WithAttributes(DefaultAttributes.EnumerableSource);
 
+
+        /// <summary>
+        /// Helper to create <see cref="Source{TOut,TMat}"/> from <see cref="IAsyncEnumerable{T}"/>.
+        /// Example usage: Source.From(Enumerable.Range(1, 10))
+        /// 
+        /// Starts a new <see cref="Source{TOut,TMat}"/> from the given <see cref="IAsyncEnumerable{T}"/>. This is like starting from an
+        /// Enumerator, but every Subscriber directly attached to the Publisher of this
+        /// stream will see an individual flow of elements (always starting from the
+        /// beginning) regardless of when they subscribed.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name=" asyncEnumerable">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<T, NotUsed> From<T>(Func<IAsyncEnumerable<T>> asyncEnumerable)
+            => FromGraph(new AsyncEnumerable<T>(asyncEnumerable)).WithAttributes(DefaultAttributes.EnumerableSource);
+
         /// <summary>
         /// Create a <see cref="Source{TOut,TMat}"/> with one element.
         /// Every connected <see cref="Sink{TIn,TMat}"/> of this stream will see an individual stream consisting of one element.
@@ -516,6 +674,18 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Source<T, TMat> FromGraph<T, TMat>(IGraph<SourceShape<T>, TMat> source)
             => source as Source<T, TMat> ?? new Source<T, TMat>(source.Module);
+
+        /// <summary>
+        /// Defers the creation of a <see cref="Source"/> until materialization. The <paramref name="factory"/> 
+        /// function exposes <see cref="ActorMaterializer"/> which is going to be used during materialization and
+        /// <see cref="Attributes"/> of the <see cref="Source"/> returned by this method.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="factory">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<T, Task<TMat>> Setup<T, TMat>(Func<ActorMaterializer, Attributes, Source<T, TMat>> factory)
+            => FromGraph(new SetupSourceStage<T, TMat>(factory));
 
         /// <summary>
         /// Start a new <see cref="Source{TOut,TMat}"/> from the given <see cref="Task{T}"/>. The stream will consist of
@@ -723,30 +893,42 @@ namespace Akka.Streams.Dsl
         /// Creates a <see cref="Source{TOut,TMat}"/> that is materialized as an <see cref="IActorRef"/>.
         /// Messages sent to this actor will be emitted to the stream if there is demand from downstream,
         /// otherwise they will be buffered until request for demand is received.
-        /// 
+        /// <para>
         /// Depending on the defined <see cref="OverflowStrategy"/> it might drop elements if
         /// there is no space available in the buffer.
-        /// 
+        /// </para>
+        /// <para>
         /// The strategy <see cref="OverflowStrategy.Backpressure"/> is not supported, and an
         /// IllegalArgument("Backpressure overflowStrategy not supported") will be thrown if it is passed as argument.
-        /// 
+        /// </para>
+        /// <para>
         /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages are dropped
         /// if there is no demand from downstream. When <paramref name="bufferSize"/> is 0 the <paramref name="overflowStrategy"/> does
         /// not matter. An async boundary is added after this Source; as such, it is never safe to assume the downstream will always generate demand.
-        /// 
+        /// </para>
+        /// <para>
         /// The stream can be completed successfully by sending the actor reference a <see cref="Status.Success"/>
         /// message (whose content will be ignored) in which case already buffered elements will be signaled before signaling completion,
         /// or by sending <see cref="PoisonPill"/> in which case completion will be signaled immediately.
-        /// 
+        /// </para>
+        /// <para>
         /// The stream can be completed with failure by sending a <see cref="Status.Failure"/> to the
         /// actor reference. In case the Actor is still draining its internal buffer (after having received
         /// a <see cref="Status.Success"/>) before signaling completion and it receives a <see cref="Status.Failure"/>,
         /// the failure will be signaled downstream immediately (instead of the completion signal).
-        /// 
+        /// </para>
+        /// <para>
+        /// Note that terminating the actor without first completing it, either with a success or a
+        /// failure, will prevent the actor triggering downstream completion and the stream will continue
+        /// to run even though the source actor is dead. Therefore you should **not** attempt to
+        /// manually terminate the actor such as with a <see cref="PoisonPill"/>.
+        /// </para>
+        /// <para>
         /// The actor will be stopped when the stream is completed, failed or canceled from downstream,
         /// i.e. you can watch it to get notified when that happens.
+        /// </para>
+        /// See also <seealso cref="Queue{T}"/>
         /// </summary>
-        /// <seealso cref="Queue{T}"/>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="bufferSize">The size of the buffer in element count</param>
         /// <param name="overflowStrategy">Strategy that is used when incoming elements cannot fit inside the buffer</param>
@@ -996,7 +1178,7 @@ namespace Akka.Streams.Dsl
             int maxBufferCapacity = 128,
             OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
         {
-            Func<Action<T>, EventHandler<T>> conversion = onEvent => (sender, e) => onEvent(e);
+            Func<Action<T>, EventHandler<T>> conversion = onEvent => (_, e) => onEvent(e);
             var wrapper = new EventWrapper<EventHandler<T>, T>(addHandler, removeHandler, conversion);
             return FromGraph(new ObservableSourceStage<T>(wrapper, maxBufferCapacity, overflowStrategy));
         }
@@ -1017,6 +1199,32 @@ namespace Akka.Streams.Dsl
             OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
         {
             return FromGraph(new ObservableSourceStage<T>(observable, maxBufferCapacity, overflowStrategy));
+        }
+
+        public static Source<T, NotUsed> ChannelReader<T>(
+            ChannelReader<T> channelReader)
+        {
+            return ChannelSource.FromReader(channelReader);
+        }
+
+        /// <summary>
+        /// Creates a Source that materializes a <see cref="ChannelWriter{T}"/>
+        /// that may be used to write items to the stream.
+        ///
+        /// This works similarly to <see cref="Queue{T}"/>,
+        /// The main difference being that you are allowed to have multiple
+        /// Writes in flight. Allowing multiple writes makes Multi-producer
+        /// scenarios easier but is still an important semantic difference. 
+        /// 
+        /// </summary>
+        /// <param name="bufferSize">The size of the channel's buffer</param>
+        /// <param name="singleWriter">If true, expects only one writer</param>
+        /// <param name="fullMode">How the channel behaves when full</param>
+        public static Source<T, ChannelWriter<T>> Channel<T>(int bufferSize,
+            bool singleWriter = false,
+            BoundedChannelFullMode fullMode = BoundedChannelFullMode.Wait)
+        {
+            return ChannelSource.Create<T>(bufferSize, singleWriter, fullMode);
         }
     }
 }

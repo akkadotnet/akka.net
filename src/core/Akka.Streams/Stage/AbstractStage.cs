@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AbstractStage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Event;
 using Directive = Akka.Streams.Supervision.Directive;
 
 namespace Akka.Streams.Stage
@@ -15,9 +16,11 @@ namespace Akka.Streams.Stage
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
-    internal class PushPullGraphLogic<TIn, TOut> : GraphStageLogic, IDetachedContext<TOut>
+    internal sealed class PushPullGraphLogic<TIn, TOut> : GraphStageLogic, IDetachedContext<TOut>
     {
+#pragma warning disable CS0618 // Type or member is obsolete
         private AbstractStage<TIn, TOut> _currentStage;
+#pragma warning restore CS0618 // Type or member is obsolete
         private readonly FlowShape<TIn, TOut> _shape;
 
         /// <summary>
@@ -29,7 +32,9 @@ namespace Akka.Streams.Stage
         public PushPullGraphLogic(
             FlowShape<TIn, TOut> shape,
             Attributes attributes,
+#pragma warning disable CS0618 // Type or member is obsolete
             AbstractStage<TIn, TOut> stage)
+#pragma warning restore CS0618 // Type or member is obsolete
             : base(shape)
         {
             Attributes = attributes;
@@ -52,13 +57,15 @@ namespace Akka.Streams.Stage
 
             SetHandler(_shape.Outlet, 
                 onPull: () => _currentStage.OnPull(Context),
-                onDownstreamFinish: () => _currentStage.OnDownstreamFinish(Context));
+                onDownstreamFinish: cause => _currentStage.OnDownstreamFinish(Context, cause));
         }
 
         /// <summary>
         /// TBD
         /// </summary>
+#pragma warning disable CS0618 // Type or member is obsolete
         public AbstractStage<TIn, TOut> Stage { get; }
+#pragma warning restore CS0618 // Type or member is obsolete
 
         IMaterializer ILifecycleContext.Materializer => Materializer;
 
@@ -116,7 +123,12 @@ namespace Akka.Streams.Stage
         /// <returns>TBD</returns>
         public FreeDirective Finish()
         {
-            CompleteStage();
+            return Finish(SubscriptionWithCancelException.NoMoreElementsNeeded.Instance);
+        }
+
+        public FreeDirective Finish(Exception cause)
+        {
+            CancelStage(cause);
             return null;
         }
 
@@ -277,7 +289,9 @@ namespace Akka.Streams.Stage
                 case Directive.Restart:
                     ResetAfterSupervise();
                     _currentStage.PostStop();
+#pragma warning disable CS0618 // Type or member is obsolete
                     _currentStage = (AbstractStage<TIn, TOut>)_currentStage.Restart();
+#pragma warning restore CS0618 // Type or member is obsolete
                     _currentStage.PreStart(Context);
                     break;
                 default:
@@ -310,14 +324,18 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// TBD
         /// </summary>
+#pragma warning disable CS0618 // Type or member is obsolete
         public readonly Func<Attributes, (IStage<TIn, TOut>, TMat)> Factory;
+#pragma warning restore CS0618 // Type or member is obsolete
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="factory">TBD</param>
         /// <param name="stageAttributes">TBD</param>
+#pragma warning disable CS0618 // Type or member is obsolete
         public PushPullGraphStageWithMaterializedValue(Func<Attributes, (IStage<TIn, TOut>, TMat)> factory, Attributes stageAttributes)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
             InitialAttributes = stageAttributes;
             Factory = factory;
@@ -344,10 +362,12 @@ namespace Akka.Streams.Stage
         public override ILogicAndMaterializedValue<TMat> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
             var stageAndMat = Factory(inheritedAttributes);
+#pragma warning disable CS0618 // Type or member is obsolete
             return
                 new LogicAndMaterializedValue<TMat>(
                     new PushPullGraphLogic<TIn, TOut>(Shape, inheritedAttributes,
                         (AbstractStage<TIn, TOut>) stageAndMat.Item1), stageAndMat.Item2);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         /// <summary>
@@ -370,7 +390,9 @@ namespace Akka.Streams.Stage
         /// <param name="factory">TBD</param>
         /// <param name="stageAttributes">TBD</param>
         /// <returns>TBD</returns>
+#pragma warning disable CS0618 // Type or member is obsolete
         public PushPullGraphStage(Func<Attributes, IStage<TIn, TOut>> factory, Attributes stageAttributes) : base(attributes => (factory(attributes), NotUsed.Instance), stageAttributes)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
         }
     }
@@ -435,7 +457,7 @@ namespace Akka.Streams.Stage
         /// with <see cref="IContext.IsFinishing"/>.
         /// </para>
         /// <para>
-        /// By default the finish signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// By default the finish signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </para>
         /// <para>
         /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
@@ -448,11 +470,12 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// This method is called when downstream has cancelled. 
-        /// By default the cancel signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// By default the cancel signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </summary>
         /// <param name="context">TBD</param>
+        /// <param name="cause"></param>
         /// <returns>TBD</returns>
-        public abstract ITerminationDirective OnDownstreamFinish(IContext context);
+        public abstract ITerminationDirective OnDownstreamFinish(IContext context, Exception cause);
 
         /// <summary>
         /// <para>
@@ -589,7 +612,7 @@ namespace Akka.Streams.Stage
         /// with <see cref="IContext.IsFinishing"/>.
         /// </para>
         /// <para>
-        /// By default the finish signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// By default the finish signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </para>
         /// <para>
         /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
@@ -609,7 +632,7 @@ namespace Akka.Streams.Stage
         /// with <see cref="IContext.IsFinishing"/>.
         /// </para>
         /// <para>
-        /// By default the finish signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// By default the finish signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </para>
         /// <para>
         /// IMPORTANT NOTICE: this signal is not back-pressured, it might arrive from upstream even though
@@ -622,19 +645,21 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// This method is called when downstream has cancelled. 
-        /// By default the cancel signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// By default the cancel signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </summary>
         /// <param name="context">TBD</param>
+        /// <param name="cause"></param>
         /// <returns>TBD</returns>
-        public sealed override ITerminationDirective OnDownstreamFinish(IContext context) => OnDownstreamFinish((TContext) context);
+        public sealed override ITerminationDirective OnDownstreamFinish(IContext context, Exception cause) => OnDownstreamFinish((TContext) context, cause);
 
         /// <summary>
         /// This method is called when downstream has cancelled. 
-        /// By default the cancel signal is immediately propagated with <see cref="IContext.Finish"/>.
+        /// By default the cancel signal is immediately propagated with <see cref="StatefulStage.Finish"/>.
         /// </summary>
         /// <param name="context">TBD</param>
+        /// <param name="cause"></param>
         /// <returns>TBD</returns>
-        public virtual ITerminationDirective OnDownstreamFinish(TContext context) => context.Finish();
+        public virtual ITerminationDirective OnDownstreamFinish(TContext context, Exception cause) => context.Finish(cause);
 
         /// <summary>
         /// <para>

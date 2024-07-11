@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Serialization.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,6 +19,7 @@ using Akka.Util;
 using Akka.Util.Internal;
 using Akka.Util.Reflection;
 using Akka.Configuration;
+using Akka.Event;
 
 namespace Akka.Serialization
 {
@@ -95,7 +96,7 @@ namespace Akka.Serialization
             {
                 case SerializerWithStringManifest s2:
                     return s2.Manifest(msg);
-                case Serializer s3 when s3.IncludeManifest:
+                case Serializer { IncludeManifest: true }:
                     return msg.GetType().TypeQualifiedName();
                 default:
                     return string.Empty;
@@ -142,11 +143,14 @@ namespace Akka.Serialization
 
         private readonly Serializer _nullSerializer;
 
-        private readonly ConcurrentDictionary<Type, Serializer> _serializerMap = new ConcurrentDictionary<Type, Serializer>();
-        private readonly Dictionary<int, Serializer> _serializersById = new Dictionary<int, Serializer>();
-        private readonly Dictionary<string, Serializer> _serializersByName = new Dictionary<string, Serializer>();
+        private readonly ConcurrentDictionary<Type, Serializer> _serializerMap = new();
+        private readonly Dictionary<int, Serializer> _serializersById = new();
+        private readonly Dictionary<string, Serializer> _serializersByName = new();
 
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
+        private readonly MinimalLogger _initializationLogger;
+
+        private readonly bool _logSerializerOverrideOnStart;
 
         /// <summary>
         /// Serialization module. Contains methods for serialization and deserialization as well as
@@ -155,9 +159,16 @@ namespace Akka.Serialization
         /// <param name="system">The ActorSystem to which this serializer belongs.</param>
         public Serialization(ExtendedActorSystem system)
         {
+            // We have to use stdout-logger here because serialization system is set up before 
+            // the logging system were set up
+            _initializationLogger = system.Settings.StdoutLogger;
+            
             System = system;
             _nullSerializer = new NullSerializer(system);
             AddSerializer("null", _nullSerializer);
+
+
+            _logSerializerOverrideOnStart = system.Settings.LogSerializerOverrideOnStart;
 
             var serializersConfig = system.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
             var serializerBindingConfig = system.Settings.Config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
@@ -326,7 +337,16 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializer(Serializer serializer)
         {
-            _serializersById.Add(serializer.Identifier, serializer);
+            var id = serializer.Identifier;
+            if(_logSerializerOverrideOnStart && _serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
+            {
+                LogWarning(
+                    $"Serializer with identifier [{id}] are being overriden  " +
+                    $"from [{_serializersById[id].GetType()}] to [{serializer.GetType()}]. " +
+                    "Did you mean to do this?");
+            }
+            
+            _serializersById[id] = serializer;
         }
 
         /// <summary>
@@ -334,11 +354,25 @@ namespace Akka.Serialization
         /// </summary>
         /// <param name="name">Configuration name of the serializer</param>
         /// <param name="serializer">Serializer instance</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializer(string name, Serializer serializer)
         {
-            _serializersById.Add(serializer.Identifier, serializer);
-            _serializersByName.Add(name, serializer);
+            var id = serializer.Identifier;
+            if(_logSerializerOverrideOnStart && _serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
+            {
+                LogWarning(
+                    $"Serializer with identifier [{id}] are being overriden  " +
+                    $"from [{_serializersById[id].GetType()}] to [{serializer.GetType()}]. " +
+                    "Did you mean to do this?");
+            }
+            
+            if(_logSerializerOverrideOnStart && _serializersByName.ContainsKey(name) && _serializersByName[name].GetType() != serializer.GetType())
+                LogWarning(
+                    $"Serializer with name [{serializer.Identifier}] are being overriden  " +
+                    $"from [{_serializersByName[name].GetType()}] to [{serializer.GetType()}]. " +
+                    "Did you mean to do this?");
+            
+            _serializersById[id] = serializer;
+            _serializersByName[name] = serializer;
         }
 
         /// <summary>
@@ -350,7 +384,51 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializationMap(Type type, Serializer serializer)
         {
+            if(_logSerializerOverrideOnStart && _serializerMap.ContainsKey(type) && _serializerMap[type].GetType() != serializer.GetType())
+                LogWarning(
+                    $"Serializer for type [{type}] are being overriden  " +
+                    $"from [{_serializerMap[type].GetType()}] to [{serializer.GetType()}]. " +
+                    "Did you mean to do this?");
+            
             _serializerMap[type] = serializer;
+        }
+
+        /// <summary>
+        /// Remove the serializer mapping for <see cref="Type"/> <paramref name="type"/> and all other types
+        /// that were derived from it.
+        /// </summary>
+        /// <param name="type">The <see cref="Type"/> that will be removed from the serializer mapping</param>
+        /// <exception cref="InvalidOperationException">>Thrown when <paramref name="type"/> is of type <see cref="Object"/></exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void RemoveSerializationMap(Type type)
+        {
+            if (type == typeof(object))
+                throw new InvalidOperationException("Could not remove the default object type serializer.");
+            
+            if(!_serializerMap.ContainsKey(type))
+                return;
+            
+            if (!_serializerMap.TryRemove(type, out _))
+            {
+                LogWarning($"Failed to remove serializer for type [{type}]");
+            }
+            
+            foreach (var serializerType in _serializerMap.Keys)
+            {
+                if (serializerType.IsAssignableFrom(type) && serializerType != _objectType)
+                {
+                    if (!_serializerMap.TryRemove(serializerType, out _))
+                    {
+                        LogWarning($"Failed to remove serializer for type [{serializerType}] which derives from type [{type}]");
+                    }
+                }
+            }
+        }
+
+        private void LogWarning(string str)
+        {
+            // Logging.StandardOutLogger is a MinimalActorRef, i.e. not a "real" actor
+            _initializationLogger.Tell(new Warning(nameof(Serialization), typeof(Serialization), str), ActorRefs.Nobody);
         }
 
         /// <summary>
@@ -380,7 +458,8 @@ namespace Akka.Serialization
                 if (!_serializersById.TryGetValue(serializerId, out var serializer))
                     throw new SerializationException(
                         $"Cannot find serializer with id [{serializerId}] (class [{type?.Name}]). The most probable reason" +
-                        " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
+                        " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems." +
+                        $" {Serializer.GetErrorForSerializerId(serializerId)}");
 
                 return serializer.FromBinary(bytes, type);
             });
@@ -402,7 +481,8 @@ namespace Akka.Serialization
             if (!_serializersById.TryGetValue(serializerId, out var serializer))
                 throw new SerializationException(
                     $"Cannot find serializer with id [{serializerId}] (manifest [{manifest}]). The most probable reason" +
-                    " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
+                    " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems." +
+                    $" {Serializer.GetErrorForSerializerId(serializerId)}");
 
             // not using `withTransportInformation { () =>` because deserializeByteBuffer is supposed to be the
             // possibility for allocation free serialization
@@ -494,6 +574,17 @@ namespace Akka.Serialization
             AddSerializationMap(type, serializer);
             return serializer;
         }
+        
+        /// <summary>
+        /// Deserializes an <see cref="IActorRef"/> from its string representation.
+        /// </summary>
+        /// <param name="path">The serialized path of the actor represented as a string.</param>
+        /// <returns>The <see cref="IActorRef"/>. If no such actor exists, it will be (equivalent to) a dead letter reference.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IActorRef DeserializeActorRef(string path)
+        {
+            return System.Provider.ResolveActorRef(path);
+        }
 
         /// <summary>
         /// The serialized path of an actorRef, based on the current transport serialization information.
@@ -502,20 +593,20 @@ namespace Akka.Serialization
         ///
         /// If there is no external address available in the given <see cref="IActorRef"/> then the systems default
         /// address will be used and that is retrieved from the ThreadLocal <see cref="Information"/>
-        /// that was set with <see cref="Serialization.WithTransportInformation{T}"/>
+        /// that was set with <see cref="WithTransport{T}(ActorSystem, Address, Func{T})"/>
         /// </summary>
         /// <param name="actorRef">The <see cref="IActorRef"/> to be serialized.</param>
         /// <returns>Absolute path to the serialized actor.</returns>
         public static string SerializedActorPath(IActorRef actorRef)
         {
             if (Equals(actorRef, ActorRefs.NoSender))
-                return String.Empty;
+                return string.Empty;
 
             var path = actorRef.Path;
             ExtendedActorSystem originalSystem = null;
-            if (actorRef is ActorRefWithCell)
+            if (actorRef is ActorRefWithCell actorRefWithCell)
             {
-                originalSystem = actorRef.AsInstanceOf<ActorRefWithCell>().Underlying.System.AsInstanceOf<ExtendedActorSystem>();
+                originalSystem = actorRefWithCell.Underlying.System.AsInstanceOf<ExtendedActorSystem>();
             }
 
             if (CurrentTransportInformation == null)

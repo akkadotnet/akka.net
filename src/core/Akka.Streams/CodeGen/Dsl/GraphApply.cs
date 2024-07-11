@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphApply.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ namespace Akka.Streams.Dsl
         /// <returns>A graph with no materialized value.</returns>
         public static IGraph<TShape, NotUsed> Create<TShape>(Func<Builder<NotUsed>, TShape> buildBlock)
             where TShape : Shape
-            => CreateMaterialized<TShape, NotUsed>(buildBlock);
+            => CreateMaterialized(buildBlock);
 
         /// <summary>
         /// Creates a new <see cref="IGraph{TShape, TMat}"/> by passing a <see cref="Builder{TMat}"/> to the given create function.

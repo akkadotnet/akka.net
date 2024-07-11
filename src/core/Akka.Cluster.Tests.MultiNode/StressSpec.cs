@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StressSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,6 +17,7 @@ using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
@@ -46,71 +47,74 @@ namespace Akka.Cluster.Tests.MultiNode
                 Role("node-" + i);
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.test.cluster-stress-spec {
-      infolog = on
-      # scale the nr-of-nodes* settings with this factor
-      nr-of-nodes-factor = 1
-      # not scaled
-      nr-of-seed-nodes = 3
-      nr-of-nodes-joining-to-seed-initially = 2
-      nr-of-nodes-joining-one-by-one-small = 2
-      nr-of-nodes-joining-one-by-one-large = 2
-      nr-of-nodes-joining-to-one = 2
-      nr-of-nodes-leaving-one-by-one-small = 1
-      nr-of-nodes-leaving-one-by-one-large = 1
-      nr-of-nodes-leaving = 2
-      nr-of-nodes-shutdown-one-by-one-small = 1
-      nr-of-nodes-shutdown-one-by-one-large = 1
-      nr-of-nodes-partition = 2
-      nr-of-nodes-shutdown = 2
-      nr-of-nodes-join-remove = 2
-      # not scaled
-      # scale the *-duration settings with this factor
-      duration-factor = 1
-      join-remove-duration = 90s
-      idle-gossip-duration = 10s
-      expected-test-duration = 600s
-      # scale convergence within timeouts with this factor
-      convergence-within-factor = 1.0
-    }
-    akka.actor.provider = cluster
+akka.test.cluster-stress-spec {
+    infolog = on
+    # scale the nr-of-nodes* settings with this factor
+    nr-of-nodes-factor = 1
+    # not scaled
+    nr-of-seed-nodes = 3
+    nr-of-nodes-joining-to-seed-initially = 2
+    nr-of-nodes-joining-one-by-one-small = 2
+    nr-of-nodes-joining-one-by-one-large = 2
+    nr-of-nodes-joining-to-one = 2
+    nr-of-nodes-leaving-one-by-one-small = 1
+    nr-of-nodes-leaving-one-by-one-large = 1
+    nr-of-nodes-leaving = 2
+    nr-of-nodes-shutdown-one-by-one-small = 1
+    nr-of-nodes-shutdown-one-by-one-large = 1
+    nr-of-nodes-partition = 2
+    nr-of-nodes-shutdown = 2
+    nr-of-nodes-join-remove = 2
+    # not scaled
+    # scale the *-duration settings with this factor
+    duration-factor = 1
+    join-remove-duration = 90s
+    idle-gossip-duration = 10s
+    expected-test-duration = 600s
+    # scale convergence within timeouts with this factor
+    convergence-within-factor = 1.0
+}
+akka.actor.provider = cluster
     
-    akka.cluster {
-      failure-detector.acceptable-heartbeat-pause = 3s
-      downing-provider-class = ""Akka.Cluster.SplitBrainResolver, Akka.Cluster""
-      split-brain-resolver {
-          active-strategy = keep-majority #TODO: remove this once it's been made default
-          stable-after = 10s
-      }
-      publish-stats-interval = 1s
+akka.cluster {
+    failure-detector.acceptable-heartbeat-pause = 3s
+    downing-provider-class = ""Akka.Cluster.SplitBrainResolver, Akka.Cluster""
+    split-brain-resolver {
+        active-strategy = keep-majority #TODO: remove this once it's been made default
+        stable-after = 10s
     }
-    akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
-            akka.loglevel = INFO
-            akka.remote.log-remote-lifecycle-events = off
-            akka.actor.default-dispatcher = {
-                executor = channel-executor
-              fork-join-executor {
-                parallelism-min = 2
-                parallelism-factor = 1
-                parallelism-max = 64
-              }
-            }
-            akka.actor.internal-dispatcher = {
-              executor = channel-executor
-              fork-join-executor {
-                parallelism-min = 2
-                parallelism-factor = 1
-                parallelism-max = 64
-              }
-            }
+    publish-stats-interval = 1s
+}
+
+akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
+akka.loglevel = INFO
+akka.remote.log-remote-lifecycle-events = off
+akka.actor.default-dispatcher = {
+    executor = fork-join-executor
+    fork-join-executor {
+        parallelism-min = 2
+        parallelism-factor = 1
+        parallelism-max = 64
+    }
+}
+
+akka.actor.internal-dispatcher = {
+    executor = fork-join-executor
+    fork-join-executor {
+        parallelism-min = 2
+        parallelism-factor = 1
+        parallelism-max = 64
+    }
+}
+
 akka.remote.default-remote-dispatcher {
-	  executor = channel-executor
-      fork-join-executor {
+    executor = fork-join-executor
+    fork-join-executor {
         parallelism-min = 2
         parallelism-factor = 0.5
         parallelism-max = 16
-      }
-            ");
+    }
+}");
 
             TestTransport = true;
         }
@@ -408,7 +412,7 @@ akka.remote.default-remote-dispatcher {
         private ImmutableDictionary<Address, PhiValue> _phiByNode = ImmutableDictionary<Address, PhiValue>.Empty;
 
         private Option<IActorRef> _reportTo = Option<IActorRef>.None;
-        private HashSet<Address> _nodes = new HashSet<Address>();
+        private HashSet<Address> _nodes = new();
 
         private ICancelable _checkPhiTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
             TimeSpan.FromSeconds(1),
@@ -454,7 +458,7 @@ akka.remote.default-remote-dispatcher {
                             _log.Warning("Detected phi value of infinity for [{0}] - ", node);
                             var (history, time) = _cluster.FailureDetector.GetFailureDetector(node) switch
                             {
-                                PhiAccrualFailureDetector fd => (fd.state.History, fd.state.TimeStamp),
+                                PhiAccrualFailureDetector fd => (fd.State.History, fd.State.TimeStamp),
                                 _ => (HeartbeatHistory.Apply(1), null)
                             };
                             _log.Warning("PhiValues: (Timestamp={0}, Mean={1}, Variance={2}, StdDeviation={3}, Intervals=[{4}])",time, 
@@ -491,7 +495,7 @@ akka.remote.default-remote-dispatcher {
                 _reportTo.OnSuccess(n => Context.Watch(n));
             });
 
-            Receive<Terminated>(t =>
+            Receive<Terminated>(_ =>
             {
                 if (_reportTo.HasValue)
                     _reportTo = Option<IActorRef>.None;
@@ -599,7 +603,7 @@ akka.remote.default-remote-dispatcher {
                 _reportTo.OnSuccess(n => Context.Watch(n));
             });
 
-            Receive<Terminated>(t =>
+            Receive<Terminated>(_ =>
             {
                 if (_reportTo.HasValue)
                     _reportTo = Option<IActorRef>.None;
@@ -628,31 +632,31 @@ akka.remote.default-remote-dispatcher {
 
     internal sealed class Begin
     {
-        public static readonly Begin Instance = new Begin();
+        public static readonly Begin Instance = new();
         private Begin() { }
     }
 
     internal sealed class End
     {
-        public static readonly End Instance = new End();
+        public static readonly End Instance = new();
         private End() { }
     }
 
     internal sealed class RetryTick
     {
-        public static readonly RetryTick Instance = new RetryTick();
+        public static readonly RetryTick Instance = new();
         private RetryTick() { }
     }
 
     internal sealed class ReportTick
     {
-        public static readonly ReportTick Instance = new ReportTick();
+        public static readonly ReportTick Instance = new();
         private ReportTick() { }
     }
 
     internal sealed class PhiTick
     {
-        public static readonly PhiTick Instance = new PhiTick();
+        public static readonly PhiTick Instance = new();
         private PhiTick() { }
     }
 
@@ -681,7 +685,7 @@ akka.remote.default-remote-dispatcher {
 
     internal sealed class Reset
     {
-        public static readonly Reset Instance = new Reset();
+        public static readonly Reset Instance = new();
         private Reset() { }
     }
 
@@ -809,7 +813,7 @@ akka.remote.default-remote-dispatcher {
         {
             Sys.ActorSelection(new RootActorPath(GetAddress(Roles.First())) / "user" / ("result" + Step))
                 .Tell(new Identify(Step), IdentifyProbe.Ref);
-            return new Option<IActorRef>(IdentifyProbe.ExpectMsg<ActorIdentity>().Subject);
+            return Option<IActorRef>.Create(IdentifyProbe.ExpectMsg<ActorIdentity>().Subject);
         }
 
         public void CreateResultAggregator(string title, int expectedResults, bool includeInHistory)
@@ -822,7 +826,7 @@ akka.remote.default-remote-dispatcher {
 
                     if (includeInHistory && Settings.Infolog)
                     {
-                        aggregator.Tell(new ReportTo(new Option<IActorRef>(ClusterResultHistory.Value)));
+                        aggregator.Tell(new ReportTo(Option<IActorRef>.Create(ClusterResultHistory.Value)));
                     }
                     else
                     {
@@ -910,7 +914,7 @@ akka.remote.default-remote-dispatcher {
                     CreateResultAggregator(title, expectedResults: currentRoles.Length, true);
                     RunOn(() =>
                     {
-                        ReportResult<bool>(() =>
+                        ReportResult(() =>
                         {
                             RunOn(() =>
                             {
@@ -1046,7 +1050,7 @@ akka.remote.default-remote-dispatcher {
 
                     RunOn(() =>
                     {
-                        ReportResult<bool>(() =>
+                        ReportResult(() =>
                         {
                             RunOn(() =>
                             {
@@ -1097,7 +1101,7 @@ akka.remote.default-remote-dispatcher {
 
                     RunOn(() =>
                     {
-                        ReportResult<bool>(() =>
+                        ReportResult(() =>
                         {
                             var startTime = MonotonicClock.GetTicks();
                             AwaitMembersUp(currentRoles.Length, timeout:RemainingOrDefault);
@@ -1176,7 +1180,7 @@ akka.remote.default-remote-dispatcher {
                             var sys = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
                             MuteLog(sys);
                             Akka.Cluster.Cluster.Get(sys).JoinSeedNodes(SeedNodes.Select(x => GetAddress(x)));
-                            nextAs = new Option<ActorSystem>(sys);
+                            nextAs = Option<ActorSystem>.Create(sys);
                         }
                         else
                         {

@@ -8,23 +8,25 @@ parameters:
   scriptArgs: 'all'
   outputDirectory: ''
   timeoutInMinutes: 120
+  run_if: true
 
 jobs:
   - job: ${{ parameters.name }}
+    condition: eq( ${{ parameters.run_if }}, true )
     displayName: ${{ parameters.displayName }}
     timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
     pool:
       vmImage: ${{ parameters.vmImage }}
+    variables:
+      - name: xunit.skip.local.fact
+        value: true
+      - name: xunit.skip.local.theory
+        value: true
     steps:
       - task: UseDotNet@2
-        displayName: 'Use .NET 6 SDK 6.0.100'
+        displayName: 'Use .NET 8 SDK 8.0.100'
         inputs:
-          version: 6.0.100
-      - task: UseDotNet@2
-        displayName: 'Use .NET Core Runtime 3.1.10'
-        inputs:
-          packageType: runtime
-          version: 3.1.10
+          version: 8.0.100
       - task: Bash@3 
         displayName: Linux / OSX Build
         inputs:
@@ -50,13 +52,22 @@ jobs:
         displayName: 'Copy Build Output'
         inputs:
           sourceFolder: ${{ parameters.outputDirectory }}
-          contents: '**\*'
+          contents: '**'
           targetFolder: $(Build.ArtifactStagingDirectory)
           continueOnError: boolean  # 'true' if future steps should run even if this step fails; defaults to 'false'
+
+      - task: CopyFiles@2
+        inputs:
+          SourceFolder: '$(Build.SourcesDirectory)'
+          Contents: '**/*.received.*'
+          TargetFolder: '$(Build.ArtifactStagingDirectory)/verify'
+        displayName: 'Copy .received. files to artifact staging directory'
+
       - task: PublishBuildArtifacts@1
         inputs:
           pathtoPublish: '$(Build.ArtifactStagingDirectory)'
           artifactName: ${{ parameters.artifactName }}
+
       - script: 'echo 1>&2'
         failOnStderr: true
         displayName: 'If above is partially succeeded, then fail'

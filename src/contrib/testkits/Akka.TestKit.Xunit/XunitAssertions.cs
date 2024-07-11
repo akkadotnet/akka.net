@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="XunitAssertions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -64,7 +64,7 @@ namespace Akka.TestKit.Xunit
         {
             var comparer = new AkkaAssertEqualityComparer<T>();
             if(!comparer.Equals(expected, actual))
-                throw new AkkaEqualException(expected, actual, format, args);
+                throw AkkaEqualException.ForMismatchedValues(expected, actual, format, args);
         }
 
         /// <summary>
@@ -83,7 +83,7 @@ namespace Akka.TestKit.Xunit
         public void AssertEqual<T>(T expected, T actual, Func<T, T, bool> comparer, string format = "", params object[] args)
         {
             if(!comparer(expected, actual))
-                throw new AkkaEqualException(expected, actual, format, args);
+                throw AkkaEqualException.ForMismatchedValues(expected, actual, format, args);
         }
     }
 }

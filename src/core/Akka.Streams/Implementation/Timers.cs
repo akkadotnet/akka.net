@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Timers.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ namespace Akka.Streams.Implementation
         /// <param name="timeout">TBD</param>
         /// <returns>TBD</returns>
         public static TimeSpan IdleTimeoutCheckInterval(TimeSpan timeout)
-            => new TimeSpan(Math.Min(Math.Max(timeout.Ticks/8, 100*TimeSpan.TicksPerMillisecond), timeout.Ticks/2));
+            => new(Math.Min(Math.Max(timeout.Ticks/8, 100*TimeSpan.TicksPerMillisecond), timeout.Ticks/2));
 
         /// <summary>
         /// TBD
@@ -75,7 +75,7 @@ namespace Akka.Streams.Implementation
 
             public void OnPull() => Pull(_stage.Inlet);
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -149,7 +149,7 @@ namespace Akka.Streams.Implementation
 
             public void OnPull() => Pull(_stage.Inlet);
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey)
                 => FailStage(new TimeoutException($"The stream has not been completed in {_stage.Timeout}."));
@@ -227,7 +227,7 @@ namespace Akka.Streams.Implementation
 
             public void OnPull() => Pull(_stage.Inlet);
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -315,7 +315,7 @@ namespace Akka.Streams.Implementation
                 Pull(_stage.Inlet);
             }
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -394,7 +394,7 @@ namespace Akka.Streams.Implementation
 
                 SetHandler(_stage.Out2,
                     onPull: () => Pull(_stage.In2),
-                    onDownstreamFinish: () => Cancel(_stage.In2));
+                    onDownstreamFinish: cause => Cancel(_stage.In2, cause));
             }
 
             public void OnPush()
@@ -409,7 +409,7 @@ namespace Akka.Streams.Implementation
 
             public void OnPull() => Pull(_stage.In1);
 
-            public void OnDownstreamFinish() => Cancel(_stage.In1);
+            public void OnDownstreamFinish(Exception cause) => Cancel(_stage.In1, cause);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -433,19 +433,19 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<TIn> In1 = new Inlet<TIn>("in1");
+        public readonly Inlet<TIn> In1 = new("in1");
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Inlet<TOut> In2 = new Inlet<TOut>("in2");
+        public readonly Inlet<TOut> In2 = new("in2");
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<TIn> Out1 = new Outlet<TIn>("out1");
+        public readonly Outlet<TIn> Out1 = new("out1");
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<TOut> Out2 = new Outlet<TOut>("out2");
+        public readonly Outlet<TOut> Out2 = new("out2");
 
         /// <summary>
         /// TBD
@@ -514,7 +514,7 @@ namespace Akka.Streams.Implementation
                     Pull(_stage.Inlet);
             }
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -634,7 +634,7 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            public void OnDownstreamFinish() => CompleteStage();
+            public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
             protected internal override void OnTimer(object timerKey)
             {
@@ -654,8 +654,8 @@ namespace Akka.Streams.Implementation
 
         private readonly TimeSpan _timeout;
         private readonly Func<TOut> _inject;
-        private readonly Inlet<TIn> _in = new Inlet<TIn>("IdleInject.in");
-        private readonly Outlet<TOut> _out = new Outlet<TOut>("IdleInject.out");
+        private readonly Inlet<TIn> _in = new("IdleInject.in");
+        private readonly Outlet<TOut> _out = new("IdleInject.out");
 
         /// <summary>
         /// TBD

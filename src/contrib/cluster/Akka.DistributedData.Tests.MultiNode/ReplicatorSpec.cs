@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReplicatorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,6 +14,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Cluster;
 using Akka.Cluster.TestKit;
+using Akka.Event;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using FluentAssertions;
@@ -49,21 +51,21 @@ namespace Akka.DistributedData.Tests.MultiNode
 
         private readonly IActorRef _replicator;
 
-        private readonly GCounterKey KeyA = new GCounterKey("A");
-        private readonly GCounterKey KeyB = new GCounterKey("B");
-        private readonly GCounterKey KeyC = new GCounterKey("C");
-        private readonly GCounterKey KeyD = new GCounterKey("D");
-        private readonly GCounterKey KeyE = new GCounterKey("E");
-        private readonly GCounterKey KeyE2 = new GCounterKey("E2");
-        private readonly GCounterKey KeyF = new GCounterKey("F");
-        private readonly ORSetKey<string> KeyG = new ORSetKey<string>("G");
-        private readonly ORDictionaryKey<string, Flag> KeyH = new ORDictionaryKey<string, Flag>("H");
-        private readonly GSetKey<string> KeyI = new GSetKey<string>("I");
-        private readonly GSetKey<string> KeyJ = new GSetKey<string>("J");
-        private readonly LWWRegisterKey<string> KeyK = new LWWRegisterKey<string>("K");
-        private readonly GCounterKey KeyX = new GCounterKey("X");
-        private readonly GCounterKey KeyY = new GCounterKey("Y");
-        private readonly GCounterKey KeyZ = new GCounterKey("Z");
+        private readonly GCounterKey KeyA = new("A");
+        private readonly GCounterKey KeyB = new("B");
+        private readonly GCounterKey KeyC = new("C");
+        private readonly GCounterKey KeyD = new("D");
+        private readonly GCounterKey KeyE = new("E");
+        private readonly GCounterKey KeyE2 = new("E2");
+        private readonly GCounterKey KeyF = new("F");
+        private readonly ORSetKey<string> KeyG = new("G");
+        private readonly ORDictionaryKey<string, Flag> KeyH = new("H");
+        private readonly GSetKey<string> KeyI = new("I");
+        private readonly GSetKey<string> KeyJ = new("J");
+        private readonly LWWRegisterKey<string> KeyK = new("K");
+        private readonly GCounterKey KeyX = new("X");
+        private readonly GCounterKey KeyY = new("Y");
+        private readonly GCounterKey KeyZ = new("Z");
 
         private readonly TimeSpan _timeOut;
         private readonly WriteTo _writeTwo;
@@ -223,7 +225,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 var exception = new Exception("Test exception");
-                Func<IReplicatedData, IReplicatedData> update = x =>
+                Func<IReplicatedData, IReplicatedData> update = _ =>
                 {
                     throw exception;
                 };

@@ -1,17 +1,17 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowStatefulSelectManySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.Util.Internal;
 using Xunit;
 using static Akka.Streams.Tests.Dsl.TestConfig;
@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var phases = new[]
                 {
-                    ((ICollection<int>)new[] {2}, (ICollection<int>)new int[0]),
+                    ((ICollection<int>)new[] {2}, (ICollection<int>)Array.Empty<int>()),
                     ((ICollection<int>)new[] {1}, (ICollection<int>)new[] {1, 1}),
                     ((ICollection<int>)new[] {3}, (ICollection<int>)new[] {3}),
                     ((ICollection<int>)new[] {6}, (ICollection<int>)new[] {6, 6, 6})
@@ -45,16 +45,16 @@ namespace Akka.Streams.Tests.Dsl
                 return Script.Create(phases);
             };
 
-            RandomTestRange(Sys).ForEach(_ =>
+            RandomTestRange(Sys).Select(async _ =>
             {
-                RunScript(script(), Materializer.Settings, flow => flow.StatefulSelectMany<int,int,int, NotUsed>(() =>
+                await RunScriptAsync(script(), Materializer.Settings, flow => flow.StatefulSelectMany<int,int,int, NotUsed>(() =>
                 {
                     int? prev = null;
                     return (x =>
                     {
                         if (prev.HasValue)
                         {
-                            var result = Enumerable.Range(1, prev.Value).Select(__ => x);
+                            var result = Enumerable.Range(1, prev.Value).Select(_ => x);
                             prev = x;
                             return result;
                         }
@@ -80,7 +80,7 @@ namespace Akka.Streams.Tests.Dsl
 
                     if (prev.HasValue)
                     {
-                        var result = Enumerable.Range(1, prev.Value).Select(__ => x);
+                        var result = Enumerable.Range(1, prev.Value).Select(_ => x);
                         prev = x;
                         return result;
                     }
@@ -92,8 +92,8 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                 .RunWith(this.SinkProbe<int>(), Materializer);
 
-            probe.Request(2).ExpectNext(1, 1);
-            probe.Request(4).ExpectNext(1, 1, 1, 1);
+            probe.Request(2).ExpectNext( 1, 1);
+            probe.Request(4).ExpectNext( 1, 1, 1, 1);
             probe.ExpectComplete();
         }
 
@@ -111,7 +111,7 @@ namespace Akka.Streams.Tests.Dsl
 
                     if (prev.HasValue)
                     {
-                        var result = Enumerable.Range(1, prev.Value).Select(__ => x);
+                        var result = Enumerable.Range(1, prev.Value).Select(_ => x);
                         prev = x;
                         return result;
                     }
@@ -123,9 +123,9 @@ namespace Akka.Streams.Tests.Dsl
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(this.SinkProbe<int>(), Materializer);
 
-            probe.Request(2).ExpectNext(1, 1);
+            probe.Request(2).ExpectNext( 1, 1);
             probe.RequestNext(4);
-            probe.Request(4).ExpectNext(1, 1, 1, 1);
+            probe.Request(4).ExpectNext( 1, 1, 1, 1);
             probe.ExpectComplete();
         }
     }

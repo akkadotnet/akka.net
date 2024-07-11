@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMediator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -126,7 +126,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        public ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
 
         /// <summary>
         /// TBD
@@ -166,9 +166,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<Send>(send =>
             {
                 var routees = new List<Routee>();
-                ValueHolder valueHolder;
                 if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket) &&
-                    bucket.Content.TryGetValue(send.Path, out valueHolder) &&
+                    bucket.Content.TryGetValue(send.Path, out var valueHolder) &&
                     send.LocalAffinity)
                 {
                     var routee = valueHolder.Routee;
@@ -192,19 +191,19 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     new Router(_settings.RoutingLogic, routees.ToArray()).Route(
                         Internal.Utils.WrapIfNeeded(send.Message), Sender);
                 else
-                    IgnoreOrSendToDeadLetters(send.Message);
+                    IgnoreOrSendToDeadLetters(send);
             });
             Receive<SendToAll>(sendToAll =>
             {
-                PublishMessage(sendToAll.Path, sendToAll.Message, sendToAll.ExcludeSelf);
+                PublishMessage(sendToAll.Path, sendToAll, sendToAll.ExcludeSelf);
             });
             Receive<Publish>(publish =>
             {
                 string path = Internal.Utils.MakeKey(Self.Path / Internal.Utils.EncodeName(publish.Topic));
                 if (publish.SendOneMessageToEachGroup)
-                    PublishToEachGroup(path, publish.Message);
+                    PublishToEachGroup(path, publish);
                 else
-                    PublishMessage(path, publish.Message);
+                    PublishMessage(path, publish);
             });
             Receive<Put>(put =>
             {
@@ -245,18 +244,18 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 HandleRegisterTopic(register.TopicRef);
             });
-            Receive<NoMoreSubscribers>(msg =>
+            Receive<NoMoreSubscribers>(_ =>
             {
                 var key = Internal.Utils.MakeKey(Sender);
                 _buffer.InitializeGrouping(key);
                 Sender.Tell(TerminateRequest.Instance);
             });
-            Receive<NewSubscriberArrived>(msg =>
+            Receive<NewSubscriberArrived>(_ =>
             {
                 var key = Internal.Utils.MakeKey(Sender);
                 _buffer.ForwardMessages(key, Sender);
             });
-            Receive<GetTopics>(getTopics =>
+            Receive<GetTopics>(_ =>
             {
                 Sender.Tell(new CurrentTopics(GetCurrentTopics().ToImmutableHashSet()));
             });
@@ -418,7 +417,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private IEnumerable<Bucket> CollectDelta(IImmutableDictionary<Address, long> versions)
         {
             // missing entries are represented by version 0
-            var filledOtherVersions = OwnVersions.ToDictionary(c => c.Key, c => 0L);
+            var filledOtherVersions = OwnVersions.ToDictionary(c => c.Key, _ => 0L);
             foreach (var version in versions)
             {
                 filledOtherVersions[version.Key] = version.Value;
@@ -469,7 +468,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     if (key.StartsWith(topicPrefix))
                     {
                         var topic = key.Substring(topicPrefix.Length + 1);
-                        if (!topic.Contains("/"))
+                        if (!topic.Contains('/'))
                         {
                             yield return Uri.EscapeDataString(topic);
                         }
@@ -500,7 +499,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Context.Self));
         }
 
-        private void PublishMessage(string path, object message, bool allButSelf = false)
+        private void PublishMessage(string path, IWrappedMessage publish, bool allButSelf = false)
         {
             IEnumerable<IActorRef> Refs()
             {
@@ -521,24 +520,24 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             foreach (var r in Refs())
             {
                 if (r == null) continue;
-                r.Forward(message);
+                r.Forward(publish.Message);
                 counter++;
             }
 
-            if (counter == 0) IgnoreOrSendToDeadLetters(message);
+            if (counter == 0) IgnoreOrSendToDeadLetters(publish);
         }
 
-        private void PublishToEachGroup(string path, object message)
+        private void PublishToEachGroup(string path, Publish publish)
         {
             var prefix = path + "/";
             var lastKey = path + "0";   // '0' is the next char of '/'
 
             var groups = ExtractGroups(prefix, lastKey).GroupBy(kv => kv.Key).ToList();
-            var wrappedMessage = new SendToOneSubscriber(message);
+            var wrappedMessage = new SendToOneSubscriber(publish.Message);
 
             if (groups.Count == 0)
             {
-                IgnoreOrSendToDeadLetters(message);
+                IgnoreOrSendToDeadLetters(publish);
             }
             else
             {
@@ -643,7 +642,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private IActorRef NewTopicActor(string encodedTopic)
         {
-            var t = Context.ActorOf(Actor.Props.Create(() => new Topic(_settings.RemovedTimeToLive, _settings.RoutingLogic)), encodedTopic);
+            var t = Context.ActorOf(
+                Actor.Props.Create(() => new Topic(_settings.RemovedTimeToLive, _settings.RoutingLogic, _settings.SendToDeadLettersWhenNoSubscribers))
+                    .WithDeploy(Deploy.Local), 
+                encodedTopic);
             HandleRegisterTopic(t);
             return t;
         }

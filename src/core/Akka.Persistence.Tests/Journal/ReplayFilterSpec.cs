@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReplayFilterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,25 +19,19 @@ namespace Akka.Persistence.Tests.Journal
         private const string WriterB = "writer-B";
         private const string WriterC = "writer-C";
 
-        private readonly ReplayedMessage _n1 =
-            new ReplayedMessage(new Persistent("a", 13, "p1", "", writerGuid: Persistent.Undefined));
+        private readonly ReplayedMessage _n1 = new(new Persistent("a", 13, "p1", "", writerGuid: Persistent.Undefined));
 
-        private readonly ReplayedMessage _n2 =
-            new ReplayedMessage(new Persistent("b", 14, "p1", "", writerGuid: Persistent.Undefined));
+        private readonly ReplayedMessage _n2 = new(new Persistent("b", 14, "p1", "", writerGuid: Persistent.Undefined));
 
-        private readonly ReplayedMessage _m1 =
-            new ReplayedMessage(new Persistent("a", 13, "p1", "", writerGuid: WriterA));
+        private readonly ReplayedMessage _m1 = new(new Persistent("a", 13, "p1", "", writerGuid: WriterA));
 
-        private readonly ReplayedMessage _m2 =
-            new ReplayedMessage(new Persistent("b", 14, "p1", "", writerGuid: WriterA));
+        private readonly ReplayedMessage _m2 = new(new Persistent("b", 14, "p1", "", writerGuid: WriterA));
 
-        private readonly ReplayedMessage _m3 =
-            new ReplayedMessage(new Persistent("c", 15, "p1", "", writerGuid: WriterA));
+        private readonly ReplayedMessage _m3 = new(new Persistent("c", 15, "p1", "", writerGuid: WriterA));
 
-        private readonly ReplayedMessage _m4 =
-            new ReplayedMessage(new Persistent("d", 16, "p1", "", writerGuid: WriterA));
+        private readonly ReplayedMessage _m4 = new(new Persistent("d", 16, "p1", "", writerGuid: WriterA));
 
-        private readonly RecoverySuccess _successMsg = new RecoverySuccess(15);
+        private readonly RecoverySuccess _successMsg = new(15);
 
         private static IPersistentRepresentation WithWriter(IPersistentRepresentation p, string writer)
         {

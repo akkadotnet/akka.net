@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Reachability.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -52,8 +52,7 @@ namespace Akka.Cluster
         /// <summary>
         ///     TBD
         /// </summary>
-        public static readonly Reachability Empty =
-            new Reachability(ImmutableList.Create<Record>(), ImmutableDictionary.Create<UniqueAddress, long>());
+        public static readonly Reachability Empty = new(ImmutableList.Create<Record>(), ImmutableDictionary.Create<UniqueAddress, long>());
 
         private readonly Lazy<Cache> _cache;
 
@@ -364,8 +363,7 @@ namespace Akka.Cluster
         /// <inheritdoc />
         public override bool Equals(object obj)
         {
-            var other = obj as Reachability;
-            if (other == null) return false;
+            if (obj is not Reachability other) return false;
             return Records.Count == other.Records.Count &&
                    Versions.Equals(other.Versions) &&
                    _cache.Value.ObserverRowMap.Equals(other._cache.Value.ObserverRowMap);
@@ -381,7 +379,7 @@ namespace Akka.Cluster
                 var rows = ObserverRows(observer);
                 if (rows == null) continue;
 
-                builder.AppendJoin(", ", rows, (b, row, index) =>
+                builder.AppendJoin(", ", rows, (b, row, _) =>
                     b.AppendFormat("[{0} -> {1}: {2} [{3}] ({4})]",
                         observer.Address, row.Key, row.Value.Status, Status(row.Key), row.Value.Version));
             }

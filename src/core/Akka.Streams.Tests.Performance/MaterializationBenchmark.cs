@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MaterializationBenchmark.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Streams.Dsl;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using NBench;
 
 namespace Akka.Streams.Tests.Performance
@@ -23,8 +23,7 @@ namespace Akka.Streams.Tests.Performance
         [PerfSetup]
         public void Setup(BenchmarkContext context)
         {
-            _actorSystem = ActorSystem.Create("MaterializationBenchmark",
-                ConfigurationFactory.FromResource<ScriptedTest>("Akka.Streams.TestKit.Tests.reference.conf"));
+            _actorSystem = ActorSystem.Create("MaterializationBenchmark", StreamTestDefaultMailbox.DefaultConfig);
             _actorSystem.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             _materializerSettings =
                 ActorMaterializerSettings.Create(_actorSystem).WithDispatcher("akka.test.stream-dispatcher");
@@ -184,7 +183,7 @@ namespace Akka.Streams.Tests.Performance
         {
             var flow = Flow.Create<NotUsed>().Select(x => x);
             for (var i = 0; i < numberOfNestedGraphs; i++)
-                flow = Flow.FromGraph(GraphDsl.Create(flow, (b, f) => new FlowShape<NotUsed, NotUsed>(f.Inlet, f.Outlet)));
+                flow = Flow.FromGraph(GraphDsl.Create(flow, (_, f) => new FlowShape<NotUsed, NotUsed>(f.Inlet, f.Outlet)));
 
             return RunnableGraph.FromGraph(GraphDsl.Create(flow, (b, f) =>
             {

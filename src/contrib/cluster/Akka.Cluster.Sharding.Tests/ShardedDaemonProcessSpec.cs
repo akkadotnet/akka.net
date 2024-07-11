@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardedDaemonProcessSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,7 +10,9 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -19,8 +21,11 @@ namespace Akka.Cluster.Sharding.Tests
     {
         private sealed class Stop
         {
-            public static Stop Instance { get; } = new Stop();
-            private Stop() { }
+            public static Stop Instance { get; } = new();
+
+            private Stop()
+            {
+            }
         }
 
         private sealed class Started
@@ -80,14 +85,16 @@ namespace Akka.Cluster.Sharding.Tests
 
         public ShardedDaemonProcessSpec()
             : base(GetConfig())
-        { }
+        {
+        }
 
         [Fact]
         public void ShardedDaemonProcess_must_have_a_single_node_cluster_running_first()
         {
             var probe = CreateTestProbe();
             Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
-            probe.AwaitAssert(() => Cluster.Get(Sys).SelfMember.Status.ShouldBe(MemberStatus.Up), TimeSpan.FromSeconds(3));
+            probe.AwaitAssert(() => Cluster.Get(Sys).SelfMember.Status.ShouldBe(MemberStatus.Up),
+                TimeSpan.FromSeconds(3));
         }
 
         [Fact]
@@ -125,7 +132,9 @@ namespace Akka.Cluster.Sharding.Tests
 
             var probe = CreateTestProbe();
             var settings = ShardedDaemonProcessSettings.Create(Sys).WithRole("workers");
-            ShardedDaemonProcess.Get(Sys).Init("roles", 3, id => MyActor.Props(id, probe.Ref), settings);
+            var actorRef = ShardedDaemonProcess.Get(Sys).Init("roles", 3, id => MyActor.Props(id, probe.Ref), settings,
+                PoisonPill.Instance);
+            actorRef.Should().BeNull();
 
             probe.ExpectNoMsg();
         }
@@ -151,8 +160,10 @@ namespace Akka.Cluster.Sharding.Tests
         private void DocExample()
         {
             #region tag-processing
+
             var tags = new[] { "tag-1", "tag-2", "tag-3" };
             ShardedDaemonProcess.Get(Sys).Init("TagProcessors", tags.Length, id => TagProcessor.Props(tags[id]));
+
             #endregion
         }
     }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorRecoveryTimeoutSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ namespace Akka.Persistence.Tests
     [Collection("PersistentActorRecoveryTimeout")] // force tests to run sequentially
     public class PersistentActorRecoveryTimeoutSpec : PersistenceSpec
     {
-        private static readonly AtomicCounter JournalIdNumber = new AtomicCounter(0);
+        private static readonly AtomicCounter JournalIdNumber = new(0);
         private static readonly string JournalId = "persistent-actor-recovery-timeout-spec" + JournalIdNumber.GetAndIncrement();
         private readonly IActorRef _journal;
 
@@ -41,7 +41,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                Persist(message, x => Sender.Tell(message));
+                Persist(message, _ => Sender.Tell(message));
                 return true;
             }
 
@@ -78,7 +78,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                Persist(message, x => Sender.Tell(message));
+                Persist(message, _ => Sender.Tell(message));
                 return true;
             }
 

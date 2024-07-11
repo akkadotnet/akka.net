@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="DurableDataSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="DurableDataPocoSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,8 @@ using Akka.Cluster;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.DistributedData.Durable;
+using Akka.Event;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
@@ -48,22 +50,22 @@ namespace Akka.DistributedData.Tests.MultiNode
                 akka.test.single-expect-default = 15s")
                 .WithFallback(DistributedData.DefaultConfig());
 
-            NodeConfig(new[] { First }, new[] { ConfigurationFactory.ParseString($@"
-                akka.cluster.distributed-data.durable.lmdb {{
+            NodeConfig(new[] { First }, new[] { ConfigurationFactory.ParseString(@"
+                akka.cluster.distributed-data.durable.lmdb {
                   dir = ""target/DurableDataPocoSpec/first-ddata""
-                }}
+                }
             ") });
 
-            NodeConfig(new[] { Second }, new[] { ConfigurationFactory.ParseString($@"
-                akka.cluster.distributed-data.durable.lmdb {{
+            NodeConfig(new[] { Second }, new[] { ConfigurationFactory.ParseString(@"
+                akka.cluster.distributed-data.durable.lmdb {
                   dir = ""target/DurableDataPocoSpec/second-ddata""
-                }}
+                }
             ") });
 
-            NodeConfig(new[] { Third }, new[] { ConfigurationFactory.ParseString($@"
-                akka.cluster.distributed-data.durable.lmdb {{
+            NodeConfig(new[] { Third }, new[] { ConfigurationFactory.ParseString(@"
+                akka.cluster.distributed-data.durable.lmdb {
                   dir = ""target/DurableDataPocoSpec/third-ddata""
-                }}
+                }
             ") });
         }
     }
@@ -95,9 +97,9 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly IWriteConsistency _writeThree;
         private readonly IReadConsistency _readThree;
 
-        private readonly ORDictionaryKey<string, PocoObject> _keyA = new ORDictionaryKey<string, PocoObject>("durable-A");
-        private readonly ORDictionaryKey<string, PocoObject> _keyB = new ORDictionaryKey<string, PocoObject>("durable-B");
-        private readonly ORSetKey<string> _keyC = new ORSetKey<string>("durable-C");
+        private readonly ORDictionaryKey<string, PocoObject> _keyA = new("durable-A");
+        private readonly ORDictionaryKey<string, PocoObject> _keyB = new("durable-B");
+        private readonly ORSetKey<string> _keyC = new("durable-C");
 
         private int _testStepCounter = 0;
 

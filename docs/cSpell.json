@@ -3,6 +3,7 @@
     "language": "en",
     "words": [
         "actorref",
+        "arounds",
         "Akka",
         "appender",
         "asynchronicity",
@@ -15,6 +16,7 @@
         "blackhole",
         "Bootcamp",
         "buncher",
+        "concat",
         "combinator",
         "combinators",
         "composability",
@@ -24,9 +26,12 @@
         "CRDT",
         "datacenter",
         "denormalization",
+        "deque",
         "deserialization",
         "downstream",
         "downstreams",
+        "ddata",
+        "eventsourced",
         "Gitter",
         "Hasher",
         "Hipsterize",
@@ -99,7 +104,15 @@
         "Livescan",
         "mainlogo",
         "Synchromatics",
-        "Varghese"
+        "markdownlint",
+        "mergetool",
+        "titlecase",
+        "Varghese",
+		"Vertech",
+		"DeadLetter",
+		"Blocksharp",
+		"Akkatecture",
+		"SharpPulsar"
     ],
     "ignoreRegExpList": [
         "\\((.*)\\)", // Markdown links

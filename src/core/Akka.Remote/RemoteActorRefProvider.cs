@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -378,9 +378,9 @@ namespace Akka.Remote
                 .Aggregate(Deploy.None, (deploy1, deploy2) => deploy2.WithFallback(deploy1));
 
             //match for remote scope
-            if (propsDeploy.Scope is RemoteScope)
+            if (propsDeploy.Scope is RemoteScope remoteScope)
             {
-                var addr = propsDeploy.Scope.AsInstanceOf<RemoteScope>().Address;
+                var addr = remoteScope.Address;
 
                 //Even if this actor is in RemoteScope, it might still be a local address
                 if (HasAddress(addr))
@@ -756,7 +756,7 @@ namespace Akka.Remote
                     {
                         _log.Info("Remote daemon shut down; proceeding with flushing remote transports.");
                         @event.StateData.Transport.Shutdown()
-                            .ContinueWith(t => TransportShutdown.Instance,
+                            .ContinueWith(_ => TransportShutdown.Instance,
                                 TaskContinuationOptions.ExecuteSynchronously)
                             .PipeTo(Self);
                         return GoTo(TerminatorState.WaitTransportShutdown);
@@ -765,7 +765,7 @@ namespace Akka.Remote
                     return null;
                 });
 
-                When(TerminatorState.WaitTransportShutdown, @event =>
+                When(TerminatorState.WaitTransportShutdown, _ =>
                 {
                     _log.Info("Remoting shut down.");
                     _systemGuardian.Tell(TerminationHookDone.Instance);
@@ -778,7 +778,7 @@ namespace Akka.Remote
             public sealed class TransportShutdown
             {
                 private TransportShutdown() { }
-                public static TransportShutdown Instance { get; } = new TransportShutdown();
+                public static TransportShutdown Instance { get; } = new();
 
                 public override string ToString()
                 {
@@ -799,6 +799,7 @@ namespace Akka.Remote
             protected override void TellInternal(object message, IActorRef sender)
             {
                 var deadLetter = message as DeadLetter;
+            
                 if (message is EndpointManager.Send send)
                 {
                     if (send.Seq == null)

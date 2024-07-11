@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncWriteProxy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -63,10 +63,7 @@ namespace Akka.Persistence.Journal
         /// </exception>
         public SetStore(IActorRef store)
         {
-            if (store == null)
-                throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
-
-            Store = store;
+            Store = store ?? throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
         }
 
         /// <summary>
@@ -129,7 +126,7 @@ namespace Akka.Persistence.Journal
             /// </summary>
             public long HighestSequenceNr { get; }
 
-            /// <inheritdoc/>
+            
             public bool Equals(ReplaySuccess other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -201,7 +198,7 @@ namespace Akka.Persistence.Journal
             /// </summary>
             public long Max { get; }
 
-            /// <inheritdoc/>
+            
             public bool Equals(ReplayMessages other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -241,7 +238,7 @@ namespace Akka.Persistence.Journal
             /// </summary>
             public long ToSequenceNr { get; }
 
-            /// <inheritdoc/>
+            
             public bool Equals(DeleteMessagesTo other)
             {
                 if (ReferenceEquals(other, null)) return false;
@@ -263,10 +260,7 @@ namespace Akka.Persistence.Journal
         private bool _isInitialized;
         private bool _isInitTimedOut;
         private IActorRef _store;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected AsyncWriteProxy()
         {
             _isInitialized = false;
@@ -298,25 +292,31 @@ namespace Akka.Persistence.Journal
         {
             if (_isInitialized)
             {
-                if (!(message is InitTimeout))
+                if (message is not InitTimeout)
                     return base.AroundReceive(receive, message);
             }
-            else if (message is SetStore)
+            else switch (message)
             {
-                _store = ((SetStore) message).Store;
-                Stash.UnstashAll();
-                _isInitialized = true;
+                case SetStore store:
+                    _store = store.Store;
+                    Stash.UnstashAll();
+                    _isInitialized = true;
+                    break;
+                case InitTimeout _:
+                    _isInitTimedOut = true;
+                    Stash.UnstashAll(); // will trigger appropriate failures
+                    break;
+                default:
+                {
+                    if (_isInitTimedOut)
+                    {
+                        return base.AroundReceive(receive, message);
+                    }
+                    else Stash.Stash();
+
+                    break;
+                }
             }
-            else if (message is InitTimeout)
-            {
-                _isInitTimedOut = true;
-                Stash.UnstashAll(); // will trigger appropriate failures
-            }
-            else if (_isInitTimedOut)
-            {
-                return base.AroundReceive(receive, message);
-            }
-            else Stash.Stash();
             return true;
         }
 
@@ -416,18 +416,11 @@ namespace Akka.Persistence.Journal
         public class InitTimeout
         {
             private InitTimeout() { }
-            private static readonly InitTimeout _instance = new InitTimeout();
 
             /// <summary>
             /// TBD
             /// </summary>
-            public static InitTimeout Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
+            public static InitTimeout Instance { get; } = new();
         }
     }
 
@@ -465,15 +458,14 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if (message is IPersistentRepresentation) _replayCallback(message as IPersistentRepresentation);
+            if (message is IPersistentRepresentation representation) _replayCallback(representation);
             else if (message is AsyncWriteTarget.ReplaySuccess)
             {
                 _replayCompletionPromise.SetResult(new object());
                 Context.Stop(Self);
             }
-            else if (message is AsyncWriteTarget.ReplayFailure)
+            else if (message is AsyncWriteTarget.ReplayFailure failure)
             {
-                var failure = message as AsyncWriteTarget.ReplayFailure;
                 _replayCompletionPromise.SetException(failure.Cause);
                 Context.Stop(Self);
             }

@@ -66,7 +66,7 @@ Stop().Applying(OrderDiscarded.Instance).AndThen(cart =>
 
 On recovery state data is initialized according to the latest available snapshot, then the remaining domain events are replayed, triggering the `ApplyEvent` method.
 
-## Periodical snapshot by snapshot-after
+## Periodical Snapshot by Snapshot-After
 
 You can enable periodical `SaveStateSnapshot()` calls in `PersistentFSM` if you turn the following flag on in `reference.conf`
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Actors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -66,12 +66,12 @@ namespace TcpEchoService.Server
                 else
                     Sender.Tell(Tcp.Write.Create(received.Data));
             });
-            Receive<Tcp.ConnectionClosed>(closed =>
+            Receive<Tcp.ConnectionClosed>(_ =>
             {
                 Console.WriteLine("Stopped, remote connection [{0}] closed", remote);
                 Context.Stop(Self);
             });
-            Receive<Terminated>(terminated =>
+            Receive<Terminated>(_ =>
             {
                 Console.WriteLine("Stopped, remote connection [{0}] died", remote);
                 Context.Stop(Self);

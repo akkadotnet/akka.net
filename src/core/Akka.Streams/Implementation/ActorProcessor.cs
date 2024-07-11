@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorProcessor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ namespace Akka.Streams.Implementation
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
-    internal class ActorProcessor<TIn, TOut> : ActorPublisher<TOut>, IProcessor<TIn, TOut>
+    internal sealed class ActorProcessor<TIn, TOut> : ActorPublisher<TOut>, IProcessor<TIn, TOut>
     {
         /// <summary>
         /// TBD
@@ -294,10 +294,10 @@ namespace Akka.Streams.Implementation
         {
             if (message is OnComplete)
                 OnComplete();
-            else if (message is OnSubscribe)
-                OnSubscribe(((OnSubscribe)message).Subscription);
-            else if (message is OnError)
-                OnError(((OnError)message).Cause);
+            else if (message is OnSubscribe subscribe)
+                OnSubscribe(subscribe.Subscription);
+            else if (message is OnError error)
+                OnError(error.Cause);
             else
                 return false;
             return true;
@@ -310,14 +310,14 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         protected virtual bool UpstreamRunning(object message)
         {
-            if (message is OnNext)
-                EnqueueInputElement(((OnNext)message).Element);
+            if (message is OnNext next)
+                EnqueueInputElement(next.Element);
             else if (message is OnComplete)
                 OnComplete();
-            else if (message is OnSubscribe)
-                ((OnSubscribe)message).Subscription.Cancel();
-            else if (message is OnError)
-                OnError(((OnError)message).Cause);
+            else if (message is OnSubscribe subscribe)
+                subscribe.Subscription.Cancel();
+            else if (message is OnError error)
+                OnError(error.Cause);
             else
                 return false;
             return true;
@@ -507,9 +507,9 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         protected bool WaitingExposedPublisher(object message)
         {
-            if (message is ExposedPublisher)
+            if (message is ExposedPublisher publisher)
             {
-                ExposedPublisher = ((ExposedPublisher)message).Publisher;
+                ExposedPublisher = publisher.Publisher;
                 SubReceive.Become(DownstreamRunning);
                 return true;
             }
@@ -526,9 +526,8 @@ namespace Akka.Streams.Implementation
         {
             if (message is SubscribePending)
                 SubscribePending(ExposedPublisher.TakePendingSubscribers());
-            else if (message is RequestMore)
+            else if (message is RequestMore requestMore)
             {
-                var requestMore = (RequestMore)message;
                 if (requestMore.Demand < 1)
                     Error(ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
                 else
@@ -620,7 +619,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         /// <summary>
         /// TBD

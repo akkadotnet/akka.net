@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PartitionWithSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using System.Threading;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util;
@@ -50,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
             source.SendNext(1);
             source.SendNext(2);
             source.SendNext(3);
-            sink.ExpectNext(2, 1, 8);
+            sink.ExpectNext( 2, 1, 8);
             source.SendComplete();
             sink.ExpectComplete();
         }

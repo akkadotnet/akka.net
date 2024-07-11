@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Transfer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -259,7 +259,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Completed Instance = new Completed();
+        public static readonly Completed Instance = new();
 
         private Completed()
         {
@@ -284,7 +284,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly NotInitialized Instance = new NotInitialized();
+        public static readonly NotInitialized Instance = new();
 
         private NotInitialized()
         {
@@ -303,7 +303,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// TBD
     /// </summary>
-    internal class WaitingForUpstreamSubscription : TransferState
+    internal sealed class WaitingForUpstreamSubscription : TransferState
     {
         /// <summary>
         /// TBD
@@ -343,7 +343,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Always Instance = new Always();
+        public static readonly Always Instance = new();
 
         private Always()
         {
@@ -362,7 +362,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// TBD
     /// </summary>
-    public struct TransferPhase
+    public readonly struct TransferPhase
     {
         /// <summary>
         /// TBD
@@ -539,7 +539,7 @@ namespace Akka.Streams.Implementation
         /// <exception cref="IllegalStateException">
         /// This exception is thrown when the action of the completed phase tried to execute.
         /// </exception>
-        public static readonly TransferPhase CompletedPhase = new TransferPhase(Completed.Instance, () =>
+        public static readonly TransferPhase CompletedPhase = new(Completed.Instance, () =>
         {
             throw new IllegalStateException("The action of completed phase must never be executed");
         });
@@ -589,16 +589,15 @@ namespace Akka.Streams.Implementation
         /// <param name="self">TBD</param>
         public static void GotUpstreamSubscription(this IPump self)
         {
-            if (self.TransferState is WaitingForUpstreamSubscription)
+            if (self.TransferState is WaitingForUpstreamSubscription state)
             {
-                var t = (WaitingForUpstreamSubscription) self.TransferState;
-                if (t.Remaining == 1)
+                if (state.Remaining == 1)
                 {
-                    self.TransferState = t.AndThen.Precondition;
-                    self.CurrentAction = t.AndThen.Action;
+                    self.TransferState = state.AndThen.Precondition;
+                    self.CurrentAction = state.AndThen.Action;
                 }
                 else
-                    self.TransferState = new WaitingForUpstreamSubscription(t.Remaining - 1, t.AndThen);
+                    self.TransferState = new WaitingForUpstreamSubscription(state.Remaining - 1, state.AndThen);
             }
 
             self.Pump();
@@ -611,10 +610,9 @@ namespace Akka.Streams.Implementation
         /// <param name="phase">TBD</param>
         public static void NextPhase(this IPump self, TransferPhase phase)
         {
-            if (self.TransferState is WaitingForUpstreamSubscription)
+            if (self.TransferState is WaitingForUpstreamSubscription state)
             {
-                var w = (WaitingForUpstreamSubscription) self.TransferState;
-                self.TransferState = new WaitingForUpstreamSubscription(w.Remaining, phase);
+                self.TransferState = new WaitingForUpstreamSubscription(state.Remaining, phase);
             }
             else
             {

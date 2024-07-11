@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SplitBrainResolver.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,46 +25,40 @@ namespace Akka.Cluster.SBR
     /// </summary>
     internal class SplitBrainResolver : SplitBrainResolverBase
     {
-        private readonly Cluster cluster;
+        private Cluster _cluster;
 
-        public SplitBrainResolver(TimeSpan stableAfter, DowningStrategy strategy)
+        public SplitBrainResolver(TimeSpan stableAfter, DowningStrategy strategy, Cluster cluster)
             : base(stableAfter, strategy)
         {
-            cluster = Cluster.Get(Context.System);
-            Log.Info(
-                "SBR started. Config: strategy [{0}], stable-after [{1}], down-all-when-unstable [{2}], selfUniqueAddress [{3}].",
-                Logging.SimpleName(strategy.GetType()),
-                stableAfter,
-                // ReSharper disable VirtualMemberCallInConstructor
-                DownAllWhenUnstable == TimeSpan.Zero ? "off" : DownAllWhenUnstable.ToString(),
-                SelfUniqueAddress.Address);
-            // ReSharper restore VirtualMemberCallInConstructor
+            _cluster = cluster;
         }
 
-        public override UniqueAddress SelfUniqueAddress => cluster.SelfUniqueAddress;
+        public override UniqueAddress SelfUniqueAddress => _cluster.SelfUniqueAddress;
 
-        public static Props Props2(TimeSpan stableAfter, DowningStrategy strategy)
+        public static Props Props2(TimeSpan stableAfter, DowningStrategy strategy, Cluster cluster)
         {
-            return Props.Create(() => new SplitBrainResolver(stableAfter, strategy));
+            return Props.Create(() => new SplitBrainResolver(stableAfter, strategy, cluster));
         }
 
         // re-subscribe when restart
         protected override void PreStart()
         {
-            cluster.Subscribe(Self, InitialStateAsEvents, typeof(IClusterDomainEvent));
+            _cluster.Subscribe(Self, InitialStateAsEvents, typeof(IClusterDomainEvent));
+
             base.PreStart();
         }
+        
 
         protected override void PostStop()
         {
-            cluster.Unsubscribe(Self);
+            _cluster.Unsubscribe(Self);
             base.PostStop();
         }
 
         public override void Down(UniqueAddress node, IDecision decision)
         {
             Log.Info("SBR is downing [{0}]", node);
-            cluster.Down(node.Address);
+            _cluster.Down(node.Address);
         }
     }
 
@@ -75,24 +69,23 @@ namespace Akka.Cluster.SBR
     internal abstract class SplitBrainResolverBase : ActorBase, IWithUnboundedStash, IWithTimers
     {
         // would be better as constructor parameter, but don't want to break Cinnamon instrumentation
-        private readonly SplitBrainResolverSettings settings;
+        private readonly SplitBrainResolverSettings _settings;
         private ILoggingAdapter _log;
 
 
-        private ReachabilityChangedStats reachabilityChangedStats =
-            new ReachabilityChangedStats(DateTime.UtcNow, DateTime.UtcNow, 0);
+        private ReachabilityChangedStats _reachabilityChangedStats = new(DateTime.UtcNow, DateTime.UtcNow, 0);
 
-        private IReleaseLeaseCondition releaseLeaseCondition = ReleaseLeaseCondition.NoLease.Instance;
-        private bool selfMemberAdded;
+        private IReleaseLeaseCondition _releaseLeaseCondition = ReleaseLeaseCondition.NoLease.Instance;
+        private bool _selfMemberAdded;
 
-        private Deadline stableDeadline;
+        private Deadline _stableDeadline;
 
         protected SplitBrainResolverBase(TimeSpan stableAfter, DowningStrategy strategy)
         {
             StableAfter = stableAfter;
             Strategy = strategy;
 
-            settings = new SplitBrainResolverSettings(Context.System.Settings.Config);
+            _settings = new SplitBrainResolverSettings(Context.System.Settings.Config);
 
             // ReSharper disable once VirtualMemberCallInConstructor
             Timers.StartPeriodicTimer(Tick.Instance, Tick.Instance, TickInterval);
@@ -106,17 +99,17 @@ namespace Akka.Cluster.SBR
 
         public DowningStrategy Strategy { get; }
 
-        public ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        public ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         public abstract UniqueAddress SelfUniqueAddress { get; }
 
-        public virtual TimeSpan DownAllWhenUnstable => settings.DownAllWhenUnstable;
+        public virtual TimeSpan DownAllWhenUnstable => _settings.DownAllWhenUnstable;
 
         public virtual TimeSpan TickInterval => TimeSpan.FromSeconds(1);
 
         protected bool Leader { get; private set; }
 
-        public bool IsResponsible => Leader && selfMemberAdded;
+        public bool IsResponsible => Leader && _selfMemberAdded;
 
         public ITimerScheduler Timers { get; set; }
 
@@ -135,18 +128,18 @@ namespace Akka.Cluster.SBR
 
         public void ResetStableDeadline()
         {
-            stableDeadline = NewStableDeadline();
+            _stableDeadline = NewStableDeadline();
         }
 
         private void ResetReachabilityChangedStats()
         {
             var now = DateTime.UtcNow;
-            reachabilityChangedStats = new ReachabilityChangedStats(now, now, 0);
+            _reachabilityChangedStats = new ReachabilityChangedStats(now, now, 0);
         }
 
         private void ResetReachabilityChangedStatsIfAllUnreachableDowned()
         {
-            if (!reachabilityChangedStats.IsEmpty && Strategy.IsAllUnreachableDownOrExiting)
+            if (!_reachabilityChangedStats.IsEmpty && Strategy.IsAllUnreachableDownOrExiting)
             {
                 Log.Debug("SBR resetting reachability stats, after all unreachable healed, downed or removed");
                 ResetReachabilityChangedStats();
@@ -215,13 +208,13 @@ namespace Akka.Cluster.SBR
             else if (responsibleBefore && !responsibleAfter)
                 Log.Info("This node is not the leader any more and not responsible for taking SBR decisions.");
 
-            if (Leader && !selfMemberAdded)
+            if (Leader && !_selfMemberAdded)
                 Log.Debug("This node is leader but !selfMemberAdded.");
         }
 
         protected override void PostStop()
         {
-            if (!(releaseLeaseCondition is ReleaseLeaseCondition.NoLease))
+            if (!(_releaseLeaseCondition is ReleaseLeaseCondition.NoLease))
                 Log.Info(
                     "SBR is stopped and owns the lease. The lease will not be released until after the " +
                     "lease heartbeat-timeout.");
@@ -292,11 +285,11 @@ namespace Akka.Cluster.SBR
         {
             // note the DownAll due to instability is running on all nodes to make that decision as quickly and
             // aggressively as possible if time is out
-            if (reachabilityChangedStats.ChangeCount > 0)
+            if (_reachabilityChangedStats.ChangeCount > 0)
             {
                 var now = DateTime.UtcNow;
-                var durationSinceLatestChange = now - reachabilityChangedStats.LatestChangeTimestamp;
-                var durationSinceFirstChange = now - reachabilityChangedStats.FirstChangeTimestamp;
+                var durationSinceLatestChange = now - _reachabilityChangedStats.LatestChangeTimestamp;
+                var durationSinceFirstChange = now - _reachabilityChangedStats.FirstChangeTimestamp;
 
                 var downAllWhenUnstableEnabled = DownAllWhenUnstable > TimeSpan.Zero;
                 if (downAllWhenUnstableEnabled && durationSinceFirstChange > StableAfter + DownAllWhenUnstable)
@@ -304,7 +297,7 @@ namespace Akka.Cluster.SBR
                     Log.Warning(
                         //ClusterLogMarker.sbrInstability,
                         "SBR detected instability and will down all nodes: {0}",
-                        reachabilityChangedStats);
+                        _reachabilityChangedStats);
                     ActOnDecision(DownAll.Instance);
                 }
                 else if (!downAllWhenUnstableEnabled && durationSinceLatestChange > StableAfter + StableAfter)
@@ -316,7 +309,7 @@ namespace Akka.Cluster.SBR
                 }
             }
 
-            if (IsResponsible && !Strategy.Unreachable.IsEmpty && stableDeadline.IsOverdue)
+            if (IsResponsible && !Strategy.Unreachable.IsEmpty && _stableDeadline.IsOverdue)
                 switch (Strategy.Decide())
                 {
                     case IAcquireLeaseDecision decision:
@@ -360,7 +353,7 @@ namespace Akka.Cluster.SBR
                         break;
                 }
 
-            switch (releaseLeaseCondition)
+            switch (_releaseLeaseCondition)
             {
                 case ReleaseLeaseCondition.WhenTimeElapsed rlc:
                     if (rlc.Deadline.IsOverdue)
@@ -398,18 +391,18 @@ namespace Akka.Cluster.SBR
                         {
                             Log.Info("SBR acquired lease for decision [{0}]", decision);
                             var downedNodes = ActOnDecision(decision);
-                            switch (releaseLeaseCondition)
+                            switch (_releaseLeaseCondition)
                             {
                                 case ReleaseLeaseCondition.WhenMembersRemoved rlc:
-                                    releaseLeaseCondition =
+                                    _releaseLeaseCondition =
                                         new ReleaseLeaseCondition.WhenMembersRemoved(rlc.Nodes.Union(downedNodes));
                                     break;
                                 default:
                                     if (downedNodes.IsEmpty)
-                                        releaseLeaseCondition =
+                                        _releaseLeaseCondition =
                                             new ReleaseLeaseCondition.WhenTimeElapsed(Deadline.Now + ReleaseLeaseAfter);
                                     else
-                                        releaseLeaseCondition =
+                                        _releaseLeaseCondition =
                                             new ReleaseLeaseCondition.WhenMembersRemoved(downedNodes);
                                     break;
                             }
@@ -422,7 +415,7 @@ namespace Akka.Cluster.SBR
                                 decision,
                                 reverseDecision);
                             ActOnDecision(reverseDecision);
-                            releaseLeaseCondition = ReleaseLeaseCondition.NoLease.Instance;
+                            _releaseLeaseCondition = ReleaseLeaseCondition.NoLease.Instance;
                         }
 
                         Stash.UnstashAll();
@@ -446,13 +439,13 @@ namespace Akka.Cluster.SBR
 
         private void OnReleaseLeaseResult(bool released)
         {
-            switch (releaseLeaseCondition)
+            switch (_releaseLeaseCondition)
             {
                 case ReleaseLeaseCondition.WhenTimeElapsed rlc:
                     if (released && rlc.Deadline.IsOverdue)
                     {
                         Log.Info("SBR released lease.");
-                        releaseLeaseCondition = ReleaseLeaseCondition.NoLease.Instance; // released successfully
+                        _releaseLeaseCondition = ReleaseLeaseCondition.NoLease.Instance; // released successfully
                     }
 
                     break;
@@ -524,8 +517,8 @@ namespace Akka.Cluster.SBR
                     Strategy.AddUnreachable(m);
                     UpdateReachabilityChangedStats();
                     ResetReachabilityChangedStatsIfAllUnreachableDowned();
-                    if (!reachabilityChangedStats.IsEmpty)
-                        Log.Debug("SBR noticed {0}", reachabilityChangedStats);
+                    if (!_reachabilityChangedStats.IsEmpty)
+                        Log.Debug("SBR noticed {0}", _reachabilityChangedStats);
                 });
             }
         }
@@ -540,8 +533,8 @@ namespace Akka.Cluster.SBR
                     Strategy.AddReachable(m);
                     UpdateReachabilityChangedStats();
                     ResetReachabilityChangedStatsIfAllUnreachableDowned();
-                    if (!reachabilityChangedStats.IsEmpty)
-                        Log.Debug("SBR noticed {0}", reachabilityChangedStats);
+                    if (!_reachabilityChangedStats.IsEmpty)
+                        Log.Debug("SBR noticed {0}", _reachabilityChangedStats);
                 });
             }
         }
@@ -554,13 +547,13 @@ namespace Akka.Cluster.SBR
         private void UpdateReachabilityChangedStats()
         {
             var now = DateTime.UtcNow;
-            if (reachabilityChangedStats.ChangeCount == 0)
-                reachabilityChangedStats = new ReachabilityChangedStats(now, now, 1);
+            if (_reachabilityChangedStats.ChangeCount == 0)
+                _reachabilityChangedStats = new ReachabilityChangedStats(now, now, 1);
             else
-                reachabilityChangedStats = new ReachabilityChangedStats(
-                    reachabilityChangedStats.FirstChangeTimestamp,
+                _reachabilityChangedStats = new ReachabilityChangedStats(
+                    _reachabilityChangedStats.FirstChangeTimestamp,
                     now,
-                    reachabilityChangedStats.ChangeCount + 1
+                    _reachabilityChangedStats.ChangeCount + 1
                 );
         }
 
@@ -576,7 +569,7 @@ namespace Akka.Cluster.SBR
             {
                 Strategy.Add(m);
                 if (m.UniqueAddress.Equals(SelfUniqueAddress))
-                    MutateResponsibilityInfo(() => { selfMemberAdded = true; });
+                    MutateResponsibilityInfo(() => { _selfMemberAdded = true; });
             });
             switch (Strategy)
             {
@@ -617,7 +610,7 @@ namespace Akka.Cluster.SBR
         public void AddWeaklyUp(Member m)
         {
             if (m.UniqueAddress.Equals(SelfUniqueAddress))
-                MutateResponsibilityInfo(() => { selfMemberAdded = true; });
+                MutateResponsibilityInfo(() => { _selfMemberAdded = true; });
             // treat WeaklyUp in same way as joining
             AddJoining(m);
         }
@@ -634,16 +627,16 @@ namespace Akka.Cluster.SBR
 
                     ResetReachabilityChangedStatsIfAllUnreachableDowned();
 
-                    switch (releaseLeaseCondition)
+                    switch (_releaseLeaseCondition)
                     {
                         case ReleaseLeaseCondition.WhenMembersRemoved rlc:
                             var remainingDownedNodes = rlc.Nodes.Remove(m.UniqueAddress);
 
                             if (remainingDownedNodes.IsEmpty)
-                                releaseLeaseCondition =
+                                _releaseLeaseCondition =
                                     new ReleaseLeaseCondition.WhenTimeElapsed(Deadline.Now + ReleaseLeaseAfter);
                             else
-                                releaseLeaseCondition =
+                                _releaseLeaseCondition =
                                     new ReleaseLeaseCondition.WhenMembersRemoved(remainingDownedNodes);
                             break;
                     }
@@ -654,7 +647,7 @@ namespace Akka.Cluster.SBR
         {
             //    implicit val ec: ExecutionContext = internalDispatcher
             if (Strategy.Lease != null)
-                if (!(releaseLeaseCondition is ReleaseLeaseCondition.NoLease))
+                if (!(_releaseLeaseCondition is ReleaseLeaseCondition.NoLease))
                 {
                     Log.Debug("SBR releasing lease");
                     Strategy.Lease.Release().ContinueWith(r => new ReleaseLeaseResult(!r.IsFaulted ? r.Result : false))
@@ -664,7 +657,7 @@ namespace Akka.Cluster.SBR
 
         internal class Tick
         {
-            public static readonly Tick Instance = new Tick();
+            public static readonly Tick Instance = new();
 
             private Tick()
             {
@@ -702,7 +695,7 @@ namespace Akka.Cluster.SBR
         /// </summary>
         protected class AcquireLease
         {
-            public static readonly AcquireLease Instance = new AcquireLease();
+            public static readonly AcquireLease Instance = new();
 
             private AcquireLease()
             {
@@ -744,7 +737,7 @@ namespace Akka.Cluster.SBR
         {
             public class NoLease : IReleaseLeaseCondition
             {
-                public static readonly NoLease Instance = new NoLease();
+                public static readonly NoLease Instance = new();
 
                 private NoLease()
                 {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardMessageRoutingBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,20 +14,21 @@ using Akka.Benchmarks.Configurations;
 using Akka.Cluster.Sharding;
 using Akka.Routing;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
 using static Akka.Cluster.Benchmarks.Sharding.ShardingHelper;
 
 namespace Akka.Cluster.Benchmarks.Sharding
 {
     [Config(typeof(MonitoringConfig))]
+    [SimpleJob(RunStrategy.Monitoring, launchCount: 10, warmupCount: 10)]
     public class ShardMessageRoutingBenchmarks
     {
         [Params(StateStoreMode.Persistence, StateStoreMode.DData)]
         public StateStoreMode StateMode;
 
-        [Params(10000)]
-        public int MsgCount;
+        public const int MsgCount = 10_000;
 
-        public int BatchSize = 20;
+        public const int BatchSize = 20;
 
         private ActorSystem _sys1;
         private ActorSystem _sys2;
@@ -141,21 +142,21 @@ namespace Akka.Cluster.Benchmarks.Sharding
             _batchActor = _sys1.ActorOf(Props.Create(() => new BulkSendActor(tcs, MsgCount)));
         }
 
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = MsgCount)]
         public async Task SingleRequestResponseToLocalEntity()
         {
             for (var i = 0; i < MsgCount; i++)
                 await _shardRegion1.Ask<ShardedMessage>(_messageToSys1);
         }
 
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = MsgCount)]
         public async Task StreamingToLocalEntity()
         {
             _batchActor.Tell(new BulkSendActor.BeginSend(_messageToSys1, _shardRegion1, BatchSize));
             await _batchComplete;
         }
 
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = MsgCount)]
         public async Task SingleRequestResponseToRemoteEntity()
         {
             for (var i = 0; i < MsgCount; i++)
@@ -163,14 +164,14 @@ namespace Akka.Cluster.Benchmarks.Sharding
         }
 
 
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = MsgCount)]
         public async Task SingleRequestResponseToRemoteEntityWithLocalProxy()
         {
             for (var i = 0; i < MsgCount; i++)
                 await _localRouter.Ask<ShardedMessage>(new SendShardedMessage(_messageToSys2.EntityId, _messageToSys2));
         }
 
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = MsgCount)]
         public async Task StreamingToRemoteEntity()
         {
             _batchActor.Tell(new BulkSendActor.BeginSend(_messageToSys2, _shardRegion1, BatchSize));

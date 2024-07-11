@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AlreadyCanceledCancelable.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,8 +15,6 @@ namespace Akka.Actor
     /// </summary>
     internal sealed class AlreadyCanceledCancelable : ICancelable
     {
-        private static readonly AlreadyCanceledCancelable _instance = new AlreadyCanceledCancelable();
-
         private AlreadyCanceledCancelable() { }
 
         /// <inheritdoc/>
@@ -31,10 +29,10 @@ namespace Akka.Actor
         /// <summary>
         /// Gets an instance of an already canceled <see cref="ICancelable"/>.
         /// </summary>
-        public static ICancelable Instance => _instance;
+        public static ICancelable Instance { get; } = new AlreadyCanceledCancelable();
 
         /// <inheritdoc/>
-        public CancellationToken Token => new CancellationToken(true);
+        public CancellationToken Token => new(true);
 
         void ICancelable.CancelAfter(TimeSpan delay)
         {

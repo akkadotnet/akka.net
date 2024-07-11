@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMessageSerializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,9 +10,11 @@ using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
+using Akka.Cluster.Tools.PublishSubscribe.Serialization;
 using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.PublishSubscribe
@@ -57,16 +59,16 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             // TODO: Bucket should accepts IDictionary<string, ValueHolder> instead of ImmutableDictionary<string, ValueHolder>
             var message = new Delta(new List<Bucket>
             {
-                new Bucket(address1, 3, new Dictionary<string, ValueHolder>
+                new(address1, 3, new Dictionary<string, ValueHolder>
                 {
                     {"/user/u1", new ValueHolder(2, u1)},
                     {"/user/u2", new ValueHolder(3, u2)},
                 }.ToImmutableDictionary()),
-                new Bucket(address2, 17, new Dictionary<string, ValueHolder>
+                new(address2, 17, new Dictionary<string, ValueHolder>
                 {
                     {"/user/u3", new ValueHolder(17, u3)}
                 }.ToImmutableDictionary()),
-                new Bucket(address3, 5, new Dictionary<string, ValueHolder>
+                new(address3, 5, new Dictionary<string, ValueHolder>
                 {
                     {"/user/u4", new ValueHolder(4, u4)},
                     {"/user/u5", new ValueHolder(5, null)},
@@ -107,6 +109,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
         private T AssertAndReturn<T>(T message)
         {
             var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(message);
+            serializer.Should().BeOfType<DistributedPubSubMessageSerializer>();
             var serialized = serializer.ToBinary(message);
             return (T)serializer.FromBinary(serialized, serializer.Manifest(message));
         }

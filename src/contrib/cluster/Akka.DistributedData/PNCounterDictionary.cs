@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PNCounterDictionary.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ namespace Akka.DistributedData
         IEquatable<PNCounterDictionary<TKey>>,
         IEnumerable<KeyValuePair<TKey, BigInteger>>, IPNCounterDictionary
     {
-        public static readonly PNCounterDictionary<TKey> Empty = new PNCounterDictionary<TKey>(ORDictionary<TKey, PNCounter>.Empty);
+        public static readonly PNCounterDictionary<TKey> Empty = new(ORDictionary<TKey, PNCounter>.Empty);
 
         /// <summary>
         /// Needs to be internal for serialization purposes
@@ -126,7 +126,7 @@ namespace Akka.DistributedData
         /// If the delta is negative then it will decrement instead of increment.
         /// </summary>
         public PNCounterDictionary<TKey> Increment(UniqueAddress node, TKey key, long delta = 1L) =>
-            new PNCounterDictionary<TKey>(Underlying.AddOrUpdate(node, key, PNCounter.Empty, old => old.Increment(node, delta)));
+            new(Underlying.AddOrUpdate(node, key, PNCounter.Empty, old => old.Increment(node, delta)));
 
         /// <summary>
         /// Decrement the counter with the delta specified.
@@ -140,7 +140,7 @@ namespace Akka.DistributedData
         /// If the delta is negative then it will increment instead of decrement.
         /// </summary>
         public PNCounterDictionary<TKey> Decrement(UniqueAddress node, TKey key, long delta = 1L) =>
-            new PNCounterDictionary<TKey>(Underlying.AddOrUpdate(node, key, PNCounter.Empty, old => old.Decrement(node, delta)));
+            new(Underlying.AddOrUpdate(node, key, PNCounter.Empty, old => old.Decrement(node, delta)));
 
         /// <summary>
         /// Removes an entry from the map.
@@ -155,11 +155,9 @@ namespace Akka.DistributedData
         /// Note that if there is a conflicting update on another node the entry will
         /// not be removed after merge.
         /// </summary>
-        public PNCounterDictionary<TKey> Remove(UniqueAddress node, TKey key) =>
-            new PNCounterDictionary<TKey>(Underlying.Remove(node, key));
+        public PNCounterDictionary<TKey> Remove(UniqueAddress node, TKey key) => new(Underlying.Remove(node, key));
 
-        public PNCounterDictionary<TKey> Merge(PNCounterDictionary<TKey> other) =>
-            new PNCounterDictionary<TKey>(Underlying.Merge(other.Underlying));
+        public PNCounterDictionary<TKey> Merge(PNCounterDictionary<TKey> other) => new(Underlying.Merge(other.Underlying));
 
         public IReplicatedData Merge(IReplicatedData other) =>
             Merge((PNCounterDictionary<TKey>)other);
@@ -173,13 +171,11 @@ namespace Akka.DistributedData
 
         IReplicatedData IRemovedNodePruning.Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => Prune(removedNode, collapseInto);
 
-        public PNCounterDictionary<TKey> Prune(UniqueAddress removedNode, UniqueAddress collapseInto) =>
-            new PNCounterDictionary<TKey>(Underlying.Prune(removedNode, collapseInto));
+        public PNCounterDictionary<TKey> Prune(UniqueAddress removedNode, UniqueAddress collapseInto) => new(Underlying.Prune(removedNode, collapseInto));
 
-        public PNCounterDictionary<TKey> PruningCleanup(UniqueAddress removedNode) =>
-            new PNCounterDictionary<TKey>(Underlying.PruningCleanup(removedNode));
+        public PNCounterDictionary<TKey> PruningCleanup(UniqueAddress removedNode) => new(Underlying.PruningCleanup(removedNode));
 
-        /// <inheritdoc/>
+        
         public bool Equals(PNCounterDictionary<TKey> other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -188,19 +184,19 @@ namespace Akka.DistributedData
             return Equals(Underlying, other.Underlying);
         }
 
-        /// <inheritdoc/>
+        
         public IEnumerator<KeyValuePair<TKey, BigInteger>> GetEnumerator() =>
             Underlying.Select(x => new KeyValuePair<TKey, BigInteger>(x.Key, x.Value.Value)).GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) =>
             obj is PNCounterDictionary<TKey> pairs && Equals(pairs);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Underlying.GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             var sb = new StringBuilder("PNCounterDictionary(");
@@ -306,8 +302,7 @@ namespace Akka.DistributedData
 
         IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
-        public PNCounterDictionary<TKey> ResetDelta() =>
-            new PNCounterDictionary<TKey>(Underlying.ResetDelta());
+        public PNCounterDictionary<TKey> ResetDelta() => new(Underlying.ResetDelta());
 
         #endregion
 

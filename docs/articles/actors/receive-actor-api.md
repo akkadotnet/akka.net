@@ -11,7 +11,7 @@ The Actor Model provides a higher level of abstraction for writing concurrent an
 > [!NOTE]
 > Since Akka.NET enforces parental supervision every actor is supervised and (potentially) the supervisor of its children, it is advisable that you familiarize yourself with [Actor Systems](xref:actor-systems) and [Supervision and Monitoring](xref:supervision) and it may also help to read [Actor References, Paths and Addresses](xref:addressing).
 
-### Defining an Actor class
+### Defining an Actor Class
 
 In order to use the `Receive()` method inside an actor, the actor must inherit from ReceiveActor. Inside the constructor, add a call to `Receive<T>(Action<T> handler)` for every type of message you want to handle:
 
@@ -155,7 +155,7 @@ This strategy is typically declared inside the actor in order to have access to 
 The remaining visible methods are user-overridable life-cycle hooks which are described in the following:
 
 ```csharp
-public override void PreStart()
+protected override void PreStart()
 {
 }
 
@@ -193,7 +193,7 @@ An `IActorRef` always represents an incarnation (path and UID) not just a given 
 
 `ActorSelection` on the other hand points to the path (or multiple paths if wildcards are used) and is completely oblivious to which incarnation is currently occupying it. `ActorSelection` cannot be watched for this reason. It is possible to resolve the current incarnation's ActorRef living under the path by sending an `Identify` message to the `ActorSelection` which will be replied to with an `ActorIdentity` containing the correct reference (see [Identifying Actors via Actor Selection](#identifying-actors-via-actor-selection)). This can also be done with the resolveOne method of the `ActorSelection`, which returns a `Task` of the matching `IActorRef`.
 
-### Lifecycle Monitoring aka DeathWatch
+### Lifecycle Monitoring a.k.a. DeathWatch
 
 In order to be notified when another actor terminates (i.e. stops permanently, not temporary failure and restart), an actor may register itself for reception of the `Terminated` message dispatched by the other actor upon termination (see [Stopping Actors](#stopping-actors)). This service is provided by the DeathWatch component of the actor system.
 
@@ -364,7 +364,7 @@ public class ImmutableMessage
 }
 ```
 
-## Send messages
+## Send Messages
 
 Messages are sent to an Actor through one of the following methods.
 
@@ -378,7 +378,7 @@ Message ordering is guaranteed on a per-sender basis.
 
 In all these methods you have the option of passing along your own `IActorRef`. Make it a practice of doing so because it will allow the receiver actors to be able to respond to your message, since the `Sender` reference is sent along with the message.
 
-## Tell: Fire-forget
+## Tell: Fire-Forget
 
 This is the preferred way of sending messages. No blocking waiting for a message. This gives the best concurrency and scalability characteristics.
 
@@ -403,6 +403,9 @@ Task.WhenAll(tasks).PipeTo(actorC, Self);
 
 This example demonstrates `Ask` together with the `Pipe` Pattern on tasks, because this is likely to be a common combination. Please note that all of the above is completely non-blocking and asynchronous: `Ask` produces a `Task`, two of which are awaited until both are completed, and when that happens, a new `Result` object is forwarded to another actor.
 
+> [!NOTE]
+> While `Ask` waits for a response, that does not ensure it receives any kind of priority. Messages sent via `Ask` queue in actor mailboxes the same way that messages sent via `Tell` do. You may need to adapt your actor hierarchy if `Ask` messages might be impeded by a large queue in an actor's mailbox.
+
 Using `Ask` will send a message to the receiving Actor as with `Tell`, and the receiving actor must reply with `Sender.Tell(reply, Self)` in order to complete the returned `Task` with a value. The `Ask` operation involves creating an internal actor for handling this reply, which needs to have a timeout after which it is destroyed in order not to leak resources; see more below.
 
 > [!WARNING]
@@ -416,7 +419,7 @@ try
 }
 catch (Exception e)
 {
-    Sender.Tell(new Failure { Exception = e }, Self);
+    Sender.Tell(new Akka.Actor.Status.Failure(e), Self);
 }
 ```
 
@@ -427,7 +430,7 @@ For more information on Tasks, check out the [MSDN documentation](https://msdn.m
 > [!WARNING]
 > When using task callbacks inside actors, you need to carefully avoid closing over the containing actor’s reference, i.e. do not call methods or access mutable state on the enclosing actor from within the callback. This would break the actor encapsulation and may introduce synchronization bugs and race conditions because the callback will be scheduled concurrently to the enclosing actor. Unfortunately there is not yet a way to detect these illegal accesses at compile time.
 
-### Forward message
+### Forward Message
 
 You can forward a message from one actor to another. This means that the original sender address/reference is maintained even though the message is going through a 'mediator'. This can be useful when writing actors that work as routers, load-balancers, replicators etc.
 
@@ -435,7 +438,7 @@ You can forward a message from one actor to another. This means that the origina
 target.Forward(result);
 ```
 
-## Receive messages
+## Receive Messages
 
 To receive a message you should create a `Receive` handler in a constructor.
 
@@ -443,7 +446,7 @@ To receive a message you should create a `Receive` handler in a constructor.
 Receive<string>(ms => Console.WriteLine("Received message: " + msg));
 ```
 
-### Handler priority
+### Handler Priority
 
 If more than one handler matches, the one that appears first is used while the others are ignored.
 
@@ -456,7 +459,7 @@ Receive<object>(o => Console.WriteLine("Received object: " + o));      //3
 > **Example**
 > The actor receives a message of type string. Only the first handler is invoked, even though all three handlers can handle that message.
 
-### Using predicates
+### Using Predicates
 
 By specifying a predicate, you can choose which messages to handle.
 
@@ -491,7 +494,7 @@ Receive<string>(s => s.Length > 5, s => Console.WriteLine("Received string: " + 
 Receive<string>(s => Console.WriteLine("Received string: " + s), s => s.Length > 5);
 ```
 
-### Unmatched messages
+### Unmatched Messages
 
 If the actor receives a message for which no handler matches, the unhandled message is published to the EventStream wrapped in an `UnhandledMessage`. To change this behavior override `Unhandled(object message)`
 
@@ -525,10 +528,10 @@ Receive<string>(s => Console.WriteLine("Received string: " + s);  //This will ca
 
 ```csharp
 ReceiveAny(o => Console.WriteLine("Received object: " + o);
-Receive<object>(0 => Console.WriteLine("Received object: " + o);
+Receive<object>(o => Console.WriteLine("Received object: " + o);
 ```
 
-## Reply to messages
+## Reply to Messages
 
 If you want to have a handle for replying to a message, you can use `Sender`, which gives you an `IActorRef`. You can reply by sending to that `IActorRef` with `Sender.Tell(replyMsg, Self)`. You can also store the `IActorRef` for replying later, or passing on to other actors. If there is no sender (a message was sent without an actor or task context) then the sender defaults to a 'dead-letter' actor ref.
 
@@ -542,7 +545,7 @@ Receive<string>(() =>
 })
 ```
 
-## Receive timeout
+## Receive Timeout
 
 The `IActorContext` `SetReceiveTimeout` defines the inactivity timeout after which the sending of a `ReceiveTimeout` message is triggered. When specified, the receive function should be able to handle an `Akka.Actor.ReceiveTimeout` message.
 
@@ -573,7 +576,7 @@ public class MyActor : ReceiveActor
 }
 ```
 
-## Stopping actors
+## Stopping Actors
 
 Actors are stopped by invoking the `Stop` method of a `ActorRefFactory`, i.e. `ActorContext` or `ActorSystem`. Typically the context is used for stopping child actors and the system for stopping top level actors. The actual termination of the actor is performed asynchronously, i.e. stop may return before the actor is stopped.
 
@@ -790,12 +793,15 @@ static void Main(string[] args)
 
 ## Stash
 
-The `IWithUnboundedStash` interface enables an actor to temporarily stash away messages that can not or should not be handled using the actor's current behavior. Upon changing the actor's message handler, i.e., right before invoking `Context.BecomeStacked()` or `Context.UnbecomeStacked()`;, all stashed messages can be "un-stashed", thereby prepending them to the actor's mailbox. This way, the stashed messages can be processed in the same order as they have been received originally. An actor that implements `IWithUnboundedStash` will automatically get a dequeue-based mailbox.
+The `IWithStash` interface enables an actor to temporarily stash away messages that can not or should not be handled using the actor's current behavior. Upon changing the actor's message handler, i.e., right before invoking `Context.Become()` or `Context.Unbecome()`, all stashed messages can be "un-stashed", thereby prepending them to the actor's mailbox. This way, the stashed messages can be processed in the same order as they have been received originally.
 
-Here is an example of the `IWithUnboundedStash` interface in action:
+> [!NOTE]
+> The interface `IWithStash` implements the marker interface `IRequiresMessageQueue<IDequeBasedMessageQueueSemantics>` which requests the system to automatically choose a deque-based mailbox implementation for the actor (defaults to an unbounded deque mailbox). If you want more control over the mailbox, see the documentation on mailboxes: [Mailboxes](xref:mailboxes).
+
+Here is an example of the `IWithStash` interface in action:
 
 ```csharp
-public class ActorWithProtocol : ReceiveActor, IWithUnboundedStash
+public class ActorWithProtocol : ReceiveActor, IWithStash
 {
     public IStash Stash { get; set; }
 
@@ -827,11 +833,50 @@ public class ActorWithProtocol : ReceiveActor, IWithUnboundedStash
 }
 ```
 
-Invoking `Stash()` adds the current message (the message that the actor received last) to the actor's stash. It is typically invoked when handling the default case in the actor's message handler to stash messages that aren't handled by the other cases. It is illegal to stash the same message twice; to do so results in an `IllegalStateException` being thrown. The stash may also be bounded in which case invoking `Stash()` may lead to a capacity violation, which results in a `StashOverflowException`. The capacity of the stash can be configured using the stash-capacity setting (an `Int`) of the mailbox's configuration.
+Invoking `Stash()` adds the current message (the message that the actor received last) to the actor's stash. It is typically invoked when handling the default case in the actor's message handler to stash messages that aren't handled by the other cases. It is illegal to stash the same message twice; to do so results in an `IllegalStateException` being thrown. The stash may also be bounded in which case invoking `Stash()` may lead to a capacity violation, which results in a `StashOverflowException`. The capacity of the stash can be configured using the stash-capacity setting (an `int`) of the mailbox's configuration.
 
 Invoking `UnstashAll()` enqueues messages from the stash to the actor's mailbox until the capacity of the mailbox (if any) has been reached (note that messages from the stash are prepended to the mailbox). In case a bounded mailbox overflows, a `MessageQueueAppendFailedException` is thrown. The stash is guaranteed to be empty after calling `UnstashAll()`.
 
-Note that the `stash` is part of the ephemeral actor state, unlike the mailbox. Therefore, it should be managed like other parts of the actor's state which have the same property. The `IWithUnboundedStash` interface implementation of `PreRestart` will call `UnstashAll()`, which is usually the desired behavior.
+Note that the stash is part of the ephemeral actor state, unlike the mailbox. Therefore, it should be managed like other parts of the actor's state which have the same property.
+
+However, the `IWithStash` interface implementation of `PreRestart` will call `UnstashAll()`. This means that before the actor restarts, it will transfer all stashed messages back to the actor’s mailbox.
+
+The result of this is that when an actor is restarted, any stashed messages will be delivered to the new incarnation of the actor. This is usually the desired behavior.
+
+> [!NOTE]
+> If you want to enforce that your actor can only work with an unbounded stash, then you should use the `IWithUnboundedStash` interface instead.
+
+### Bounded Stashes
+
+In certain scenarios, it might be helpful to put a limit on the size of the `IStash` inside your actor. You can configure a bounded stash via the following actor definition:
+
+```csharp
+public class StashingActorWithOverflow : UntypedActor, IWithStash
+```
+
+The `IWithStash` interface will default to *unbounded* stash behavior, but the the `Props` class or via `akka.actor.deployment` we can easily configure this actor to impose a limit on its stash capacity:
+
+```csharp
+// create an actor with a stash size of 2
+IActorRef stasher = Sys.ActorOf(Props.Create<StashingActorWithOverflow>().WithStashCapacity(2));
+```
+
+Or via HOCON:
+
+```hocon
+akka.actor.deployment{{
+    /configStashingActor {{
+        stash-capacity = 2
+    }}
+}}
+```
+
+Either of these settings will configure the `IStash` to only have a maximum capacity of 2 items. If a third item is attempted to be stashed the `IStash` will throw a `StashOverflowException`.
+
+> [!TIP]
+> You can always check to see if your `IStash` is approaching its capacity by checking the `IStash.IsFull`, `IStash.Capacity`, or `IStash.Count` properties.
+
+If you attempt to apply a maximum stash capacity to an `IWithUnboundedStash` actor then the setting will be ignored.
 
 ## Killing an Actor
 
@@ -850,25 +895,25 @@ An exception can be thrown while a message is being processed by an actor, e.g. 
 
 When this occurs and the exception is not handled via a `try` / `catch` block, the actor's parent will be notified that its child failed with a specific exception type and will use its [supervision strategy](xref:supervision#what-supervision-means) to restart that child.
 
-### What happens to the Message
+### What Happens to the Message
 
 If an exception is thrown while a message is being processed (i.e. taken out of its mailbox and handed over to the current behavior), then this message will be lost. It is important to understand that it is not put back on the mailbox. So if you want to retry processing of a message, you need to deal with it yourself by catching the exception and retry your flow. Make sure that you put a bound on the number of retries since you don't want a system to livelock (so consuming a lot of cpu cycles without making progress).
 
-### What happens to the mailbox
+### What Happens to the Mailbox
 
 If an exception is thrown while a message is being processed, nothing happens to the mailbox. If the actor is restarted, the same mailbox will be there. So all messages on that mailbox will be there as well.
 
-### What happens to the actor
+### What Happens to the Actor
 
 If code within an actor throws an exception, that actor is suspended and the supervision process is started (see Supervision and Monitoring). Depending on the supervisor’s decision the actor is resumed (as if nothing happened), restarted (wiping out its internal state and starting from scratch) or terminated.
 
-## Initialization patterns
+## Initialization Patterns
 
 The rich lifecycle hooks of `Actors` provide a useful toolkit to implement various initialization patterns. During the lifetime of an `IActorRef`, an actor can potentially go through several restarts, where the old instance is replaced by a fresh one, invisibly to the outside observer who only sees the `IActorRef`.
 
 One may think about the new instances as "incarnations". Initialization might be necessary for every incarnation of an actor, but sometimes one needs initialization to happen only at the birth of the first instance when the `IActorRef` is created. The following sections provide patterns for different initialization needs.
 
-### Initialization via constructor
+### Initialization via Constructor
 
 Using the constructor for initialization has various benefits. First of all, it makes it possible to use readonly fields to store any state that does not change during the life of the actor instance, making the implementation of the actor more robust. The constructor is invoked for every incarnation of the actor, therefore the internals of the actor can always assume that proper initialization happened. This is also the drawback of this approach, as there are cases when one would like to avoid re-initializing internals on restart. For example, it is often useful to preserve child actors across restarts. The following section provides a pattern for this case.
 
@@ -903,7 +948,7 @@ Please note, that the child actors are *still restarted*, but no new `IActorRef`
 
 For more information see [What Restarting Means](xref:supervision#what-restarting-means).
 
-#### Initialization via message passing
+#### Initialization via Message Passing
 
 There are cases when it is impossible to pass all the information needed for actor initialization in the constructor, for example in the presence of circular dependencies. In this case the actor should listen for an initialization message, and use `Become()` or a finite state-machine state transition to encode the initialized and uninitialized states of the actor.
 

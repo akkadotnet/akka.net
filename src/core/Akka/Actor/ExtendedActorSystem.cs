@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ExtendedActorSystem.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -43,7 +43,6 @@ namespace Akka.Actor
         /// Gets the actor producer pipeline resolver for current actor system. It may be used by
         /// Akka plugins to inject custom behavior directly into actor creation chain.
         /// </summary>
-        [Obsolete("Actor producer pipeline API will be removed in v1.5.")]
         public abstract ActorProducerPipelineResolver ActorPipelineResolver { get; }
 
         /// <summary>
@@ -70,6 +69,8 @@ namespace Akka.Actor
         /// Aggressively terminates an <see cref="ActorSystem"/> without waiting for the normal shutdown process to run as-is.
         /// </summary>
         public abstract void Abort();
+
+        public abstract string PrintTree();
 
         //TODO: Missing threadFactory, dynamicAccess, printTree
         //  /**

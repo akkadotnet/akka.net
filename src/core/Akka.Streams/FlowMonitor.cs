@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowMonitor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ namespace Akka.Streams
             /// <summary>
             /// TBD
             /// </summary>
-            public static Initialized Instance { get; } = new Initialized();
+            public static Initialized Instance { get; } = new();
 
             private Initialized()
             {
@@ -98,7 +98,7 @@ namespace Akka.Streams
             /// <summary>
             /// TBD
             /// </summary>
-            public static Finished Instance { get; } = new Finished();
+            public static Finished Instance { get; } = new();
 
             private Finished()
             {

@@ -30,7 +30,7 @@ namespace Samples.Cluster.Simple
 
 We've shown a number of examples and referred to many different types of `ClusterEvent` messages throughout *Akka.NET Clustering* thus far. We're going to take a moment to show you all of the different types of messages you can subscribe to from the `Cluster` actor system extension and how the current state of the cluster can be replayed to new subscribers.
 
-### Subscribing and Unsubscribing from Cluster Gossip
+### Subscribing and Unsubscribing From Cluster Gossip
 
 We've seen a few code samples that showed actors who subscribed to gossip messages from the [`Cluster`](http://api.getakka.net/docs/stable/html/6FA3E0EC.htm "Akka.NET Stable API Docs - Cluster Class") actor system extension, but let's review the `Subscribe` and `Unsubscribe` methods and see what they do.
 
@@ -43,7 +43,7 @@ This is an example of subscribing to `IMemberEvents` from the `Cluster`:
 Cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent) });
 ```
 
-#### Unsubscribing from Gossip
+#### Unsubscribing From Gossip
 
 Let's suppose you need to unsubscribe from cluster gossip - here's how you can accomplish that.
 
@@ -66,11 +66,11 @@ Gossip events fall into three categories:
 
 ### Cluster Event Categories
 
-#### Member events
+#### Member Events
 
 Member events refer to nodes joining / leaving / being removed from the cluster. These events are used by [Akka.Cluster routers](xref:cluster-routing) to automatically adjust their routee lists.
 
-#### Reachability events
+#### Reachability Events
 
 Reachability events refer to connectivity between nodes.
 

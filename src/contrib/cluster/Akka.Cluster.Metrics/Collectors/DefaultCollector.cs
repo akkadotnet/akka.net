@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DefaultCollector.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ namespace Akka.Cluster.Metrics.Collectors
         {
         }
 
-        /// <inheritdoc />
+        
         public void Dispose()
         {
             _cpuWatch.Stop();
@@ -55,25 +55,38 @@ namespace Akka.Cluster.Metrics.Collectors
         {
             using (var process = Process.GetCurrentProcess())
             {
-                var metrics = new List<NodeMetrics.Types.Metric>()
-                {
-                    // Memory
-                    // Forcing garbage collection to keep metrics more resilent to occasional allocations
-                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, GC.GetTotalMemory(true)).Value,
-                    // VirtualMemorySize64 is not best idea here...
-                    NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.VirtualMemorySize64).Value,
-                    // CPU Processors
-                    NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount).Value,
-                };
+                process.Refresh();
+                var metrics = new List<NodeMetrics.Types.Metric>();
+                
+                var totalMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, GC.GetTotalMemory(true));
+                if(totalMemory.HasValue)
+                    metrics.Add(totalMemory.Value);
+                    
+                var availableMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.WorkingSet64 + process.PagedMemorySize64);
+                if(availableMemory.HasValue)
+                    metrics.Add(availableMemory.Value);
+
+                var processorCount = NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount);
+                if(processorCount.HasValue)
+                    metrics.Add(processorCount.Value);
 
                 if (process.MaxWorkingSet != IntPtr.Zero)
-                    metrics.Add(NodeMetrics.Types.Metric.Create(StandardMetrics.MaxMemoryRecommended, process.MaxWorkingSet.ToInt64()).Value);
+                {
+                    var workingSet = NodeMetrics.Types.Metric.Create(StandardMetrics.MaxMemoryRecommended, process.MaxWorkingSet.ToInt64());
+                    if(workingSet.HasValue)
+                        metrics.Add(workingSet.Value);
+                }
 
                 var (processCpuUsage, totalCpuUsage) = GetCpuUsages(process.Id);
+                
                 // CPU % by process
-                metrics.Add(NodeMetrics.Types.Metric.Create(StandardMetrics.CpuProcessUsage, processCpuUsage).Value);
+                var cpuUsage = NodeMetrics.Types.Metric.Create(StandardMetrics.CpuProcessUsage, processCpuUsage);
+                if(cpuUsage.HasValue)
+                    metrics.Add(cpuUsage.Value);
+                
                 // CPU % by all processes that are used for overall CPU capacity calculation
-                metrics.Add(NodeMetrics.Types.Metric.Create(StandardMetrics.CpuTotalUsage, totalCpuUsage).Value);
+                var totalCpu = NodeMetrics.Types.Metric.Create(StandardMetrics.CpuTotalUsage, totalCpuUsage);
+                metrics.Add(totalCpu.Value);
             
                 return new NodeMetrics(_address, DateTime.UtcNow.ToTimestamp(), metrics);
             }
@@ -85,7 +98,7 @@ namespace Akka.Cluster.Metrics.Collectors
             
             try
             {
-                TimeSpan measureStartTime;
+                TimeSpan measureStartTime = TimeSpan.Zero;
                 TimeSpan measureEndTime;
                 ImmutableDictionary<int, TimeSpan> currentCpuTimings;
                 

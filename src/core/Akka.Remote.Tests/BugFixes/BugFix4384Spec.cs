@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BugFix4384Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Tests.Actor
+namespace Akka.Remote.Tests.BugFixes
 {
     public class BugFix4384Spec : TestKit.Xunit2.TestKit
     {
@@ -47,12 +47,19 @@ namespace Akka.Tests.Actor
             InitializeLogger(Sys2);
         }
 
+        protected override void AfterAll()
+        {
+            base.AfterAll();
+            Shutdown(Sys1);
+            Shutdown(Sys2);
+        }
+
         [Fact]
         public async Task Ask_from_local_actor_without_remote_association_should_work()
         {
             // create actor in Sys1
             const string actorName = "actor1";
-            Sys1.ActorOf(dsl => dsl.ReceiveAny((m, ctx) => TestActor.Tell(m)), actorName);
+            Sys1.ActorOf(dsl => dsl.ReceiveAny((m, _) => TestActor.Tell(m)), actorName);
             
             // create ActorSelection from Sys2 --> Sys1
             var sel = Sys2.ActorSelection(new RootActorPath(Sys1Address) / "user" / actorName);
@@ -84,24 +91,27 @@ namespace Akka.Tests.Actor
             var secondActor = Sys1.ActorOf(act => act.ReceiveAny((o, ctx) => ctx.Sender.Tell(o)), "foo");
 
             Sys2.ActorSelection(new RootActorPath(Sys1Address) / "user" / secondActor.Path.Name).Tell("foo", sys2Probe);
-            sys2Probe.ExpectMsg("foo");
+            await sys2Probe.ExpectMsgAsync("foo");
 
             // have ActorSystem2 message it via tell
             var sel = Sys2.ActorSelection(new RootActorPath(Sys1Address) / "user" / "router1");
             sel.Tell(new HashableString("foo"));
-            ExpectMsg<HashableString>(str => str.Str.Equals("foo"));
+            await ExpectMsgAsync<HashableString>(str => str.Str.Equals("foo"));
 
-            // have ActorSystem2 message it via Ask
-            sel.Ask(new Identify("bar2"), TimeSpan.FromSeconds(3)).PipeTo(sys2Probe);
-            var remoteRouter = sys2Probe.ExpectMsg<ActorIdentity>(x => x.MessageId.Equals("bar2"), TimeSpan.FromSeconds(5)).Subject;
+            // have ActorSystem2 message it via Ask. Task is intentionally not awaited.
+            var task = sel.Ask(new Identify("bar2"), TimeSpan.FromSeconds(3)).PipeTo(sys2Probe);
+            var remoteRouter = (await sys2Probe.ExpectMsgAsync<ActorIdentity>(x => x.MessageId.Equals("bar2"), TimeSpan.FromSeconds(5))).Subject;
 
             var s2Actor = Sys2.ActorOf(act =>
             {
-                act.ReceiveAny((o, ctx) =>
-                    sel.Ask<ActorIdentity>(new Identify(o), TimeSpan.FromSeconds(3)).PipeTo(sys2Probe));
+                act.ReceiveAny((o, _) =>
+                {
+                    // Task is intentionally not awaited.
+                    var task = sel.Ask<ActorIdentity>(new Identify(o), TimeSpan.FromSeconds(3)).PipeTo(sys2Probe);
+                });
             });
             s2Actor.Tell("hit");
-            sys2Probe.ExpectMsg<ActorIdentity>(x => x.MessageId.Equals("hit"), TimeSpan.FromSeconds(5));
+            await sys2Probe.ExpectMsgAsync<ActorIdentity>(x => x.MessageId.Equals("hit"), TimeSpan.FromSeconds(5));
         }
 
         class ReporterActor : ReceiveActor

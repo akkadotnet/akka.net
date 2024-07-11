@@ -1,24 +1,30 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\common.props" />
-  <PropertyGroup>
-    <AssemblyTitle>Akka.Remote</AssemblyTitle>
-    <Description>Remote actor support for Akka.NET</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
-    <PackageTags>$(AkkaPackageTags);network</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
+    <PropertyGroup>
+        <Description>Remoting support for Akka.NET. Allows actors to communicate over the network.</Description>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <PackageTags>$(AkkaPackageTags);network</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+    <ItemGroup>
+        <EmbeddedResource Include="Configuration\Remote.conf" />
+        <ProjectReference Include="..\Akka\Akka.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="DotNetty.Handlers" Version="0.7.6" />
+        <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
+        <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
   <ItemGroup>
-    <EmbeddedResource Include="Configuration\Remote.conf" />
-    <ProjectReference Include="..\Akka\Akka.csproj" />
+    <Protobuf Access="internal" Include="../../protobuf/ContainerFormats.proto" />
+    <Protobuf Access="internal" Include="../../protobuf/SystemMessageFormats.proto" />
+    <Protobuf Access="internal" Include="../../protobuf/WireFormats.proto" />
+
   </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="DotNetty.Handlers" Version="0.6.0" />
-    <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
-  </ItemGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup>
-    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-  </PropertyGroup>
+    <PropertyGroup>
+        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    </PropertyGroup>
 </Project>

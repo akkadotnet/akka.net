@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Inbox.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
-using Akka.Configuration;
 using Akka.Configuration;
 
 namespace Akka.Actor
@@ -178,7 +177,7 @@ namespace Akka.Actor
         // a specific predicate (even if it's in middle of queue), and current queue implementation won't provide that in easy way.
 
 
-        private readonly LinkedList<T> _inner = new LinkedList<T>();
+        private readonly LinkedList<T> _inner = new();
 
         /// <inheritdoc/>
         public IEnumerator<T> GetEnumerator()
@@ -316,12 +315,10 @@ namespace Akka.Actor
     /// </summary>
     internal class DeadlineComparer : IComparer<IQuery>
     {
-        private static readonly DeadlineComparer _instance = new DeadlineComparer();
-
         /// <summary>
         /// The singleton instance of this comparer
         /// </summary>
-        public static DeadlineComparer Instance { get { return _instance; } }
+        public static DeadlineComparer Instance { get; } = new();
 
         private DeadlineComparer()
         {
@@ -557,7 +554,7 @@ namespace Akka.Actor
             return Receiver.Ask(new Get(_system.Scheduler.MonotonicClock + timeout), Timeout.InfiniteTimeSpan);
         }
 
-        /// <inheritdoc/>
+      
         public void Dispose()
         {
             Dispose(true);

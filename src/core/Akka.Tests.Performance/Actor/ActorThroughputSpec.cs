@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorThroughputSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,50 +19,6 @@ namespace Akka.Tests.Performance.Actor
     public class ActorThroughputSpec
     {
         #region Actor classes
-        internal class BenchmarkActorBasePatternMatchActor : ActorBase
-        {
-            private readonly Counter _counter;
-            private readonly long _maxExpectedMessages;
-            private long _currentMessages = 0;
-            private readonly ManualResetEventSlim _resetEvent;
-
-            public BenchmarkActorBasePatternMatchActor(Counter counter, long maxExpectedMessages, ManualResetEventSlim resetEvent)
-            {
-                _counter = counter;
-                _maxExpectedMessages = maxExpectedMessages;
-                _resetEvent = resetEvent;
-            }
-
-            protected override bool Receive(object message)
-            {
-                return message.Match()
-                    .With<string>(IncrementAndCheck)
-                    .With<int>(IncrementAndCheck)
-                    .With<SimpleData>(simpleDataMessage =>
-                    {
-                        if (simpleDataMessage.Age > 20)
-                        {
-                            IncrementAndCheck();
-                        }
-                        else
-                        {
-                            IncrementAndCheck();
-                        }
-                    })
-                    .Default(o => IncrementAndCheck())
-                    .WasHandled;
-            }
-
-            private void IncrementAndCheck()
-            {
-                _counter.Increment();
-                if (++_currentMessages == _maxExpectedMessages)
-                    _resetEvent.Set();
-            }
-
-            public static Props Props(Counter counter, long maxExpectedMessages, ManualResetEventSlim resetEvent) => Akka.Actor.Props.Create(
-                () => new BenchmarkActorBasePatternMatchActor(counter, maxExpectedMessages, resetEvent));
-        }
 
         internal class BenchmarkUntypedActor : UntypedActor
         {
@@ -80,19 +36,16 @@ namespace Akka.Tests.Performance.Actor
 
             protected override void OnReceive(object message)
             {
-                if (message is string)
+                if (message is string stringMessage)
                 {
-                    string stringMessage = (string)message;
                     IncrementAndCheck();
                 }
-                else if (message is int)
+                else if (message is int intMessage)
                 {
-                    int intMessage = (int)message;
                     IncrementAndCheck();
                 }
-                else if (message is SimpleData)
+                else if (message is SimpleData simpleDataMessage)
                 {
-                    SimpleData simpleDataMessage = (SimpleData)message;
                     if (simpleDataMessage.Age > 20)
                     {
                         IncrementAndCheck();
@@ -132,11 +85,11 @@ namespace Akka.Tests.Performance.Actor
                 _maxExpectedMessages = maxExpectedMessages;
                 _resetEvent = resetEvent;
 
-                Receive<string>(stringMessage => IncrementAndCheck());
-                Receive<int>(intMessage => IncrementAndCheck());
-                Receive<SimpleData>(simpleDataMessage => simpleDataMessage.Age > 20, simpleDataMessage => IncrementAndCheck());
-                Receive<SimpleData>(simpleDataMessage => simpleDataMessage.Age <= 20, simpleDataMessage => IncrementAndCheck());
-                ReceiveAny(message => IncrementAndCheck());
+                Receive<string>(_ => IncrementAndCheck());
+                Receive<int>(_ => IncrementAndCheck());
+                Receive<SimpleData>(simpleDataMessage => simpleDataMessage.Age > 20, _ => IncrementAndCheck());
+                Receive<SimpleData>(simpleDataMessage => simpleDataMessage.Age <= 20, _ => IncrementAndCheck());
+                ReceiveAny(_ => IncrementAndCheck());
             }
 
             private void IncrementAndCheck()
@@ -192,21 +145,20 @@ namespace Akka.Tests.Performance.Actor
             public int Age { get; }
         }
 
-        private SimpleData dataExample = new SimpleData("John", 25);
+        private SimpleData dataExample = new("John", 25);
         private int intExample = 343;
         private string stringExample = "just_string";
 
         private const string MailboxCounterName = "MessageReceived";
         private const long MailboxMessageCount = 10000000;
         private Counter _mailboxThroughput;
-        private readonly ManualResetEventSlim _resetEvent = new ManualResetEventSlim(false);
+        private readonly ManualResetEventSlim _resetEvent = new(false);
 
-        private IActorRef _actorBasePatternMatchActorRef;
         private IActorRef _untypedActorRef;
         private IActorRef _receiveActorRef;
         private IActorRef _minimalActorRef;
 
-        private static readonly AtomicCounter Counter = new AtomicCounter(0);
+        private static readonly AtomicCounter Counter = new(0);
         protected ActorSystem System;
 
         [PerfSetup]
@@ -215,28 +167,9 @@ namespace Akka.Tests.Performance.Actor
             _mailboxThroughput = context.GetCounter(MailboxCounterName);
             System = ActorSystem.Create($"{GetType().Name}{Counter.GetAndIncrement()}");
 
-            _actorBasePatternMatchActorRef = System.ActorOf(BenchmarkActorBasePatternMatchActor.Props(_mailboxThroughput, MailboxMessageCount * 3, _resetEvent));
             _untypedActorRef = System.ActorOf(BenchmarkUntypedActor.Props(_mailboxThroughput, MailboxMessageCount * 3, _resetEvent));
             _receiveActorRef = System.ActorOf(BenchmarkReceiveActor.Props(_mailboxThroughput, MailboxMessageCount * 3, _resetEvent));
             _minimalActorRef = new BenchmarkMinimalActorRef(_mailboxThroughput, MailboxMessageCount, _resetEvent);
-        }
-
-        [PerfBenchmark(
-            Description = "Measures the throughput of an ActorBase + Pattern match class",
-            RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement,
-            RunTimeMilliseconds = 1000)]
-        [CounterMeasurement(MailboxCounterName)]
-        [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
-        public void ActorBase_PatternMatch_Throughput(BenchmarkContext context)
-        {
-            for (var i = 0; i < MailboxMessageCount;)
-            {
-                _actorBasePatternMatchActorRef.Tell(dataExample);
-                _actorBasePatternMatchActorRef.Tell(intExample);
-                _actorBasePatternMatchActorRef.Tell(stringExample);
-                ++i;
-            }
-            _resetEvent.Wait(); //wait up to a second
         }
 
         [PerfBenchmark(

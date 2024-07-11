@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpOperationsBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ using BenchmarkDotNet.Engines;
 namespace Akka.Benchmarks
 {
     [Config(typeof(MicroBenchmarkConfig))]
-    [SimpleJob(warmupCount: 1, invocationCount: 1, launchCount: 1, runStrategy: RunStrategy.Monitoring, targetCount: 100)]
+    [SimpleJob(warmupCount: 1, invocationCount: 1, launchCount: 1, runStrategy: RunStrategy.Monitoring)]
     public class TcpOperationsBenchmarks
     {
         private ActorSystem _system;
@@ -83,7 +83,7 @@ namespace Akka.Benchmarks
                 Context.System.Tcp().Tell(new Tcp.Bind(Self, new IPEndPoint(IPAddress.Any, port)));
                 
                 Receive<Tcp.Bound>(_ => { });
-                Receive<Tcp.Connected>(connected =>
+                Receive<Tcp.Connected>(_ =>
                 {
                     var connection = Context.ActorOf(Props.Create(() => new EchoConnection(Sender)));
                     Sender.Tell(new Tcp.Register(connection));
@@ -104,7 +104,7 @@ namespace Akka.Benchmarks
 
         private class ClientCoordinator : ReceiveActor
         {
-            private readonly HashSet<IActorRef> _waitingChildren = new HashSet<IActorRef>();
+            private readonly HashSet<IActorRef> _waitingChildren = new();
             private IActorRef _requester;
             
             public ClientCoordinator(string host, int port, int clientsCount)

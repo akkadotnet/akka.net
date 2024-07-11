@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestUtils.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ namespace Akka.Streams.TestKit
         public static IEnumerable<IPEndPoint> TemporaryServerAddresses(int numberOfAddresses,
             string hostName = "127.0.0.1", bool udp = false)
         {
-            return Enumerable.Range(0, numberOfAddresses).Select(i => TemporaryServerAddress(hostName, udp));
+            return Enumerable.Range(0, numberOfAddresses).Select(_ => TemporaryServerAddress(hostName, udp));
         }
     }
 }

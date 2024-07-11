@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -91,7 +91,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public Mailbox Mailbox => Volatile.Read(ref _mailboxDoNotCallMeDirectly);
+        public Mailbox Mailbox => _mailboxDoNotCallMeDirectly;
 
         /// <summary>
         /// TBD
@@ -104,7 +104,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        protected ActorBase Actor { get { return _actor; } }
+        internal ActorBase Actor { get { return _actor; } }
         /// <summary>
         /// TBD
         /// </summary>
@@ -189,7 +189,7 @@ namespace Akka.Actor
              * Create the mailbox and enqueue the Create() message to ensure that
              * this is processed before anything else.
              */
-            var mailbox = Dispatcher.CreateMailbox(this, mailboxType);
+            var mailbox = MessageDispatcher.CreateMailbox(this, mailboxType);
 
             Create createMessage;
             /*
@@ -355,6 +355,7 @@ namespace Akka.Actor
 
             // Apply default of custom behaviors to actor.
             var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
+
             pipeline.AfterActorIncarnated(actor, this);
 
             if (actor is IInitializableActor initializableActor)
@@ -481,19 +482,6 @@ namespace Akka.Actor
         {
             actor?.Unclear();
         }
-        /// <summary>
-        /// INTERNAL API
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Not used. Will be removed in Akka.NET v1.5.")]
-        public static NameAndUid SplitNameAndUid(string name)
-        {
-            var i = name.IndexOf('#');
-            return i < 0
-                ? new NameAndUid(name, UndefinedUid)
-                : new NameAndUid(name.Substring(0, i), Int32.Parse(name.Substring(i + 1)));
-        }
 
         /// <summary>
         /// INTERNAL API
@@ -528,11 +516,17 @@ namespace Akka.Actor
             return current != null ? current.Sender : ActorRefs.NoSender;
         }
 
+        #nullable enable
         private Envelope SerializeAndDeserialize(Envelope envelope)
         {
-            DeadLetter deadLetter;
-            var unwrapped = (deadLetter = envelope.Message as DeadLetter) != null ? deadLetter.Message : envelope.Message;
-
+            // in case someone has an IWrappedMessage that ALSO implements INoSerializationVerificationNeeded
+            if(envelope.Message is INoSerializationVerificationNeeded)
+                return envelope;
+            
+            // recursively unwraps message, no need to check for DeadLetter because DeadLetter inherits IWrappedMessage
+            var unwrapped = WrappedMessage.Unwrap(envelope.Message);
+            
+            // don't do serialization verification if the underlying type doesn't require it
             if (unwrapped is INoSerializationVerificationNeeded)
                 return envelope;
 
@@ -546,11 +540,18 @@ namespace Akka.Actor
                 throw new SerializationException($"Failed to serialize and deserialize payload object [{unwrapped.GetType()}]. Envelope: [{envelope}], Actor type: [{Actor.GetType()}]", e);
             }
 
-            if (deadLetter != null)
-                return new Envelope(new DeadLetter(deserializedMsg, deadLetter.Sender, deadLetter.Recipient), envelope.Sender);
-            return new Envelope(deserializedMsg, envelope.Sender);
+            // Check that this message was ever wrapped
+            if (ReferenceEquals(envelope.Message, unwrapped))
+                return new Envelope(deserializedMsg, envelope.Sender);
 
+            // In the case above this one, we're able to deserialize the message, and we returned that
+            // (a new copy of the message), however, when we're dealing with wrapped messages, it's impossible to
+            // reconstruct the russian dolls together again, so we just return the original envelope.
+            // We guarantee that we can de/serialize in innermost message, but we can not guarantee to return
+            // a new copy.
+            return envelope;
         }
+        #nullable restore
 
         private object SerializeAndDeserializePayload(object obj)
         {

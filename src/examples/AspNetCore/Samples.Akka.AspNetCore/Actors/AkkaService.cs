@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaService.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -61,9 +61,9 @@ namespace Samples.Akka.AspNetCore.Actors
             await CoordinatedShutdown.Get(_actorSystem).Run(CoordinatedShutdown.ClrExitReason.Instance);
         }
 
-        public async Task<HashReply> Hash(string input, CancellationToken token)
+        public Task<HashReply> Hash(string input, CancellationToken token)
         {
-            return await RouterActor.Ask<HashReply>(input, token);
+            return RouterActor.Ask<HashReply>(input, token);
         }
     }
 }

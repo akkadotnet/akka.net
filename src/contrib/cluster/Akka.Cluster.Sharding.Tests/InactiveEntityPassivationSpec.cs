@@ -1,14 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InactiveEntityPassivationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Globalization;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
@@ -27,7 +26,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         internal class Passivate
         {
-            public static readonly Passivate Instance = new Passivate();
+            public static readonly Passivate Instance = new();
             private Passivate() { }
         }
 
@@ -90,27 +89,45 @@ namespace Akka.Cluster.Sharding.Tests
         protected ClusterShardingSettings settings;
         protected readonly TimeSpan smallTolerance = TimeSpan.FromMilliseconds(300);
 
-        private readonly ExtractEntityId _extractEntityId = message =>
-            message is int msg ? (msg.ToString(), message) : Option<(string, object)>.None;
-
-        private readonly ExtractShardId _extractShard = message =>
-            message is int msg ? (msg % 10).ToString(CultureInfo.InvariantCulture) : null;
-
-        public AbstractInactiveEntityPassivationSpec(Config config, ITestOutputHelper helper)
-            : base(config.WithFallback(GetConfig()), helper)
+        private sealed class MessageExtractor: IMessageExtractor
         {
+            public string EntityId(object message)
+                => message switch
+                {
+                    int msg => msg.ToString(),
+                    _ => null
+                };
+
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    int msg => (msg % 10).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % 10).ToString(CultureInfo.InvariantCulture);
         }
 
-        public static Config GetConfig()
-        {
-            return ConfigurationFactory.ParseString(@"
+        private static Config SpecConfig =>
+            ConfigurationFactory.ParseString(@"
                 akka.loglevel = DEBUG
                 akka.actor.provider = cluster
                 akka.cluster.sharding.passivate-idle-entity-after = 3s
                 akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
-                akka.remote.dot-netty.tcp.port = 0")
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
+                akka.remote.dot-netty.tcp.port = 0
+                akka.cluster.sharding.verbose-debug-logging = on
+                akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
                 .WithFallback(ClusterSharding.DefaultConfig())
                 .WithFallback(ClusterSingletonManager.DefaultConfig());
+
+        public AbstractInactiveEntityPassivationSpec(Config config, ITestOutputHelper helper)
+            : base(config.WithFallback(SpecConfig), helper)
+        {
         }
 
         protected IActorRef Start(TestProbe probe)
@@ -123,39 +140,34 @@ namespace Akka.Cluster.Sharding.Tests
                 "myType",
                 Entity.Props(probe.Ref),
                 settings,
-                _extractEntityId,
-                _extractShard,
+                new MessageExtractor(),
                 ClusterSharding.Get(Sys).DefaultShardAllocationStrategy(settings),
                 Passivate.Instance);
         }
 
         protected async Task<TimeSpan> TimeUntilPassivate(IActorRef region, TestProbe probe)
         {
-            Entity.GotIt[] responses = null;
-            await AwaitAssertAsync(() =>
-            {
-                region.Tell(1);
-                region.Tell(2);
-                
-                responses = new[]
-                {
-                    probe.ExpectMsg<Entity.GotIt>(),
-                    probe.ExpectMsg<Entity.GotIt>()
-                };
-                responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
-            }, TimeSpan.FromSeconds(20));
-            
+            region.Tell(1);
+            region.Tell(2);
+
+            var responses = new[] {
+                probe.ExpectMsg<Entity.GotIt>(),
+                probe.ExpectMsg<Entity.GotIt>()
+            };
+            responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
+
             var timeOneSawMessage = responses.Single(r => r.Id == "1").When;
 
             await Task.Delay(1000);
             region.Tell(2);
-            probe.ExpectMsg<Entity.GotIt>(TimeSpan.FromSeconds(10)).Id.ShouldBe("2");
+            probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
             await Task.Delay(1000);
             region.Tell(2);
-            probe.ExpectMsg<Entity.GotIt>(TimeSpan.FromSeconds(10)).Id.ShouldBe("2");
+            probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
 
             var timeSinceOneSawAMessage = DateTime.Now.Ticks - timeOneSawMessage;
-            return settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) + smallTolerance;
+            var time = settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) + smallTolerance;
+            return time < smallTolerance ? smallTolerance : time;
         }
     }
 
@@ -176,19 +188,16 @@ namespace Akka.Cluster.Sharding.Tests
             var time = await TimeUntilPassivate(region, probe);
             probe.ExpectNoMsg(time);
 
-            await AwaitAssertAsync(() =>
+            // but it can be re activated
+            region.Tell(1);
+            region.Tell(2);
+
+            var responses = new[]
             {
-                // but it can be re activated
-                region.Tell(1);
-                region.Tell(2);
-                
-                var responses = new[]
-                {
                     probe.ExpectMsg<Entity.GotIt>(),
                     probe.ExpectMsg<Entity.GotIt>()
                 };
-                responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
-            }, TimeSpan.FromSeconds(20));
+            responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
         }
     }
 
@@ -205,7 +214,7 @@ namespace Akka.Cluster.Sharding.Tests
             var probe = CreateTestProbe();
             var region = Start(probe);
             var time = await TimeUntilPassivate(region, probe);
-            probe.ExpectNoMsg(time);
+            await probe.ExpectNoMsgAsync(time);
         }
     }
 }

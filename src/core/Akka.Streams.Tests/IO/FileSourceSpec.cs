@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FileSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,13 +11,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.TestKit.Extensions;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
@@ -30,7 +31,7 @@ namespace Akka.Streams.Tests.IO
     {
         private readonly string _testText;
         private readonly ActorMaterializer _materializer;
-        private readonly FileInfo _testFilePath = new FileInfo(Path.Combine(Path.GetTempPath(), "file-source-spec.tmp"));
+        private readonly FileInfo _testFilePath = new(Path.Combine(Path.GetTempPath(), "file-source-spec.tmp"));
         private FileInfo _manyLinesPath;
 
         public FileSourceSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)
@@ -48,10 +49,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void FileSource_should_read_contents_from_a_file()
+        public async Task FileSource_should_read_contents_from_a_file()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var chunkSize = 512;
                 var bufferAttributes = Attributes.CreateInputBuffer(1, 2);
 
@@ -98,14 +98,14 @@ namespace Akka.Streams.Tests.IO
                 }
                 sub.Request(1);
                 c.ExpectComplete();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void Filesource_could_read_partial_contents_from_a_file()
+        public async Task Filesource_could_read_partial_contents_from_a_file()
         {
-            this.AssertAllStagesStopped(() => 
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var chunkSize = 512;
                 var startPosition = 1000;
                 var bufferAttributes = Attributes.CreateInputBuffer(1, 2);
@@ -120,7 +120,8 @@ namespace Akka.Streams.Tests.IO
 
                 var remaining = _testText.Substring(1000);
 
-                var nextChunk = new Func<string>(() => {
+                var nextChunk = new Func<string>(() =>
+                {
                     string chunks;
 
                     if (remaining.Length <= chunkSize)
@@ -140,21 +141,20 @@ namespace Akka.Streams.Tests.IO
                 sub.Request(5000);
 
                 var expectedChunk = nextChunk();
-                for(int i=0; i<10; ++i)
+                for (int i = 0; i < 10; ++i)
                 {
                     c.ExpectNext().ToString().Should().Be(expectedChunk);
                     expectedChunk = nextChunk();
                 }
                 c.ExpectComplete();
-
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void FileSource_should_complete_only_when_all_contents_of_a_file_have_been_signalled()
+        public async Task FileSource_should_complete_only_when_all_contents_of_a_file_have_been_signalled()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var chunkSize = 512;
                 var bufferAttributes = Attributes.CreateInputBuffer(1, 2);
                 var demandAllButOnechunks = _testText.Length / chunkSize - 1;
@@ -198,18 +198,18 @@ namespace Akka.Streams.Tests.IO
                 sub.Request(1);
                 c.ExpectNext().ToString(Encoding.UTF8).Should().Be(nextChunk());
                 c.ExpectComplete();
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void FileSource_should_open_file_in_shared_mode_for_reading_multiple_times()
+        public async Task FileSource_should_open_file_in_shared_mode_for_reading_multiple_times()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var testFile = TestFile();
                 var p1 = FileIO.FromFile(testFile).RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
                 var p2 = FileIO.FromFile(testFile).RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
-                
+
                 var c1 = this.CreateManualSubscriberProbe<ByteString>();
                 var c2 = this.CreateManualSubscriberProbe<ByteString>();
                 p1.Subscribe(c1);
@@ -222,14 +222,14 @@ namespace Akka.Streams.Tests.IO
 
                 c1.ExpectNext();
                 c2.ExpectNext();
-
+                return Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void FileSource_should_onError_with_failure_and_return_a_failed_IOResult_when_trying_to_read_from_file_which_does_not_exist()
+        public async Task FileSource_should_onError_with_failure_and_return_a_failed_IOResult_when_trying_to_read_from_file_which_does_not_exist()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var t = FileIO.FromFile(NotExistingFile())
                     .ToMaterialized(Sink.AsPublisher<ByteString>(false), Keep.Both)
@@ -242,7 +242,8 @@ namespace Akka.Streams.Tests.IO
 
                 c.ExpectSubscription();
                 c.ExpectError();
-                r.AwaitResult(Dilated(TimeSpan.FromSeconds(3))).WasSuccessful.ShouldBeFalse();
+                var complete = await r.ShouldCompleteWithin(Dilated(TimeSpan.FromSeconds(3)));
+                complete.WasSuccessful.ShouldBeFalse();
             }, _materializer);
         }
 
@@ -265,10 +266,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void FileSource_should_use_dedicated_blocking_io_dispatcher_by_default()
+        public async Task FileSource_should_use_dedicated_blocking_io_dispatcher_by_default()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var sys = ActorSystem.Create("dispatcher-testing", Utils.UnboundedMailboxConfig);
                 var materializer = sys.Materializer();
 
@@ -291,6 +291,8 @@ namespace Akka.Streams.Tests.IO
                 {
                     Shutdown(sys);
                 }
+
+                return Task.CompletedTask;
             }, _materializer);
         }
 
@@ -367,11 +369,12 @@ namespace Akka.Streams.Tests.IO
         protected override void AfterAll()
         {
             base.AfterAll();
-
+            
             //give the system enough time to shutdown and release the file handle
             Thread.Sleep(500);
             _manyLinesPath?.Delete();
             _testFilePath?.Delete();
         }
+
     }
 }

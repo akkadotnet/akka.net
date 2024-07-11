@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FusedGraphsBenchmark.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -60,7 +60,7 @@ namespace Akka.Streams.Tests.Performance
                 Shape = new SourceShape<MutableElement>(Out);
             }
 
-            private Outlet<MutableElement> Out { get; } = new Outlet<MutableElement>("TestSource.out");
+            private Outlet<MutableElement> Out { get; } = new("TestSource.out");
 
             public override SourceShape<MutableElement> Shape { get; }
 
@@ -104,7 +104,7 @@ namespace Akka.Streams.Tests.Performance
                 Shape = new SinkShape<MutableElement>(In);
             }
 
-            private Inlet<MutableElement> In { get; } = new Inlet<MutableElement>("CompletionLatch.in");
+            private Inlet<MutableElement> In { get; } = new("CompletionLatch.in");
 
             public override SinkShape<MutableElement> Shape { get; }
             public override ILogicAndMaterializedValue<TestLatch> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
@@ -131,9 +131,9 @@ namespace Akka.Streams.Tests.Performance
                 Shape = new FlowShape<MutableElement, MutableElement>(In, Out);
             }
 
-            private Outlet<MutableElement> Out { get; } = new Outlet<MutableElement>("IdentityStage.out");
+            private Outlet<MutableElement> Out { get; } = new("IdentityStage.out");
             
-            private Inlet<MutableElement> In { get; } = new Inlet<MutableElement>("IdentityStage.in");
+            private Inlet<MutableElement> In { get; } = new("IdentityStage.in");
 
             public override FlowShape<MutableElement, MutableElement> Shape { get; }
 

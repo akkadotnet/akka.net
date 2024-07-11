@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPublisher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly SubscribePending Instance = new SubscribePending();
+        public static readonly SubscribePending Instance = new();
         private SubscribePending() { }
     }
 
@@ -151,7 +151,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly NormalShutdownException NormalShutdownReason = new NormalShutdownException(NormalShutdownReasonMessage);
+        public static readonly NormalShutdownException NormalShutdownReason = new(NormalShutdownReasonMessage);
     }
 
     /// <summary>
@@ -175,7 +175,7 @@ namespace Akka.Streams.Implementation
         // called by the actor from postStop. Pending (unregistered) subscription attempts are denied by
         // the shutdown method. Subscription attempts after shutdown can be denied immediately.
         private readonly AtomicReference<ImmutableList<ISubscriber<TOut>>> _pendingSubscribers =
-            new AtomicReference<ImmutableList<ISubscriber<TOut>>>(ImmutableList<ISubscriber<TOut>>.Empty);
+            new(ImmutableList<ISubscriber<TOut>>.Empty);
 
         private volatile Exception _shutdownReason;
 

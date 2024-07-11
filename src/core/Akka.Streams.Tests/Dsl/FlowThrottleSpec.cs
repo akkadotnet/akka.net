@@ -1,24 +1,29 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowThrottleSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
+using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
-// ReSharper disable InvokeAsExtensionMethod
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -44,76 +49,107 @@ namespace Akka.Streams.Tests.Dsl
             return ByteString.FromBytes(bytes);
         }
 
-        [Fact]
-        public void Throttle_for_single_cost_elements_must_work_for_the_happy_case()
+        [Fact(DisplayName = "Throttle with delegate calculateCost must resume when delegate throws")]
+        public async Task ThrottleCostExceptionTest()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                Source.From(Enumerable.Range(1, 5))
+                var probe = Source.From(new[] { 1, 2, 3, 4, 5 })
+                    .Throttle(
+                        cost: 1,
+                        per: 1.Seconds(),
+                        maximumBurst: 10,
+                        calculateCost: e => e == 3 ? throw new TestException("err1") : 0,
+                        mode: ThrottleMode.Shaping)
+                    .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+                await probe.AsyncBuilder()
+                    .Request(5)
+                    .ExpectNext(1, 2, 4, 5)
+                    .ExpectComplete()
+                    .ExecuteAsync()
+                    .ShouldCompleteWithin(RemainingOrDefault);
+            }, Materializer);
+        }
+        
+        [Fact]
+        public async Task Throttle_for_single_cost_elements_must_work_for_the_happy_case()
+        {
+            await this.AssertAllStagesStoppedAsync(async() => {
+                var probe = Source.From(Enumerable.Range(1, 5))
                     .Throttle(1, TimeSpan.FromMilliseconds(100), 0, ThrottleMode.Shaping)
-                    .RunWith(this.SinkProbe<int>(), Materializer)
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+                await probe.AsyncBuilder()
                     .Request(5)
                     .ExpectNext(1, 2, 3, 4, 5)
-                    .ExpectComplete();
+                    .ExpectComplete()
+                    .ExecuteAsync()
+                    .ShouldCompleteWithin(RemainingOrDefault);
             }, Materializer);
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_accept_very_high_rates()
+        public async Task Throttle_for_single_cost_elements_must_accept_very_high_rates()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.From(Enumerable.Range(1, 5))
+            await this.AssertAllStagesStoppedAsync(async() => {
+                var probe = Source.From(Enumerable.Range(1, 5))
                     .Throttle(1, TimeSpan.FromTicks(1), 0, ThrottleMode.Shaping)
-                    .RunWith(this.SinkProbe<int>(), Materializer)
-                    .Request(5)
-                    .ExpectNext(1, 2, 3, 4, 5)
-                    .ExpectComplete();
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+                await probe.AsyncBuilder()
+                    .Request(5)                                                                             
+                    .ExpectNext(1, 2, 3, 4, 5)                                                                             
+                    .ExpectComplete()
+                    .ExecuteAsync()
+                    .ShouldCompleteWithin(RemainingOrDefault);
             }, Materializer);
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_accept_very_low_rates()
+        public async Task Throttle_for_single_cost_elements_must_accept_very_low_rates()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var probe = Source.From(Enumerable.Range(1, 5))
                     .Throttle(1, TimeSpan.FromDays(100), 1, ThrottleMode.Shaping)
                     .RunWith(this.SinkProbe<int>(), Materializer);
-                probe.Request(5)
+                await probe.AsyncBuilder()
+                    .Request(5)
                     .ExpectNext(1)
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(100))
+                    .ExecuteAsync()
+                    .ShouldCompleteWithin(RemainingOrDefault);
                 probe.Cancel();
             }, Materializer);
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_()
+        public async Task Throttle_for_single_cost_elements_must_work()
         {
-            var sharedThrottle = Flow.Create<int>().Throttle(1, TimeSpan.FromDays(1), 1, ThrottleMode.Enforcing);
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var sharedThrottle = Flow.Create<int>().Throttle(1, TimeSpan.FromDays(1), 1, ThrottleMode.Enforcing);
 
-            // If there is accidental shared state then we would not be able to pass through the single element
-            var t = Source.Single(1)
-                .Via(sharedThrottle)
-                .Via(sharedThrottle)
-                .RunWith(Sink.First<int>(), Materializer);
-            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            t.Result.Should().Be(1);
+                // If there is accidental shared state then we would not be able to pass through the single element
+                var t = await Source.Single(1)
+                    .Via(sharedThrottle)
+                    .Via(sharedThrottle)
+                    .RunWith(Sink.First<int>(), Materializer)
+                    .ShouldCompleteWithin(RemainingOrDefault);
+                t.Should().Be(1);
 
-            // It works with a new stream, too
-            t = Source.Single(2)
-                .Via(sharedThrottle)
-                .Via(sharedThrottle)
-                .RunWith(Sink.First<int>(), Materializer);
-            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            t.Result.Should().Be(2);
+                // It works with a new stream, too
+                t = await Source.Single(2)
+                    .Via(sharedThrottle)
+                    .Via(sharedThrottle)
+                    .RunWith(Sink.First<int>(), Materializer)
+                    .ShouldCompleteWithin(RemainingOrDefault);
+                t.Should().Be(2);
+            }, Materializer);
         }
 
-        [Fact(Skip ="Racy")]
-        public void Throttle_for_single_cost_elements_must_emit_single_element_per_tick()
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
+        public async Task Throttle_for_single_cost_elements_must_emit_single_element_per_tick()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -121,25 +157,24 @@ namespace Akka.Streams.Tests.Dsl
                     .Throttle(1, TimeSpan.FromMilliseconds(500), 0, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
-                downstream.Request(2);
-                upstream.SendNext(1);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(150));
-                downstream.ExpectNext(1);
+                await downstream.RequestAsync(2);
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(150));
+                await downstream.ExpectNextAsync(1);
 
-                upstream.SendNext(2);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(150));
-                downstream.ExpectNext(2);
+                await upstream.SendNextAsync(2);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(150));
+                await downstream.ExpectNextAsync(2);
 
-                upstream.SendComplete();
-                downstream.ExpectComplete();
+                await upstream.SendCompleteAsync();
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_not_send_downstream_if_upstream_does_not_emit_element()
+        public async Task Throttle_for_single_cost_elements_must_not_send_downstream_if_upstream_does_not_emit_element()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -147,58 +182,60 @@ namespace Akka.Streams.Tests.Dsl
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
-                downstream.Request(2);
-                upstream.SendNext(1);
-                downstream.ExpectNext(1);
+                await downstream.RequestAsync(2);
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNextAsync(1);
 
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
-                upstream.SendNext(2);
-                downstream.ExpectNext(2);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+                await upstream.SendNextAsync(2);
+                await downstream.ExpectNextAsync(2);
 
-                upstream.SendComplete();
-                downstream.ExpectComplete();
+                await upstream.SendCompleteAsync();
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_cancel_when_downstream_cancels()
+        public async Task Throttle_for_single_cost_elements_must_cancel_when_downstream_cancels()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var downstream = this.CreateSubscriberProbe<int>();
-                Source.From(Enumerable.Range(1, 10))
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var probe = Source.From(Enumerable.Range(1, 10))
                     .Throttle(1, TimeSpan.FromMilliseconds(300), 0, ThrottleMode.Shaping)
-                    .RunWith(Sink.FromSubscriber(downstream), Materializer);
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+                var downstream = await probe.ExpectSubscriptionAsync();
+                downstream.Request(5);
                 downstream.Cancel();
+                await probe.ExpectNoMsgAsync(200.Milliseconds());
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy")]
-        public void Throttle_for_single_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
+        public async Task Throttle_for_single_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var probe =
-                    Source.From(Enumerable.Range(1, 10))
-                        .Throttle(2, TimeSpan.FromMilliseconds(750), 0, ThrottleMode.Shaping)
-                        .RunWith(this.SinkProbe<int>(), Materializer);
+            await this.AssertAllStagesStoppedAsync(async() => {
+                var probe = Source.From(Enumerable.Range(1, 10))
+                    .Throttle(2, TimeSpan.FromMilliseconds(750), 0, ThrottleMode.Shaping)
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+                
                 probe.Request(5);
                 var result = probe.ReceiveWhile(TimeSpan.FromMilliseconds(900), filter: x => x);
-                probe.ExpectNoMsg(TimeSpan.FromMilliseconds(150))
+                await probe.AsyncBuilder()
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(150))
                     .ExpectNext(3)
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(150))
-                    .ExpectNext(4);
+                    .ExpectNext(4)
+                    .ExecuteAsync()
+                    .ShouldCompleteWithin(RemainingOrDefault);
                 probe.Cancel();
                 // assertion may take longer then the throttle and therefore the next assertion fails
                 result.Should().BeEquivalentTo(new[] { new OnNext(1), new OnNext(2) });
             }, Materializer);
         }
 
-        [Fact(Skip ="Racy")]
-        public void Throttle_for_single_cost_elements_must_burst_according_to_its_maximum_if_enough_time_passed()
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
+        public async Task Throttle_for_single_cost_elements_must_burst_according_to_its_maximum_if_enough_time_passed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var ms = TimeSpan.FromMilliseconds(300);
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
@@ -209,25 +246,26 @@ namespace Akka.Streams.Tests.Dsl
 
                 // Exhaust bucket first
                 downstream.Request(5);
-                Enumerable.Range(1, 5).ForEach(i => upstream.SendNext(i));
+                foreach (var i in Enumerable.Range(1, 5))
+                    await upstream.SendNextAsync(i);
                 // Check later, takes to long
                 var exhaustElements = downstream.ReceiveWhile(ms, ms,
                     msg => msg is TestSubscriber.OnNext<int> ? msg : null, 5);
                 downstream.Request(1);
-                upstream.SendNext(6);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNext(6);
+                await upstream.SendNextAsync(6);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream.ExpectNextAsync(6);
                 downstream.Request(5);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(1200));
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(1200));
                 var expected = new List<OnNext>();
                 for (var i = 7; i < 12; i++)
                 {
-                    upstream.SendNext(i);
+                    await upstream.SendNextAsync(i);
                     expected.Add(new OnNext(i));
                 }
                 downstream.ReceiveWhile(TimeSpan.FromMilliseconds(300), filter: x => x, msgs: 5)
                     .Should().BeEquivalentTo(expected);
-                
+
                 downstream.Cancel();
 
                 exhaustElements.Cast<TestSubscriber.OnNext<int>>()
@@ -236,11 +274,10 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip ="Racy")]
-        public void Throttle_for_single_cost_elements_must_burst_some_elements_if_have_enough_time()
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
+        public async Task Throttle_for_single_cost_elements_must_burst_some_elements_if_have_enough_time()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -250,20 +287,21 @@ namespace Akka.Streams.Tests.Dsl
 
                 // Exhaust bucket first
                 downstream.Request(5);
-                Enumerable.Range(1, 5).ForEach(i => upstream.SendNext(i));
+                foreach (var i in Enumerable.Range(1, 5))
+                    await upstream.SendNextAsync(i);
                 // Check later, takes too long
                 var exhaustElements = downstream.ReceiveWhile(filter: o => o, max: TimeSpan.FromMilliseconds(300), msgs: 5);
 
                 downstream.Request(1);
-                upstream.SendNext(6);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNext(6);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+                await upstream.SendNextAsync(6);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream.ExpectNextAsync(6);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
                 downstream.Request(5);
                 var expected = new List<OnNext>();
                 for (var i = 7; i < 11; i++)
                 {
-                    upstream.SendNext(i);
+                    await upstream.SendNextAsync(i);
                     if (i < 9)
                         expected.Add(new OnNext(i));
                 }
@@ -279,66 +317,70 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_throw_exception_when_exceeding_throughtput_in_enforced_mode()
+        public async Task Throttle_for_single_cost_elements_must_throw_exception_when_exceeding_throughtput_in_enforced_mode()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var t1 =
-                    Source.From(Enumerable.Range(1, 5))
-                        .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Enforcing)
-                        .RunWith(Sink.Seq<int>(), Materializer); // Burst is 5 so this will not fail
-                t1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t1.Result.Should().BeEquivalentTo(Enumerable.Range(1, 5));
+                var t1 = await Source.From(Enumerable.Range(1, 5))
+                    .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Enforcing)
+                    .RunWith(Sink.Seq<int>(), Materializer) // Burst is 5 so this will not fail
+                    .ShouldCompleteWithin(RemainingOrDefault);
+                t1.Should().BeEquivalentTo(Enumerable.Range(1, 5));
 
-                var t2 =
-                    Source.From(Enumerable.Range(1, 6))
-                        .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Enforcing)
-                        .RunWith(Sink.Ignore<int>(), Materializer);
-                t2.Invoking(task => task.Wait(TimeSpan.FromSeconds(2))).Should().Throw<OverflowException>();
+                await Awaiting(async () =>
+                    {
+                        await Source.From(Enumerable.Range(1, 6))
+                            .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Enforcing)
+                            .RunWith(Sink.Ignore<int>(), Materializer);
+                    }).Should().ThrowAsync<OverflowException>()
+                    .ShouldCompleteWithin(RemainingOrDefault);
             }, Materializer);
         }
 
         [Fact]
-        public void Throttle_for_single_cost_elements_must_properly_combine_shape_and_throttle_modes()
+        public async Task Throttle_for_single_cost_elements_must_properly_combine_shape_and_throttle_modes()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.From(Enumerable.Range(1, 5))
-                    .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Shaping)
-                    .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Enforcing)
-                    .RunWith(this.SinkProbe<int>(), Materializer)
-                    .Request(5)
-                    .ExpectNext(1, 2, 3, 4, 5)
-                    .ExpectComplete();
+            await this.AssertAllStagesStoppedAsync(async() => {
+                var probe = Source.From(Enumerable.Range(1, 5))                                                                             
+                    .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Shaping)                                                                             
+                    .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Enforcing)                                                                             
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+                
+                await probe.AsyncBuilder()
+                    .Request(5)                                                                             
+                    .ExpectNext(1, 2, 3, 4, 5)                                                                             
+                    .ExpectComplete()
+                    .ExecuteAsync()
+                    .ShouldCompleteWithin(RemainingOrDefault);
             }, Materializer);
         }
 
-
-
         [Fact]
-        public void Throttle_for_various_cost_elements_must_work_for_the_happy_case()
+        public async Task Throttle_for_various_cost_elements_must_work_for_the_happy_case()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.From(Enumerable.Range(1, 5))
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var probe = Source.From(Enumerable.Range(1, 5))
                     .Throttle(1, TimeSpan.FromMilliseconds(100), 0, _ => 1, ThrottleMode.Shaping)
-                    .RunWith(this.SinkProbe<int>(), Materializer)
-                    .Request(5)
-                    .ExpectNext(1, 2, 3, 4, 5)
-                    .ExpectComplete();
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+                await probe.AsyncBuilder()
+                    .Request(5)                                                                             
+                    .ExpectNext(1, 2, 3, 4, 5)                                                                             
+                    .ExpectComplete()
+                    .ExecuteAsync()
+                    .ShouldCompleteWithin(RemainingOrDefault);
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy, see https://github.com/akkadotnet/akka.net/pull/4424#issuecomment-632284459")]
-        public void Throttle_for_various_cost_elements_must_emit_elements_according_to_cost()
+        [LocalFact(SkipLocal = "Racy, see https://github.com/akkadotnet/akka.net/pull/4424#issuecomment-632284459")]
+        public async Task Throttle_for_various_cost_elements_must_emit_elements_according_to_cost()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var list = Enumerable.Range(1, 4).Select(x => x*2).Select(GenerateByteString).ToList();
+            await this.AssertAllStagesStoppedAsync(async() => {
+                var list = Enumerable.Range(1, 4).Select(x => x * 2).Select(GenerateByteString).ToList();
 
-                Source.From(list)
+                var probe = Source.From(list)
                     .Throttle(2, TimeSpan.FromMilliseconds(200), 0, x => x.Count, ThrottleMode.Shaping)
-                    .RunWith(this.SinkProbe<ByteString>(), Materializer)
+                    .RunWith(this.SinkProbe<ByteString>(), Materializer);
+                await probe.AsyncBuilder()
                     .Request(4)
                     .ExpectNext(list[0])
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(300))
@@ -347,15 +389,16 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(list[2])
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(700))
                     .ExpectNext(list[3])
-                    .ExpectComplete();
+                    .ExpectComplete()
+                    .ExecuteAsync()
+                    .ShouldCompleteWithin(RemainingOrDefault);
             }, Materializer);
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_not_send_downstream_if_upstream_does_not_emit_element()
+        public async Task Throttle_for_various_cost_elements_must_not_send_downstream_if_upstream_does_not_emit_element()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -364,85 +407,93 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 downstream.Request(2);
-                upstream.SendNext(1);
-                downstream.ExpectNext(1);
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNextAsync(1);
 
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
-                upstream.SendNext(2);
-                downstream.ExpectNext(2);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+                await upstream.SendNextAsync(2);
+                await downstream.ExpectNextAsync(2);
 
-                upstream.SendComplete();
-                downstream.ExpectComplete();
+                await upstream.SendCompleteAsync();
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_cancel_when_downstream_cancels()
+        public async Task Throttle_for_various_cost_elements_must_cancel_when_downstream_cancels()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var downstream = this.CreateSubscriberProbe<int>();
-                Source.From(Enumerable.Range(1, 10))
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var probe = Source.From(Enumerable.Range(1, 10))
                     .Throttle(2, TimeSpan.FromMilliseconds(200), 0, x => x, ThrottleMode.Shaping)
-                    .RunWith(Sink.FromSubscriber(downstream), Materializer);
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+                var downstream = await probe.ExpectSubscriptionAsync();
+                downstream.Request(5);
                 downstream.Cancel();
+                await probe.ExpectNoMsgAsync(200.Milliseconds());
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy")]
-        public void Throttle_for_various_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
+        public async Task Throttle_for_various_cost_elements_must_send_elements_downstream_as_soon_as_time_comes()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var probe =
-                    Source.From(Enumerable.Range(1, 10))
-                        .Throttle(4, TimeSpan.FromMilliseconds(500), 0, _ => 2, ThrottleMode.Shaping)
-                        .RunWith(this.SinkProbe<int>(), Materializer);
+            await this.AssertAllStagesStoppedAsync(async() => {
+                var probe = Source.From(Enumerable.Range(1, 10))
+                    .Throttle(4, TimeSpan.FromMilliseconds(500), 0, _ => 2, ThrottleMode.Shaping)
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+                
                 probe.Request(5);
-                var result = probe.ReceiveWhile(TimeSpan.FromMilliseconds(600), filter: x => x);
-                probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100))
+                var result = await probe.ReceiveWithinAsync<int>(600.Milliseconds(), 2).ToListAsync();
+                
+                await probe.AsyncBuilder()
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(100))
                     .ExpectNext(3)
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(100))
-                    .ExpectNext(4);
+                    .ExpectNext(4)
+                    .ExecuteAsync()
+                    .ShouldCompleteWithin(RemainingOrDefault);
                 probe.Cancel();
+                
                 // assertion may take longer then the throttle and therefore the next assertion fails
-                result.Should().BeEquivalentTo(new[] { new OnNext(1), new OnNext(2) });
+                result.Should().BeEquivalentTo( 1, 2 );
+
             }, Materializer);
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_burst_according_to_its_maximum_if_enough_time_passed()
+        public async Task Throttle_for_various_cost_elements_must_burst_according_to_its_maximum_if_enough_time_passed()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
-                    .Throttle(2, TimeSpan.FromMilliseconds(400), 5, x => 1, ThrottleMode.Shaping)
+                    .Throttle(2, TimeSpan.FromMilliseconds(400), 5, _ => 1, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 // Exhaust bucket first
                 downstream.Request(5);
-                Enumerable.Range(1, 5).ForEach(i => upstream.SendNext(i));
+                foreach (var i in Enumerable.Range(1, 5))
+                    await upstream.SendNextAsync(i);
                 downstream.ReceiveWithin<int>(TimeSpan.FromMilliseconds(300), 5)
                     .Should().BeEquivalentTo(Enumerable.Range(1, 5));
 
                 downstream.Request(5);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(1200));
-                Enumerable.Range(7, 5).ForEach(i => upstream.SendNext(i));
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(1200));
+                foreach (var i in Enumerable.Range(7, 5))
+                    await upstream.SendNextAsync(i);
+
                 downstream.ReceiveWithin<int>(TimeSpan.FromMilliseconds(300), 5)
                     .Should().BeEquivalentTo(Enumerable.Range(7, 5));
 
                 downstream.Cancel();
+
             }, Materializer);
         }
 
-        [Fact(Skip ="Racy")]
-        public void Throttle_for_various_cost_elements_must_burst_some_elements_if_have_enough_time()
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
+        public async Task Throttle_for_various_cost_elements_must_burst_some_elements_if_have_enough_time()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var upstream = this.CreatePublisherProbe<int>();
                 var downstream = this.CreateSubscriberProbe<int>();
 
@@ -452,21 +503,22 @@ namespace Akka.Streams.Tests.Dsl
 
                 // Exhaust bucket first
                 downstream.Request(5);
-                Enumerable.Range(1, 5).ForEach(i => upstream.SendNext(i));
+                foreach (var i in Enumerable.Range(1, 5))
+                    await upstream.SendNextAsync(i);
                 // Check later, takes too long
                 var exhaustElements = downstream.ReceiveWhile(filter: o => o, max: TimeSpan.FromMilliseconds(300),
                     msgs: 5);
 
                 downstream.Request(1);
-                upstream.SendNext(6);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-                downstream.ExpectNext(6);
-                downstream.ExpectNoMsg(TimeSpan.FromMilliseconds(500)); //wait to receive 2 in burst afterwards
+                await upstream.SendNextAsync(6);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                await downstream.ExpectNextAsync(6);
+                await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500)); //wait to receive 2 in burst afterwards
                 downstream.Request(5);
                 var expected = new List<OnNext>();
                 for (var i = 7; i < 10; i++)
                 {
-                    upstream.SendNext(i);
+                    await upstream.SendNextAsync(i);
                     if (i < 9)
                         expected.Add(new OnNext(i));
                 }
@@ -482,52 +534,55 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_throw_exception_when_exceeding_throughtput_in_enforced_mode()
+        public async Task Throttle_for_various_cost_elements_must_throw_exception_when_exceeding_throughtput_in_enforced_mode()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                var t1 =
-                    Source.From(Enumerable.Range(1, 4))
-                        .Throttle(2, TimeSpan.FromMilliseconds(200), 10, x => x, ThrottleMode.Enforcing)
-                        .RunWith(Sink.Seq<int>(), Materializer);
-                t1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t1.Result.Should().BeEquivalentTo(Enumerable.Range(1, 4)); // Burst is 10 so this will not fail
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var t1 = await Source.From(Enumerable.Range(1, 4))
+                    .Throttle(2, TimeSpan.FromMilliseconds(200), 10, x => x, ThrottleMode.Enforcing)
+                    .RunWith(Sink.Seq<int>(), Materializer)
+                    .ShouldCompleteWithin(RemainingOrDefault);
+                t1.Should().BeEquivalentTo(Enumerable.Range(1, 4)); // Burst is 10 so this will not fail
 
-                var t2 =
-                    Source.From(Enumerable.Range(1, 6))
-                        .Throttle(2, TimeSpan.FromMilliseconds(200), 5, x => x, ThrottleMode.Enforcing)
-                        .RunWith(Sink.Ignore<int>(), Materializer);
-                t2.Invoking(task => task.Wait(TimeSpan.FromSeconds(2))).Should().Throw<OverflowException>();
+                await Awaiting(async () =>
+                    {
+                        await Source.From(Enumerable.Range(1, 6))
+                            .Throttle(2, TimeSpan.FromMilliseconds(200), 5, x => x, ThrottleMode.Enforcing)
+                            .RunWith(Sink.Ignore<int>(), Materializer);
+                    }).Should().ThrowAsync<OverflowException>()
+                    .ShouldCompleteWithin(RemainingOrDefault);
             }, Materializer);
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_properly_combine_shape_and_enforce_modes()
+        public async Task Throttle_for_various_cost_elements_must_properly_combine_shape_and_enforce_modes()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.From(Enumerable.Range(1, 5))
-                    .Throttle(2, TimeSpan.FromMilliseconds(200), 0, x => x, ThrottleMode.Shaping)
-                    .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Enforcing)
-                    .RunWith(this.SinkProbe<int>(), Materializer)
+            await this.AssertAllStagesStoppedAsync(async() => {
+                var probe = Source.From(Enumerable.Range(1, 5))
+                    .Throttle(2, TimeSpan.FromMilliseconds(200), 0, x => x, ThrottleMode.Shaping)                                                                             
+                    .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Enforcing)                                                                             
+                    .RunWith(this.SinkProbe<int>(), Materializer);                                                                             
+                await probe.AsyncBuilder()
                     .Request(5)
                     .ExpectNext(1, 2, 3, 4, 5)
-                    .ExpectComplete();
+                    .ExpectComplete()
+                    .ExecuteAsync()
+                    .ShouldCompleteWithin(RemainingOrDefault);
             }, Materializer);
         }
 
         [Fact]
-        public void Throttle_for_various_cost_elements_must_handle_rate_calculation_function_exception()
+        public async Task Throttle_for_various_cost_elements_must_handle_rate_calculation_function_exception()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async () => {
                 var ex = new Exception();
-                Source.From(Enumerable.Range(1, 5))
-                    .Throttle(2, TimeSpan.FromMilliseconds(200), 0, _ => { throw ex; }, ThrottleMode.Shaping)
+                var exception = await Source.From(Enumerable.Range(1, 5))
+                    .Throttle(2, TimeSpan.FromMilliseconds(200), 0, _ => throw ex, ThrottleMode.Shaping)
                     .Throttle(1, TimeSpan.FromMilliseconds(100), 5, ThrottleMode.Enforcing)
                     .RunWith(this.SinkProbe<int>(), Materializer)
+                    .AsyncBuilder()
                     .Request(5)
-                    .ExpectError().Should().Be(ex);
+                    .ExpectErrorAsync();
+                exception.Should().Be(ex);
             }, Materializer);
         }
     }

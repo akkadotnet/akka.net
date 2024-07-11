@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SpawnActorBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,17 +15,24 @@ using BenchmarkDotNet.Engines;
 namespace Akka.Benchmarks.Actor
 {
     [Config(typeof(MicroBenchmarkConfig))]
-    [SimpleJob(RunStrategy.Throughput, targetCount:10, warmupCount:5)]
+    [SimpleJob(RunStrategy.Throughput, warmupCount:5)]
     public class SpawnActorBenchmarks
     {
         [Params(100_000)]
         public int ActorCount { get;set; }
+        
+        [Params(true, false)]
+        public bool EnableTelemetry { get; set; }
+        
         private ActorSystem system;
 
         [IterationSetup]
         public void Setup()
         {
-            system = ActorSystem.Create("system");
+            if(EnableTelemetry) // need to measure the impact of publishing actor start / stop events
+                system = ActorSystem.Create("system", "akka.actor.telemetry.enabled = true");
+            else
+                system = ActorSystem.Create("system");
         }
 
         [IterationCleanup]
@@ -38,7 +45,12 @@ namespace Akka.Benchmarks.Actor
         public async Task Actor_spawn()
         {
             var parent = system.ActorOf(Parent.Props);
-            await parent.Ask<TestDone>(new StartTest(ActorCount), TimeSpan.FromMinutes(2));
+            
+            // spawn a bunch of actors
+            await parent.Ask<TestDone>(new StartTest(ActorCount), TimeSpan.FromMinutes(2)).ConfigureAwait(false);
+            
+            // terminate the hierarchy
+            await parent.GracefulStop(TimeSpan.FromMinutes(1)).ConfigureAwait(false);
         }
 
         #region actors
@@ -54,13 +66,13 @@ namespace Akka.Benchmarks.Actor
 
         sealed class ChildReady
         {
-            public static readonly ChildReady Instance = new ChildReady();
+            public static readonly ChildReady Instance = new();
             private ChildReady() { }
         }
 
         sealed class TestDone
         {
-            public static readonly TestDone Instance = new TestDone();
+            public static readonly TestDone Instance = new();
             private TestDone() { }
         }
 

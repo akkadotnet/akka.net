@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistenceQuery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,15 +17,16 @@ namespace Akka.Persistence.Query
     public sealed class PersistenceQuery : IExtension
     {
         private readonly ExtendedActorSystem _system;
-        private readonly ConcurrentDictionary<string, IReadJournal> _readJournalPluginExtensionIds = new ConcurrentDictionary<string, IReadJournal>();
+        private readonly ConcurrentDictionary<string, IReadJournal> _readJournalPluginExtensionIds = new();
         private ILoggingAdapter _log;
+        private readonly object _lock = new ();
 
         public static PersistenceQuery Get(ActorSystem system)
         {
             return system.WithExtension<PersistenceQuery, PersistenceQueryProvider>();
         }
 
-        public ILoggingAdapter Log => _log ?? (_log = _system.Log);
+        public ILoggingAdapter Log => _log ??= _system.Log;
 
         public PersistenceQuery(ExtendedActorSystem system)
         {
@@ -34,8 +35,18 @@ namespace Akka.Persistence.Query
 
         public TJournal ReadJournalFor<TJournal>(string readJournalPluginId) where TJournal : IReadJournal
         {
-            var plugin = _readJournalPluginExtensionIds.GetOrAdd(readJournalPluginId, path => CreatePlugin(path, GetDefaultConfig<TJournal>()).GetReadJournal());
-            return (TJournal)plugin;
+            if(_readJournalPluginExtensionIds.TryGetValue(readJournalPluginId, out var plugin))
+                return (TJournal)plugin;
+            
+            lock (_lock)
+            {
+                if (_readJournalPluginExtensionIds.TryGetValue(readJournalPluginId, out plugin))
+                    return (TJournal)plugin;
+                
+                plugin = CreatePlugin(readJournalPluginId, GetDefaultConfig<TJournal>()).GetReadJournal();
+                _readJournalPluginExtensionIds[readJournalPluginId] = plugin;
+                return (TJournal)plugin;
+            }
         }
 
         private IReadJournalProvider CreatePlugin(string configPath, Config config)
@@ -62,7 +73,7 @@ namespace Akka.Persistence.Query
             if (ctor != null) return (IReadJournalProvider)ctor.Invoke(new[] { parameters[0] });
 
             ctor = pluginType.GetConstructor(new Type[0]);
-            if (ctor != null) return (IReadJournalProvider)ctor.Invoke(new object[0]);
+            if (ctor != null) return (IReadJournalProvider)ctor.Invoke(Array.Empty<object>());
 
             throw new ArgumentException($"Unable to create read journal plugin instance type {pluginType}!");
         }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Cluster.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -68,13 +67,11 @@ namespace Akka.Cluster
             bool GetAssertInvariants()
             {
                 var isOn = Environment.GetEnvironmentVariable("AKKA_CLUSTER_ASSERT")?.ToLowerInvariant();
-                switch (isOn)
+                return isOn switch
                 {
-                    case "on":
-                        return true;
-                    default:
-                        return false;
-                }
+                    "on" => true,
+                    _ => false
+                };
             }
 
             IsAssertInvariantsEnabled = GetAssertInvariants();
@@ -115,12 +112,24 @@ namespace Akka.Cluster
             System = system;
             Settings = new ClusterSettings(system.Settings.Config, system.Name);
 
-            if (!(system.Provider is IClusterActorRefProvider provider))
+            if (system.Provider is not IClusterActorRefProvider provider)
                 throw new ConfigurationException(
                     $"ActorSystem {system} needs to have a 'IClusterActorRefProvider' enabled in the configuration, currently uses {system.Provider.GetType().FullName}");
             SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
             _log = Logging.GetLogger(system, "Cluster");
+            
+            // log a warning if the user has set auto-down-unreachable-after to any value other than "off"
+            // obsolete setting, so suppress obsolete warning
+#pragma warning disable CS0618
+            if (Settings.AutoDownUnreachableAfter != null)
+#pragma warning restore CS0618
+            {
+                _log.Warning(
+                    "The `auto-down-unreachable-after` feature has been deprecated as of Akka.NET v1.5.2 and will be removed in a future version of Akka.NET. " +
+                    "The `keep-majority` split brain resolver will be used instead. See https://getakka.net/articles/cluster/split-brain-resolver.html for more details.");
+            }
+            
 
             CurrentInfoLogger = new InfoLogger(_log, Settings, SelfAddress);
 
@@ -132,7 +141,7 @@ namespace Akka.Cluster
             Scheduler = CreateScheduler(system);
 
             // it has to be lazy - otherwise if downing provider will init a cluster itself, it will deadlock
-            _downingProvider = new Lazy<IDowningProvider>(() => Akka.Cluster.DowningProvider.Load(Settings.DowningProviderType, system), LazyThreadSafetyMode.ExecutionAndPublication);
+            _downingProvider = new Lazy<IDowningProvider>(() => Akka.Cluster.DowningProvider.Load(Settings.DowningProviderType, system, this), LazyThreadSafetyMode.ExecutionAndPublication);
 
             //create supervisor for daemons under path "/system/cluster"
             _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(Settings)).WithDeploy(Deploy.Local), "cluster");
@@ -263,16 +272,33 @@ namespace Akka.Cluster
         /// <param name="address">The address of the node we want to join.</param>
         /// <param name="token">An optional cancellation token used to cancel returned task before it completes.</param>
         /// <returns>Task which completes, once current cluster node reaches <see cref="MemberStatus.Up"/> state.</returns>
-        public Task JoinAsync(Address address, CancellationToken token = default(CancellationToken))
+        public Task JoinAsync(Address address, CancellationToken token = default)
         {
-            var completion = new TaskCompletionSource<NotUsed>();
-            this.RegisterOnMemberUp(() => completion.TrySetResult(NotUsed.Instance));
-            this.RegisterOnMemberRemoved(() => completion.TrySetException(
-                new ClusterJoinFailedException($"Node has not managed to join the cluster using provided address: {address}")));
+            if (_isTerminated.Value)
+                throw new ClusterJoinFailedException("Cluster has already been terminated");
+            
+            if (IsUp)
+                return Task.CompletedTask;
 
+            var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            if (token != default)
+            {
+                token.Register(() =>
+                {
+                    completion.TrySetException(new ClusterJoinFailedException(
+                        $"Node has not managed to join the cluster using provided address: {address}"));
+                });
+            }
+            
+            RegisterOnMemberUp(() =>
+            {
+                completion.TrySetResult(NotUsed.Instance);
+            });
+            
             Join(address);
 
-            return completion.Task.WithCancellation(token);
+            return completion.Task;
         }
 
         private Address FillLocal(Address address)
@@ -321,16 +347,34 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="seedNodes">TBD</param>
         /// <param name="token">TBD</param>
-        public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default(CancellationToken))
+        public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default)
         {
-            var completion = new TaskCompletionSource<NotUsed>();
-            this.RegisterOnMemberUp(() => completion.TrySetResult(NotUsed.Instance));
-            this.RegisterOnMemberRemoved(() => completion.TrySetException(
-                new ClusterJoinFailedException($"Node has not managed to join the cluster using provided seed node addresses: {string.Join(", ", seedNodes)}.")));
+            if (_isTerminated.Value)
+                throw new ClusterJoinFailedException("Cluster has already been terminated");
+            
+            if (IsUp)
+                return Task.CompletedTask;
+            
+            var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var nodes = seedNodes.ToList();
 
-            JoinSeedNodes(seedNodes);
+            if (token != default)
+            {
+                token.Register(() =>
+                {
+                    completion.TrySetException(new ClusterJoinFailedException(
+                        $"Node has not managed to join the cluster using provided addresses: [{string.Join(",", nodes)}]"));
+                });
+            }
+            
+            RegisterOnMemberUp(() =>
+            {
+                completion.TrySetResult(NotUsed.Instance);
+            });
+            
+            JoinSeedNodes(nodes);
 
-            return completion.Task.WithCancellation(token);
+            return completion.Task;
         }
 
         /// <summary>
@@ -397,7 +441,10 @@ namespace Akka.Cluster
                 return leaveTask;
 
             // Subscribe to MemberRemoved events
-            _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() => tcs.TrySetResult(null)));
+            _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() =>
+            {
+                tcs.TrySetResult(null);
+            }));
 
             // Send leave message
             ClusterCore.Tell(new ClusterUserAction.Leave(SelfAddress));
@@ -427,7 +474,10 @@ namespace Akka.Cluster
         /// <param name="callback">The callback that is run whenever the current member achieves a status of <see cref="MemberStatus.Up"/></param>
         public void RegisterOnMemberUp(Action callback)
         {
-            _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberUpListener(callback));
+            if (IsUp)
+                callback();
+            else
+                _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberUpListener(callback));
         }
 
         /// <summary>
@@ -493,13 +543,18 @@ namespace Akka.Cluster
         /// </summary>
         public Member SelfMember => _readView.Self;
 
-        private readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
+        private readonly AtomicBoolean _isTerminated = new(false);
 
         /// <summary>
         /// Determine whether or not this cluster instance has been shutdown.
         /// </summary>
         public bool IsTerminated { get { return _isTerminated.Value; } }
 
+        /// <summary>
+        /// Determine whether the cluster is in the UP state.
+        /// </summary>
+        public bool IsUp => SelfMember.Status is MemberStatus.Up or MemberStatus.WeaklyUp;
+        
         /// <summary>
         /// The underlying <see cref="ActorSystem"/> supported by this plugin.
         /// </summary>
@@ -520,7 +575,7 @@ namespace Akka.Cluster
         public DefaultFailureDetectorRegistry<Address> FailureDetector { get; }
 
         /// <summary>
-        /// TBD
+        /// The downing provider used to execute automatic downing inside Akka.Cluster.
         /// </summary>
         public IDowningProvider DowningProvider => _downingProvider.Value;
 
@@ -535,7 +590,6 @@ namespace Akka.Cluster
 
         private static IScheduler CreateScheduler(ActorSystem system)
         {
-            //TODO: Whole load of stuff missing here!
             return system.Scheduler;
         }
 

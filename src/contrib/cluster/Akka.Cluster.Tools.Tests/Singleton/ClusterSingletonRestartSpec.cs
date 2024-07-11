@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonRestartSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -15,6 +16,7 @@ using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
 {
@@ -24,16 +26,16 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         private readonly ActorSystem _sys2;
         private ActorSystem _sys3 = null;
 
-        public ClusterSingletonRestartSpec() : base(@"
+        public ClusterSingletonRestartSpec(ITestOutputHelper output) : base(@"
               akka.loglevel = INFO
               akka.actor.provider = ""cluster""
-              akka.cluster.auto-down-unreachable-after = 2s
+              #akka.cluster.auto-down-unreachable-after = 2s
               akka.remote {
                 dot-netty.tcp {
                   hostname = ""127.0.0.1""
                   port = 0
                 }
-              }")
+              }", output)
         {
             _sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
             _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
@@ -128,8 +130,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        protected override void AfterTermination()
+        protected override void AfterAll()
         {
+            base.AfterAll();
             Shutdown(_sys1);
             Shutdown(_sys2);
             if(_sys3 != null)

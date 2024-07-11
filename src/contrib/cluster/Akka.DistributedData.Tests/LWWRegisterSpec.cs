@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LWWRegisterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,7 +42,7 @@ namespace Akka.DistributedData.Tests
         public void LWWRegister_must_merge_by_picking_max_timestamp()
         {
             var i = From(100).GetEnumerator();
-            Clock<string> clock = (timestamp, value) =>
+            Clock<string> clock = (_, _) =>
             {
                 i.MoveNext();
                 return i.Current;
@@ -66,7 +66,7 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void LWWRegister_must_merge_by_picking_least_address_when_same_timestamp()
         {
-            Clock<string> clock = (timestamp, value) => 100;
+            Clock<string> clock = (_, _) => 100;
 
             var r1 = new LWWRegister<string>(_node1, "A", clock);
             var r2 = new LWWRegister<string>(_node2, "B", clock);

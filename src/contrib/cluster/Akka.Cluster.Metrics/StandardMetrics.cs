@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StandardMetrics.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ namespace Akka.Cluster.Metrics
     public static class StandardMetrics
     {
         /// <summary>
-        /// Total memory allocated to the currently running process (<see cref="GC.GetTotalMemory"/>)
+        /// Total memory allocated to the currently running process (<see cref="Process.WorkingSet64"/>)
         /// </summary>
         public const string MemoryUsed = "MemoryUsed";
         /// <summary>
@@ -84,7 +84,7 @@ namespace Akka.Cluster.Metrics
             /// </summary>
             public long Timestamp { get; }
             /// <summary>
-            /// The current process allocated memory (in bytes) (<see cref="GC.GetTotalMemory"/>)
+            /// The current process allocated memory (in bytes) (<see cref="Process.WorkingSet64"/>)
             /// </summary>
             public double Used { get; }
             /// <summary>
@@ -201,9 +201,9 @@ namespace Akka.Cluster.Metrics
             /// <param name="processorsNumber">The number of available processors</param>
             public Cpu(Actor.Address address, long timestamp, double cpuProcessUsage, double cpuTotalUsage, int processorsNumber)
             {
-                if (cpuProcessUsage < 0 || cpuProcessUsage > 1)
+                if (cpuProcessUsage is < 0 or > 1)
                     throw new ArgumentException(nameof(cpuProcessUsage), $"{nameof(cpuProcessUsage)} must be between [0.0 - 1.0], was {cpuProcessUsage}" );
-                if (cpuTotalUsage < 0 || cpuTotalUsage > 1)
+                if (cpuTotalUsage is < 0 or > 1)
                     throw new ArgumentException(nameof(cpuTotalUsage), $"{nameof(cpuTotalUsage)} must be between [0.0 - 1.0], was {cpuTotalUsage}" );
                 
                 Address = address;

@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="LruBoundedCacheBenchmarks.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="LruBoundedCacheBenchmarks.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,7 +54,7 @@ namespace Akka.Benchmarks.Remoting
             var name = "target" + ++_cacheHitPathCount;
             _cacheHitActorRef = _sys1.ActorOf(act =>
             {
-                act.ReceiveAny((o, context) => context.Sender.Tell(context.Sender));
+                act.ReceiveAny((_, context) => context.Sender.Tell(context.Sender));
             }, name);
 
             _cacheMissActorRef = await _cacheHitActorRef.Ask<IActorRef>("hit", CancellationToken.None);

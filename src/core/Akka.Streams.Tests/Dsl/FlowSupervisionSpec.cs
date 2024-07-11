@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSupervisionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,7 +20,7 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class FlowSupervisionSpec : AkkaSpec
     {
-        private static readonly Exception Exception = new Exception("simulated exception");
+        private static readonly Exception Exception = new("simulated exception");
         private static Flow<int, int, NotUsed> FailingMap => Flow.Create<int>().Select(n =>
         {
             if (n == 3)
@@ -75,7 +75,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Stream_supervision_must_complete_stream_with_ArgumentNullException_when_null_is_emitted()
         {
-            var task = Source.From(new[] {"a", "b"}).Select(x => null as string).Limit(1000).RunWith(Sink.Seq<string>(), Materializer);
+            var task = Source.From(new[] {"a", "b"}).Select(_ => null as string).Limit(1000).RunWith(Sink.Seq<string>(), Materializer);
 
             task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
                 .Should().Throw<ArgumentNullException>()

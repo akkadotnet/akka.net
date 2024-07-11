@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SerializationTools.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ namespace Akka.Streams.Serialization
 
         public static Type TypeFromProto(EventType eventType) => TypeFromString(eventType.TypeName);
 
-        public static EventType TypeToProto(Type clrType) => new EventType
+        public static EventType TypeToProto(Type clrType) => new()
         {
             TypeName = clrType.TypeQualifiedName()
         };

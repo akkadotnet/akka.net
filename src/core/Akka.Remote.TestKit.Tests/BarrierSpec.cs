@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BarrierSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -45,7 +45,7 @@ namespace Akka.Remote.TestKit.Tests
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is Failed && Equals((Failed) obj);
+                return obj is Failed failed && Equals(failed);
             }
 
             public override int GetHashCode()
@@ -79,9 +79,9 @@ namespace Akka.Remote.TestKit.Tests
         {
         }
 
-        private readonly RoleName A = new RoleName("a");
-        private readonly RoleName B = new RoleName("b");
-        private readonly RoleName C = new RoleName("c");
+        private readonly RoleName A = new("a");
+        private readonly RoleName B = new("b");
+        private readonly RoleName C = new("c");
 
         [Fact]
         public void A_BarrierCoordinator_must_register_clients_and_remove_them()

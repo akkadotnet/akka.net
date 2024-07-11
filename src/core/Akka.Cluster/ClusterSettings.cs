@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,8 +22,8 @@ namespace Akka.Cluster
     /// </summary>
     public sealed class ClusterSettings
     {
-        readonly Config _failureDetectorConfig;
-        readonly string _useDispatcher;
+        private readonly Config _failureDetectorConfig;
+        private readonly string _useDispatcher;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterSettings"/> class.
@@ -34,8 +34,8 @@ namespace Akka.Cluster
         {
             //TODO: Requiring!
             var clusterConfig = config.GetConfig("akka.cluster");
-            if (clusterConfig.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<ClusterSettings>("akka.cluster");
+            if (clusterConfig?.GetConfig("failure-detector") == null)
+                throw new ConfigurationException($"Failed to instantiate {nameof(ClusterSettings)}: Configuration does not contain `akka.cluster` node. Did you forgot to set the 'akka.cluster.provider' HOCON property to 'cluster'?");
 
             LogInfoVerbose = clusterConfig.GetBoolean("log-info-verbose", false);
             LogInfo = LogInfoVerbose || clusterConfig.GetBoolean("log-info", false);
@@ -66,7 +66,9 @@ namespace Akka.Cluster
                 ) ? TimeSpan.Zero :
                 clusterConfig.GetTimeSpan("down-removal-margin", null);
 
+#pragma warning disable CS0618
             AutoDownUnreachableAfter = clusterConfig.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
+#pragma warning restore CS0618
 
             Roles = clusterConfig.GetStringList("roles", new string[] { }).ToImmutableHashSet();
             AppVersion = Util.AppVersion.Create(clusterConfig.GetString("app-version"));
@@ -89,14 +91,15 @@ namespace Akka.Cluster
             var downingProviderClassName = clusterConfig.GetString("downing-provider-class", null);
             if (!string.IsNullOrEmpty(downingProviderClassName))
                 DowningProviderType = Type.GetType(downingProviderClassName, true);
+#pragma warning disable CS0618
             else if (AutoDownUnreachableAfter.HasValue)
+#pragma warning restore CS0618
                 DowningProviderType = typeof(AutoDowning);
             else
                 DowningProviderType = typeof(NoDowning);
 
             RunCoordinatedShutdownWhenDown = clusterConfig.GetBoolean("run-coordinated-shutdown-when-down", false);
-
-            // TODO: replace with a switch expression when we upgrade to C#8 or later
+            
             TimeSpan GetWeaklyUpDuration()
             {
                 var cKey = "allow-weakly-up-members";
@@ -118,6 +121,7 @@ namespace Akka.Cluster
 
             WeaklyUpAfter = GetWeaklyUpDuration();
 
+            UseLegacyHeartbeatMessage = clusterConfig.GetBoolean("use-legacy-heartbeat-message", false);
         }
 
         /// <summary>
@@ -206,8 +210,9 @@ namespace Akka.Cluster
         public TimeSpan? PublishStatsInterval { get; }
 
         /// <summary>
-        /// TBD
+        /// Obsolete. No longer used as of Akka.NET v1.5.
         /// </summary>
+        [Obsolete(message:"Deprecated as of Akka.NET v1.5.2 - clustering defaults to using KeepMajority SBR instead")]
         public TimeSpan? AutoDownUnreachableAfter { get; }
 
         /// <summary>
@@ -255,11 +260,7 @@ namespace Akka.Cluster
         /// </summary>
         public ImmutableDictionary<string, int> MinNrOfMembersOfRole { get; }
 
-        /// <summary>
-        /// Obsolete. Use <see cref="P:Cluster.DowningProvider.DownRemovalMargin"/>.
-        /// </summary>
-        [Obsolete("Use Cluster.DowningProvider.DownRemovalMargin [1.1.2]")]
-        public TimeSpan DownRemovalMargin { get; }
+        internal TimeSpan DownRemovalMargin { get; }
 
         /// <summary>
         /// Determine whether or not to log heartbeat message in verbose mode.
@@ -300,6 +301,13 @@ namespace Akka.Cluster
         /// The leader will move <see cref="MemberStatus.WeaklyUp"/> members to <see cref="MemberStatus.Up"/> status once convergence has been reached.
         /// </summary>
         public TimeSpan WeaklyUpAfter { get; }
+        
+        /// <summary>
+        /// Enable/disable legacy pre-1.4.19 <see cref="ClusterHeartbeatSender.Heartbeat"/> and
+        /// <see cref="ClusterHeartbeatSender.HeartbeatRsp"/> wire format serialization support.
+        /// Set this to true if you're doing a rolling update from Akka.NET version older than 1.4.19.
+        /// </summary>
+        public bool UseLegacyHeartbeatMessage { get; }
     }
 }
 

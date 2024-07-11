@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterMetricsRouting.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,6 @@ using Akka.Dispatch;
 using Akka.Routing;
 using Akka.Util;
 using Akka.Util.Extensions;
-using Akka.Configuration;
 
 namespace Akka.Cluster.Metrics
 {
@@ -228,7 +227,7 @@ namespace Akka.Cluster.Metrics
             if (!SupervisorStrategy.Equals(DefaultSupervisorStrategy))
                 return this;
 
-            if (routerConfig is FromConfig || routerConfig is NoRouter)
+            if (routerConfig is FromConfig or NoRouter)
                 return this; // NoRouter is the default, hence â€œneutralâ€
 
             if (routerConfig is AdaptiveLoadBalancingPool adaptiveLoadBalancingPool)

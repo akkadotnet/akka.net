@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="NodeUpSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.Util;
@@ -45,15 +46,15 @@ namespace Akka.Cluster.Tests.MultiNode
 
             protected override void OnReceive(object message)
             {
-                message.Match()
-                    .With<ClusterEvent.IMemberEvent>(evt =>
-                    {
+                switch (message)
+                {
+                    case ClusterEvent.IMemberEvent evt:
                         _unexpected.Value.Add(evt.Member);
-                    })
-                    .With<ClusterEvent.CurrentClusterState>(() =>
-                    {
+                        break;
+                    case ClusterEvent.CurrentClusterState _:
                         // ignore
-                    });
+                        break;
+                }
             }
         }
 

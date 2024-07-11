@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="JsonFramingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,14 +13,17 @@ using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
 using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
+using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using System.Threading.Tasks;
+using FluentAssertions.Extensions;
+using Akka.Streams.Tests.Actor;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -34,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
         private ActorMaterializer Materializer { get; }
 
         [Fact]
-        public void Collecting_multiple_json_should_parse_json_array()
+        public async Task Collecting_multiple_json_should_parse_json_array()
         {
             var input = @"
            [
@@ -51,7 +54,8 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            result.AwaitResult().Should().BeEquivalentTo(new []
+            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            complete.Should().BeEquivalentTo(new []
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""Ég get etið gler án þess að meiða mig"" }",
@@ -60,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_emit_single_json_element_from_string()
+        public async Task Collecting_multiple_json_should_emit_single_json_element_from_string()
         {
             var input = @"
             { ""name"" : ""john"" }
@@ -76,11 +80,12 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            result.AwaitResult().Should().HaveCount(1).And.Subject.Should().Contain(@"{ ""name"" : ""john"" }");
+            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            complete.Should().HaveCount(1).And.Subject.Should().Contain(@"{ ""name"" : ""john"" }");
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_parse_line_delimited()
+        public async Task Collecting_multiple_json_should_parse_line_delimited()
         {
             var input = @"
             { ""name"" : ""john"" }
@@ -96,8 +101,8 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-
-            result.AwaitResult().Should().BeEquivalentTo(new[]
+            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            complete.Should().BeEquivalentTo(new[]
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""jack"" }",
@@ -106,7 +111,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_parse_comma_delimited()
+        public async Task Collecting_multiple_json_should_parse_comma_delimited()
         {
             var input = @"{ ""name"" : ""john"" }, { ""name"" : ""jack"" }, { ""name"" : ""katie"" }
            ";
@@ -119,8 +124,8 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-
-            result.AwaitResult().Should().BeEquivalentTo(new[]
+            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            complete.Should().BeEquivalentTo(new[]
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""jack"" }",
@@ -130,7 +135,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Collecting_multiple_json_should_parse_chunks_successfully()
+        public async Task Collecting_multiple_json_should_parse_chunks_successfully()
         {
             var input = new[]
             {
@@ -138,14 +143,14 @@ namespace Akka.Streams.Tests.Dsl
                 ByteString.FromString("{ \"na"), ByteString.FromString("me\" : \"jack\" "),
                 ByteString.FromString("}]")
             };
-            var result = Source.From(input)
+            var result = await Source.From(input)
                 .Via(JsonFraming.ObjectScanner(int.MaxValue))
                 .RunAggregate(new List<string>(), (list, s) =>
                 {
                     list.Add(s.ToString());
                     return list;
                 }, Materializer)
-                .AwaitResult();
+                .ShouldCompleteWithin(3.Seconds()); ;
 
 
             result.Should().BeEquivalentTo(new[]

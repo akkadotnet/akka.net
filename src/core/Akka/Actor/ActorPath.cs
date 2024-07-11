@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPath.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -64,21 +64,18 @@ namespace Akka.Actor
 
             #region Equality
 
-            /// <inheritdoc/>
             public bool Equals(Surrogate other)
             {
                 if (other is null) return false;
                 return ReferenceEquals(this, other) || StringComparer.Ordinal.Equals(Path, other.Path);
             }
 
-            /// <inheritdoc/>
             public bool Equals(ActorPath other)
             {
                 if (other is null) return false;
                 return StringComparer.Ordinal.Equals(Path, other.ToSerializationFormat());
             }
 
-            /// <inheritdoc/>
             public override bool Equals(object obj)
             {
                 if (obj is null) return false;
@@ -87,7 +84,6 @@ namespace Akka.Actor
                 return Equals(obj as Surrogate);
             }
 
-            /// <inheritdoc/>
             public override int GetHashCode()
             {
                 return Path.GetHashCode();
@@ -96,25 +92,36 @@ namespace Akka.Actor
             #endregion
         }
 
+        public const string ValidSymbols = "\"-_.*$+:@&=,!~';()";
+
         /// <summary>
-        /// INTERNAL API
+        /// A small bool array, indexed by the ASCII code (0..127), containing <c>true</c> for valid chars
+        /// and <c>false</c> for invalid characters.
         /// </summary>
-        internal static readonly char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
+        private static readonly bool[] ValidAscii = Enumerable.Range(0, 128).Select(c => (c >= 'a' && c <= 'z')
+                || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || ValidSymbols.Contains((char)c))
+            .ToArray();
+
+        /// <summary>
+        /// A human readable description of a valid actor name. This is used in several places to throw
+        /// exceptions when the caller supplies invalid actor names.
+        /// </summary>
+        internal const string ValidActorNameDescription=
+            $"Actor paths MUST: not start with `$`, not be empty, and only contain ASCII letters, digits and these special characters: `{ValidSymbols}`";
 
         /// <summary>
         /// Method that checks if actor name conforms to RFC 2396, http://www.ietf.org/rfc/rfc2396.txt
         /// Note that AKKA JVM does not allow parenthesis ( ) but, according to RFC 2396 those are allowed, and
         /// since we use URL Encode to create valid actor names, we must allow them.
         /// </summary>
-        /// <param name="s">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="s">The string to verify for conformity</param>
+        /// <returns>True if the path element is valid</returns>
         public static bool IsValidPathElement(string s)
         {
-            return !string.IsNullOrEmpty(s) && !s.StartsWith("$") && Validate(s);
+            return !string.IsNullOrEmpty(s) && !s.StartsWith('$') && Validate(s);
         }
 
-        private static bool IsValidChar(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                                                   (c >= '0' && c <= '9') || ValidSymbols.Contains(c);
+        private static bool IsValidChar(char c) => c < 128 && ValidAscii[c];
 
         private static bool IsHexChar(char c) => (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') ||
                                                  (c >= '0' && c <= '9');
@@ -262,7 +269,6 @@ namespace Akka.Actor
         [JsonIgnore]
         public ActorPath Root => ParentOf(0);
 
-        /// <inheritdoc/>
         public bool Equals(ActorPath other)
         {
             if (other is null || _depth != other._depth)
@@ -290,7 +296,6 @@ namespace Akka.Actor
             }
         }
 
-        /// <inheritdoc/>
         public int CompareTo(ActorPath other)
         {
             if (_depth == 0)
@@ -525,7 +530,7 @@ namespace Akka.Actor
         public static bool TryParseParts(ReadOnlySpan<char> path, out ReadOnlySpan<char> address, out ReadOnlySpan<char> absoluteUri)
         {
             var firstAtPos = path.IndexOf(':');
-            if (firstAtPos < 4 || 255 < firstAtPos)
+            if (firstAtPos is < 4 or > 255)
             {
                 //missing or invalid scheme
                 address = default;
@@ -562,9 +567,17 @@ namespace Akka.Actor
         /// Joins this instance.
         /// </summary>
         /// <param name="prefix">the address or empty</param>
+        /// <param name="uid">Optional - the UID for this path.</param>
         /// <returns> System.String. </returns>
-        private string Join(ReadOnlySpan<char> prefix)
+        private string Join(ReadOnlySpan<char> prefix, long? uid = null)
         {
+            void AppendUidSpan(ref Span<char> writeable, int startPos, int sizeHint)
+            {
+                if (uid == null) return;
+                writeable[startPos] = '#';
+                SpanHacks.TryFormat(uid.Value, startPos+1, ref writeable, sizeHint);
+            }
+
             if (_depth == 0)
             {
                 Span<char> buffer = prefix.Length < 1024 ? stackalloc char[prefix.Length + 1] : new char[prefix.Length + 1];
@@ -583,16 +596,27 @@ namespace Akka.Actor
                     p = p._parent;
                 }
 
-                // Concatenate segments (in reverse order) into buffer with '/' prefixes                
+                // UID calculation
+                var uidSizeHint = 0;
+                if (uid != null)
+                {
+                    // 1 extra character for the '#'
+                    uidSizeHint = SpanHacks.Int64SizeInCharacters(uid.Value) + 1;
+                    totalLength += uidSizeHint;
+                }
+
+                // Concatenate segments (in reverse order) into buffer with '/' prefixes
                 Span<char> buffer = totalLength < 1024 ? stackalloc char[totalLength] : new char[totalLength];
                 prefix.CopyTo(buffer);
 
-                var offset = buffer.Length;
-                ReadOnlySpan<char> name;
+                var offset = buffer.Length - uidSizeHint;
+                // append UID span first
+                AppendUidSpan(ref buffer, offset, uidSizeHint-1); // -1 for the '#'
+
                 p = this;
                 while (p._depth > 0)
                 {
-                    name = p._name.AsSpan();
+                    var name = p._name.AsSpan();
                     offset -= name.Length + 1;
                     buffer[offset] = '/';
                     name.CopyTo(buffer.Slice(offset + 1, name.Length));
@@ -613,7 +637,6 @@ namespace Akka.Actor
             return Join(ReadOnlySpan<char>.Empty);
         }
 
-        /// <inheritdoc/>
         public override string ToString()
         {
             return Join(_address.ToString().AsSpan());
@@ -650,7 +673,6 @@ namespace Akka.Actor
             }
         }
 
-        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as ActorPath);
@@ -684,7 +706,12 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         public string ToStringWithAddress()
         {
-            return ToStringWithAddress(_address);
+            return ToStringWithAddress(_address, false);
+        }
+
+        private string ToStringWithAddress(bool includeUid)
+        {
+            return ToStringWithAddress(_address, includeUid);
         }
 
         /// <summary>
@@ -693,7 +720,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public string ToSerializationFormat()
         {
-            return AppendUidFragment(ToStringWithAddress());
+            return ToStringWithAddress(true);
         }
 
         /// <summary>
@@ -708,8 +735,7 @@ namespace Akka.Actor
                 // we never change address for IgnoreActorRef
                 return ToString();
             }
-            var withAddress = ToStringWithAddress(address);
-            var result = AppendUidFragment(withAddress);
+            var result = ToStringWithAddress(address, true);
             return result;
         }
 
@@ -727,15 +753,25 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         public string ToStringWithAddress(Address address)
         {
+            return ToStringWithAddress(address, false);
+        }
+
+        private string ToStringWithAddress(Address address, bool includeUid)
+        {
             if (IgnoreActorRef.IsIgnoreRefPath(this))
             {
                 // we never change address for IgnoreActorRef
                 return ToString();
             }
-            if (_address.Host != null && _address.Port.HasValue)
-                return Join(_address.ToString().AsSpan());
 
-            return Join(address.ToString().AsSpan());
+            long? uid = null;
+            if (includeUid && _uid != ActorCell.UndefinedUid)
+                uid = _uid;
+
+            if (_address.Host != null && _address.Port.HasValue)
+                return Join(_address.ToString().AsSpan(), uid);
+
+            return Join(address.ToString().AsSpan(), uid);
         }
 
         /// <summary>

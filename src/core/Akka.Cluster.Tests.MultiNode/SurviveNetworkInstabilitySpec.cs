@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SurviveNetworkInstabilitySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
@@ -80,7 +81,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public class TargetsRegistered
         {
-            public static readonly TargetsRegistered Instance = new TargetsRegistered();
+            public static readonly TargetsRegistered Instance = new();
             private TargetsRegistered() { }
         }
 
@@ -98,7 +99,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     Sender.Tell(TargetsRegistered.Instance);
                 });
 
-                Receive<string>(s => s.Equals("boom"), e =>
+                Receive<string>(s => s.Equals("boom"), _ =>
                 {
                     _targets.ForEach(x => Context.Watch(x));
                 });

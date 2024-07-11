@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SinkRefImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.Serialization;
 using Akka.Streams.Stage;
@@ -77,11 +78,10 @@ namespace Akka.Streams.Implementation.StreamRef
             private StreamRefAttributes.SubscriptionTimeout _subscriptionTimeout;
             private string _stageActorName;
 
-            private StreamRefsMaster StreamRefsMaster => _streamRefsMaster ?? (_streamRefsMaster = StreamRefsMaster.Get(ActorMaterializerHelper.Downcast(Materializer).System));
-            private StreamRefSettings Settings => _settings ?? (_settings = ActorMaterializerHelper.Downcast(Materializer).Settings.StreamRefSettings);
-            private StreamRefAttributes.SubscriptionTimeout SubscriptionTimeout => _subscriptionTimeout ?? (_subscriptionTimeout =
-                                                                                       _inheritedAttributes.GetAttribute(new StreamRefAttributes.SubscriptionTimeout(Settings.SubscriptionTimeout)));
-            protected override string StageActorName => _stageActorName ?? (_stageActorName = StreamRefsMaster.NextSinkRefName());
+            private StreamRefsMaster StreamRefsMaster => _streamRefsMaster ??= StreamRefsMaster.Get(ActorMaterializerHelper.Downcast(Materializer).System);
+            private StreamRefSettings Settings => _settings ??= ActorMaterializerHelper.Downcast(Materializer).Settings.StreamRefSettings;
+            private StreamRefAttributes.SubscriptionTimeout SubscriptionTimeout => _subscriptionTimeout ??= _inheritedAttributes.GetAttribute(new StreamRefAttributes.SubscriptionTimeout(Settings.SubscriptionTimeout));
+            protected override string StageActorName => _stageActorName ??= StreamRefsMaster.NextSinkRefName();
 
             private StageActor _stageActor;
 
@@ -286,7 +286,7 @@ namespace Akka.Streams.Implementation.StreamRef
             Shape = new SinkShape<TIn>(Inlet);
         }
 
-        public Inlet<TIn> Inlet { get; } = new Inlet<TIn>("SinkRef.in");
+        public Inlet<TIn> Inlet { get; } = new("SinkRef.in");
         public override SinkShape<TIn> Shape { get; }
         public override ILogicAndMaterializedValue<Task<ISourceRef<TIn>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {

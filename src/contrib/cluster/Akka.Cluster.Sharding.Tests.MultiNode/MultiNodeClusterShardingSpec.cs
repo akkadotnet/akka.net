@@ -1,11 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiNodeClusterShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Event;
@@ -16,7 +19,8 @@ using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public abstract class MultiNodeClusterShardingSpec : MultiNodeClusterSpec
+    public abstract class MultiNodeClusterShardingSpec<TConfig> : MultiNodeClusterSpec
+        where TConfig : MultiNodeClusterShardingConfig
     {
         protected class EntityActor : ActorBase
         {
@@ -48,7 +52,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             public class Stop
             {
-                public static readonly Stop Instance = new Stop();
+                public static readonly Stop Instance = new();
 
                 private Stop()
                 {
@@ -67,7 +71,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             public class Pong
             {
-                public static readonly Pong Instance = new Pong();
+                public static readonly Pong Instance = new();
 
                 private Pong()
                 {
@@ -80,7 +84,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
 
             private ILoggingAdapter _log;
-            private ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+            private ILoggingAdapter Log => _log ??= Context.GetLogger();
 
             protected override bool Receive(object message)
             {
@@ -101,7 +105,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             public class Stop
             {
-                public static readonly Stop Instance = new Stop();
+                public static readonly Stop Instance = new();
 
                 private Stop()
                 {
@@ -127,51 +131,78 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal ExtractEntityId IntExtractEntityId = message =>
+        private sealed class IntMessageExtractor: IMessageExtractor
         {
-            if (message is int id)
-                return (id.ToString(), message);
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    int id => id.ToString(),
+                    _ => null
+                };
 
-        internal ExtractShardId IntExtractShardId = message =>
-        {
-            switch (message)
-            {
-                case int id:
-                    return id.ToString();
-                case ShardRegion.StartEntity se:
-                    return se.EntityId;
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message;
 
-        private readonly MultiNodeClusterShardingConfig config;
+            public string ShardId(object message)
+                => message switch
+                {
+                    int id => id.ToString(),
+                    _ => null
+                };
 
-        private readonly Lazy<ClusterShardingSettings> settings;
+            public string ShardId(string entityId, object messageHint = null)
+                => entityId;
+        }
 
-        private readonly Lazy<IShardAllocationStrategy> defaultShardAllocationStrategy;
+        protected readonly TConfig Config;
 
-        protected MultiNodeClusterShardingSpec(MultiNodeClusterShardingConfig config, Type type)
+        protected readonly Lazy<ClusterShardingSettings> Settings;
+
+        private readonly Lazy<IShardAllocationStrategy> _defaultShardAllocationStrategy;
+
+        protected MultiNodeClusterShardingSpec(TConfig config, Type type)
             : base(config, type)
         {
-            this.config = config;
-            settings = new Lazy<ClusterShardingSettings>(() =>
+            this.Config = config;
+            ClearStorage();
+            EnterBarrier("startup");
+
+            Settings = new Lazy<ClusterShardingSettings>(() =>
             {
                 return ClusterShardingSettings.Create(Sys).WithRememberEntities(config.RememberEntities);
             });
-            defaultShardAllocationStrategy = new Lazy<IShardAllocationStrategy>(() =>
+            _defaultShardAllocationStrategy = new Lazy<IShardAllocationStrategy>(() =>
             {
-                return ClusterSharding.Get(Sys).DefaultShardAllocationStrategy(settings.Value);
+                return ClusterSharding.Get(Sys).DefaultShardAllocationStrategy(Settings.Value);
             });
         }
 
         protected override int InitialParticipantsValueFactory => Roles.Count;
 
 
-        protected bool IsDdataMode => config.Mode == ClusterShardingSettings.StateStoreModeDData;
+        protected bool IsDdataMode => Config.Mode == StateStoreMode.DData;
 
-        protected bool PersistenceIsNeeded => config.Mode == ClusterShardingSettings.StateStoreModePersistence;
+        protected bool PersistenceIsNeeded => Config.Mode == StateStoreMode.Persistence
+            || Sys.Settings.Config.GetString("akka.cluster.sharding.remember-entities-store").Equals(RememberEntitiesStore.Eventsourced.ToString(), StringComparison.InvariantCultureIgnoreCase);
+
+        private void ClearStorage()
+        {
+            var path = Sys.Settings.Config.GetString("akka.persistence.snapshot-store.local.dir");
+            try
+            {
+                if (!string.IsNullOrEmpty(path))
+                    Directory.Delete(path, true);
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        protected override void AfterTermination()
+        {
+            ClearStorage();
+            base.AfterTermination();
+        }
 
         /// <summary>
         /// Flexible cluster join pattern usage.
@@ -209,24 +240,22 @@ namespace Akka.Cluster.Sharding.Tests
             }, from);
             EnterBarrier(from.Name + "-joined");
         }
-
+        
         protected IActorRef StartSharding(
             ActorSystem sys,
             string typeName,
+            IMessageExtractor messageExtractor = null,
             Props entityProps = null,
             ClusterShardingSettings settings = null,
-            ExtractEntityId extractEntityId = null,
-            ExtractShardId extractShardId = null,
             IShardAllocationStrategy allocationStrategy = null,
             object handOffStopMessage = null)
         {
             return ClusterSharding.Get(sys).Start(
                 typeName,
-                entityProps ?? EchoActor.Props(this),
-                settings ?? this.settings.Value,
-                extractEntityId ?? IntExtractEntityId,
-                extractShardId ?? IntExtractShardId,
-                allocationStrategy ?? defaultShardAllocationStrategy.Value,
+                entityProps ?? SimpleEchoActor.Props(),
+                settings ?? Settings.Value,
+                messageExtractor ?? new IntMessageExtractor(),
+                allocationStrategy ?? _defaultShardAllocationStrategy.Value,
                 handOffStopMessage ?? PoisonPill.Instance);
         }
 
@@ -234,51 +263,65 @@ namespace Akka.Cluster.Sharding.Tests
             ActorSystem sys,
             string typeName,
             string role,
-            ExtractEntityId extractEntityId,
-            ExtractShardId extractShardId)
+            IMessageExtractor messageExtractor = null)
         {
-            return ClusterSharding.Get(sys).StartProxy(typeName, role, extractEntityId, extractShardId);
+            return ClusterSharding.Get(sys).StartProxy(typeName, role, messageExtractor ?? new IntMessageExtractor());
         }
 
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="startOn">the node to start the `MemoryJournalShared` store on</param>
-        protected void StartPersistenceIfNeeded(RoleName startOn)
+        protected void SetStoreIfNeeded(ActorSystem sys, RoleName storeOn)
         {
             if (PersistenceIsNeeded)
-                StartPersistence(startOn);
+                SetStore(sys, storeOn);
+        }
+
+        protected void SetStore(ActorSystem sys, RoleName storeOn)
+        {
+            Persistence.Persistence.Instance.Apply(sys);
+
+            var journalProbe = CreateTestProbe(sys);
+            sys.ActorSelection(Node(storeOn) / "system" / "akka.persistence.journal.inmem").Tell(new Identify(null), journalProbe.Ref);
+            var sharedjournalStore = journalProbe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(20)).Subject;
+            sharedjournalStore.Should().NotBeNull();
+            MemoryJournalShared.SetStore(sharedjournalStore, sys);
+
+            var snapshotProbe = CreateTestProbe(sys);
+            sys.ActorSelection(Node(storeOn) / "system" / "akka.persistence.snapshot-store.inmem").Tell(new Identify(null), snapshotProbe.Ref);
+            var sharedSnapshotStore = snapshotProbe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(20)).Subject;
+            sharedSnapshotStore.Should().NotBeNull();
+            MemorySnapshotStoreShared.SetStore(sharedSnapshotStore, sys);
         }
 
         /// <summary>
         ///
         /// </summary>
         /// <param name="startOn">the node to start the `MemoryJournalShared` store on</param>
-        protected void StartPersistence(RoleName startOn)
+        protected void StartPersistenceIfNeeded(RoleName startOn, params RoleName[] setStoreOn)
         {
-            Log.Info("Setting up setup shared journal.");
+            if (PersistenceIsNeeded)
+                StartPersistence(startOn, setStoreOn);
+        }
 
-            // start the Persistence extension
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="startOn">the node to start the `MemoryJournalShared` store on</param>
+        protected void StartPersistence(RoleName startOn, params RoleName[] setStoreOn)
+        {
+            Log.Info("Setting up setup shared journal & snapshot.");
+
             Persistence.Persistence.Instance.Apply(Sys);
             RunOn(() =>
             {
-                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.MemoryJournal");
+                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.inmem");
+                Persistence.Persistence.Instance.Apply(Sys).SnapshotStoreFor("akka.persistence.snapshot-store.inmem");
             }, startOn);
+
             EnterBarrier("persistence-started");
 
-            Sys.ActorSelection(Node(startOn) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
-            var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-            sharedStore.Should().NotBeNull();
-
-            MemoryJournalShared.SetStore(sharedStore, Sys);
-
-            EnterBarrier("persistence-started-test");
-
-            //check persistence running
-            var probe = CreateTestProbe(Sys);
-            var journal = Persistence.Persistence.Instance.Get(Sys).JournalFor(null);
-            journal.Tell(new Persistence.ReplayMessages(0, 0, long.MaxValue, Guid.NewGuid().ToString(), probe.Ref));
-            probe.ExpectMsg<Persistence.RecoverySuccess>(TimeSpan.FromSeconds(10));
+            RunOn(() =>
+            {
+                SetStore(Sys, startOn);
+            }, setStoreOn);
 
             EnterBarrier($"after-{startOn.Name}");
         }

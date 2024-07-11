@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Address.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ namespace Akka.Actor
         /// <summary>
         /// Pseudo address for all systems
         /// </summary>
-        public static readonly Address AllSystems = new Address("akka", "all-systems");
+        public static readonly Address AllSystems = new("akka", "all-systems");
 
         private string _toString;
         private readonly string _host;
@@ -135,7 +135,6 @@ namespace Akka.Actor
             return Comparer.Compare(this, other);
         }
 
-        /// <inheritdoc/>
         public override string ToString()
         {
             if (_toString == null)
@@ -146,7 +145,7 @@ namespace Akka.Actor
             return _toString;
         }
 
-        /// <inheritdoc/>
+
         public bool Equals(Address other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -154,10 +153,9 @@ namespace Akka.Actor
             return Port == other.Port && string.Equals(Host, other.Host) && string.Equals(System, other.System) && string.Equals(Protocol, other.Protocol);
         }
 
-        /// <inheritdoc/>
+
         public override bool Equals(object obj) => Equals(obj as Address);
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -357,7 +355,7 @@ namespace Akka.Actor
             if (firstColonPos == -1) // not an absolute Uri
                 return false;
 
-            if (firstColonPos < 4 || 255 < firstColonPos)
+            if (firstColonPos is < 4 or > 255)
             {
                 //invalid scheme length
                 return false;
@@ -526,7 +524,7 @@ namespace Akka.Actor
                 if (!isRelative) return null;
 
                 var finalAddr = addr;
-                if (!addr.StartsWith("/"))
+                if (!addr.StartsWith('/'))
                 {
                     //hack to cause the URI not to explode when we're only given an actor name
                     finalAddr = "/" + addr;

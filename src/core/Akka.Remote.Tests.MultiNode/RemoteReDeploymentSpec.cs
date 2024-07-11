@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteReDeploymentSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 
@@ -46,7 +47,6 @@ namespace Akka.Remote.Tests.MultiNode
     public abstract class RemoteReDeploymentSpec : MultiNodeSpec
     {
         private readonly RemoteReDeploymentSpecConfig _config;
-        private readonly Func<RoleName, string, IActorRef> _identify;
 
         protected RemoteReDeploymentSpec(Type type) : this(new RemoteReDeploymentSpecConfig(), type)
         {
@@ -76,12 +76,12 @@ namespace Akka.Remote.Tests.MultiNode
                 Sys.ActorOf(Props.Create(() => new Parent()), "parent")
                     .Tell(new ParentMessage(Props.Create(() => new Hello()), "hello"));
 
-                ExpectMsg<string>("HelloParent", TimeSpan.FromSeconds(15));
+                ExpectMsg("HelloParent", TimeSpan.FromSeconds(15));
             }, _config.Second);
 
             RunOn(() =>
             {
-                ExpectMsg<string>("PreStart", TimeSpan.FromSeconds(15));
+                ExpectMsg("PreStart", TimeSpan.FromSeconds(15));
                 
             }, _config.First);
 
@@ -141,7 +141,7 @@ namespace Akka.Remote.Tests.MultiNode
                     }
                     else
                     {
-                        ExpectMsgAllOf("PostStop", "PreStart");
+                        ExpectMsgAllOf(new []{ "PostStop", "PreStart" });
                     }
                 });
             }, _config.First);
@@ -167,8 +167,14 @@ namespace Akka.Remote.Tests.MultiNode
 
             protected override bool Receive(object message)
             {
-                return message.Match().With<ParentMessage>(_ => Context.ActorOf(_.Props, _.Name)).Default(m =>
-                    _monitor.Tell(m)).WasHandled;
+                if (message is ParentMessage msg)
+                {
+                    Context.ActorOf(msg.Props, msg.Name); 
+                    return true;
+                }
+
+                _monitor.Tell(message);
+                return true;
             }
         }
 

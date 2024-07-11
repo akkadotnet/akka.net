@@ -1,12 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Option.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using Akka.Annotations;
 
 namespace Akka.Util
 {
@@ -16,21 +18,29 @@ namespace Akka.Util
     /// Useful where distinguishing between null (or zero, or false) and uninitialized is significant.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    [InternalStableApi]
     public readonly struct Option<T>
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Option<T> Create(T value)
+#pragma warning disable CS0618
+            => value is null ? None : new Option<T>(value);
+#pragma warning restore CS0618
+
         /// <summary>
         /// None.
         /// </summary>
-        public static readonly Option<T> None = new Option<T>();
+        public static readonly Option<T> None = new();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="value">TBD</param>
+        // TODO: Change this to private constructor in the future
+        [Obsolete("Use Option<T>.Create() instead")] 
         public Option(T value)
         {
+            if (value is null)
+                throw new ArgumentNullException(nameof(value), "You can not create an Option<T> with null value. Either use Option<T>.None or use Option<T>.Create(null).");
+            
             Value = value;
-            HasValue = value != null;
+            HasValue = true;
         }
 
         /// <summary>
@@ -50,7 +60,7 @@ namespace Akka.Util
         /// </summary>
         /// <param name="value">The object to convert</param>
         /// <returns>The result of the conversion.</returns>
-        public static implicit operator Option<T>(T value) => new Option<T>(value);
+        public static implicit operator Option<T>(T value) => Create(value);
 
         /// <summary>
         /// Gets option value, if any, otherwise returns default value provided
@@ -84,7 +94,7 @@ namespace Akka.Util
         public bool Equals(Option<T> other)
             => HasValue == other.HasValue && EqualityComparer<T>.Default.Equals(Value, other.Value);
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             if (obj is null)
@@ -92,7 +102,7 @@ namespace Akka.Util
             return obj is Option<T> opt && Equals(opt);
         }
         
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             unchecked
@@ -101,7 +111,7 @@ namespace Akka.Util
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => HasValue ? $"Some<{Value}>" : "None";
 
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BackoffOptions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,7 +11,7 @@ using Akka.Actor;
 namespace Akka.Pattern
 {
     /// <summary>
-    /// Builds back-off options for creating a back-off supervisor. You can pass <see cref="BackoffOptions"/> to <see cref="BackoffSupervisor.Props"/>.
+    /// Builds back-off options for creating a back-off supervisor. You can pass <see cref="BackoffOptions"/> to <see cref="Props"/>.
     /// </summary>
     public static class Backoff
     {
@@ -195,7 +195,7 @@ namespace Akka.Pattern
             {
                 if (_minBackoff <= TimeSpan.Zero) throw new ArgumentException("MinBackoff must be greater than 0");
                 if (_maxBackoff < _minBackoff) throw new ArgumentException("MaxBackoff must be greater than MinBackoff");
-                if (_randomFactor < 0.0 || _randomFactor > 1.0) throw new ArgumentException("RandomFactor must be between 0.0 and 1.0");
+                if (_randomFactor is < 0.0 or > 1.0) throw new ArgumentException("RandomFactor must be between 0.0 and 1.0");
                 
                 if (_reset is AutoReset autoReset)
                 {
@@ -210,9 +210,9 @@ namespace Akka.Pattern
                 switch (_backoffType)
                 {
                     case RestartImpliesFailure _:
-                        return Props.Create(() => new BackoffOnRestartSupervisor(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped, _finalStopMessage));
+                        return Props.Create<BackoffOnRestartSupervisor>(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped, _finalStopMessage);
                     case StopImpliesFailure _:
-                        return Props.Create(() => new BackoffSupervisor(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped, _finalStopMessage));
+                        return Props.Create<BackoffSupervisor>(_childProps, _childName, _minBackoff, _maxBackoff, _reset, _randomFactor, _strategy, _replyWhileStopped, _finalStopMessage);
                     default:
                         return Props.Empty;
                 }
@@ -226,13 +226,13 @@ namespace Akka.Pattern
 
     internal sealed class StopImpliesFailure : IBackoffType
     {
-        public static readonly StopImpliesFailure Instance = new StopImpliesFailure();
+        public static readonly StopImpliesFailure Instance = new();
         private StopImpliesFailure() { }
     }
 
     internal sealed class RestartImpliesFailure : IBackoffType
     {
-        public static readonly RestartImpliesFailure Instance = new RestartImpliesFailure();
+        public static readonly RestartImpliesFailure Instance = new();
         private RestartImpliesFailure() { }
     }
 

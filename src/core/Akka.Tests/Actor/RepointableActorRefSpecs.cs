@@ -1,10 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RepointableActorRefSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -18,20 +19,20 @@ namespace Akka.Tests.Actor
         {
             public Bug2182Actor()
             {
-                Receive<string>(str => str.Equals("init"), s => Become(Initialize));
-                ReceiveAny(o => Stash.Stash());
+                Receive<string>(str => str.Equals("init"), _ => Become(Initialize));
+                ReceiveAny(_ => Stash.Stash());
                 Self.Tell("init");
             }
 
             private void Initialize()
             {
                 Self.Tell("init2");
-                Receive<string>(str => str.Equals("init2"), s =>
+                Receive<string>(str => str.Equals("init2"), _ =>
                 {
                     Become(Set);
                     Stash.UnstashAll();
                 });
-                ReceiveAny(o => Stash.Stash());
+                ReceiveAny(_ => Stash.Stash());
             }
 
             private void Set()
@@ -46,11 +47,11 @@ namespace Akka.Tests.Actor
         /// Fixes https://github.com/akkadotnet/akka.net/pull/2182
         /// </summary>
         [Fact]
-        public void Fix2128_RepointableActorRef_multiple_enumerations()
+        public async Task Fix2128_RepointableActorRef_multiple_enumerations()
         {
             var actor = Sys.ActorOf(Props.Create(() => new Bug2182Actor()).WithDispatcher("akka.test.calling-thread-dispatcher"), "buggy");
             actor.Tell("foo");
-            ExpectMsg("foo");
+            await ExpectMsgAsync("foo");
         }
     }
 }

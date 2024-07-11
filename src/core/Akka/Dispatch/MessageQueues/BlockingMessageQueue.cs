@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BlockingMessageQueue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,7 +16,7 @@ namespace Akka.Dispatch.MessageQueues
     /// </summary>
     public abstract class BlockingMessageQueue : IMessageQueue, IBlockingMessageQueueSemantics
     {
-        private readonly object _lock = new object();
+        private readonly object _lock = new();
         private TimeSpan _blockTimeOut = TimeSpan.FromSeconds(1);
         /// <summary>
         /// TBD
@@ -88,8 +88,7 @@ namespace Akka.Dispatch.MessageQueues
         /// <returns>TBD</returns>
         public void CleanUp(IActorRef owner, IMessageQueue deadletters)
         {
-            Envelope msg;
-            while (TryDequeue(out msg)) // lock gets acquired inside the TryDequeue method
+            while (TryDequeue(out var msg)) // lock gets acquired inside the TryDequeue method
             {
                 deadletters.Enqueue(owner, msg);
             }

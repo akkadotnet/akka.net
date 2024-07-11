@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FanOut.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -80,42 +80,54 @@ namespace Akka.Streams.Implementation
                 isReady: () => _markedPending > 0);
 
             // FIXME: Eliminate re-wraps
-            SubReceive = new SubReceive(message => message.Match()
-                .With<FanOut.ExposedPublishers<T>>(exposed =>
+            SubReceive = new SubReceive(message =>
+            {
+                switch (message)
                 {
-                    var publishers = exposed.Publishers.GetEnumerator();
-                    var outputs = _outputs.AsEnumerable().GetEnumerator();
+                    case FanOut.ExposedPublishers<T> exposed:
+                        using (var publishers = exposed.Publishers.GetEnumerator())
+                        {
+                            using (var outputs = _outputs.AsEnumerable().GetEnumerator())
+                            {
+                                while (publishers.MoveNext() && outputs.MoveNext())
+                                    outputs.Current?.SubReceive.CurrentReceive(new ExposedPublisher(publishers.Current));
+                            }
+                        }
+                        return true;
 
-                    while (publishers.MoveNext() && outputs.MoveNext())
-                        outputs.Current.SubReceive.CurrentReceive(new ExposedPublisher(publishers.Current));
-                })
-                .With<FanOut.SubstreamRequestMore>(more =>
-                {
-                    if (more.Demand < 1)
-                        // According to Reactive Streams Spec 3.9, with non-positive demand must yield onError
-                        Error(more.Id, ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
-                    else
-                    {
-                        if (_marked[more.Id] && !_pending[more.Id])
-                            _markedPending += 1;
-                        _pending[more.Id] = true;
-                        _outputs[more.Id].SubReceive.CurrentReceive(new RequestMore(null, more.Demand));
-                    }
-                })
-                .With<FanOut.SubstreamCancel>(cancel =>
-                {
-                    if (_unmarkCancelled)
-                        UnmarkOutput(cancel.Id);
+                    case FanOut.SubstreamRequestMore more:
+                        if (more.Demand < 1)
+                            // According to Reactive Streams Spec 3.9, with non-positive demand must yield onError
+                            Error(more.Id, ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
+                        else
+                        {
+                            if (_marked[more.Id] && !_pending[more.Id])
+                                _markedPending += 1;
+                            _pending[more.Id] = true;
+                            _outputs[more.Id].SubReceive.CurrentReceive(new RequestMore(null, more.Demand));
+                        }
+                        return true;
 
-                    if (_marked[cancel.Id] && !_cancelled[cancel.Id])
-                        _markedCanceled += 1;
+                    case FanOut.SubstreamCancel cancel:
+                        if (_unmarkCancelled)
+                            UnmarkOutput(cancel.Id);
 
-                    _cancelled[cancel.Id] = true;
-                    OnCancel(cancel.Id);
-                    _outputs[cancel.Id].SubReceive.CurrentReceive(new Cancel(null));
-                })
-                .With<FanOut.SubstreamSubscribePending>(pending => _outputs[pending.Id].SubReceive.CurrentReceive(SubscribePending.Instance))
-                .WasHandled);
+                        if (_marked[cancel.Id] && !_cancelled[cancel.Id])
+                            _markedCanceled += 1;
+
+                        _cancelled[cancel.Id] = true;
+                        OnCancel(cancel.Id);
+                        _outputs[cancel.Id].SubReceive.CurrentReceive(new Cancel(null));
+                        return true;
+                    
+                    case FanOut.SubstreamSubscribePending pending:
+                        _outputs[pending.Id].SubReceive.CurrentReceive(SubscribePending.Instance);
+                        return true;
+                    
+                    default:
+                        return false;
+                }
+            });
         }
 
         /// <summary>
@@ -403,7 +415,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         [Serializable]
-        public struct SubstreamRequestMore : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct SubstreamRequestMore : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -430,7 +442,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         [Serializable]
-        public struct SubstreamCancel : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct SubstreamCancel : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -451,7 +463,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         [Serializable]
-        public struct SubstreamSubscribePending : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct SubstreamSubscribePending : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -507,7 +519,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         [Serializable]
-        public struct ExposedPublishers<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct ExposedPublishers<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -578,7 +590,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        protected ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
         private ILoggingAdapter _log;
 
         /// <summary>
@@ -708,7 +720,7 @@ namespace Akka.Streams.Implementation
         /// <param name="settings">TBD</param>
         /// <returns>TBD</returns>
         public static Props Props<T>(ActorMaterializerSettings settings)
-            => Actor.Props.Create(() => new Unzip<T>(settings, 2)).WithDeploy(Deploy.Local);
+            => Actor.Props.Create<Unzip<T>>(settings, 2).WithDeploy(Deploy.Local);
     }
 
     /// <summary>
@@ -728,6 +740,7 @@ namespace Akka.Streams.Implementation
         /// This exception is thrown when the elements in <see cref="Akka.Streams.Implementation.FanOut{T}.PrimaryInputs"/>
         /// are of an unknown type.
         /// </exception>>
+        /// If this gets changed you must change <see cref="Akka.Streams.Implementation.FanOut.Unzip{T}"/> as well!
         public Unzip(ActorMaterializerSettings settings, int outputCount = 2) : base(settings, outputCount)
         {
             OutputBunch.MarkAllOutputs();

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RandomSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ namespace Akka.Tests.Routing
             {
                 _testLatch = testLatch;
 
-                Receive<string>(s => s == "hello", c => Sender.Tell("world"));
+                Receive<string>(s => s == "hello", _ => Sender.Tell("world"));
             }
 
             protected override void PostStop()
@@ -42,15 +42,15 @@ namespace Akka.Tests.Routing
         {
             private readonly TestLatch _doneLatch;
             private static AtomicCounter _counter;
-            private readonly Lazy<int> id = new Lazy<int>(() => _counter.GetAndIncrement());
+            private readonly Lazy<int> id = new(() => _counter.GetAndIncrement());
 
             public RandomActor(TestLatch doneLatch, AtomicCounter counter)
             {
                 _doneLatch = doneLatch;
                 _counter = counter;
 
-                Receive<string>(s => s == "hit", c => Sender.Tell(id.Value));
-                Receive<string>(s => s == "end", c => _doneLatch.CountDown());
+                Receive<string>(s => s == "hit", _ => Sender.Tell(id.Value));
+                Receive<string>(s => s == "end", _ => _doneLatch.CountDown());
             }
         }
 
@@ -64,7 +64,7 @@ namespace Akka.Tests.Routing
                 _helloLatch = helloLatch;
                 _stopLatch = stopLatch;
 
-                Receive<string>(s => s == "hello", c => _helloLatch.CountDown());
+                Receive<string>(s => s == "hello", _ => _helloLatch.CountDown());
             }
 
             protected override void PostStop()
@@ -88,8 +88,8 @@ namespace Akka.Tests.Routing
             {
                 this._doneLatch = doneLatch;
 
-                Receive<string>(s => s == "hit", c => Sender.Tell(Self.Path.Name));
-                Receive<string>(s => s == "end", c => _doneLatch.CountDown());
+                Receive<string>(s => s == "hit", _ => Sender.Tell(Self.Path.Name));
+                Receive<string>(s => s == "end", _ => _doneLatch.CountDown());
             }
         }
 
@@ -128,18 +128,18 @@ namespace Akka.Tests.Routing
         {
             public RandomLogicPropsActor()
             {
-                Receive<string>(s => s == "hit", c => Sender.Tell(Self.Path.Name));
-                Receive<string>(s => s == "end", c => Context.Stop(Self));
+                Receive<string>(s => s == "hit", _ => Sender.Tell(Self.Path.Name));
+                Receive<string>(s => s == "end", _ => Context.Stop(Self));
             }
         }
 
-        private int RouteeSize(IActorRef router)
+        private async Task<int> RouteeSize(IActorRef router)
         {
-            return router.Ask<Routees>(new GetRoutees()).Result.Members.Count();
+            return (await router.Ask<Routees>(new GetRoutees())).Members.Count();
         }
 
         [Fact]
-        public void Random_pool_must_be_able_to_shut_down_its_instance()
+        public async Task Random_pool_must_be_able_to_shut_down_its_instance()
         {
             const int routeeCount = 7;
             var testLatch = new TestLatch(routeeCount);
@@ -153,10 +153,10 @@ namespace Akka.Tests.Routing
             actor.Tell("hello");
             actor.Tell("hello");
 
-            Within(TimeSpan.FromSeconds(2), () => {
+            await WithinAsync(TimeSpan.FromSeconds(2), async() => {
                 for (int i = 1; i <= 5; i++)
                 {
-                    ExpectMsg("world");
+                    await ExpectMsgAsync("world");
                 }
             });
 
@@ -218,22 +218,22 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
-        public void Random_pool_must_be_controlled_with_management_messages()
+        public async Task Random_pool_must_be_controlled_with_management_messages()
         {
             IActorRef actor = Sys.ActorOf(new RandomPool(3)
                 .Props(Props.Create<EmptyBehaviorActor>()), "random-managed");
 
-            RouteeSize(actor).Should().Be(3);
+            (await RouteeSize(actor)).Should().Be(3);
             actor.Tell(new AdjustPoolSize(4));
-            RouteeSize(actor).Should().Be(7);
+            (await RouteeSize(actor)).Should().Be(7);
             actor.Tell(new AdjustPoolSize(-2));
-            RouteeSize(actor).Should().Be(5);
+            (await RouteeSize(actor)).Should().Be(5);
 
             var other = new ActorSelectionRoutee(Sys.ActorSelection("/user/other"));
             actor.Tell(new AddRoutee(other));
-            RouteeSize(actor).Should().Be(6);
+            (await RouteeSize(actor)).Should().Be(6);
             actor.Tell(new RemoveRoutee(other));
-            RouteeSize(actor).Should().Be(5);
+            (await RouteeSize(actor)).Should().Be(5);
         }
 
         [Fact]
@@ -302,7 +302,7 @@ namespace Akka.Tests.Routing
 
             Watch(actor);
             actor.Tell(new Broadcast("end"));
-            ExpectTerminated(actor);
+            await ExpectTerminatedAsync(actor);
 
             replies.Values.ForEach(c => c.Should().BeGreaterThan(0));
             replies.Values.Any(c => c != iterationCount).ShouldBeTrue();

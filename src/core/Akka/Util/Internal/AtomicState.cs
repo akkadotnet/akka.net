@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtomicState.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -73,89 +73,79 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Shared implementation of call across all states.  Thrown exception or execution of the call beyond the allowed
         /// call timeout is counted as a failed call, otherwise a successful call
-        /// 
-        /// NOTE: In .Net there is no way to cancel an uncancellable task. We are merely cancelling the wait and marking this
-        /// as a failure.
-        /// 
-        /// see http://blogs.msdn.com/b/pfxteam/archive/2011/11/10/10235834.aspx 
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="task">Implementation of the call</param>
-        /// <returns>result of the call</returns>
+        /// <param name="task"><see cref="Task"/> Implementation of the call</param>
+        /// <returns><see cref="Task"/> containing the result of the call</returns>
         public async Task<T> CallThrough<T>(Func<Task<T>> task)
         {
-            var deadline = DateTime.UtcNow.Add(_callTimeout);
-            ExceptionDispatchInfo capturedException = null;
-            T result = default(T);
+            var result = default(T);
             try
             {
-                result = await task().ConfigureAwait(false);
+                result = await task().WaitAsync(_callTimeout).ConfigureAwait(false);
+                CallSucceeds();
             }
             catch (Exception ex)
             {
-                capturedException = ExceptionDispatchInfo.Capture(ex);
-            }
-
-            // Need to make sure that timeouts are reported as timeouts
-            if (capturedException != null)
-            {
+                var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
             }
-            else if (DateTime.UtcNow.CompareTo(deadline) >= 0)
+
+            return result;
+        }
+
+        public async Task<T> CallThrough<T, TState>(TState state, Func<TState, Task<T>> task)
+        {
+            var result = default(T);
+            try
             {
-                CallFails(new TimeoutException(
-                    $"Execution did not complete within the time allotted {_callTimeout.TotalMilliseconds} ms"));
-            }
-            else
-            {
+                result = await task(state).WaitAsync(_callTimeout).ConfigureAwait(false);
                 CallSucceeds();
             }
+            catch (Exception ex)
+            {
+                var capturedException = ExceptionDispatchInfo.Capture(ex);
+                CallFails(capturedException.SourceException);
+                capturedException.Throw();
+            }
+
             return result;
         }
 
         /// <summary>
         /// Shared implementation of call across all states.  Thrown exception or execution of the call beyond the allowed
         /// call timeout is counted as a failed call, otherwise a successful call
-        /// 
-        /// NOTE: In .Net there is no way to cancel an uncancellable task. We are merely cancelling the wait and marking this
-        /// as a failure.
-        /// 
-        /// see http://blogs.msdn.com/b/pfxteam/archive/2011/11/10/10235834.aspx 
         /// </summary>
         /// <param name="task"><see cref="Task"/> Implementation of the call</param>
-        /// <returns><see cref="Task"/></returns>
+        /// <returns><see cref="Task"/> containing the result of the call</returns>
         public async Task CallThrough(Func<Task> task)
         {
-            var deadline = DateTime.UtcNow.Add(_callTimeout);
-            ExceptionDispatchInfo capturedException = null;
-
             try
             {
-                await task().ConfigureAwait(false);
+                await task().WaitAsync(_callTimeout).ConfigureAwait(false);
+                CallSucceeds();
             }
             catch (Exception ex)
             {
-                capturedException = ExceptionDispatchInfo.Capture(ex);
-            }
-
-            // Need to make sure that timeouts are reported as timeouts
-            if (capturedException != null)
-            {
-                CallFails(capturedException?.SourceException);
+                var capturedException = ExceptionDispatchInfo.Capture(ex);
+                CallFails(capturedException.SourceException);
                 capturedException.Throw();
-            } 
-            else if (DateTime.UtcNow.CompareTo(deadline) >= 0)
-            {
-                CallFails(new TimeoutException(
-                    $"Execution did not complete within the time allotted {_callTimeout.TotalMilliseconds} ms"));
             }
-            else
+        }
+
+        public async Task CallThrough<TState>(TState state, Func<TState, Task> task)
+        {
+            try
             {
+                await task(state).WaitAsync(_callTimeout).ConfigureAwait(false);
                 CallSucceeds();
             }
-
-
+            catch (Exception ex)
+            {
+                var capturedException = ExceptionDispatchInfo.Capture(ex);
+                CallFails(capturedException.SourceException);
+                capturedException.Throw();
+            }
         }
 
         /// <summary>
@@ -166,12 +156,16 @@ namespace Akka.Util.Internal
         /// <returns><see cref="Task"/> containing result of protected call</returns>
         public abstract Task<T> Invoke<T>(Func<Task<T>> body);
 
+        public abstract Task<T> InvokeState<T, TState>(TState state, Func<TState, Task<T>> body);
+
         /// <summary>
         /// Abstract entry point for all states
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
         public abstract Task Invoke(Func<Task> body);
+
+        public abstract Task InvokeState<TState>(TState state, Func<TState, Task> body);
 
         /// <summary>
         /// Invoked when call fails
@@ -195,9 +189,10 @@ namespace Akka.Util.Internal
         public void Enter()
         {
             EnterInternal();
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             NotifyTransitionListeners();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         }
-
     }
 
     /// <summary>

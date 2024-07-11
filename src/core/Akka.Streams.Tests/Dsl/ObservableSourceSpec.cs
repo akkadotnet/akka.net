@@ -1,16 +1,16 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ObservableSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
@@ -71,35 +71,33 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void An_ObservableSource_must_subscribe_to_an_observable()
+        public async Task An_ObservableSource_must_subscribe_to_an_observable()
         {
-            this.AssertAllStagesStopped(() =>
+            await this.AssertAllStagesStoppedAsync(async() =>
             {
-
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o)
                     .To(Sink.FromSubscriber(s))
                     .Run(_materializer);
 
-                var sub = s.ExpectSubscription();
+                var sub = await s.ExpectSubscriptionAsync();
 
                 o.Complete();
             }, _materializer);
         }
 
         [Fact]
-        public void An_ObservableSource_must_receive_events_from_an_observable()
+        public async Task An_ObservableSource_must_receive_events_from_an_observable()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o)
                     .To(Sink.FromSubscriber(s))
                     .Run(_materializer);
 
-                var sub = s.ExpectSubscription();
+                var sub = await s.ExpectSubscriptionAsync();
 
                 sub.Request(2);
 
@@ -107,35 +105,34 @@ namespace Akka.Streams.Tests.Dsl
                 o.Event(2);
                 o.Event(3);
 
-                s.ExpectNext(1);
-                s.ExpectNext(2);
+                await s.ExpectNextAsync(1);
+                await s.ExpectNextAsync(2);
                 s.ExpectNoMsg();
 
                 sub.Request(2);
 
-                s.ExpectNext(3);
+                await s.ExpectNextAsync(3);
                 s.ExpectNoMsg();
 
                 o.Event(4);
 
-                s.ExpectNext(4);
+                await s.ExpectNextAsync(4);
 
                 o.Complete();
             }, _materializer);
         }
 
         [Fact(Skip = "Buggy")]
-        public void An_ObservableSource_must_receive_errors_from_an_observable()
+        public async Task An_ObservableSource_must_receive_errors_from_an_observable()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o)
                     .To(Sink.FromSubscriber(s))
                     .Run(_materializer);
 
-                var sub = s.ExpectSubscription();
+                var sub = await s.ExpectSubscriptionAsync();
                 sub.Request(2);
 
                 var e = new Exception("hello");
@@ -144,69 +141,66 @@ namespace Akka.Streams.Tests.Dsl
                 o.Error(e);
                 o.Event(2);
 
-                s.ExpectNext(1);
+                await s.ExpectNextAsync(1);
                 s.ExpectError().ShouldBe(e);
                 s.ExpectNoMsg();
             }, _materializer);
         }
 
         [Fact]
-        public void An_ObservableSource_must_receive_completion_from_an_observable()
+        public async Task An_ObservableSource_must_receive_completion_from_an_observable()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o)
                     .To(Sink.FromSubscriber(s))
                     .Run(_materializer);
 
-                var sub = s.ExpectSubscription();
+                var sub = await s.ExpectSubscriptionAsync();
 
                 o.Event(1);
                 o.Complete();
 
                 sub.Request(5);
-                
-                s.ExpectComplete();
+
+                await s.ExpectCompleteAsync();
             }, _materializer);
         }
 
         [Fact]
-        public void An_ObservableSource_must_be_able_to_unsubscribe()
+        public async Task An_ObservableSource_must_be_able_to_unsubscribe()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o)
                     .To(Sink.FromSubscriber(s))
                     .Run(_materializer);
 
-                var sub = s.ExpectSubscription();
+                var sub = await s.ExpectSubscriptionAsync();
 
                 o.Event(1);
 
                 sub.Cancel();
 
-                Thread.Sleep(100);
+                await Task.Delay(100);
 
                 o.Subscribed.ShouldBeFalse();
             }, _materializer);
         }
 
         [Fact]
-        public void An_ObservableSource_must_ignore_new_element_on_DropNew_overflow()
+        public async Task An_ObservableSource_must_ignore_new_element_on_DropNew_overflow()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o, maxBufferCapacity: 2, overflowStrategy: OverflowStrategy.DropNew)
                     .To(Sink.FromSubscriber(s))
                     .Run(_materializer);
 
-                var sub = s.ExpectSubscription();
+                var sub = await s.ExpectSubscriptionAsync();
 
                 o.Event(1);
                 o.Event(2);
@@ -214,8 +208,8 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.Request(3);
 
-                s.ExpectNext(1);
-                s.ExpectNext(2);
+                await s.ExpectNextAsync(1);
+                await s.ExpectNextAsync(2);
                 s.ExpectNoMsg();
 
                 sub.Cancel();
@@ -223,17 +217,16 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void An_ObservableSource_must_drop_oldest_element_on_DropHead_overflow()
+        public async Task An_ObservableSource_must_drop_oldest_element_on_DropHead_overflow()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o, maxBufferCapacity: 2, overflowStrategy: OverflowStrategy.DropHead)
                     .To(Sink.FromSubscriber(s))
                     .Run(_materializer);
 
-                var sub = s.ExpectSubscription();
+                var sub = await s.ExpectSubscriptionAsync();
 
                 o.Event(1); // this should be dropped
                 o.Event(2);
@@ -241,8 +234,8 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.Request(3);
 
-                s.ExpectNext(2);
-                s.ExpectNext(3);
+                await s.ExpectNextAsync(2);
+                await s.ExpectNextAsync(3);
                 s.ExpectNoMsg();
 
                 sub.Cancel();
@@ -250,17 +243,16 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void An_ObservableSource_must_drop_newest_element_on_DropTail_overflow()
+        public async Task An_ObservableSource_must_drop_newest_element_on_DropTail_overflow()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o, maxBufferCapacity: 2, overflowStrategy: OverflowStrategy.DropTail)
                     .To(Sink.FromSubscriber(s))
                     .Run(_materializer);
 
-                var sub = s.ExpectSubscription();
+                var sub = await s.ExpectSubscriptionAsync();
 
                 o.Event(1);
                 o.Event(2); // this should be dropped
@@ -268,8 +260,8 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.Request(3);
 
-                s.ExpectNext(1);
-                s.ExpectNext(3);
+                await s.ExpectNextAsync(1);
+                await s.ExpectNextAsync(3);
                 s.ExpectNoMsg();
 
                 sub.Cancel();
@@ -277,24 +269,23 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void An_ObservableSource_must_fail_on_Fail_overflow()
+        public async Task An_ObservableSource_must_fail_on_Fail_overflow()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var o = new TestObservable<int>();
                 var s = this.CreateManualSubscriberProbe<int>();
                 Source.FromObservable(o, maxBufferCapacity: 2, overflowStrategy: OverflowStrategy.Fail)
                     .To(Sink.FromSubscriber(s))
                     .Run(_materializer);
 
-                var sub = s.ExpectSubscription();
+                var sub = await s.ExpectSubscriptionAsync();
 
                 o.Event(1);
                 o.Event(2);
                 o.Event(3); // this should cause an error
 
                 sub.Request(3);
-                
+
                 s.ExpectError();
                 s.ExpectNoMsg();
 

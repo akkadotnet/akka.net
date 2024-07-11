@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="WithUdpSend.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -46,7 +46,6 @@ namespace Akka.IO
                             _pendingSend = send;
                             _pendingCommander = Sender;
 
-                            //var e = Udp.SocketEventArgsPool.Acquire(Self);
                             if (send.Target is DnsEndPoint dns)
                             {
                                 var resolved = Dns.ResolveName(dns.Host, Context.System, Self);
@@ -83,10 +82,10 @@ namespace Akka.IO
                     }
                 case SocketSent sent:
                     {
-                        if (sent.EventArgs.SocketError == SocketError.Success)
+                        if (sent.SocketError == SocketError.Success)
                         {
                             if (Udp.Setting.TraceLogging)
-                                _log.Debug("Wrote [{0}] bytes to channel", sent.EventArgs.BytesTransferred);
+                                _log.Debug("Wrote [{0}] bytes to channel", sent.BytesTransferred);
 
                             if (_pendingSend.WantsAck) _pendingCommander.Tell(_pendingSend.Ack);
 

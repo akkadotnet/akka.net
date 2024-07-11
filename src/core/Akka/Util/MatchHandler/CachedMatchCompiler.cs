@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CachedMatchCompiler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -23,11 +23,11 @@ namespace Akka.Tools.MatchHandler
         private readonly IMatchExpressionBuilder _expressionBuilder;
         private readonly IPartialActionBuilder _actionBuilder;
         private readonly ILambdaExpressionCompiler _expressionCompiler;
-        private readonly ConcurrentDictionary<MatchBuilderSignature, Delegate> _cache = new ConcurrentDictionary<MatchBuilderSignature, Delegate>();
+        private readonly ConcurrentDictionary<MatchBuilderSignature, Delegate> _cache = new();
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly CachedMatchCompiler<T> Instance = new CachedMatchCompiler<T>(new MatchExpressionBuilder<T>(), new PartialActionBuilder(), new LambdaExpressionCompiler());
+        public static readonly CachedMatchCompiler<T> Instance = new(new MatchExpressionBuilder<T>(), new PartialActionBuilder(), new LambdaExpressionCompiler());
 
         /// <summary>
         /// TBD

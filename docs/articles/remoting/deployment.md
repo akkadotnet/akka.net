@@ -52,7 +52,7 @@ public class Hello
 
 ```
 
-### DeployTarget (process that gets deployed onto)
+### DeployTarget (Process that Gets Deployed Onto)
 
 ```csharp
 class Program
@@ -76,7 +76,7 @@ class Program
 }
 ```
 
-### Deployer (process that does deploying)
+### Deployer (Process that Does Deploying)
 
 ```csharp
 class Program
@@ -197,8 +197,8 @@ However, in the happy event that we can form a remote association with DeployTar
 
 1. A local name on for the actor we're remote deploying will be reserved on Deployer, since all actors must have a unique name;
 2. The `Props` for the `EchoActor` will be serialized, including all of the constructor arguments for the `EchoActor` class, along with anything else in the actor's deployment such as router details, dispatcher configuration, and so forth;
-3. The serialized `Props` and all of the relevant actor path and name information is transmitted over the network by Deployer's `EndpointWriter` and received by DeployTarget's `EndpointWriter`;
-4. The `EndpointWriter` determines that this is a special "deploy remote actor" message, and tells a special system actor (the `RemoteDaemon`) to create a new `EchoActor` instance; and
+3. The serialized `Props` and all of the relevant actor path and name information is transmitted over the network by Deployer's `EndpointWriter` and received by DeployTarget's `EndpointReader`;
+4. The `EndpointReader` determines that this is a special "deploy remote actor" message, and tells a special system actor (the `RemoteDaemon`) to create a new `EchoActor` instance; and
 5. Going forward, all messages sent to the `RemoteActorRef` are automatically sent to the `EchoActor`.
 
 And once all of that is done, we've successfully deployed an `EchoActor` over the network from Deployer to DeployTarget.

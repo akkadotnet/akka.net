@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKit.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -98,14 +98,14 @@ namespace Akka.TestKit.Xunit
         /// <summary>
         /// Commonly used assertions used throughout the testkit.
         /// </summary>
-        protected static XunitAssertions Assertions { get; } = new XunitAssertions();
-        
+        protected static XunitAssertions Assertions { get; } = new();
+
         /// <summary>
         /// This method is called when a test ends.
         /// 
         /// <remarks>
-        /// If you override this, then make sure you either call base.AfterTest() or
-        /// <see cref="TestKitBase.Shutdown(System.Nullable{System.TimeSpan},bool)">TestKitBase.Shutdown</see>
+        /// If you override this, then make sure you either call <c>base.AfterTest()</c> or
+        /// <c>TestKitBase.Shutdown</c>
         /// to shut down the system. Otherwise a memory leak will occur.
         /// </remarks>
         /// </summary>
@@ -128,7 +128,7 @@ namespace Akka.TestKit.Xunit
             }
         }
 
-        /// <inheritdoc/>
+        
         public void Dispose()
         {
             Dispose(true);

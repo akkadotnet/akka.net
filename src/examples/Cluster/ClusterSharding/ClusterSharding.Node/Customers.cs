@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Customers.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -49,7 +49,7 @@ namespace ClusterSharding.Node
             SetReceiveTimeout(TimeSpan.FromSeconds(60));
             Recover<ItemPurchased>(purchased => _purchasedItems.Add(purchased.ItemName));
 
-            Command<ShardRegion.StartEntity>(e =>
+            Command<ShardRegion.StartEntity>(_ =>
             {
                 Console.WriteLine($"'{PersistenceId}' started via remember-entities");
 

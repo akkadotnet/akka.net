@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Endpoint.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -48,7 +49,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class DefaultMessageDispatcher : IInboundMessageDispatcher
+    internal sealed class DefaultMessageDispatcher : IInboundMessageDispatcher
     {
         private readonly ExtendedActorSystem _system;
         private readonly IRemoteActorRefProvider _provider;
@@ -101,73 +102,74 @@ namespace Akka.Remote
                 }
             }
 
-            //message is intended for a local recipient
-            else if ((recipient is ILocalRef || recipient is RepointableActorRef) && recipient.IsLocal)
+            else switch (recipient)
             {
-                if (_settings.LogReceive)
+                //message is intended for a local recipient
+                case ILocalRef or RepointableActorRef when recipient.IsLocal:
                 {
-                    var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
-                    _log.Debug("received local message [{0}]", msgLog);
-                }
-                if (payload is ActorSelectionMessage sel)
-                {
-                    if (_settings.UntrustedMode
-                        && (!_settings.TrustedSelectionPaths.Contains(FormatActorPath(sel))
-                            || sel.Message is IPossiblyHarmful
-                            || !recipient.Equals(_provider.RootGuardian)))
+                    if (_settings.LogReceive)
                     {
-                        _log.Debug(
-                            "operating in UntrustedMode, dropping inbound actor selection to [{0}], allow it" +
-                            "by adding the path to 'akka.remote.trusted-selection-paths' in configuration",
-                            FormatActorPath(sel));
+                        var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
+                        _log.Debug("received local message [{0}]", msgLog);
+                    }
+
+                    switch (payload)
+                    {
+                        case ActorSelectionMessage sel when _settings.UntrustedMode
+                                                            && (!_settings.TrustedSelectionPaths.Contains(FormatActorPath(sel))
+                                                                || sel.Message is IPossiblyHarmful
+                                                                || !recipient.Equals(_provider.RootGuardian)):
+                            _log.Debug(
+                                "operating in UntrustedMode, dropping inbound actor selection to [{0}], allow it" +
+                                "by adding the path to 'akka.remote.trusted-selection-paths' in configuration",
+                                FormatActorPath(sel));
+                            break;
+                        case ActorSelectionMessage sel:
+                            //run the receive logic for ActorSelectionMessage here to make sure it is not stuck on busy user actor
+                            ActorSelection.DeliverSelection(recipient, sender, sel);
+                            break;
+                        case IPossiblyHarmful when _settings.UntrustedMode:
+                            _log.Debug("operating in UntrustedMode, dropping inbound IPossiblyHarmful message of type {0}",
+                                payload.GetType());
+                            break;
+                        case ISystemMessage systemMessage:
+                            recipient.SendSystemMessage(systemMessage);
+                            break;
+                        default:
+                            recipient.Tell(payload, sender);
+                            break;
+                    }
+
+                    break;
+                }
+                // message is intended for a remote-deployed recipient
+                case IRemoteRef or RepointableActorRef when !recipient.IsLocal &&
+                                                            !_settings.UntrustedMode:
+                {
+                    if (_settings.LogReceive)
+                    {
+                        var msgLog = $"RemoteMessage: {payload} to {recipient}<+{originalReceiver} from {sender}";
+                        _log.Debug("received remote-destined message {0}", msgLog);
+                    }
+                    if (_provider.Transport.Addresses.Contains(recipientAddress))
+                    {
+                        //if it was originally addressed to us but is in fact remote from our point of view (i.e. remote-deployed)
+                        recipient.Tell(payload, sender);
                     }
                     else
                     {
-                        //run the receive logic for ActorSelectionMessage here to make sure it is not stuck on busy user actor
-                        ActorSelection.DeliverSelection(recipient, sender, sel);
+                        _log.Error(
+                            "Dropping message [{0}] for non-local recipient [{1}] arriving at [{2}] inbound addresses [{3}]",
+                            payloadClass, recipient, recipientAddress, string.Join(",", _provider.Transport.Addresses));
                     }
-                }
-                else if (payload is IPossiblyHarmful && _settings.UntrustedMode)
-                {
-                    _log.Debug("operating in UntrustedMode, dropping inbound IPossiblyHarmful message of type {0}",
-                        payload.GetType());
-                }
-                else if (payload is ISystemMessage systemMessage)
-                {
-                    recipient.SendSystemMessage(systemMessage);
-                }
-                else
-                {
-                    recipient.Tell(payload, sender);
-                }
-            }
 
-            // message is intended for a remote-deployed recipient
-            else if ((recipient is IRemoteRef || recipient is RepointableActorRef) && !recipient.IsLocal &&
-                     !_settings.UntrustedMode)
-            {
-                if (_settings.LogReceive)
-                {
-                    var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver, sender);
-                    _log.Debug("received remote-destined message {0}", msgLog);
+                    break;
                 }
-                if (_provider.Transport.Addresses.Contains(recipientAddress))
-                {
-                    //if it was originally addressed to us but is in fact remote from our point of view (i.e. remote-deployed)
-                    recipient.Tell(payload, sender);
-                }
-                else
-                {
+                default:
                     _log.Error(
                         "Dropping message [{0}] for non-local recipient [{1}] arriving at [{2}] inbound addresses [{3}]",
                         payloadClass, recipient, recipientAddress, string.Join(",", _provider.Transport.Addresses));
-                }
-            }
-            else
-            {
-                _log.Error(
-                    "Dropping message [{0}] for non-local recipient [{1}] arriving at [{2}] inbound addresses [{3}]",
-                    payloadClass, recipient, recipientAddress, string.Join(",", _provider.Transport.Addresses));
+                    break;
             }
         }
 
@@ -329,7 +331,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected EndpointDisassociatedException(SerializationInfo info, StreamingContext context)
+        public EndpointDisassociatedException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
@@ -361,7 +363,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected EndpointAssociationException(SerializationInfo info, StreamingContext context)
+        EndpointAssociationException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
@@ -386,7 +388,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected OversizedPayloadException(SerializationInfo info, StreamingContext context)
+        OversizedPayloadException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
@@ -397,43 +399,34 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class ReliableDeliverySupervisor : ReceiveActor
+    internal sealed class ReliableDeliverySupervisor : ReceiveActor
     {
         #region Internal message classes
 
         /// <summary>
-        /// TBD
+        /// Query if the <see cref="ReliableDeliverySupervisor"/> is idle
         /// </summary>
         public class IsIdle
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static readonly IsIdle Instance = new IsIdle();
+            public static readonly IsIdle Instance = new();
             private IsIdle() { }
         }
 
         /// <summary>
-        /// TBD
+        /// Response to a <see cref="IsIdle"/> query
         /// </summary>
         public class Idle
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static readonly Idle Instance = new Idle();
+            public static readonly Idle Instance = new();
             private Idle() { }
         }
 
         /// <summary>
-        /// TBD
+        /// Triggers a <see cref="HopelessAssociation"/> exception when the <see cref="ReliableDeliverySupervisor"/> has been idle for too long
         /// </summary>
         public class TooLongIdle
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static readonly TooLongIdle Instance = new TooLongIdle();
+            public static readonly TooLongIdle Instance = new();
             private TooLongIdle() { }
         }
 
@@ -446,21 +439,21 @@ namespace Akka.Remote
         private readonly int? _refuseUid;
         private readonly AkkaProtocolTransport _transport;
         private readonly RemoteSettings _settings;
-        private AkkaPduCodec _codec;
+        private readonly AkkaPduCodec _codec;
         private AkkaProtocolHandle _currentHandle;
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
 
         /// <summary>
-        /// TBD
+        /// Creates a new instance of the <see cref="ReliableDeliverySupervisor"/> class.
         /// </summary>
-        /// <param name="handleOrActive">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="refuseUid">TBD</param>
-        /// <param name="transport">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="codec">TBD</param>
-        /// <param name="receiveBuffers">TBD</param>
+        /// <param name="handleOrActive">The Akka.Remote protocol handle for sending messages</param>
+        /// <param name="localAddress">Our local address per the <see cref="transport"/></param>
+        /// <param name="remoteAddress">The remote address we're communicating with</param>
+        /// <param name="refuseUid">Optional - the quarantined UID for the <see cref="remoteAddress"/>, if we've previously quarantined it.</param>
+        /// <param name="transport">The underlying transport.</param>
+        /// <param name="settings">The general Akka.Remote transport settings.</param>
+        /// <param name="codec">The Akka.Remote protocol codec for encoding and decoding messages.</param>
+        /// <param name="receiveBuffers">The set of receive buffers for resending messages in the event that the connection to <see cref="remoteAddress"/> is disrupted.</param>
         public ReliableDeliverySupervisor(
                     AkkaProtocolHandle handleOrActive,
                     Address localAddress,
@@ -481,7 +474,7 @@ namespace Akka.Remote
             _receiveBuffers = receiveBuffers;
             Reset(); // needs to be called at startup
             _writer = CreateWriter(); // need to create writer at startup
-            Uid = handleOrActive != null ? (int?)handleOrActive.HandshakeInfo.Uid : null;
+            Uid = handleOrActive?.HandshakeInfo.Uid;
             UidConfirmed = Uid.HasValue && (Uid != _refuseUid);
 
             if (Uid.HasValue && Uid == _refuseUid)
@@ -497,7 +490,7 @@ namespace Akka.Remote
         private readonly ICancelable _autoResendTimer;
 
         /// <summary>
-        /// TBD
+        /// The UID of the remote system we're communicating with.
         /// </summary>
         public int? Uid { get; set; }
 
@@ -598,16 +591,16 @@ namespace Akka.Remote
         /// TBD
         /// </summary>
         /// <exception cref="HopelessAssociation">TBD</exception>
-        protected void Receiving()
+        private void Receiving()
         {
-            Receive<EndpointWriter.FlushAndStop>(flush =>
+            Receive<EndpointWriter.FlushAndStop>(_ =>
             {
                 //Trying to serve until our last breath
                 ResendAll();
                 _writer.Tell(EndpointWriter.FlushAndStop.Instance);
                 Become(FlushWait);
             });
-            Receive<IsIdle>(idle => { }); // Do not reply, we will Terminate soon, or send a GotUid
+            Receive<IsIdle>(_ => { }); // Do not reply, we will Terminate soon, or send a GotUid
             Receive<EndpointManager.Send>(send => HandleSend(send));
             Receive<Ack>(ack =>
             {
@@ -627,11 +620,11 @@ namespace Akka.Remote
                     ResendNacked();
                 }
             });
-            Receive<AttemptSysMsgRedelivery>(sysmsg =>
+            Receive<AttemptSysMsgRedelivery>(_ =>
             {
                 if (UidConfirmed) ResendAll();
             });
-            Receive<Terminated>(terminated =>
+            Receive<Terminated>(_ =>
             {
                 _currentHandle = null;
                 Context.Parent.Tell(new EndpointWriter.StoppedReading(Self));
@@ -679,9 +672,9 @@ namespace Akka.Remote
         /// <param name="writerTerminated">TBD</param>
         /// <param name="earlyUngateRequested">TBD</param>
         /// <exception cref="HopelessAssociation">TBD</exception>
-        protected void Gated(bool writerTerminated, bool earlyUngateRequested)
+        private void Gated(bool writerTerminated, bool earlyUngateRequested)
         {
-            Receive<Terminated>(terminated =>
+            Receive<Terminated>(_ =>
             {
                 if (!writerTerminated)
                 {
@@ -695,8 +688,8 @@ namespace Akka.Remote
 
                 Become(() => Gated(true, earlyUngateRequested));
             });
-            Receive<IsIdle>(idle => Sender.Tell(Idle.Instance));
-            Receive<Ungate>(ungate =>
+            Receive<IsIdle>(_ => Sender.Tell(Idle.Instance));
+            Receive<Ungate>(_ =>
             {
                 if (!writerTerminated)
                 {
@@ -710,7 +703,7 @@ namespace Akka.Remote
                     // remote address at the EndpointManager level stopping this actor. In case the remote system becomes reachable
                     // again it will be immediately quarantined due to out-of-sync system message buffer and becomes quarantined.
                     // In other words, this action is safe.
-                    if (_bailoutAt != null && _bailoutAt.IsOverdue)
+                    if (_bailoutAt is { IsOverdue: true })
                     {
                         throw new HopelessAssociation(_localAddress, _remoteAddress, Uid,
                             new TimeoutException("Delivery of system messages timed out and they were dropped"));
@@ -725,10 +718,10 @@ namespace Akka.Remote
                     GoToIdle();
                 }
             });
-            Receive<AttemptSysMsgRedelivery>(redelivery => { }); // Ignore
+            Receive<AttemptSysMsgRedelivery>(_ => { }); // Ignore
             Receive<EndpointManager.Send>(send => send.Message is ISystemMessage, send => TryBuffer(send.Copy(NextSeq())));
             Receive<EndpointManager.Send>(send => Context.System.DeadLetters.Tell(send));
-            Receive<EndpointWriter.FlushAndStop>(flush => Context.Stop(Self));
+            Receive<EndpointWriter.FlushAndStop>(_ => Context.Stop(Self));
             Receive<EndpointWriter.StopReading>(stop =>
             {
                 stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer));
@@ -739,9 +732,9 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        protected void IdleBehavior()
+        private void IdleBehavior()
         {
-            Receive<IsIdle>(idle => Sender.Tell(Idle.Instance));
+            Receive<IsIdle>(_ => Sender.Tell(Idle.Instance));
             Receive<EndpointManager.Send>(send =>
             {
                 _writer = CreateWriter();
@@ -750,7 +743,7 @@ namespace Akka.Remote
                 GoToActive();
             });
 
-            Receive<AttemptSysMsgRedelivery>(sys =>
+            Receive<AttemptSysMsgRedelivery>(_ =>
             {
                 if (_resendBuffer.Nacked.Any() || _resendBuffer.NonAcked.Any())
                 {
@@ -759,11 +752,11 @@ namespace Akka.Remote
                     GoToActive();
                 }
             });
-            Receive<TooLongIdle>(idle =>
+            Receive<TooLongIdle>(_ =>
             {
                 HandleTooLongIdle();
             });
-            Receive<EndpointWriter.FlushAndStop>(stop => Context.Stop(Self));
+            Receive<EndpointWriter.FlushAndStop>(_ => Context.Stop(Self));
             Receive<EndpointWriter.StopReading>(stop => stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
             Receive<Ungate>(_ => { }); //ok, not gated
         }
@@ -771,17 +764,17 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        protected void FlushWait()
+        private void FlushWait()
         {
-            Receive<IsIdle>(idle => { }); // Do not reply, we will Terminate soon, which will do the inbound connection unstashing
-            Receive<Terminated>(terminated =>
+            Receive<IsIdle>(_ => { }); // Do not reply, we will Terminate soon, which will do the inbound connection unstashing
+            Receive<Terminated>(_ =>
             {
                 //Clear buffer to prevent sending system messages to dead letters -- at this point we are shutting down and
                 //don't know if they were properly delivered or not
                 _resendBuffer = new AckedSendBuffer<EndpointManager.Send>(0);
                 Context.Stop(Self);
             });
-            ReceiveAny(o => { }); // ignore
+            ReceiveAny(_ => { }); // ignore
         }
 
         #endregion
@@ -1014,7 +1007,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class EndpointWriter : EndpointActor
+    internal sealed class EndpointWriter : EndpointActor
     {
         /// <summary>
         /// TBD
@@ -1072,7 +1065,7 @@ namespace Akka.Remote
         private DisassociateInfo _stopReason = DisassociateInfo.Unknown;
 
         private IActorRef _reader;
-        private readonly AtomicCounter _readerId = new AtomicCounter(0);
+        private readonly AtomicCounter _readerId = new(0);
         private readonly IInboundMessageDispatcher _msgDispatcher;
 
         private Ack _lastAck = null;
@@ -1084,10 +1077,10 @@ namespace Akka.Remote
         // Use an internal buffer instead of Stash for efficiency
         // stash/unstashAll is slow when many messages are stashed
         // IMPORTANT: sender is not stored, so .Sender and forward must not be used in EndpointWriter
-        private readonly LinkedList<object> _buffer = new LinkedList<object>();
+        private readonly LinkedList<object> _buffer = new();
 
         //buffer for IPriorityMessages - ensures that heartbeats get delivered before user-defined messages
-        private readonly LinkedList<EndpointManager.Send> _prioBuffer = new LinkedList<EndpointManager.Send>();
+        private readonly LinkedList<EndpointManager.Send> _prioBuffer = new();
         private long _largeBufferLogTimestamp = MonotonicClock.GetNanos();
 
         private readonly IRemoteMetrics _remoteMetrics;
@@ -1194,7 +1187,7 @@ namespace Akka.Remote
             {
                 // Assert handle == None?
                 Context.Parent.Tell(
-                    new ReliableDeliverySupervisor.GotUid((int)handle.ProtocolHandle.HandshakeInfo.Uid, RemoteAddress));
+                    new ReliableDeliverySupervisor.GotUid(handle.ProtocolHandle.HandshakeInfo.Uid, RemoteAddress));
                 _handle = handle.ProtocolHandle;
                 _reader = StartReadEndpoint(_handle);
                 EventPublisher.NotifyListeners(new AssociatedEvent(LocalAddress, RemoteAddress, Inbound));
@@ -1205,13 +1198,13 @@ namespace Akka.Remote
         private void Buffering()
         {
             Receive<EndpointManager.Send>(send => EnqueueInBuffer(send));
-            Receive<BackoffTimer>(backoff => SendBufferedMessages());
+            Receive<BackoffTimer>(_ => SendBufferedMessages());
             Receive<FlushAndStop>(stop =>
             {
                 _buffer.AddLast(stop); //Flushing is postponed after the pending writes
                 Context.System.Scheduler.ScheduleTellOnce(Settings.FlushWait, Self, FlushAndStopTimeout.Instance, Self);
             });
-            Receive<FlushAndStopTimeout>(timeout =>
+            Receive<FlushAndStopTimeout>(_ =>
             {
                 // enough, ready to flush
                 DoFlushAndStop();
@@ -1229,8 +1222,8 @@ namespace Akka.Remote
                     Become(Buffering);
                 }
             });
-            Receive<FlushAndStop>(flush => DoFlushAndStop());
-            Receive<AckIdleCheckTimer>(ack =>
+            Receive<FlushAndStop>(_ => DoFlushAndStop());
+            Receive<AckIdleCheckTimer>(_ =>
             {
                 if (_ackDeadline.IsOverdue)
                 {
@@ -1241,7 +1234,7 @@ namespace Akka.Remote
 
         private void Handoff()
         {
-            Receive<Terminated>(terminated =>
+            Receive<Terminated>(_ =>
             {
                 _reader = StartReadEndpoint(_handle);
                 BecomeWritingOrSendBufferedMessages();
@@ -1319,10 +1312,18 @@ namespace Akka.Remote
 
         private void PublishAndThrow(Exception reason, LogLevel level, bool needToThrow = true)
         {
-            reason.Match()
-                .With<EndpointDisassociatedException>(endpoint => PublishDisassociated())
-                .With<ShutDownAssociation>(shutdown => { }) // don't log an error for planned shutdowns
-                .Default(msg => PublishError(reason, level));
+            switch (reason)
+            {
+                case EndpointDisassociatedException _:
+                    PublishDisassociated();
+                    break;
+                case ShutDownAssociation _:
+                    // don't log an error for planned shutdowns
+                    break;
+                default:
+                    PublishError(reason, level);
+                    break;
+            }
 
             if (needToThrow)
             {
@@ -1430,8 +1431,8 @@ namespace Akka.Remote
             var send = message as EndpointManager.Send;
             if (send != null && send.Message is IPriorityMessage)
                 _prioBuffer.AddLast(send);
-            else if (send != null && send.Message is ActorSelectionMessage &&
-                     send.Message.AsInstanceOf<ActorSelectionMessage>().Message is IPriorityMessage)
+            else if (send != null && send.Message is ActorSelectionMessage actorSelectionMessage &&
+                     actorSelectionMessage.Message is IPriorityMessage)
             {
                 _prioBuffer.AddLast(send);
             }
@@ -1454,6 +1455,41 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// Unwraps <see cref="IWrappedMessage"/> in order to help make it easier to troubleshoot
+        /// which oversized message was sent.
+        /// </summary>
+        /// <returns>The formatted type string.</returns>
+        /// <remarks>
+        /// Internal for testing purposes only.
+        /// </remarks>
+        internal static string LogPossiblyWrappedMessageType(object failedMsg)
+        {
+            if (failedMsg is IWrappedMessage wrappedMessage)
+            {
+                static void LogWrapped(StringBuilder builder, IWrappedMessage nextMsg)
+                {
+                    builder.Append($"{nextMsg.GetType()}-->");
+                    if (nextMsg.Message is IWrappedMessage wrappedAgain)
+                    {
+                        builder.Append('(');
+                        LogWrapped(builder, wrappedAgain); // recursively iterate through all layers of wrapping
+                        builder.Append(')');
+                    }
+                    else
+                    {
+                        builder.Append(nextMsg.Message.GetType());
+                    }
+                }
+                
+                var builder = new StringBuilder();
+                LogWrapped(builder, wrappedMessage);
+                return builder.ToString();
+            }
+
+            return failedMsg.GetType().ToString();
+        }
+
         private bool WriteSend(EndpointManager.Send send)
         {
             try
@@ -1468,7 +1504,7 @@ namespace Akka.Remote
                 }
 
                 var pdu = _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
-                    this.SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
+                    SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
 
                 _remoteMetrics.LogPayloadBytes(send.Message, pdu.Length);
 
@@ -1478,7 +1514,7 @@ namespace Akka.Remote
                         string.Format("Discarding oversized payload sent to {0}: max allowed size {1} bytes, actual size of encoded {2} was {3} bytes.",
                             send.Recipient,
                             Transport.MaximumPayloadBytes,
-                            send.Message.GetType(),
+                            LogPossiblyWrappedMessageType(send.Message),
                             pdu.Length));
                     _log.Error(reason, "Transient association error (association remains live)");
                     return true;
@@ -1501,7 +1537,7 @@ namespace Akka.Remote
                 _log.Error(
                   ex,
                   "Serialization failed for message [{0}]. Transient association error (association remains live)",
-                  send.Message.GetType());
+                  LogPossiblyWrappedMessageType(send.Message));
                 return true;
             }
             catch (ArgumentException ex)
@@ -1509,7 +1545,7 @@ namespace Akka.Remote
                 _log.Error(
                   ex,
                   "Serializer threw ArgumentException for message type [{0}]. Transient association error (association remains live)",
-                  send.Message.GetType());
+                  LogPossiblyWrappedMessageType(send.Message));
                 return true;
             }
             catch (EndpointException ex)
@@ -1518,7 +1554,7 @@ namespace Akka.Remote
             }
             catch (Exception ex)
             {
-                PublishAndThrow(new EndpointException("Failed to write message to the transport", ex),
+                PublishAndThrow(new EndpointException($"Failed to write message [{send.Message}] to the transport", ex),
                     LogLevel.ErrorLevel);
             }
 
@@ -1709,11 +1745,7 @@ namespace Akka.Remote
         public sealed class BackoffTimer
         {
             private BackoffTimer() { }
-            private static readonly BackoffTimer _instance = new BackoffTimer();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static BackoffTimer Instance { get { return _instance; } }
+            public static BackoffTimer Instance { get; } = new();
         }
 
         /// <summary>
@@ -1722,11 +1754,7 @@ namespace Akka.Remote
         public sealed class FlushAndStop
         {
             private FlushAndStop() { }
-            private static readonly FlushAndStop _instance = new FlushAndStop();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static FlushAndStop Instance { get { return _instance; } }
+            public static FlushAndStop Instance { get; } = new();
         }
 
         /// <summary>
@@ -1735,18 +1763,13 @@ namespace Akka.Remote
         public sealed class AckIdleCheckTimer
         {
             private AckIdleCheckTimer() { }
-            private static readonly AckIdleCheckTimer _instance = new AckIdleCheckTimer();
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static AckIdleCheckTimer Instance { get { return _instance; } }
+            public static AckIdleCheckTimer Instance { get; } = new();
         }
 
         private sealed class FlushAndStopTimeout
         {
             private FlushAndStopTimeout() { }
-            private static readonly FlushAndStopTimeout _instance = new FlushAndStopTimeout();
-            public static FlushAndStopTimeout Instance { get { return _instance; } }
+            public static FlushAndStopTimeout Instance { get; } = new();
         }
 
         /// <summary>
@@ -1845,7 +1868,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class EndpointReader : EndpointActor
+    internal sealed class EndpointReader : EndpointActor
     {
         /// <summary>
         /// TBD
@@ -1891,7 +1914,7 @@ namespace Akka.Remote
         private readonly IInboundMessageDispatcher _msgDispatch;
 
         private readonly IRemoteActorRefProvider _provider;
-        private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new AckedReceiveBuffer<Message>();
+        private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new();
 
         #region ActorBase overrides
 
@@ -1953,21 +1976,9 @@ namespace Akka.Remote
                                     ackAndMessage.MessageOption.SerializedMessage,
                                     ackAndMessage.MessageOption.SenderOptional);
                             }
-                            catch (SerializationException e)
-                            {
-                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
-                            }
-                            catch (ArgumentException e)
-                            {
-                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
-                            }
-                            catch (InvalidCastException e)
-                            {
-                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
-                            }
                             catch (Exception e)
                             {
-                                throw;
+                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
                             }
                         }
                     }
@@ -1987,10 +1998,11 @@ namespace Akka.Remote
             var sm = msg.SerializedMessage;
             _log.Warning(error,
               "Deserialization failed for message with serializer id [{0}] and manifest [{1}]. " +
-                "Transient association error (association remains live). {2}",
+                "Transient association error (association remains live). {2}. {3}",
               sm.SerializerId,
               sm.MessageManifest.IsEmpty ? "" : sm.MessageManifest.ToStringUtf8(),
-              error.Message);
+              error.Message,
+              Serializer.GetErrorForSerializerId(sm.SerializerId));
         }
 
         private void NotReading()
@@ -2003,7 +2015,7 @@ namespace Akka.Remote
                 if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
                     _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
             });
-            ReceiveAny(o => { }); // ignore
+            ReceiveAny(_ => { }); // ignore
         }
 
         #endregion

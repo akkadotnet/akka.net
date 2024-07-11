@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BuiltInActors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -43,8 +43,8 @@ namespace Akka.Actor
         {
             if (message is Terminated)
                 Context.Stop(Self);
-            else if (message is StopChild)
-                Context.Stop(((StopChild)message).Child);
+            else if (message is StopChild child)
+                Context.Stop(child.Child);
             else
                 Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Self), Sender);
             return true;
@@ -191,8 +191,10 @@ namespace Akka.Actor
     {
         public static object Unwrap(object message)
         {
-            if (message is IWrappedMessage wm)
-                return Unwrap(wm.Message);
+            while (message is IWrappedMessage wm)
+            {
+                message = wm.Message;
+            }
             return message;
         }
     }
@@ -248,8 +250,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected override bool SpecialHandle(object message, IActorRef sender)
         {
-            var w = message as Watch;
-            if (w != null)
+            if (message is Watch w)
             {
                 if (!w.Watchee.Equals(this) && !w.Watcher.Equals(this))
                 {

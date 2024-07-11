@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InterpreterStressSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,10 +30,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         private readonly ITestOutputHelper _helper;
 
         // GraphStages can be reused
-        private static readonly Select<int, int> Select = new Select<int, int>(x => x + 1);
-        private static readonly Skip<int> SkipOne = new Skip<int>(1);
-        private static readonly Take<int> TakeOne = new Take<int>(1);
-        private static readonly Take<int> TakeHalfOfRepetition = new Take<int>(Repetition/2);
+        private static readonly Select<int, int> Select = new(x => x + 1);
+        private static readonly Skip<int> SkipOne = new(1);
+        private static readonly Take<int> TakeOne = new(1);
+        private static readonly Take<int> TakeHalfOfRepetition = new(Repetition/2);
 
         public InterpreterStressSpec(ITestOutputHelper helper = null) : base(helper)
         {
@@ -103,7 +103,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                 upstream.OnNext(0);
-                lastEvents().Should().BeEquivalentTo(new OnNext(0 + ChainLength), new Cancel(), new OnComplete());
+                lastEvents().Should().BeEquivalentTo(new OnNext(0 + ChainLength), new Cancel(SubscriptionWithCancelException.StageWasCompleted.Instance), new OnComplete());
 
                 tstamp.Stop();
                 var time = tstamp.Elapsed.TotalSeconds;
@@ -125,7 +125,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 lastEvents().Should().BeEquivalentTo(new RequestOne());
 
                 upstream.OnNext(0);
-                lastEvents().Should().BeEquivalentTo(new OnNext(0), new Cancel(), new OnComplete());
+                lastEvents().Should().BeEquivalentTo(new OnNext(0), new Cancel(SubscriptionWithCancelException.StageWasCompleted.Instance), new OnComplete());
             });
         }
 
@@ -161,7 +161,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             var batch = new Batch<int, int>(0, _ => 0, i => i, (agg, i) => agg + i);
             var ops = Enumerable.Range(1, ChainLength/10).Select(_ => batch).ToArray();
 
-            WithOneBoundedSetup(ops, (lastEvents, upstream, downstream) =>
+            WithOneBoundedSetup(ops, (lastEvents, upstream, _) =>
             {
                 lastEvents().Should().BeEquivalentTo(new RequestOne());
 

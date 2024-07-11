@@ -55,6 +55,6 @@ The first possibility is especially well-suited for resources which are single-t
 > [!NOTE]
 > Configuring thread pools is a task best delegated to Akka.NET, simply configure in the application.conf and instantiate through an ActorSystem.
 
-## What you should not concern yourself with
+## What You Should Not Concern Yourself With
 
 An actor system manages the resources it is configured to use in order to run the actors which it contains. There may be millions of actors within one such system, after all the mantra is to view them as abundant and they weigh in at an overhead of only roughly 300 bytes per instance. Naturally, the exact order in which messages are processed in large systems is not controllable by the application author, but this is also not intended. Take a step back and relax while Akka.NET does the heavy lifting under the hood.

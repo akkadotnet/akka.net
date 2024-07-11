@@ -1,16 +1,17 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowTakeWhileSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
@@ -28,40 +29,37 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_TakeWhile_must_take_while_predicate_is_true()
+        public async Task A_TakeWhile_must_take_while_predicate_is_true()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.From(Enumerable.Range(1, 4))
-                    .TakeWhile(i => i < 3)
-                    .RunWith(this.SinkProbe<int>(), Materializer)
-                    .Request(3)
-                    .ExpectNext(1, 2)
-                    .ExpectComplete();
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 4))                                                                             
+                .TakeWhile(i => i < 3)                                                                             
+                .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
+                .Request(3)                                                                             
+                .ExpectNext(1, 2)                                                                             
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void A_TakeWhile_must_complete_the_future_for_an_empty_stream()
+        public async Task A_TakeWhile_must_complete_the_future_for_an_empty_stream()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.Empty<int>()
-                    .TakeWhile(i => i < 2)
-                    .RunWith(this.SinkProbe<int>(), Materializer)
-                    .Request(1)
-                    .ExpectComplete();
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.Empty<int>()                                                                             
+                .TakeWhile(i => i < 2)                                                                             
+                .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
+                .Request(1)                                                                             
+                .ExpectCompleteAsync();
             }, Materializer);
         }
 
         [Fact]
-        public void A_TakeWhile_must_continue_if_error()
+        public async Task A_TakeWhile_must_continue_if_error()
         {
-            this.AssertAllStagesStopped(() =>
-            {
+            await this.AssertAllStagesStoppedAsync(async() => {
                 var testException = new Exception("test");
 
-                Source.From(Enumerable.Range(1, 4)).TakeWhile(a =>
+                await Source.From(Enumerable.Range(1, 4)).TakeWhile(a =>
                 {
                     if (a == 3)
                         throw testException;
@@ -71,21 +69,21 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(4)
                     .ExpectNext(1, 2, 4)
-                    .ExpectComplete();
+                    .ExpectCompleteAsync();
+                
             }, Materializer);
         }
 
         [Fact]
-        public void A_TakeWhile_must_emit_the_element_that_caused_the_predicate_to_return_false_and_then_no_more_with_inclusive_set()
+        public async Task A_TakeWhile_must_emit_the_element_that_caused_the_predicate_to_return_false_and_then_no_more_with_inclusive_set()
         {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.From(Enumerable.Range(1, 10))
-                .TakeWhile(i => i < 3, true)
-                .RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(4)
-                .ExpectNext(1, 2, 3)
-                .ExpectComplete();
+            await this.AssertAllStagesStoppedAsync(async() => {
+                await Source.From(Enumerable.Range(1, 10))                                                                         
+                .TakeWhile(i => i < 3, true)                                                                         
+                .RunWith(this.SinkProbe<int>(), Materializer)                                                                         
+                .Request(4)                                                                         
+                .ExpectNext(1, 2, 3)                                                                         
+                .ExpectCompleteAsync();
             }, Materializer);
         }
     }

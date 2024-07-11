@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphInterpreterSpecKit.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,7 +15,7 @@ using Akka.Event;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Xunit.Abstractions;
 
@@ -121,10 +121,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     var assembly = BuildAssembly();
 
                     var mat = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
-                        new Dictionary<IModule, object>(), s => { });
+                        new Dictionary<IModule, object>(), _ => { });
                     var connections = mat.Item1;
                     var logics = mat.Item2;
-                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
+                    var interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (_, _, _) => {}, false, null);
 
                     var i = 0;
                     foreach (var upstream in _upstreams)
@@ -144,10 +144,10 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             public void ManualInit(GraphAssembly assembly)
             {
                 var mat = assembly.Materialize(Attributes.None, assembly.Stages.Select(s => s.Module).ToArray(),
-                    new Dictionary<IModule, object>(), s => { });
+                    new Dictionary<IModule, object>(), _ => { });
                 var connections = mat.Item1;
                 var logics = mat.Item2;
-                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (l, o, a) => {}, false, null);
+                _interpreter = new GraphInterpreter(assembly, NoMaterializer.Instance, _logger, logics, connections, (_, _, _) => {}, false, null);
             }
 
             public AssemblyBuilder Builder(params IGraphStageWithMaterializedValue<Shape, object>[] stages)
@@ -205,10 +205,18 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             public class Cancel : ITestEvent
             {
                 public GraphStageLogic Source { get; }
+                public Exception Cause { get; }
 
-                public Cancel(GraphStageLogic source) => Source = source;
+                public Cancel(GraphStageLogic source, Exception cause)
+                {
+                    Source = source;
+                    Cause = cause;
+                }
 
-                protected bool Equals(Cancel other) => Equals(Source, other.Source);
+                protected bool Equals(Cancel other) => 
+                    Equals(Source, other.Source)
+                    && Cause.GetType() == other.Cause.GetType()
+                    && Cause.Message == other.Cause.Message;
 
                 public override bool Equals(object obj)
                 {
@@ -373,9 +381,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public void ClearEvents() => LastEvent = new HashSet<ITestEvent>();
 
-            public UpstreamProbe<T> NewUpstreamProbe<T>(string name) => new UpstreamProbe<T>(this, name);
+            public UpstreamProbe<T> NewUpstreamProbe<T>(string name) => new(this, name);
 
-            public DownstreamProbe<T> NewDownstreamProbe<T>(string name) => new DownstreamProbe<T>(this, name);
+            public DownstreamProbe<T> NewDownstreamProbe<T>(string name) => new(this, name);
 
             public class UpstreamProbe<T> : GraphInterpreter.UpstreamBoundaryStageLogic
             {
@@ -387,7 +395,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     Outlet = new Outlet<T>("out") {Id = 0};
 
                     var probe = this;
-                    SetHandler(Outlet, () => setup.LastEvent.Add(new RequestOne(probe)), () => setup.LastEvent.Add(new Cancel(probe)));
+                    SetHandler(Outlet, () => setup.LastEvent.Add(new RequestOne(probe)), cause => setup.LastEvent.Add(new Cancel(probe, cause)));
                 }
 
                 public sealed override Outlet Out => Outlet;
@@ -476,7 +484,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 var propagateStage = new EventPropagateStage();
 
                 var assembly = !chasing
-                    ? new GraphAssembly(new IGraphStageWithMaterializedValue<Shape, object>[0], new Attributes[0],
+                    ? new GraphAssembly(Array.Empty<IGraphStageWithMaterializedValue<Shape, object>>(), Array.Empty<Attributes>(),
                         new Inlet[] {null}, new[] {-1}, new Outlet[] {null}, new[] {-1})
                     : new GraphAssembly(new[] {propagateStage}, new[] {Attributes.None},
                         new Inlet[] {propagateStage.In, null}, new[] {0, -1}, new Outlet[] {null, propagateStage.Out},
@@ -513,14 +521,14 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     public void OnPull() => Pull(_stage.In);
 
-                    public void OnDownstreamFinish() => Cancel(_stage.In);
+                    public void OnDownstreamFinish(Exception cause) => Cancel(_stage.In, cause);
                 }
 
                 public EventPropagateStage() => Shape  = new FlowShape<int, int>(In, Out);
 
-                public Inlet<int> In { get; } = new Inlet<int>("Propagate.in");
+                public Inlet<int> In { get; } = new("Propagate.in");
 
-                public Outlet<int> Out { get; } = new Outlet<int>("Propagate.out");
+                public Outlet<int> Out { get; } = new("Propagate.out");
 
                 public override FlowShape<int, int> Shape { get; }
 
@@ -640,7 +648,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                     SetHandler(setup._stageOut,
                         () => MayFail(() => Pull(setup._stageIn)),
-                        () => MayFail(CompleteStage));
+                        _ => MayFail(CompleteStage));
                 }
 
                 private void MayFail(Action task)
@@ -728,7 +736,16 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             public class Cancel : ITestEvent
             {
-                protected bool Equals(Cancel other) => true;
+                public Cancel(Exception cause)
+                {
+                    Cause = cause;
+                }
+
+                public Exception Cause { get; }
+
+                protected bool Equals(Cancel other) =>
+                    Cause.GetType() == other.Cause.GetType()
+                    && Cause.Message == other.Cause.Message;
 
                 public override bool Equals(object obj)
                 {
@@ -846,7 +863,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                             setup.LastEvent.Add(new RequestAnother());
                         else
                             setup.LastEvent.Add(new RequestOne());
-                    }, () => setup.LastEvent.Add(new Cancel()));
+                    }, cause => setup.LastEvent.Add(new Cancel(cause)));
                 }
 
                 public override Outlet Out => _outlet;
@@ -902,7 +919,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
                 public void Cancel()
                 {
-                    Cancel(_inlet);
+                    Cancel(_inlet, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance);
                     _setup.Run();
                 }
             }
@@ -963,13 +980,17 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }
         }
 
+#pragma warning disable CS0618 // Type or member is obsolete
         public PushPullGraphStage<TIn, TOut> ToGraphStage<TIn, TOut>(IStage<TIn, TOut> stage)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
             var s = stage;
             return new PushPullGraphStage<TIn, TOut>(_ => s, Attributes.None);
         }
 
+#pragma warning disable CS0618 // Type or member is obsolete
         public IGraphStageWithMaterializedValue<Shape, object>[] ToGraphStage<TIn, TOut>(IStage<TIn, TOut>[] stages)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
             return stages.Select(ToGraphStage).Cast<IGraphStageWithMaterializedValue<Shape, object>>().ToArray();
         }
@@ -998,7 +1019,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             spec(setup, setup.Builder, setup.LastEvents);
         }
 
+#pragma warning disable CS0618 // Type or member is obsolete
         public void WithOneBoundedSetup<T>(IStage<T, T> op,
+#pragma warning restore CS0618 // Type or member is obsolete
             Action
                 <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
                     OneBoundedSetup.DownstreamOneBoundedPortProbe<T>> spec)
@@ -1006,7 +1029,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             WithOneBoundedSetup<T>(ToGraphStage(op), spec);
         }
 
+#pragma warning disable CS0618 // Type or member is obsolete
         public void WithOneBoundedSetup<T>(IStage<T, T>[] ops,
+#pragma warning restore CS0618 // Type or member is obsolete
             Action
                 <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
                     OneBoundedSetup.DownstreamOneBoundedPortProbe<T>> spec)

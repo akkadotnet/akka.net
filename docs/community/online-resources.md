@@ -11,7 +11,7 @@ title: Resources
 
 [**Start Bootcamp here.**](http://learnakka.net/)
 
-## Blog posts
+## Blog Posts
 
 ### Petabridge
 
@@ -96,11 +96,11 @@ title: Resources
 * [Hanselminutes (April 2015)](http://hanselminutes.com/472/inside-the-akkanet-open-source-project-and-the-actor-model-with-aaron-stannard) — Good overview of concepts in Akka.NET and high-level discussion with [Aaron Stannard](https://twitter.com/aaronontheweb).
 * [.NET Rocks! (November 2014)](http://www.dotnetrocks.com/default.aspx?showNum=1058) — Overview of the project discussed w/ [Roger Alsing](https://twitter.com/rogeralsing).
 
-## Code samples / Demos
+## Code Samples / Demos
 
 * [Using Akka.Cluster to build a web crawler](https://github.com/petabridge/akkadotnet-code-samples/tree/master/Cluster.WebCrawler)
 
-## Non-English resources
+## Non-English Resources
 
 * [Distributed Programming Using Akka.NET Framework (in Polish)](https://www.youtube.com/watch?v=_6vDp2-VCjc) (Bartosz Sypytkowski on March 6, 2015)
 * [Intro to Akka.NET (in Swedish)](https://www.youtube.com/watch?v=Ta6qLA9OsjE) (Håkan Canberger on March 23, 2015)

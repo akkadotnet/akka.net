@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Echo.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,42 +10,41 @@ using Akka.Actor;
 using Akka.Cluster;
 using Akka.Cluster.Tools.PublishSubscribe;
 
-namespace ClusterToolsExample.Shared
-{
-    public sealed class Echo
-    {
-        public readonly string Message;
+namespace ClusterToolsExample.Shared;
 
-        public Echo(string message)
-        {
-            Message = message;
-        }
+public sealed class Echo
+{
+    public readonly string Message;
+
+    public Echo(string message)
+    {
+        Message = message;
+    }
+}
+
+public class EchoReceiver : ReceiveActor
+{
+    private const string Topic = "echo";
+
+    private readonly Cluster _cluster = Cluster.Get(Context.System);
+    private readonly IActorRef _mediator = DistributedPubSub.Get(Context.System).Mediator;
+
+    public EchoReceiver()
+    {
+        Receive<Echo>(echo => Console.WriteLine(echo.Message));
+        Receive<SubscribeAck>(ack =>
+            Console.WriteLine("Actor [{0}] has subscribed to topic [{1}]", ack.Subscribe.Ref, ack.Subscribe.Topic));
     }
 
-    public class EchoReceiver : ReceiveActor
+    protected override void PreStart()
     {
-        public const string Topic = "echo";
+        base.PreStart();
+        _mediator.Tell(new Subscribe(Topic, Self));
+    }
 
-        public readonly Cluster Cluster = Cluster.Get(Context.System);
-        public readonly IActorRef Mediator = DistributedPubSub.Get(Context.System).Mediator;
-
-        public EchoReceiver()
-        {
-            Receive<Echo>(echo => Console.WriteLine(echo.Message));
-            Receive<SubscribeAck>(ack =>
-                Console.WriteLine("Actor [{0}] has subscribed to topic [{1}]", ack.Subscribe.Ref, ack.Subscribe.Topic));
-        }
-
-        protected override void PreStart()
-        {
-            base.PreStart();
-            Mediator.Tell(new Subscribe(Topic, Self));
-        }
-
-        protected override void PostStop()
-        {
-            Mediator.Tell(new Unsubscribe(Topic, Self));
-            base.PostStop();
-        }
+    protected override void PostStop()
+    {
+        _mediator.Tell(new Unsubscribe(Topic, Self));
+        base.PostStop();
     }
 }

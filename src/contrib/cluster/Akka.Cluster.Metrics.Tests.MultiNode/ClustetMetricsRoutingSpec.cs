@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClustetMetricsRoutingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ using Akka.Event;
 using Akka.Remote.TestKit;
 using Akka.Routing;
 using FluentAssertions;
-using Akka.Configuration;
+using Akka.MultiNode.TestAdapter;
 using FluentAssertions.Extensions;
 using Address = Akka.Actor.Address;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
@@ -33,7 +33,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         public sealed class AllocateMemory
         {
             private AllocateMemory() { }
-            public static readonly AllocateMemory Instance = new AllocateMemory();
+            public static readonly AllocateMemory Instance = new();
         }
         
         [Serializable]
@@ -245,11 +245,11 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
             
             await RunOnAsync(async () =>
             {
-                await WithinAsync(20.Seconds(), async () =>
-                {
-                   Sys.ActorOf(Props.Create<AdaptiveLoadBalancingRouterConfig.MemoryAllocator>(), "memory-allocator")
-                       .Tell(AdaptiveLoadBalancingRouterConfig.AllocateMemory.Instance);
-                   ExpectMsg("done");
+                await WithinAsync(20.Seconds(), () => {
+                    Sys.ActorOf(Props.Create<AdaptiveLoadBalancingRouterConfig.MemoryAllocator>(), "memory-allocator")
+                                                                             .Tell(AdaptiveLoadBalancingRouterConfig.AllocateMemory.Instance);
+                    ExpectMsg("done");
+                    return Task.CompletedTask;
                 });
             }, _config.Node2);
             
@@ -350,7 +350,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
 
         private IImmutableDictionary<Address, int> ReceiveReplies(int expectedReplies)
         {
-            var zero = ImmutableDictionary<Address, int>.Empty.AddRange(Roles.ToDictionary(r => Node(r).Address, r => 0));
+            var zero = ImmutableDictionary<Address, int>.Empty.AddRange(Roles.ToDictionary(r => Node(r).Address, _ => 0));
             return ReceiveWhile(5.Seconds(), msg => (msg as AdaptiveLoadBalancingRouterConfig.Reply)?.Address, expectedReplies)
                 .Aggregate(zero, (replyDict, address) => replyDict.SetItem(address, replyDict[address] + 1));
         }

@@ -1,16 +1,18 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliveryReceiveActorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using Xunit;
 
 namespace Akka.Persistence.Tests
@@ -55,7 +57,7 @@ namespace Akka.Persistence.Tests
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
-                return obj is Action && Equals((Action) obj);
+                return obj is Action action && Equals(action);
             }
 
             public override int GetHashCode()
@@ -86,7 +88,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         private sealed class Boom
         {
-            public static readonly Boom Instance = new Boom();
+            public static readonly Boom Instance = new();
         }
 
         private class Destination : ReceiveActor
@@ -116,7 +118,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         private sealed class InvalidReq
         {
-            public static readonly InvalidReq Instance = new InvalidReq();
+            public static readonly InvalidReq Instance = new();
 
             private InvalidReq()
             {
@@ -185,13 +187,13 @@ namespace Akka.Persistence.Tests
                     }
                 });
 
-                Command<Boom>(boom =>
+                Command<Boom>(_ =>
                 {
                     _log.Debug("Boom!");
                     throw new Exception("boom");
                 });
 
-                Command<SaveSnap>(save =>
+                Command<SaveSnap>(_ =>
                 {
                     _log.Debug("Save snapshot");
                     _lastSnapshotAskedForBy = Sender;
@@ -231,18 +233,18 @@ namespace Akka.Persistence.Tests
 
             private void UpdateState(IEvt evt)
             {
-                evt.Match()
-                    .With<AcceptedReq>(a =>
-                    {
+                switch (evt)
+                {
+                    case AcceptedReq a:
                         _log.Debug("Deliver(destination, deliveryId => Action(deliveryId, {0})), recovering: {1}",
                             a.Payload, IsRecovering);
                         Deliver(ActorPath.Parse(a.DestinationPath), deliveryId => new Action(deliveryId, a.Payload));
-                    })
-                    .With<ReqDone>(r =>
-                    {
+                        break;
+                    case ReqDone r:
                         _log.Debug("ConfirmDelivery({0}), recovering: {1}", r.Id, IsRecovering);
                         ConfirmDelivery(r.Id);
-                    });
+                        break;
+                }
             }
         }
 
@@ -260,7 +262,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         private sealed class ReqAck
         {
-            public static readonly ReqAck Instance = new ReqAck();
+            public static readonly ReqAck Instance = new();
 
             private ReqAck()
             {
@@ -291,7 +293,7 @@ namespace Akka.Persistence.Tests
         [Serializable]
         private sealed class SaveSnap
         {
-            public static readonly SaveSnap Instance = new SaveSnap();
+            public static readonly SaveSnap Instance = new();
         }
 
         [Serializable]
@@ -343,7 +345,7 @@ namespace Akka.Persistence.Tests
                     }
                 });
 
-                Recover<object>(message => {});
+                Recover<object>(_ => {});
             }
 
             public override string PersistenceId
@@ -563,13 +565,13 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void PersistentReceive_must_warn_about_unconfirmed_messages()
+        public async Task PersistentReceive_must_warn_about_unconfirmed_messages()
         {
-            TestProbe probeA = CreateTestProbe();
-            TestProbe probeB = CreateTestProbe();
+            var probeA = CreateTestProbe();
+            var probeB = CreateTestProbe();
 
             var destinations = new Dictionary<string, ActorPath> {{"A", probeA.Ref.Path}, {"B", probeB.Ref.Path}};
-            IActorRef sender =
+            var sender =
                 Sys.ActorOf(
                     Props.Create(
                         () =>
@@ -579,19 +581,19 @@ namespace Akka.Persistence.Tests
             sender.Tell(new Req("a-1"));
             sender.Tell(new Req("b-1"));
             sender.Tell(new Req("b-2"));
-            ExpectMsg(ReqAck.Instance);
-            ExpectMsg(ReqAck.Instance);
-            ExpectMsg(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
 
-            UnconfirmedDelivery[] unconfirmed = ReceiveWhile(TimeSpan.FromSeconds(3), x =>
-                x is UnconfirmedWarning
-                    ? ((UnconfirmedWarning) x).UnconfirmedDeliveries
+            var unconfirmed = ReceiveWhile(TimeSpan.FromSeconds(3), x =>
+                x is UnconfirmedWarning warning
+                    ? warning.UnconfirmedDeliveries
                     : Enumerable.Empty<UnconfirmedDelivery>())
                 .SelectMany(e => e).ToArray();
 
-            ActorPath[] resultDestinations = unconfirmed.Select(x => x.Destination).Distinct().ToArray();
+            var resultDestinations = unconfirmed.Select(x => x.Destination).Distinct().ToArray();
             resultDestinations.ShouldOnlyContainInOrder(probeA.Ref.Path, probeB.Ref.Path);
-            object[] resultMessages = unconfirmed.Select(x => x.Message).Distinct().ToArray();
+            var resultMessages = unconfirmed.Select(x => x.Message).Distinct().ToArray();
             resultMessages.ShouldOnlyContainInOrder(new Action(1, "a-1"), new Action(2, "b-1"), new Action(3, "b-2"));
 
             Sys.Stop(sender);
@@ -646,7 +648,7 @@ namespace Akka.Persistence.Tests
             resCarr.Except(c).Any().ShouldBeFalse();
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void PersistentReceive_must_limit_the_number_of_messages_redelivered_at_once()
         {
             var probe = CreateTestProbe();

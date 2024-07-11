@@ -24,7 +24,7 @@ If you need a quick reference of the available processing stages used in the rec
 In this collection we show simple recipes that involve linear flows. The recipes in this section are rather
 general, more targeted recipes are available as separate sections ( [Buffers and working with rate](xref:streams-buffers), [Working with streaming IO](xref:streams-io)).
 
-### Logging elements of a stream
+### Logging Elements of a Stream
 
 **Situation:** During development it is sometimes helpful to see what happens in a particular section of a stream.
 
@@ -54,7 +54,7 @@ mySource.Log("before-select")
 mySource.Log("custom", null, Logging.GetLogger(sys, "customLogger"));
 ```
 
-### Flattening a stream of sequences
+### Flattening a Stream of Sequences
 
 **Situation:** A stream is given as a stream of sequence of elements, but a stream of elements needed instead, streaming
 all the nested elements inside the sequences separately.
@@ -68,7 +68,7 @@ Source<List<Message>,NotUsed > myData = someDataSource;
 Source<Message, NotUsed> flattened = myData.SelectMany(x => x);
 ```
 
-### Draining a stream to a strict collection
+### Draining a Stream to a Strict Collection
 
 **Situation:** A possibly unbounded sequence of elements is given as a stream, which needs to be collected into a collection while ensuring boundedness
 
@@ -97,7 +97,7 @@ var limited = mySource.Limit(MAX_ALLOWED_SIZE).RunWith(Sink.Seq<string>(), mater
 var ignoreOverflow = mySource.Take(MAX_ALLOWED_SIZE).RunWith(Sink.Seq<string>(), materializer);
 ```
 
-### Calculating the digest of a ByteString stream
+### Calculating the Digest of a ByteString Stream
 
 **Situation:** A stream of bytes is given as a stream of ``ByteStrings`` and we want to calculate the cryptographic digest
 of the stream.
@@ -159,7 +159,7 @@ var data = Source.Empty<ByteString>();
 var digest = data.Via(new DigestCalculator("SHA-256"));
 ```
 
-### Parsing lines from a stream of ByteStrings
+### Parsing Lines From a Stream of ByteStrings
 
 **Situation:** A stream of bytes is given as a stream of ``ByteStrings`` containing lines terminated by line ending
 characters (or, alternatively, containing binary frames delimited by a special delimiter byte sequence) which
@@ -174,7 +174,7 @@ var linesStream = rawData
     .Select(b => b.DecodeString());
 ```
 
-### Implementing reduce-by-key
+### Implementing Reduce-By-Key
 
 **Situation:** Given a stream of elements, we want to calculate some aggregated value on different subgroups of the
 elements.
@@ -246,7 +246,7 @@ var counts = words.Via(ReduceByKey(MaximumDistinctWords,
 > Please note that the reduce-by-key version we discussed above is sequential in reading the overall input stream,
 in other words it is **NOT** a parallelization pattern like MapReduce and similar frameworks.
 
-### Sorting elements to multiple groups with groupBy
+### Sorting Elements to Multiple Groups with groupBy
 
 **Situation:** The ``GroupBy`` operation strictly partitions incoming elements, each element belongs to exactly one group.
 Sometimes we want to map elements into multiple groups simultaneously.
@@ -283,7 +283,7 @@ var multiGroups = messageAndTopic.GroupBy(2, tuple => tuple.Item2).Select(tuple 
 
 In this collection we show recipes that use stream graph elements to achieve various goals.
 
-### Triggering the flow of elements programmatically
+### Triggering the Flow of Elements Programmatically
 
 **Situation:** Given a stream of elements we want to control the emission of those elements according to a trigger signal.
 In other words, even if the stream would be able to flow (not being backpressured) we want to hold back elements until a
@@ -327,7 +327,7 @@ var graph = RunnableGraph.FromGraph(GraphDsl.Create(b =>
 }));
 ```
 
-### Balancing jobs to a fixed pool of workers
+### Balancing Jobs to a Fixed Pool of Workers
 
 **Situation:** Given a stream of jobs and a worker process expressed as a `Flow` create a pool of workers
 that automatically balances incoming jobs to available workers, then merges the results.
@@ -362,12 +362,12 @@ var worker = Flow.Create<Job>().Select(j => new Done(j));
 var processedJobs = myJobs.Via(Balancer(worker, 3));
 ```
 
-## Working with rate
+## Working with Rate
 
 This collection of recipes demonstrate various patterns where rate differences between upstream and downstream
 needs to be handled by other strategies than simple backpressure.
 
-### Dropping elements
+### Dropping Elements
 
 **Situation:** Given a fast producer and a slow consumer, we want to drop elements if necessary to not slow down
 the producer too much.
@@ -386,7 +386,7 @@ var droppyStream = Flow.Create<Message>().Conflate((lastMessage, newMessage) => 
 There is a more general version of ``Conflate`` named ``ConflateWithSeed`` that allows to express more complex aggregations, more
 similar to a ``Aggregate``.
 
-### Dropping broadcast
+### Dropping Broadcast
 
 **Situation:** The default ``Broadcast`` graph element is properly backpressured, but that means that a slow downstream
 consumer can hold back the other downstream consumers resulting in lowered throughput. In other words the rate of
@@ -416,7 +416,7 @@ var graph = RunnableGraph.FromGraph(GraphDsl.Create(mysink1, mysink2, mysink3, T
     }));
 ```
 
-### Collecting missed ticks
+### Collecting Missed Ticks
 
 **Situation:** Given a regular (stream) source of ticks, instead of trying to backpressure the producer of the ticks
 we want to keep a counter of the missed ticks instead and pass it down when possible.
@@ -438,7 +438,7 @@ var missed = Flow.Create<Tick>()
   .ConflateWithSeed(seed: _ => 0, aggregate: (missedTicks, tick) => missedTicks + 1);
 ```
 
-### Create a stream processor that repeats the last element seen
+### Create a Stream Processor that Repeats the Last Element Seen
 
 **Situation:** Given a producer and consumer, where the rate of neither is known in advance, we want to ensure that none
 of them is slowing down the other by dropping earlier unconsumed elements from the upstream if necessary, and repeating
@@ -554,7 +554,7 @@ public sealed class HoldWithWait<T> : GraphStage<FlowShape<T, T>>
 }
 ```
 
-### Globally limiting the rate of a set of streams
+### Globally Limiting the Rate of a Set of Streams
 
 **Situation:** Given a set of independent streams that we cannot merge, we want to globally limit the aggregate
 throughput of the set of streams.
@@ -685,7 +685,7 @@ public Flow<T, T, NotUsed> LimitGlobal<T>(IActorRef limiter, TimeSpan maxAllowed
 
 ## Working with IO
 
-### Chunking up a stream of ByteStrings into limited size ByteStrings
+### Chunking up a Stream of ByteStrings Into Limited Size ByteStrings
 
 **Situation:** Given a stream of ByteStrings we want to produce a stream of ByteStrings containing the same bytes in
 the same sequence, but capping the size of ByteStrings. In other words we want to slice up ByteStrings into smaller
@@ -776,7 +776,7 @@ var rawBytes = Source.Empty<ByteString>();
 var chunkStream = rawBytes.Via(new Chunker(ChunkLimit));
 ```
 
-### Limit the number of bytes passing through a stream of ByteStrings
+### Limit the Number of Bytes Passing Through a Stream of ByteStrings
 
 **Situation:** Given a stream of ByteStrings we want to fail the stream if more than a given maximum of bytes has been
 consumed.
@@ -828,7 +828,7 @@ public class ByteLimiter : GraphStage<FlowShape<ByteString, ByteString>>
 var limiter = Flow.Create<ByteString>().Via(new ByteLimiter(SizeLimit));
 ```
 
-### Compact ByteStrings in a stream of ByteStrings
+### Compact ByteStrings in a Stream of ByteStrings
 
 **Situation:** After a long stream of transformations, due to their immutable, structural sharing nature ByteStrings may
 refer to multiple original ByteString instances unnecessarily retaining memory. As the final step of a transformation
@@ -842,7 +842,7 @@ var data = Source.Empty<ByteString>();
 var compacted = data.Select(b => b.Compact());
 ```
 
-### Injecting keep-alive messages into a stream of ByteStrings
+### Injecting Keep-Alive Messages Into a Stream of ByteStrings
 
 **Situation:** Given a communication channel expressed as a stream of ByteStrings we want to inject keep-alive messages
 but only if this does not interfere with normal traffic.

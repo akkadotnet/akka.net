@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MatchesAll.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,16 +12,11 @@ namespace Akka.TestKit.Internal.StringMatcher
     /// </summary>
     public class MatchesAll : IStringMatcher
     {
-        private static readonly IStringMatcher _instance = new MatchesAll();
-
         private MatchesAll()
         {
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static IStringMatcher Instance { get { return _instance; } }
+        public static IStringMatcher Instance { get; } = new MatchesAll();
 
         /// <summary>
         /// TBD

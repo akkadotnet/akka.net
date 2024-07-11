@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FileIO.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ namespace Akka.Streams.Dsl
         /// <param name="startPosition">the start position to read from, defaults to 0</param>
         /// <returns>TBD</returns>
         public static Source<ByteString, Task<IOResult>> FromFile(FileInfo f, int chunkSize = 8192, long startPosition = 0) =>
-            new Source<ByteString, Task<IOResult>>(new FileSource(f, chunkSize, startPosition, DefaultAttributes.FileSource,
+            new(new FileSource(f, chunkSize, startPosition, DefaultAttributes.FileSource,
                 new SourceShape<ByteString>(new Outlet<ByteString>("FileSource"))));
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flushSignaler">when passed an instance of <see cref="FlushSignaler"/>, can be used to send a manual flush signal to the file sink</param>
         /// <returns>TBD</returns>
         public static Sink<ByteString, Task<IOResult>> ToFile(FileInfo f, FileMode? fileMode = null, long startPosition = 0, bool autoFlush = false, FlushSignaler flushSignaler = null) =>
-            new Sink<ByteString, Task<IOResult>>(new FileSink(f, startPosition, fileMode ?? FileMode.Create, DefaultAttributes.FileSink,
+            new(new FileSink(f, startPosition, fileMode ?? FileMode.Create, DefaultAttributes.FileSink,
                 new SinkShape<ByteString>(new Inlet<ByteString>("FileSink")), autoFlush, flushSignaler));
     }
 }

@@ -1,4 +1,0 @@
-﻿this was copied because the nuget only supports .net 4.6+
-
-https://github.com/StephenCleary/AsyncEx
-https://github.com/StephenCleary/Disposables

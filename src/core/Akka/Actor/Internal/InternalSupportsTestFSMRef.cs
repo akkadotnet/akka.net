@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalSupportsTestFSMRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -40,14 +40,12 @@ namespace Akka.Actor.Internal
     [InternalApi]
     public class InternalActivateFsmLogging
     {
-        private static readonly InternalActivateFsmLogging _instance = new InternalActivateFsmLogging();
-
         private InternalActivateFsmLogging(){}
         /// <summary>
         /// INTERNAL API. Used for testing.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
-        public static InternalActivateFsmLogging Instance { get { return _instance; } }
+        public static InternalActivateFsmLogging Instance { get; } = new();
     }
 }
 

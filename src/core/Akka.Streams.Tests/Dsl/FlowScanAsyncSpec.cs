@@ -1,24 +1,27 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowScanAsyncSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using Decider = Akka.Streams.Supervision.Decider;
+using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -53,22 +56,23 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(SumScanFlow)
                 .RunWith(this.SinkProbe<int>(), Materializer)
                 .Request(2)
-                .ExpectNext(0, 1)
+                .ExpectNext( 0, 1)
                 .ExpectComplete();
         }
 
         [Fact]
-        public void A_ScanAsync_must_work_with_a_large_source()
+        public async Task A_ScanAsync_must_work_with_a_large_source()
         {
             var elements = Enumerable.Range(1, 100000).Select(i => (long)i).ToList();
             var expectedSum = elements.Sum();
             var eventualActual = Source.From(elements)
                 .ScanAsync(0L, (l, l1) => Task.FromResult(l + l1))
                 .RunWith(Sink.Last<long>(), Materializer);
-            eventualActual.AwaitResult().ShouldBe(expectedSum);
+            var complete = await eventualActual.ShouldCompleteWithin(3.Seconds());
+            complete.ShouldBe(expectedSum);
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void A_ScanAsync_must_work_with_slow_tasks()
         {
             var delay = TimeSpan.FromMilliseconds(500);
@@ -101,7 +105,7 @@ namespace Akka.Streams.Tests.Dsl
             var elements = new[] { 1, -1, 1 };
 
             WhenFailedScan(elements, 0, decider: Deciders.RestartingDecider)
-                .ExpectNext(1, 1)
+                .ExpectNext( 1, 1)
                 .ExpectComplete();
         }
 
@@ -111,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
             var elements = new[] { 1, -1, 1 };
 
             WhenFailedTask(elements, 0, decider: Deciders.RestartingDecider)
-                .ExpectNext(1, 1)
+                .ExpectNext( 1, 1)
                 .ExpectComplete();
         }
 
@@ -121,7 +125,7 @@ namespace Akka.Streams.Tests.Dsl
             var elements = new[] { 1, -1, 1 };
 
             WhenFailedScan(elements, 0, decider: Deciders.ResumingDecider)
-                .ExpectNext(1, 2)
+                .ExpectNext( 1, 2)
                 .ExpectComplete();
         }
 
@@ -131,7 +135,7 @@ namespace Akka.Streams.Tests.Dsl
             var elements = new[] { 1, -1, 1 };
 
             WhenFailedTask(elements, 0, decider: Deciders.ResumingDecider)
-                .ExpectNext(1, 2)
+                .ExpectNext( 1, 2)
                 .ExpectComplete();
         }
 
@@ -171,7 +175,7 @@ namespace Akka.Streams.Tests.Dsl
             exception = exception ?? new Exception("boom");
             decider = decider ?? Deciders.StoppingDecider;
 
-            return Source.From(elements)
+            var probe = Source.From(elements)
                 .ScanAsync(zero, (i, i1) =>
                 {
                     if (i1 >= 0)
@@ -180,9 +184,10 @@ namespace Akka.Streams.Tests.Dsl
                     throw exception;
                 })
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(decider))
-                .RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(elements.Count + 1)
+                .RunWith(this.SinkProbe<int>(), Materializer);
+            probe.Request(elements.Count + 1)
                 .ExpectNext(zero);
+            return probe;
         }
 
         private TestSubscriber.ManualProbe<int> WhenFailedTask(ICollection<int> elements, int zero,
@@ -192,7 +197,7 @@ namespace Akka.Streams.Tests.Dsl
             exception = exception ?? new Exception("boom");
             decider = decider ?? Deciders.StoppingDecider;
 
-            return Source.From(elements)
+            var probe = Source.From(elements)
                 .ScanAsync(zero, (i, i1) => Task.Run(() =>
                 {
                     if (i1 >= 0)
@@ -201,21 +206,23 @@ namespace Akka.Streams.Tests.Dsl
                     throw exception;
                 }))
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(decider))
-                .RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(elements.Count + 1)
+                .RunWith(this.SinkProbe<int>(), Materializer);
+            probe.Request(elements.Count + 1)
                 .ExpectNext(zero);
+            return probe;
         }
 
         private TestSubscriber.ManualProbe<string> WhenNullElement(ICollection<string> elements, string zero, Decider decider = null)
         {
             decider = decider ?? Deciders.StoppingDecider;
 
-            return Source.From(elements)
-                .ScanAsync(zero, (i, i1) => Task.FromResult(i1 != "null" ? i1 : null))
+            var probe = Source.From(elements)
+                .ScanAsync(zero, (_, i1) => Task.FromResult(i1 != "null" ? i1 : null))
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(decider))
-                .RunWith(this.SinkProbe<string>(), Materializer)
-                .Request(elements.Count + 1)
+                .RunWith(this.SinkProbe<string>(), Materializer);
+            probe.Request(elements.Count + 1)
                 .ExpectNext(zero);
+            return probe;
         }
     }
 }

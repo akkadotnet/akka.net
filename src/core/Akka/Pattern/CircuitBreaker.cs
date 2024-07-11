@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CircuitBreaker.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -128,6 +128,11 @@ namespace Akka.Pattern
         /// </summary>
         public double ExponentialBackoffFactor { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public double RandomFactor { get; }
+
         //akka.io implementation is to use nested static classes and access parent member variables
         //.Net static nested classes do not have access to parent member variables -- so we configure the states here and
         //swap them above
@@ -157,7 +162,7 @@ namespace Akka.Pattern
         /// <param name="resetTimeout"><see cref="TimeSpan"/> of time after which to attempt to close the circuit</param>
         /// <returns>TBD</returns>
         public CircuitBreaker(IScheduler scheduler, int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout)
-            : this(scheduler, maxFailures, callTimeout, resetTimeout, TimeSpan.FromDays(36500), 1.0)
+            : this(scheduler, maxFailures, callTimeout, resetTimeout, TimeSpan.FromDays(36500), 1.0, 0.0)
         {
         }
 
@@ -172,8 +177,25 @@ namespace Akka.Pattern
         /// <param name="exponentialBackoffFactor"></param>
         /// <returns>TBD</returns>
         public CircuitBreaker(IScheduler scheduler, int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout, TimeSpan maxResetTimeout, double exponentialBackoffFactor)
+            : this(scheduler, maxFailures, callTimeout, resetTimeout, maxResetTimeout, exponentialBackoffFactor, 0.0)
+        {
+        }
+
+        /// <summary>
+        /// Create a new CircuitBreaker
+        /// </summary>
+        /// <param name="scheduler">Reference to Akka scheduler</param>
+        /// <param name="maxFailures">Maximum number of failures before opening the circuit</param>
+        /// <param name="callTimeout"><see cref="TimeSpan"/> of time after which to consider a call a failure</param>
+        /// <param name="resetTimeout"><see cref="TimeSpan"/> of time after which to attempt to close the circuit</param>
+        /// <param name="maxResetTimeout"></param>
+        /// <param name="exponentialBackoffFactor"></param>
+        /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. randomFactor should be in range `0.0` (inclusive) and `1.0` (inclusive). In order to skip this additional delay pass in `0`.</param>
+        /// <returns>TBD</returns>
+        public CircuitBreaker(IScheduler scheduler, int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout, TimeSpan maxResetTimeout, double exponentialBackoffFactor, double randomFactor)
         {
             if (exponentialBackoffFactor < 1.0) throw new ArgumentException("factor must be >= 1.0", nameof(exponentialBackoffFactor));
+            if (randomFactor is < 0.0 or > 1.0) throw new ArgumentException("randomFactor must be between 0.0 and 1.0", nameof(randomFactor));
 
             Scheduler = scheduler;
             MaxFailures = maxFailures;
@@ -181,6 +203,7 @@ namespace Akka.Pattern
             ResetTimeout = resetTimeout;
             MaxResetTimeout = maxResetTimeout;
             ExponentialBackoffFactor = exponentialBackoffFactor;
+            RandomFactor = randomFactor;
             Closed = new Closed(this);
             Open = new Open(this);
             HalfOpen = new HalfOpen(this);
@@ -191,13 +214,9 @@ namespace Akka.Pattern
         /// <summary>
         /// Retrieves current failure count.
         /// </summary>
-        public long CurrentFailureCount
-        {
-            get { return Closed.Current; }
-        }
+        public long CurrentFailureCount => Closed.Current;
 
         public Exception LastCaughtException { get; private set; }
-
 
         /// <summary>
         /// Wraps invocation of asynchronous calls that need to be protected
@@ -205,57 +224,35 @@ namespace Akka.Pattern
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/> containing the call result</returns>
-        public Task<T> WithCircuitBreaker<T>(Func<Task<T>> body)
-        {
-            return CurrentState.Invoke(body);
-        }
+        public Task<T> WithCircuitBreaker<T>(Func<Task<T>> body) => CurrentState.Invoke(body);
+
+        public Task<T> WithCircuitBreaker<T, TState>(TState state, Func<TState, Task<T>> body) => 
+            CurrentState.InvokeState(state, body);
 
         /// <summary>
         /// Wraps invocation of asynchronous calls that need to be protected
         /// </summary>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/></returns>
-        public Task WithCircuitBreaker(Func<Task> body)
-        {
-            return CurrentState.Invoke(body);
-        }
+        public Task WithCircuitBreaker(Func<Task> body) => CurrentState.Invoke(body);
+
+        public Task WithCircuitBreaker<TState>(TState state, Func<TState, Task> body) => 
+            CurrentState.InvokeState(state, body);
 
         /// <summary>
-        /// The failure will be recorded farther down.
+        /// Wraps invocations of asynchronous calls that need to be protected.
         /// </summary>
-        /// <param name="body">TBD</param>
-        public void WithSyncCircuitBreaker(Action body)
-        {
-            var cbTask = WithCircuitBreaker(() => Task.Factory.StartNew(body));
-            if (!cbTask.Wait(CallTimeout))
-            {
-                //throw new TimeoutException( string.Format( "Execution did not complete within the time allotted {0} ms", CallTimeout.TotalMilliseconds ) );
-            }
-            if (cbTask.Exception != null)
-            {
-                ExceptionDispatchInfo.Capture(cbTask.Exception).Throw();
-            }
-        }
+        /// <param name="body">Call needing protected</param>
+        public void WithSyncCircuitBreaker(Action body) =>
+            WithCircuitBreaker(body, b => Task.Run(b)).GetAwaiter().GetResult();
 
         /// <summary>
-        /// Wraps invocations of asynchronous calls that need to be protected
-        /// If this does not complete within the time allotted, it should return default(<typeparamref name="T"/>)
-        ///
-        /// <code>
-        ///  Await.result(
-        ///      withCircuitBreaker(try Future.successful(body) catch { case NonFatal(t) ⇒ Future.failed(t) }),
-        ///      callTimeout)
-        /// </code>
-        ///
+        /// Wraps invocations of asynchronous calls that need to be protected.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="body">TBD</param>
-        /// <returns><typeparamref name="T"/> or default(<typeparamref name="T"/>)</returns>
-        public T WithSyncCircuitBreaker<T>(Func<T> body)
-        {
-            var cbTask = WithCircuitBreaker(() => Task.Factory.StartNew(body));
-            return cbTask.Wait(CallTimeout) ? cbTask.Result : default(T);
-        }
+        /// <param name="body">Call needing protected</param>
+        /// <returns>The result of the call</returns>
+        public T WithSyncCircuitBreaker<T>(Func<T> body) =>
+            WithCircuitBreaker(body, b => Task.Run(b)).Result;
 
         /// <summary>
         /// Mark a successful call through CircuitBreaker. Sometimes the callee of CircuitBreaker sends back a message to the
@@ -331,16 +328,21 @@ namespace Akka.Pattern
             Closed.AddListener(callback);
             return this;
         }
-        
+
         /// <summary>
         /// The <see cref="ResetTimeout"/> will be increased exponentially for each failed attempt to close the circuit.
         /// The default exponential backoff factor is 2.
         /// </summary>
         /// <param name="maxResetTimeout">The upper bound of <see cref="ResetTimeout"/></param>
-        public CircuitBreaker WithExponentialBackoff(TimeSpan maxResetTimeout)
-        {
-            return new CircuitBreaker(Scheduler, MaxFailures, CallTimeout, ResetTimeout, maxResetTimeout, 2.0);
-        }
+        public CircuitBreaker WithExponentialBackoff(TimeSpan maxResetTimeout) => 
+            new(Scheduler, MaxFailures, CallTimeout, ResetTimeout, maxResetTimeout, 2.0, RandomFactor);
+
+        /// <summary>
+        /// Adds jitter to the delay.
+        /// </summary>
+        /// <param name="randomFactor">after calculation of the back-off an additional random delay based on this factor is added, e.g. 0.2 adds up to 20% delay. In order to skip this additional delay pass in 0.</param>
+        public CircuitBreaker WithRandomFactor(double randomFactor) => 
+            new(Scheduler, MaxFailures, CallTimeout, ResetTimeout, MaxResetTimeout, ExponentialBackoffFactor, randomFactor);
 
         /// <summary>
         /// Implements consistent transition between states. Throws IllegalStateException if an invalid transition is attempted.

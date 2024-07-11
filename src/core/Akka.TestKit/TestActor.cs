@@ -1,10 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Util;
 
@@ -64,18 +65,19 @@ namespace Akka.TestKit
         /// </summary>
         public class Watch : INoSerializationVerificationNeeded
         {
-            private readonly IActorRef _actorToWatch;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="actorToWatch">TBD</param>
-            public Watch(IActorRef actorToWatch) { _actorToWatch = actorToWatch; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public IActorRef Actor { get { return _actorToWatch; } }
+            public Watch(IActorRef actorToWatch)
+            {
+                Actor = actorToWatch;
+            }
+            
+            public IActorRef Actor { get; }
+        }
+        
+        internal sealed class WatchAck : INoSerializationVerificationNeeded
+        {
+            private WatchAck() { }
+            
+            public static readonly WatchAck Instance = new();
         }
 
         /// <summary>
@@ -84,18 +86,22 @@ namespace Akka.TestKit
         /// </summary>
         public class Unwatch : INoSerializationVerificationNeeded
         {
-            private readonly IActorRef _actorToUnwatch;
+            public Unwatch(IActorRef actorToUnwatch)
+            {
+                Actor = actorToUnwatch;
+            }
+            
+            public IActorRef Actor { get; }
+        }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="actorToUnwatch">TBD</param>
-            public Unwatch(IActorRef actorToUnwatch) { _actorToUnwatch = actorToUnwatch; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public IActorRef Actor { get { return _actorToUnwatch; } }
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal sealed class UnwatchAck : INoSerializationVerificationNeeded
+        {
+            private UnwatchAck() { }
+            
+            public static readonly UnwatchAck Instance = new();
         }
 
         /// <summary>

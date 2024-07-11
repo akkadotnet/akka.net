@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Deployer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,8 +26,7 @@ namespace Akka.Actor
         /// </summary>
         protected readonly Config Default;
         private readonly Settings _settings;
-        private readonly AtomicReference<WildcardIndex<Deploy>> _deployments = 
-            new AtomicReference<WildcardIndex<Deploy>>(new WildcardIndex<Deploy>());
+        private readonly AtomicReference<WildcardIndex<Deploy>> _deployments = new(new WildcardIndex<Deploy>());
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Deployer"/> class.
@@ -88,7 +87,7 @@ namespace Akka.Actor
         /// </exception>
         public void SetDeploy(Deploy deploy)
         {
-            void add(IList<string> path, Deploy d)
+            void Add(IList<string> path, Deploy d)
             {
                 var w = _deployments.Value;
                 foreach (var t in path)
@@ -98,14 +97,14 @@ namespace Akka.Actor
                     if (!ActorPath.IsValidPathElement(t))
                     {
                         throw new IllegalActorNameException(
-                            $"Illegal actor name [{t}] in deployment [${d.Path}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${new string(ActorPath.ValidSymbols)}.");
+                            $"Illegal actor name [{t}] in deployment [${d.Path}]. {ActorPath.ValidActorNameDescription}");
                     }
                 }
-                if (!_deployments.CompareAndSet(w, w.Insert(path, d))) add(path, d);
+                if (!_deployments.CompareAndSet(w, w.Insert(path, d))) Add(path, d);
             }
 
             var elements = deploy.Path.Split('/').Drop(1).ToList();
-            add(elements, deploy);
+            Add(elements, deploy);
         }
 
         /// <summary>
@@ -122,7 +121,8 @@ namespace Akka.Actor
             var router = CreateRouterConfig(routerType, deployment);
             var dispatcher = deployment.GetString("dispatcher", "");
             var mailbox = deployment.GetString("mailbox", "");
-            var deploy = new Deploy(key, deployment, router, Deploy.NoScopeGiven, dispatcher, mailbox);
+            var stashCapacity = deployment.GetInt("stash-capacity", Deploy.NoStashSize);
+            var deploy = new Deploy(key, deployment, router, Deploy.NoScopeGiven, dispatcher, mailbox, stashCapacity);
             return deploy;
         }
 
@@ -140,8 +140,9 @@ namespace Akka.Actor
             if(routerTypeName == null)
             {
                 var message = $"Could not find type mapping for router alias [{routerTypeAlias}].";
-                if (routerTypeAlias == "cluster-metrics-adaptive-group" ||
-                    routerTypeAlias == "cluster-metrics-adaptive-pool")
+                if (routerTypeAlias is
+                    "cluster-metrics-adaptive-group" or
+                    "cluster-metrics-adaptive-pool")
                     message += " Please install Akka.Cluster.Metrics extension nuget package.";
                 else
                     message += " Did you forgot to install a specific router extension?";
@@ -157,8 +158,7 @@ namespace Akka.Actor
             catch (ArgumentNullException e)
             {
                 var message = $"Could not find extension Type [{routerTypeAlias}] for router alias [{routerTypeAlias}].";
-                if (routerTypeAlias == "cluster-metrics-adaptive-group" ||
-                    routerTypeAlias == "cluster-metrics-adaptive-pool")
+                if (routerTypeAlias is "cluster-metrics-adaptive-group" or "cluster-metrics-adaptive-pool")
                     message += " Please install Akka.Cluster.Metrics extension nuget package.";
                 else
                     message += " Did you forgot to install a specific router extension?";

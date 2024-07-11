@@ -2,7 +2,7 @@
 # See https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema for reference
 
 pool:
-  vmImage: windows-2019
+  vmImage: windows-latest
   demands: Cmd
 
 trigger: none
@@ -20,14 +20,9 @@ variables:
 
 steps:
 - task: UseDotNet@2
-  displayName: 'Use .NET 5 SDK 6.0.100'
+  displayName: 'Use .NET 8 SDK 8.0.100'
   inputs:
-    version: 6.0.100
-- task: UseDotNet@2
-  displayName: 'Use .NET Core Runtime 3.1.10'
-  inputs:
-    packageType: runtime
-    version: 3.1.10
+    version: 8.0.100
 - task: BatchScript@1
   displayName: 'FAKE Build'
   inputs:

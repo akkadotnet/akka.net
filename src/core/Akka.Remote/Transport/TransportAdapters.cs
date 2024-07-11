@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TransportAdapters.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
+    internal sealed class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
     {
         /// <inheritdoc cref="ExtensionIdProvider{T}"/>
         public override TransportAdapters CreateExtension(ExtendedActorSystem system)
@@ -61,7 +61,7 @@ namespace Akka.Remote.Transport
     /// 
     /// Extension that allows us to look up transport adapters based upon the settings provided inside <see cref="RemoteSettings"/>
     /// </summary>
-    internal class TransportAdapters : IExtension
+    internal sealed class TransportAdapters : IExtension
     {
         /// <summary>
         /// TBD
@@ -81,7 +81,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// The Akka.Remote settings
         /// </summary>
-        protected RemoteSettings Settings;
+        private readonly RemoteSettings Settings;
 
         private Dictionary<string, ITransportAdapterProvider> _adaptersTable;
 
@@ -303,7 +303,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal abstract class AbstractTransportAdapterHandle : AssociationHandle
+    public abstract class AbstractTransportAdapterHandle : AssociationHandle
     {
         /// <summary>
         /// TBD
@@ -385,7 +385,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Marker interface for all transport operations
     /// </summary>
-    internal abstract class TransportOperation : INoSerializationVerificationNeeded
+    public abstract class TransportOperation : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// TBD
@@ -396,7 +396,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class ListenerRegistered : TransportOperation
+    public sealed class ListenerRegistered : TransportOperation
     {
         /// <summary>
         /// TBD
@@ -416,7 +416,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class AssociateUnderlying : TransportOperation
+    public sealed class AssociateUnderlying : TransportOperation
     {
         /// <summary>
         /// TBD
@@ -443,7 +443,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class ListenUnderlying : TransportOperation
+    public sealed class ListenUnderlying : TransportOperation
     {
         /// <summary>
         /// TBD
@@ -470,7 +470,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class DisassociateUnderlying : TransportOperation, IDeadLetterSuppression
+    public sealed class DisassociateUnderlying : TransportOperation, IDeadLetterSuppression
     {
         /// <summary>
         /// TBD
@@ -556,12 +556,12 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
-    internal abstract class ActorTransportAdapterManager : UntypedActor
+    public abstract class ActorTransportAdapterManager : UntypedActor
     {
         /// <summary>
         /// Lightweight Stash implementation
         /// </summary>
-        protected Queue<object> DelayedEvents = new Queue<object>();
+        protected Queue<object> DelayedEvents = new();
 
         /// <summary>
         /// TBD
@@ -591,17 +591,17 @@ namespace Akka.Remote.Transport
         /// <param name="message">TBD</param>
         protected override void OnReceive(object message)
         {
-            PatternMatch.Match(message)
-                .With<ListenUnderlying>(listen =>
-                {
+            switch (message)
+            {
+                case ListenUnderlying listen:
                     LocalAddress = listen.ListenAddress;
                     var capturedSelf = Self;
                     listen.UpstreamListener.ContinueWith(
                         listenerRegistered => capturedSelf.Tell(new ListenerRegistered(listenerRegistered.Result)),
                         TaskContinuationOptions.ExecuteSynchronously);
-                })
-                .With<ListenerRegistered>(listener =>
-                {
+                    break;
+                
+                case ListenerRegistered listener:
                     AssociationListener = listener.Listener;
                     foreach (var dEvent in DelayedEvents)
                     {
@@ -609,8 +609,12 @@ namespace Akka.Remote.Transport
                     }
                     DelayedEvents = new Queue<object>();
                     Context.Become(Ready);
-                })
-                .Default(m => DelayedEvents.Enqueue(m));
+                    break;
+                
+                default:
+                    DelayedEvents.Enqueue(message);
+                    break;
+            }
         }
 
         /// <summary>

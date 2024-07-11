@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterHeartBeatSenderStateSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,12 +17,28 @@ using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
 using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests
 {
-    public class ClusterHeartBeatSenderStateSpec : ClusterSpecBase
+    public class ClusterHeartBeatSenderStateSpec : ClusterHeartBeatSenderStateBase
     {
-        public ClusterHeartBeatSenderStateSpec()
+        public ClusterHeartBeatSenderStateSpec(ITestOutputHelper output) : base(output, false)
+        {
+        }
+    }
+    
+    public class ClusterHeartBeatSenderStateLegacySpec : ClusterHeartBeatSenderStateBase
+    {
+        public ClusterHeartBeatSenderStateLegacySpec(ITestOutputHelper output) : base(output, true)
+        {
+        }
+    }
+    
+    public abstract class ClusterHeartBeatSenderStateBase : ClusterSpecBase
+    {
+        protected ClusterHeartBeatSenderStateBase(ITestOutputHelper output, bool useLegacyMessage)
+            : base(output, useLegacyMessage)
         {
             _emptyState = EmptyState(aa);
         }
@@ -55,7 +71,7 @@ namespace Akka.Cluster.Tests
 
             public override bool IsAvailable
             {
-                get { return (_status == Status.Up || _status == Status.Unknown); }
+                get { return _status is Status.Up or Status.Unknown; }
             }
 
             public override bool IsMonitoring
@@ -71,11 +87,11 @@ namespace Akka.Cluster.Tests
 
         #endregion
 
-        private UniqueAddress aa = new UniqueAddress(new Address("akka.tcp", "sys", "aa", 2552), 1);
-        private UniqueAddress bb = new UniqueAddress(new Address("akka.tcp", "sys", "bb", 2552), 2);
-        private UniqueAddress cc = new UniqueAddress(new Address("akka.tcp", "sys", "cc", 2552), 3);
-        private UniqueAddress dd = new UniqueAddress(new Address("akka.tcp", "sys", "dd", 2552), 4);
-        private UniqueAddress ee = new UniqueAddress(new Address("akka.tcp", "sys", "ee", 2552), 5);
+        private UniqueAddress aa = new(new Address("akka.tcp", "sys", "aa", 2552), 1);
+        private UniqueAddress bb = new(new Address("akka.tcp", "sys", "bb", 2552), 2);
+        private UniqueAddress cc = new(new Address("akka.tcp", "sys", "cc", 2552), 3);
+        private UniqueAddress dd = new(new Address("akka.tcp", "sys", "dd", 2552), 4);
+        private UniqueAddress ee = new(new Address("akka.tcp", "sys", "ee", 2552), 5);
 
         private readonly ClusterHeartbeatSenderState _emptyState;
 

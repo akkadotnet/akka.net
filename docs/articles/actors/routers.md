@@ -19,7 +19,7 @@ Akka.NET comes with several useful routers you can choose right out of the box, 
 
 Routers can be deployed in multiple ways, using code or configuration.
 
-### Code deployment
+### Code Deployment
 
 The example below shows how to deploy 5 workers using a round robin router:
 
@@ -35,7 +35,7 @@ The above code can also be written as:
 var props = new RoundRobinPool(5).Props(Props.Create<Worker>());
 ```
 
-### Configuration deployment
+### Configuration Deployment
 
 The same router may be defined using a [HOCON deployment configuration](xref:configuration).
 
@@ -90,13 +90,13 @@ There are two types of routers:
 
 ### Supervision
 
-Routers are implemented as actors, so a router is supervised by it's parent, and they may supervise children.
+Routers are implemented as actors, so a router is supervised by its parent, and they may supervise children.
 
 *Group routers* use routees created somewhere else, it doesn't have children of its own. If a routee dies, a group router will have no knowledge of it.
 
 *Pool routers* on the other hand create their own children. The router is therefore also the routee's supervisor.
 
-By default, pool routers use a custom strategy that only returns `Escalate` for all exceptions, the router supervising the failing worker will then escalate to it's own parent, if the parent of the router decides to restart the router, all the pool workers will also be recreated as a result of this.
+By default, pool routers use a custom strategy that only returns `Escalate` for all exceptions, the router supervising the failing worker will then escalate to its own parent, if the parent of the router decides to restart the router, all the pool workers will also be recreated as a result of this.
 
 ## Routing Strategies
 
@@ -569,7 +569,7 @@ Most messages sent to router will be forwarded according to router's routing log
 
 ### Broadcast Messages
 
-A `Broadcast` message can be used to send message to __all__ routees of a router. When a router receives `Broadcast` message, it will broadcast that message's __payload__ to all routees, no matter how that router normally handles its messages.
+A `Broadcast` message can be used to send message to **all** routees of a router. When a router receives `Broadcast` message, it will broadcast that message's **payload** to all routees, no matter how that router normally handles its messages.
 
 Here is an example of how to send a message to every routee of a router.
 
@@ -596,7 +596,7 @@ In this example, the router received the `Broadcast` message, extracted its payl
 
 When an actor received `PoisonPill` message, that actor will be stopped. (see [PoisonPill](xref:receive-actor-api#poisonpill) for details).
 
-For a router, which normally passes on messages to routees, the `PoisonPill` messages are processed __by the router only__. `PoisonPill` messages sent to a router will __not__ be sent on to its routees.
+For a router, which normally passes on messages to routees, the `PoisonPill` messages are processed **by the router only**. `PoisonPill` messages sent to a router will **not** be sent on to its routees.
 
 However, a `PoisonPill` message sent to a router may still affect its routees, as it will stop the router which in turns stop children the router has created. Each child will process its current message and then stop. This could lead to some messages being unprocessed.
 
@@ -640,7 +640,7 @@ Sending one of the following messages to a router can be used to manage its rout
 
 ## Advanced
 
-### How Routing is Designed within Akka.NET
+### How Routing Is Designed Within Akka.NET
 
 On the surface routers look like normal actors, but they are actually implemented differently. Routers are designed to be extremely efficient at receiving messages and passing them quickly on to routees.
 

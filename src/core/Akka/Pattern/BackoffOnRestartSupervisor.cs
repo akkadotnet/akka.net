@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BackoffOnRestartSupervisor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,6 +24,10 @@ namespace Akka.Pattern
         private readonly OneForOneStrategy _strategy;
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
+        /// <devremarks>
+        /// If the arguments here change, you -must- change the invocation in <see cref="BackoffOptions"/> accordingly!
+        /// Expression based props are too slow for many scenarios, so we must drop compile time safety for that sake.
+        /// </devremarks>
         public BackoffOnRestartSupervisor(
             Props childProps,
             string childName,

@@ -13,7 +13,7 @@ indent_style = space
 indent_size = 4
 
 # Xml project files
-[*.{csproj}]
+[*.csproj]
 indent_size = 2
 
 # Xml config files
@@ -28,8 +28,8 @@ indent_size = 2
 [*.proto]
 indent_size = 2
 
-# Dotnet code style settings:
-[*.{cs}]
+# CSharp code style settings:
+[*.cs]
 # Sort using and Import directives with System.* appearing first
 dotnet_sort_system_directives_first = true
 # Avoid "this." and "Me." if not necessary
@@ -49,8 +49,6 @@ dotnet_style_coalesce_expression = true:suggestion
 dotnet_style_null_propagation = true:suggestion
 dotnet_style_explicit_tuple_names = true:suggestion
 
-# CSharp code style settings:
-[*.cs]
 # Prefer "var" everywhere
 csharp_style_var_for_built_in_types = true:suggestion
 csharp_style_var_when_type_is_apparent = true:suggestion

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MatchBuilder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,9 +38,9 @@ namespace Akka.Tools.MatchHandler
         //    builder2:  action = s=>G(s); predicate = s=>s!=""
 
         private static readonly Type _itemType = typeof(TItem);
-        private readonly List<TypeHandler> _typeHandlers = new List<TypeHandler>(); //Contains all handlers, with the handled types and predicates
-        private readonly List<Argument> _arguments = new List<Argument>();                //Contains Actions,Predicates and Funcs that has been added
-        private readonly List<object> _signature = new List<object>();
+        private readonly List<TypeHandler> _typeHandlers = new(); //Contains all handlers, with the handled types and predicates
+        private readonly List<Argument> _arguments = new();                //Contains Actions,Predicates and Funcs that has been added
+        private readonly List<object> _signature = new();
         private readonly IMatchCompiler<TItem> _compiler;
         private State _state;
 
@@ -195,12 +195,10 @@ namespace Akka.Tools.MatchHandler
 
         private void AddHandler(Type handlesType, PredicateAndHandler predicateAndHandler)
         {
-            TypeHandler typeHandler;
-
             //if the previous handler handles the same type, we don't need an entirely new TypeHandler,
             //we can just add the handler to its' list of handlers
 
-            if(!TryGetPreviousTypeHandlerIfItHandlesSameType(handlesType, out typeHandler))
+            if(!TryGetPreviousTypeHandlerIfItHandlesSameType(handlesType, out var typeHandler))
             {
                 //Either no previous handler had been added, or it handled a different type.
                 //Create a new handler and store it.

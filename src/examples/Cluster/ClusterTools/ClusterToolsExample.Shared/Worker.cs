@@ -1,28 +1,27 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Worker.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Event;
 
-namespace ClusterToolsExample.Shared
-{
-    public class Worker : ReceiveActor
-    {
-        public Worker(IActorRef counter)
-        {
-            var log = Context.GetLogger();
+namespace ClusterToolsExample.Shared;
 
-            Receive<Work>(work =>
-            {
-                var result = new Result(work.Id);
-                log.Info("Worker {0} - result: {1}", Self.Path.Name, result.Id);
-                Sender.Tell(result);
-                counter.Tell(result);
-            });
-        }
+public class Worker : ReceiveActor
+{
+    public Worker(IActorRef counter)
+    {
+        var log = Context.GetLogger();
+
+        Receive<Work>(work =>
+        {
+            var result = new Result(work.Id);
+            log.Info("Worker {0} - result: {1}", Self.Path.Name, result.Id);
+            Sender.Tell(result);
+            counter.Tell(result);
+        });
     }
 }

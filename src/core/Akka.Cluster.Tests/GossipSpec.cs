@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GossipSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -257,11 +257,11 @@ namespace Akka.Cluster.Tests
             Member a8 = TestMember.Create(new Address("akka.tcp", "sys", "a8", 2552), MemberStatus.Exiting, ImmutableHashSet<string>.Empty.Add("role1"), upNumber: 8);
             Member a9 = TestMember.Create(new Address("akka.tcp", "sys", "a9", 2552), MemberStatus.Exiting, ImmutableHashSet<string>.Empty.Add("role2"), upNumber: 9);
 
-            IEnumerable<Member> theExiting = new Member[] { a5, a6 };
+            var theExiting = new Member[] { a5, a6 };
             var gossip = new Gossip(ImmutableSortedSet.Create(a1, a2, a3, a4, a5, a6, a7, a8, a9));
 
             var r = ClusterCoreDaemon.GossipTargetsForExitingMembers(gossip, theExiting);
-            r.Should().BeEquivalentTo(new[] { a1, a2, a5, a6, a9 });
+            r.Should().BeEquivalentTo(a1, a2, a5, a6, a9);
         }
     }
 }

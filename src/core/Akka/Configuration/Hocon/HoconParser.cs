@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconParser.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ namespace Akka.Configuration.Hocon
     /// </summary>
     public class Parser
     {
-        private readonly List<HoconSubstitution> _substitutions = new List<HoconSubstitution>();
+        private readonly List<HoconSubstitution> _substitutions = new();
         private HoconTokenizer _reader;
         private HoconValue _root;
         private Func<string, HoconRoot> _includeCallback;

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorServiceProviderPropsWithScopesSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -193,7 +193,6 @@ namespace Akka.DependencyInjection.Tests
         [Fact(DisplayName = "Props created via the ServiceProvider should support the standard Props copying methods")]
         public void ServiceProvider_Props_should_support_copying()
         {
-            // <CreateNonDiActor>
             var spExtension = DependencyResolver.For(Sys);
             var arg1 = "foo";
             var arg2 = "bar";
@@ -321,7 +320,7 @@ namespace Akka.DependencyInjection.Tests
                     Sender.Tell(new CurrentDependencies(new AkkaDiFixture.IDependency[] { _transient, _scoped, _singleton }));
                 });
 
-                Receive<string>(str =>
+                Receive<string>(_ =>
                 {
                     Sender.Tell(_arg1);
                     Sender.Tell(_arg2);

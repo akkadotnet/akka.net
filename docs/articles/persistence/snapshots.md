@@ -42,7 +42,7 @@ If not specified, they default to `SnapshotSelectionCriteria.Latest` which selec
 > Since it is acceptable for some applications to not use any snap-shotting, it is legal to not configure a snapshot store. However, Akka will log a warning message when this situation is detected and then continue to operate until an actor tries to store a snapshot, at which point the operation will fail (by replying with an `SaveSnapshotFailure` for example).
 > Note that `Cluster Sharding` is using snapshots, so if you use Cluster Sharding you need to define a snapshot store plugin.
 
-## Snapshot deletion
+## Snapshot Deletion
 
 A persistent actor can delete individual snapshots by calling the `DeleteSnapshot` method with the sequence number of when the snapshot was taken.
 
@@ -51,7 +51,7 @@ persistent actors should use the `deleteSnapshots` method. Depending on the jour
 best practice to do specific deletes with `deleteSnapshot` or to include a `minSequenceNr` as well as a `maxSequenceNr`
 for the `SnapshotSelectionCriteria`.
 
-## Snapshot status handling
+## Snapshot Status Handling
 
 Saving or deleting snapshots can either succeed or fail – this information is reported back to the persistent actor via status messages as illustrated in the following table.
 

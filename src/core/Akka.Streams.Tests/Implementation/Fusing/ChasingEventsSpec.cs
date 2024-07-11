@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ChasingEventsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,6 @@ using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
@@ -89,9 +88,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 Shape = new FlowShape<int, int>(In, Out);
             }
 
-            public Inlet<int> In { get; } = new Inlet<int>("Propagate.in");
+            public Inlet<int> In { get; } = new("Propagate.in");
 
-            public Outlet<int> Out { get; } = new Outlet<int>("Propagate.out");
+            public Outlet<int> Out { get; } = new("Propagate.out");
 
             public override FlowShape<int, int> Shape { get; }
 
@@ -118,9 +117,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 Shape = new FlowShape<int, int>(In, Out);
             }
 
-            public Inlet<int> In { get; } = new Inlet<int>("Propagate.in");
+            public Inlet<int> In { get; } = new("Propagate.in");
 
-            public Outlet<int> Out { get; } = new Outlet<int>("Propagate.out");
+            public Outlet<int> Out { get; } = new("Propagate.out");
 
             public override FlowShape<int, int> Shape { get; }
 
@@ -147,9 +146,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 Shape = new FlowShape<int, int>(In, Out);
             }
 
-            public Inlet<int> In { get; } = new Inlet<int>("Propagate.in");
+            public Inlet<int> In { get; } = new("Propagate.in");
 
-            public Outlet<int> Out { get; } = new Outlet<int>("Propagate.out");
+            public Outlet<int> Out { get; } = new("Propagate.out");
 
             public override FlowShape<int, int> Shape { get; }
 
@@ -176,7 +175,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                 Shape = new SinkShape<int>(In);
             }
 
-            public Inlet<int> In { get; } = new Inlet<int>("Chaseable.in");
+            public Inlet<int> In { get; } = new("Chaseable.in");
 
             public override SinkShape<int> Shape { get; }
 

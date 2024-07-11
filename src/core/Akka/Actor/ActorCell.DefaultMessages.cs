@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.DefaultMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,6 +14,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Debug = Akka.Event.Debug;
 using System.Globalization;
+using Akka.Actor.Scheduler;
 
 namespace Akka.Actor
 {
@@ -55,14 +56,16 @@ namespace Akka.Actor
         /// </exception>>
         public void Invoke(Envelope envelope)
         {
-
             var message = envelope.Message;
-            var influenceReceiveTimeout = !(message is INotInfluenceReceiveTimeout);
+            if (message is IScheduledTellMsg scheduled)
+                message = scheduled.Message;
+            
+            var influenceReceiveTimeout = message is not INotInfluenceReceiveTimeout;
 
             try
             {
                 // Akka JVM doesn't have these lines
-                CurrentMessage = envelope.Message;
+                CurrentMessage = message;
                 _currentEnvelopeId++;
                 if (_currentEnvelopeId == int.MaxValue) _currentEnvelopeId = 0;
 
@@ -72,6 +75,7 @@ namespace Akka.Actor
                 {
                     CancelReceiveTimeout();
                 }
+                
 
                 if (message is IAutoReceivedMessage)
                 {
@@ -79,7 +83,8 @@ namespace Akka.Actor
                 }
                 else
                 {
-                    ReceiveMessage(message);
+                    // Intentional, we want to preserve IScheduledMsg
+                    ReceiveMessage(envelope.Message);  
                 }
                 CurrentMessage = null;
             }
@@ -105,24 +110,7 @@ namespace Akka.Actor
             var sender = envelope.Sender;
             return sender ?? System.DeadLetters;
         }
-
-
-        /*
- def autoReceiveMessage(msg: Envelope): Unit = {
-    if (system.settings.DebugAutoReceive)
-      publish(Debug(self.path.toString, clazz(actor), "received AutoReceiveMessage " + msg))
-
-    msg.message match {
-      case t: Terminated              ⇒ receivedTerminated(t)
-      case AddressTerminated(address) ⇒ addressTerminated(address)
-      case Kill                       ⇒ throw new ActorKilledException("Kill")
-      case PoisonPill                 ⇒ self.stop()
-      case sel: ActorSelectionMessage ⇒ receiveSelection(sel)
-      case Identify(messageId)        ⇒ sender() ! ActorIdentity(messageId, Some(self))
-    }
-  }
-         */
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -133,15 +121,16 @@ namespace Akka.Actor
         protected internal virtual void AutoReceiveMessage(Envelope envelope)
         {
             var message = envelope.Message;
+            if (message is IScheduledTellMsg scheduled)
+                message = scheduled.Message;
 
             var actor = _actor;
-            var actorType = actor != null ? actor.GetType() : null;
+            var actorType = actor?.GetType();
 
             if (System.Settings.DebugAutoReceive)
                 Publish(new Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));
 
-            var m = envelope.Message;
-            switch (m)
+            switch (message)
             {
                 case Terminated terminated:
                     ReceivedTerminated(terminated);
@@ -190,6 +179,9 @@ namespace Akka.Actor
         /// <param name="message">The message that will be sent to the actor.</param>
         protected virtual void ReceiveMessage(object message)
         {
+            if (message is IScheduledTellMsg scheduled)
+                message = scheduled.Message;
+            
             var wasHandled = _actor.AroundReceive(_state.GetCurrentBehavior(), message);
 
             if (System.Settings.AddLoggingReceive && _actor is ILogReceive)
@@ -257,7 +249,7 @@ namespace Akka.Actor
                 {
                     switch (message)
                     {
-                        case SystemMessage sm when ShouldStash(sm, currentState):
+                        case not null when ShouldStash(message, currentState):
                             Stash(message);
                             break;
                         case ActorTaskSchedulerMessage atsm:
@@ -449,6 +441,8 @@ namespace Akka.Actor
                 CheckReceiveTimeout();
                 if (System.Settings.DebugLifecycle)
                     Publish(new Debug(Self.Path.ToString(), created.GetType(), "Started (" + created + ")"));
+                if(System.Settings.EmitActorTelemetry)
+                    System.EventStream.Publish(new ActorStarted(Self, Props.Type));
             }
             catch (Exception e)
             {

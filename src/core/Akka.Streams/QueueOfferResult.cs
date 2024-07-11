@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueueOfferResult.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ namespace Akka.Streams
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Enqueued Instance = new Enqueued();
+            public static readonly Enqueued Instance = new();
 
             private Enqueued()
             {
@@ -44,7 +44,7 @@ namespace Akka.Streams
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Dropped Instance = new Dropped();
+            public static readonly Dropped Instance = new();
 
             private Dropped()
             {
@@ -79,7 +79,7 @@ namespace Akka.Streams
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly QueueClosed Instance = new QueueClosed();
+            public static readonly QueueClosed Instance = new();
 
             private QueueClosed()
             {

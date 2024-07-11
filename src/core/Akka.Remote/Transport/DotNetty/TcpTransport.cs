@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -72,7 +72,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             var se = exception as SocketException;
 
-            if (se?.SocketErrorCode == SocketError.OperationAborted || se?.SocketErrorCode == SocketError.ConnectionAborted)
+            if (se?.SocketErrorCode is SocketError.OperationAborted or SocketError.ConnectionAborted)
             {
                 Log.Info("Socket read operation aborted. Connection is about to be closed. Channel [{0}->{1}](Id={2})",
                     context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
@@ -132,7 +132,7 @@ namespace Akka.Remote.Transport.DotNetty
 
     internal sealed class TcpClientHandler : TcpHandlers
     {
-        private readonly TaskCompletionSource<AssociationHandle> _statusPromise = new TaskCompletionSource<AssociationHandle>();
+        private readonly TaskCompletionSource<AssociationHandle> _statusPromise = new();
         private readonly Address _remoteAddress;
 
         public Task<AssociationHandle> StatusFuture => _statusPromise.Task;
@@ -184,8 +184,9 @@ namespace Akka.Remote.Transport.DotNetty
             var buffer = Unpooled.WrappedBuffer(payload.ToByteArray());
             return buffer;
         }
-
+#pragma warning disable CS0672
         public override void Disassociate()
+#pragma warning restore CS0672
         {
             _channel.CloseAsync();
         }

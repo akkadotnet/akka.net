@@ -11,7 +11,7 @@ Dispatchers are responsible for scheduling all code that run inside the `ActorSy
 
 By default, all actors share a single **Global Dispatcher**. Unless you change the configuration, this dispatcher uses the *.NET Thread Pool* behind the scenes, which is optimized for most common scenarios. **That means the default configuration should be *good enough* for most cases.**
 
-### Why should I use different dispatchers?
+### Why Should I Use Different Dispatchers?
 
 When messages arrive in the [actor's mailbox](xref:mailboxes), the dispatcher schedules the delivery of messages in batches, and tries to deliver the entire batch before releasing the thread to another actor. While the default configuration is *good enough* for most scenarios, you may want to change ([through configuration](#configuring-dispatchers)) how much time the scheduler should spend running each actor.
 
@@ -127,7 +127,7 @@ This is the configuration for the [*default-fork-join-dispatcher*](#built-in-dis
 ```hocon
 default-fork-join-dispatcher {
   type = ForkJoinDispatcher
-  throughput = 100
+  throughput = 30
   dedicated-thread-pool {
       thread-count = 3
       deadlock-timeout = 3s
@@ -227,13 +227,13 @@ This will enable the `ChannelExecutor` to run everywhere and all Akka.NET loads,
 The following configuration keys are available for any dispatcher configuration:
 
 * `type` - (Required) The type of dispatcher to be used: `Dispatcher`, `TaskDispatcher`, `PinnedDispatcher`, `ForkJoinDispatcher` or `SynchronizedDispatcher`.
-* `throughput` - (Required) The maximum # of messages processed each time the actor is activated. Most dispatchers default to `100`.
+* `throughput` - (Required) The maximum # of messages processed each time the actor is activated. Most dispatchers default to `30`.
 * `throughput-deadline-time` - The maximum amount of time to process messages when the actor is activated, or `0` for no limit. The default is `0`.
 
 > [!NOTE]
 > The throughput-deadline-time is used as a *best effort*, not as a *hard limit*. This means that if a message takes more time than the deadline allows, Akka.NET won't interrupt the process. Instead it will wait for it to finish before giving turn to the next actor.
 
-## Dispatcher aliases
+## Dispatcher Aliases
 
 When a dispatcher is looked up, and the given setting contains a string rather than a dispatcher config block,
 the lookup will treat it as an alias, and follow that string to an alternate location for a dispatcher config.

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="OtherMessageComparer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Akka.DistributedData.Serialization.Proto.Msg;
@@ -7,7 +14,7 @@ namespace Akka.DistributedData.Serialization
 {
     internal class OtherMessageComparer : IComparer<OtherMessage>
     {
-        public static OtherMessageComparer Instance { get; } = new OtherMessageComparer();
+        public static OtherMessageComparer Instance { get; } = new();
 
         private OtherMessageComparer()
         {}

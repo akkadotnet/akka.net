@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AllTestForEventFilterBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,23 +11,22 @@ using Akka.Event;
 using FluentAssertions;
 using Xunit;
 using Xunit.Sdk;
+using static FluentAssertions.FluentActions;
 
-namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
+namespace Akka.TestKit.Tests.TestEventListenerTests
 {
     public abstract class AllTestForEventFilterBase<TLogEvent> : EventFilterTestBase where TLogEvent : LogEvent
     {
-        // ReSharper disable ConvertToLambdaExpression
         private readonly EventFilterFactory _testingEventFilter;
 
         protected AllTestForEventFilterBase(string config)
             : base(config)
         {
             LogLevel = Logging.LogLevelFor<TLogEvent>();
-            // ReSharper disable once VirtualMemberCallInContructor
             _testingEventFilter = CreateTestingEventFilter();
         }
 
-        protected LogLevel LogLevel { get; private set; }
+        protected LogLevel LogLevel { get; }
         protected abstract EventFilterFactory CreateTestingEventFilter();
 
         protected void LogMessage(string message)
@@ -43,140 +42,166 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         protected abstract void PublishMessage(object message, string source);
 
         [Fact]
-        public void Single_message_is_intercepted()
+        public async Task Single_message_is_intercepted()
         {
-            _testingEventFilter.ForLogLevel(LogLevel).ExpectOne(() => LogMessage("whatever"));
+            await _testingEventFilter.ForLogLevel(LogLevel)
+                .ExpectOneAsync(() => { LogMessage("whatever"); return Task.CompletedTask; });
             TestSuccessful = true;
         }
 
 
         [Fact]
-        public void Can_intercept_messages_when_start_is_specified()
+        public async Task Can_intercept_messages_when_start_is_specified()
         {
-            _testingEventFilter.ForLogLevel(LogLevel, start: "what").ExpectOne(() => LogMessage("whatever"));
+            await _testingEventFilter.ForLogLevel(LogLevel, start: "what")
+                .ExpectOneAsync(() => { LogMessage("whatever"); return Task.CompletedTask; });
             TestSuccessful = true;
         }
 
         [Fact]
-        public void Do_not_intercept_messages_when_start_does_not_match()
+        public async Task Do_not_intercept_messages_when_start_does_not_match()
         {
-            _testingEventFilter.ForLogLevel(LogLevel, start: "what").ExpectOne(() =>
-            {
+            await _testingEventFilter.ForLogLevel(LogLevel, start: "what").ExpectOneAsync(() => {
                 LogMessage("let-me-thru");
                 LogMessage("whatever");
+                return Task.CompletedTask;
+            });
+            await ExpectMsgAsync<TLogEvent>(err => (string)err.Message == "let-me-thru");
+            TestSuccessful = true;
+        }
+
+        [Fact]
+        public async Task Can_intercept_messages_when_message_is_specified()
+        {
+            await _testingEventFilter.ForLogLevel(LogLevel, message: "whatever")
+                .ExpectOneAsync(() => { LogMessage("whatever"); return Task.CompletedTask; });
+            TestSuccessful = true;
+        }
+
+        [Fact]
+        public async Task Do_not_intercept_messages_when_message_does_not_match()
+        {
+            await EventFilter.ForLogLevel(LogLevel, message: "whatever").ExpectOneAsync(() => {
+                LogMessage("let-me-thru");
+                LogMessage("whatever");
+                return Task.CompletedTask;
+            });
+            await ExpectMsgAsync<TLogEvent>(err => (string)err.Message == "let-me-thru");
+            TestSuccessful = true;
+        }
+
+        [Fact]
+        public async Task Can_intercept_messages_when_contains_is_specified()
+        {
+            await _testingEventFilter.ForLogLevel(LogLevel, contains: "ate")
+                .ExpectOneAsync(() => { LogMessage("whatever"); return Task.CompletedTask; });
+            TestSuccessful = true;
+        }
+
+        [Fact]
+        public async Task Do_not_intercept_messages_when_contains_does_not_match()
+        {
+            await _testingEventFilter.ForLogLevel(LogLevel, contains: "eve").ExpectOneAsync(() => {
+                LogMessage("let-me-thru");
+                LogMessage("whatever");
+                return Task.CompletedTask;
             });
             ExpectMsg<TLogEvent>(err => (string)err.Message == "let-me-thru");
             TestSuccessful = true;
         }
 
+
         [Fact]
-        public void Can_intercept_messages_when_message_is_specified()
+        public async Task Can_intercept_messages_when_source_is_specified()
         {
-            _testingEventFilter.ForLogLevel(LogLevel, message: "whatever").ExpectOne(() => LogMessage("whatever"));
+            await _testingEventFilter.ForLogLevel(LogLevel, source: LogSource.FromType(GetType(), Sys))
+                .ExpectOneAsync(() => { LogMessage("whatever"); return Task.CompletedTask; });
             TestSuccessful = true;
         }
 
         [Fact]
-        public void Do_not_intercept_messages_when_message_does_not_match()
+        public async Task Do_not_intercept_messages_when_source_does_not_match()
         {
-            EventFilter.ForLogLevel(LogLevel, message: "whatever").ExpectOne(() =>
-            {
-                LogMessage("let-me-thru");
-                LogMessage("whatever");
-            });
-            ExpectMsg<TLogEvent>(err => (string)err.Message == "let-me-thru");
-            TestSuccessful = true;
-        }
-
-        [Fact]
-        public void Can_intercept_messages_when_contains_is_specified()
-        {
-            _testingEventFilter.ForLogLevel(LogLevel, contains: "ate").ExpectOne(() => LogMessage("whatever"));
-            TestSuccessful = true;
-        }
-
-        [Fact]
-        public void Do_not_intercept_messages_when_contains_does_not_match()
-        {
-            _testingEventFilter.ForLogLevel(LogLevel, contains: "eve").ExpectOne(() =>
-            {
-                LogMessage("let-me-thru");
-                LogMessage("whatever");
-            });
-            ExpectMsg<TLogEvent>(err => (string)err.Message == "let-me-thru");
-            TestSuccessful = true;
-        }
-
-
-        [Fact]
-        public void Can_intercept_messages_when_source_is_specified()
-        {
-            _testingEventFilter.ForLogLevel(LogLevel, source: LogSource.FromType(GetType(), Sys)).ExpectOne(() => LogMessage("whatever"));
-            TestSuccessful = true;
-        }
-
-        [Fact]
-        public void Do_not_intercept_messages_when_source_does_not_match()
-        {
-            _testingEventFilter.ForLogLevel(LogLevel, source: "expected-source").ExpectOne(() =>
-            {
+            await _testingEventFilter.ForLogLevel(LogLevel, source: "expected-source").ExpectOneAsync(() => {
                 PublishMessage("message", source: "expected-source");
                 PublishMessage("message", source: "let-me-thru");
+                return Task.CompletedTask;
             });
-            ExpectMsg<TLogEvent>(err => err.LogSource == "let-me-thru");
+            await ExpectMsgAsync<TLogEvent>(err => err.LogSource == "let-me-thru");
             TestSuccessful = true;
         }
 
         [Fact]
-        public void Specified_numbers_of_messagesan_be_intercepted()
+        public async Task Specified_numbers_of_messages_can_be_intercepted()
         {
-            _testingEventFilter.ForLogLevel(LogLevel).Expect(2, () =>
-            {
+            await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(2, () => {
                 LogMessage("whatever");
                 LogMessage("whatever");
+                return Task.CompletedTask;
             });
             TestSuccessful = true;
         }
 
         [Fact]
-        public void Expect_0_events_Should_work()
+        public async Task Expect_0_events_Should_work()
         {
-            this.Invoking(_ =>
+            await Awaiting(async () =>
             {
-                EventFilter.Error().Expect(0, () =>
-                {
+                await EventFilter.Error().ExpectAsync(0, () => {
                     Log.Error("something");
+                    return Task.CompletedTask;
                 });
-            }).Should().Throw<Exception>("Expected 0 events");
+            }).Should().ThrowAsync<Exception>("Expected 0 events");
         }
 
         [Fact]
         public async Task ExpectAsync_0_events_Should_work()
         {
-            Exception ex = null;
-            try
+            await Awaiting(async () =>
             {
                 await EventFilter.Error().ExpectAsync(0, async () =>
                 {
                     await Task.Delay(100); // bug only happens when error is not logged instantly
                     Log.Error("something");
                 });
-            }
-            catch (Exception e)
-            {
-                ex = e;
-            }
+            }).Should().ThrowAsync<Exception>("Expected 0 errors logged, but there are error logs");
+        }
 
-            ex.Should().NotBeNull("Expected 0 errors logged, but there are error logs");
+        /// issue: InternalExpectAsync does not await actionAsync() - causing actionAsync to run as a detached task #5537
+        [Fact]
+        public async Task ExpectAsync_should_await_actionAsync()
+        {
+            await Assert.ThrowsAnyAsync<FalseException>(async () =>
+            {
+                await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(0, actionAsync: async () =>
+                {
+                    Assert.False(true);
+                    await Task.CompletedTask;
+                });
+            });
+        }
+
+        // issue: InterceptAsync seems to run func() as a detached task #5586
+        [Fact]
+        public async Task InterceptAsync_should_await_func()
+        {
+            await Assert.ThrowsAnyAsync<FalseException>(async () =>
+            {
+                await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(0, async () =>
+                {
+                    Assert.False(true);
+                    await Task.CompletedTask;
+                }, TimeSpan.FromSeconds(.1));
+            });
         }
 
         [Fact]
-        public void Messages_can_be_muted()
+        public async Task Messages_can_be_muted()
         {
-            _testingEventFilter.ForLogLevel(LogLevel).Mute(() =>
-            {
+            await _testingEventFilter.ForLogLevel(LogLevel).MuteAsync(() => {
                 LogMessage("whatever");
                 LogMessage("whatever");
+                return Task.CompletedTask;
             });
             TestSuccessful = true;
         }
@@ -205,54 +230,50 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 
 
         [Fact]
-        public void Make_sure_async_works()
+        public async Task Make_sure_async_works()
         {
-            _testingEventFilter.ForLogLevel(LogLevel).Expect(1, TimeSpan.FromSeconds(2), () =>
-            {
-                Task.Delay(TimeSpan.FromMilliseconds(10)).ContinueWith(t => { LogMessage("whatever"); });
+            await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(1, TimeSpan.FromSeconds(2), () => {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                Task.Delay(TimeSpan.FromMilliseconds(10)).ContinueWith(_ => { LogMessage("whatever"); });
+                return Task.CompletedTask;
             });
         }
 
         [Fact]
-        public void Chain_many_filters()
+        public async Task Chain_many_filters()
         {
-            _testingEventFilter
+            await _testingEventFilter
                 .ForLogLevel(LogLevel,message:"Message 1").And
                 .ForLogLevel(LogLevel,message:"Message 3")
-                .Expect(2,() =>
-                {
+                .ExpectAsync(2, () => {
                     LogMessage("Message 1");
                     LogMessage("Message 2");
                     LogMessage("Message 3");
-
+                    return Task.CompletedTask;
                 });
-            ExpectMsg<TLogEvent>(m => (string) m.Message == "Message 2");
+            await ExpectMsgAsync<TLogEvent>(m => (string) m.Message == "Message 2");
         }
 
 
         [Fact]
-        public void Should_timeout_if_too_few_messages()
+        public async Task Should_timeout_if_too_few_messages()
         {
-            var exception = XAssert.Throws<TrueException>(() =>
+            await Awaiting(async () =>
             {
-                _testingEventFilter.ForLogLevel(LogLevel).Expect(2, TimeSpan.FromMilliseconds(50), () =>
-                {
+                await _testingEventFilter.ForLogLevel(LogLevel).ExpectAsync(2, TimeSpan.FromMilliseconds(50), () => {
                     LogMessage("whatever");
+                    return Task.CompletedTask;
                 });
-            });
-            Assert.Contains("timeout", exception.Message, StringComparison.OrdinalIgnoreCase);
+            }).Should().ThrowAsync<FailException>().WithMessage("Timeout (*");
         }
 
         [Fact]
-        public void Should_log_when_not_muting()
+        public async Task Should_log_when_not_muting()
         {
             const string message = "This should end up in the log since it's not filtered";
             LogMessage(message);
-            ExpectMsg<TLogEvent>( msg => (string)msg.Message == message);
+            await ExpectMsgAsync<TLogEvent>( msg => (string)msg.Message == message);
         }
-
-        // ReSharper restore ConvertToLambdaExpression
-
     }
 }
 

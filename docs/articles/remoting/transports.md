@@ -11,7 +11,7 @@ A "transport" refers to an actual network transport, such as TCP or UDP. By defa
 
 In this section we'll expand a bit more on what transports are and how Akka.Remote can support multiple transports simultaneously.
 
-## What are Transports?
+## What Are Transports?
 
 Transports in Akka.Remote are abstractions on top of actual network transports, such as TCP and UDP sockets, and in truth transports have pretty simple requirements.
 
@@ -135,7 +135,7 @@ There are a couple of important caveats to bear in mind with transports in Akka.
 * Each transport must have its own distinct protocol scheme (`transport-protocol` in HOCON) - no two transports can share the same scheme.
 * Only one instance of a given transport can be active at a time, for the reason above.
 
-### Separating Physical IP Address from Logical Address
+### Separating Physical IP Address From Logical Address
 
 One common DevOps issue that comes up often with Akka.Remote is something along the lines of the following:
 

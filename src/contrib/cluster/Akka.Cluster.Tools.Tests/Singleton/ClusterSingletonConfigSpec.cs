@@ -1,9 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
+
 
 using System;
 using Akka.Cluster.Tools.Singleton;
@@ -13,6 +15,7 @@ using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
 {
+    // <ClusterSingletonConfigSpec>
     public class ClusterSingletonConfigSpec : TestKit.Xunit2.TestKit
     {
         public ClusterSingletonConfigSpec() : base(GetConfig())
@@ -24,7 +27,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
                                                       akka.remote.dot-netty.tcp.port = 0");
         }
-
+        // </ClusterSingletonConfigSpec>
         [Fact]
         public void ClusterSingletonManagerSettings_must_have_default_config()
         {
@@ -34,7 +37,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             clusterSingletonManagerSettings.SingletonName.ShouldBe("singleton");
             clusterSingletonManagerSettings.Role.ShouldBe(null);
             clusterSingletonManagerSettings.HandOverRetryInterval.TotalSeconds.ShouldBe(1);
-            clusterSingletonManagerSettings.RemovalMargin.TotalSeconds.ShouldBe(0);
+            clusterSingletonManagerSettings.RemovalMargin.TotalSeconds.ShouldBe(20); // now 20 due to default SBR settings
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.singleton");
             Assert.False(config.IsNullOrEmpty());
@@ -54,3 +57,4 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
     }
 }
+

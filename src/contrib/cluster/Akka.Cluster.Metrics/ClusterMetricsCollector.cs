@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterMetricsCollector.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ namespace Akka.Cluster.Metrics
         sealed class MetricsTick
         { 
             private MetricsTick() { }
-            public static readonly MetricsTick Instance = new MetricsTick();
+            public static readonly MetricsTick Instance = new();
         }
 
         /// <summary>
@@ -48,7 +48,7 @@ namespace Akka.Cluster.Metrics
         sealed class GossipTick
         {
             private GossipTick() { }
-            public static readonly GossipTick Instance = new GossipTick();
+            public static readonly GossipTick Instance = new();
         }
         
         /// <summary>
@@ -120,10 +120,10 @@ namespace Akka.Cluster.Metrics
                 case ClusterEvent.MemberExited m: RemoveMember(m.Member); return true;
                 case ClusterEvent.UnreachableMember m: RemoveMember(m.Member); return true;
                 case ClusterEvent.ReachableMember m: 
-                    if (m.Member.Status == MemberStatus.Up || m.Member.Status == MemberStatus.WeaklyUp)
+                    if (m.Member.Status is MemberStatus.Up or MemberStatus.WeaklyUp)
                         AddMember(m.Member);
                     return true;
-                case object msg when msg is ClusterEvent.IMemberEvent:
+                case object and ClusterEvent.IMemberEvent:
                     return true; // not interested in other types of MemberEvent
             }
 
@@ -151,7 +151,7 @@ namespace Akka.Cluster.Metrics
         private void ReceiveState(ClusterEvent.CurrentClusterState state)
         {
             _nodes = state.Members.Except(state.Unreachable)
-                .Where(m => m.Status == MemberStatus.Up || m.Status == MemberStatus.WeaklyUp)
+                .Where(m => m.Status is MemberStatus.Up or MemberStatus.WeaklyUp)
                 .Select(m => m.Address)
                 .ToImmutableSortedSet();
         }

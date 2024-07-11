@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDeathWatchSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
@@ -277,12 +278,12 @@ namespace Akka.Cluster.Tests.MultiNode
                     {
                         if (!Sys.WhenTerminated.Wait(timeout)) // TestConductor.Shutdown called by First MUST terminate this actor system
                         {
-                            Assert.True(false, String.Format("Failed to stop [{0}] within [{1}]", Sys.Name, timeout));
+                            Assert.Fail($"Failed to stop [{Sys.Name}] within [{timeout}]");
                         }
                     }
                     catch (TimeoutException)
                     {
-                        Assert.True(false, String.Format("Failed to stop [{0}] within [{1}]", Sys.Name, timeout));
+                        Assert.Fail($"Failed to stop [{Sys.Name}] within [{timeout}]");
                     }
 
                     
@@ -327,10 +328,10 @@ namespace Akka.Cluster.Tests.MultiNode
         /// <summary>
         /// Used to report <see cref="Terminated"/> events to the <see cref="TestActor"/>
         /// </summary>
-        class Observer : ReceiveActor
+        private class Observer : ReceiveActor
         {
             private readonly IActorRef _testActorRef;
-            readonly TestLatch _watchEstablished;
+            private readonly TestLatch _watchEstablished;
 
             public Observer(ActorPath path2, ActorPath path3, TestLatch watchEstablished, IActorRef testActorRef)
             {
@@ -357,28 +358,6 @@ namespace Akka.Cluster.Tests.MultiNode
                 Context.ActorSelection(path2).Tell(new Identify(path2));
                 Context.ActorSelection(path3).Tell(new Identify(path3));
 
-            }
-        }
-
-        class DumbObserver : ReceiveActor
-        {
-            private readonly IActorRef _testActorRef;
-
-            public DumbObserver(ActorPath path2, IActorRef testActorRef)
-            {
-                _testActorRef = testActorRef;
-
-                Receive<ActorIdentity>(identity =>
-                {
-                    Context.Watch(identity.Subject);
-                });
-
-                Receive<Terminated>(terminated =>
-                {
-                    _testActorRef.Tell(terminated.ActorRef.Path);
-                });
-
-                Context.ActorSelection(path2).Tell(new Identify(path2));
             }
         }
     }

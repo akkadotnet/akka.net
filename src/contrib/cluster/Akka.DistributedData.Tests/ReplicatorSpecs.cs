@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReplicatorSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -15,6 +16,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
@@ -33,7 +35,11 @@ namespace Akka.DistributedData.Tests
             SpecConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = DEBUG
                 akka.actor.provider = cluster
-                akka.remote.dot-netty.tcp.port = 0")
+                akka.remote.dot-netty.tcp.port = 0
+                akka.remote.dot-netty.tcp.send-buffer-size = 2000000
+                akka.remote.dot-netty.tcp.receive-buffer-size = 2000000
+                akka.remote.dot-netty.tcp.maximum-frame-size = 1000000
+                akka.cluster.sharding.updating-state-timeout = 15s")
                 .WithFallback(DistributedData.DefaultConfig());
         }
 
@@ -53,11 +59,11 @@ namespace Akka.DistributedData.Tests
         private readonly ReadMajority _readMajority;
         private readonly ReadAll _readAll;
 
-        private readonly PNCounterDictionaryKey<string> _keyC = new PNCounterDictionaryKey<string>("C");
-        private readonly ORDictionaryKey<string, Flag> _keyH = new ORDictionaryKey<string, Flag>("H");
-        private readonly GSetKey<string> _keyI = new GSetKey<string>("I");
-        private readonly ORMultiValueDictionaryKey<string, string> _keyJ = new ORMultiValueDictionaryKey<string, string>("J");
-        private readonly LWWDictionaryKey<string, string> _keyK = new LWWDictionaryKey<string, string>("K");
+        private readonly PNCounterDictionaryKey<string> _keyC = new("C");
+        private readonly ORDictionaryKey<string, Flag> _keyH = new("H");
+        private readonly GSetKey<string> _keyI = new("I");
+        private readonly ORMultiValueDictionaryKey<string, string> _keyJ = new("J");
+        private readonly LWWDictionaryKey<string, string> _keyK = new("K");
 
         public ReplicatorSpecs(ITestOutputHelper helper) : base(SpecConfig, helper)
         {
@@ -167,7 +173,7 @@ namespace Akka.DistributedData.Tests
             await ReplicatorDuplicatePublish();
         }
 
-        private async Task ReplicatorDuplicatePublish()
+        private Task ReplicatorDuplicatePublish()
         {
             var p1 = CreateTestProbe(_sys1);
             var p2 = CreateTestProbe(_sys2);
@@ -199,6 +205,7 @@ namespace Akka.DistributedData.Tests
 
             // no probe should receive an update
             p2.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -211,7 +218,7 @@ namespace Akka.DistributedData.Tests
             await PNCounterDictionary_Should_Merge();
         }
 
-        private async Task PNCounterDictionary_Should_Merge()
+        private Task PNCounterDictionary_Should_Merge()
         {
             var p1 = CreateTestProbe(_sys1);
             var p2 = CreateTestProbe(_sys2);
@@ -256,6 +263,7 @@ namespace Akka.DistributedData.Tests
             });
 
             Sys.Log.Info("Done");
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -360,7 +368,7 @@ namespace Akka.DistributedData.Tests
             await ORMultiValueDictionary_Should_Merge();
         }
 
-        private async Task ORMultiValueDictionary_Should_Merge()
+        private Task ORMultiValueDictionary_Should_Merge()
         {
             var changedProbe = CreateTestProbe(_sys2);
 
@@ -469,6 +477,7 @@ namespace Akka.DistributedData.Tests
                         changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries);
                 });
             });
+            return Task.CompletedTask;
         }
 
         private void VerifyMultiValueDictionaryEntries(
@@ -503,7 +512,7 @@ namespace Akka.DistributedData.Tests
 
             // Scenario 1 - add 1 entry with multiple values to all nodes
             var keyA = "A";
-            var entryA = ImmutableHashSet<string>.Empty.Add("1").Add("2");
+            var entryA = ImmutableHashSet<string>.Empty.Add("1").Add("2").Add("3").Add("4");
             await AwaitAssertAsync(async () => {
                 var m1 = await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
                     _keyJ,
@@ -539,7 +548,7 @@ namespace Akka.DistributedData.Tests
             });
 
             // Scenario 3 - modify set with existing items in it
-            var entryA1 = entryA.Add("4");
+            var entryA1 = entryA.Add("6");
             ORMultiValueDictionary<string, string> node2EntriesBCA = null;
             await AwaitAssertAsync(async () =>
             {
@@ -551,10 +560,10 @@ namespace Akka.DistributedData.Tests
                     s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA1)));
 
                 node2EntriesBCA = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ);
-                node2EntriesBCA.Entries["A"].Should().BeEquivalentTo("1", "2", "4");
+                node2EntriesBCA.Entries["A"].Should().BeEquivalentTo("1", "2", "3", "4", "6");
 
                 var node3EntriesBCA = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
-                node3EntriesBCA["A"].Should().BeEquivalentTo("1", "2", "4");
+                node3EntriesBCA["A"].Should().BeEquivalentTo("1", "2", "3", "4", "6");
             });
 
             // Trigger update from Node2 back to Node 1
@@ -570,13 +579,79 @@ namespace Akka.DistributedData.Tests
                     s => s.SetItems(Cluster.Cluster.Get(_sys2), keyA, entryA2)));
 
                 var node1EntriesBCA = changedProbe1.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
-                node1EntriesBCA["A"].Should().BeEquivalentTo("1", "2", "4", "5");
+                node1EntriesBCA["A"].Should().BeEquivalentTo("1", "2", "3", "4", "5", "6");
             });
         }
 
-
-        protected override void BeforeTermination()
+        // Reproduction spec for issue #5663
+        [Fact]
+        public async Task ORMultiValueDictionary_WithValueDeltas_LargeDataSet()
         {
+            await InitCluster();
+
+            var changedProbe2 = CreateTestProbe(_sys2);
+            _replicator2.Tell(Dsl.Subscribe(_keyJ, changedProbe2.Ref));
+
+            var changedProbe3 = CreateTestProbe(_sys3);
+            _replicator3.Tell(Dsl.Subscribe(_keyJ, changedProbe3.Ref));
+
+            var messages = Enumerable.Range(0, 20000).Select(i => i.ToString()).ToList();
+            
+            // Scenario 1 - add 1 entry with multiple values to all nodes
+            var keyA = "A";
+            var entryA = messages.ToImmutableHashSet();
+
+            var stopwatch = Stopwatch.StartNew();
+            try
+            {
+                await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
+                    _keyJ,
+                    ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
+                    new WriteMajority(_timeOut),
+                    s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA)));
+            }
+            finally
+            {
+                stopwatch.Stop();
+            }
+            Log.Info($"Update time: {stopwatch.ElapsedMilliseconds} ms ({stopwatch.ElapsedMilliseconds / 1000.0} s)");
+           
+            var node2EntriesA = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+            node2EntriesA[keyA].Should().BeEquivalentTo(entryA);
+
+            var node3EntriesA = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+            node3EntriesA[keyA].Should().BeEquivalentTo(entryA);
+
+            // Scenario 2 - modify set with existing items in it
+            var entryA1 = entryA.Add("999999").Add("1000000");
+            
+            stopwatch = Stopwatch.StartNew();
+            try
+            {
+                await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
+                    _keyJ,
+                    ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
+                    new WriteMajority(_timeOut),
+                    s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA1)));
+            }
+            finally
+            {
+                stopwatch.Stop();
+            }
+            Log.Info($"Single update time: {stopwatch.ElapsedMilliseconds} ms ({stopwatch.ElapsedMilliseconds / 1000.0} s)");
+
+            var node2Changed = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ), TimeSpan.FromSeconds(3));
+            var node2EntriesBCA = node2Changed.Get(_keyJ);
+            node2EntriesBCA.Entries["A"].Should().BeEquivalentTo(entryA1);
+
+            var node3Changed = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ), TimeSpan.FromSeconds(3));
+            var node3EntriesBCA = node3Changed.Get(_keyJ).Entries;
+            node3EntriesBCA["A"].Should().BeEquivalentTo(entryA1);
+        }
+        
+        protected override void AfterAll()
+        {
+            base.AfterAll();
             Shutdown(_sys1);
             Shutdown(_sys2);
             Shutdown(_sys3);

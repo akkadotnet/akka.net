@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="HyperionSerializerSetupSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -10,12 +17,14 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
 using Hyperion;
+using Hyperion.Internal;
 
 namespace Akka.Serialization.Hyperion.Tests
 {
@@ -25,7 +34,7 @@ namespace Akka.Serialization.Hyperion.Tests
          => ConfigurationFactory.ParseString(@"
 akka.actor {
     serializers {
-        hyperion = ""Akka.Serialization.Hyperion, Akka.Serialization.Hyperion""
+        hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
     }
 
     serialization-bindings {
@@ -34,8 +43,12 @@ akka.actor {
 }
 ");
 
+        private readonly ITestOutputHelper _output;
+
         public HyperionSerializerSetupSpec(ITestOutputHelper output) : base (Config, output)
-        { }
+        {
+            _output = output;
+        }
 
         [Fact]
         public void Setup_should_be_converted_to_settings_correctly()
@@ -50,7 +63,7 @@ akka.actor {
                     false, 
                     typeof(DummyTypesProvider), 
                     new Func<string, string>[] { s => $"{s}.." },
-                    new Surrogate[0],
+                    Array.Empty<Surrogate>(),
                     true);
             var appliedSettings = setup.ApplySettings(settings);
 
@@ -81,6 +94,34 @@ akka.actor {
             adapter("My.Hyperion.Override").Should().Be("My.Hyperion");
         }
         
+        [Fact(DisplayName = "Setup should be applied correctly")]
+        public void SetupApplicationTest()
+        {
+            var surrogate = Surrogate.Create<Foo, FooSurrogate>(
+                foo => new FooSurrogate(foo.Bar),
+                surrogate => new Foo(surrogate.Bar));
+            
+            var actorSetup = ActorSystemSetup.Empty
+                .And(BootstrapSetup.Create().WithConfig(Config))
+                .And(HyperionSerializerSetup.Empty
+                    .WithSurrogates(new[] { surrogate })
+                    .WithKnownTypeProvider<CustomTypeProvider>());
+            
+            var sys = ActorSystem.Create("test", actorSetup);
+            var serializer = (HyperionSerializer) sys.Serialization.FindSerializerForType(typeof(object));
+            var settings = serializer.Settings;
+
+            settings.Surrogates.Should().BeEquivalentTo(surrogate);
+            settings.KnownTypesProvider.Should().Be(typeof(CustomTypeProvider));
+            
+            Shutdown(sys);
+        }
+        
+        private sealed class CustomTypeProvider : IKnownTypesProvider
+        {
+            public IEnumerable<Type> GetKnownTypes() => new[] { typeof(ClassA), typeof(ClassB) };
+        }
+
         public class Foo
         {
             public Foo(string bar)
@@ -127,28 +168,86 @@ akka.actor {
 
         [Theory]
         [MemberData(nameof(DangerousObjectFactory))]
-        public void Setup_disallow_unsafe_type_should_work(object dangerousObject, Type type)
+        public void Setup_disallow_unsafe_type_should_work_by_default(byte[] dangerousObject, Type type)
         {
-            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, HyperionSerializerSettings.Default);
-            var serialized = serializer.ToBinary(dangerousObject);
-            serializer.Invoking(s => s.FromBinary(serialized, type)).Should().Throw<SerializationException>();
+            _output.WriteLine($"Dangerous type: [{type}]");
+            var deserializer = new HyperionSerializer((ExtendedActorSystem)Sys, HyperionSerializerSettings.Default);
+            deserializer.Invoking(s => s.FromBinary(dangerousObject, type)).Should().Throw<SerializationException>();
+        }
+
+        [Theory]
+        [MemberData(nameof(DangerousObjectFactory))]
+        public void Setup_should_deserialize_unsafe_type_if_allowed(byte[] dangerousObject, Type type)
+        {
+            _output.WriteLine($"Dangerous type: [{type}]");
+            var deserializer = new HyperionSerializer((ExtendedActorSystem)Sys, HyperionSerializerSettings.Default.WithDisallowUnsafeType(false));
+            deserializer.FromBinary(dangerousObject, type); // should not throw
+        }
+        
+        [Theory]
+        [MemberData(nameof(TypeFilterObjectFactory))]
+        public void Setup_TypeFilter_should_filter_types_properly(object sampleObject, bool shouldSucceed)
+        {
+            var setup = HyperionSerializerSetup.Empty
+                .WithTypeFilter(TypeFilterBuilder.Create()
+                    .Include<ClassA>()
+                    .Include<ClassB>()
+                    .Build());
+            
+            var settings = setup.ApplySettings(HyperionSerializerSettings.Default);
+            var deserializer = new HyperionSerializer((ExtendedActorSystem)Sys, settings);
+            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, deserializer.Settings.WithDisallowUnsafeType(false));
+            var serialized = serializer.ToBinary(sampleObject);
+            
+            ((TypeFilter)deserializer.Settings.TypeFilter).FilteredTypes.Count.Should().Be(2);
+            object deserialized = null;
+            Action act = () => deserialized = deserializer.FromBinary<object>(serialized);
+            if (shouldSucceed)
+            {
+                act.Should().NotThrow();
+                deserialized.GetType().Should().Be(sampleObject.GetType());
+            }
+            else
+            {
+                act.Should().Throw<SerializationException>()
+                    .WithInnerException<UserEvilDeserializationException>();
+            }
         }
 
         public static IEnumerable<object[]> DangerousObjectFactory()
         {
             var isWindow = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             
-            yield return new object[]{ new FileInfo("C:\\Windows\\System32"), typeof(FileInfo) };
-            yield return new object[]{ new ClaimsIdentity(), typeof(ClaimsIdentity)};
+            yield return new object[]{ Serialize(new FileInfo("C:\\Windows\\System32")), typeof(FileInfo) };
+            yield return new object[]{ Serialize(new ClaimsIdentity()), typeof(ClaimsIdentity)};
             if (isWindow)
             {
-                yield return new object[]{ WindowsIdentity.GetAnonymous(), typeof(WindowsIdentity) };
-                yield return new object[]{ new WindowsPrincipal(WindowsIdentity.GetAnonymous()), typeof(WindowsPrincipal)};
+                yield return new object[]{ Serialize(WindowsIdentity.GetAnonymous()), typeof(WindowsIdentity) };
+                yield return new object[]{ Serialize(new WindowsPrincipal(WindowsIdentity.GetAnonymous())), typeof(WindowsPrincipal)};
             }
-#if NET471
-            yield return new object[]{ new Process(), typeof(Process)};
+#if NET48
+            yield return new object[]{ Serialize(new Process()), typeof(Process)};
 #endif
-            yield return new object[]{ new ClaimsIdentity(), typeof(ClaimsIdentity)};
+            yield return new object[]{ Serialize(new ClaimsIdentity()), typeof(ClaimsIdentity)};
         }
+
+        private static byte[] Serialize(object obj)
+        {
+            var serializer = new HyperionSerializer(null, HyperionSerializerSettings.Default.WithDisallowUnsafeType(false));
+            return serializer.ToBinary(obj);
+        }
+
+        public static IEnumerable<object[]> TypeFilterObjectFactory()
+        {
+            yield return new object[] { new ClassA(), true };
+            yield return new object[] { new ClassB(), true };
+            yield return new object[] { new ClassC(), false };
+        }
+
+        public class ClassA { }
+
+        public class ClassB { }
+
+        public class ClassC { }
     }
 }

@@ -1,10 +1,14 @@
 ---
 uid: dependency-injection
-title: Dependency injection
+title: Dependency Injection Support in Akka.NET
 ---
 # Dependency Injection
 
 As of Akka.NET v1.4.15 we recommend to Akka.NET users adopt the Akka.DependencyInjection library, which integrates directly with Microsoft.Extensions.DependencyInjection and deprecates the previous Akka.DI.Core and Akka.DI.* libraries.
+
+<!-- markdownlint-disable MD033 -->
+<iframe width="560" height="315" src="https://www.youtube.com/embed/XNIVS5hBTUk?si=_B3MtEj-vBfmSNLi" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+ <!-- markdownlint-enable MD033 -->
 
 You can install Akka.DependencyInjection via NuGet:
 
@@ -105,7 +109,7 @@ var worker1Ref = system.ActorOf(system.DI().Props<TypedWorker>(), "Worker1");
 var worker2Ref = system.ActorOf(system.DI().Props<TypedWorker>(), "Worker2");
 ```
 
-### Creating Child Actors using DI
+### Creating Child Actors Using DI
 
 When you want to create child actors from within your existing actors using
 Dependency Injection you can use the Actor Content extension just like in
@@ -203,7 +207,7 @@ var system = ActorSystem.Create("MySystem");
 var propsResolver = new NinjectDependencyResolver(container,system);
 ```
 
-#### Other frameworks
+#### Other Frameworks
 
 Support for additional dependency injection frameworks may be added in the
 future, but you can easily implement your own by implementing an

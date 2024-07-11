@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterRoundRobinSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Cluster.Routing;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.Routing;
@@ -52,7 +53,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             public SomeActor(IRouteeType routeeType)
             {
                 _routeeType = routeeType;
-                Receive<string>(s => s == "hit", s =>
+                Receive<string>(s => s == "hit", _ =>
                 {
                     Sender.Tell(new Reply(_routeeType, Self));
                 });
@@ -160,7 +161,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
 
         private Dictionary<Address, int> ReceiveReplays(ClusterRoundRobinSpecConfig.IRouteeType routeeType, int expectedReplies)
         {
-            var zero = Roles.Select(c => GetAddress(c)).ToDictionary(c => c, c => 0);
+            var zero = Roles.Select(c => GetAddress(c)).ToDictionary(c => c, _ => 0);
             var replays = ReceiveWhile(5.Seconds(), msg =>
             {
                 if (msg is ClusterRoundRobinSpecConfig.Reply routee && routee.RouteeType.GetType() == routeeType.GetType())
@@ -436,7 +437,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 var notUsedAddress = Roles.Select(c => GetAddress(c)).Except(routeeAddresses()).First();
                 var downAddress = routeeAddresses().Find(c => c != GetAddress(_config.First));
                 var downRouteeRef = routees()
-                    .Where(c => c is ActorRefRoutee && ((ActorRefRoutee)c).Actor.Path.Address == downAddress)
+                    .Where(c => c is ActorRefRoutee routee && routee.Actor.Path.Address == downAddress)
                     .Select(c => ((ActorRefRoutee)c).Actor).First();
 
                 Cluster.Down(downAddress);

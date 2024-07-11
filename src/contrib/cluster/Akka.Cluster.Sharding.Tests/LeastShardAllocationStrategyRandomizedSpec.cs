@@ -1,26 +1,25 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LeastShardAllocationStrategyRandomizedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2;
-using Xunit;
 using FluentAssertions;
-using System.Collections;
-using System;
 using FluentAssertions.Execution;
+using Xunit;
+using Xunit.Abstractions;
 using static Akka.Cluster.ClusterEvent;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class LeastShardAllocationStrategyRandomizedSpec : TestKit.Xunit2.TestKit
+    public class LeastShardAllocationStrategyRandomizedSpec : AkkaSpec
     {
         private readonly IShardAllocationStrategy strategyWithoutLimits;
         private int rndSeed;
@@ -30,7 +29,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private ImmutableSortedSet<Member> clusterMembers = ImmutableSortedSet<Member>.Empty;
 
-        public LeastShardAllocationStrategyRandomizedSpec()
+        public LeastShardAllocationStrategyRandomizedSpec(ITestOutputHelper helper) : base(helper)
         {
             rndSeed = DateTime.UtcNow.Millisecond;
             rnd = new Random(rndSeed);
@@ -65,7 +64,7 @@ namespace Akka.Cluster.Sharding.Tests
                 var regions = Enumerable.Range(1, numberOfRegions).Select(n => LeastShardAllocationStrategySpec.NewFakeRegion($"{iteration}-R{n}", memberArray[n - 1]));
 
                 //var regions = Enumerable.Range(1, numberOfRegions).Select(n => Sys.ActorOf(Props.Empty, $"{iteration}-R{n}")).ToImmutableList();
-                var countPerRegion = regions.ToImmutableDictionary(region => region, region => rnd.Next(maxShardsPerRegion));
+                var countPerRegion = regions.ToImmutableDictionary(region => region, _ => rnd.Next(maxShardsPerRegion));
                 var allocations = CreateAllocations(countPerRegion);
                 TestRebalance(allocationStrategy, allocations, ImmutableList.Create(allocations), expectedMaxSteps);
                 foreach (var region in regions)

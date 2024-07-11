@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ namespace Akka.Persistence
         /// <summary>
         /// The singleton instance of <see cref="RecoveryCompleted"/>.
         /// </summary>
-        public static readonly RecoveryCompleted Instance = new RecoveryCompleted();
+        public static readonly RecoveryCompleted Instance = new();
         private RecoveryCompleted(){}
 
         public override bool Equals(object obj) => obj is RecoveryCompleted;
@@ -51,7 +51,7 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public static Recovery Default { get; } = new Recovery(SnapshotSelectionCriteria.Latest);
+        public static Recovery Default { get; } = new(SnapshotSelectionCriteria.Latest);
 
         /// <summary>
         /// Convenience method for skipping recovery in <see cref="PersistentActor"/>.
@@ -60,7 +60,7 @@ namespace Akka.Persistence
         /// higher sequence numbers rather than starting from 1 and assuming that there are no
         /// previous event with that sequence number.
         /// </summary>
-        public static Recovery None { get; } = new Recovery(SnapshotSelectionCriteria.None, 0);
+        public static Recovery None { get; } = new(SnapshotSelectionCriteria.None, 0);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Recovery"/> class.
@@ -160,7 +160,7 @@ namespace Akka.Persistence
         /// <summary>
         /// The singleton instance of <see cref="DiscardToDeadLetterStrategy"/>.
         /// </summary>
-        public static DiscardToDeadLetterStrategy Instance { get; } = new DiscardToDeadLetterStrategy();
+        public static DiscardToDeadLetterStrategy Instance { get; } = new();
 
         private DiscardToDeadLetterStrategy() { }
     }
@@ -177,7 +177,7 @@ namespace Akka.Persistence
         /// <summary>
         /// The singleton instance of <see cref="ThrowOverflowExceptionStrategy"/>.
         /// </summary>
-        public static ThrowOverflowExceptionStrategy Instance { get; } = new ThrowOverflowExceptionStrategy();
+        public static ThrowOverflowExceptionStrategy Instance { get; } = new();
 
         private ThrowOverflowExceptionStrategy() { }
     }
@@ -331,8 +331,8 @@ namespace Akka.Persistence
     public abstract class ReceivePersistentActor : UntypedPersistentActor, IInitializableActor
     {
         private bool _shouldUnhandle = true;
-        private readonly Stack<MatchBuilder> _matchCommandBuilders = new Stack<MatchBuilder>();
-        private readonly Stack<MatchBuilder> _matchRecoverBuilders = new Stack<MatchBuilder>();
+        private readonly Stack<MatchBuilder> _matchCommandBuilders = new();
+        private readonly Stack<MatchBuilder> _matchRecoverBuilders = new();
         private PartialAction<object> _partialReceiveCommand = _ => false;
         private PartialAction<object> _partialReceiveRecover = _ => false;
         private bool _hasBeenInitialized;
@@ -439,7 +439,7 @@ namespace Akka.Persistence
         protected void Recover<T>(Action<T> handler, Predicate<T> shouldHandle = null)
         {
             EnsureMayConfigureRecoverHandlers();
-            _matchRecoverBuilders.Peek().Match<T>(handler, shouldHandle);
+            _matchRecoverBuilders.Peek().Match(handler, shouldHandle);
         }
 
         /// <summary>
@@ -450,7 +450,7 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         protected void Recover<T>(Predicate<T> shouldHandle, Action<T> handler)
         {
-            Recover<T>(handler, shouldHandle);
+            Recover(handler, shouldHandle);
         }
 
         /// <summary>
@@ -484,7 +484,7 @@ namespace Akka.Persistence
         protected void Recover<T>(Func<T, bool> handler)
         {
             EnsureMayConfigureRecoverHandlers();
-            _matchRecoverBuilders.Peek().Match<T>(handler);
+            _matchRecoverBuilders.Peek().Match(handler);
         }
 
         /// <summary>
@@ -609,7 +609,7 @@ namespace Akka.Persistence
         protected void Command<T>(Action<T> handler, Predicate<T> shouldHandle = null)
         {
             EnsureMayConfigureCommandHandlers();
-            _matchCommandBuilders.Peek().Match<T>(handler, shouldHandle);
+            _matchCommandBuilders.Peek().Match(handler, shouldHandle);
         }
 
         /// <summary>
@@ -620,7 +620,7 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         protected void Command<T>(Predicate<T> shouldHandle, Action<T> handler)
         {
-            Command<T>(handler, shouldHandle);
+            Command(handler, shouldHandle);
         }
 
         /// <summary>
@@ -654,7 +654,7 @@ namespace Akka.Persistence
         protected void Command<T>(Func<T, bool> handler)
         {
             EnsureMayConfigureCommandHandlers();
-            _matchCommandBuilders.Peek().Match<T>(handler);
+            _matchCommandBuilders.Peek().Match(handler);
         }
 
         /// <summary>

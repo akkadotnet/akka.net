@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Shape.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -76,7 +76,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public abstract Inlet CarbonCopy();
 
-        /// <inheritdoc/>
+        
         public sealed override string ToString() => Name;
     }
 
@@ -138,7 +138,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public abstract Outlet CarbonCopy();
 
-        /// <inheritdoc/>
+        
         public sealed override string ToString() => Name;
     }
 
@@ -228,7 +228,7 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public object Clone() => DeepCopy();
 
-        /// <inheritdoc/>
+        
         public sealed override string ToString() => $"{GetType().Name}([{string.Join(", ", Inlets)}] [{string.Join(", ", Outlets)}])";
     }
 
@@ -241,7 +241,7 @@ namespace Akka.Streams
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly ClosedShape Instance = new ClosedShape();
+        public static readonly ClosedShape Instance = new();
         
         private ClosedShape() { }
 
@@ -386,7 +386,7 @@ namespace Akka.Streams
             return new SourceShape<TOut>(outlets[0] as Outlet<TOut>);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))
@@ -400,7 +400,7 @@ namespace Akka.Streams
         /// <inheritdoc/>
         private bool Equals(SourceShape<TOut> other) => Outlet.Equals(other.Outlet);
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode() => Outlet.GetHashCode();
     }
 
@@ -555,7 +555,7 @@ namespace Akka.Streams
             return new SinkShape<TIn>(inlets[0] as Inlet<TIn>);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))
@@ -568,7 +568,7 @@ namespace Akka.Streams
 
         private bool Equals(SinkShape<TIn> other) => Equals(Inlet, other.Inlet);
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Inlet.GetHashCode();
     }
 
@@ -695,6 +695,6 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static BidiShape<TIn1, TOut1, TIn2, TOut2> FromFlows<TIn1, TOut1, TIn2, TOut2>(
             FlowShape<TIn1, TOut1> top, FlowShape<TIn2, TOut2> bottom)
-            => new BidiShape<TIn1, TOut1, TIn2, TOut2>(top.Inlet, top.Outlet, bottom.Inlet, bottom.Outlet);
+            => new(top.Inlet, top.Outlet, bottom.Inlet, bottom.Outlet);
     }
 }

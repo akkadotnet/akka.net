@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ namespace Akka.Persistence.Tests
 {
     public partial class PersistentActorSpec : PersistenceSpec
     {
-        private readonly Random _random = new Random();
+        private readonly Random _random = new();
         public PersistentActorSpec()
             : base(Configuration("PersistentActorSpec"))
         {
@@ -239,7 +239,7 @@ namespace Akka.Persistence.Tests
             {
                 foreach (var probe in probes)
                 {
-                    probe.ExpectMsgAllOf<string>();
+                    probe.ExpectMsgAllOf(new string[]{} );
                 }
             });
         }
@@ -497,8 +497,8 @@ namespace Akka.Persistence.Tests
             pref.Tell("b");
 
             var msgs = ReceiveN(10).Select(m => m.ToString()).ToArray();
-            var amsgs = msgs.Where(m => m.StartsWith("a")).ToArray();
-            var bmsgs = msgs.Where(m => m.StartsWith("b")).ToArray();
+            var amsgs = msgs.Where(m => m.StartsWith('a')).ToArray();
+            var bmsgs = msgs.Where(m => m.StartsWith('b')).ToArray();
             amsgs.ShouldOnlyContainInOrder("a", "a-outer-1", "a-outer-2", "a-inner-1", "a-inner-2");
             bmsgs.ShouldOnlyContainInOrder("b", "b-outer-1", "b-outer-2", "b-inner-1", "b-inner-2");
         }

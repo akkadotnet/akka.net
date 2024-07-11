@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Member.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,7 +11,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Util;
-using Akka.Util.Internal;
 using Newtonsoft.Json;
 
 namespace Akka.Cluster
@@ -123,13 +122,13 @@ namespace Akka.Cluster
         /// </summary>
         public Address Address { get { return UniqueAddress.Address; } }
 
-        /// <inheritdoc cref="object.GetHashCode"/>
+        
         public override int GetHashCode()
         {
             return UniqueAddress.GetHashCode();
         }
 
-        /// <inheritdoc cref="object.Equals(object)"/>
+        
         public override bool Equals(object obj)
         {
             var m = obj as Member;
@@ -137,7 +136,7 @@ namespace Akka.Cluster
             return UniqueAddress.Equals(m.UniqueAddress);
         }
 
-        /// <inheritdoc cref="IComparable.CompareTo"/>
+        
         public int CompareTo(Member other) => Ordering.Compare(this, other);
 
         int IComparable.CompareTo(object obj)
@@ -147,7 +146,7 @@ namespace Akka.Cluster
             throw new ArgumentException($"Cannot compare {nameof(Member)} to an instance of type '{obj?.GetType().FullName ?? "null"}'");
         }
 
-        /// <inheritdoc cref="object.ToString"/>
+        
         public override string ToString()
         {
             return $"Member(address = {Address}, Uid={UniqueAddress.Uid} status = {Status}, role=[{string.Join(",", Roles)}], upNumber={UpNumber}, version={AppVersion})";
@@ -255,7 +254,7 @@ namespace Akka.Cluster
         /// Orders the members by their address except that members with status
         /// Joining, Exiting and Down are ordered last (in that order).
         /// </summary>
-        internal static readonly LeaderStatusMemberComparer LeaderStatusOrdering = new LeaderStatusMemberComparer();
+        internal static readonly LeaderStatusMemberComparer LeaderStatusOrdering = new();
 
         /// <summary>
         /// INTERNAL API
@@ -283,7 +282,7 @@ namespace Akka.Cluster
         /// <summary>
         /// <see cref="Member"/> ordering type class, sorts members by host and port.
         /// </summary>
-        internal static readonly MemberComparer Ordering = new MemberComparer();
+        internal static readonly MemberComparer Ordering = new();
 
         /// <summary>
         /// INTERNAL API
@@ -501,10 +500,10 @@ namespace Akka.Cluster
             return Uid == other.Uid && Address.Equals(other.Address);
         }
 
-        /// <inheritdoc cref="object.Equals(object)"/>
+        
         public override bool Equals(object obj) => obj is UniqueAddress address && Equals(address);
 
-        /// <inheritdoc cref="object.GetHashCode"/>
+        
         public override int GetHashCode()
         {
             return Uid;
@@ -532,7 +531,7 @@ namespace Akka.Cluster
             return result == 0 ? Uid.CompareTo(uniqueAddress.Uid) : result;
         }
 
-        /// <inheritdoc cref="object.ToString"/>
+        
         public override string ToString() => $"UniqueAddress: ({Address}, {Uid})";
 
         #region operator overloads

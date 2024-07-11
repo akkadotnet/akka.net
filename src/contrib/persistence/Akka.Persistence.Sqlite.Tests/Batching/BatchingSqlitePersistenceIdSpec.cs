@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BatchingSqlitePersistenceIdSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,6 +31,7 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
             }}
             akka.persistence {{
                 publish-plugin-commands = on
+                query.journal.sql.refresh-interval = 200ms
                 journal {{
                     plugin = ""akka.persistence.journal.sqlite""
                     sqlite = {{
@@ -40,7 +41,6 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
                         metadata-table-name = journal_metadata
                         auto-initialize = on
                         connection-string = ""{ConnectionString("journal")}""
-                        refresh-interval = 200ms
                     }}
                 }}
                 snapshot-store {{

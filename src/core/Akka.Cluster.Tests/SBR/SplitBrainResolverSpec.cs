@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SplitBrainResolverSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,6 +25,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Akka.Util;
 using Akka.Coordination.Tests;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests.SBR
 {
@@ -1232,6 +1233,25 @@ namespace Akka.Cluster.Tests.SBR
         }
 
         [Fact]
+        public void LeaseMajority_must_down_indirectly_connected_when_combined_with_clean_partition_A_B_C_D__E_F___A_B_C_D()
+        {
+            var setup = new LeaseMajoritySetup(this);
+            var memberELeaving = Leaving(MemberE);
+            var memberFDown = Downed(MemberF);
+            setup.Side1 = ImmutableHashSet.Create(MemberA, MemberB, MemberC, MemberD);
+            setup.Side2 = ImmutableHashSet.Create(memberELeaving, memberFDown);
+
+            // trouble when indirectly connected happens before clean partition
+            setup.IndirectlyConnected = ImmutableHashSet.Create((memberELeaving, memberFDown));
+
+            // from side1 of the partition, majority
+            setup.AssertDowningSide(setup.Side1, new[] { memberELeaving });
+
+            // from side2 of the partition, minority
+            setup.AssertDowningSide(setup.Side2, new[] { MemberA, MemberB, MemberC, MemberD, memberELeaving });
+        }
+
+        [Fact]
         public void Strategy_must_add_and_remove_members_with_default_Member_ordering()
         {
             var setup = new KeepMajoritySetup(this);
@@ -1572,14 +1592,14 @@ namespace Akka.Cluster.Tests.SBR
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_not_down_unreachable_when_not_leader()
+        public async Task Split_Brain_Resolver_must_not_down_unreachable_when_not_leader()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.Zero, MemberB.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
             setup.Leader(MemberA);
             setup.Unreachable(MemberC);
             setup.Tick();
-            ExpectNoMsg(500);
+            await ExpectNoMsgAsync(500);
             setup.Stop();
         }
 
@@ -1597,19 +1617,19 @@ namespace Akka.Cluster.Tests.SBR
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_down_unreachable_after_specified_duration()
+        public async Task Split_Brain_Resolver_must_down_unreachable_after_specified_duration()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.FromSeconds(2), MemberA.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
             setup.Leader(MemberA);
             setup.Unreachable(MemberB);
-            ExpectNoMsg(1000);
+            await ExpectNoMsgAsync(1000);
             setup.ExpectDownCalled(MemberB);
             setup.Stop();
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_down_unreachable_when_becoming_leader_inbetween_detection_and_specified_duration()
+        public async Task Split_Brain_Resolver_must_down_unreachable_when_becoming_leader_inbetween_detection_and_specified_duration()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.FromSeconds(2), MemberA.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
@@ -1617,13 +1637,13 @@ namespace Akka.Cluster.Tests.SBR
             setup.Unreachable(MemberC);
             setup.Leader(MemberA);
             setup.Tick();
-            ExpectNoMsg(1000);
+            await ExpectNoMsgAsync(1000);
             setup.ExpectDownCalled(MemberC);
             setup.Stop();
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_not_down_unreachable_when_loosing_leadership_inbetween_detection_and_specified_duration()
+        public async Task Split_Brain_Resolver_must_not_down_unreachable_when_loosing_leadership_inbetween_detection_and_specified_duration()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.FromSeconds(1), MemberA.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
@@ -1631,7 +1651,7 @@ namespace Akka.Cluster.Tests.SBR
             setup.Unreachable(MemberC);
             setup.Leader(MemberB);
             setup.Tick();
-            ExpectNoMsg(1500);
+            await ExpectNoMsgAsync(1500);
             setup.Stop();
         }
 
@@ -1649,7 +1669,7 @@ namespace Akka.Cluster.Tests.SBR
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_not_down_when_unreachable_become_reachable_inbetween_detection_and_specified_duration()
+        public async Task Split_Brain_Resolver_must_not_down_when_unreachable_become_reachable_inbetween_detection_and_specified_duration()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.FromSeconds(1), MemberA.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
@@ -1657,12 +1677,12 @@ namespace Akka.Cluster.Tests.SBR
             setup.Unreachable(MemberB);
             setup.Reachable(MemberB);
             setup.Tick();
-            ExpectNoMsg(1500);
+            await ExpectNoMsgAsync(1500);
             setup.Stop();
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_not_down_when_unreachable_is_removed_inbetween_detection_and_specified_duration()
+        public async Task Split_Brain_Resolver_must_not_down_when_unreachable_is_removed_inbetween_detection_and_specified_duration()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.FromSeconds(1), MemberA.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
@@ -1670,19 +1690,19 @@ namespace Akka.Cluster.Tests.SBR
             setup.Unreachable(MemberB);
             setup.A.Tell(new ClusterEvent.MemberRemoved(MemberB.Copy(MemberStatus.Removed), MemberStatus.Exiting));
             setup.Tick();
-            ExpectNoMsg(1500);
+            await ExpectNoMsgAsync(1500);
             setup.Stop();
         }
 
         [Fact]
-        public void Split_Brain_Resolver_must_not_down_when_unreachable_is_already_Down()
+        public async Task Split_Brain_Resolver_must_not_down_when_unreachable_is_already_Down()
         {
             var setup = new SetupKeepMajority(this, TimeSpan.Zero, MemberA.UniqueAddress, null);
             setup.MemberUp(MemberA, MemberB, MemberC);
             setup.Leader(MemberA);
             setup.Unreachable(MemberB.Copy(MemberStatus.Down));
             setup.Tick();
-            ExpectNoMsg(1500);
+            await ExpectNoMsgAsync(1500);
             setup.Stop();
         }
 
@@ -1802,6 +1822,58 @@ namespace Akka.Cluster.Tests.SBR
             // Note that memberC is not downed, as on the other side, because those indirectly connected
             // not seen from this side. That outcome is OK.
             setup.ExpectDownCalled(MemberD, MemberE);
+            setup.Stop();
+        }
+
+        [Fact]
+        public void Split_Brain_Resolver_must_down_indirectly_connected_when_combined_with_partition_and_exiting_A_B_C_D__E_Fexiting___A_B_C_D()
+        {
+            var setup = new SetupKeepMajority(this, TimeSpan.Zero, MemberA.UniqueAddress, null);
+            setup.MemberUp(MemberA, MemberB, MemberC, MemberD, MemberE, MemberF);
+            var memberFExiting = Exiting(MemberF);
+            setup.A.Tell(new ClusterEvent.MemberExited(memberFExiting));
+            setup.Leader(MemberA);
+            // indirectly connected: memberF
+            // partition: memberA, memberB, memberC, memberD | memberE, memberF
+            setup.ReachabilityChanged(
+                (MemberA, MemberE),
+                (MemberA, memberFExiting),
+                (MemberB, MemberE),
+                (MemberB, memberFExiting),
+                (MemberC, MemberE),
+                (MemberC, memberFExiting),
+                (MemberD, MemberE),
+                (MemberD, memberFExiting),
+                (MemberE, memberFExiting));
+            setup.Tick();
+            // keep fully connected members
+            setup.ExpectDownCalled(MemberE);
+            setup.Stop();
+        }
+
+        [Fact]
+        public void Split_Brain_Resolver_must_down_indirectly_connected_when_combined_with_partition_and_exiting_A_B_C_D__Eexiting_F___A_B_C_D()
+        {
+            var setup = new SetupKeepMajority(this, TimeSpan.Zero, MemberA.UniqueAddress, null);
+            setup.MemberUp(MemberA, MemberB, MemberC, MemberD, MemberE, MemberF);
+            var memberEExiting = Exiting(MemberE);
+            setup.A.Tell(new ClusterEvent.MemberExited(memberEExiting));
+            setup.Leader(MemberA);
+            // indirectly connected: memberF
+            // partition: memberA, memberB, memberC, memberD | memberE, memberF
+            setup.ReachabilityChanged(
+                (MemberA, memberEExiting),
+                (MemberA, MemberF),
+                (MemberB, memberEExiting),
+                (MemberB, MemberF),
+                (MemberC, memberEExiting),
+                (MemberC, MemberF),
+                (MemberD, memberEExiting),
+                (MemberD, MemberF),
+                (MemberE, MemberF));
+            setup.Tick();
+            // keep fully connected members
+            setup.ExpectDownCalled(MemberF);
             setup.Stop();
         }
 
@@ -1936,6 +2008,117 @@ namespace Akka.Cluster.Tests.SBR
             setup.ExpectNoDecision(TimeSpan.FromMilliseconds(100));
         }
 
+        [Fact(DisplayName = "Split Brain Resolver must down correct nodes when Reachability records is polluted and consensus is reached")]
+        public async Task BugFix7141Consensus()
+        {
+            var setup = new SetupKeepMajority(this, 2.Seconds(), MemberA.UniqueAddress, null, null, 100.Seconds());
+            setup.MemberUp(MemberA, MemberB, MemberC, MemberD, MemberE, MemberF);
+            setup.Leader(MemberA);
+            
+            // First unreachable reported
+            setup.Unreachable(MemberC);
+            
+            await Task.Delay(500.Milliseconds());
+            setup.ReachabilityChanged(
+                (MemberA, MemberC),
+                (MemberB, MemberC),
+                (MemberE, MemberC), // Poison record
+                (MemberF, MemberC));
+            
+            await Task.Delay(500.Milliseconds());
+            
+            // Second unreachable reported
+            setup.Unreachable(MemberD);
+            
+            await Task.Delay(500.Milliseconds());
+            setup.ReachabilityChanged(
+                (MemberA, MemberC),
+                (MemberA, MemberD),
+                (MemberB, MemberC),
+                (MemberB, MemberD),
+                (MemberE, MemberC), // Poison record
+                (MemberF, MemberC),
+                (MemberF, MemberD));
+            
+            await Task.Delay(500.Milliseconds());
+            
+            // Third unreachable reported
+            setup.Unreachable(MemberD);
+            
+            await Task.Delay(500.Milliseconds());
+            setup.ReachabilityChanged(
+                (MemberA, MemberC),
+                (MemberA, MemberD),
+                (MemberA, MemberE),
+                (MemberB, MemberC),
+                (MemberB, MemberD),
+                (MemberB, MemberE),
+                (MemberE, MemberC), // Poison record
+                (MemberF, MemberC),
+                (MemberF, MemberD),
+                (MemberF, MemberE));
+            
+            Thread.Sleep(3000);
+            setup.Tick();
+            setup.ExpectDownCalled(MemberC, MemberD, MemberE);
+        }
+
+        [Fact(DisplayName = "Split Brain Resolver must down all nodes when Reachability records is polluted and no consensus is reached")]
+        public async Task BugFix7141NoConsensus()
+        {
+            var setup = new SetupKeepMajority(this, 2.Seconds(), MemberA.UniqueAddress, null, null, 100.Seconds());
+            setup.MemberUp(MemberA, MemberB, MemberC, MemberD, MemberE, MemberF);
+            setup.Leader(MemberA);
+            
+            // First unreachable reported
+            setup.Unreachable(MemberC);
+            
+            await Task.Delay(500.Milliseconds());
+            setup.ReachabilityChanged(
+                (MemberA, MemberC),
+                (MemberB, MemberC),
+                (MemberE, MemberC), // Poison record
+                (MemberF, MemberC));
+            
+            await Task.Delay(500.Milliseconds());
+            
+            // Second unreachable reported
+            setup.Unreachable(MemberD);
+            
+            await Task.Delay(500.Milliseconds());
+            setup.ReachabilityChanged(
+                (MemberA, MemberC),
+                (MemberA, MemberD),
+                (MemberB, MemberC),
+                (MemberB, MemberD),
+                (MemberE, MemberC), // Poison record
+                (MemberF, MemberC),
+                (MemberF, MemberD));
+            
+            await Task.Delay(500.Milliseconds());
+            
+            // Third unreachable reported
+            setup.Unreachable(MemberD);
+            
+            await Task.Delay(500.Milliseconds());
+            
+            // F did not report that E is unreachable
+            setup.ReachabilityChanged(
+                (MemberA, MemberC),
+                (MemberA, MemberD),
+                (MemberA, MemberE),
+                (MemberB, MemberC),
+                (MemberB, MemberD),
+                (MemberB, MemberE),
+                (MemberE, MemberC), // Poison record
+                (MemberF, MemberC),
+                (MemberF, MemberD));
+            
+            Thread.Sleep(3000);
+            setup.Tick();
+            setup.ExpectDownCalled(MemberA, MemberB, MemberC, MemberD, MemberE, MemberF);
+        }
+        
         [Fact]
         public void Split_Brain_Resolver_must_down_other_side_when_lease_can_be_acquired()
         {

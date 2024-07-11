@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FileSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,26 +12,26 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Dispatch;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.IO;
 using Akka.Streams.IO;
-using Akka.Streams.TestKit.Tests;
+using Akka.Streams.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.TestKit;
-using Akka.Tests.Shared.Internals;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.IO
 {
     public class FileSinkSpec : AkkaSpec
     {
         private readonly ActorMaterializer _materializer;
-        private readonly List<string> _testLines = new List<string>();
+        private readonly List<string> _testLines = new();
         private readonly List<ByteString> _testByteStrings;
         private readonly TimeSpan _expectTimeout = TimeSpan.FromSeconds(10);
 
@@ -56,20 +56,19 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_write_lines_to_a_file()
+        public async Task SynchronousFileSink_should_write_lines_to_a_file()
         {
-            Within(_expectTimeout, () => 
+            await WithinAsync(_expectTimeout,async () => 
                 {
-                    TargetFile(f =>
+                    await TargetFileAsync(async f =>
                     {
                         var completion = Source.From(_testByteStrings)
                             .RunWith(FileIO.ToFile(f), _materializer);
-
-                        completion.AwaitResult(Remaining);
-                        var result = completion.Result;
+                        
+                        var result = await completion.ShouldCompleteWithin(Remaining); 
                         result.Count.Should().Be(6006);
 
-                        AwaitAssert(
+                        await AwaitAssertAsync(
                             () => CheckFileContent(f, _testLines.Aggregate((s, s1) => s + s1)),
                             Remaining);
                     }, _materializer);
@@ -77,19 +76,18 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_create_new_file_if_not_exists()
+        public async Task SynchronousFileSink_should_create_new_file_if_not_exists()
         {
-            Within(_expectTimeout, () =>
+            await WithinAsync(_expectTimeout, async () =>
             {
-                TargetFile(f =>
+                await TargetFileAsync(async f =>
                 {
                     var completion = Source.From(_testByteStrings)
                         .RunWith(FileIO.ToFile(f), _materializer);
-
-                    completion.AwaitResult(Remaining);
-                    var result = completion.Result;
+                    
+                    var result = await completion.ShouldCompleteWithin(Remaining);
                     result.Count.Should().Be(6006);
-                    AwaitAssert(
+                    await AwaitAssertAsync(
                         () => CheckFileContent(f, _testLines.Aggregate((s, s1) => s + s1)),
                         Remaining);
                 }, _materializer, false);
@@ -97,32 +95,32 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_write_into_existing_file_without_wiping_existing_data()
+        public async Task SynchronousFileSink_should_write_into_existing_file_without_wiping_existing_data()
         {
-            Within(_expectTimeout, () =>
+            await WithinAsync(_expectTimeout, async () =>
             {
-                TargetFile(f =>
+                await TargetFileAsync(async f =>
                 {
                     Task<IOResult> Write(IEnumerable<string> lines) => Source.From(lines)
                         .Select(ByteString.FromString)
                         .RunWith(FileIO.ToFile(f, FileMode.OpenOrCreate), _materializer);
 
                     var completion1 = Write(_testLines);
-                    completion1.AwaitResult(Remaining);
+                    await completion1.ShouldCompleteWithin(Remaining);
 
                     var lastWrite = new string[100];
                     for (var i = 0; i < 100; i++)
                         lastWrite[i] = "x";
 
                     var completion2 = Write(lastWrite);
-                    completion2.AwaitResult(Remaining);
-                    var result = completion2.Result;
+                    
+                    var result = await completion2.ShouldCompleteWithin(Remaining); 
 
                     var lastWriteString = new string(lastWrite.SelectMany(x => x).ToArray());
                     result.Count.Should().Be(lastWriteString.Length);
                     var testLinesString = new string(_testLines.SelectMany(x => x).ToArray());
 
-                    AwaitAssert(
+                    await AwaitAssertAsync(
                         () => CheckFileContent(f, lastWriteString + testLinesString.Substring(100)),
                         Remaining);
                 }, _materializer);
@@ -130,26 +128,26 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_by_default_replace_the_existing_file()
+        public async Task SynchronousFileSink_should_by_default_replace_the_existing_file()
         {
-            Within(_expectTimeout, () =>
+            await WithinAsync(_expectTimeout, async () =>
             {
-                TargetFile(f =>
+                await TargetFileAsync(async f =>
                 {
                     Task<IOResult> Write(List<string> lines) =>
                         Source.From(lines).Select(ByteString.FromString)
                             .RunWith(FileIO.ToFile(f), _materializer);
 
                     var task1 = Write(_testLines);
-                    task1.AwaitResult(Remaining);
+                    await task1.ShouldCompleteWithin(Remaining);
                     var lastWrite = Enumerable.Range(0, 100).Select(_ => "x").ToList();
 
                     var task2 = Write(lastWrite);
-                    var result = task2.AwaitResult(Remaining);
+                    var result = await task2.ShouldCompleteWithin(Remaining);
 
                     result.Count.Should().Be(lastWrite.Count);
 
-                    AwaitAssert(
+                    await AwaitAssertAsync(
                         () => CheckFileContent(f, string.Join("", lastWrite)),
                         Remaining);
                 }, _materializer);
@@ -157,27 +155,27 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_allow_appending_to_file()
+        public async Task SynchronousFileSink_should_allow_appending_to_file()
         {
-            Within(_expectTimeout, () =>
+            await WithinAsync(_expectTimeout, async () =>
             {
-                TargetFile(f =>
+                await TargetFileAsync(async f =>
                 {
                     Task<IOResult> Write(List<string> lines) => Source.From(lines)
                         .Select(ByteString.FromString)
                         .RunWith(FileIO.ToFile(f, fileMode: FileMode.Append), _materializer);
 
                     var completion1 = Write(_testLines);
-                    completion1.AwaitResult(Remaining);
-                    var result1 = completion1.Result;
+                    
+                    var result1 = await completion1.ShouldCompleteWithin(Remaining); ;
 
                     var lastWrite = new List<string>();
                     for (var i = 0; i < 100; i++)
                         lastWrite.Add("x");
 
                     var completion2 = Write(lastWrite);
-                    completion2.AwaitResult(Remaining);
-                    var result2 = completion2.Result;
+                    
+                    var result2 = await completion2.ShouldCompleteWithin(Remaining);
 
                     var lastWriteString = new string(lastWrite.SelectMany(x => x).ToArray());
                     var testLinesString = new string(_testLines.SelectMany(x => x).ToArray());
@@ -185,7 +183,7 @@ namespace Akka.Streams.Tests.IO
                     f.Length.Should().Be(result1.Count + result2.Count);
 
                     //NOTE: no new line at the end of the file - does JVM/linux appends new line at the end of the file in append mode?
-                    AwaitAssert(
+                    await AwaitAssertAsync(
                         () => CheckFileContent(f, testLinesString + lastWriteString),
                         Remaining);
                 }, _materializer);
@@ -194,11 +192,11 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_allow_writing_from_specific_position_to_the_file()
+        public async Task SynchronousFileSink_should_allow_writing_from_specific_position_to_the_file()
         {
-            Within(_expectTimeout, () =>
+            await WithinAsync(_expectTimeout, async () =>
             {
-                TargetFile(f => 
+                await TargetFileAsync(async f => 
                 {
                     var testLinesCommon = new List<string>
                     {
@@ -224,14 +222,14 @@ namespace Akka.Streams.Tests.IO
                             _materializer);
 
                     var completion1 = Write(_testLines, 0);
-                    completion1.AwaitResult(Remaining);
+                    await completion1.ShouldCompleteWithin(Remaining);
 
                     var completion2 = Write(testLinesPart2, startPosition);
-                    var result2 = completion2.AwaitResult(Remaining);
+                    var result2 = await completion2.ShouldCompleteWithin(Remaining);
 
                     f.Length.ShouldBe(startPosition + result2.Count);
 
-                    AwaitAssert(
+                    await AwaitAssertAsync(
                         () => CheckFileContent(f, testLinesCommon.Join("") + testLinesPart2.Join("")),
                         Remaining);
                 }, _materializer);
@@ -239,14 +237,14 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_use_dedicated_blocking_io_dispatcher_by_default()
+        public async Task SynchronousFileSink_should_use_dedicated_blocking_io_dispatcher_by_default()
         {
-            Within(_expectTimeout, () =>
+            await WithinAsync(_expectTimeout, async() =>
             {
-                // This is technically incorrect, we're (ab)using TargetFile() just to provide
+                // This is technically incorrect, we're (ab)using TargetFileAsync() just to provide
                 // the necessary FileInfo, ignoring the fact that we're using a different
                 // materializer, because we will shut down the system before we're exiting anyway.
-                TargetFile(f =>
+                await TargetFileAsync(f =>
                 {
                     var sys = ActorSystem.Create("FileSinkSpec-dispatcher-testing-1", Utils.UnboundedMailboxConfig);
                     var materializer = ActorMaterializer.Create(sys);
@@ -265,6 +263,7 @@ namespace Akka.Streams.Tests.IO
 
                         // haven't figured out why this returns the aliased id rather than the id, but the stage is going away so whatever
                         Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
+                        return Task.CompletedTask;
                     }
                     finally
                     {
@@ -276,14 +275,14 @@ namespace Akka.Streams.Tests.IO
 
         // FIXME: overriding dispatcher should be made available with dispatcher alias support in materializer (#17929)
         [Fact(Skip = "overriding dispatcher should be made available with dispatcher alias support in materializer")]
-        public void SynchronousFileSink_should_allow_overriding_the_dispatcher_using_Attributes()
+        public async Task SynchronousFileSink_should_allow_overriding_the_dispatcher_using_Attributes()
         {
-            Within(_expectTimeout, () =>
+            await WithinAsync(_expectTimeout, async() =>
             {
-                // This is technically incorrect, we're (ab)using TargetFile() just to provide
+                // This is technically incorrect, we're (ab)using TargetFileAsync() just to provide
                 // the necessary FileInfo, ignoring the fact that we're using a different
                 // materializer, because we will shut down the system before we're exiting anyway.
-                TargetFile(f =>
+                await TargetFileAsync(f =>
                 {
                     var sys = ActorSystem.Create("FileSinkSpec-dispatcher-testing-2", Utils.UnboundedMailboxConfig);
                     var materializer = ActorMaterializer.Create(sys);
@@ -298,6 +297,7 @@ namespace Akka.Streams.Tests.IO
                         ((ActorMaterializerImpl)materializer).Supervisor.Tell(StreamSupervisor.GetChildren.Instance, TestActor);
                         var actorRef = ExpectMsg<StreamSupervisor.Children>().Refs.First(@ref => @ref.Path.ToString().Contains("File"));
                         Utils.AssertDispatcher(actorRef, "akka.actor.default-dispatcher");
+                        return Task.CompletedTask;
                     }
                     finally
                     {
@@ -308,22 +308,22 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_write_single_line_to_a_file_from_lazy_sink()
+        public async Task SynchronousFileSink_should_write_single_line_to_a_file_from_lazy_sink()
         {
-            Within(_expectTimeout, () =>
+            await WithinAsync(_expectTimeout, async() =>
             {
-                TargetFile(f => 
+                // LazySink must wait for result of initialization even if got UpstreamComplete
+                await TargetFileAsync(async f => 
                 {
-                    var lazySink = Sink.LazySink(
-                            (ByteString _) => Task.FromResult(FileIO.ToFile(f)),
-                            () => Task.FromResult(IOResult.Success(0)))
-                        .MapMaterializedValue(t => t.AwaitResult());
+                    var lazySink = Sink.LazyInitAsync(() => Task.FromResult(FileIO.ToFile(f)))
+                        // map a Task<Option<Task<IOResult>>> into a Task<IOResult>
+                        .MapMaterializedValue(t => t.Result.GetOrElse(Task.FromResult(IOResult.Success(0))));
 
                     var completion = Source.From(new []{_testByteStrings.Head()})
                         .RunWith(lazySink, _materializer);
 
-                    completion.AwaitResult(Remaining);
-                    AwaitAssert(
+                    await completion.ShouldCompleteWithin(Remaining);
+                    await AwaitAssertAsync(
                         () => CheckFileContent(f, _testLines.Head()),
                         Remaining);
                 }, _materializer);
@@ -331,9 +331,9 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_complete_materialized_task_with_an_exception_when_upstream_fails()
+        public async Task SynchronousFileSink_should_complete_materialized_task_with_an_exception_when_upstream_fails()
         {
-            TargetFile(f =>
+            await TargetFileAsync(async f =>
             {
                 var completion = Source.From(_testByteStrings)
                     .Select(bytes =>
@@ -343,30 +343,36 @@ namespace Akka.Streams.Tests.IO
                     })
                     .RunWith(FileIO.ToFile(f), _materializer);
 
-                var ex = Intercept<AbruptIOTerminationException>(() => completion.Wait(TimeSpan.FromSeconds(3)));
+                var ex = await InterceptAsync<AbruptIOTerminationException>(() => completion).ShouldCompleteWithin(3.Seconds());
                 ex.IoResult.Count.ShouldBe(1001);
                 CheckFileContent(f, string.Join("", _testLines.TakeWhile(s => !s.Contains('b'))));
+                await Task.CompletedTask;
             }, _materializer);
         }
 
         [Fact]
-        public void SynchronousFileSink_should_complete_with_failure_when_file_cannot_be_open()
+        public async Task SynchronousFileSink_should_complete_with_failure_when_file_cannot_be_open()
         {
-            TargetFile(f =>
+            await TargetFileAsync(async _ =>
             {
                 var completion = Source.Single(ByteString.FromString("42"))
                     .RunWith(FileIO.ToFile(new FileInfo("I-hope-this-file-doesnt-exist.txt"), FileMode.Open), _materializer);
 
-                AssertThrows<FileNotFoundException>(completion.Wait);
+                async Task Exec()
+                {
+                    await completion;
+                }
+
+                await Exec().ShouldThrowWithin<FileNotFoundException>(RemainingOrDefault);
             }, _materializer);
         }
 
         [Fact]
-        public void SynchronousFileSink_should_write_each_element_if_auto_flush_is_set()
+        public async Task SynchronousFileSink_should_write_each_element_if_auto_flush_is_set()
         {
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async() =>
             {
-                TargetFile(f => 
+                await TargetFileAsync(async f => 
                 {
                     var (actor, task) = Source.ActorRef<string>(64, OverflowStrategy.DropNew)
                         .Select(ByteString.FromString)
@@ -379,9 +385,10 @@ namespace Akka.Streams.Tests.IO
                     actor.Tell("a\n");
                     actor.Tell("b\n");
 
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         CheckFileContent(f, "a\nb\n");
+                        return Task.CompletedTask;
                     }, Remaining);
 
                     actor.Tell("a\n");
@@ -391,8 +398,8 @@ namespace Akka.Streams.Tests.IO
 
                     // We still have to wait for the task to complete, because the signal
                     // came from the FileSink actor, not the source actor.
-                    task.AwaitResult(Remaining);
-                    ExpectTerminated(actor, Remaining);
+                    await task.ShouldCompleteWithin(Remaining);
+                    await ExpectTerminatedAsync(actor, Remaining);
 
                     f.Length.ShouldBe(8);
                     CheckFileContent(f, "a\nb\na\nb\n");
@@ -401,11 +408,11 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_write_buffered_element_if_manual_flush_is_called()
+        public async Task SynchronousFileSink_should_write_buffered_element_if_manual_flush_is_called()
         {
-            this.AssertAllStagesStopped(() => 
+            await this.AssertAllStagesStoppedAsync(async() => 
             {
-                TargetFile(f =>
+                await TargetFileAsync(async f =>
                 {
                     var flusher = new FlushSignaler();
                     var (actor, task) = Source.ActorRef<string>(64, OverflowStrategy.DropNew)
@@ -414,23 +421,23 @@ namespace Akka.Streams.Tests.IO
                             FileIO.ToFile(f, fileMode: FileMode.OpenOrCreate, startPosition: 0, flushSignaler:flusher), 
                             (a, t) => (a, t))
                         .Run(_materializer);
-                    Thread.Sleep(100); // wait for stream to catch up
+                    await Task.Delay(100); // wait for stream to catch up
 
                     actor.Tell("a\n");
                     actor.Tell("b\n");
-                    Thread.Sleep(200); // wait for stream to catch up
+                    await Task.Delay(200); // wait for stream to catch up
 
                     flusher.Flush();
-                    Thread.Sleep(100); // wait for flush
+                    await Task.Delay(100); // wait for flush
                     CheckFileContent(f, "a\nb\n"); // file should be flushed
 
                     actor.Tell("c\n");
                     actor.Tell("d\n");
-                    Thread.Sleep(200); // wait for stream to catch up
+                    await Task.Delay(200); // wait for stream to catch up
                     CheckFileContent(f, "a\nb\n"); // file content should not change
 
                     flusher.Flush();
-                    Thread.Sleep(100); // wait for flush
+                    await Task.Delay(100); // wait for flush
                     CheckFileContent(f, "a\nb\nc\nd\n"); // file content should all be flushed
 
                     actor.Tell(new Status.Success(NotUsed.Instance));
@@ -441,12 +448,12 @@ namespace Akka.Streams.Tests.IO
             }, _materializer);
         }
 
-        private void TargetFile(
-            Action<FileInfo> block, 
+        private async Task TargetFileAsync(
+            Func<FileInfo, Task> block, 
             ActorMaterializer materializer, 
             bool create = true)
         {
-            var targetFile = new FileInfo(Path.Combine(Path.GetTempPath(), "synchronous-file-sink.tmp"));
+            var targetFile = new FileInfo(Path.Combine(Path.GetTempPath(), $"synchronous-file-sink-{Guid.NewGuid()}.tmp"));
 
             if (!create)
                 targetFile.Delete();
@@ -455,16 +462,16 @@ namespace Akka.Streams.Tests.IO
 
             try
             {
-                block(targetFile);
+                await block(targetFile);
             }
             finally
             {
                 // this is the proverbial stream kill switch, make sure that all streams
                 // are dead so that the file handle would be released
-                this.AssertAllStagesStopped(() => { }, materializer);
+                await this.AssertAllStagesStoppedAsync(() => { return Task.CompletedTask; }, materializer);
 
                 //give the system enough time to shutdown and release the file handle
-                Thread.Sleep(500);
+                await Task.Delay(500);
                 targetFile.Delete();
             }
         }

@@ -1,13 +1,15 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FunctionRefSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,9 +18,10 @@ namespace Akka.Tests.Actor
 {
     public class FunctionRefSpec : AkkaSpec
     {
+        
         #region internal classes
 
-        sealed class GetForwarder : IEquatable<GetForwarder>
+        private sealed class GetForwarder : IEquatable<GetForwarder>
         {
             public IActorRef ReplyTo { get; }
 
@@ -39,7 +42,7 @@ namespace Akka.Tests.Actor
             public override int GetHashCode() => (ReplyTo != null ? ReplyTo.GetHashCode() : 0);
         }
 
-        sealed class DropForwarder : IEquatable<DropForwarder>
+        private sealed class DropForwarder : IEquatable<DropForwarder>
         {
             public FunctionRef Ref { get; }
 
@@ -60,7 +63,7 @@ namespace Akka.Tests.Actor
             public override int GetHashCode() => (Ref != null ? Ref.GetHashCode() : 0);
         }
 
-        sealed class Forwarded : IEquatable<Forwarded>
+        private sealed class Forwarded : IEquatable<Forwarded>
         {
             public object Message { get; }
             public IActorRef Sender { get; }
@@ -89,7 +92,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        sealed class Super : ReceiveActor
+        private sealed class Super : ReceiveActor, ILogReceive
         {
             public Super()
             {
@@ -120,63 +123,69 @@ namespace Akka.Tests.Actor
 
         #endregion
 
-        public FunctionRefSpec(ITestOutputHelper output) : base(output, null)
+        // create HOCON to enable debug loglevel and have all actors log received messages
+        private static readonly Config Config = ConfigurationFactory.ParseString(@"
+            akka.loglevel = DEBUG
+            akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
+            akka.actor.debug.receive = on
+            ");
+        
+        public FunctionRefSpec(ITestOutputHelper output) : base(output)
         {
+            //Sys.Log.Info("Starting FunctionRefSpec");
         }
 
         #region top level
 
         [Fact]
-        public void FunctionRef_created_by_top_level_actor_must_forward_messages()
+        public async Task FunctionRef_created_by_top_level_actor_must_forward_messages()
         {
             var s = SuperActor();
-            var forwarder = GetFunctionRef(s);
+            var forwarder = await GetFunctionRef(s);
 
             forwarder.Tell("hello");
-            ExpectMsg(new Forwarded("hello", TestActor));
+            await ExpectMsgAsync(new Forwarded("hello", TestActor));
         }
 
         [Fact]
-        public void FunctionRef_created_by_top_level_actor_must_be_watchable()
+        public async Task FunctionRef_created_by_top_level_actor_must_be_watchable()
         {
             var s = SuperActor();
-            var forwarder = GetFunctionRef(s);
-
-            s.Tell(new GetForwarder(TestActor));
-            var f = ExpectMsg<FunctionRef>();
-            Watch(f);
-            s.Tell(new DropForwarder(f));
-            ExpectTerminated(f);
+            var forwarder = await GetFunctionRef(s);
+            
+            await WatchAsync(forwarder);
+            s.Tell(new DropForwarder(forwarder));
+            await ExpectTerminatedAsync(forwarder);
         }
 
         [Fact]
-        public void FunctionRef_created_by_top_level_actor_must_be_able_to_watch()
+        public async Task FunctionRef_created_by_top_level_actor_must_be_able_to_watch()
         {
             var s = SuperActor();
-            var forwarder = GetFunctionRef(s);
+            var forwarder = await GetFunctionRef(s);
 
             s.Tell(new GetForwarder(TestActor));
-            var f = ExpectMsg<FunctionRef>();
+            var f = await ExpectMsgAsync<FunctionRef>();
             forwarder.Watch(f);
             s.Tell(new DropForwarder(f));
-            ExpectMsg(new Forwarded(new Terminated(f, true, false), f));
+            await ExpectMsgAsync(new Forwarded(new Terminated(f, true, false), f));
         }
 
         [Fact]
-        public void FunctionRef_created_by_top_level_actor_must_terminate_when_their_parent_terminates()
+        public async Task FunctionRef_created_by_top_level_actor_must_terminate_when_their_parent_terminates()
         {
             var s = SuperActor();
-            var forwarder = GetFunctionRef(s);
+            var forwarder = await GetFunctionRef(s);
 
-            Watch(forwarder);
+            await WatchAsync(forwarder);
             s.Tell(PoisonPill.Instance);
-            ExpectTerminated(forwarder);
+            await ExpectTerminatedAsync(forwarder);
         }
 
-        private FunctionRef GetFunctionRef(IActorRef s)
+        private async Task<FunctionRef> GetFunctionRef(IActorRef s)
         {
             s.Tell(new GetForwarder(TestActor));
-            return ExpectMsg<FunctionRef>();
+            return await ExpectMsgAsync<FunctionRef>();
         }
 
         private IActorRef SuperActor() => Sys.ActorOf(Props.Create<Super>(), "super");
@@ -186,50 +195,48 @@ namespace Akka.Tests.Actor
         #region non-top level
 
         [Fact]
-        public void FunctionRef_created_by_non_top_level_actor_must_forward_messages()
+        public async Task FunctionRef_created_by_non_top_level_actor_must_forward_messages()
         {
             var s = SupSuperActor();
-            var forwarder = GetFunctionRef(s);
+            var forwarder = await GetFunctionRef(s);
 
             forwarder.Tell("hello");
-            ExpectMsg(new Forwarded("hello", TestActor));
+            await ExpectMsgAsync(new Forwarded("hello", TestActor));
         }
 
         [Fact]
-        public void FunctionRef_created_by_non_top_level_actor_must_be_watchable()
+        public async Task FunctionRef_created_by_non_top_level_actor_must_be_watchable()
         {
             var s = SupSuperActor();
-            var forwarder = GetFunctionRef(s);
-
-            s.Tell(new GetForwarder(TestActor));
-            var f = ExpectMsg<FunctionRef>();
-            Watch(f);
-            s.Tell(new DropForwarder(f));
-            ExpectTerminated(f);
+            var forwarder = await GetFunctionRef(s);
+            
+            await WatchAsync(forwarder);
+            s.Tell(new DropForwarder(forwarder));
+            await ExpectTerminatedAsync(forwarder);
         }
 
         [Fact]
-        public void FunctionRef_created_by_non_top_level_actor_must_be_able_to_watch()
+        public async Task FunctionRef_created_by_non_top_level_actor_must_be_able_to_watch()
         {
             var s = SupSuperActor();
-            var forwarder = GetFunctionRef(s);
+            var forwarder = await GetFunctionRef(s);
 
             s.Tell(new GetForwarder(TestActor));
-            var f = ExpectMsg<FunctionRef>();
+            var f = await ExpectMsgAsync<FunctionRef>();
             forwarder.Watch(f);
             s.Tell(new DropForwarder(f));
-            ExpectMsg(new Forwarded(new Terminated(f, true, false), f));
+            await ExpectMsgAsync(new Forwarded(new Terminated(f, true, false), f));
         }
 
         [Fact]
-        public void FunctionRef_created_by_non_top_level_actor_must_terminate_when_their_parent_terminates()
+        public async Task FunctionRef_created_by_non_top_level_actor_must_terminate_when_their_parent_terminates()
         {
             var s = SupSuperActor();
-            var forwarder = GetFunctionRef(s);
+            var forwarder = await GetFunctionRef(s);
 
-            Watch(forwarder);
+            await WatchAsync(forwarder);
             s.Tell(PoisonPill.Instance);
-            ExpectTerminated(forwarder);
+            await ExpectTerminatedAsync(forwarder);
         }
 
         private IActorRef SupSuperActor() => Sys.ActorOf(Props.Create<SupSuper>(), "supsuper");
@@ -237,16 +244,16 @@ namespace Akka.Tests.Actor
         #endregion
 
         [Fact(Skip = "FIXME")]
-        public void FunctionRef_when_not_registered_must_not_be_found()
+        public async Task FunctionRef_when_not_registered_must_not_be_found()
         {
             var provider = ((ExtendedActorSystem)Sys).Provider;
-            var fref = new FunctionRef(TestActor.Path / "blabla", provider, Sys.EventStream, (x, y) => { });
-            EventFilter.Exception<InvalidOperationException>().ExpectOne(() =>
+            var fref = new FunctionRef(TestActor.Path / "blabla", provider, Sys.EventStream, (_, _) => { });
+            await EventFilter.Exception<InvalidOperationException>().ExpectOneAsync(async() =>
             {
                 // needs to be something that fails when the deserialized form is not a FunctionRef
                 // this relies upon serialize-messages during tests
                 TestActor.Tell(new DropForwarder(fref));
-                ExpectNoMsg(TimeSpan.FromSeconds(1));
+                await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
             });
         }
     }

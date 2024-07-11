@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BackoffSupervisor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ namespace Akka.Pattern
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly GetCurrentChild Instance = new GetCurrentChild();
+            public static readonly GetCurrentChild Instance = new();
             private GetCurrentChild() { }
         }
 
@@ -58,14 +58,14 @@ namespace Akka.Pattern
         [Serializable]
         public sealed class Reset
         {
-            public static readonly Reset Instance = new Reset();
+            public static readonly Reset Instance = new();
             private Reset() { }
         }
 
         [Serializable]
         public sealed class GetRestartCount
         {
-            public static readonly GetRestartCount Instance = new GetRestartCount();
+            public static readonly GetRestartCount Instance = new();
             private GetRestartCount() { }
         }
 
@@ -86,7 +86,7 @@ namespace Akka.Pattern
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly StartChild Instance = new StartChild();
+            public static readonly StartChild Instance = new();
             private StartChild() { }
         }
 
@@ -117,6 +117,10 @@ namespace Akka.Pattern
         {
         }
 
+        /// <summary>
+        /// If the arguments here change, you -must- change the invocation in <see cref="BackoffOptions"/> accordingly!
+        /// Expression based props are too slow for many scenarios, so we must drop compile time safety for that sake.  
+        /// </summary>
         public BackoffSupervisor(
             Props childProps,
             string childName,
@@ -264,7 +268,7 @@ namespace Akka.Pattern
         {
             var rand = 1.0 + ThreadLocalRandom.Current.NextDouble() * randomFactor;
             var calculateDuration = Math.Min(maxBackoff.Ticks, minBackoff.Ticks * Math.Pow(2, restartCount)) * rand;
-            return calculateDuration < 0d || calculateDuration >= long.MaxValue ? maxBackoff : new TimeSpan((long)calculateDuration);
+            return calculateDuration is < 0d or >= long.MaxValue ? maxBackoff : new TimeSpan((long)calculateDuration);
         }
     }
 }

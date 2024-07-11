@@ -1,22 +1,36 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BusLogging.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Actor;
 
 namespace Akka.Event
 {
     /// <summary>
     /// A logging adapter implementation publishing log events to the event stream.
     /// </summary>
-    public class BusLogging : LoggingAdapterBase
+    public sealed class BusLogging : LoggingAdapterBase
     {
-        private readonly LoggingBus _bus;
-        private readonly Type _logClass;
-        private readonly string _logSource;
+        /// <summary>
+        /// For convenience, this is the destination to which logs are written.
+        ///
+        /// Typically powered by the <see cref="EventStream"/> on the <see cref="ActorSystem"/>.
+        /// </summary>
+        public LoggingBus Bus { get; }
+        
+        /// <summary>
+        /// The type responsible for emitting these logs
+        /// </summary>
+        public Type LogClass { get; }
+        
+        /// <summary>
+        /// The instance of the <see cref="LogClass"/> responsible for emitting these logs.
+        /// </summary>
+        public string LogSource { get; }
         
         /// <summary>
         /// Initializes a new instance of the <see cref="BusLogging" /> class.
@@ -28,99 +42,52 @@ namespace Akka.Event
         public BusLogging(LoggingBus bus, string logSource, Type logClass, ILogMessageFormatter logMessageFormatter)
             : base(logMessageFormatter)
         {
-            _bus = bus;
-            _logSource = logSource;
-            _logClass = logClass;
+            Bus = bus;
+            LogSource = logSource;
+            LogClass = logClass;
 
-            _isErrorEnabled = bus.LogLevel <= LogLevel.ErrorLevel;
-            _isWarningEnabled = bus.LogLevel <= LogLevel.WarningLevel;
-            _isInfoEnabled = bus.LogLevel <= LogLevel.InfoLevel;
-            _isDebugEnabled = bus.LogLevel <= LogLevel.DebugLevel;
+            IsErrorEnabled = bus.LogLevel <= LogLevel.ErrorLevel;
+            IsWarningEnabled = bus.LogLevel <= LogLevel.WarningLevel;
+            IsInfoEnabled = bus.LogLevel <= LogLevel.InfoLevel;
+            IsDebugEnabled = bus.LogLevel <= LogLevel.DebugLevel;
         }
 
-        private readonly bool _isDebugEnabled;
         /// <summary>
         /// Check to determine whether the <see cref="LogLevel.DebugLevel" /> is enabled.
         /// </summary>
-        public override bool IsDebugEnabled { get { return _isDebugEnabled; } }
+        public override bool IsDebugEnabled { get; }
 
-        private readonly bool _isErrorEnabled;
         /// <summary>
         /// Check to determine whether the <see cref="LogLevel.ErrorLevel" /> is enabled.
         /// </summary>
-        public override bool IsErrorEnabled { get { return _isErrorEnabled; } }
+        public override bool IsErrorEnabled { get; }
 
-        private readonly bool _isInfoEnabled;
         /// <summary>
         /// Check to determine whether the <see cref="LogLevel.InfoLevel" /> is enabled.
         /// </summary>
-        public override bool IsInfoEnabled { get { return _isInfoEnabled; } }
+        public override bool IsInfoEnabled { get; }
 
-        private readonly bool _isWarningEnabled;
         /// <summary>
         /// Check to determine whether the <see cref="LogLevel.WarningLevel" /> is enabled.
         /// </summary>
-        public override bool IsWarningEnabled { get { return _isWarningEnabled; } }
-
-        /// <summary>
-        /// Publishes the error message onto the LoggingBus.
-        /// </summary>
-        /// <param name="message">The error message.</param>
-        protected override void NotifyError(object message)
+        public override bool IsWarningEnabled { get; }
+        
+        private LogEvent CreateLogEvent(LogLevel logLevel, object message, Exception cause = null)
         {
-            _bus.Publish(new Error(null, _logSource, _logClass, message));
+            return logLevel switch
+            {
+                LogLevel.DebugLevel => new Debug(cause, LogSource, LogClass, message),
+                LogLevel.InfoLevel => new Info(cause, LogSource, LogClass, message),
+                LogLevel.WarningLevel => new Warning(cause, LogSource, LogClass, message),
+                LogLevel.ErrorLevel => new Error(cause, LogSource, LogClass, message),
+                _ => throw new ArgumentOutOfRangeException(nameof(logLevel), logLevel, null)
+            };
         }
 
-        /// <summary>
-        /// Publishes the error message and exception onto the LoggingBus.
-        /// </summary>
-        /// <param name="cause">The exception that caused this error.</param>
-        /// <param name="message">The error message.</param>
-        protected override void NotifyError(Exception cause, object message)
+        protected override void NotifyLog(LogLevel logLevel, object message, Exception cause = null)
         {
-            _bus.Publish(new Error(cause, _logSource, _logClass, message));
-        }
-
-        /// <summary>
-        /// Publishes the warning message onto the LoggingBus.
-        /// </summary>
-        /// <param name="message">The warning message.</param>
-        protected override void NotifyWarning(object message)
-        {
-            _bus.Publish(new Warning(_logSource, _logClass, message));
-        }
-
-        protected override void NotifyWarning(Exception cause, object message)
-        {
-            _bus.Publish(new Warning(cause, _logSource, _logClass, message));
-        }
-
-        /// <summary>
-        /// Publishes the info message onto the LoggingBus.
-        /// </summary>
-        /// <param name="message">The info message.</param>
-        protected override void NotifyInfo(object message)
-        {
-            _bus.Publish(new Info(_logSource, _logClass, message));
-        }
-
-        protected override void NotifyInfo(Exception cause, object message)
-        {
-            _bus.Publish(new Info(cause, _logSource, _logClass, message));
-        }
-
-        /// <summary>
-        /// Publishes the debug message onto the LoggingBus.
-        /// </summary>
-        /// <param name="message">The debug message.</param>
-        protected override void NotifyDebug(object message)
-        {
-            _bus.Publish(new Debug(_logSource, _logClass, message));
-        }
-
-        protected override void NotifyDebug(Exception cause, object message)
-        {
-            _bus.Publish(new Debug(cause, _logSource, _logClass, message));
+            var logEvent = CreateLogEvent(logLevel, message, cause);
+            Bus.Publish(logEvent);
         }
     }
 }

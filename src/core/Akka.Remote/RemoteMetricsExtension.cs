@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteMetricsExtension.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ namespace Akka.Remote
     ///     Extension that keeps track of remote metrics, such
     ///     as max size of different message types.
     /// </summary>
-    internal class RemoteMetricsExtension : ExtensionIdProvider<IRemoteMetrics>
+    internal sealed class RemoteMetricsExtension : ExtensionIdProvider<IRemoteMetrics>
     {
         /// <summary>
         /// TBD
@@ -54,11 +54,11 @@ namespace Akka.Remote
     /// <summary>
     ///     INTERNAL API
     /// </summary>
-    internal class RemoteMetricsOn : IRemoteMetrics
+    internal sealed class RemoteMetricsOn : IRemoteMetrics
     {
         private readonly ILoggingAdapter _log;
         private readonly long? _logFrameSizeExceeding;
-        private readonly ConcurrentDictionary<Type, long> _maxPayloadBytes = new ConcurrentDictionary<Type, long>();
+        private readonly ConcurrentDictionary<Type, long> _maxPayloadBytes = new();
 
         /// <summary>
         /// TBD
@@ -124,7 +124,7 @@ namespace Akka.Remote
     /// <summary>
     ///     INTERNAL API
     /// </summary>
-    internal class RemoteMetricsOff : IRemoteMetrics
+    internal sealed class RemoteMetricsOff : IRemoteMetrics
     {
         /// <summary>
         /// TBD

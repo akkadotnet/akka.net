@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CircuitBreakerState.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -51,6 +51,17 @@ namespace Akka.Pattern
         public override Task<T> Invoke<T>(Func<Task<T>> body) => 
             Task.FromException<T>(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
 
+        public override Task
+            InvokeState<TState>(TState state, Func<TState, Task> body) =>
+            Task.FromException(
+                new OpenCircuitException(_breaker.LastCaughtException,
+                    RemainingDuration()));
+
+        public override Task<T> InvokeState<T, TState>(TState state,
+            Func<TState, Task<T>> body) => Task.FromException<T>(
+            new OpenCircuitException(_breaker.LastCaughtException,
+                RemainingDuration()));
+
         /// <summary>
         /// Fail-fast on any invocation
         /// </summary>
@@ -88,7 +99,8 @@ namespace Akka.Pattern
             GetAndSet(DateTime.UtcNow.Ticks);
             _breaker.Scheduler.Advanced.ScheduleOnce(_breaker.CurrentResetTimeout, () => _breaker.AttemptReset());
 
-            var nextResetTimeout = TimeSpan.FromTicks(_breaker.CurrentResetTimeout.Ticks * (long)_breaker.ExponentialBackoffFactor);
+            var rnd = 1.0 + ThreadLocalRandom.Current.NextDouble() * _breaker.RandomFactor;
+            var nextResetTimeout = TimeSpan.FromTicks(_breaker.CurrentResetTimeout.Ticks * (long)_breaker.ExponentialBackoffFactor * (long)rnd);
             if (nextResetTimeout < _breaker.MaxResetTimeout)
             {
                 _breaker.SwapStateResetTimeout(_breaker.CurrentResetTimeout, nextResetTimeout);
@@ -120,6 +132,14 @@ namespace Akka.Pattern
             _lock = new AtomicBoolean();
         }
 
+        private void CheckState()
+        {
+            if (!_lock.CompareAndSet(true, false))
+            {
+                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
+            }
+        }
+
         /// <summary>
         /// Allows a single call through, during which all other callers fail-fast. If the call fails, the breaker reopens.
         /// If the call succeeds, the breaker closes.
@@ -127,13 +147,16 @@ namespace Akka.Pattern
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task<T> Invoke<T>(Func<Task<T>> body)
+        public override Task<T> Invoke<T>(Func<Task<T>> body)
         {
-            if (!_lock.CompareAndSet(true, false))
-            {
-                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
-            }
-            return await CallThrough(body);
+            CheckState();
+            return CallThrough(body);
+        }
+        
+        public override Task<T> InvokeState<T,TState>(TState state, Func<TState, Task<T>> body)
+        {
+            CheckState();
+            return CallThrough(state,body);
         }
 
         /// <summary>
@@ -144,11 +167,15 @@ namespace Akka.Pattern
         /// <returns><see cref="Task"/> containing result of protected call</returns>
         public override async Task Invoke(Func<Task> body)
         {
-            if (!_lock.CompareAndSet(true, false))
-            {
-                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
-            }
+            CheckState();
             await CallThrough(body);
+        }
+
+        public override async Task InvokeState<TState>(TState state,
+            Func<TState, Task> body)
+        {
+            CheckState();
+            await CallThrough(state,body);
         }
 
         /// <summary>
@@ -183,7 +210,7 @@ namespace Akka.Pattern
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format(CultureInfo.InvariantCulture, "Half-Open currently testing call for success = {0}", (_lock == true));
+            return string.Format(CultureInfo.InvariantCulture, "Half-Open currently testing call for success = {0}", (_lock.Value == true));
         }
     }
 
@@ -215,6 +242,11 @@ namespace Akka.Pattern
             return CallThrough(body);
         }
 
+        public override Task<T> InvokeState<T, TState>(TState state, Func<TState, Task<T>> body)
+        {
+            return CallThrough(state, body);
+        }
+
         /// <summary>
         /// Implementation of invoke, which simply attempts the call
         /// </summary>
@@ -223,6 +255,11 @@ namespace Akka.Pattern
         public override Task Invoke(Func<Task> body)
         {
             return CallThrough(body);
+        }
+
+        public override Task InvokeState<TState>(TState state, Func<TState, Task> body)
+        {
+            return CallThrough(state, body);
         }
 
         /// <summary>

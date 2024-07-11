@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="OutputStreamSourceStage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,44 +20,44 @@ using static Akka.Streams.Implementation.IO.OutputStreamSourceStage;
 
 namespace Akka.Streams.Implementation.IO
 {
-
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class OutputStreamSourceStage : GraphStageWithMaterializedValue<SourceShape<ByteString>, Stream>
+    internal sealed class OutputStreamSourceStage : GraphStageWithMaterializedValue<SourceShape<ByteString>, Stream>
     {
         #region internal classes
 
         /// <summary>
         /// TBD
         /// </summary>
-        internal interface IAdapterToStageMessage { }
+        internal interface IAdapterToStageMessage
+        {
+        }
 
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Flush : IAdapterToStageMessage
+        internal sealed class Flush : IAdapterToStageMessage
         {
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Flush Instance = new Flush();
+            public static readonly Flush Instance = new();
 
             private Flush()
             {
-                
             }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Close : IAdapterToStageMessage
+        internal sealed class Close : IAdapterToStageMessage
         {
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Close Instance = new Close();
+            public static readonly Close Instance = new();
 
             private Close()
             {
@@ -67,37 +67,37 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal interface IDownstreamStatus { }
+        internal interface IDownstreamStatus
+        {
+        }
 
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Ok : IDownstreamStatus
+        internal sealed class Ok : IDownstreamStatus
         {
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Ok Instance = new Ok();
+            public static readonly Ok Instance = new();
 
             private Ok()
             {
-
             }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        internal class Canceled : IDownstreamStatus
+        internal sealed class Canceled : IDownstreamStatus
         {
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Canceled Instance = new Canceled();
+            public static readonly Canceled Instance = new();
 
             private Canceled()
             {
-
             }
         }
 
@@ -121,13 +121,14 @@ namespace Akka.Streams.Implementation.IO
             private readonly string _dispatcherId;
             private readonly Action<(IAdapterToStageMessage, TaskCompletionSource<NotUsed>)> _upstreamCallback;
             private readonly OnPullRunnable _pullTask;
-            private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
+            private readonly CancellationTokenSource _cancellation = new();
             private BlockingCollection<ByteString> _dataQueue;
             private TaskCompletionSource<NotUsed> _flush;
             private TaskCompletionSource<NotUsed> _close;
             private MessageDispatcher _dispatcher;
 
-            public Logic(OutputStreamSourceStage stage, BlockingCollection<ByteString> dataQueue, AtomicReference<IDownstreamStatus> downstreamStatus, string dispatcherId) : base(stage.Shape)
+            public Logic(OutputStreamSourceStage stage, BlockingCollection<ByteString> dataQueue,
+                AtomicReference<IDownstreamStatus> downstreamStatus, string dispatcherId) : base(stage.Shape)
             {
                 _stage = stage;
                 _dataQueue = dataQueue;
@@ -141,7 +142,8 @@ namespace Akka.Streams.Implementation.IO
                     else
                         FailStage(result.Value as Exception);
                 });
-                _upstreamCallback = GetAsyncCallback<(IAdapterToStageMessage, TaskCompletionSource<NotUsed>)>(OnAsyncMessage);
+                _upstreamCallback =
+                    GetAsyncCallback<(IAdapterToStageMessage, TaskCompletionSource<NotUsed>)>(OnAsyncMessage);
                 _pullTask = new OnPullRunnable(downstreamCallback, dataQueue, _cancellation.Token);
                 SetHandler(_stage._out, this);
             }
@@ -163,14 +165,15 @@ namespace Akka.Streams.Implementation.IO
                 _cancellation.Cancel(false);
                 base.PostStop();
             }
-            
+
             private sealed class OnPullRunnable : IRunnable
             {
                 private readonly Action<Either<ByteString, Exception>> _callback;
                 private readonly BlockingCollection<ByteString> _dataQueue;
                 private readonly CancellationToken _cancellationToken;
 
-                public OnPullRunnable(Action<Either<ByteString, Exception>> callback, BlockingCollection<ByteString> dataQueue, CancellationToken cancellationToken)
+                public OnPullRunnable(Action<Either<ByteString, Exception>> callback,
+                    BlockingCollection<ByteString> dataQueue, CancellationToken cancellationToken)
                 {
                     _callback = callback;
                     _dataQueue = dataQueue;
@@ -192,8 +195,15 @@ namespace Akka.Streams.Implementation.IO
                         _callback(new Right<ByteString, Exception>(ex));
                     }
                 }
+
+#if !NETSTANDARD
+                public void Execute()
+                {
+                    Run();
+                }
+#endif
             }
-            
+
             public override void OnPull() => _dispatcher.Schedule(_pullTask);
 
             private void OnPush(ByteString data)
@@ -254,7 +264,7 @@ namespace Akka.Streams.Implementation.IO
         #endregion
 
         private readonly TimeSpan _writeTimeout;
-        private readonly Outlet<ByteString> _out = new Outlet<ByteString>("OutputStreamSource.out");
+        private readonly Outlet<ByteString> _out = new("OutputStreamSource.out");
 
         /// <summary>
         /// TBD
@@ -282,7 +292,8 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="inheritedAttributes">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
-        public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(
+            Attributes inheritedAttributes)
         {
             // has to be in this order as module depends on shape
             var maxBuffer = inheritedAttributes.GetAttribute(new Attributes.InputBuffer(16, 16)).Max;
@@ -304,9 +315,9 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// TBD
     /// </summary>
-    internal class OutputStreamAdapter : Stream
+    internal sealed class OutputStreamAdapter : Stream
     {
-        #region not supported 
+        #region not supported
 
         /// <summary>
         /// TBD
@@ -315,7 +326,8 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="origin">TBD</param>
         /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>TBD</returns>
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException("This stream can only write");
+        public override long Seek(long offset, SeekOrigin origin) =>
+            throw new NotSupportedException("This stream can only write");
 
         /// <summary>
         /// TBD
@@ -332,7 +344,8 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="count">TBD</param>
         /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>TBD</returns>
-        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException("This stream can only write");
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException("This stream can only write");
 
         /// <summary>
         /// TBD
@@ -352,8 +365,9 @@ namespace Akka.Streams.Implementation.IO
 
         #endregion
 
-        private static readonly Exception PublisherClosedException = new IOException("Reactive stream is terminated, no writes are possible");
-        
+        private static readonly Exception PublisherClosedException =
+            new IOException("Reactive stream is terminated, no writes are possible");
+
         private readonly BlockingCollection<ByteString> _dataQueue;
         private readonly AtomicReference<IDownstreamStatus> _downstreamStatus;
         private readonly IStageWithCallback _stageWithCallback;
@@ -405,7 +419,6 @@ namespace Akka.Streams.Implementation.IO
 
         private void SendMessage(IAdapterToStageMessage msg, bool handleCancelled = true) => Send(() =>
         {
-
             _stageWithCallback.WakeUp(msg).Wait(_writeTimeout);
             if (_downstreamStatus.Value is Canceled && handleCancelled)
             {
@@ -414,7 +427,7 @@ namespace Akka.Streams.Implementation.IO
                 throw PublisherClosedException;
             }
         });
-        
+
 
         /// <summary>
         /// TBD
@@ -445,10 +458,12 @@ namespace Akka.Streams.Implementation.IO
         /// TBD
         /// </summary>
         public override bool CanRead => false;
+
         /// <summary>
         /// TBD
         /// </summary>
         public override bool CanSeek => false;
+
         /// <summary>
         /// TBD
         /// </summary>

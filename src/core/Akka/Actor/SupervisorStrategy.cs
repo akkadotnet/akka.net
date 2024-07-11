@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SupervisorStrategy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -142,9 +142,8 @@ namespace Akka.Actor
         {
             if (LoggingEnabled)
             {
-                var actorInitializationException = cause as ActorInitializationException;
                 string message;
-                if (actorInitializationException != null && actorInitializationException.InnerException != null)
+                if (cause is ActorInitializationException actorInitializationException && actorInitializationException.InnerException != null)
                     message = actorInitializationException.InnerException.Message;
                 else
                     message = cause.Message;
@@ -152,7 +151,7 @@ namespace Akka.Actor
                 switch (directive)
                 {
                     case Directive.Resume:
-                        Publish(context, new Warning(child.Path.ToString(), GetType(), message));
+                        Publish(context, new Warning(cause, child.Path.ToString(), GetType(), message));
                         break;
                     case Directive.Escalate:
                         //Don't log here
@@ -171,7 +170,7 @@ namespace Akka.Actor
         /// </summary>
         protected bool LoggingEnabled { get; set; }
 
-        private void Publish(IActorContext context, LogEvent logEvent)
+        private static void Publish(IActorContext context, LogEvent logEvent)
         {
             try
             {
@@ -194,7 +193,7 @@ namespace Akka.Actor
         ///     This strategy resembles Erlang in that failing children are always
         ///     terminated (one-for-one).
         /// </summary>
-        public static readonly OneForOneStrategy StoppingStrategy = new OneForOneStrategy(ex => Directive.Stop);
+        public static readonly OneForOneStrategy StoppingStrategy = new(_ => Directive.Stop);
 
         /// <summary>
         /// This method is called after the child has been removed from the set of children.
@@ -449,7 +448,6 @@ namespace Akka.Actor
 
         #region Equals
 
-        /// <inheritdoc/>
         public bool Equals(OneForOneStrategy other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -460,13 +458,13 @@ namespace Akka.Actor
                    Decider.Equals(other.Decider);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return Equals(obj as OneForOneStrategy);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -715,7 +713,6 @@ namespace Akka.Actor
 
         #region Equals
 
-        /// <inheritdoc/>
         public bool Equals(AllForOneStrategy other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -726,13 +723,11 @@ namespace Akka.Actor
                    Decider.Equals(other.Decider);
         }
 
-        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as AllForOneStrategy);
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
@@ -977,7 +972,6 @@ namespace Akka.Actor
             return DefaultDirective;
         }
 
-        /// <inheritdoc/>
         public bool Equals(DeployableDecider other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -987,13 +981,11 @@ namespace Akka.Actor
                    Pairs.SequenceEqual(other.Pairs);
         }
 
-        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             return Equals(obj as DeployableDecider);
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked

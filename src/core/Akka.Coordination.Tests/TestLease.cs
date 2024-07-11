@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestLease.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,27 +33,25 @@ namespace Akka.Coordination.Tests
             return system.WithExtension<TestLeaseExt, TestLeaseExtExtensionProvider>();
         }
 
-        private readonly ExtendedActorSystem _system;
-        private readonly ConcurrentDictionary<string, TestLease> testLeases = new ConcurrentDictionary<string, TestLease>();
+        private readonly ConcurrentDictionary<string, TestLease> _testLeases = new();
 
         public TestLeaseExt(ExtendedActorSystem system)
         {
-            _system = system;
-            _system.Settings.InjectTopLevelFallback(LeaseProvider.DefaultConfig());
+            system.Settings.InjectTopLevelFallback(LeaseProvider.DefaultConfig());
         }
 
         public TestLease GetTestLease(string name)
         {
-            if (!testLeases.TryGetValue(name, out var lease))
+            if (!_testLeases.TryGetValue(name, out var lease))
             {
-                throw new InvalidOperationException($"Test lease {name} has not been set yet. Current leases {string.Join(",", testLeases.Keys)}");
+                throw new InvalidOperationException($"Test lease {name} has not been set yet. Current leases {string.Join(",", _testLeases.Keys)}");
             }
             return lease;
         }
 
         public void SetTestLease(string name, TestLease lease)
         {
-            testLeases[name] = lease;
+            _testLeases[name] = lease;
         }
     }
 
@@ -118,10 +116,10 @@ namespace Akka.Coordination.Tests
 
         public TestProbe Probe { get; }
         private AtomicReference<Task<bool>> nextAcquireResult;
-        private AtomicBoolean nextCheckLeaseResult = new AtomicBoolean(false);
-        private AtomicReference<Action<Exception>> currentCallBack = new AtomicReference<Action<Exception>>(_ => { });
+        private AtomicBoolean nextCheckLeaseResult = new(false);
+        private AtomicReference<Action<Exception>> currentCallBack = new(_ => { });
         private ILoggingAdapter _log;
-        public TaskCompletionSource<bool> InitialPromise { get; } = new TaskCompletionSource<bool>();
+        public TaskCompletionSource<bool> InitialPromise { get; } = new();
 
 
         public TestLease(LeaseSettings settings, ExtendedActorSystem system)

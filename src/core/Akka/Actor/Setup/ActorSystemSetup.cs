@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemSetup.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -43,7 +43,7 @@ namespace Akka.Actor.Setup
     /// </remarks>
     public sealed class ActorSystemSetup
     {
-        public static readonly ActorSystemSetup Empty = new ActorSystemSetup(ImmutableDictionary<Type, Setup>.Empty);
+        public static readonly ActorSystemSetup Empty = new(ImmutableDictionary<Type, Setup>.Empty);
 
         public static ActorSystemSetup Create(params Setup[] setup)
         {
@@ -61,7 +61,7 @@ namespace Akka.Actor.Setup
 
         public Option<T> Get<T>() where T:Setup
         {
-            return _setups.ContainsKey(typeof(T)) ? new Option<T>((T)_setups[typeof(T)]) : Option<T>.None;
+            return _setups.ContainsKey(typeof(T)) ? Option<T>.Create((T)_setups[typeof(T)]) : Option<T>.None;
         }
         
         /// <summary>
@@ -72,7 +72,8 @@ namespace Akka.Actor.Setup
         /// <returns>A new, immutable <see cref="ActorSystemSetup"/> instance.</returns>
         public ActorSystemSetup WithSetup<T>(T setup) where T : Setup
         {
-            return new ActorSystemSetup(_setups.SetItem(typeof(T), setup));
+            var typeT = setup.GetType();
+            return new ActorSystemSetup(_setups.SetItem(typeT, setup));
         }
 
         /// <summary>

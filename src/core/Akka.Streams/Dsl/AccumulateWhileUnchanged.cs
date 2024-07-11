@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AccumulateWhileUnchanged.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,7 +27,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : GraphStageLogic
         {
             private Option<TProperty> _currentState = Option<TProperty>.None;
-            private readonly List<TElement> _buffer = new List<TElement>();
+            private readonly List<TElement> _buffer = new();
 
             public Logic(AccumulateWhileUnchanged<TElement, TProperty> accumulateWhileUnchanged) : base(accumulateWhileUnchanged.Shape)
             {
@@ -37,7 +37,7 @@ namespace Akka.Streams.Dsl
                     var nextState = accumulateWhileUnchanged._propertyExtractor(nextElement);
 
                     if (!_currentState.HasValue)
-                        _currentState = new Option<TProperty>(nextState);
+                        _currentState = Option<TProperty>.Create(nextState);
 
                     if (EqualityComparer<TProperty>.Default.Equals(_currentState.Value, nextState))
                     {
@@ -50,7 +50,7 @@ namespace Akka.Streams.Dsl
                         _buffer.Clear();
                         _buffer.Add(nextElement);
                         Push(accumulateWhileUnchanged.Out, result);
-                        _currentState = new Option<TProperty>(nextState);
+                        _currentState = Option<TProperty>.Create(nextState);
                     }
                 }, onUpstreamFinish: () =>
                 {

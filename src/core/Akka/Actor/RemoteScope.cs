@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteScope.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ namespace Akka.Actor
         /// </summary>
         public Address Address { get; set; }
 
-        /// <inheritdoc/>
+       
         public bool Equals(RemoteScope other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -44,7 +44,7 @@ namespace Akka.Actor
             return Equals(Address, other.Address);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -53,7 +53,7 @@ namespace Akka.Actor
             return Equals((RemoteScope) obj);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             return (Address != null ? Address.GetHashCode() : 0);

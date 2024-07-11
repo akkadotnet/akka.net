@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ExampleFSMActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,7 +19,9 @@ namespace DocsExamples.Actor.FiniteStateMachine
 
         public ExampleFSMActor()
         {
+            // <StartWith>
             StartWith(State.Idle, Uninitialized.Instance);
+            // </StartWith>
 
             #region FSMHandlers
             When(State.Idle, state =>
@@ -34,7 +36,7 @@ namespace DocsExamples.Actor.FiniteStateMachine
 
             When(State.Active, state =>
             {
-                if ((state.FsmEvent is Flush || state.FsmEvent is StateTimeout) 
+                if (state.FsmEvent is Flush or StateTimeout 
                     && state.StateData is Todo t)
                 {
                     return GoTo(State.Idle).Using(t.Copy(ImmutableList<object>.Empty));

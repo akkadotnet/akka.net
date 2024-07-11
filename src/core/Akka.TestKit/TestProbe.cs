@@ -1,12 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestProbe.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.Util;
@@ -80,6 +82,7 @@ namespace Akka.TestKit
             Sender.Tell(message,TestActor);
         }
 
+
         /// <summary>
         /// N/A
         /// </summary>
@@ -89,7 +92,9 @@ namespace Akka.TestKit
         /// </exception>
         /// <returns>N/A</returns>
         [Obsolete("Cannot create a TestProbe from a TestProbe", true)]
+#pragma warning disable CS0809
         public override TestProbe CreateTestProbe(string name=null)
+#pragma warning restore CS0809
         {
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }
@@ -122,7 +127,9 @@ namespace Akka.TestKit
 
         IActorRefProvider IInternalActorRef.Provider { get { return ((IInternalActorRef)TestActor).Provider; } }
 
+#pragma warning disable CS0618 // Type or member is obsolete
         bool IInternalActorRef.IsTerminated { get { return ((IInternalActorRef)TestActor).IsTerminated; } }
+#pragma warning restore CS0618 // Type or member is obsolete
 
         IActorRef IInternalActorRef.GetChild(IReadOnlyList<string> name)
         {
@@ -167,70 +174,99 @@ namespace Akka.TestKit
         /// <summary>
         /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
         /// </summary>
-        /// <param name="props"></param>
         /// <param name="name"></param>
         /// <param name="supervisorStrategy"></param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
         /// <returns></returns>
-        public IActorRef ChildActorOf(Props props, String name, SupervisorStrategy supervisorStrategy)
-        {
-            return ((TestKitBase)this).ChildActorOf(props, name, supervisorStrategy);
-        }
-        
-        public IActorRef ChildActorOf<T>(String name, SupervisorStrategy supervisorStrategy)
+        public IActorRef ChildActorOf<T>(
+            string name,
+            SupervisorStrategy supervisorStrategy,
+            CancellationToken cancellationToken = default)
             where T : ActorBase
-        {
-            return ((TestKitBase)this).ChildActorOf(Props.Create<T>(), name, supervisorStrategy);
-        }
+            => ChildActorOfAsync(Props.Create<T>(), name, supervisorStrategy, cancellationToken)
+                .GetAwaiter().GetResult();
         
         /// <summary>
         /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
         /// </summary>
-        /// <param name="props"></param>
-        /// <param name="supervisorStrategy"></param>
-        /// <returns></returns>
-        public IActorRef ChildActorOf(Props props, SupervisorStrategy supervisorStrategy)
-        {
-            return ((TestKitBase)this).ChildActorOf(props, supervisorStrategy);
-        }
-        
-        public IActorRef ChildActorOf<T>(SupervisorStrategy supervisorStrategy)
-            where T : ActorBase
-        {
-            return ((TestKitBase)this).ChildActorOf(Props.Create<T>(), supervisorStrategy);
-        }
-        
-        /// <summary>
-        /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
-        /// </summary>
-        /// <param name="props"></param>
         /// <param name="name"></param>
+        /// <param name="supervisorStrategy"></param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
         /// <returns></returns>
-        public IActorRef ChildActorOf(Props props, String name)
-        {
-            return ((TestKitBase)this).ChildActorOf(props, name);
-        }
-        
-        public IActorRef ChildActorOf<T>(String name)
+        public async Task<IActorRef> ChildActorOfAsync<T>(
+            string name,
+            SupervisorStrategy supervisorStrategy,
+            CancellationToken cancellationToken = default)
             where T : ActorBase
-        {
-            return ((TestKitBase)this).ChildActorOf(Props.Create<T>(), name);
-        }
+            => await ChildActorOfAsync(Props.Create<T>(), name, supervisorStrategy, cancellationToken)
+                ;
+
         
         /// <summary>
         /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
         /// </summary>
-        /// <param name="props"></param>
+        /// <param name="supervisorStrategy"></param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
         /// <returns></returns>
-        public IActorRef ChildActorOf(Props props)
-        {
-            return ((TestKitBase)this).ChildActorOf(props);
-        }
-        
-        public IActorRef ChildActorOf<T>()
+        public IActorRef ChildActorOf<T>(
+            SupervisorStrategy supervisorStrategy, CancellationToken cancellationToken = default)
             where T : ActorBase
-        {
-            return ((TestKitBase)this).ChildActorOf(Props.Create<T>());
-        }
+            => ChildActorOfAsync(Props.Create<T>(), supervisorStrategy, cancellationToken)
+                .GetAwaiter().GetResult();
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="supervisorStrategy"></param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
+        /// <returns></returns>
+        public async Task<IActorRef> ChildActorOfAsync<T>(
+            SupervisorStrategy supervisorStrategy, CancellationToken cancellationToken = default)
+            where T : ActorBase
+            => await ChildActorOfAsync(Props.Create<T>(), supervisorStrategy, cancellationToken)
+                ;
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf<T>(string name, CancellationToken cancellationToken = default)
+            where T : ActorBase
+            => ChildActorOfAsync(Props.Create<T>(), name, cancellationToken)
+                .GetAwaiter().GetResult();
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
+        /// <returns></returns>
+        public async Task<IActorRef> ChildActorOfAsync<T>(string name, CancellationToken cancellationToken = default)
+            where T : ActorBase
+            => await ChildActorOfAsync(Props.Create<T>(), name, cancellationToken)
+                ;
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf<T>(CancellationToken cancellationToken = default)
+            where T : ActorBase
+            => ChildActorOfAsync(Props.Create<T>(), cancellationToken)
+                .GetAwaiter().GetResult();
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> to cancel the operation</param>
+        /// <returns></returns>
+        public async Task<IActorRef> ChildActorOfAsync<T>(CancellationToken cancellationToken = default)
+            where T : ActorBase
+            => await ChildActorOfAsync(Props.Create<T>(), cancellationToken)
+                ;
         
         /// <summary>
         /// Sends a system message to the test probe
@@ -241,25 +277,25 @@ namespace Akka.TestKit
             ((IInternalActorRef)TestActor).SendSystemMessage(message);
         }
 
-        /// <inheritdoc/>
+   
         public int CompareTo(object obj)
         {
             return TestActor.CompareTo(obj);
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return TestActor.Equals(obj);
         }
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode()
         {
             return TestActor.GetHashCode();
         }
 
-        /// <inheritdoc/>
+       
         public override string ToString()
         {
             return $"TestProbe({TestActor})";

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InputStreamPublisher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,14 +13,13 @@ using Akka.Event;
 using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.IO;
-using Akka.Util;
 
 namespace Akka.Streams.Implementation.IO
 {
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class InputStreamPublisher : Actors.ActorPublisher<ByteString>
+    internal sealed class InputStreamPublisher : Actors.ActorPublisher<ByteString>
     {
         /// <summary>
         /// TBD
@@ -37,12 +36,12 @@ namespace Akka.Streams.Implementation.IO
             if (chunkSize <= 0)
                 throw new ArgumentException($"chunkSize must be > 0 was {chunkSize}", nameof(chunkSize));
 
-            return Actor.Props.Create(()=> new InputStreamPublisher(inputstream, completionSource, chunkSize)).WithDeploy(Deploy.Local);
+            return Actor.Props.Create<InputStreamPublisher>(inputstream, completionSource, chunkSize).WithDeploy(Deploy.Local);
         }
 
-        private struct Continue : IDeadLetterSuppression
+        private readonly struct Continue : IDeadLetterSuppression
         {
-            public static Continue Instance { get; } = new Continue();
+            public static Continue Instance { get; } = new();
         }
         
         private readonly Stream _inputstream;
@@ -58,6 +57,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="inputstream">TBD</param>
         /// <param name="completionSource">TBD</param>
         /// <param name="chunkSize">TBD</param>
+        /// If this gets changed you must change <see cref="InputStreamPublisher.Props"/> as well!
         public InputStreamPublisher(Stream inputstream, TaskCompletionSource<IOResult> completionSource, int chunkSize)
         {
             _inputstream = inputstream;
@@ -73,11 +73,20 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
-            => message.Match()
-                    .With<Request>(ReadAndSignal)
-                    .With<Continue>(ReadAndSignal)
-                    .With<Actors.Cancel>(() => Context.Stop(Self))
-                    .WasHandled;
+        {
+            switch (message)
+            {
+                case Request _:
+                case Continue _:
+                    ReadAndSignal();
+                    return true;
+                case Actors.Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
+        }
 
         /// <summary>
         /// TBD

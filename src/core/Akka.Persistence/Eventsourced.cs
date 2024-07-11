@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -70,29 +70,29 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// TBD
+    /// The base class for all persistent actors.
     /// </summary>
     public abstract partial class Eventsourced : ActorBase, IPersistentIdentity, IPersistenceStash, IPersistenceRecovery
     {
-        private static readonly AtomicCounter InstanceCounter = new AtomicCounter(1);
+        private static readonly AtomicCounter InstanceCounter = new(1);
 
         private readonly int _instanceId;
         private readonly string _writerGuid;
         private readonly IStash _internalStash;
         private IActorRef _snapshotStore;
         private IActorRef _journal;
-        private ICollection<IPersistentEnvelope> _journalBatch = new List<IPersistentEnvelope>();
+        private List<IPersistentEnvelope> _journalBatch = new();
         private bool _isWriteInProgress;
         private long _sequenceNr;
         private EventsourcedState _currentState;
-        private LinkedList<IPersistentEnvelope> _eventBatch = new LinkedList<IPersistentEnvelope>();
+        private LinkedList<IPersistentEnvelope> _eventBatch = new();
         private bool _asyncTaskRunning = false;
 
         /// Used instead of iterating `pendingInvocations` in order to check if safe to revert to processing commands
         private long _pendingStashingPersistInvocations = 0L;
 
         /// Holds user-supplied callbacks for persist/persistAsync calls
-        private readonly LinkedList<IPendingHandlerInvocation> _pendingInvocations = new LinkedList<IPendingHandlerInvocation>();
+        private readonly LinkedList<IPendingHandlerInvocation> _pendingInvocations = new();
 
         /// <summary>
         /// TBD
@@ -164,12 +164,12 @@ namespace Akka.Persistence
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef Journal => _journal ?? (_journal = Extension.JournalFor(JournalPluginId));
+        public IActorRef Journal => _journal ??= Extension.JournalFor(JournalPluginId);
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IActorRef SnapshotStore => _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotPluginId));
+        public IActorRef SnapshotStore => _snapshotStore ??= Extension.SnapshotStoreFor(SnapshotPluginId);
 
         /// <summary>
         /// Returns <see cref="PersistenceId"/>.
@@ -303,7 +303,7 @@ namespace Akka.Persistence
 
             _pendingStashingPersistInvocations++;
             _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, o => handler((TEvent)o)));
-            _eventBatch.AddFirst(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
+            _eventBatch.AddLast(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
                 sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender)));
         }
 
@@ -335,7 +335,7 @@ namespace Akka.Persistence
             }
 
             if (persistents.Count > 0)
-                _eventBatch.AddFirst(new AtomicWrite(persistents.ToImmutable()));
+                _eventBatch.AddLast(new AtomicWrite(persistents.ToImmutable()));
         }
 
         /// <summary>
@@ -374,7 +374,7 @@ namespace Akka.Persistence
             }
 
             _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, o => handler((TEvent)o)));
-            _eventBatch.AddFirst(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
+            _eventBatch.AddLast(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
                 sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender)));
         }
 
@@ -400,7 +400,7 @@ namespace Akka.Persistence
                 _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, Inv));
             }
 
-            _eventBatch.AddFirst(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
+            _eventBatch.AddLast(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
                     sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender))
                 .ToImmutableList<IPersistentRepresentation>()));
         }
@@ -440,7 +440,7 @@ namespace Akka.Persistence
             else
             {
                 _pendingInvocations.AddLast(new AsyncHandlerInvocation(evt, o => handler((TEvent)o)));
-                _eventBatch.AddFirst(new NonPersistentMessage(evt, Sender));
+                _eventBatch.AddLast(new NonPersistentMessage(evt, Sender));
             }
         }
 
@@ -603,7 +603,7 @@ namespace Akka.Persistence
         {
             if (!_isWriteInProgress && _journalBatch.Count > 0)
             {
-                Journal.Tell(new WriteMessages(_journalBatch.ToArray(), Self, _instanceId));
+                Journal.Tell(new WriteMessages(_journalBatch, Self, _instanceId));
                 _journalBatch = new List<IPersistentEnvelope>(0);
                 _isWriteInProgress = true;
             }
@@ -628,9 +628,9 @@ namespace Akka.Persistence
                     var sender = Sender;
                     Context.System.DeadLetters.Tell(new DeadLetter(currentMessage, sender, Self), Sender);
                 }
-                else if (strategy is ReplyToStrategy)
+                else if (strategy is ReplyToStrategy toStrategy)
                 {
-                    Sender.Tell(((ReplyToStrategy)strategy).Response);
+                    Sender.Tell(toStrategy.Response);
                 }
                 else if (strategy is ThrowOverflowExceptionStrategy)
                 {
@@ -695,6 +695,12 @@ namespace Akka.Persistence
             {
                 _userStash.Prepend(envelopes);
             }
+
+            public int Count => _userStash.Count;
+            public bool IsEmpty => _userStash.IsEmpty;
+            public bool NonEmpty => _userStash.NonEmpty;
+            public bool IsFull => _userStash.IsFull;
+            public int Capacity => _userStash.Capacity;
         }
     }
 }

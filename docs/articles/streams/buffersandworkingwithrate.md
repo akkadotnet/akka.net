@@ -3,11 +3,11 @@ uid: streams-buffers
 title: Buffers and working with rate
 ---
 
-# Buffers and working with rate
+# Buffers and Working With Rate
 
 When upstream and downstream rates differ, especially when the throughput has spikes, it can be useful to introduce buffers in a stream. In this chapter we cover how buffers are used in Akka Streams.
 
-## Buffers for asynchronous stages
+## Buffers for Asynchronous Stages
 
 In this section we will discuss internal buffers that are introduced as an optimization when using asynchronous stages.
 To run a stage asynchronously it has to be marked explicitly as such using the .async method. Being run asynchronously means that a stage, after handing out an element to its downstream consumer is able to immediately process the next message. To demonstrate what we mean by this, let's take a look at the following example:
@@ -39,7 +39,7 @@ While pipelining in general increases throughput, in practice there is a cost of
 
 While this internal protocol is mostly invisible to the user (apart form its throughput increasing effects) there are situations when these details get exposed. In all of our previous examples we always assumed that the rate of the processing chain is strictly coordinated through the backpressure signal causing all stages to process no faster than the throughput of the connected chain. There are tools in Akka Streams however that enable the rates of different segments of a processing chain to be "detached" or to define the maximum throughput of the stream through external timing sources. These situations are exactly those where the internal batching buffering strategy suddenly becomes non-transparent.
 
-## Internal buffers and their effect
+## Internal Buffers and Their Effect
 
 As we have explained, for performance reasons Akka Streams introduces a buffer for every asynchronous processing stage. The purpose of these buffers is solely optimization, in fact the size of 1 would be the most natural choice if there would be no need for throughput improvements. Therefore it is recommended to keep these buffer sizes small, and increase them only to a level suitable for the throughput requirements of the application. Default buffer sizes can be set through configuration:
 
@@ -136,9 +136,9 @@ If our imaginary external job provider is a client using our API, we might want 
 jobs.buffer(1000, OverflowStrategy.fail)
 ```
 
-## Rate transformation
+## Rate Transformation
 
-### Understanding conflate
+### Understanding Conflate
 
 When a fast producer can not be informed to slow down by backpressure or some other signal, conflate might be useful to combine elements from a producer until a demand signal comes from a consumer.
 
@@ -170,7 +170,7 @@ Another possible use of `conflate` is to not consider all elements for summary w
        }).Concat(identity);
 ```
 
-### Understanding expand
+### Understanding Expand
 
 Expand helps to deal with slow producers which are unable to keep up with the demand coming from consumers. Expand allows to extrapolate a value to be sent as an element to a consumer.
 
@@ -189,3 +189,32 @@ var driftFlow = Flow.Create<int>()
 ```
 
 Note that all of the elements coming from upstream will go through expand at least once. This means that the output of this flow is going to report a drift of zero if producer is fast enough, or a larger drift otherwise.
+
+### Reusing Values Downstream
+
+When working with fan-in stages such as `Zip` where one `Source<T>` might produce messages infrequently, it can be helpful to cache the previous value and re-use it in combination with a faster stream.
+
+For instance, consider the following scenario:
+
+* A `Source<HttpClient, NotUsed>` that emits an updated `HttpClient` with new bearer-token credentials every 30 minutes and
+* A `Source<HttpRequestMessage, NotUsed>` that emits outbound `HttpRequestMessage`s as they come - at any given moment it can produce zero requests per second or thousands of requests per second.
+
+In this scenario we're going to want to combine the `Source<HttpClient, NotUsed>` and `Source<HttpRequestMessage, NotUsed>` together so the `HttpClient` can execute all of the `HttpRequestMessage`s - however, given that `HttpClient`s are only emitted once every 30 minutes - how can we use a stage like `Zip` to make sure that every `HttpRequestMessage` gets serviced in a timely, low-latency fashion?
+
+Enter the `ReuseLatest` stage - which will allow us to reuse the most recent `HttpClient` each time a new `HttpRequestMessage` arrives:
+
+```csharp
+public static Source<HttpClient, ICancelable> CreateSourceInternal(string clientId,
+        Func<Task<string>> tokenProvider, TimeSpan tokenRefreshTimeout)
+{
+        var source = Source.Tick(TimeSpan.Zero, TimeSpan.FromSeconds(30), clientId)
+            .SelectAsync(1, async c => 
+                // refresh bearer token, create new HttpClient
+                CreateClient(c, (await tokenProvider().WaitAsync(tokenRefreshTimeout))))
+             // reuse the previous value whenever there's downstream demand
+            .ReuseLatest();
+        return source;
+}
+```
+
+This type of design allows us to decouple the rate at which `HttpClient`s are produced from the rate at which `HttpRequestMessage`s are.

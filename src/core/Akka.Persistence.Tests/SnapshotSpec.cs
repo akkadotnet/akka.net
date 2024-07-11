@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ namespace Akka.Persistence.Tests
 
         internal class TakeSnapshot
         {
-            public static readonly TakeSnapshot Instance = new TakeSnapshot();
+            public static readonly TakeSnapshot Instance = new();
             private TakeSnapshot()
             {
             }
@@ -43,26 +43,43 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveRecover(object message)
             {
-                return message.Match()
-                    .With<SnapshotOffer>(offer =>
-                    {
+                switch (message)
+                {
+                    case SnapshotOffer offer:
                         State = offer.Snapshot.AsInstanceOf<ImmutableArray<string>>();
-                    })
-                    .With<string>(m => State = State.AddFirst(m + "-" + LastSequenceNr))
-                    .WasHandled;
+                        return true;
+                    
+                    case string m:
+                        State = State.AddFirst(m + "-" + LastSequenceNr);
+                        return true;
+                    
+                    default:
+                        return false;
+                }
             }
 
             protected override bool ReceiveCommand(object message)
             {
-                return message.Match()
-                    .With<string>(payload => Persist(payload, _ =>
-                    {
-                        State = State.AddFirst(payload + "-" + LastSequenceNr);
-                    }))
-                    .With<TakeSnapshot>(_ => SaveSnapshot(State))
-                    .With<SaveSnapshotSuccess>(s => _probe.Tell(s.Metadata.SequenceNr))
-                    .With<GetState>(_ => _probe.Tell(State.Reverse().ToArray()))
-                    .WasHandled;
+                switch (message)
+                {
+                    case string payload:
+                        Persist(payload, _ =>
+                        {
+                            State = State.AddFirst(payload + "-" + LastSequenceNr);
+                        });
+                        return true;
+                    case TakeSnapshot _:
+                        SaveSnapshot(State);
+                        return true;
+                    case SaveSnapshotSuccess s:
+                        _probe.Tell(s.Metadata.SequenceNr);
+                        return true;
+                    case GetState _:
+                        _probe.Tell(State.Reverse().ToArray());
+                        return true;
+                    default:
+                        return false;
+                }
             }
         }
 
@@ -80,26 +97,37 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveRecover(object message)
             {
-                return message.Match()
-                    .With<string>(payload => _probe.Tell(payload + "-" + LastSequenceNr))
-                    .With<SnapshotOffer>(offer => _probe.Tell(offer))
-                    .Default(other => _probe.Tell(other))
-                    .WasHandled;
+                switch (message)
+                {
+                    case string payload:
+                        _probe.Tell(payload + "-" + LastSequenceNr);
+                        return true;
+                    case SnapshotOffer offer:
+                        _probe.Tell(offer);
+                        return true;
+                    default:
+                        _probe.Tell(message);
+                        return true;
+                }
             }
 
             protected override bool ReceiveCommand(object message)
             {
-                return message.Match()
-                    .With<string>(payload =>
-                    {
+                switch (message)
+                {
+                    case string payload:
                         if (payload == "done")
                             _probe.Tell("done");
                         else
                             Persist(payload, _ => _probe.Tell(payload + "-" + LastSequenceNr));
-                    })
-                    .With<SnapshotOffer>(offer => _probe.Tell(offer))
-                    .Default(other => _probe.Tell(other))
-                    .WasHandled;
+                        return true;
+                    case SnapshotOffer offer:
+                        _probe.Tell(offer);
+                        return true;
+                    default:
+                        _probe.Tell(message);
+                        return true;
+                }
             }
 
             protected override void PreStart() { }
@@ -141,7 +169,7 @@ namespace Akka.Persistence.Tests
             {
                 switch(message)
                 {
-                    case string payload when payload == "done":
+                    case string and "done":
                         _probe.Tell("done");
                         return true;
                     case string payload:
@@ -190,10 +218,17 @@ namespace Akka.Persistence.Tests
 
             protected bool ReceiveDelete(object message)
             {
-                return message.Match()
-                    .With<DeleteOne>(d => DeleteSnapshot(d.Metadata.SequenceNr))
-                    .With<DeleteMany>(d => DeleteSnapshots(d.Criteria))
-                    .WasHandled;
+                switch (message)
+                {
+                    case DeleteOne d:
+                        DeleteSnapshot(d.Metadata.SequenceNr);
+                        return true;
+                    case DeleteMany d:
+                        DeleteSnapshots(d.Criteria);
+                        return true;
+                    default:
+                        return false;
+                }
             }
         }
 
@@ -212,7 +247,7 @@ namespace Akka.Persistence.Tests
             pref.Tell(TakeSnapshot.Instance);
             pref.Tell("e");
             pref.Tell("f");
-            ExpectMsgAllOf(1L, 2L, 4L);
+            ExpectMsgAllOf(new []{ 1L, 2L, 4L });
         }
 
         [Fact]
@@ -329,7 +364,9 @@ namespace Akka.Persistence.Tests
             pref.Tell("done");
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4);
-            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
+            var strSnapshot1 = offer.Snapshot as IEnumerable<string>;
+            Assert.NotNull(strSnapshot1);
+            strSnapshot1.Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
 
             ExpectMsg<RecoveryCompleted>();
             ExpectMsg("done");
@@ -341,7 +378,9 @@ namespace Akka.Persistence.Tests
             ActorOf(() => new DeleteSnapshotTestActor(Name, new Recovery(SnapshotSelectionCriteria.Latest, 4), TestActor));
 
             var offer2 = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
-            (offer2.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
+            var strSnapshot2 = offer2.Snapshot as IEnumerable<string>;
+            Assert.NotNull(strSnapshot2);
+            strSnapshot2.Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
 
             ExpectMsg("c-3");
             ExpectMsg("d-4");
@@ -360,12 +399,12 @@ namespace Akka.Persistence.Tests
             // recover persistentActor and the delete first three (= all) snapshots
             pref.Tell(new DeleteMany(new SnapshotSelectionCriteria(4, DateTime.MaxValue)));
 
-            ExpectMsgPf("offer", o =>
+            ExpectMsgOf("offer", o =>
             {
-                var offer = o as SnapshotOffer;
-                if (offer != null)
+                if (o is SnapshotOffer offer)
                 {
                     var snapshot = offer.Snapshot as IEnumerable<string>;
+                    Assert.NotNull(snapshot);
                     snapshot.Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
 
                     Assert.Equal(persistenceId, offer.Metadata.PersistenceId);
@@ -373,7 +412,8 @@ namespace Akka.Persistence.Tests
 
                     return offer;
                 }
-                else return null;
+
+                return null;
             });
 
             ExpectMsg<RecoveryCompleted>();

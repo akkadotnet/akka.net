@@ -110,7 +110,7 @@ RunnableGraph.FromGraph(GraphDsl.Create(topHeadSink, bottomHeadSink, Keep.Both,
     }));
 ```
 
-## Constructing and combining Partial Graphs
+## Constructing and Combining Partial Graphs
 
 Sometimes it is not possible (or needed) to construct the entire computation graph in one place, but instead construct all of its different phases in different places and in the end connect them all into a complete graph and run it.
 
@@ -166,7 +166,7 @@ Then we import it (all of its nodes and connections) explicitly into the closed 
 > [!WARNING]
 > Please note that `GraphDSL` is not able to provide compile time type-safety about whether or not all elements have been properly connected—this validation is performed as a runtime check during the graph's instantiation. A partial graph also verifies that all ports are either connected or part of the returned `Shape`.
 
-## Constructing Sources, Sinks and Flows from Partial Graphs
+## Constructing Sources, Sinks and Flows From Partial Graphs
 
 Instead of treating a partial graph as simply a collection of flows and junctions which may not yet all be
 connected it is sometimes useful to expose such a complex graph as a simpler structure,
@@ -229,7 +229,7 @@ var pairUpWithToString = Flow.FromGraph(
 pairUpWithToString.RunWith(Source.From(new[] {1}), Sink.First<Tuple<int, string>>(), materializer);
 ```
 
-## Combining Sources and Sinks with simplified API
+## Combining Sources and Sinks with Simplified API
 
 There is a simplified API you can use to combine sources and sinks with junctions like: ``Broadcast<T>``, ``Balance<T>``,  ``Merge<In>`` and ``Concat<A>`` without the need for using the Graph DSL. The combine method takes care of constructing the necessary graph underneath. In following example we combine two sources into one (fan-in):
 
@@ -253,7 +253,7 @@ var sink = Sink.Combine(i => new Broadcast<int>(i), sendRemotely, localProcessin
 Source.From(new[] {0, 1, 2}).RunWith(sink, materializer);
 ```
 
-## Building reusable Graph components
+## Building Reusable Graph Components
 
 It is possible to build reusable, encapsulated components of arbitrary input and output ports using the graph DSL.
 
@@ -309,7 +309,7 @@ public class PriorityWorkerPoolShape<TIn, TOut> : Shape
 }
 ```
 
-## Predefined shapes
+## Predefined Shapes
 
 In general a custom `Shape` needs to be able to provide all its input and output ports, be able to copy itself, and also be
 able to create a new instance from given ports. There are some predefined shapes provided to avoid unnecessary
@@ -664,7 +664,7 @@ result.Result.ShouldAllBeEquivalentTo(Enumerable.Range(0, 10));
 
 This example demonstrates how `BidiFlow` subgraphs can be hooked together and also turned around with the ``.Reversed`` method. The test simulates both parties of a network communication protocol without actually having to open a network connection—the flows can just be connected directly.
 
-## Accessing the materialized value inside the Graph
+## Accessing the Materialized Value Inside the Graph
 
 In certain cases it might be necessary to feed back the materialized value of a Graph (partial, closed or backing a
 Source, Sink, Flow or BidiFlow). This is possible by using ``builder.MaterializedValue`` which gives an ``Outlet`` that
@@ -700,7 +700,7 @@ var cyclicAggregate = Source.FromGraph(GraphDsl.Create(Sink.Aggregate<int, int>(
     }));
 ```
 
-## Graph cycles, liveness and deadlocks
+## Graph Cycles, Liveness and Deadlocks
 
 Cycles in bounded stream topologies need special considerations to avoid potential deadlocks and other liveness issues. This section shows several examples of problems that can arise from the presence of feedback arcs in stream processing graphs.
 

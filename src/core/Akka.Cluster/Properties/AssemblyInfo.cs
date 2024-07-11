@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AssemblyInfo.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,10 +12,12 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Benchmarks")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests.Performance")]
 [assembly: InternalsVisibleTo("Akka.Cluster.TestKit")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tools")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Tools.Tests")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tools.Tests.MultiNode")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Sharding")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Sharding.Tests")]

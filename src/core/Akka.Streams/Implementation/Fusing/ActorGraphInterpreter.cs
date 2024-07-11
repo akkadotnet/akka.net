@@ -1,20 +1,20 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorGraphInterpreter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Stage;
+using Akka.Util;
 using Reactive.Streams;
 using static Akka.Streams.Implementation.Fusing.GraphInterpreter;
 
@@ -185,11 +185,11 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public ILoggingAdapter Log => _log ?? (_log = GetLogger());
+        public ILoggingAdapter Log => _log ??= GetLogger();
         /// <summary>
         /// TBD
         /// </summary>
-        public GraphInterpreter Interpreter => _interpreter ?? (_interpreter = GetInterpreter());
+        public GraphInterpreter Interpreter => _interpreter ??= GetInterpreter();
 
         /// <summary>
         /// TBD
@@ -247,7 +247,7 @@ namespace Akka.Streams.Implementation.Fusing
                         break;
 
                     case ActorGraphInterpreter.OnSubscribe onSubscribe:
-                        ReactiveStreamsCompliance.TryCancel(onSubscribe.Subscription);
+                        ReactiveStreamsCompliance.TryCancel(onSubscribe.Subscription, SubscriptionWithCancelException.StageWasCompleted.Instance);
                         _subscribersPending--;
                         if (CanShutdown)
                             _interpreterCompleted = true;
@@ -307,7 +307,7 @@ namespace Akka.Streams.Implementation.Fusing
 
                 case ActorGraphInterpreter.Cancel cancel:
                     if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Cancel id={cancel.Id}");
-                    _outputs[cancel.Id].Cancel();
+                    _outputs[cancel.Id].Cancel(cancel.Cause);
                     return RunBatch(eventLimit);
 
                 case ActorGraphInterpreter.SubscribePending subscribePending:
@@ -362,7 +362,7 @@ namespace Akka.Streams.Implementation.Fusing
                 foreach (var output in _outputs)
                     output.Fail(ex);
                 foreach (var input in _inputs)
-                    input.Cancel();
+                    input.Cancel(ex);
             }
         }
 
@@ -420,9 +420,9 @@ namespace Akka.Streams.Implementation.Fusing
                 }, _settings.IsFuzzingMode, Self);
         }
 
-        private BusLogging GetLogger()
+        private ILoggingAdapter GetLogger()
         {
-            return new BusLogging(Materializer.System.EventStream, Self.ToString(), typeof(GraphInterpreterShell), new DefaultLogMessageFormatter());
+            return new BusLogging(Materializer.System.EventStream, Self.ToString(), typeof(GraphInterpreterShell), Materializer.System.Settings.LogFormatter);
         }
 
         /// <summary>
@@ -454,7 +454,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct OnError : IBoundaryEvent
+        public readonly struct OnError : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -486,7 +486,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct OnComplete : IBoundaryEvent
+        public readonly struct OnComplete : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -512,7 +512,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct OnNext : IBoundaryEvent
+        public readonly struct OnNext : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -544,7 +544,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct OnSubscribe : IBoundaryEvent
+        public readonly struct OnSubscribe : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -576,7 +576,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct RequestMore : IBoundaryEvent
+        public readonly struct RequestMore : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -608,33 +608,38 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct Cancel : IBoundaryEvent
+        public readonly struct Cancel : IBoundaryEvent
         {
             /// <summary>
             /// TBD
             /// </summary>
             public readonly int Id;
+
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="shell">TBD</param>
             /// <param name="id">TBD</param>
-            public Cancel(GraphInterpreterShell shell, int id)
+            /// <param name="cause"></param>
+            public Cancel(GraphInterpreterShell shell, int id, Exception cause)
             {
                 Shell = shell;
                 Id = id;
+                Cause = cause;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
             public GraphInterpreterShell Shell { get; }
+            
+            public Exception Cause { get; }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public struct SubscribePending : IBoundaryEvent
+        public readonly struct SubscribePending : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -660,7 +665,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct ExposedPublisher : IBoundaryEvent
+        public readonly struct ExposedPublisher : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -692,7 +697,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct AsyncInput : IBoundaryEvent
+        public readonly struct AsyncInput : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -731,7 +736,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct Resume : IBoundaryEvent
+        public readonly struct Resume : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -748,7 +753,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct Abort : IBoundaryEvent
+        public readonly struct Abort : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -764,7 +769,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private class ShellRegistered
         {
-            public static readonly ShellRegistered Instance = new ShellRegistered();
+            public static readonly ShellRegistered Instance = new();
             private ShellRegistered()
             {
             }
@@ -800,7 +805,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public sealed class BoundarySubscription : ISubscription
+        public sealed class BoundarySubscription : ISubscriptionWithCancelException
         {
             private readonly IActorRef _parent;
             private readonly GraphInterpreterShell _shell;
@@ -828,7 +833,9 @@ namespace Akka.Streams.Implementation.Fusing
             /// <summary>
             /// TBD
             /// </summary>
-            public void Cancel() => _parent.Tell(new Cancel(_shell, _id));
+            public void Cancel() => Cancel(SubscriptionWithCancelException.NoMoreElementsNeeded.Instance);
+
+            public void Cancel(Exception cause) => _parent.Tell(new Cancel(_shell, _id, cause)); 
 
             /// <summary>
             /// TBD
@@ -925,7 +932,7 @@ namespace Akka.Streams.Implementation.Fusing
                     else if (upstreamCompleted) _that.Complete(_that._outlet);
                 }
 
-                public override void OnDownstreamFinish() => _that.Cancel();
+                public override void OnDownstreamFinish(Exception cause) => _that.Cancel(cause);
 
                 public override string ToString() => _that.ToString();
             }
@@ -941,7 +948,7 @@ namespace Akka.Streams.Implementation.Fusing
             private int _inputBufferElements;
             private int _nextInputElementCursor;
             private bool _upstreamCompleted;
-            private bool _downstreamCanceled;
+            private Option<Exception> _downstreamCanceled = Option<Exception>.None;
             private readonly int _requestBatchSize;
             private int _batchRemaining;
             private readonly Outlet<object> _outlet;
@@ -981,7 +988,7 @@ namespace Akka.Streams.Implementation.Fusing
             /// <param name="reason">TBD</param>
             public void OnInternalError(Exception reason)
             {
-                if (!(_upstreamCompleted || _downstreamCanceled) && !ReferenceEquals(_upstream, null))
+                if (!(_upstreamCompleted || _downstreamCanceled.HasValue) && !ReferenceEquals(_upstream, null))
                     _upstream.Cancel();
 
                 if (!IsClosed(_outlet))
@@ -994,7 +1001,7 @@ namespace Akka.Streams.Implementation.Fusing
             /// <param name="reason">TBD</param>
             public void OnError(Exception reason)
             {
-                if (!_upstreamCompleted || !_downstreamCanceled)
+                if (!_upstreamCompleted || _downstreamCanceled.IsEmpty)
                 {
                     _upstreamCompleted = true;
                     Clear();
@@ -1023,11 +1030,17 @@ namespace Akka.Streams.Implementation.Fusing
             public void OnSubscribe(ISubscription subscription)
             {
                 if (subscription == null) throw new ArgumentException("Subscription cannot be null");
-                if (_upstreamCompleted) ReactiveStreamsCompliance.TryCancel(subscription);
-                else if (_downstreamCanceled)
+                if (_upstreamCompleted) 
+                    ReactiveStreamsCompliance.TryCancel(subscription, SubscriptionWithCancelException.NoMoreElementsNeeded.Instance);
+                else if (_downstreamCanceled.HasValue)
                 {
                     _upstreamCompleted = true;
-                    ReactiveStreamsCompliance.TryCancel(subscription);
+                    ReactiveStreamsCompliance.TryCancel(subscription, _downstreamCanceled.Value);
+                }
+                else if (_upstream != null)
+                {
+                    // reactive streams spec 2.5
+                    ReactiveStreamsCompliance.TryCancel(subscription, new IllegalStateException("Publisher can only be subscribed once."));
                 }
                 else
                 {
@@ -1058,14 +1071,14 @@ namespace Akka.Streams.Implementation.Fusing
             /// <summary>
             /// TBD
             /// </summary>
-            public void Cancel()
+            public void Cancel(Exception cause)
             {
-                _downstreamCanceled = true;
+                _downstreamCanceled = cause;
                 if (!_upstreamCompleted)
                 {
                     _upstreamCompleted = true;
                     if (!ReferenceEquals(_upstream, null))
-                        ReactiveStreamsCompliance.TryCancel(_upstream);
+                        ReactiveStreamsCompliance.TryCancel(_upstream, cause);
                     Clear();
                 }
             }
@@ -1124,7 +1137,7 @@ namespace Akka.Streams.Implementation.Fusing
             /// <summary>
             /// TBD
             /// </summary>
-            void Cancel();
+            void Cancel(Exception cause);
             /// <summary>
             /// TBD
             /// </summary>
@@ -1136,7 +1149,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
-        internal class ActorOutputBoundary<T> : DownstreamBoundaryStageLogic, IActorOutputBoundary
+        internal sealed class ActorOutputBoundary<T> : DownstreamBoundaryStageLogic, IActorOutputBoundary
         {
             #region InHandler
             private sealed class InHandler : Stage.InHandler
@@ -1148,8 +1161,8 @@ namespace Akka.Streams.Implementation.Fusing
                 public override void OnPush()
                 {
                     _that.OnNext(_that.Grab(_that._inlet));
-                    if (_that._downstreamCompleted)
-                        _that.Cancel(_that._inlet);
+                    if (_that.DownstreamCompleted)
+                        _that.Cancel(_that._inlet, _that._downstreamCompletionCause.Value);
                     else if (_that._downstreamDemand > 0)
                         _that.Pull(_that._inlet);
                 }
@@ -1172,7 +1185,8 @@ namespace Akka.Streams.Implementation.Fusing
 
             // This flag is only used if complete/fail is called externally since this op turns into a Finished one inside the
             // interpreter (i.e. inside this op this flag has no effects since if it is completed the op will not be invoked)
-            private bool _downstreamCompleted;
+            private Option<Exception> _downstreamCompletionCause = Option<Exception>.None;
+            private bool DownstreamCompleted => _downstreamCompletionCause.HasValue;
             // when upstream failed before we got the exposed publisher
             private Exception _upstreamFailed;
             private bool _upstreamCompleted;
@@ -1207,7 +1221,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 if (elements < 1)
                 {
-                    Cancel((Inlet<T>) In);
+                    Cancel((Inlet<T>) In, ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
                     Fail(ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
                 }
                 else
@@ -1261,12 +1275,12 @@ namespace Akka.Streams.Implementation.Fusing
             /// <summary>
             /// TBD
             /// </summary>
-            public void Cancel()
+            public void Cancel(Exception cause)
             {
-                _downstreamCompleted = true;
+                _downstreamCompletionCause = cause;
                 _subscriber = null;
                 _exposedPublisher.Shutdown(new NormalShutdownException("UpstreamBoundary"));
-                Cancel(_inlet);
+                Cancel(_inlet, cause);
             }
 
             /// <summary>
@@ -1276,7 +1290,7 @@ namespace Akka.Streams.Implementation.Fusing
             public void Fail(Exception reason)
             {
                 // No need to fail if had already been cancelled, or we closed earlier
-                if (!(_downstreamCompleted || _upstreamCompleted))
+                if (!(DownstreamCompleted || _upstreamCompleted))
                 {
                     _upstreamCompleted = true;
                     _upstreamFailed = reason;
@@ -1297,7 +1311,7 @@ namespace Akka.Streams.Implementation.Fusing
             private void Complete()
             {
                 // No need to complete if had already been cancelled, or we closed earlier
-                if (!(_upstreamCompleted || _downstreamCompleted))
+                if (!(_upstreamCompleted || DownstreamCompleted))
                 {
                     _upstreamCompleted = true;
                     if (!ReferenceEquals(_exposedPublisher, null))
@@ -1315,10 +1329,11 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="shell">TBD</param>
         /// <returns>TBD</returns>
-        public static Props Props(GraphInterpreterShell shell) => Actor.Props.Create(() => new ActorGraphInterpreter(shell)).WithDeploy(Deploy.Local);
+        public static Props Props(GraphInterpreterShell shell) => Actor.Props
+            .Create<ActorGraphInterpreter>(shell).WithDeploy(Deploy.Local);
 
         private ISet<GraphInterpreterShell> _activeInterpreters = new HashSet<GraphInterpreterShell>();
-        private readonly Queue<GraphInterpreterShell> _newShells = new Queue<GraphInterpreterShell>();
+        private readonly Queue<GraphInterpreterShell> _newShells = new();
         private readonly SubFusingActorMaterializerImpl _subFusingMaterializerImpl;
         private readonly GraphInterpreterShell _initial;
         private ILoggingAdapter _log;
@@ -1332,6 +1347,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// TBD
         /// </summary>
         /// <param name="shell">TBD</param>
+        /// If this ctor gets changed you -must- change <see cref="ActorGraphInterpreter.Props"/> as well!
         public ActorGraphInterpreter(GraphInterpreterShell shell)
         {
             _initial = shell;
@@ -1344,7 +1360,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public ILoggingAdapter Log => _log ?? (_log = Context.GetLogger());
+        public ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         private void EnqueueToShortCircuit(object input)
         {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventSequences.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly EmptyEventSequence Instance = new EmptyEventSequence();
+        public static readonly EmptyEventSequence Instance = new();
 
         private EmptyEventSequence() { }
 
@@ -45,13 +45,13 @@ namespace Akka.Persistence.Journal
         /// </summary>
         public IEnumerable<object> Events => Enumerable.Empty<object>();
 
-        /// <inheritdoc/>
+       
         public bool Equals(IEventSequence other)
         {
             return other is EmptyEventSequence;
         }
 
-        /// <inheritdoc/>
+       
         public override bool Equals(object obj)
         {
             return Equals(obj as IEventSequence);
@@ -80,13 +80,13 @@ namespace Akka.Persistence.Journal
         /// </summary>
         public IEnumerable<object> Events => _events;
 
-        /// <inheritdoc/>
+        
         public bool Equals(IEventSequence other)
         {
             return other != null && _events.SequenceEqual(other.Events);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return Equals(obj as IEventSequence);
@@ -114,7 +114,7 @@ namespace Akka.Persistence.Journal
         /// </summary>
         public IEnumerable<object> Events => _events;
 
-        /// <inheritdoc/>
+        
         public bool Equals(IEventSequence other)
         {
             if (other == null) return false;
@@ -122,7 +122,7 @@ namespace Akka.Persistence.Journal
             return e != null && e.Equals(_events[0]) && other.Events.Count() == 1;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return Equals(obj as IEventSequence);

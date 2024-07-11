@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GroupByTest.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,7 +20,7 @@ namespace Akka.Streams.Tests.TCK
 
             var flow = (Source<Source<int, NotUsed>, NotUsed>)
                 Source.From(Enumerate(elements))
-                    .GroupBy(1, elem => "all")
+                    .GroupBy(1, _ => "all")
                     .PrefixAndTail(0)
                     .Select(tuple => tuple.Item2)
                     .ConcatSubstream();

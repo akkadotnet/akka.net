@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MiscMessageSerializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -74,6 +74,30 @@ namespace Akka.Remote.Tests.Serialization
         {
             var identify = new Identify(null);
             AssertEqual(identify);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData(1)]
+        [InlineData("hi")]
+        public void Can_serialize_StatusSuccess(object payload)
+        {
+            var success = new Status.Success(payload);
+            AssertEqual(success);
+        }
+        
+        [Theory]
+        [InlineData(null)]
+        [InlineData(1)]
+        [InlineData("hi")]
+        public void Can_serialize_StatusFailure(object payload)
+        {
+            var success = new Status.Failure(new ApplicationException("foo"),payload);
+            // can't use AssertEqual here since the Exception data isn't 100% identical after round-trip serialization
+            var deserialized = AssertAndReturn(success);
+            deserialized.State.Should().BeEquivalentTo(success.State);
+            deserialized.Cause.Message.Should().BeEquivalentTo(success.Cause.Message);
+            deserialized.Cause.Should().BeOfType(success.Cause.GetType());
         }
 
         [Fact]
@@ -310,7 +334,7 @@ namespace Akka.Remote.Tests.Serialization
         {
             var message = new RemoteRouterConfig(
                 local: new RandomPool(25),
-                nodes: new List<Address> { new Address("akka.tcp", "TestSys", "localhost", 23423) });
+                nodes: new List<Address> { new("akka.tcp", "TestSys", "localhost", 23423) });
             AssertEqual(message);
         }
 
@@ -352,7 +376,7 @@ namespace Akka.Remote.Tests.Serialization
         public void Serializer_must_reject_deserialization_with_invalid_manifest()
         {
             var serializer = new MiscMessageSerializer(Sys.AsInstanceOf<ExtendedActorSystem>());
-            Action comparison = () => serializer.FromBinary(new byte[0], "INVALID");
+            Action comparison = () => serializer.FromBinary(Array.Empty<byte>(), "INVALID");
             comparison.Should().Throw<SerializationException>();
         }
 
@@ -372,7 +396,7 @@ namespace Akka.Remote.Tests.Serialization
         private void AssertEqual<T>(T message)
         {
             var deserialized = AssertAndReturn(message);
-            Assert.Equal(message, deserialized);
+            deserialized.Should().BeEquivalentTo(message);
         }
     }
 }

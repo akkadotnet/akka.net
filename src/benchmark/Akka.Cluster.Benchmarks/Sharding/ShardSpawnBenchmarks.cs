@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="ShardSpawnBenchmarks.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ShardSpawnBenchmarks.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -16,7 +16,7 @@ using static Akka.Cluster.Benchmarks.Sharding.ShardingHelper;
 namespace Akka.Cluster.Benchmarks.Sharding
 {
     [Config(typeof(MonitoringConfig))]
-    [SimpleJob(RunStrategy.ColdStart, targetCount:1, warmupCount:0, launchCount:5)]
+    [SimpleJob(RunStrategy.ColdStart, warmupCount:0, launchCount:5)]
     public class ShardSpawnBenchmarks
     {
         [Params(StateStoreMode.Persistence, StateStoreMode.DData)]

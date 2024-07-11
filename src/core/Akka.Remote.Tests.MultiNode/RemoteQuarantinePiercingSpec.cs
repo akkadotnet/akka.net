@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteQuarantinePiercingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@
 using System;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 
@@ -35,8 +36,8 @@ namespace Akka.Remote.Tests.MultiNode
         {
             public Subject()
             {
-                Receive<string>(str => str == "shutdown", c => Context.System.Terminate());
-                Receive<string>(str => str == "identify", c =>
+                Receive<string>(str => str == "shutdown", _ => Context.System.Terminate());
+                Receive<string>(str => str == "identify", _ =>
                 {
                     Sender.Tell((AddressUidExtension.Uid(Context.System), Self));
                 });

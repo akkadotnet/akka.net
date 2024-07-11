@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Flow.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,11 +9,13 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.ExceptionServices;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
+using Akka.Util;
 using Reactive.Streams;
 
 namespace Akka.Streams.Dsl
@@ -239,7 +241,7 @@ namespace Akka.Streams.Dsl
         /// <param name="mapFunc">TBD</param>
         /// <returns>TBD</returns>
         public Flow<TIn, TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
-            => new Flow<TIn, TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
+            => new(Module.TransformMaterializedValue(mapFunc));
 
         /// <summary>
         /// Connect this <see cref="Flow{TIn,TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/>, concatenating the processing steps of both.
@@ -408,7 +410,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Flow<T, T, NotUsed> Identity<T>() => new Flow<T, T, NotUsed>(GraphStages.Identity<T>().Module);
+        public static Flow<T, T, NotUsed> Identity<T>() => new(GraphStages.Identity<T>().Module);
 
         /// <summary>
         /// TBD
@@ -416,7 +418,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Flow<T, T, TMat> Identity<T, TMat>() => new Flow<T, T, TMat>(GraphStages.Identity<T>().Module);
+        public static Flow<T, T, TMat> Identity<T, TMat>() => new(GraphStages.Identity<T>().Module);
 
         /// <summary>
         /// Creates flow from the Reactive Streams <see cref="IProcessor{T1,T2}"/>.
@@ -437,7 +439,7 @@ namespace Akka.Streams.Dsl
         /// <param name="factory">TBD</param>
         /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> FromProcessorMaterialized<TIn, TOut, TMat>(Func<(IProcessor<TIn, TOut>, TMat)> factory) 
-            => new Flow<TIn, TOut, TMat>(new ProcessorModule<TIn, TOut, TMat>(factory));
+            => new(new ProcessorModule<TIn, TOut, TMat>(factory));
 
         /// <summary>
         /// Helper to create a <see cref="Flow{TIn,TOut,TMat}"/> without a <see cref="Source"/> or <see cref="Sink"/>.
@@ -477,6 +479,19 @@ namespace Akka.Streams.Dsl
             => graph as Flow<TIn, TOut, TMat> ?? new Flow<TIn, TOut, TMat>(graph.Module);
 
         /// <summary>
+        /// Defers the creation of a <see cref="Flow"/> until materialization. The <paramref name="factory"/> 
+        /// function exposes <see cref="ActorMaterializer"/> which is going to be used during materialization and
+        /// <see cref="Attributes"/> of the <see cref="Flow"/> returned by this method.
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="factory">TBD</param>
+        /// <returns>TBD</returns>
+        public static Flow<TIn, TOut, Task<TMat>> Setup<TIn, TOut, TMat>(Func<ActorMaterializer, Attributes, Flow<TIn, TOut, TMat>> factory)
+            => FromGraph(new SetupFlowStage<TIn, TOut, TMat>(factory));
+
+        /// <summary>
         /// Creates a <see cref="Flow{TIn,TOut,TMat}"/> from a <see cref="Sink{TIn,TMat}"/> and a <see cref="Source{TOut,TMat}"/> where the flow's input
         /// will be sent to the sink and the flow's output will come from the source.
         /// </summary>
@@ -506,7 +521,26 @@ namespace Akka.Streams.Dsl
         /// <param name="combine">TBD</param>
         /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> FromSinkAndSource<TIn, TOut, TMat1, TMat2, TMat>(IGraph<SinkShape<TIn>, TMat1> sink, IGraph<SourceShape<TOut>, TMat2> source, Func<TMat1, TMat2, TMat> combine) 
-            => FromGraph(GraphDsl.Create(sink, source, combine, (builder, @in, @out) => new FlowShape<TIn, TOut>(@in.Inlet, @out.Outlet)));
+            => FromGraph(GraphDsl.Create(sink, source, combine, (_, @in, @out) => new FlowShape<TIn, TOut>(@in.Inlet, @out.Outlet)));
+
+        /// <summary>
+        /// Creates a real <see cref="Flow"/> upon receiving the first element. Internal <see cref="Flow"/> will not be created
+        /// if there are no elements, because of completion, cancellation, or error.
+        /// <para>
+        /// The materialized value of the <see cref="Flow"/> is a <see cref="Task{TMat}"/> that is completed with `TMat` when the internal
+        /// flow gets materialized or with `default` when there where no elements. If the flow materialization (including
+        /// the call of the `flowFactory`) fails then the future is completed with a failure.
+        /// </para>
+        /// <para>Emits when the internal flow is successfully created and it emits</para>
+        /// <para>Cancels when downstream cancels</para>
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flowFactory">TBD</param>
+        /// <returns>TBD</returns>
+        public static Flow<TIn, TOut, Task<Option<TMat>>> LazyInitAsync<TIn, TOut, TMat>(Func<Task<Flow<TIn, TOut, TMat>>> flowFactory) =>
+            FromGraph(new LazyFlow<TIn, TOut, TMat>(_ => flowFactory()));
     }
 
     /// <summary>

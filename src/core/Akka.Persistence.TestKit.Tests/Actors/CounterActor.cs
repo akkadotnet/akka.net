@@ -1,9 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CounterActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
+using Akka.Event;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TestKit.Tests
 {
@@ -15,9 +18,11 @@ namespace Akka.Persistence.TestKit.Tests
 
     public class CounterActor : UntypedPersistentActor
     {
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+        
         public CounterActor(string id)
         {
-            this.PersistenceId = id;
+            PersistenceId = id;
         }
 
         private int _value = 0;
@@ -26,6 +31,8 @@ namespace Akka.Persistence.TestKit.Tests
 
         protected override void OnCommand(object message)
         {
+            _log.Info("Received command {0}", message);
+            
             switch (message as string)
             {
                 case "inc":
@@ -49,6 +56,8 @@ namespace Akka.Persistence.TestKit.Tests
 
         protected override void OnRecover(object message)
         {
+            _log.Info("Received recover {0}", message);
+            
             switch (message as string)
             {
                 case "inc":
@@ -67,23 +76,25 @@ namespace Akka.Persistence.TestKit.Tests
 
     public class CounterActorTests : PersistenceTestKit
     {
+        public CounterActorTests(ITestOutputHelper output) : base(output:output){}
+        
         [Fact]
-        public async Task CounterActor_internal_state_will_be_lost_if_underlying_persistence_store_is_not_available()
+        public Task CounterActor_internal_state_will_be_lost_if_underlying_persistence_store_is_not_available()
         {
-            await WithJournalWrite(write => write.Fail(), async () => 
+            return WithJournalWrite(write => write.Fail(), async () => 
             {
                 var counterProps = Props.Create(() => new CounterActor("test"));
                 var actor = ActorOf(counterProps, "counter");
                 
                 Watch(actor);
                 actor.Tell("inc", TestActor);
-                ExpectMsg<Terminated>(TimeSpan.FromSeconds(3));
+                await ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(3));
 
                 // need to restart actor
                 actor = ActorOf(counterProps, "counter1");
                 actor.Tell("read", TestActor);
 
-                var value = ExpectMsg<int>(TimeSpan.FromSeconds(3));
+                var value = await ExpectMsgAsync<int>(TimeSpan.FromSeconds(3));
                 value.ShouldBe(0);
             });
         }

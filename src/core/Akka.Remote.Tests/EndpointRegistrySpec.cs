@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EndpointRegistrySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,8 +20,8 @@ namespace Akka.Remote.Tests
         private IActorRef actorA;
         private IActorRef actorB;
         
-        Address address1 = new Address("test", "testsys1", "testhost1", 1234);
-        Address address2 = new Address("test", "testsy2", "testhost2", 1234);
+        Address address1 = new("test", "testsys1", "testhost1", 1234);
+        Address address2 = new("test", "testsy2", "testhost2", 1234);
 
         public  EndpointRegistrySpec()
         {

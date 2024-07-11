@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TransitionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,8 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
+using Akka.Event;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 
@@ -54,7 +56,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             // sorts the addresses and provides the address of the node with the lowest port number
             // as that node will be the leader
-            return roles.Select(x => (x, GetAddress(x).Port)).OrderBy(x => x.Item2).First().Item1;
+            return roles.Select(x => (x, GetAddress(x).Port)).MinBy(x => x.Item2).Item1;
         }
 
         private RoleName[] NonLeader(params RoleName[] roles)
@@ -69,14 +71,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 .Select(m => m.Status)
                 .ToList();
 
-            if (status.Any())
-            {
-                return status.First();
-            }
-            else
-            {
-                return Akka.Cluster.MemberStatus.Removed;
-            }
+            return status.Count != 0 ? status.First() : Akka.Cluster.MemberStatus.Removed;
         }
 
         private ImmutableHashSet<Address> MemberAddresses()

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqlSnapshotConnectionFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ namespace Akka.Persistence.Sql.TestKit
         private class SaveSnapshotTestActor : NamedPersistentActor
         {
             private readonly IActorRef _probe;
-            protected LinkedList<string> _state = new LinkedList<string>();
+            protected LinkedList<string> _state = new();
 
             public SaveSnapshotTestActor(string name, IActorRef probe)
                 : base(name)
@@ -49,26 +49,44 @@ namespace Akka.Persistence.Sql.TestKit
 
             protected override bool ReceiveRecover(object message)
             {
-                return message.Match()
-                    .With<SnapshotOffer>(offer => _state = offer.Snapshot as LinkedList<string>)
-                    .With<string>(m => _state.AddFirst(m + "-" + LastSequenceNr))
-                    .WasHandled;
+                switch (message)
+                {
+                    case SnapshotOffer offer:
+                        _state = (LinkedList<string>)offer.Snapshot;
+                        return true;
+                    case string m:
+                        _state.AddFirst(m + "-" + LastSequenceNr);
+                        return true;
+                    default:
+                        return false;
+                }
             }
 
             protected override bool ReceiveCommand(object message)
             {
-                return message.Match()
-                    .With<string>(payload => Persist(payload, _ => _state.AddFirst(payload + "-" + LastSequenceNr)))
-                    .With<TakeSnapshot>(_ => SaveSnapshot(_state))
-                    .With<SaveSnapshotSuccess>(s => _probe.Tell(s.Metadata.SequenceNr))
-                    .With<GetState>(_ => _probe.Tell(_state.Reverse().ToArray()))
-                    .WasHandled;
+                switch (message)
+                {
+                    case string payload:
+                        Persist(payload, _ => _state.AddFirst(payload + "-" + LastSequenceNr));
+                        return true;
+                    case TakeSnapshot _:
+                        SaveSnapshot(_state);
+                        return true;
+                    case SaveSnapshotSuccess s:
+                        _probe.Tell(s.Metadata.SequenceNr);
+                        return true;
+                    case GetState _:
+                        _probe.Tell(_state.Reverse().ToArray());
+                        return true;
+                    default:
+                        return false;
+                }
             }
         }
 
         internal class TakeSnapshot
         {
-            public static readonly TakeSnapshot Instance = new TakeSnapshot();
+            public static readonly TakeSnapshot Instance = new();
             private TakeSnapshot()
             {
             }
@@ -76,7 +94,7 @@ namespace Akka.Persistence.Sql.TestKit
 
         internal sealed class GetState
         {
-            public static readonly GetState Instance = new GetState();
+            public static readonly GetState Instance = new();
             private GetState() { }
         }
 

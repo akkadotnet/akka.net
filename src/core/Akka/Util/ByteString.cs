@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ByteString.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -72,6 +72,62 @@ namespace Akka.IO
 
             var copy = new byte[count];
             Array.Copy(array, offset, copy, 0, count);
+
+            return new ByteString(copy, 0, copy.Length);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ByteString"/> by copying a <see cref="Memory{T}"/>.
+        /// </summary>
+        /// <param name="memory">The <see cref="Memory{T}"/> to copy</param>
+        /// <returns>The new <see cref="ByteString"/></returns>
+        public static ByteString CopyFrom(Memory<byte> memory)
+            => CopyFrom(memory, 0, memory.Length);
+        
+        /// <summary>
+        /// Creates a new <see cref="ByteString"/> by copying a <see cref="Memory{T}"/>.
+        /// </summary>
+        /// <param name="memory">The <see cref="Memory{T}"/> to copy</param>
+        /// <param name="offset">Index in provided <paramref name="memory"/>, at which copy should start.</param>
+        /// <param name="count">Number of bytes to copy.</param>
+        /// <returns>The new <see cref="ByteString"/></returns>
+        public static ByteString CopyFrom(Memory<byte> memory, int offset, int count)
+        {
+            if (count == 0) return Empty;
+
+            if (offset < 0 || offset >= memory.Length) throw new ArgumentOutOfRangeException(nameof(offset), $"Provided offset of [{offset}] is outside bounds of an array [{memory.Length}]");
+            if (count > memory.Length - offset) throw new ArgumentException($"Provided length [{count}] of array to copy doesn't fit array length [{memory.Length}] within given offset [{offset}]", nameof(count));
+
+            var copy = new byte[count];
+            memory.Slice(offset, count).CopyTo(copy);
+
+            return new ByteString(copy, 0, copy.Length);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ByteString"/> by copying a <see cref="Span{T}"/>.
+        /// </summary>
+        /// <param name="span">The <see cref="Span{T}"/> to copy</param>
+        /// <returns>The new <see cref="ByteString"/></returns>
+        public static ByteString CopyFrom(Span<byte> span)
+            => CopyFrom(span, 0, span.Length);
+        
+        /// <summary>
+        /// Creates a new <see cref="ByteString"/> by copying a <see cref="Span{T}"/>.
+        /// </summary>
+        /// <param name="span">The <see cref="Span{T}"/> to copy</param>
+        /// <param name="offset">Index in provided <paramref name="span"/>, at which copy should start.</param>
+        /// <param name="count">Number of bytes to copy.</param>
+        /// <returns>The new <see cref="ByteString"/></returns>
+        public static ByteString CopyFrom(Span<byte> span, int offset, int count)
+        {
+            if (count == 0) return Empty;
+
+            if (offset < 0 || offset >= span.Length) throw new ArgumentOutOfRangeException(nameof(offset), $"Provided offset of [{offset}] is outside bounds of an array [{span.Length}]");
+            if (count > span.Length - offset) throw new ArgumentException($"Provided length [{count}] of array to copy doesn't fit array length [{span.Length}] within given offset [{offset}]", nameof(count));
+
+            var copy = new byte[count];
+            span.Slice(offset, count).CopyTo(copy);
 
             return new ByteString(copy, 0, copy.Length);
         }
@@ -184,7 +240,7 @@ namespace Akka.IO
         /// <summary>
         /// An empty <see cref="ByteString"/>.
         /// </summary>
-        public static ByteString Empty { get; } = new ByteString(new ByteBuffer(new byte[0], 0, 0));
+        public static ByteString Empty { get; } = new(new ByteBuffer(Array.Empty<byte>(), 0, 0));
 
         #endregion
 
@@ -276,21 +332,22 @@ namespace Akka.IO
         /// </summary>
         /// <param name="index">index inside current <see cref="ByteString"/>, from which slicing should start</param>
         /// <param name="count">Number of bytes to fit into new <see cref="ByteString"/>.</param>
-        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException">If index or count result in an invalid <see cref="ByteString"/>.</exception>
         public ByteString Slice(int index, int count)
         {
-            //TODO: this is really stupid, but previous impl didn't throw if arguments 
-            //      were out of range. We either have to round them to valid bounds or 
-            //      (future version, provide negative-arg slicing like i.e. Python).
-            if (index < 0) index = 0;
-            if (index >= _count) index = Math.Max(0, _count - 1);
-            if (count > _count - index) count = _count - index;
-            if (count <= 0) return Empty;
-
-            if (index == 0 && count == _count) return this;
+            if(index < 0)
+                throw new ArgumentOutOfRangeException(nameof(index), "Index must be positive number");
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count), "Count must be positive number");
+            if (count == 0) return Empty;
+            if(index > _count)
+                throw new ArgumentOutOfRangeException(nameof(index), "Index is outside of the bounds of the ByteString");
+            if(index + count > _count)
+                throw new ArgumentOutOfRangeException(nameof(count), "Index + count is outside of the bounds of the ByteString");
             
-            int j;
-            var i = GetBufferFittingIndex(index, out j);
+            if (index == 0 && count == _count) return this;
+
+            var i = GetBufferFittingIndex(index, out var j);
             var init = _buffers[i];
 
             var copied = Math.Min(init.Count - j, count);
@@ -447,7 +504,7 @@ namespace Akka.IO
                 return Array.Empty<byte>();
 
             var copy = new byte[_count];
-            this.CopyTo(copy, 0, _count);
+            CopyTo(copy, 0, _count);
             return copy;
         }
 
@@ -482,6 +539,7 @@ namespace Akka.IO
         /// <returns>TBD</returns>
         public int CopyTo(byte[] buffer, int index, int count)
         {
+            if(buffer.Length == 0 && count == 0) return 0; // edge case for no-copy
             if (buffer == null) throw new ArgumentNullException(nameof(buffer));
             if (index < 0 || index >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(index), "Provided index is outside the bounds of the buffer to copy to.");
             if (count > buffer.Length - index) throw new ArgumentException("Provided number of bytes to copy won't fit into provided buffer", nameof(count));
@@ -493,6 +551,84 @@ namespace Akka.IO
             {
                 var toCopy = Math.Min(b.Count, remaining);
                 Array.Copy(b.Array, b.Offset, buffer, position, toCopy);
+                position += toCopy;
+                remaining -= toCopy;
+
+                if (remaining == 0) return count;
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// Copies content of a current <see cref="ByteString"/> into a provided <see cref="Memory{T}"/>
+        /// <paramref name="buffer"/>
+        /// </summary>
+        /// <returns>The number of bytes copied</returns>
+        public int CopyTo(ref Memory<byte> buffer)
+            => CopyTo(ref buffer, 0, buffer.Length);
+        
+        /// <summary>
+        /// Copies content of a current <see cref="ByteString"/> into a provided <see cref="Memory{T}"/>
+        /// <paramref name="buffer"/> starting from <paramref name="index"/> in that
+        /// buffer and copying a <paramref name="count"/> number of bytes.
+        /// </summary>
+        /// <returns>The number of bytes copied</returns>
+        public int CopyTo(ref Memory<byte> buffer, int index, int count)
+        {
+            if(buffer.Length == 0 && count == 0) return 0; // edge case for no-copy
+            if (index < 0 || index >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(index), "Provided index is outside the bounds of the buffer to copy to.");
+            if (count > buffer.Length - index) throw new ArgumentException("Provided number of bytes to copy won't fit into provided buffer", nameof(count));
+
+            count = Math.Min(count, _count);
+            var remaining = count;
+            var position = index;
+            foreach (var b in _buffers)
+            {
+                var toCopy = Math.Min(b.Count, remaining);
+
+                var bufferSpan = buffer.Span.Slice(position, toCopy);
+                b.AsSpan().CopyTo(bufferSpan);
+                
+                position += toCopy;
+                remaining -= toCopy;
+
+                if (remaining == 0) return count;
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// Copies content of a current <see cref="ByteString"/> into a provided <see cref="Span{T}"/>
+        /// <paramref name="buffer"/>.
+        /// </summary>
+        /// <returns>The number of bytes copied</returns>
+        public int CopyTo(ref Span<byte> buffer)
+            => CopyTo(ref buffer, 0, buffer.Length);
+        
+        /// <summary>
+        /// Copies content of a current <see cref="ByteString"/> into a provided <see cref="Span{T}"/>
+        /// <paramref name="buffer"/> starting from <paramref name="index"/> in that
+        /// buffer and copying a <paramref name="count"/> number of bytes.
+        /// </summary>
+        /// <returns>The number of bytes copied</returns>
+        public int CopyTo(ref Span<byte> buffer, int index, int count)
+        {
+            if(buffer.Length == 0 && count == 0) return 0; // edge case for no-copy
+            if (index < 0 || index >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(index), "Provided index is outside the bounds of the buffer to copy to.");
+            if (count > buffer.Length - index) throw new ArgumentException("Provided number of bytes to copy won't fit into provided buffer", nameof(count));
+
+            count = Math.Min(count, _count);
+            var remaining = count;
+            var position = index;
+            foreach (var b in _buffers)
+            {
+                var toCopy = Math.Min(b.Count, remaining);
+
+                var bufferSpan = buffer.Slice(position, toCopy);
+                b.AsSpan().CopyTo(bufferSpan);
+                
                 position += toCopy;
                 remaining -= toCopy;
 

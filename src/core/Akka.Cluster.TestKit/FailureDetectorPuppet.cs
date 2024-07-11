@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FailureDetectorPuppet.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ namespace Akka.Cluster.Tests.MultiNode
             Unknown
         }
 
-        readonly AtomicReference<Status> _status = new AtomicReference<Status>(Status.Unknown);
+        readonly AtomicReference<Status> _status = new(Status.Unknown);
 
         public void MarkNodeAsUnavailable()
         {
@@ -56,7 +56,7 @@ namespace Akka.Cluster.Tests.MultiNode
             get
             {
                 var status = _status.Value;
-                return status == Status.Up || status == Status.Unknown;
+                return status is Status.Up or Status.Unknown;
             }
         }
 

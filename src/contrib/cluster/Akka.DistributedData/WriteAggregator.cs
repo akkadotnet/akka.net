@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="WriteAggregator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -183,11 +183,11 @@ namespace Akka.DistributedData
 
     public sealed class WriteLocal : IWriteConsistency
     {
-        public static readonly WriteLocal Instance = new WriteLocal();
+        public static readonly WriteLocal Instance = new();
 
         public TimeSpan Timeout => TimeSpan.Zero;
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return obj != null && obj is WriteLocal;
@@ -212,7 +212,7 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as WriteTo);
 
         public override string ToString() => $"WriteTo({Count}, timeout={Timeout})";
@@ -244,7 +244,7 @@ namespace Akka.DistributedData
             MinCapacity = minCapacity;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as WriteMajority);
 
         public override string ToString() => $"WriteMajority(timeout={Timeout})";
@@ -283,7 +283,7 @@ namespace Akka.DistributedData
             MinCapacity = minCapacity;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as WriteMajorityPlus);
 
         public override string ToString() => $"WriteMajorityPlus(timeout={Timeout}, additional={Additional})";
@@ -317,7 +317,7 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => Equals(obj as WriteAll);
 
         public override string ToString() => $"WriteAll(timeout={Timeout})";

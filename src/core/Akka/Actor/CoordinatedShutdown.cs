@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CoordinatedShutdown.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -91,7 +91,7 @@ namespace Akka.Actor
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Phase && Equals((Phase)obj);
+            return obj is Phase phase && Equals(phase);
         }
 
         /// <inheritdoc/>
@@ -270,12 +270,12 @@ namespace Akka.Actor
         /// </summary>
         internal readonly List<string> OrderedPhases;
 
-        private readonly ConcurrentBag<Func<Task<Done>>> _clrShutdownTasks = new ConcurrentBag<Func<Task<Done>>>();
-        private readonly ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>> _tasks = new ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>>();
-        private readonly AtomicReference<Reason> _runStarted = new AtomicReference<Reason>(null);
-        private readonly AtomicBoolean _clrHooksStarted = new AtomicBoolean(false);
-        private readonly TaskCompletionSource<Done> _runPromise = new TaskCompletionSource<Done>();
-        private readonly TaskCompletionSource<Done> _hooksRunPromise = new TaskCompletionSource<Done>();
+        private readonly ConcurrentSet<Func<Task<Done>>> _clrShutdownTasks = new();
+        private readonly ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>> _tasks = new();
+        private readonly AtomicReference<Reason> _runStarted = new(null);
+        private readonly AtomicBoolean _clrHooksStarted = new(false);
+        private readonly TaskCompletionSource<Done> _runPromise = new();
+        private readonly TaskCompletionSource<Done> _hooksRunPromise = new();
 
         private volatile bool _runningClrHook = false;
 
@@ -333,9 +333,9 @@ namespace Akka.Actor
         /// <param name="hook">A task that will be executed during shutdown.</param>
         internal void AddClrShutdownHook(Func<Task<Done>> hook)
         {
-            if (!_clrHooksStarted)
+            if (!_clrHooksStarted.Value)
             {
-                _clrShutdownTasks.Add(hook);
+                _clrShutdownTasks.TryAdd(hook);
             }
         }
 
@@ -421,7 +421,7 @@ namespace Akka.Actor
 
                         // note that tasks within same phase are performed in parallel
                         var recoverEnabled = Phases[phase].Recover;
-                        var result = Task.WhenAll<Done>(phaseTasks.Select(x =>
+                        var result = Task.WhenAll(phaseTasks.Select(x =>
                             {
                                 var taskName = x.Item1;
                                 var task = x.Item2;
@@ -493,7 +493,7 @@ namespace Akka.Actor
                             timeoutFunction = result;
                         }
 
-                        phaseResult = Task.WhenAny<Done>(result, timeoutFunction).Unwrap();
+                        phaseResult = Task.WhenAny(result, timeoutFunction).Unwrap();
                     }
 
                     if (!remaining.Any())
@@ -505,7 +505,7 @@ namespace Akka.Actor
                             var r = tr.Result;
                             return Loop(remaining);
                         })
-                        .Unwrap<Done>();
+                        .Unwrap();
                 }
 
                 var runningPhases = (fromPhase == null
@@ -653,13 +653,13 @@ namespace Akka.Actor
 
                     if (terminateActorSystem)
                     {
-                        system.FinalTerminate();
-                        return system.Terminate().ContinueWith(tr =>
+                        return system.FinalTerminate().ContinueWith(_ =>
                         {
                             if (exitClr && !coord._runningClrHook)
                             {
                                 Environment.Exit(0);
                             }
+
                             return Done.Instance;
                         });
                     }
@@ -691,7 +691,10 @@ namespace Akka.Actor
                 var exitTask = TerminateOnClrExit(coord);
                 // run all hooks during termination sequence
                 AppDomain.CurrentDomain.ProcessExit += exitTask;
-                system.WhenTerminated.ContinueWith(tr => { AppDomain.CurrentDomain.ProcessExit -= exitTask; });
+                system.WhenTerminated.ContinueWith(_ =>
+                {
+                    AppDomain.CurrentDomain.ProcessExit -= exitTask;
+                });
 
                 coord.AddClrShutdownHook(() =>
                 {
@@ -718,7 +721,7 @@ namespace Akka.Actor
 
         private static EventHandler TerminateOnClrExit(CoordinatedShutdown coord)
         {
-            return (sender, args) =>
+            return (_, _) =>
             {
                 // have to block, because if this method exits the process exits.
                 coord.RunClrHooks().Wait(coord.TotalTimeout);

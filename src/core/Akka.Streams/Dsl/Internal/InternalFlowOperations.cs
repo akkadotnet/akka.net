@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalFlowOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -878,9 +878,9 @@ namespace Akka.Streams.Dsl.Internal
         /// <paramref name="n"/> must be positive, and <paramref name="timeout"/> must be greater than 0 seconds, otherwise
         /// <see cref="ArgumentException"/> is thrown.
         /// <para>
-        /// Emits when the configured time elapses since the last group has been emitted
+        /// Emits when the configured time elapses since the last group has been emitted or `n` elements is buffered
         /// </para>
-        /// Backpressures when the configured time elapses since the last group has been emitted
+        /// Backpressures when downstream backpressures, and there are `n+1` buffered elements
         /// <para>
         /// Completes when upstream completes (emits last group)
         /// </para>
@@ -893,14 +893,63 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="timeout">TBD</param>
         /// <exception cref="ArgumentException">Thrown if <paramref name="n"/> is less than or equal zero or <paramref name="timeout"/> is <see cref="TimeSpan.Zero"/>.</exception>
         /// <returns>TBD</returns>
-        public static IFlow<IEnumerable<T>, TMat> GroupedWithin<T, TMat>(this IFlow<T, TMat> flow, int n,
-            TimeSpan timeout)
-        {
-            if (n <= 0) throw new ArgumentException("n must be > 0", nameof(n));
-            if (timeout == TimeSpan.Zero) throw new ArgumentException("Timeout must be non-zero", nameof(timeout));
+        public static IFlow<IEnumerable<T>, TMat> GroupedWithin<T, TMat>(this IFlow<T, TMat> flow, int n, TimeSpan timeout) => 
+            flow.Via(new Fusing.GroupedWeightedWithin<T>(long.MaxValue, n, _ => 0L, timeout)
+                .WithAttributes(DefaultAttributes.GroupedWithin));
 
-            return flow.Via(new Fusing.GroupedWithin<T>(n, timeout));
-        }
+        /// <summary>
+        /// Chunk up this stream into groups of elements received within a time window,
+        /// or limited by the weight of the elements, whatever happens first.
+        /// Empty groups will not be emitted if no elements are received from upstream.
+        /// The last group before end-of-stream will contain the buffered elements
+        /// since the previously emitted group.
+        /// <para>
+        /// <paramref name="maxWeight" /> must be positive, and <paramref name="interval"/> must be greater than 0 seconds, 
+        /// otherwise ArgumentException is thrown.
+        /// </para>
+        /// <para>Emits when the configured time elapses since the last group has been emitted or weight limit reached</para>
+        /// <para>Backpressures when downstream backpressures, and buffered group(+ pending element) weighs more than `maxWeight`</para>
+        /// <para>Completes when upstream completes(emits last group)</para>
+        /// <para>Cancels when downstream completes</para>
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="maxWeight">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="costFn">TBD</param>
+        /// <returns>TBD</returns>
+        public static IFlow<IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this IFlow<TOut, TMat> flow, long maxWeight, TimeSpan interval, Func<TOut, long> costFn) =>
+            flow.Via(new Fusing.GroupedWeightedWithin<TOut>(maxWeight, int.MaxValue, costFn, interval));
+
+        /// <summary>
+        /// Chunk up this stream into groups of elements received within a time window,
+        /// or limited by the weight of the elements, whatever happens first.
+        /// Empty groups will not be emitted if no elements are received from upstream.
+        /// The last group before end-of-stream will contain the buffered elements
+        /// since the previously emitted group.
+        /// <para>
+        /// <paramref name="maxWeight" /> must be positive, <paramref name="maxNumber"/> must be positive, and <paramref name="interval"/> must be greater than 0 seconds, 
+        /// otherwise ArgumentException is thrown.
+        /// </para>
+        /// <para>Emits when the configured time elapses since the last group has been emitted or weight limit reached</para>
+        /// <para>
+        /// Backpressures when downstream backpressures, and buffered group(+ pending element) weighs more than `maxWeight` 
+        /// or has more than `maxNumber` elements
+        /// </para>
+        /// <para>Completes when upstream completes(emits last group)</para>
+        /// <para>Cancels when downstream completes</para>
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="maxWeight">TBD</param>
+        /// <param name="maxNumber">TBD</param>
+        /// <param name="interval">TBD</param>
+        /// <param name="costFn">TBD</param>
+        /// <returns>TBD</returns>        
+        public static IFlow<IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this IFlow<TOut, TMat> flow, long maxWeight, int maxNumber, TimeSpan interval, Func<TOut, long> costFn) =>
+            flow.Via(new Fusing.GroupedWeightedWithin<TOut>(maxWeight, maxNumber, costFn, interval));
 
         /// <summary>
         /// Shifts elements emission in time by a specified amount. It allows to store elements
@@ -1062,7 +1111,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<TSeed, TMat> ConflateWithSeed<T, TMat, TSeed>(this IFlow<T, TMat> flow, Func<T, TSeed> seed,
             Func<TSeed, T, TSeed> aggregate)
         {
-            return flow.Via(new Fusing.Batch<T, TSeed>(1L, elem => 0L, seed, aggregate));
+            return flow.Via(new Fusing.Batch<T, TSeed>(1L, _ => 0L, seed, aggregate));
         }
 
         /// <summary>
@@ -1235,9 +1284,11 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="stageFactory">TBD</param>
         /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> Transform<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+#pragma warning disable CS0618 // Type or member is obsolete
             Func<IStage<TIn, TOut>> stageFactory)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
-            return flow.Via(new PushPullGraphStage<TIn, TOut>(attr => stageFactory(), Attributes.None));
+            return flow.Via(new PushPullGraphStage<TIn, TOut>(_ => stageFactory(), Attributes.None));
         }
 
         /// <summary>
@@ -1269,58 +1320,102 @@ namespace Akka.Streams.Dsl.Internal
         /// This operation demultiplexes the incoming stream into separate output
         /// streams, one for each element key. The key is computed for each element
         /// using the given function. When a new key is encountered for the first time
-        /// it is emitted to the downstream subscriber together with a fresh
-        /// flow that will eventually produce all the elements of the substream
-        /// for that key. Not consuming the elements from the created streams will
-        /// stop this processor from processing more elements, therefore you must take
-        /// care to unblock (or cancel) all of the produced streams even if you want
-        /// to consume only one of them.
-        /// 
+        /// a new substream is opened and subsequently fed with all elements belonging to
+        /// that key.
+        /// <para>
+        /// WARNING: If <paramref name="allowClosedSubstreamRecreation"/> is set to false (default behavior) the operator 
+        /// keeps track of all keys of streams that have already been closed. If you expect an infinite number of keys this 
+        /// can cause memory issues. Elements belonging to those keys are drained directly and not send to the substream.
+        /// </para>
+        /// <para>
+        /// Note: If <paramref name="allowClosedSubstreamRecreation"/> is set to true substream completion and incoming 
+        /// elements are subject to race-conditions. If elements arrive for a stream that is in the process of closing 
+        /// these elements might get lost.
+        /// </para>
+        /// <para>
+        /// The object returned from this method is not a normal <see cref="Source"/> or <see cref="Flow"/>, it is a 
+        /// <see cref="SubFlow{TOut, TMat, TClosed}"/>. This means that after this operator 
+        /// all transformations are applied to all encountered substreams in the same fashion. 
+        /// Substream mode is exited either by closing the substream (i.e. connecting it to a <see cref="Sink"/>)
+        /// or by merging the substreams back together; see the <c>To</c> and <c>MergeBack</c> methods
+        /// on <see cref="SubFlow{TOut, TMat, TClosed}"/> for more information.
+        /// </para>
+        /// <para>
+        /// It is important to note that the substreams also propagate back-pressure as any other stream, which means 
+        /// that blocking one substream will block the <c>GroupBy</c> operator itself —and thereby all substreams— once all 
+        /// internal or explicit buffers are filled.
+        /// </para>
+        /// <para>
         /// If the group by function <paramref name="groupingFunc"/> throws an exception and the supervision decision
-        /// is <see cref="Supervision.Directive.Stop"/> the stream and substreams will be completed
-        /// with failure.
-        /// 
+        /// is <see cref="Supervision.Directive.Stop"/> the stream and substreams will be completed with failure.
+        /// </para>
+        /// <para>
         /// If the group by <paramref name="groupingFunc"/> throws an exception and the supervision decision
         /// is <see cref="Supervision.Directive.Resume"/> or <see cref="Supervision.Directive.Restart"/>
         /// the element is dropped and the stream and substreams continue.
-        /// 
-        /// Function <paramref name="groupingFunc"/>  MUST NOT return null. This will throw exception and trigger supervision decision mechanism.
-        /// <para>
-        /// Emits when an element for which the grouping function returns a group that has not yet been created.
-        /// Emits the new group
         /// </para>
-        /// Backpressures when there is an element pending for a group whose substream backpressures
         /// <para>
-        /// Completes when upstream completes
+        /// Function <paramref name="groupingFunc"/> MUST NOT return <c>null</c>. This will throw exception and trigger supervision decision mechanism.
         /// </para>
-        /// Cancels when downstream cancels and all substreams cancel
+        /// <para>**Emits when** an element for which the grouping function returns a group that has not yet been created. Emits the new group.</para>
+        /// <para>**Backpressures when** there is an element pending for a group whose substream backpressures</para>
+        /// <para>**Completes when** upstream completes</para>
+        /// <para>**Cancels when** downstream cancels and all substreams cancel</para>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <typeparam name="TKey">TBD</typeparam>
         /// <typeparam name="TClosed">TBD</typeparam>
         /// <param name="flow">TBD</param>
-        /// <param name="maxSubstreams">TBD</param>
-        /// <param name="groupingFunc">TBD</param>
+        /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails</param>
+        /// <param name="groupingFunc">Computes the key for each element</param>
         /// <param name="toFunc">TBD</param>
+        /// <param name="allowClosedSubstreamRecreation">Enables recreation of already closed substreams if elements with their corresponding keys arrive after completion</param>
         /// <returns>TBD</returns>
         public static SubFlow<T, TMat, TClosed> GroupBy<T, TMat, TKey, TClosed>(
             this IFlow<T, TMat> flow,
             int maxSubstreams,
             Func<T, TKey> groupingFunc,
-            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task>, TClosed> toFunc)
+            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task<Done>>, TClosed> toFunc,
+            bool allowClosedSubstreamRecreation)
         {
-            var merge = new GroupByMergeBack<T, TMat, TKey>(flow, maxSubstreams, groupingFunc);
+            var merge = new GroupByMergeBack<T, TMat, TKey>(flow, maxSubstreams, groupingFunc, allowClosedSubstreamRecreation);
 
-            Func<Sink<T, TMat>, TClosed> finish = s =>
+            TClosed finish(Sink<T, TMat> s)
             {
                 return toFunc(
-                    flow.Via(new Fusing.GroupBy<T, TKey>(maxSubstreams, groupingFunc)),
+                    flow.Via(new Fusing.GroupBy<T, TKey>(maxSubstreams, groupingFunc, allowClosedSubstreamRecreation)),
                     Sink.ForEach<Source<T, NotUsed>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
-            };
+            }
 
             return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, finish);
         }
+
+        /// <summary>
+        /// This operation demultiplexes the incoming stream into separate output streams, one for each element key. 
+        /// The key is computed for each element using the given function. When a new key is encountered for the first 
+        /// time a new substream is opened and subsequently fed with all elements belonging to that key.
+        /// <para>
+        /// WARNING: The operator keeps track of all keys of streams that have already been closed. If you expect an 
+        /// infinite number of keys this can cause memory issues. Elements belonging to those keys are drained directly 
+        /// and not send to the substream.
+        /// </para>
+        /// See also <seealso cref="GroupBy{T, TMat, TKey, TClosed}(IFlow{T, TMat}, int, Func{T, TKey}, Func{IFlow{Source{T, NotUsed}, TMat}, Sink{Source{T, NotUsed}, Task{Done}}, TClosed}, bool)"/>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TMat"></typeparam>
+        /// <typeparam name="TKey"></typeparam>
+        /// <typeparam name="TClosed"></typeparam>
+        /// <param name="flow"></param>
+        /// <param name="maxSubstreams"></param>
+        /// <param name="groupingFunc"></param>
+        /// <param name="toFunc"></param>
+        /// <returns></returns>
+        public static SubFlow<T, TMat, TClosed> GroupBy<T, TMat, TKey, TClosed>(
+            this IFlow<T, TMat> flow,
+            int maxSubstreams,
+            Func<T, TKey> groupingFunc,
+            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task<Done>>, TClosed> toFunc) => GroupBy(flow, maxSubstreams, groupingFunc, toFunc, allowClosedSubstreamRecreation: false);
 
         /// <summary>
         /// TBD
@@ -1328,11 +1423,12 @@ namespace Akka.Streams.Dsl.Internal
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <typeparam name="TKey">TBD</typeparam>
-        internal class GroupByMergeBack<TOut, TMat, TKey> : IMergeBack<TOut, TMat>
+        internal sealed class GroupByMergeBack<TOut, TMat, TKey> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
             private readonly int _maxSubstreams;
             private readonly Func<TOut, TKey> _groupingFunc;
+            private readonly bool _allowClosedSubstreamRecreation;
 
             /// <summary>
             /// TBD
@@ -1340,13 +1436,13 @@ namespace Akka.Streams.Dsl.Internal
             /// <param name="self">TBD</param>
             /// <param name="maxSubstreams">TBD</param>
             /// <param name="groupingFunc">TBD</param>
-            public GroupByMergeBack(IFlow<TOut, TMat> self,
-                int maxSubstreams,
-                Func<TOut, TKey> groupingFunc)
+            /// <param name="allowClosedSubstreamRecreation">TBD</param>
+            public GroupByMergeBack(IFlow<TOut, TMat> self, int maxSubstreams, Func<TOut, TKey> groupingFunc, bool allowClosedSubstreamRecreation = false)
             {
                 _self = self;
                 _maxSubstreams = maxSubstreams;
                 _groupingFunc = groupingFunc;
+                _allowClosedSubstreamRecreation = allowClosedSubstreamRecreation;
             }
 
             /// <summary>
@@ -1358,7 +1454,7 @@ namespace Akka.Streams.Dsl.Internal
             /// <returns>TBD</returns>
             public IFlow<T, TMat> Apply<T>(Flow<TOut, T, TMat> flow, int breadth)
             {
-                return _self.Via(new Fusing.GroupBy<TOut, TKey>(_maxSubstreams, _groupingFunc))
+                return _self.Via(new Fusing.GroupBy<TOut, TKey>(_maxSubstreams, _groupingFunc, _allowClosedSubstreamRecreation))
                     .Select(f => f.Via(flow))
                     .Via(new Fusing.FlattenMerge<Source<T, NotUsed>, T, NotUsed>(breadth));
             }
@@ -1427,15 +1523,15 @@ namespace Akka.Streams.Dsl.Internal
         /// <returns>TBD</returns>
         public static SubFlow<T, TMat, TClosed> SplitWhen<T, TMat, TClosed>(this IFlow<T, TMat> flow,
             SubstreamCancelStrategy substreamCancelStrategy, Func<T, bool> predicate,
-            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task>, TClosed> toFunc)
+            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task<Done>>, TClosed> toFunc)
         {
             var merge = new SplitWhenMergeBack<T, TMat>(flow, predicate, substreamCancelStrategy);
 
-            Func<Sink<T, TMat>, TClosed> finish = s =>
+            TClosed finish(Sink<T, TMat> s)
             {
                 return toFunc(flow.Via(Fusing.Split.When(predicate, substreamCancelStrategy)),
                     Sink.ForEach<Source<T, NotUsed>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
-            };
+            }
 
             return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, finish);
         }
@@ -1445,7 +1541,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
-        internal class SplitWhenMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
+        internal sealed class SplitWhenMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
             private readonly Func<TOut, bool> _predicate;
@@ -1532,15 +1628,15 @@ namespace Akka.Streams.Dsl.Internal
         /// <returns>TBD</returns>
         public static SubFlow<T, TMat, TClosed> SplitAfter<T, TMat, TClosed>(this IFlow<T, TMat> flow,
             SubstreamCancelStrategy substreamCancelStrategy, Func<T, bool> predicate,
-            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task>, TClosed> toFunc)
+            Func<IFlow<Source<T, NotUsed>, TMat>, Sink<Source<T, NotUsed>, Task<Done>>, TClosed> toFunc)
         {
             var merge = new SplitAfterMergeBack<T, TMat>(flow, predicate, substreamCancelStrategy);
 
-            Func<Sink<T, TMat>, TClosed> finish = s =>
+            TClosed finish(Sink<T, TMat> s)
             {
                 return toFunc(flow.Via(Fusing.Split.After(predicate, substreamCancelStrategy)),
                     Sink.ForEach<Source<T, NotUsed>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
-            };
+            }
 
             return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, finish);
         }
@@ -1550,7 +1646,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
-        internal class SplitAfterMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
+        internal sealed class SplitAfterMergeBack<TOut, TMat> : IMergeBack<TOut, TMat>
         {
             private readonly IFlow<TOut, TMat> _self;
             private readonly Func<TOut, bool> _predicate;
@@ -1799,7 +1895,7 @@ namespace Akka.Streams.Dsl.Internal
             int maximumBurst, ThrottleMode mode)
         {
             if (elements <= 0) throw new ArgumentException("Throttle elements must be > 0", nameof(elements));
-            if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
+            if (per <= TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be less than or equal to zero", nameof(per));
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
             if (per.Ticks < elements)
@@ -1856,7 +1952,7 @@ namespace Akka.Streams.Dsl.Internal
             int maximumBurst, Func<T, int> calculateCost, ThrottleMode mode)
         {
             if (cost <= 0) throw new ArgumentException("cost must be > 0", nameof(cost));
-            if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
+            if (per <= TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be less than or equal to zero", nameof(per));
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
             if (per.Ticks < cost)
@@ -2474,7 +2570,7 @@ namespace Akka.Streams.Dsl.Internal
         /// elements that would've been sent to it will be dropped instead.
         /// </para>
         /// <para>It is similar to <seealso cref="AlsoToMaterialized{TOut,TMat,TMat2,TMat3}"/> which does backpressure instead of dropping elements.</para>
-        /// <para>@see <seealso cref="WireTap{TOut,TMat}"/></para>
+        /// <para>@see <seealso cref="WireTap{TOut, TMat}(IFlow{TOut, TMat}, Action{TOut})"/></para>
         /// <para>
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
@@ -2579,11 +2675,8 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="materializerFunction">TBD</param>
         /// <returns>TBD</returns>
-        public static IFlow<T, TMat2> WatchTermination<T, TMat, TMat2>(this IFlow<T, TMat> flow,
-            Func<TMat, Task, TMat2> materializerFunction)
-        {
-            return flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
-        }
+        public static IFlow<T, TMat2> WatchTermination<T, TMat, TMat2>(this IFlow<T, TMat> flow, Func<TMat, Task<Done>, TMat2> materializerFunction) => 
+            flow.ViaMaterialized(Fusing.GraphStages.TerminationWatcher<T>(), materializerFunction);
 
         /// <summary>
         /// Materializes to <see cref="IFlowMonitor"/> that allows monitoring of the the current flow. All events are propagated

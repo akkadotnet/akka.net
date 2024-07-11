@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorProducerPipeline.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,6 @@ namespace Akka.Actor
     /// <summary>
     /// Plugin interface used to define
     /// </summary>
-    [Obsolete("Actor producer pipeline API will be removed in v1.5.")]
     public interface IActorProducerPlugin
     {
         /// <summary>
@@ -45,8 +44,7 @@ namespace Akka.Actor
 
     /// <summary>
     /// Base actor producer pipeline plugin class.
-    /// </summary>
-    [Obsolete("Actor producer pipeline API will be removed in v1.5.")]
+    /// </summary>    
     public abstract class ActorProducerPluginBase : IActorProducerPlugin
     {
         /// <summary>
@@ -76,8 +74,7 @@ namespace Akka.Actor
 
     /// <summary>
     /// Base generic actor producer pipeline plugin class.
-    /// </summary>
-    [Obsolete("Actor producer pipeline API will be removed in v1.5.")]
+    /// </summary>    
     public abstract class ActorProducerPluginBase<TActor> : IActorProducerPlugin where TActor : ActorBase
     {
         /// <summary>
@@ -118,17 +115,16 @@ namespace Akka.Actor
     /// <summary>
     /// Class used to resolving actor producer pipelines depending on actor type.
     /// </summary>
-    [Obsolete("Actor producer pipeline API will be removed in v1.5.")]
     public class ActorProducerPipelineResolver
     {
         private readonly Lazy<ILoggingAdapter> _log;
-        private readonly List<IActorProducerPlugin> _plugins = new List<IActorProducerPlugin>
+        private readonly List<IActorProducerPlugin> _plugins = new()
         {   
             // collection of plugins loaded by default
             new ActorStashPlugin()
         };
 
-        private readonly ConcurrentDictionary<Type, ActorProducerPipeline> _pipelines = new ConcurrentDictionary<Type, ActorProducerPipeline>();
+        private readonly ConcurrentDictionary<Type, ActorProducerPipeline> _pipelines = new();
 
         /// <summary>
         /// Gets total number of unique plugins registered inside current resolver.
@@ -233,8 +229,7 @@ namespace Akka.Actor
 
     /// <summary>
     /// TBD
-    /// </summary>
-    [Obsolete("Actor producer pipeline API will be removed in v1.5.")]
+    /// </summary>    
     public class ActorProducerPipeline : IEnumerable<IActorProducerPlugin>
     {
         private Lazy<ILoggingAdapter> _log;

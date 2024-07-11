@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReplicatorMessageSerializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -34,8 +34,6 @@ namespace Akka.DistributedData.Tests.Serialization
 
         private readonly ReplicatorMessageSerializer _serializer;
 
-        private readonly string _protocol;
-
         private readonly UniqueAddress _address1;
         private readonly UniqueAddress _address2;
         private readonly UniqueAddress _address3;
@@ -48,7 +46,6 @@ namespace Akka.DistributedData.Tests.Serialization
 
             // We dont have Artery implementation
             // _protocol = ((RemoteActorRefProvider) ((ExtendedActorSystem)Sys).Provider).RemoteSettings.Artery.Enabled
-            _protocol = "akka.tcp";
 
             _address1 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "some.host.org", 4711), 1);
             _address2 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "other.host.org", 4711), 2);

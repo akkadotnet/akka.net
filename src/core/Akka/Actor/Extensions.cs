@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Extensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -195,13 +195,13 @@ namespace Akka.Actor
         /// <returns>The extension created using the given actor system.</returns>
         public abstract T CreateExtension(ExtendedActorSystem system);
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return obj is T;
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return typeof (T).GetHashCode();

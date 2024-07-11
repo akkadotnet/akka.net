@@ -1,23 +1,22 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Tcp.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.IO.Buffers;
+using Akka.Util;
 
 namespace Akka.IO
 {
@@ -29,7 +28,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Tcp Instance = new Tcp();
+        public static readonly Tcp Instance = new();
 
         /// <summary>
         /// TBD
@@ -53,29 +52,30 @@ namespace Akka.IO
 
         #region internal connection messages
         
-        internal abstract class SocketCompleted : INoSerializationVerificationNeeded { }
+        internal abstract class SocketCompleted : INoSerializationVerificationNeeded, IDeadLetterSuppression 
+        { }
 
         internal sealed class SocketSent : SocketCompleted
         {
-            public static readonly SocketSent Instance = new SocketSent();
+            public static readonly SocketSent Instance = new();
             private SocketSent() { }
         }
 
         internal sealed class SocketReceived : SocketCompleted
         {
-            public static readonly SocketReceived Instance = new SocketReceived();
+            public static readonly SocketReceived Instance = new();
             private SocketReceived() { }
         }
 
         internal sealed class SocketAccepted : SocketCompleted
         {
-            public static readonly SocketAccepted Instance = new SocketAccepted();
+            public static readonly SocketAccepted Instance = new();
             private SocketAccepted() { }
         }
 
         internal sealed class SocketConnected : SocketCompleted
         {
-            public static readonly SocketConnected Instance = new SocketConnected();
+            public static readonly SocketConnected Instance = new();
             private SocketConnected() { }
         }
 
@@ -87,7 +87,7 @@ namespace Akka.IO
         public class Message : INoSerializationVerificationNeeded { }
 
         #region user commands
-        
+
         // COMMANDS
         /// <summary>
         /// TBD
@@ -268,7 +268,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Unbind Instance = new Unbind();
+            public static readonly Unbind Instance = new();
 
             private Unbind()
             { }
@@ -296,7 +296,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Close Instance = new Close();
+            public static readonly Close Instance = new();
 
             private Close()
             {
@@ -319,7 +319,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ConfirmedClose Instance = new ConfirmedClose();
+            public static readonly ConfirmedClose Instance = new();
 
             private ConfirmedClose()
             {
@@ -343,7 +343,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Abort Instance = new Abort();
+            public static readonly Abort Instance = new();
 
             private Abort()
             {
@@ -366,7 +366,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly NoAck Instance = new NoAck(null);
+            public static readonly NoAck Instance = new(null);
 
             /// <summary>
             /// TBD
@@ -484,7 +484,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Write Empty = new Write(ByteString.Empty, NoAck.Instance);
+            public static readonly Write Empty = new(ByteString.Empty, NoAck.Instance);
 
             /// <summary>
             /// TBD
@@ -668,7 +668,11 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ResumeWriting Instance = new ResumeWriting();
+            public static readonly ResumeWriting Instance = new();
+
+            private ResumeWriting()
+            {
+            }
         }
 
         /// <summary>
@@ -681,7 +685,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static SuspendReading Instance = new SuspendReading();
+            public static readonly SuspendReading Instance = new();
 
             private SuspendReading()
             {
@@ -697,7 +701,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static ResumeReading Instance = new ResumeReading();
+            public static readonly ResumeReading Instance = new();
 
             private ResumeReading()
             {
@@ -731,7 +735,7 @@ namespace Akka.IO
         #endregion
 
         #region user events
-        
+
         /// <summary>
         /// Common interface for all events generated by the TCP layer actors.
         /// </summary>
@@ -806,18 +810,32 @@ namespace Akka.IO
             /// TBD
             /// </summary>
             /// <param name="cmd">TBD</param>
-            public CommandFailed(Command cmd)
-            {
-                Cmd = cmd;
-            }
+            public CommandFailed(Command cmd) => Cmd = cmd;
 
             /// <summary>
             /// TBD
             /// </summary>
             public Command Cmd { get; }
 
-            public override string ToString() =>
-                $"CommandFailed({Cmd})";
+            /// <summary>
+            /// Optionally contains the cause why the command failed.
+            /// </summary>
+            public Option<Exception> Cause { get; private set; } = Option<Exception>.None;
+
+            /// <summary>
+            /// Creates a copy of this object with a new cause set.
+            /// </summary>
+            [InternalApi]
+            public CommandFailed WithCause(Exception cause)
+            {
+                // Needs to be added with a mutable property for compatibility reasons
+                return new CommandFailed(Cmd) { Cause = cause };
+            }
+
+            [InternalApi]
+            public string CauseString => Cause.HasValue ? $" because of {Cause.Value.Message}" : "";
+
+            public override string ToString() => $"CommandFailed({Cmd}){CauseString}";
         }
 
         /// <summary>
@@ -832,7 +850,11 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static WritingResumed Instance = new WritingResumed();
+            public static readonly WritingResumed Instance = new();
+
+            private WritingResumed()
+            {
+            }
         }
 
         /// <summary>
@@ -869,7 +891,11 @@ namespace Akka.IO
             /// <summary>
             /// Singleton instance
             /// </summary>
-            public static Unbound Instance = new Unbound();
+            public static readonly Unbound Instance = new();
+
+            private Unbound()
+            {
+            }
         }
 
         /// <summary>
@@ -912,7 +938,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Closed Instance = new Closed();
+            public static readonly Closed Instance = new();
 
             private Closed()
             {
@@ -927,7 +953,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly Aborted Instance = new Aborted();
+            public static readonly Aborted Instance = new();
 
             private Aborted()
             {
@@ -948,7 +974,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly ConfirmedClosed Instance = new ConfirmedClosed();
+            public static readonly ConfirmedClosed Instance = new();
 
             private ConfirmedClosed()
             {
@@ -968,7 +994,7 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public static readonly PeerClosed Instance = new PeerClosed();
+            public static readonly PeerClosed Instance = new();
 
             private PeerClosed()
             {

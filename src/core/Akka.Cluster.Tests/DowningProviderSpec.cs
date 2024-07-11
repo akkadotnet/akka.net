@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DowningProviderSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,15 +10,16 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.TestKit.Xunit2.Attributes;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
 
 namespace Akka.Cluster.Tests
 {
-    class FailingDowningProvider : IDowningProvider
+    internal class FailingDowningProvider : IDowningProvider
     {
-        public FailingDowningProvider(ActorSystem system)
+        public FailingDowningProvider(ActorSystem system, Cluster cluster)
         {
         }
 
@@ -33,10 +34,10 @@ namespace Akka.Cluster.Tests
         }
     }
 
-    class DummyDowningProvider : IDowningProvider
+    internal class DummyDowningProvider : IDowningProvider
     {
-        public readonly AtomicBoolean ActorPropsAccessed = new AtomicBoolean(false);
-        public DummyDowningProvider(ActorSystem system)
+        public readonly AtomicBoolean ActorPropsAccessed = new(false);
+        public DummyDowningProvider(ActorSystem system, Cluster cluster)
         {
         }
 
@@ -68,18 +69,20 @@ namespace Akka.Cluster.Tests
         ");
 
         [Fact]
-        public void Downing_provider_should_default_to_NoDowning()
+        public void Downing_provider_should_default_to_KeepMajority()
         {
             using (var system = ActorSystem.Create("default", BaseConfig))
             {
-                Cluster.Get(system).DowningProvider.Should().BeOfType<NoDowning>();
+                Cluster.Get(system).DowningProvider.Should().BeOfType<Akka.Cluster.SBR.SplitBrainResolverProvider>();
             }
         }
 
         [Fact]
-        public void Downing_provider_should_use_AutoDowning_if_auto_down_unreachable_after_is_configured()
+        public void Downing_provider_should_ignore_AutoDowning_if_auto_down_unreachable_after_is_configured()
         {
-            var config = ConfigurationFactory.ParseString(@"akka.cluster.auto-down-unreachable-after=18s");
+            var config = ConfigurationFactory.ParseString(@"
+                akka.cluster.downing-provider-class = """"
+                akka.cluster.auto-down-unreachable-after=18s");
             using (var system = ActorSystem.Create("auto-downing", config.WithFallback(BaseConfig)))
             {
                 Cluster.Get(system).DowningProvider.Should().BeOfType<AutoDowning>();
@@ -96,12 +99,12 @@ namespace Akka.Cluster.Tests
                 var downingProvider = Cluster.Get(system).DowningProvider;
                 downingProvider.Should().BeOfType<DummyDowningProvider>();
                 AwaitCondition(() =>
-                    (downingProvider as DummyDowningProvider).ActorPropsAccessed.Value,
+                    ((DummyDowningProvider)downingProvider).ActorPropsAccessed.Value,
                     TimeSpan.FromSeconds(3));
             }
         }
 
-        [Fact(Skip = "Racy")]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void Downing_provider_should_stop_the_cluster_if_the_downing_provider_throws_exception_in_props()
         {
             var config = ConfigurationFactory.ParseString(

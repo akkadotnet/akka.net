@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Serializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -37,6 +38,8 @@ namespace Akka.Serialization
     /// </summary>
     public abstract class Serializer
     {
+        internal static string GetErrorForSerializerId(int id) => SerializerErrorCode.GetErrorForSerializerId(id);
+        
         /// <summary>
         /// The actor system to associate with this serializer.
         /// </summary>
@@ -80,7 +83,9 @@ namespace Akka.Serialization
         /// <returns>TBD</returns>
         public byte[] ToBinaryWithAddress(Address address, object obj)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             return Serialization.WithTransport(system, address, () => ToBinary(obj));
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         /// <summary>

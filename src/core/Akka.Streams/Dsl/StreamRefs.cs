@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamRefs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="SourceRef{T}"/>
         [ApiMayChange]
         public static Sink<T, Task<ISourceRef<T>>> SourceRef<T>() =>
-            Sink.FromGraph<T, Task<ISourceRef<T>>>(new SinkRefStageImpl<T>(null));
+            Sink.FromGraph(new SinkRefStageImpl<T>(null));
 
         /// <summary>
         /// A local <see cref="Sink{TIn,TMat}"/> which materializes a <see cref="SinkRef{T}"/> which can be used by other streams (including remote ones),
@@ -46,7 +46,7 @@ namespace Akka.Streams.Dsl
         /// <seealso cref="SinkRef{T}"/>
         [ApiMayChange]
         public static Source<T, Task<ISinkRef<T>>> SinkRef<T>() =>
-            Source.FromGraph<T, Task<ISinkRef<T>>>(new SourceRefStageImpl<T>(null));
+            Source.FromGraph(new SourceRefStageImpl<T>(null));
     }
 
     /// <summary>
@@ -89,7 +89,7 @@ namespace Akka.Streams.Dsl
         public StreamRefSettings Copy(int? bufferCapacity = null,
             TimeSpan? demandRedeliveryInterval = null,
             TimeSpan? subscriptionTimeout = null,
-            TimeSpan? finalTerminationSignalDeadline = null) => new StreamRefSettings(
+            TimeSpan? finalTerminationSignalDeadline = null) => new(
             bufferCapacity: bufferCapacity ?? this.BufferCapacity,
             demandRedeliveryInterval: demandRedeliveryInterval ?? this.DemandRedeliveryInterval,
             subscriptionTimeout: subscriptionTimeout ?? this.SubscriptionTimeout,

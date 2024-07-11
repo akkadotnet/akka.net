@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReadAggregator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -81,26 +81,36 @@ namespace Akka.DistributedData
                 Reply(false);
         }
 
-        protected override bool Receive(object message) => message.Match()
-            .With<ReadResult>(x =>
+        protected override bool Receive(object message)
+        {
+            switch (message)
             {
-                if (x.Envelope != null)
-                {
-                    _result = _result?.Merge(x.Envelope) ?? x.Envelope;
-                }
+                case ReadResult x:
+                    if (x.Envelope != null)
+                    {
+                        _result = _result?.Merge(x.Envelope) ?? x.Envelope;
+                    }
 
-                Remaining = Remaining.Remove(Sender.Path.Address);
-                var done = DoneWhenRemainingSize;
-                Log.Debug("read acks remaining: {0}, done when: {1}, current state: {2}", Remaining.Count, done, _result);
-                if (Remaining.Count == done) Reply(true);
-            })
-            .With<SendToSecondary>(x =>
-            {
-                foreach (var n in SecondaryNodes)
-                    Replica(n).Tell(_read);
-            })
-            .With<ReceiveTimeout>(_ => Reply(false))
-            .WasHandled;
+                    Remaining = Remaining.Remove(Sender.Path.Address);
+                    var done = DoneWhenRemainingSize;
+                    Log.Debug("read acks remaining: {0}, done when: {1}, current state: {2}", Remaining.Count, done,
+                        _result);
+                    if (Remaining.Count == done) Reply(true);
+                    return true;
+                
+                case SendToSecondary x:
+                    foreach (var n in SecondaryNodes)
+                        Replica(n).Tell(_read);
+                    return true;
+                
+                case ReceiveTimeout _:
+                    Reply(false);
+                    return true;
+                
+                default:
+                    return false;
+            }
+        }
 
         private void Reply(bool ok)
         {
@@ -121,19 +131,30 @@ namespace Akka.DistributedData
             }
         }
 
-        private Receive WaitRepairAck(DataEnvelope envelope) => msg => msg.Match()
-            .With<ReadRepairAck>(x =>
+        private Receive WaitRepairAck(DataEnvelope envelope) => msg =>
+        {
+            switch (msg)
             {
-                var reply = envelope.Data is DeletedData
-                    ? (object)new DataDeleted(_key, null)
-                    : new GetSuccess(_key, _req, envelope.Data);
-                _replyTo.Tell(reply, Context.Parent);
-                Context.Stop(Self);
-            })
-            .With<ReadResult>(x => Remaining = Remaining.Remove(Sender.Path.Address))
-            .With<SendToSecondary>(_ => { })
-            .With<ReceiveTimeout>(_ => { })
-            .WasHandled;
+                case ReadRepairAck _:
+                    var reply = envelope.Data is DeletedData
+                        ? (object)new DataDeleted(_key, null)
+                        : new GetSuccess(_key, _req, envelope.Data);
+                    _replyTo.Tell(reply, Context.Parent);
+                    Context.Stop(Self);
+                    return true;
+                case ReadResult _:
+                    Remaining = Remaining.Remove(Sender.Path.Address);
+                    return true;
+                case SendToSecondary _:
+                    // no-op
+                    return true;
+                case ReceiveTimeout _:
+                    // no-op
+                    return true;
+                default:
+                    return false;
+            }
+        };
     }
 
     public interface IReadConsistency
@@ -143,18 +164,18 @@ namespace Akka.DistributedData
 
     public sealed class ReadLocal : IReadConsistency
     {
-        public static readonly ReadLocal Instance = new ReadLocal();
+        public static readonly ReadLocal Instance = new();
 
         public TimeSpan Timeout => TimeSpan.Zero;
 
         private ReadLocal() { }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj) => obj != null && obj is ReadLocal;
 
-        /// <inheritdoc/>
+        
         public override string ToString() => "ReadLocal";
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => nameof(ReadLocal).GetHashCode();
     }
 
@@ -170,10 +191,10 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
-        /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is ReadFrom && Equals((ReadFrom) obj);
+        
+        public override bool Equals(object obj) => obj is ReadFrom from && Equals(from);
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReadFrom other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -181,7 +202,7 @@ namespace Akka.DistributedData
             return N == other.N && Timeout.Equals(other.Timeout);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -190,7 +211,7 @@ namespace Akka.DistributedData
             }
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReadFrom({N}, timeout={Timeout})";
     }
 
@@ -205,16 +226,16 @@ namespace Akka.DistributedData
             MinCapacity = minCapacity;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
-            return obj is ReadMajority && Equals((ReadMajority) obj);
+            return obj is ReadMajority majority && Equals(majority);
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReadMajority(timeout={Timeout})";
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReadMajority other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -222,7 +243,7 @@ namespace Akka.DistributedData
             return Timeout.Equals(other.Timeout) && MinCapacity == other.MinCapacity;
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -250,16 +271,16 @@ namespace Akka.DistributedData
             MinCapacity = minCapacity;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
-            return obj is ReadMajorityPlus && Equals((ReadMajorityPlus)obj);
+            return obj is ReadMajorityPlus plus && Equals(plus);
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReadMajorityPlus(timeout={Timeout}, additional={Additional})";
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReadMajorityPlus other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -267,7 +288,7 @@ namespace Akka.DistributedData
             return Timeout.Equals(other.Timeout) && Additional == other.Additional && MinCapacity == other.MinCapacity;
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -290,16 +311,16 @@ namespace Akka.DistributedData
             Timeout = timeout;
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
-            return obj is ReadAll && Equals((ReadAll) obj);
+            return obj is ReadAll all && Equals(all);
         }
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"ReadAll(timeout={Timeout})";
 
-        /// <inheritdoc/>
+        
         public bool Equals(ReadAll other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -307,7 +328,7 @@ namespace Akka.DistributedData
             return Timeout.Equals(other.Timeout);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             return Timeout.GetHashCode();

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EqualsStringAndPathMatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -39,8 +39,7 @@ namespace Akka.TestKit.Internal.StringMatcher
             if (String.Equals(_path, path, StringComparison.OrdinalIgnoreCase)) return true;
             if(!_canBeRelative)return false;
 
-            ActorPath actorPath;
-            if (!ActorPath.TryParse(path, out actorPath)) return false;
+            if (!ActorPath.TryParse(path, out var actorPath)) return false;
             var pathWithoutAddress = actorPath.ToStringWithoutAddress();
             return String.Equals(_path, pathWithoutAddress, StringComparison.OrdinalIgnoreCase);
         }

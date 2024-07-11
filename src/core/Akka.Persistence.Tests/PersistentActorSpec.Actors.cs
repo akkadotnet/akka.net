@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorSpec.Actors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,9 +28,8 @@ namespace Akka.Persistence.Tests
 
         protected bool Receiver(object message)
         {
-            if (message is Cmd)
+            if (message is Cmd cmd)
             {
-                var cmd = message as Cmd;
                 PersistAll(new[] { new Evt(cmd.Data + "-1"), new Evt(cmd.Data + "-2") }, UpdateStateHandler);
             }
             else if (message is DeleteMessagesSuccess)
@@ -52,16 +51,16 @@ namespace Akka.Persistence.Tests
 
         protected override void OnPersistRejected(Exception cause, object @event, long sequenceNr)
         {
-            if (@event is Evt)
-                Sender.Tell("Rejected: " + ((Evt)@event).Data);
+            if (@event is Evt evt)
+                Sender.Tell("Rejected: " + evt.Data);
             else
                 base.OnPersistRejected(cause, @event, sequenceNr);
         }
 
         protected override void OnPersistFailure(Exception cause, object @event, long sequenceNr)
         {
-            if (@event is Evt)
-                Sender.Tell("Failure: " + ((Evt)@event).Data);
+            if (@event is Evt evt)
+                Sender.Tell("Failure: " + evt.Data);
             else
                 base.OnPersistFailure(cause, @event, sequenceNr);
         }
@@ -148,10 +147,10 @@ namespace Akka.Persistence.Tests
 
             protected bool UpdateState(object message)
             {
-                if (message is Evt)
-                    Events = Events.AddFirst((message as Evt).Data);
-                else if (message is IActorRef)
-                    AskedForDelete = (IActorRef)message;
+                if (message is Evt evt)
+                    Events = Events.AddFirst(evt.Data);
+                else if (message is IActorRef @ref)
+                    AskedForDelete = @ref;
                 else
                     return false;
                 return true;
@@ -161,10 +160,10 @@ namespace Akka.Persistence.Tests
             {
                 if (message is GetState) Sender.Tell(Events.Reverse().ToArray());
                 else if (message.ToString() == "boom") throw new TestException("boom");
-                else if (message is Delete)
+                else if (message is Delete delete)
                 {
                     Persist(Sender, s => AskedForDelete = s);
-                    DeleteMessages(((Delete)message).ToSequenceNr);
+                    DeleteMessages(delete.ToSequenceNr);
                 }
                 else return false;
                 return true;
@@ -183,9 +182,8 @@ namespace Akka.Persistence.Tests
 
             protected bool Receiver(object message)
             {
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = message as Cmd;
                     PersistAll(new[] { new Evt(cmd.Data + "-1"), new Evt(cmd.Data + "-2") }, UpdateStateHandler);
                     PersistAll(new[] { new Evt(cmd.Data + "-3"), new Evt(cmd.Data + "-4") }, UpdateStateHandler);
                     return true;
@@ -204,9 +202,8 @@ namespace Akka.Persistence.Tests
 
             protected bool Receiver(object message)
             {
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = message as Cmd;
                     PersistAll(new[] { new Evt(cmd.Data + "-11"), new Evt(cmd.Data + "-12") }, UpdateStateHandler);
                     UpdateState(new Evt(cmd.Data + "-10"));
                     return true;
@@ -223,9 +220,8 @@ namespace Akka.Persistence.Tests
             {
                 if (CommonBehavior(message)) return true;
 
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = message as Cmd;
                     Persist(new Evt(cmd.Data + "-0"), evt =>
                     {
                         UpdateState(evt);
@@ -238,10 +234,8 @@ namespace Akka.Persistence.Tests
 
             protected bool NewBehavior(object message)
             {
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = message as Cmd;
-
                     Persist(new Evt(cmd.Data + "-21"), UpdateStateHandler);
                     Persist(new Evt(cmd.Data + "-22"), evt =>
                     {
@@ -262,9 +256,8 @@ namespace Akka.Persistence.Tests
             {
                 if (CommonBehavior(message)) return true;
 
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = message as Cmd;
                     Persist(new Evt(cmd.Data + "-0"), evt =>
                     {
                         UpdateState(evt);
@@ -277,10 +270,8 @@ namespace Akka.Persistence.Tests
 
             protected bool NewBehavior(object message)
             {
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = message as Cmd;
-
                     Persist(new Evt(cmd.Data + "-21"), evt =>
                     {
                         UpdateState(evt);
@@ -300,9 +291,8 @@ namespace Akka.Persistence.Tests
             {
                 if (CommonBehavior(message)) return true;
 
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = message as Cmd;
                     Context.Become(NewBehavior);
                     Persist(new Evt(cmd.Data + "-0"), UpdateStateHandler);
                     return true;
@@ -312,9 +302,8 @@ namespace Akka.Persistence.Tests
 
             protected bool NewBehavior(object message)
             {
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = message as Cmd;
                     Context.UnbecomeStacked();
                     PersistAll(new[] { new Evt(cmd.Data + "-31"), new Evt(cmd.Data + "-32") }, UpdateStateHandler);
                     UpdateState(new Evt(cmd.Data + "-30"));
@@ -332,9 +321,8 @@ namespace Akka.Persistence.Tests
             {
                 if (CommonBehavior(message)) return true;
 
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = message as Cmd;
                     Persist(new Evt(cmd.Data + "-0"), UpdateStateHandler);
                     Context.Become(NewBehavior);
                     return true;
@@ -344,9 +332,8 @@ namespace Akka.Persistence.Tests
 
             protected bool NewBehavior(object message)
             {
-                if (message is Cmd)
+                if (message is Cmd cmd)
                 {
-                    var cmd = message as Cmd;
                     PersistAll(new[] { new Evt(cmd.Data + "-31"), new Evt(cmd.Data + "-32") }, UpdateStateHandler);
                     UpdateState(new Evt(cmd.Data + "-30"));
                     Context.UnbecomeStacked();
@@ -369,10 +356,10 @@ namespace Akka.Persistence.Tests
             {
                 if (!base.ReceiveRecover(message))
                 {
-                    if (message is SnapshotOffer)
+                    if (message is SnapshotOffer offer)
                     {
                         Probe.Tell("offered");
-                        Events = (message as SnapshotOffer).Snapshot.AsInstanceOf<ImmutableArray<object>>();
+                        Events = offer.Snapshot.AsInstanceOf<ImmutableArray<object>>();
                     }
                     else return false;
                 }
@@ -382,7 +369,7 @@ namespace Akka.Persistence.Tests
             protected override bool ReceiveCommand(object message)
             {
                 if (CommonBehavior(message)) return true;
-                if (message is Cmd) HandleCmd(message as Cmd);
+                if (message is Cmd cmd) HandleCmd(cmd);
                 else if (message is SaveSnapshotSuccess) Probe.Tell("saved");
                 else if (message.ToString() == "snap") SaveSnapshot(Events);
                 else return false;
@@ -470,8 +457,8 @@ namespace Akka.Persistence.Tests
 
             protected override void OnPersistFailure(Exception cause, object @event, long sequenceNr)
             {
-                if (@event is Evt)
-                    Sender.Tell(string.Format("Failure: {0}", ((Evt)@event).Data));
+                if (@event is Evt evt)
+                    Sender.Tell(string.Format("Failure: {0}", evt.Data));
                 else
                     base.OnPersistFailure(cause, @event, sequenceNr);
             }
@@ -511,7 +498,7 @@ namespace Akka.Persistence.Tests
 
         internal class AsyncPersistSameEventTwiceActor : ExamplePersistentActor
         {
-            private AtomicCounter _sendMessageCounter = new AtomicCounter(0);
+            private AtomicCounter _sendMessageCounter = new(0);
             public AsyncPersistSameEventTwiceActor(string name)
                 : base(name)
             {
@@ -561,14 +548,14 @@ namespace Akka.Persistence.Tests
                         if (data.Contains("defer"))
                         {
                             DeferAsync("before-nil", evt => Sender.Tell(evt));
-                            PersistAll<object>(null, evt => Sender.Tell("Null"));
+                            PersistAll<object>(null, _ => Sender.Tell("Null"));
                             DeferAsync("after-nil", evt => Sender.Tell(evt));
                             Sender.Tell(data);
                         }
                         else if (data.Contains("persist"))
                         {
                             Persist("before-nil", evt => Sender.Tell(evt));
-                            PersistAll<object>(null, evt => Sender.Tell("Null"));
+                            PersistAll<object>(null, _ => Sender.Tell("Null"));
                             DeferAsync("after-nil", evt => Sender.Tell(evt));
                             Sender.Tell(data);
                             return true;
@@ -642,7 +629,6 @@ namespace Akka.Persistence.Tests
 
         internal class AsyncPersistHandlerCorrelationCheck : ExamplePersistentActor
         {
-            private int _counter = 0;
             public AsyncPersistHandlerCorrelationCheck(string name)
                 : base(name)
             {
@@ -652,8 +638,7 @@ namespace Akka.Persistence.Tests
             {
                 if (!CommonBehavior(message))
                 {
-                    var cmd = message as Cmd;
-                    if (cmd != null)
+                    if (message is Cmd cmd)
                     {
                         PersistAsync(new Evt(cmd.Data), evt =>
                         {
@@ -678,8 +663,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                var cmd = message as Cmd;
-                if (cmd != null && cmd.Data.ToString() == "a")
+                if (message is Cmd cmd && cmd.Data.ToString() == "a")
                 {
                     Persist(5L, i =>
                     {
@@ -738,8 +722,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                var cmd = message as Cmd;
-                if (cmd != null)
+                if (message is Cmd cmd)
                 {
                     DeferAsync("d-1", Sender.Tell);
                     Persist(cmd.Data + "-2", Sender.Tell);
@@ -784,8 +767,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                var cmd = message as Cmd;
-                if (cmd != null)
+                if (message is Cmd cmd)
                 {
                     Persist("p-" + cmd.Data + "-1", Sender.Tell);
                     PersistAsync("pa-" + cmd.Data + "-2", Sender.Tell);
@@ -809,8 +791,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                var cmd = message as Cmd;
-                if (cmd != null)
+                if (message is Cmd cmd)
                 {
                     DeferAsync("d-1", Sender.Tell);
                     DeferAsync("d-2", Sender.Tell);
@@ -831,16 +812,14 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is LatchCmd)
+                if (message is LatchCmd latchCmd)
                 {
-                    var latchCmd = message as LatchCmd;
                     Sender.Tell(latchCmd.Data);
                     latchCmd.Latch.Ready(TimeSpan.FromSeconds(5));
                     PersistAsync(latchCmd.Data, _ => { });
                 }
-                else if (message is Cmd)
+                else if (message is Cmd cmd)
                 {
-                    var cmd = message as Cmd;
                     Sender.Tell(cmd.Data);
                     PersistAsync(cmd.Data, _ => { });
                 }
@@ -888,9 +867,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is string)
+                if (message is string s)
                 {
-                    var s = (string)message;
                     _probe.Tell(s);
                     Persist(s + "-outer-1", outer =>
                     {
@@ -920,9 +898,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is string)
+                if (message is string s)
                 {
-                    var s = (string)message;
                     _probe.Tell(s);
                     PersistAsync(s + "-outer-1", outer =>
                     {
@@ -952,9 +929,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is string)
+                if (message is string s)
                 {
-                    var s = (string)message;
                     _probe.Tell(s);
                     Persist(s + "-outer-1", outer =>
                     {
@@ -984,9 +960,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is string)
+                if (message is string s)
                 {
-                    var s = (string)message;
                     _probe.Tell(s);
                     PersistAsync(s + "-outer-async-1", outer =>
                     {
@@ -1016,9 +991,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is string)
+                if (message is string s)
                 {
-                    var s = (string)message;
                     _probe.Tell(s);
                     PersistAsync(s + "-outer-async", outer =>
                     {
@@ -1045,7 +1019,7 @@ namespace Akka.Persistence.Tests
         {
             private readonly int _maxDepth;
             private readonly IActorRef _probe;
-            private readonly Dictionary<string, int> _currentDepths = new Dictionary<string, int>();
+            private readonly Dictionary<string, int> _currentDepths = new();
 
             public DeeplyNestedPersists(string name, int maxDepth, IActorRef probe)
                 : base(name)
@@ -1074,9 +1048,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is string)
+                if (message is string s)
                 {
-                    var s = (string)message;
                     _probe.Tell(s);
                     Persist(s + "-1", WeMustGoDeeper);
                     return true;
@@ -1089,7 +1062,7 @@ namespace Akka.Persistence.Tests
         {
             private readonly int _maxDepth;
             private readonly IActorRef _probe;
-            private readonly Dictionary<string, int> _currentDepths = new Dictionary<string, int>();
+            private readonly Dictionary<string, int> _currentDepths = new();
 
             public DeeplyNestedPersistAsyncs(string name, int maxDepth, IActorRef probe)
                 : base(name)
@@ -1118,9 +1091,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is string)
+                if (message is string s)
                 {
-                    var s = (string)message;
                     _probe.Tell(s);
                     PersistAsync(s + "-1", WeMustGoDeeper);
                     return true;

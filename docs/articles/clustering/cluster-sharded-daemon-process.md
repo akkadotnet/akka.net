@@ -1,3 +1,8 @@
+---
+uid: sharded-daemon-process
+title: Akka.Cluster.Sharding Daemon Processes - Distributing Workers
+---
+
 # Sharded Daemon Process
 
 > [!WARNING]
@@ -18,7 +23,7 @@ used to split the workload of consuming and updating a projection between `N` wo
 
 For cases where a single actor needs to be kept alive see [Cluster Singleton](cluster-singleton.md)
 
-## Basic example
+## Basic Example
 
 To set up a set of actors running with Sharded Daemon process each node in the cluster needs to run the same initialization
 when starting up:
@@ -27,5 +32,20 @@ when starting up:
 
 ## Scalability  
 
-This cluster tool is intended for small numbers of consumers and will not scale well to a large set. In large clusters
-it is recommended to limit the nodes the sharded daemon process will run on using a role.
+This cluster tool is intended for small numbers of consumers and will not scale well to a large set. In large clusters it is recommended to limit the nodes the sharded daemon process will run on using a role.
+
+## Push-Based Communication
+
+[`ShardedDaemonProcess`](xref:Akka.Cluster.Sharding.ShardedDaemonProcess) also supports push-based communication not too dissimilar from a round-robin `Router`:
+
+[!code-csharp[IActorRef returned by ShardedDaemonProcess](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests/ShardedDaemonProcessProxySpec.cs?name=PushDaemon)]
+
+The `ShardedDaemonProcess.Init` call returns an `IActorRef` - any messages you send to this `IActorRef` will be routed to one of the `n` worker instances you specified.
+
+## Daemon Proxies
+
+You can also interact with `ShardedDaemonProcess` on nodes that don't use the same [Akka.Cluster role](xref:member-roles) as the `ShardedDaemonProcess` host itself.
+
+[!code-csharp[IActorRef returned by ShardedDaemonProcess](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests/ShardedDaemonProcessProxySpec.cs?name=PushDaemonProxy)]
+
+Under the covers we use a [`ShardRegionProxy`](xref:Akka.Cluster.Sharding.ClusterSharding#Akka_Cluster_Sharding_ClusterSharding_StartProxy_System_String_System_String_Akka_Cluster_Sharding_IMessageExtractor_) to forward any messages you send to the `IActorRef` returned by the `ShardedDaemonProcess.InitProxy` method.

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DiscoveryConfigurationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,6 +14,7 @@ using Akka.Event;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Discovery.Tests
 {
@@ -113,10 +114,10 @@ namespace Akka.Discovery.Tests
                         }}
                     }}").WithFallback(ConfigurationFactory.Load()));
 
-            Action discoveryInstance = () => _ = Discovery.Get(sys).Default;
-            discoveryInstance
+            Invoking(() => _ = Discovery.Get(sys).Default)
                 .Should().Throw<TargetInvocationException>()
-                .WithInnerException<DiscoveryException>();
+                .WithInnerException<DiscoveryException>()
+                .WithMessage("oh no");
         }
 
         [Fact]
@@ -131,7 +132,79 @@ namespace Akka.Discovery.Tests
                         method = ""{className}""
                     }}").WithFallback(ConfigurationFactory.Load()));
 
-            Assert.Throws<ArgumentException>(() => _ = Discovery.Get(sys).Default);
+            Invoking(() => _ = Discovery.Get(sys).Default).Should()
+                .Throw<ArgumentException>()
+                .WithMessage($"Could not load discovery config from path [akka.discovery.{className}]");
+        }
+        
+        [Fact(DisplayName = "Discovery should load ServiceDiscovery class with one parameter")]
+        public void OneParameterTest()
+        {
+            using var sys = ActorSystem.Create(
+                "DiscoveryConfigurationSpec",
+                ConfigurationFactory.ParseString($@"
+                    akka.discovery {{
+                        method = akka-mock-inside
+                        akka-mock-inside {{
+                            class = ""{typeof(TestDiscoveryWithOneParam).TypeQualifiedName()}""
+                        }}
+                    }}").WithFallback(ConfigurationFactory.Load()));
+
+            var discovery = Discovery.Get(sys).Default;
+            discovery.Should().BeAssignableTo<TestDiscoveryWithOneParam>();
+        }
+
+        [Fact(DisplayName = "Discovery should load ServiceDiscovery class with two parameters")]
+        public void TwoParametersTest()
+        {
+            using var sys = ActorSystem.Create(
+                "DiscoveryConfigurationSpec",
+                ConfigurationFactory.ParseString($@"
+                    akka.discovery {{
+                        method = akka-mock-inside
+                        akka-mock-inside {{
+                            class = ""{typeof(TestDiscoveryWithTwoParam).TypeQualifiedName()}""
+                        }}
+                    }}").WithFallback(ConfigurationFactory.Load()));
+
+            var discovery = Discovery.Get(sys).Default;
+            discovery.Should().BeAssignableTo<TestDiscoveryWithTwoParam>();
+        }
+
+        [Fact(DisplayName = "Discovery should throw if ServiceDiscovery class has invalid parameters")]
+        public void IllegalParametersTest()
+        {
+            using var sys = ActorSystem.Create(
+                "DiscoveryConfigurationSpec",
+                ConfigurationFactory.ParseString($@"
+                    akka.discovery {{
+                        method = akka-mock-inside
+                        akka-mock-inside {{
+                            class = ""{typeof(TestDiscoveryWithIllegalParam).TypeQualifiedName()}""
+                        }}
+                    }}").WithFallback(ConfigurationFactory.Load()));
+
+            Invoking(() => _ = Discovery.Get(sys).Default).Should()
+                .Throw<ArgumentException>()
+                .WithMessage("Illegal akka.discovery.akka-mock-inside.class value or incompatible class!*");
+        }
+
+        [Fact(DisplayName = "Discovery should throw if ServiceDiscovery class does not have any public constructor")]
+        public void IllegalConstructorTest()
+        {
+            using var sys = ActorSystem.Create(
+                "DiscoveryConfigurationSpec",
+                ConfigurationFactory.ParseString($@"
+                    akka.discovery {{
+                        method = akka-mock-inside
+                        akka-mock-inside {{
+                            class = ""{typeof(TestDiscoveryWithIllegalCtor).TypeQualifiedName()}""
+                        }}
+                    }}").WithFallback(ConfigurationFactory.Load()));
+
+            Invoking(() => _ = Discovery.Get(sys).Default).Should()
+                .Throw<ArgumentException>()
+                .WithMessage("Illegal akka.discovery.akka-mock-inside.class value or incompatible class!*");
         }
     }
 
@@ -143,6 +216,40 @@ namespace Akka.Discovery.Tests
 
     internal class FakeTestDiscovery2 : FakeTestDiscovery
     { }
+
+    internal class TestDiscoveryWithOneParam : ServiceDiscovery
+    {
+        public TestDiscoveryWithOneParam(ExtendedActorSystem sys){ }
+        
+        public override Task<Resolved> Lookup(Lookup lookup, TimeSpan resolveTimeout)=>
+            Task.FromResult((Resolved)null);
+    }
+
+    internal class TestDiscoveryWithTwoParam : ServiceDiscovery
+    {
+        public TestDiscoveryWithTwoParam(ExtendedActorSystem sys, Configuration.Config cfg){ }
+        
+        public override Task<Resolved> Lookup(Lookup lookup, TimeSpan resolveTimeout)=>
+            Task.FromResult((Resolved)null);
+    }
+
+    internal class TestDiscoveryWithIllegalParam : ServiceDiscovery
+    {
+        public TestDiscoveryWithIllegalParam(Configuration.Config cfg){ }
+        
+        public override Task<Resolved> Lookup(Lookup lookup, TimeSpan resolveTimeout)=>
+            Task.FromResult((Resolved)null);
+    }
+
+    internal class TestDiscoveryWithIllegalCtor : ServiceDiscovery
+    {
+        private TestDiscoveryWithIllegalCtor(){ }
+        private TestDiscoveryWithIllegalCtor(ExtendedActorSystem sys){ }
+        private TestDiscoveryWithIllegalCtor(ExtendedActorSystem sys, Configuration.Config cfg){ }
+        
+        public override Task<Resolved> Lookup(Lookup lookup, TimeSpan resolveTimeout)=>
+            Task.FromResult((Resolved)null);
+    }
 
     internal class DiscoveryException : Exception
     {

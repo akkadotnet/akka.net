@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ChildrenContainerBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -147,10 +147,7 @@ namespace Akka.Actor.Internal
         /// <returns>TBD</returns>
         public bool TryGetByName(string name, out IChildStats stats)
         {
-            if (InternalChildren.TryGetValue(name, out stats))
-                return true;
-            stats = null;
-            return false;
+            return InternalChildren.TryGetValue(name, out stats);
         }
 
         /// <summary>

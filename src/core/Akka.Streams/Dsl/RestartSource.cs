@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="RestartSource.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="RestartSource.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using Akka.Pattern;
@@ -151,7 +151,7 @@ namespace Akka.Streams.Dsl
             Shape = new SourceShape<T>(Out);
         }
 
-        public Outlet<T> Out { get; } = new Outlet<T>("RestartWithBackoffSource.out");
+        public Outlet<T> Out { get; } = new("RestartWithBackoffSource.out");
 
         public override SourceShape<T> Shape { get; }
 

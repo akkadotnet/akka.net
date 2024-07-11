@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TypeExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,9 +42,9 @@ namespace Akka.Util
             return moreGeneralType.IsAssignableFrom(type);
         }
 
-        private static readonly ConcurrentDictionary<Type, string> ShortenedTypeNames = new ConcurrentDictionary<Type, string>();
+        private static readonly ConcurrentDictionary<Type, string> ShortenedTypeNames = new();
 
-        private static readonly Regex cleanAssemblyVersionRegex = new Regex(
+        private static readonly Regex cleanAssemblyVersionRegex = new(
             @"(, Version=([\d\.]+))?(, Culture=[^,\] \t]+)?(, PublicKeyToken=(null|[\da-f]+))?",
             RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
@@ -58,8 +58,7 @@ namespace Akka.Util
         [InternalApi]
         public static string TypeQualifiedName(this Type type)
         {
-            string shortened;
-            if (ShortenedTypeNames.TryGetValue(type, out shortened))
+            if (ShortenedTypeNames.TryGetValue(type, out var shortened))
             {
                 return shortened;
             }

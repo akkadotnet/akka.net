@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InterpreterBenchmark.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ namespace Akka.Streams.Tests.Performance
 
         private static void Execute(int numberOfIdentities)
         {
-            new GraphInterpreterSpecKit().WithTestSetup((setup, lastEvents) =>
+            new GraphInterpreterSpecKit().WithTestSetup((setup, _) =>
             {
                 var identities =
                     Enumerable.Range(1, numberOfIdentities)
@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.Performance
                     }
                     else
                         CompleteStage();
-                }, onDownstreamFinish: CompleteStage);
+                }, onDownstreamFinish: InternalOnDownstreamFinish);
                 Console.WriteLine("Handler Set");
             }
 
@@ -105,7 +105,7 @@ namespace Akka.Streams.Tests.Performance
 
         private sealed class GraphDataSink<T> : GraphInterpreter.DownstreamBoundaryStageLogic
         {
-            private readonly Inlet<T> _inlet = new Inlet<T>("in");
+            private readonly Inlet<T> _inlet = new("in");
             private readonly string _toString;
 
             public GraphDataSink(string toString, int expected)

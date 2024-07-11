@@ -1,18 +1,22 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SupervisorHierarchySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.TestKit.TestActors;
 using Akka.Tests.TestUtils;
 using Akka.Util.Internal;
+using FluentAssertions.Extensions;
+using Nito.AsyncEx;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -21,10 +25,10 @@ namespace Akka.Tests.Actor
     {
         private class CountDownActor : ReceiveActor
         {
-            private readonly CountdownEvent _restartsCountdown;
+            private readonly AsyncCountdownEvent _restartsCountdown;
             private readonly SupervisorStrategy _supervisorStrategy;
 
-            public CountDownActor(CountdownEvent restartsCountdown, SupervisorStrategy supervisorStrategy)
+            public CountDownActor(AsyncCountdownEvent restartsCountdown, SupervisorStrategy supervisorStrategy)
             {
                 _restartsCountdown = restartsCountdown;
                 _supervisorStrategy = supervisorStrategy;
@@ -69,10 +73,14 @@ namespace Akka.Tests.Actor
         {
             public ResumerAsync()
             {
+#pragma warning disable CS1998
+#pragma warning disable AK1003
                 ReceiveAsync<string>(s => s.StartsWith("spawn:"), async s => Sender.Tell(Context.ActorOf<ResumerAsync>(s.Substring(6))));
                 ReceiveAsync<string>(s => s.Equals("spawn"), async _ => Sender.Tell(Context.ActorOf<ResumerAsync>()));
                 ReceiveAsync<string>(s => s.Equals("fail"), async _ => { throw new Exception("expected"); });
                 ReceiveAsync<string>(s => s.Equals("ping"), async _ => Sender.Tell("pong"));
+#pragma warning restore AK1003
+#pragma warning restore CS1998
             }
 
             protected override SupervisorStrategy SupervisorStrategy()
@@ -111,44 +119,44 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void A_supervisor_hierarchy_must_Restart_Manager_And_Workers_In_AllForOne()
+        public async Task A_supervisor_hierarchy_must_Restart_Manager_And_Workers_In_AllForOne()
         {
-            var countDown = new CountdownEvent(4);
+            var countDown = new AsyncCountdownEvent(4);
             SupervisorStrategy strategy = new OneForOneStrategy(_ => Directive.Restart);
             var boss = ActorOf(Props.Create(() => new Supervisor(strategy)), "boss");
 
             Func<Exception, Directive> decider = _ => { return Directive.Escalate; };
             var managerProps = new PropsWithName(Props.Create(() => new CountDownActor(countDown, new AllForOneStrategy(decider))), "manager");
-            var manager = boss.Ask<IActorRef>(managerProps, TestKitSettings.DefaultTimeout).Result;
+            var manager = await boss.Ask<IActorRef>(managerProps, TestKitSettings.DefaultTimeout);
 
             var workerProps = Props.Create(() => new CountDownActor(countDown, SupervisorStrategy.DefaultStrategy));
-            var worker1 = manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker1"), TestKitSettings.DefaultTimeout).Result;
-            var worker2 = manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker2"), TestKitSettings.DefaultTimeout).Result;
-            var worker3 = manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker3"), TestKitSettings.DefaultTimeout).Result;
+            var worker1 = await manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker1"), TestKitSettings.DefaultTimeout);
+            var worker2 = await manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker2"), TestKitSettings.DefaultTimeout);
+            var worker3 = await manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker3"), TestKitSettings.DefaultTimeout);
 
-            EventFilter.Exception<ActorKilledException>().ExpectOne(() =>
+            await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(async () =>
             {
                 worker1.Tell(Kill.Instance);
                 // manager + all workers should be restarted by only killing a worker
                 // manager doesn't trap exits, so boss will restart manager
 
-                countDown.Wait(TimeSpan.FromSeconds(5)).ShouldBe(true);
-
+                await countDown.WaitAsync().ShouldCompleteWithin(5.Seconds());
+                //countDown.Wait(TimeSpan.FromSeconds(5)).ShouldBe(true);
             });
 
         }
 
         [Fact]
-        public void A_supervisor_must_send_notifications_to_supervisor_when_permanent_failure()
+        public async Task A_supervisor_must_send_notifications_to_supervisor_when_permanent_failure()
         {
-            var countDownMessages = new CountdownEvent(1);
-            var countDownMax = new CountdownEvent(1);
+            var countDownMessages = new AsyncCountdownEvent(1);
+            var countDownMax = new AsyncCountdownEvent(1);
             var boss = ActorOf((cfg, ctx) =>
             {
                 var crasher = ctx.ActorOf(Props.Create(() => new CountDownActor(countDownMessages, SupervisorStrategy.DefaultStrategy)), "crasher");
-                cfg.Receive("killCrasher", (s, context) => crasher.Tell(Kill.Instance));
-                cfg.Receive<Terminated>((terminated, context) => countDownMax.Signal());
-                cfg.Strategy = new OneForOneStrategy(1, TimeSpan.FromSeconds(5), e => Directive.Restart);
+                cfg.Receive("killCrasher", (_, _) => crasher.Tell(Kill.Instance));
+                cfg.Receive<Terminated>((_, _) => countDownMax.Signal());
+                cfg.Strategy = new OneForOneStrategy(1, TimeSpan.FromSeconds(5), _ => Directive.Restart);
                 ctx.Watch(crasher);
             }, "boss");
 
@@ -162,16 +170,17 @@ namespace Akka.Tests.Actor
             //We then send another "killCrasher", which again will send Kill to crasher. It crashes,
             //decider says it should be restarted but since we specified maximum 1 restart/5seconds it will be 
             //permanently stopped. Boss, which watches crasher, receives Terminated, and counts down countDownMax
-            EventFilter.Exception<ActorKilledException>().Expect(2, () =>
+            await EventFilter.Exception<ActorKilledException>().ExpectAsync(2, () =>
             {
                 boss.Tell("killCrasher");
                 boss.Tell("killCrasher");
+                return Task.CompletedTask;
             });
-            countDownMessages.Wait(TimeSpan.FromSeconds(2)).ShouldBeTrue();
-            countDownMax.Wait(TimeSpan.FromSeconds(2)).ShouldBeTrue();
+            await countDownMessages.WaitAsync().ShouldCompleteWithin(2.Seconds());
+            await countDownMax.WaitAsync().ShouldCompleteWithin(2.Seconds());
         }
 
-        private void Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<T>() 
+        private async Task Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<T>() 
             where T : ActorBase, new()
         {
             //Build this hierarchy:
@@ -183,43 +192,44 @@ namespace Akka.Tests.Actor
             var name = typeof(T).Name;
             var boss = ActorOf<T>(name);
             boss.Tell("spawn:middle");
-            var middle = ExpectMsg<IActorRef>();
+            var middle = await ExpectMsgAsync<IActorRef>();
             middle.Tell("spawn:worker");
-            var worker = ExpectMsg<IActorRef>();
+            var worker = await ExpectMsgAsync<IActorRef>();
 
             //Check everything is in place by sending ping to worker and expect it to respond with pong
             worker.Tell("ping");
-            ExpectMsg("pong");
-            EventFilter.Warning("expected").ExpectOne(() => //expected exception is thrown by the boss when it crashes
-            {
-                middle.Tell("fail");    //Throws an exception, and then it's resumed
-            });
+            await ExpectMsgAsync("pong");
+            await EventFilter.Warning("expected").ExpectOneAsync(() => //expected exception is thrown by the boss when it crashes
+{
+    middle.Tell("fail");    //Throws an exception, and then it's resumed
+    return Task.CompletedTask;
+});
 
             //verify that middle answers
             middle.Tell("ping");
-            ExpectMsg("pong");
+            await ExpectMsgAsync("pong");
 
             //verify worker (child to middle) is up
             worker.Tell("ping");
-            ExpectMsg("pong");
+            await ExpectMsgAsync("pong");
         }
 
         [Fact]
-        public void A_supervisor_hierarchy_must_resume_children_after_Resume()
+        public async Task A_supervisor_hierarchy_must_resume_children_after_Resume()
         {
-            Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<Resumer>();
-            Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<ResumerAsync>();
+            await Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<Resumer>();
+            await Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<ResumerAsync>();
         }
 
         [Fact]
-        public void A_supervisor_hierarchy_must_suspend_children_while_failing()
+        public async Task A_supervisor_hierarchy_must_suspend_children_while_failing()
         {
             var latch = CreateTestLatch();
             var slowResumer = ActorOf(c =>
             {
-                c.Strategy = new OneForOneStrategy(e => { latch.Ready(Dilated(TimeSpan.FromSeconds(4))); return Directive.Resume; });
+                c.Strategy = new OneForOneStrategy(_ => { latch.Ready(Dilated(TimeSpan.FromSeconds(4))); return Directive.Resume; });
                 c.Receive<string>(s => s.StartsWith("spawn:"), (s, ctx) => ctx.Sender.Tell(ctx.ActorOf<Resumer>(s.Substring(6))));
-                c.Receive("spawn", (s, ctx) => ctx.Sender.Tell(ctx.ActorOf<Resumer>()));
+                c.Receive("spawn", (_, ctx) => ctx.Sender.Tell(ctx.ActorOf<Resumer>()));
             }, "slowResumer");
 
             //Build this hierarchy:
@@ -231,33 +241,33 @@ namespace Akka.Tests.Actor
             //      |
             //    worker
             slowResumer.Tell("spawn:boss");
-            var boss = ExpectMsg<IActorRef>();
+            var boss = await ExpectMsgAsync<IActorRef>();
             boss.Tell("spawn:middle");
-            var middle = ExpectMsg<IActorRef>();
+            var middle = await ExpectMsgAsync<IActorRef>();
             middle.Tell("spawn:worker");
-            var worker = ExpectMsg<IActorRef>();
+            var worker = await ExpectMsgAsync<IActorRef>();
 
             //Check everything is in place by sending ping to worker and expect it to respond with pong
             worker.Tell("ping");
-            ExpectMsg("pong");
-            EventFilter.Warning("expected").ExpectOne(() => //expected exception is thrown by the boss when it crashes
+            await ExpectMsgAsync("pong");
+            await EventFilter.Warning("expected").ExpectOneAsync(async () => //expected exception is thrown by the boss when it crashes
             {
                 //Let boss crash, this means any child under boss should be suspended, so we wait for worker to become suspended.                
                 boss.Tell("fail");
-                AwaitCondition(() => ((LocalActorRef)worker).Cell.Mailbox.IsSuspended());
+                await AwaitConditionAsync(() => Task.FromResult(((LocalActorRef)worker).Cell.Mailbox.IsSuspended()));
 
                 //At this time slowresumer is currently handling the failure, in supervisestrategy, waiting for latch to be opened
                 //We verify that no message is handled by worker, by sending it a ping
                 //Normally it would respond with a pong, but since it's suspended nothing will happen.
                 worker.Tell("ping");
-                ExpectNoMsg(TimeSpan.FromSeconds(1));
+                await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
                 //By counting down the latch slowResumer will continue in the supervisorstrategy and will return Resume.
                 latch.CountDown();
             });
 
             //Check that all children, and especially worker is resumed. It should receive the ping and respond with a pong
-            ExpectMsg("pong", TimeSpan.FromMinutes(10));
+            await ExpectMsgAsync("pong", TimeSpan.FromMinutes(10));
         }
 
         [Fact]
@@ -290,7 +300,7 @@ namespace Akka.Tests.Actor
                             if (ca < 6)
                                 throw new InvalidOperationException("OH NO!");
                             childDsl.OnPreStart = _ => preStartCalled.IncrementAndGet();
-                            childDsl.OnPostRestart = (e, _) => postRestartCalled.IncrementAndGet();
+                            childDsl.OnPostRestart = (_, _) => postRestartCalled.IncrementAndGet();
                             childDsl.ReceiveAny((m, actorContext) => actorContext.Sender.Tell(m));
                         }, "failingChild");
                         resumerDsl.ReceiveAny((m, _) => failingChild.Forward(m));

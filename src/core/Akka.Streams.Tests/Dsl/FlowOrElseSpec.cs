@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowOrElseSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,11 +9,13 @@
 using System;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.Streams.TestKit.Tests;
+using Akka.TestKit.Extensions;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using System.Threading.Tasks;
+using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -29,25 +31,27 @@ namespace Akka.Streams.Tests.Dsl
         private ActorMaterializer Materializer { get; }
 
         [Fact]
-        public void An_OrElse_flow_should_pass_elements_from_the_first_input()
+        public async Task An_OrElse_flow_should_pass_elements_from_the_first_input()
         {
             var source1 = Source.From(new[] {1, 2, 3});
             var source2 = Source.From(new[] {4, 5, 6});
 
             var sink = Sink.Seq<int>();
 
-            source1.OrElse(source2).RunWith(sink, Materializer).AwaitResult().Should().BeEquivalentTo(new[] {1, 2, 3});
+            var complete = await source1.OrElse(source2).RunWith(sink, Materializer).ShouldCompleteWithin(3.Seconds());
+            complete.Should().BeEquivalentTo(new[] { 1, 2, 3 });
         }
 
         [Fact]
-        public void An_OrElse_flow_should_pass_elements_from_the_second_input_if_the_first_completes_with_no_elements_emitted()
+        public async Task An_OrElse_flow_should_pass_elements_from_the_second_input_if_the_first_completes_with_no_elements_emitted()
         {
             var source1 = Source.Empty<int>();
             var source2 = Source.From(new[] { 4, 5, 6 });
 
             var sink = Sink.Seq<int>();
 
-            source1.OrElse(source2).RunWith(sink, Materializer).AwaitResult().Should().BeEquivalentTo(new[] { 4, 5, 6 });
+            var complete = await source1.OrElse(source2).RunWith(sink, Materializer).ShouldCompleteWithin(3.Seconds());
+            complete.Should().BeEquivalentTo(new[] { 4, 5, 6 });
         }
 
         [Fact]

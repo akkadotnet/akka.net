@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AssociationStressSpecBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ namespace Akka.Remote.Tests.Performance.Transports
     public abstract class AssociationStressSpecBase
     {
         private const string AssociationCounterName = "AssociationConfirmed";
-        private static readonly AtomicCounter ActorSystemNameCounter = new AtomicCounter(0);
+        private static readonly AtomicCounter ActorSystemNameCounter = new(0);
         protected readonly TimeSpan AssociationTimeout = TimeSpan.FromSeconds(2);
         protected Counter AssociationCounter;
 

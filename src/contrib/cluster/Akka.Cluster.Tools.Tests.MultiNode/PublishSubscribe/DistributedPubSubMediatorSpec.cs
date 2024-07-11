@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMediatorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,6 +20,7 @@ using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
 using System.Collections.Immutable;
+using Akka.MultiNode.TestAdapter;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 {
@@ -237,7 +238,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         private readonly RoleName _second;
         private readonly RoleName _third;
 
-        private readonly ConcurrentDictionary<string, IActorRef> _chatUsers = new ConcurrentDictionary<string, IActorRef>();
+        private readonly ConcurrentDictionary<string, IActorRef> _chatUsers = new();
 
         public DistributedPubSubMediatorSpec() : this(new DistributedPubSubMediatorSpecConfig())
         {
@@ -518,7 +519,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     var names = ReceiveWhile(x => "hello all".Equals(x) ? LastSender.Path.Name : null, msgs: 2);
-                    names.All(x => x == "u8" || x == "u9").Should().BeTrue();
+                    names.All(x => x is "u8" or "u9").Should().BeTrue();
                 }, _first);
 
                 RunOn(() =>

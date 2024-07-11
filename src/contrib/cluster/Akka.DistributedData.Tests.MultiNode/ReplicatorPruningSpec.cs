@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReplicatorPruningSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using Akka.Actor;
 using Akka.Cluster;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
+using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -50,9 +51,9 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly IActorRef _replicator;
         private readonly TimeSpan _timeout;
 
-        private readonly GCounterKey _keyA = new GCounterKey("A");
-        private readonly ORSetKey<string> _keyB = new ORSetKey<string>("B");
-        private readonly PNCounterDictionaryKey<string> _keyC = new PNCounterDictionaryKey<string>("C");
+        private readonly GCounterKey _keyA = new("A");
+        private readonly ORSetKey<string> _keyB = new("B");
+        private readonly PNCounterDictionaryKey<string> _keyC = new("C");
 
         public ReplicatorPruningSpec() : this(new ReplicatorPruningSpecConfig())
         {
@@ -188,8 +189,11 @@ namespace Akka.DistributedData.Tests.MultiNode
             void UpdateAfterPruning(ulong expectedValue)
             {
                 // inject data from removed node to simulate bad data
-                _replicator.Tell(Dsl.Update(_keyA, GCounter.Empty, new WriteAll(_timeout), x => x.Merge(oldCounter).Increment(_cluster, 1)));
-                ExpectMsg<UpdateSuccess>(msg =>
+                _replicator.Tell(Dsl.Update(_keyA, GCounter.Empty,
+                    new WriteAll(_timeout), x => x.Merge(oldCounter).Increment(_cluster, 1)));
+                ExpectMsg<UpdateSuccess>();
+                
+                AwaitAssert(() =>
                 {
                     _replicator.Tell(Dsl.Get(_keyA, ReadLocal.Instance));
                     var retrieved = ExpectMsg<GetSuccess>().Get(_keyA);

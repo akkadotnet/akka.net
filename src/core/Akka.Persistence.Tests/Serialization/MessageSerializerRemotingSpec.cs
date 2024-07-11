@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MessageSerializerRemotingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -119,19 +120,17 @@ akka {
         {
             protected override bool Receive(object message)
             {
-                if (message is Persistent)
+                if (message is Persistent persistent)
                 {
-                    var p = (Persistent) message;
-                    if (p.Payload is MyPayload)
+                    if (persistent.Payload is MyPayload)
                     {
-                        p.Sender.Tell("p" + ((MyPayload) p.Payload).Data);
+                        persistent.Sender.Tell("p" + ((MyPayload) persistent.Payload).Data);
                     }
                     else return false;
                 }
-                else if (message is AtomicWrite)
+                else if (message is AtomicWrite write)
                 {
-                    var a = (AtomicWrite) message;
-                    foreach (var p in (IEnumerable<IPersistentRepresentation>) a.Payload)
+                    foreach (var p in (IEnumerable<IPersistentRepresentation>) write.Payload)
                     {
                         if (p.Payload is MyPayload)
                         {
@@ -176,10 +175,10 @@ akka {
             return ((ExtendedActorSystem) system).Provider.DefaultAddress;
         }
 
-        protected override void AfterTermination()
+        protected override void AfterAll()
         {
-            _remoteSystem.Terminate().Wait(TimeSpan.FromSeconds(2));
-            base.AfterTermination();
+            base.AfterAll();
+            Shutdown(_remoteSystem);
         }
 
         [Fact]

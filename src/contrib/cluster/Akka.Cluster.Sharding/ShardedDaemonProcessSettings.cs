@@ -1,10 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardedDaemonProcessSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using Akka.Actor;
 using Akka.Annotations;
@@ -24,12 +24,12 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Specify sharding settings that should be used for the sharded daemon process instead of loading from config.
         /// </summary>
-        public readonly ClusterShardingSettings ShardingSettings;
+        public readonly ClusterShardingSettings? ShardingSettings;
 
         /// <summary>
         /// Specifies that the ShardedDaemonProcess should run on nodes with a specific role.
         /// </summary>
-        public readonly string Role;
+        public readonly string? Role;
 
         /// <summary>
         /// Create default settings for system
@@ -48,14 +48,14 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Not for user constructions, use factory methods to instantiate.
         /// </summary>
-        private ShardedDaemonProcessSettings(TimeSpan keepAliveInterval, ClusterShardingSettings shardingSettings = null, string role = null)
+        private ShardedDaemonProcessSettings(TimeSpan keepAliveInterval, ClusterShardingSettings? shardingSettings = null, string? role = null)
         {
             KeepAliveInterval = keepAliveInterval;
             ShardingSettings = shardingSettings;
             Role = role;
         }
 
-        private ShardedDaemonProcessSettings Copy(TimeSpan? keepAliveInterval = null, ClusterShardingSettings shardingSettings = null, string role = null)
+        private ShardedDaemonProcessSettings Copy(TimeSpan? keepAliveInterval = null, ClusterShardingSettings? shardingSettings = null, string? role = null)
         {
             return new ShardedDaemonProcessSettings(keepAliveInterval ?? KeepAliveInterval, shardingSettings ?? ShardingSettings, role ?? Role);
         }

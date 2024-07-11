@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadLetter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -83,6 +83,7 @@ namespace Akka.Event
         /// </exception>
         public DeadLetter(object message, IActorRef sender, IActorRef recipient) : base(message, sender, recipient)
         {
+            System.Diagnostics.Debug.Assert(message is not DeadLetter, "DeadLetter inside DeadLetter");
             if (sender == null) throw new ArgumentNullException(nameof(sender), "DeadLetter sender may not be null");
             if (recipient == null) throw new ArgumentNullException(nameof(recipient), "DeadLetter recipient may not be null");
         }

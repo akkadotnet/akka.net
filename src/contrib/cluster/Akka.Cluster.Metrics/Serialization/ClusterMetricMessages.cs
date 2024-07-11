@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterMetricMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,13 +25,17 @@ namespace Akka.Cluster.Metrics.Serialization
     /// Envelope adding a sender address to the cluster metrics gossip.
     /// </summary>
     [InternalApi]
-    public sealed partial class MetricsGossipEnvelope : IClusterMetricMessage, IDeadLetterSuppression
+    public sealed class MetricsGossipEnvelope : IClusterMetricMessage, IDeadLetterSuppression
     {
         /// <summary>
         /// Akka's actor address
         /// </summary>
         public Actor.Address FromAddress { get; }
 
+        public MetricsGossip Gossip { get; }
+        
+        public bool Reply { get; }
+        
         /// <summary>
         /// Creates new instance of <see cref="MetricsGossipEnvelope"/>
         /// </summary>

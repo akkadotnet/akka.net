@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaAssertEqualityComparer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ namespace Akka.TestKit.Xunit2.Internals
     public class AkkaAssertEqualityComparer<T> : IEqualityComparer<T>
     {
         private static readonly IEqualityComparer DefaultInnerComparer = new AkkaAssertEqualityComparerAdapter<object>(new AkkaAssertEqualityComparer<object>());
-        private static readonly TypeInfo NullableTypeInfo = typeof(Nullable<>).GetTypeInfo();
+        private static readonly Type NullableType = typeof(Nullable<>);
 
         private readonly Func<IEqualityComparer> _innerComparerFactory;
         private readonly bool _skipTypeCheck;
@@ -40,13 +40,13 @@ namespace Akka.TestKit.Xunit2.Internals
             _innerComparerFactory = () => innerComparer ?? DefaultInnerComparer;
         }
 
-        /// <inheritdoc/>
+       
         public bool Equals(T x, T y)
         {
-            var typeInfo = typeof(T).GetTypeInfo();
+            var type = typeof(T);
 
             // Null?
-            if(!typeInfo.IsValueType || (typeInfo.IsGenericType && typeInfo.GetGenericTypeDefinition().GetTypeInfo().IsAssignableFrom(NullableTypeInfo)))
+            if(!type.IsValueType || (type.IsGenericType && type.GetGenericTypeDefinition().IsAssignableFrom(NullableType)))
             {
                 if(object.Equals(x, default(T)))
                     return object.Equals(y, default(T));
@@ -91,7 +91,7 @@ namespace Akka.TestKit.Xunit2.Internals
             return object.Equals(x, y);
         }
 
-        /// <inheritdoc/>
+        
         public int GetHashCode(T obj) => throw new NotImplementedException();
     }
 }

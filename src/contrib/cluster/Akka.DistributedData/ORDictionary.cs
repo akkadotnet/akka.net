@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ORDictionary.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -130,7 +130,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// An empty instance of the <see cref="ORDictionary{TKey,TValue}"/>
         /// </summary>
-        public static readonly ORDictionary<TKey, TValue> Empty = new ORDictionary<TKey, TValue>(ORSet<TKey>.Empty, ImmutableDictionary<TKey, TValue>.Empty);
+        public static readonly ORDictionary<TKey, TValue> Empty = new(ORSet<TKey>.Empty, ImmutableDictionary<TKey, TValue>.Empty);
 
         internal readonly ORSet<TKey> KeySet;
         internal readonly IImmutableDictionary<TKey, TValue> ValueMap;
@@ -401,7 +401,7 @@ namespace Akka.DistributedData
             return new ORDictionary<TKey, TValue>(pruningCleanupKeys, pruningCleanupValues);
         }
 
-        /// <inheritdoc/>
+       
         public bool Equals(ORDictionary<TKey, TValue> other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -410,13 +410,13 @@ namespace Akka.DistributedData
             return Equals(KeySet, other.KeySet) && ValueMap.SequenceEqual(other.ValueMap);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             return obj is ORDictionary<TKey, TValue> pairs && Equals(pairs);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode()
         {
             unchecked
@@ -425,11 +425,11 @@ namespace Akka.DistributedData
             }
         }
 
-        /// <inheritdoc/>
+        
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() => ValueMap.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        /// <inheritdoc/>
+        
         public override string ToString()
         {
             var sb = new StringBuilder("ORDictionary(");
@@ -699,7 +699,7 @@ namespace Akka.DistributedData
                 {
                     var lastIndex = Operations.Length - 1;
                     var last = Operations[lastIndex];
-                    if (last is PutDeltaOperation || last is UpdateDeltaOperation)
+                    if (last is PutDeltaOperation or UpdateDeltaOperation)
                     {
                         var builder = Operations.ToList();
                         var merged = (IDeltaOperation)last.Merge(atomic);

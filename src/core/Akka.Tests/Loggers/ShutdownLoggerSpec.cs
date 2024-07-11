@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="ShutdownLoggerSpec.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ShutdownLoggerSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -50,11 +50,11 @@ akka.stdout-logger-class = ""Akka.Tests.Loggers.ThrowingLogger, Akka.Tests""");
 
     internal class LogProbe : ReceiveActor
     {
-        public List<LogEvent> Events { get; } = new List<LogEvent>();
+        public List<LogEvent> Events { get; } = new();
 
         public LogProbe()
         {
-            Receive<string>(msg => Sender.Tell(this));
+            Receive<string>(_ => Sender.Tell(this));
             Receive<LogEvent>(Events.Add);
             Receive<InitializeLogger>(e =>
             {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamRefsDocTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -53,12 +53,13 @@ namespace DocsExamples.Streams
             {
                 Receive<RequestLogs>(request =>
                 {
+                    var sender = Sender;
                     // create a source
                     StreamLogs(request.StreamId)
                         // materialize it using stream refs
                         .RunWith(StreamRefs.SourceRef<string>(), Context.System.Materializer())
                         // and send to sender
-                        .PipeTo(Sender, success: sourceRef => new LogsOffer(request.StreamId, sourceRef));
+                        .PipeTo(sender, success: sourceRef => new LogsOffer(request.StreamId, sourceRef));
                 });
             }
 
@@ -96,16 +97,17 @@ namespace DocsExamples.Streams
                 {
                     // obtain a source you want to offer
                     var sink = LogsSinksFor(prepare.Id);
+                    var sender = this.Sender;
 
                     // materialize sink ref (remote is source data for us)
                     StreamRefs.SinkRef<string>()
                         .To(sink)
                         .Run(Context.System.Materializer())
-                        .PipeTo(Sender, success: sinkRef => sinkRef);
+                        .PipeTo(sender, success: sinkRef => new MeasurementsSinkReady(prepare.Id, sinkRef));
                 });
             }
 
-            private Sink<string, Task> LogsSinksFor(string id) =>
+            private Sink<string, Task<Done>> LogsSinksFor(string id) =>
                 Sink.ForEach<string>(Console.WriteLine);
         }
         #endregion
@@ -135,12 +137,12 @@ namespace DocsExamples.Streams
             #region sink-ref-materialization
             var receiver = Sys.ActorOf(Props.Create<DataReceiver>(), "receiver");
 
-            var ready = await receiver.Ask<ISinkRef<string>>(new PrepareUpload("id"), timeout: TimeSpan.FromSeconds(30));
+            var ready = await receiver.Ask<MeasurementsSinkReady>(new PrepareUpload("id"), timeout: TimeSpan.FromSeconds(30));
 
             // stream local metrics to Sink's origin:
             Source.From(Enumerable.Range(1, 100))
                 .Select(i => i.ToString())
-                .RunWith(ready.Sink, Materializer);
+                .RunWith(ready.SinkRef.Sink, Materializer);
             #endregion
         }
     }

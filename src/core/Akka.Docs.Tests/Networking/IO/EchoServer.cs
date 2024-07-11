@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EchoServer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using Akka.IO;
 
 namespace DocsExamples.Networking.IO
 {
+    // <echoServer>
     public class EchoServer : UntypedActor
     {
         public EchoServer(int port)
@@ -21,9 +22,8 @@ namespace DocsExamples.Networking.IO
 
         protected override void OnReceive(object message)
         {
-            if (message is Tcp.Bound)
+            if (message is Tcp.Bound bound)
             {
-                var bound = message as Tcp.Bound;
                 Console.WriteLine("Listening on {0}", bound.LocalAddress);
             }
             else if (message is Tcp.Connected)
@@ -34,4 +34,6 @@ namespace DocsExamples.Networking.IO
             else Unhandled(message);
         }
     }
+
+    // </echoServer>
 }

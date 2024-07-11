@@ -17,8 +17,8 @@ DOTNETCORE_VERSION=3.1.105
 DOTNET_VERSION=5.0.101
 DOTNET_INSTALLER_URL=https://dot.net/v1/dotnet-install.sh
 DOTNET_CHANNEL=LTS
-PROTOBUF_VERSION=3.4.0
-INCREMENTALIST_VERSION=0.6.0
+PROTOBUF_VERSION=3.21.5
+INCREMENTALIST_VERSION=0.9.0
 
 # Define default arguments.
 TARGET="Default"
@@ -75,29 +75,6 @@ fi
 if [ ! -f "$FAKE_EXE" ]; then
     echo "Could not find Fake.exe at '$FAKE_EXE'."
     exit 1
-fi
-
-###########################################################################
-# INSTALL PROTOC
-###########################################################################
-
-if [[ $(uname -s) == Darwin* ]]; then
-    PROTOC_EXE="src/packages/Google.Protobuf.Tools/tools/macosx_x64/protoc"
-else
-    PROTOC_EXE="src/packages/Google.Protobuf.Tools/tools/linux_x64/protoc"
-fi
-
-if [ ! -f "$PROTOC_EXE" ]; then
-    mono "$NUGET_EXE" install Google.Protobuf.Tools -ExcludeVersion -Version $PROTOBUF_VERSION -OutputDirectory "src/packages"
-    if [ $? -ne 0 ]; then
-        echo "An error occured while installing protobuf"
-        exit 1
-    fi
-    chmod a+x $PROTOC_EXE
-    if [ $? -ne 0 ]; then
-        echo "An error occured while making protoc executable"
-        exit 1
-    fi
 fi
 
 ###########################################################################

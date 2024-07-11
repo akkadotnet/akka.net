@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LocalConcurrencySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ namespace Akka.DistributedData.Tests
     {
         public sealed class Updater : ReceiveActor, IWithUnboundedStash
         {
-            public static readonly ORSetKey<string> Key = new ORSetKey<string>("key");
+            public static readonly ORSetKey<string> Key = new("key");
             public Updater()
             {
                 var cluster = Cluster.Cluster.Get(Context.System);

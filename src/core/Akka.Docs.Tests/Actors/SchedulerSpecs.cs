@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SchedulerSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ namespace DocsExamples.Actors
             public ITimerScheduler Timers { get; set; }
 
             private int _count = 0;
-            private ILoggingAdapter _log = Context.GetLogger();
+            private readonly ILoggingAdapter _log = Context.GetLogger();
 
             public TimerActor()
             {
@@ -159,7 +159,7 @@ namespace DocsExamples.Actors
             await Task.Delay(100); // pause for 100ms
 
             timerActor.Tell(new Total());
-            var count2 = ExpectMsg<int>();
+            var count2 = await ExpectMsgAsync<int>();
 
             count1.Should().BeLessThan(count2);
         }

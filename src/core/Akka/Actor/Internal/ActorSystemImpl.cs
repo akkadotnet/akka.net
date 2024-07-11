@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using System.Reflection;
+using System.Text;
 using Akka.Actor.Setup;
 using Akka.Serialization;
 using Akka.Util;
@@ -35,7 +37,7 @@ namespace Akka.Actor.Internal
     public class ActorSystemImpl : ExtendedActorSystem, ISupportSerializationConfigReload
     {
         private IActorRef _logDeadLetterListener;
-        private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
+        private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new();
 
         private ILoggingAdapter _log;
         private IActorRefProvider _provider;
@@ -68,6 +70,7 @@ namespace Akka.Actor.Internal
         /// <param name="name">The name given to the actor system.</param>
         /// <param name="config">The configuration used to configure the actor system.</param>
         /// <param name="setup">The <see cref="ActorSystemSetup"/> used to help programmatically bootstrap the actor system.</param>
+        /// <param name="guardianProps">Optional - the props from the /user guardian actor.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the given <paramref name="name"/> is an invalid name for an actor system.
         ///  Note that the name must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-').
@@ -137,6 +140,7 @@ namespace Akka.Actor.Internal
         public override ILoggingAdapter Log { get { return _log; } }
 
         /// <inheritdoc cref="ActorSystem"/>
+
         public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
 
         /// <inheritdoc cref="ActorSystem"/>
@@ -199,7 +203,7 @@ namespace Akka.Actor.Internal
         public override void Abort()
         {
             Aborting = true;
-            Terminate();
+            FinalTerminate(); // Skip CoordinatedShutdown check and aggressively shutdown the ActorSystem
         }
 
         /// <summary>Starts this system</summary>
@@ -207,9 +211,6 @@ namespace Akka.Actor.Internal
         {
             try
             {
-                // Force TermInfoDriver to initialize in order to protect us from the issue seen in #2432
-                typeof(Console).GetProperty("BackgroundColor").GetValue(null); // HACK: Only needed for MONO
-
                 RegisterOnTermination(StopScheduler);
                 _provider.Init(this);
                 LoadExtensions();
@@ -297,7 +298,7 @@ namespace Akka.Actor.Internal
             foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions", new string[] { }))
             {
                 var extensionType = Type.GetType(extensionFqn);
-                if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.GetTypeInfo().IsAbstract || !extensionType.GetTypeInfo().IsClass)
+                if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
                 {
                     _log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
                     continue;
@@ -335,7 +336,7 @@ namespace Akka.Actor.Internal
         {
             if (extension == null) return null;
 
-            _extensions.GetOrAdd(extension.ExtensionType, t => new Lazy<object>(() => extension.CreateExtension(this), LazyThreadSafetyMode.ExecutionAndPublication));
+            _extensions.GetOrAdd(extension.ExtensionType, _ => new Lazy<object>(() => extension.CreateExtension(this), LazyThreadSafetyMode.ExecutionAndPublication));
 
             return extension.Get(this);
         }
@@ -462,7 +463,7 @@ namespace Akka.Actor.Internal
 
         private void ConfigureLoggers()
         {
-            _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), new DefaultLogMessageFormatter());
+            _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), _settings.LogFormatter);
         }
 
         private void ConfigureDispatchers()
@@ -480,7 +481,9 @@ namespace Akka.Actor.Internal
         private void ConfigureActorProducerPipeline()
         {
             // we push Log in lazy manner since it may not be configured at point of pipeline initialization
+
             _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
+
         }
 
         private void ConfigureTerminationCallbacks()
@@ -525,20 +528,19 @@ namespace Akka.Actor.Internal
         {
             if(Settings.CoordinatedShutdownRunByActorSystemTerminate)
             {
-                CoordinatedShutdown.Get(this).Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
-            } else
-            {
-                FinalTerminate();
+                return CoordinatedShutdown.Get(this)
+                    .Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
             }
-            return WhenTerminated;
+            return FinalTerminate();
         }
 
-        internal override void FinalTerminate()
+        internal override Task FinalTerminate()
         {
             Log.Debug("System shutdown initiated");
             if (!Settings.LogDeadLettersDuringShutdown && _logDeadLetterListener != null)
                 Stop(_logDeadLetterListener);
             _provider.Guardian.Stop();
+            return WhenTerminated;
         }
 
         /// <summary>
@@ -568,6 +570,78 @@ namespace Akka.Actor.Internal
         public override string ToString()
         {
             return LookupRoot.Path.Root.Address.ToString();
+        }
+
+        public override string PrintTree()
+        {
+            string PrintNode(IActorRef node, string indent)
+            {
+                var sb = new StringBuilder();
+                if (node is ActorRefWithCell wc)
+                {
+                    const string space = " ";
+                    var cell = wc.Underlying;
+                    sb.Append(string.IsNullOrEmpty(indent) ? "-> " : indent.Remove(indent.Length-1) + "L-> ")
+                        .Append($"{node.Path.Name} {Logging.SimpleName(node)} ");
+                    
+                    if (cell is ActorCell real)
+                    {
+                        var realActor = real.Actor;
+                        sb.Append(realActor is null ? "null" : realActor.GetType().ToString())
+                            .Append($" status={real.Mailbox.CurrentStatus()}");
+                    }
+                    else
+                    {
+                        sb.Append(Logging.SimpleName(cell));
+                    }
+                    sb.Append(space);
+
+                    switch (cell.ChildrenContainer)
+                    {
+                        case TerminatingChildrenContainer t:
+                            var toDie = t.ToDie.ToList();
+                            toDie.Sort();
+                            var reason = t.Reason;
+                            sb.Append($"Terminating({reason})")
+                                .Append($"\n{indent}   |    toDie: ")
+                                .Append(string.Join($"\n{indent}   |           ", toDie));
+                            break;
+                        case TerminatedChildrenContainer x:
+                            sb.Append(x);
+                            break;
+                        case EmptyChildrenContainer x:
+                            sb.Append(x);
+                            break;
+                        case NormalChildrenContainer n:
+                            sb.Append($"{n.Children.Count} children");
+                            break;
+                        case var x:
+                            sb.Append(Logging.SimpleName(x));
+                            break;
+                    }
+
+                    if (cell.ChildrenContainer.Children.Count > 0)
+                    {
+                        sb.Append("\n");
+
+                        var children = cell.ChildrenContainer.Children.ToList();
+                        children.Sort();
+                        var childStrings = children.Select((t, i) => i == 0
+                            ? PrintNode(t, $"{indent}   |")
+                            : PrintNode(t, $"{indent}    "));
+
+                        sb.Append(string.Join("\n", childStrings));
+                    }
+                }
+                else
+                {
+                    sb.Append($"{indent}{node.Path.Name} {Logging.SimpleName(node)}");
+                }
+
+                return sb.ToString();
+            }
+
+            return PrintNode(LookupRoot, "");
         }
     }
 

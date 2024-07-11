@@ -1,22 +1,18 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.Children.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Text;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor.Internal;
-using Akka.Dispatch.SysMsg;
-using Akka.Serialization;
 using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
@@ -80,12 +76,12 @@ namespace Akka.Actor
 
         /// <summary>
         /// Attaches a child to the current <see cref="ActorCell"/>.
-        /// 
+        ///
         /// This method is used in the process of starting actors.
         /// </summary>
         /// <param name="props">The <see cref="Props"/> this child actor will use.</param>
         /// <param name="isSystemService">If <c>true</c>, then this actor is a system actor and activates a special initialization path.</param>
-        /// <param name="name">The name of the actor being started. Can be <c>null</c>, and if it is we will automatically 
+        /// <param name="name">The name of the actor being started. Can be <c>null</c>, and if it is we will automatically
         /// generate a random name for this actor.</param>
         /// <exception cref="InvalidActorNameException">
         /// This exception is thrown if the given <paramref name="name"/> is an invalid actor name.
@@ -199,7 +195,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// This should only be used privately or when creating the root actor. 
+        /// This should only be used privately or when creating the root actor.
         /// </summary>
         /// <param name="actor">TBD</param>
         /// <returns>TBD</returns>
@@ -307,8 +303,8 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Tries to get the stats for the child with the specified name. The stats can be either <see cref="ChildNameReserved"/> 
-        /// indicating that only a name has been reserved for the child, or a <see cref="ChildRestartStats"/> for a child that 
+        /// Tries to get the stats for the child with the specified name. The stats can be either <see cref="ChildNameReserved"/>
+        /// indicating that only a name has been reserved for the child, or a <see cref="ChildRestartStats"/> for a child that
         /// has been initialized/created.
         /// </summary>
         /// <param name="name">TBD</param>
@@ -349,10 +345,10 @@ namespace Akka.Actor
         // In Akka JVM there is a getAllChildStats here. Use ChildrenRefs.Stats instead
 
         /// <summary>
-        /// Obsolete. Use <see cref="TryGetSingleChild(string, out IInternalActorRef)"/> instead.
+        /// Get a single child matching the name supplied
         /// </summary>
-        /// <param name="name">N/A</param>
-        /// <returns>N/A</returns>
+        /// <param name="name">the child's name</param>
+        /// <returns>IInternalActorRef</returns>
         public IInternalActorRef GetSingleChild(string name)
         {
             if (name.IndexOf('#') < 0)
@@ -383,7 +379,7 @@ namespace Akka.Actor
             }
             return ActorRefs.Nobody;
         }
-        
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -421,7 +417,7 @@ namespace Akka.Actor
             if (name.Length == 0) throw new InvalidActorNameException("Actor name must not be empty.");
             if (!ActorPath.IsValidPathElement(name))
             {
-                throw new InvalidActorNameException($"Illegal actor name [{name}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${new string(ActorPath.ValidSymbols)}.");
+                throw new InvalidActorNameException($"Illegal actor name [{name}]. {ActorPath.ValidActorNameDescription}");
             }
             return name;
         }
@@ -437,7 +433,7 @@ namespace Akka.Actor
                     if (oldInfo == null)
                         Serialization.Serialization.CurrentTransportInformation =
                             SystemImpl.Provider.SerializationInformation;
-                    
+
                     var ser = _systemImpl.Serialization;
                     if (props.Arguments != null)
                     {

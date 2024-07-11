@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DataEnvelopeSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,10 +17,10 @@ namespace Akka.DistributedData.Tests
 {
     public class DataEnvelopeSpec
     {
-        private readonly UniqueAddress node1 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2551), 1);
-        private readonly UniqueAddress node2 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2552), 1);
-        private readonly UniqueAddress node3 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2553), 1);
-        private readonly UniqueAddress node4 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2554), 1);
+        private readonly UniqueAddress node1 = new(new Address("akka.tcp", "Sys", "localhost", 2551), 1);
+        private readonly UniqueAddress node2 = new(new Address("akka.tcp", "Sys", "localhost", 2552), 1);
+        private readonly UniqueAddress node3 = new(new Address("akka.tcp", "Sys", "localhost", 2553), 1);
+        private readonly UniqueAddress node4 = new(new Address("akka.tcp", "Sys", "localhost", 2554), 1);
 
         private readonly DateTime obsoleteTimeInFuture = DateTime.UtcNow.AddHours(1);
         private readonly DateTime obsoleteTime = DateTime.UtcNow.AddHours(-1);

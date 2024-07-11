@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteWatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -132,7 +132,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public static Heartbeat Instance { get; } = new Heartbeat();
+            public static Heartbeat Instance { get; } = new();
         }
 
         /// <summary>
@@ -171,7 +171,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public static HeartbeatTick Instance { get; } = new HeartbeatTick();
+            public static HeartbeatTick Instance { get; } = new();
         }
 
         /// <summary>
@@ -184,7 +184,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public static ReapUnreachableTick Instance { get; } = new ReapUnreachableTick();
+            public static ReapUnreachableTick Instance { get; } = new();
         }
 
         /// <summary>
@@ -218,7 +218,7 @@ namespace Akka.Remote
         /// </summary>
         public sealed class Stats
         {
-            /// <inheritdoc/>
+            
             public override bool Equals(object obj)
             {
                 var other = obj as Stats;
@@ -226,7 +226,7 @@ namespace Akka.Remote
                 return _watching == other._watching && _watchingNodes == other._watchingNodes;
             }
 
-            /// <inheritdoc/>
+            
             public override int GetHashCode()
             {
                 unchecked
@@ -303,7 +303,7 @@ namespace Akka.Remote
             /// </summary>
             public ImmutableHashSet<Address> WatchingAddresses => _watchingAddresses;
 
-            /// <inheritdoc/>
+            
             public override string ToString()
             {
                 string FormatWatchingRefs()
@@ -366,17 +366,17 @@ namespace Akka.Remote
         private readonly TimeSpan _heartbeatExpectedResponseAfter;
         private readonly IScheduler _scheduler = Context.System.Scheduler;
         private readonly IRemoteActorRefProvider _remoteProvider;
-        private readonly HeartbeatRsp _selfHeartbeatRspMsg = new HeartbeatRsp(AddressUidExtension.Uid(Context.System));
+        private readonly HeartbeatRsp _selfHeartbeatRspMsg = new(AddressUidExtension.Uid(Context.System));
        
         /// <summary>
         ///  Actors that this node is watching, map of watchee --> Set(watchers)
         /// </summary>
-        protected readonly Dictionary<IInternalActorRef, HashSet<IInternalActorRef>>  Watching = new Dictionary<IInternalActorRef, HashSet<IInternalActorRef>>();
+        protected readonly Dictionary<IInternalActorRef, HashSet<IInternalActorRef>>  Watching = new();
 
         /// <summary>
         /// Nodes that this node is watching, i.e. expecting heartbeats from these nodes. Map of address --> Set(watchee) on this address.
         /// </summary>
-        protected readonly Dictionary<Address, HashSet<IInternalActorRef>> WatcheeByNodes = new Dictionary<Address, HashSet<IInternalActorRef>>();
+        protected readonly Dictionary<Address, HashSet<IInternalActorRef>> WatcheeByNodes = new();
 
         /// <summary>
         /// TBD
@@ -385,9 +385,9 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        protected HashSet<Address> Unreachable { get; } = new HashSet<Address>();
+        protected HashSet<Address> Unreachable { get; } = new();
 
-        private readonly Dictionary<Address, int> _addressUids = new Dictionary<Address, int>();
+        private readonly Dictionary<Address, int> _addressUids = new();
 
         private readonly ICancelable _heartbeatCancelable;
         private readonly ICancelable _failureDetectorReaperCancelable;

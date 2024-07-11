@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Offset.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -23,29 +23,36 @@ namespace Akka.Persistence.Query
         public static Offset NoOffset() => Query.NoOffset.Instance;
 
         /// <summary>
-        /// Corresponds to an ordered sequence number for the events.Note that the corresponding
-        /// offset of each event is provided in the <see cref="EventEnvelope"/>,
-        /// which makes it possible to resume the stream at a later point from a given offset.
-        /// The `offset` is exclusive, i.e.the event with the exact same sequence number will not be included
-        /// in the returned stream. This means that you can use the offset that is returned in <see cref="EventEnvelope"/>
-        /// as the `offset` parameter in a subsequent query.
+        /// Factory to create an offset of type <see cref="Query.Sequence"/>
         /// </summary>
         public static Offset Sequence(long value) => new Sequence(value);
+
+        /// <summary>
+        /// Factory to create an offset of type <see cref="TimeBasedUuid"/>
+        /// </summary>
+        public static Offset TimeBasedUuid(Guid value) => new TimeBasedUuid(value);
 
         /// <summary>
         /// Used to compare to other <see cref="Offset"/> implementations.
         /// </summary>
         /// <param name="other">The other offset to compare.</param>
         public abstract int CompareTo(Offset other);
+
+        /// <summary>
+        /// Used to log offset's value
+        /// </summary>
+        public abstract override string ToString();
     }
 
     /// <summary>
     /// Corresponds to an ordered sequence number for the events.Note that the corresponding
     /// offset of each event is provided in the <see cref="EventEnvelope"/>,
     /// which makes it possible to resume the stream at a later point from a given offset.
+    /// <para>
     /// The `offset` is exclusive, i.e.the event with the exact same sequence number will not be included
     /// in the returned stream. This means that you can use the offset that is returned in <see cref="EventEnvelope"/>
     /// as the `offset` parameter in a subsequent query.
+    /// </para>
     /// </summary>
     public sealed class Sequence : Offset, IComparable<Sequence>
     {
@@ -67,7 +74,7 @@ namespace Akka.Persistence.Query
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Sequence && Equals((Sequence)obj);
+            return obj is Sequence sequence && Equals(sequence);
         }
 
         public override int GetHashCode() => Value.GetHashCode();
@@ -81,6 +88,50 @@ namespace Akka.Persistence.Query
 
             throw new InvalidOperationException($"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
         }
+
+        public override string ToString() => Value.ToString();
+    }
+
+    /// <summary>
+    /// Corresponds to an ordered unique identifier of the events. Note that the corresponding
+    /// offset of each event is provided in the <see cref="EventEnvelope"/>, which makes it 
+    /// possible to resume the stream at a later point from a given offset.
+    /// <para>
+    /// The `offset` is exclusive, i.e. the event with the exact same sequence number will not be included
+    /// in the returned stream. This means that you can use the offset that is returned in `EventEnvelope`
+    /// as the `offset` parameter in a subsequent query.
+    /// </para>
+    /// </summary>
+    public sealed class TimeBasedUuid : Offset, IComparable<TimeBasedUuid>
+    {
+        public Guid Value { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TimeBasedUuid"/> class.
+        /// </summary>
+        public TimeBasedUuid(Guid value) => Value = value;
+
+        public int CompareTo(TimeBasedUuid other) => Value.CompareTo(other.Value);
+
+        private bool Equals(TimeBasedUuid other) => Value == other.Value;
+
+        public override bool Equals(object obj)
+        {
+            if (obj is null) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is TimeBasedUuid uUID && Equals(uUID);
+        }
+
+        public override int GetHashCode() => Value.GetHashCode();
+
+        public override int CompareTo(Offset other)
+        {
+            return other is TimeBasedUuid seq
+                ? CompareTo(seq)
+                : throw new InvalidOperationException($"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
+        }
+
+        public override string ToString() => Value.ToString();
     }
 
     /// <summary>
@@ -91,7 +142,7 @@ namespace Akka.Persistence.Query
         /// <summary>
         /// The singleton instance of <see cref="NoOffset"/>.
         /// </summary>
-        public static NoOffset Instance { get; } = new NoOffset();
+        public static NoOffset Instance { get; } = new();
         private NoOffset() { }
 
         public override int CompareTo(Offset other)
@@ -103,5 +154,7 @@ namespace Akka.Persistence.Query
 
             throw new InvalidOperationException($"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
         }
+
+        public override string ToString() => "0";
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="ClusterMetricsExtensionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="ClusterMetricsAutostartSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,16 +24,16 @@ namespace Akka.Cluster.Metrics.Tests
         /// <summary>
         /// This is a single node test.
         /// </summary>
-        private static readonly Config Config = ConfigurationFactory.ParseString($@"
-akka {{
+        private static readonly Config Config = ConfigurationFactory.ParseString(@"
+akka {
     extensions = [""Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics""]
     actor.provider = ""cluster""
-    cluster.metrics.collector {{
+    cluster.metrics.collector {
         provider = [""Akka.Cluster.Metrics.Collectors.DefaultCollector, Akka.Cluster.Metrics""]
         sample-interval = 200ms
         gossip-interval = 200ms
-    }}
-}}
+    }
+}
 ");
         
         public ClusterMetricsAutostartSpec(ITestOutputHelper output)

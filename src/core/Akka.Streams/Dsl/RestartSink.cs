@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="RestartSink.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="RestartSink.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using Akka.Pattern;
@@ -105,7 +105,7 @@ namespace Akka.Streams.Dsl
             Shape = new SinkShape<T>(In);
         }
 
-        public Inlet<T> In { get; } = new Inlet<T>("RestartWithBackoffSink.in");
+        public Inlet<T> In { get; } = new("RestartWithBackoffSink.in");
 
         public override SinkShape<T> Shape { get; }
 

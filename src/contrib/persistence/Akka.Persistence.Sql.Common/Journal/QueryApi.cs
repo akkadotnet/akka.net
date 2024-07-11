@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueryApi.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,9 +15,7 @@ using Akka.Persistence.Journal;
 
 namespace Akka.Persistence.Sql.Common.Journal
 {
-    /// <summary>
-    /// TBD
-    /// </summary>
+    [Obsolete("Query is not implemented.")]
     public interface ISubscriptionCommand { }
 
     /// <summary>
@@ -26,6 +24,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// the subscriber when <see cref="AsyncWriteJournal.WriteMessagesAsync"/> has been called.
     /// </summary>
     [Serializable]
+    [Obsolete("Query is not implemented.", true)]
     public sealed class SubscribePersistenceId : ISubscriptionCommand
     {
         /// <summary>
@@ -47,6 +46,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// TBD
     /// </summary>
     [Serializable]
+    [Obsolete("Query is not implemented.", true)]
     public sealed class EventAppended : IDeadLetterSuppression
     {
         /// <summary>
@@ -108,6 +108,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// the subscriber when `asyncWriteMessages` has been called.
     /// </summary>
     [Serializable]
+    [Obsolete("Query is not implemented.", true)]
     public sealed class SubscribeNewEvents : ISubscriptionCommand
     {
         public static SubscribeNewEvents Instance = new SubscribeNewEvents();
@@ -116,6 +117,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     [Serializable]
+    [Obsolete("Query is not implemented.", true)]
     public sealed class NewEventAppended : IDeadLetterSuppression
     {
         public static NewEventAppended Instance = new NewEventAppended();
@@ -131,6 +133,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// via an <see cref="IEventAdapter"/>.
     /// </summary>
     [Serializable]
+    [Obsolete("Query is not implemented.", true)]
     public sealed class SubscribeTag : ISubscriptionCommand
     {
         /// <summary>
@@ -152,6 +155,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// TBD
     /// </summary>
     [Serializable]
+    [Obsolete("Query is not implemented.", true)]
     public sealed class TaggedEventAppended : IDeadLetterSuppression
     {
         /// <summary>
@@ -239,7 +243,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// TBD
         /// </summary>
         /// <param name="persistent">TBD</param>
-        /// <param name="tag">TBD</param>
         /// <param name="offset">TBD</param>
         public ReplayedEvent(IPersistentRepresentation persistent, long offset)
         {
@@ -268,17 +271,17 @@ namespace Akka.Persistence.Sql.Common.Journal
             return Equals(HighestSequenceNr, other.HighestSequenceNr);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (!(obj is EventReplaySuccess evt)) return false;
             return Equals(evt);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => HighestSequenceNr.GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"EventReplaySuccess<highestSequenceNr: {HighestSequenceNr}>";
     }
 
@@ -302,17 +305,17 @@ namespace Akka.Persistence.Sql.Common.Journal
             return Equals(Cause, other.Cause);
         }
 
-        /// <inheritdoc/>
+        
         public override bool Equals(object obj)
         {
             if (!(obj is EventReplayFailure f)) return false;
             return Equals(f);
         }
 
-        /// <inheritdoc/>
+        
         public override int GetHashCode() => Cause.GetHashCode();
 
-        /// <inheritdoc/>
+        
         public override string ToString() => $"EventReplayFailure<cause: {Cause.Message}>";
     }
 

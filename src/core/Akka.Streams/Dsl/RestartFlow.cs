@@ -1,14 +1,16 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="Restart.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="RestartFlow.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
+using Akka.Util;
 
 namespace Akka.Streams.Dsl
 {
@@ -160,6 +162,7 @@ namespace Akka.Streams.Dsl
         /// <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions"/>.</para>
         /// </summary>
         /// <param name="flowFactory">A factory for producing the <see cref="Flow"/>] to wrap.</param>
+        /// <param name="settings"><see cref="RestartSettings" /> defining restart configuration</param>
         public static Flow<TIn, TOut, NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory, RestartSettings settings)
             => Flow.FromGraph(new RestartWithBackoffFlow<TIn, TOut, TMat>(flowFactory, settings, onlyOnFailures: true));
     }
@@ -181,9 +184,9 @@ namespace Akka.Streams.Dsl
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
-        public Inlet<TIn> In { get; } = new Inlet<TIn>("RestartWithBackoffFlow.in");
+        public Inlet<TIn> In { get; } = new("RestartWithBackoffFlow.in");
 
-        public Outlet<TOut> Out { get; } = new Outlet<TOut>("RestartWithBackoffFlow.out");
+        public Outlet<TOut> Out { get; } = new("RestartWithBackoffFlow.out");
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
@@ -200,7 +203,7 @@ namespace Akka.Streams.Dsl
                 : base(name, stage.Shape, stage.In, stage.Out, stage.Settings, stage.OnlyOnFailures)
             {
                 _inheritedAttributes = inheritedAttributes;
-                _delay = _inheritedAttributes.GetAttribute<RestartWithBackoffFlow.Delay>(new RestartWithBackoffFlow.Delay(TimeSpan.FromMilliseconds(50))).Duration;
+                _delay = _inheritedAttributes.GetAttribute(new RestartWithBackoffFlow.Delay(TimeSpan.FromMilliseconds(50))).Duration;
                 _stage = stage;
                 Backoff();
             }
@@ -326,10 +329,10 @@ namespace Akka.Streams.Dsl
 
             SetHandler(Out,
                 onPull: () => sinkIn.Pull(),
-                onDownstreamFinish: () =>
+                onDownstreamFinish: cause =>
                 {
                     _finishing = true;
-                    sinkIn.Cancel();
+                    sinkIn.Cancel(cause);
                 });
 
             return sinkIn;
@@ -349,10 +352,10 @@ namespace Akka.Streams.Dsl
                             Pull(In);
                     }
                 },
-                onDownstreamFinish: () =>
+                onDownstreamFinish: cause =>
                 {
                     if (_finishing || MaxRestartsReached() || _onlyOnFailures)
-                        Cancel(In);
+                        Cancel(In, cause);
                     else
                     {
                         ScheduleRestartTimer();
@@ -438,26 +441,26 @@ namespace Akka.Streams.Dsl
             Duration = duration;
         }
             
-        /// <inheritdoc/>
+        
         public bool Equals(Delay other) => !ReferenceEquals(other, null) && Equals(Duration, other.Duration);
 
-        /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is Delay && Equals((Delay)obj);
+       
+        public override bool Equals(object obj) => obj is Delay delay && Equals(delay);
 
-        /// <inheritdoc/>
+       
         public override int GetHashCode() => Duration.GetHashCode();
 
-        /// <inheritdoc/>
+       
         public override string ToString() => $"Duration({Duration})";
     }
     }
-    
+
     /// <summary>
     /// Returns a flow that is almost identical but delays propagation of cancellation from downstream to upstream.
     /// Once the down stream is finished calls to onPush are ignored
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    internal class DelayCancellationStage<T> : SimpleLinearGraphStage<T>
+    internal sealed class DelayCancellationStage<T> : SimpleLinearGraphStage<T>
     {
         private readonly TimeSpan _delay;
 
@@ -471,7 +474,8 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : TimerGraphStageLogic
         {
             private readonly DelayCancellationStage<T> _stage;
-            
+            private Option<Exception> _cause = Option<Exception>.None;
+
             public Logic(DelayCancellationStage<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
@@ -484,9 +488,9 @@ namespace Akka.Streams.Dsl
             /// <summary>
             /// We should really. port the Cause parameter functionality for the OnDownStreamFinished delegate
             /// </summary>
-            private void OnDownStreamFinished()
+            private void OnDownStreamFinished(Exception cause)
             {
-                //_cause = new Option<Exception>(/*cause*/);
+                _cause = cause;
                 ScheduleOnce("CompleteState", _stage._delay);
                 SetHandler(_stage.Inlet, onPush:DoNothing);
             }
@@ -494,15 +498,10 @@ namespace Akka.Streams.Dsl
             protected internal override void OnTimer(object timerKey)
             {
                 Log.Debug($"Stage was cancelled after delay of {_stage._delay}");
-                CompleteStage();
-                
-                // this code will replace the CompleteStage() call once we port the Exception Cause parameter for the OnDownStreamFinished delegate
-                /*if(_cause != null)
-                    FailStage(_cause.Value); //<-- is this the same as cancelStage ?
+                if(_cause.HasValue)
+                    CancelStage(_cause.Value);
                 else
-                {
                     throw new IllegalStateException("Timer hitting without first getting a cancel cannot happen");
-                }*/
             }
         }
     }
@@ -515,9 +514,9 @@ namespace Akka.Streams.Dsl
 
         public bool IsOverdue => Time.Ticks - DateTime.UtcNow.Ticks < 0;
 
-        public static Deadline Now => new Deadline(new TimeSpan(DateTime.UtcNow.Ticks));
+        public static Deadline Now => new(new TimeSpan(DateTime.UtcNow.Ticks));
 
-        public static Deadline operator +(Deadline deadline, TimeSpan duration) => new Deadline(deadline.Time.Add(duration));
+        public static Deadline operator +(Deadline deadline, TimeSpan duration) => new(deadline.Time.Add(duration));
     }
 
     internal static class DeadlineExtensions
