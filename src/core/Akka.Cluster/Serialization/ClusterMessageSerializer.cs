@@ -328,6 +328,7 @@ namespace Akka.Cluster.Serialization
             // rather than call a bunch of individual LINQ operations, we're going to do it all in one go
             var allRoles = new HashSet<string>();
             var allAddresses = new List<UniqueAddress>(gossip.Members.Count);
+            var addressesToProto = new List<Proto.Msg.UniqueAddress>(gossip.Members.Count);
             var allAppVersions = new HashSet<string>();
             var addressMapping = new Dictionary<UniqueAddress, int>();
             var addrIndex = 0;
@@ -345,6 +346,7 @@ namespace Akka.Cluster.Serialization
                     addressMapping.Add(m.UniqueAddress, addrIndex);
                     addrIndex += 1;
                 }
+                addressesToProto.Add(UniqueAddressToProto(m.UniqueAddress));
                 var previousRoleCount = allRoles.Count;
                 allRoles.UnionWith(m.Roles);
                 if (allRoles.Count > previousRoleCount) // found a new role
@@ -385,7 +387,7 @@ namespace Akka.Cluster.Serialization
             overview.ObserverReachability.AddRange(reachabilityProto);
 
             var message = new Proto.Msg.Gossip();
-            message.AllAddresses.AddRange(allAddresses.Select(UniqueAddressToProto));
+            message.AllAddresses.AddRange(addressesToProto);
             message.AllRoles.AddRange(allRoles);
             message.AllHashes.AddRange(allHashes);
             message.Members.AddRange(membersProtos);
