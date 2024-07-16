@@ -327,12 +327,15 @@ namespace Akka.Cluster.Serialization
             
             // rather than call a bunch of individual LINQ operations, we're going to do it all in one go
             var allRoles = new HashSet<string>();
-            var allAddresses = new List<UniqueAddress>();
+            var allAddresses = new List<UniqueAddress>(gossip.Members.Count);
             var allAppVersions = new HashSet<string>();
             var addressMapping = new Dictionary<UniqueAddress, int>();
             var addrIndex = 0;
             var roleMapping = new Dictionary<string, int>();
             var roleIndex = 0;
+            var membersProtos = new List<Proto.Msg.Member>(gossip.Members.Count);
+            var appVersionMapping = new Dictionary<string, int>();
+            var appVersionIndex = 0;
 
             foreach (var m in allMembers)
             {
@@ -356,17 +359,25 @@ namespace Akka.Cluster.Serialization
                         }
                     }
                 }
+                
                 allAppVersions.Add(m.AppVersion.Version);
+                if (!appVersionMapping.ContainsKey(m.AppVersion.Version))
+                {
+                    appVersionMapping.Add(m.AppVersion.Version, appVersionIndex);
+                    appVersionIndex += 1;
+                }
+                
+                
+                membersProtos.Add(MemberToProto(m));
             }
             
             //var addressMapping = allAddresses.ZipWithIndex();
             //var roleMapping = allRoles.ZipWithIndex();
             var allHashes = gossip.Version.Versions.Keys.Select(x => x.ToString()).ToArray();
             var hashMapping = allHashes.ZipWithIndex();
-            var appVersionMapping = allAppVersions.ZipWithIndex();
 
             var reachabilityProto = ReachabilityToProto(gossip.Overview.Reachability, addressMapping);
-            var membersProtos = gossip.Members.Select(c => MemberToProto(c));
+            //var membersProtos = gossip.Members.Select(c => MemberToProto(c));
             var seenProtos = gossip.Overview.Seen.Select((Func<UniqueAddress, int>)MapUniqueAddress);
 
             var overview = new Proto.Msg.GossipOverview();
