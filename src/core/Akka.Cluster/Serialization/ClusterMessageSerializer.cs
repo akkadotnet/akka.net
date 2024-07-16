@@ -352,11 +352,9 @@ namespace Akka.Cluster.Serialization
                     foreach(var role in m.Roles)
                     {
                         // TODO: TryAdd would be nice here
-                        if (!roleMapping.ContainsKey(role))
-                        {
-                            roleMapping.Add(role, roleIndex);
-                            roleIndex += 1;
-                        }
+                        if (roleMapping.ContainsKey(role)) continue;
+                        roleMapping.Add(role, roleIndex);
+                        roleIndex += 1;
                     }
                 }
                 
@@ -413,9 +411,16 @@ namespace Akka.Cluster.Serialization
         private static Gossip GossipFrom(Proto.Msg.Gossip gossip)
         {
             var addressMapping = gossip.AllAddresses.Select(UniqueAddressFrom).ToList();
-            var roleMapping = gossip.AllRoles.ToList();
-            var hashMapping = gossip.AllHashes.ToList();
+            var roleMapping = gossip.AllRoles;
+            var hashMapping = gossip.AllHashes;
             var appVersionMapping = gossip.AllAppVersions.Select(i => AppVersion.Create(i)).ToList();
+
+            var members = gossip.Members.Select((Func<Proto.Msg.Member, Member>)MemberFromProto).ToImmutableSortedSet(Member.Ordering);
+            var reachability = ReachabilityFromProto(gossip.Overview.ObserverReachability, addressMapping);
+            var seen = gossip.Overview.Seen.Select(x => addressMapping[x]).ToImmutableHashSet();
+            var overview = new GossipOverview(seen, reachability);
+
+            return new Gossip(members, overview, VectorClockFrom(gossip.Version, hashMapping));
 
             Member MemberFromProto(Proto.Msg.Member member) =>
                 Member.Create(
@@ -424,14 +429,7 @@ namespace Akka.Cluster.Serialization
                     (MemberStatus)member.Status,
                     member.RolesIndexes.Select(x => roleMapping[x]).ToImmutableHashSet(),
                     appVersionMapping.Any() ? appVersionMapping[member.AppVersionIndex] : AppVersion.Zero
-                    );
-
-            var members = gossip.Members.Select((Func<Proto.Msg.Member, Member>)MemberFromProto).ToImmutableSortedSet(Member.Ordering);
-            var reachability = ReachabilityFromProto(gossip.Overview.ObserverReachability, addressMapping);
-            var seen = gossip.Overview.Seen.Select(x => addressMapping[x]).ToImmutableHashSet();
-            var overview = new GossipOverview(seen, reachability);
-
-            return new Gossip(members, overview, VectorClockFrom(gossip.Version, hashMapping));
+                );
         }
 
         private static IEnumerable<Proto.Msg.ObserverReachability> ReachabilityToProto(Reachability reachability, Dictionary<UniqueAddress, int> addressMapping)
