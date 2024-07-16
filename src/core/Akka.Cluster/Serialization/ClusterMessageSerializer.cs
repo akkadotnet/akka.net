@@ -327,7 +327,6 @@ namespace Akka.Cluster.Serialization
             
             // rather than call a bunch of individual LINQ operations, we're going to do it all in one go
             var allRoles = new HashSet<string>();
-            var allAddresses = new List<UniqueAddress>(gossip.Members.Count);
             var addressesToProto = new List<Proto.Msg.UniqueAddress>(gossip.Members.Count);
             var allAppVersions = new HashSet<string>();
             var addressMapping = new Dictionary<UniqueAddress, int>();
@@ -340,7 +339,6 @@ namespace Akka.Cluster.Serialization
 
             foreach (var m in allMembers)
             {
-                allAddresses.Add(m.UniqueAddress);
                 if (!addressMapping.ContainsKey(m.UniqueAddress))
                 {
                     addressMapping.Add(m.UniqueAddress, addrIndex);
