@@ -329,17 +329,39 @@ namespace Akka.Cluster.Serialization
             var allRoles = new HashSet<string>();
             var allAddresses = new List<UniqueAddress>();
             var allAppVersions = new HashSet<string>();
+            var addressMapping = new Dictionary<UniqueAddress, int>();
+            var addrIndex = 0;
+            var roleMapping = new Dictionary<string, int>();
+            var roleIndex = 0;
 
             foreach (var m in allMembers)
             {
                 allAddresses.Add(m.UniqueAddress);
+                if (!addressMapping.ContainsKey(m.UniqueAddress))
+                {
+                    addressMapping.Add(m.UniqueAddress, addrIndex);
+                    addrIndex += 1;
+                }
+                var previousRoleCount = allRoles.Count;
                 allRoles.UnionWith(m.Roles);
+                if (allRoles.Count > previousRoleCount) // found a new role
+                {
+                    foreach(var role in m.Roles)
+                    {
+                        // TODO: TryAdd would be nice here
+                        if (roleMapping.ContainsKey(role))
+                        {
+                            roleMapping.Add(role, roleIndex);
+                            roleIndex += 1;
+                        }
+                    }
+                }
                 allAppVersions.Add(m.AppVersion.Version);
             }
             
-            var addressMapping = allAddresses.ZipWithIndex();
-            var roleMapping = allRoles.ZipWithIndex();
-            var allHashes = gossip.Version.Versions.Keys.Select(x => x.ToString()).ToList();
+            //var addressMapping = allAddresses.ZipWithIndex();
+            //var roleMapping = allRoles.ZipWithIndex();
+            var allHashes = gossip.Version.Versions.Keys.Select(x => x.ToString()).ToArray();
             var hashMapping = allHashes.ZipWithIndex();
             var appVersionMapping = allAppVersions.ZipWithIndex();
 
