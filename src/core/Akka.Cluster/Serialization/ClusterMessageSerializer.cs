@@ -349,7 +349,7 @@ namespace Akka.Cluster.Serialization
                     foreach(var role in m.Roles)
                     {
                         // TODO: TryAdd would be nice here
-                        if (roleMapping.ContainsKey(role))
+                        if (!roleMapping.ContainsKey(role))
                         {
                             roleMapping.Add(role, roleIndex);
                             roleIndex += 1;
