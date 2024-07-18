@@ -92,22 +92,15 @@ namespace Akka.Cluster.Tools.Singleton
 
         #endregion
 
-        private readonly MemberAgeOrdering _memberAgeComparer;
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
 
         /// <summary>
         /// Creates a new instance of the <see cref="OldestChangedBuffer"/>.
         /// </summary>
         /// <param name="role">The role for which we're watching for membership changes.</param>
-        /// <param name="considerAppVersion">Should cluster AppVersion be considered when sorting member age</param>
-        public OldestChangedBuffer(string role, bool considerAppVersion)
+        public OldestChangedBuffer(string role)
         {
             _role = role;
-            _memberAgeComparer = considerAppVersion
-                ? MemberAgeOrdering.DescendingWithAppVersion
-                : MemberAgeOrdering.Descending;
-            _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(_memberAgeComparer);
-            
             SetupCoordinatedShutdown();
         }
 
@@ -137,7 +130,7 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         private readonly string _role;
-        private ImmutableSortedSet<Member> _membersByAge;
+        private ImmutableSortedSet<Member> _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(MemberAgeOrdering.Descending);
         private ImmutableQueue<object> _changes = ImmutableQueue<object>.Empty;
 
         private readonly Cluster _cluster = Cluster.Get(Context.System);
@@ -163,7 +156,7 @@ namespace Akka.Cluster.Tools.Singleton
             // all members except Joining and WeaklyUp
             _membersByAge = state.Members
                 .Where(m => m.UpNumber != int.MaxValue && MatchingRole(m))
-                .ToImmutableSortedSet(_memberAgeComparer);
+                .ToImmutableSortedSet(MemberAgeOrdering.Descending);
 
             // If there is some removal in progress of an older node it's not safe to immediately become oldest,
             // removal of younger nodes doesn't matter. Note that it can also be started via restart after

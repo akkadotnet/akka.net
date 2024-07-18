@@ -56,13 +56,6 @@ namespace Akka.Cluster.Tools.Singleton
         /// LeaseSettings for acquiring before creating the singleton actor.
         /// </summary>
         public LeaseUsageSettings LeaseSettings { get; }
-        
-        /// <summary>
-        /// Should <see cref="Member.AppVersion"/> be considered when the cluster singleton instance is being moved to another node.
-        /// When set to false, singleton instance will always be created on oldest member.
-        /// When set to true, singleton instance will be created on the oldest member with the highest <see cref="Member.AppVersion"/> number.
-        /// </summary>
-        public bool ConsiderAppVersion { get; }
 
         /// <summary>
         /// Create settings from the default configuration `akka.cluster`.
@@ -79,7 +72,7 @@ namespace Akka.Cluster.Tools.Singleton
         public static ClusterSingletonSettings Create(Config config)
         {
             var mgrSettings = ClusterSingletonManagerSettings.Create(config.GetConfig("singleton"));
-            var proxySettings = ClusterSingletonProxySettings.Create(config.GetConfig("singleton-proxy"), false);
+            var proxySettings = ClusterSingletonProxySettings.Create(config.GetConfig("singleton-proxy"));
 
             return new ClusterSingletonSettings(
                 mgrSettings.Role,
@@ -87,18 +80,10 @@ namespace Akka.Cluster.Tools.Singleton
                 mgrSettings.RemovalMargin,
                 mgrSettings.HandOverRetryInterval,
                 proxySettings.BufferSize,
-                mgrSettings.LeaseSettings,
-                mgrSettings.ConsiderAppVersion);
+                mgrSettings.LeaseSettings);
         }
 
-        private ClusterSingletonSettings(
-            string role,
-            TimeSpan singletonIdentificationInterval,
-            TimeSpan removalMargin,
-            TimeSpan handOverRetryInterval,
-            int bufferSize,
-            LeaseUsageSettings leaseSettings,
-            bool considerAppVersion)
+        private ClusterSingletonSettings(string role, TimeSpan singletonIdentificationInterval, TimeSpan removalMargin, TimeSpan handOverRetryInterval, int bufferSize, LeaseUsageSettings leaseSettings)
         {
             if (singletonIdentificationInterval == TimeSpan.Zero)
                 throw new ArgumentException("singletonIdentificationInterval must be positive", nameof(singletonIdentificationInterval));
@@ -118,7 +103,6 @@ namespace Akka.Cluster.Tools.Singleton
             HandOverRetryInterval = handOverRetryInterval;
             BufferSize = bufferSize;
             LeaseSettings = leaseSettings;
-            ConsiderAppVersion = considerAppVersion;
         }
 
         public ClusterSingletonSettings WithRole(string role) => Copy(role: role);
@@ -129,14 +113,7 @@ namespace Akka.Cluster.Tools.Singleton
 
         public ClusterSingletonSettings WithLeaseSettings(LeaseUsageSettings leaseSettings) => Copy(leaseSettings: leaseSettings);
 
-        private ClusterSingletonSettings Copy(
-            Option<string> role = default,
-            TimeSpan? singletonIdentificationInterval = null,
-            TimeSpan? removalMargin = null,
-            TimeSpan? handOverRetryInterval = null,
-            int? bufferSize = null,
-            Option<LeaseUsageSettings> leaseSettings = default,
-            bool? considerAppVersion = null)
+        private ClusterSingletonSettings Copy(Option<string> role = default, TimeSpan? singletonIdentificationInterval = null, TimeSpan? removalMargin = null, TimeSpan? handOverRetryInterval = null, int? bufferSize = null, Option<LeaseUsageSettings> leaseSettings = default)
         {
             return new ClusterSingletonSettings(
                 role: role.HasValue ? role.Value : Role,
@@ -144,22 +121,21 @@ namespace Akka.Cluster.Tools.Singleton
                 removalMargin: removalMargin ?? RemovalMargin,
                 handOverRetryInterval: handOverRetryInterval ?? HandOverRetryInterval,
                 bufferSize: bufferSize ?? BufferSize,
-                leaseSettings: leaseSettings.HasValue ? leaseSettings.Value : LeaseSettings,
-                considerAppVersion: considerAppVersion ?? ConsiderAppVersion);
+                leaseSettings: leaseSettings.HasValue ? leaseSettings.Value : LeaseSettings);
         }
 
         [InternalApi]
         internal ClusterSingletonManagerSettings ToManagerSettings(string singletonName) =>
-            new(singletonName, Role, RemovalMargin, HandOverRetryInterval, LeaseSettings, ConsiderAppVersion);
+            new ClusterSingletonManagerSettings(singletonName, Role, RemovalMargin, HandOverRetryInterval, LeaseSettings);
 
         [InternalApi]
         internal ClusterSingletonProxySettings ToProxySettings(string singletonName) =>
-            new(singletonName, Role, SingletonIdentificationInterval, BufferSize, ConsiderAppVersion);
+            new ClusterSingletonProxySettings(singletonName, Role, SingletonIdentificationInterval, BufferSize);
 
         [InternalApi]
         internal bool ShouldRunManager(Cluster cluster) => string.IsNullOrEmpty(Role) || cluster.SelfMember.Roles.Contains(Role);
 
         public override string ToString() =>
-            $"ClusterSingletonSettings({Role}, {SingletonIdentificationInterval}, {RemovalMargin}, {HandOverRetryInterval}, {BufferSize}, {LeaseSettings}, {ConsiderAppVersion})";
+            $"ClusterSingletonSettings({Role}, {SingletonIdentificationInterval}, {RemovalMargin}, {HandOverRetryInterval}, {BufferSize}, {LeaseSettings})";
     }
 }

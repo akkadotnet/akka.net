@@ -57,8 +57,7 @@ namespace Akka.Cluster.Tools.Singleton
                 role: RoleOption(config.GetString("role")),
                 removalMargin: TimeSpan.Zero, // defaults to ClusterSettings.DownRemovalMargin
                 handOverRetryInterval: config.GetTimeSpan("hand-over-retry-interval"),
-                leaseSettings: lease,
-                considerAppVersion: config.GetBoolean("consider-app-version"));
+                leaseSettings: lease);
         }
 
         private static string RoleOption(string role)
@@ -92,14 +91,6 @@ namespace Akka.Cluster.Tools.Singleton
         /// LeaseSettings for acquiring before creating the singleton actor
         /// </summary>
         public LeaseUsageSettings LeaseSettings { get; }
-        
-        
-        /// <summary>
-        /// Should <see cref="Member.AppVersion"/> be considered when the cluster singleton instance is being moved to another node.
-        /// When set to false, singleton instance will always be created on oldest member.
-        /// When set to true, singleton instance will be created on the oldest member with the highest <see cref="Member.AppVersion"/> number.
-        /// </summary>
-        public bool ConsiderAppVersion { get; }
 
         /// <summary>
         /// Creates a new instance of the <see cref="ClusterSingletonManagerSettings"/>.
@@ -123,19 +114,9 @@ namespace Akka.Cluster.Tools.Singleton
         /// over has started or the previous oldest member is removed from the cluster
         /// (+ <paramref name="removalMargin"/>).
         /// </param>
-        /// <param name="considerAppVersion">
-        /// Should <see cref="Member.AppVersion"/> be considered when the cluster singleton instance is being moved to another node.
-        /// When set to false, singleton instance will always be created on oldest member.
-        /// When set to true, singleton instance will be created on the oldest member with the highest <see cref="Member.AppVersion"/> number.
-        /// </param>
         /// <exception cref="ArgumentException">TBD</exception>
-        public ClusterSingletonManagerSettings(
-            string singletonName,
-            string role,
-            TimeSpan removalMargin,
-            TimeSpan handOverRetryInterval,
-            bool considerAppVersion)
-            : this(singletonName, role, removalMargin, handOverRetryInterval, null, considerAppVersion)
+        public ClusterSingletonManagerSettings(string singletonName, string role, TimeSpan removalMargin, TimeSpan handOverRetryInterval)
+            : this(singletonName, role, removalMargin, handOverRetryInterval, null)
         {
         }
 
@@ -162,19 +143,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// (+ <paramref name="removalMargin"/>).
         /// </param>
         /// <param name="leaseSettings">LeaseSettings for acquiring before creating the singleton actor</param>
-        /// <param name="considerAppVersion">
-        /// Should <see cref="Member.AppVersion"/> be considered when the cluster singleton instance is being moved to another node.
-        /// When set to false, singleton instance will always be created on oldest member.
-        /// When set to true, singleton instance will be created on the oldest member with the highest <see cref="Member.AppVersion"/> number.
-        /// </param>
         /// <exception cref="ArgumentException">TBD</exception>
-        public ClusterSingletonManagerSettings(
-            string singletonName,
-            string role,
-            TimeSpan removalMargin,
-            TimeSpan handOverRetryInterval,
-            LeaseUsageSettings leaseSettings,
-            bool considerAppVersion)
+        public ClusterSingletonManagerSettings(string singletonName, string role, TimeSpan removalMargin, TimeSpan handOverRetryInterval, LeaseUsageSettings leaseSettings)
         {
             if (string.IsNullOrWhiteSpace(singletonName))
                 throw new ArgumentNullException(nameof(singletonName));
@@ -188,7 +158,6 @@ namespace Akka.Cluster.Tools.Singleton
             RemovalMargin = removalMargin;
             HandOverRetryInterval = handOverRetryInterval;
             LeaseSettings = leaseSettings;
-            ConsiderAppVersion = considerAppVersion;
         }
 
         /// <summary>
@@ -241,21 +210,15 @@ namespace Akka.Cluster.Tools.Singleton
             return Copy(leaseSettings: leaseSettings);
         }
 
-        private ClusterSingletonManagerSettings Copy(
-            string singletonName = null,
-            Option<string> role = default,
-            TimeSpan? removalMargin = null,
-            TimeSpan? handOverRetryInterval = null,
-            Option<LeaseUsageSettings> leaseSettings = default,
-            bool? considerAppVersion = null)
+        private ClusterSingletonManagerSettings Copy(string singletonName = null, Option<string> role = default, TimeSpan? removalMargin = null,
+            TimeSpan? handOverRetryInterval = null, Option<LeaseUsageSettings> leaseSettings = default)
         {
             return new ClusterSingletonManagerSettings(
                 singletonName: singletonName ?? SingletonName,
                 role: role.HasValue ? role.Value : Role,
                 removalMargin: removalMargin ?? RemovalMargin,
                 handOverRetryInterval: handOverRetryInterval ?? HandOverRetryInterval,
-                leaseSettings: leaseSettings.HasValue ? leaseSettings.Value : LeaseSettings,
-                considerAppVersion: considerAppVersion ?? ConsiderAppVersion
+                leaseSettings: leaseSettings.HasValue ? leaseSettings.Value : LeaseSettings
                 );
         }
     }
