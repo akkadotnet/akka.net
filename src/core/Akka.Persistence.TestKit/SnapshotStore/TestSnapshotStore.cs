@@ -5,6 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.Configuration;
+using Akka.Event;
+
 namespace Akka.Persistence.TestKit
 {
     using System.Threading.Tasks;
@@ -19,22 +22,39 @@ namespace Akka.Persistence.TestKit
         private ISnapshotStoreInterceptor _saveInterceptor = SnapshotStoreInterceptors.Noop.Instance;
         private ISnapshotStoreInterceptor _loadInterceptor = SnapshotStoreInterceptors.Noop.Instance;
         private ISnapshotStoreInterceptor _deleteInterceptor = SnapshotStoreInterceptors.Noop.Instance;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+        
+        public TestSnapshotStore(Config snapshotStoreConfig)
+        {
+            DebugEnabled = snapshotStoreConfig.GetBoolean("debug", false);
+        }
+        
+        private bool DebugEnabled { get; }
 
         protected override bool ReceivePluginInternal(object message)
         {
+            if(DebugEnabled)
+                _log.Info("Received plugin internal message {0}", message);
+            
             switch (message)
             {
                 case UseSaveInterceptor use:
+                    if(DebugEnabled)
+                        _log.Info("Using save interceptor {0}", use.Interceptor.GetType().Name);
                     _saveInterceptor = use.Interceptor;
                     Sender.Tell(Ack.Instance);
                     return true;
 
                 case UseLoadInterceptor use:
+                    if(DebugEnabled)
+                        _log.Info("Using load interceptor {0}", use.Interceptor.GetType().Name);
                     _loadInterceptor = use.Interceptor;
                     Sender.Tell(Ack.Instance);
                     return true;
 
                 case UseDeleteInterceptor use:
+                    if(DebugEnabled)
+                        _log.Info("Using delete interceptor {0}", use.Interceptor.GetType().Name);
                     _deleteInterceptor = use.Interceptor;
                     Sender.Tell(Ack.Instance);
                     return true;
@@ -46,29 +66,55 @@ namespace Akka.Persistence.TestKit
 
         protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
+            if(DebugEnabled)
+                _log.Info("Starting to intercept snapshot {0} saving using interceptor {1}", metadata, _saveInterceptor.GetType().Name);
+            
             await _saveInterceptor.InterceptAsync(metadata.PersistenceId, ToSelectionCriteria(metadata));
+            
+            if(DebugEnabled)
+                _log.Info("Completed intercept snapshot {0} saving using interceptor {1}", metadata, _saveInterceptor.GetType().Name);
             await base.SaveAsync(metadata, snapshot);
         }
 
         protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
+            if(DebugEnabled)
+                _log.Info("Starting to intercept snapshot {0} loading using interceptor {1}", persistenceId, _loadInterceptor.GetType().Name);
             await _loadInterceptor.InterceptAsync(persistenceId, criteria);
+            
+            if(DebugEnabled)
+                _log.Info("Completed intercept snapshot {0} loading using interceptor {1}", persistenceId, _loadInterceptor.GetType().Name);
+            
             return await base.LoadAsync(persistenceId, criteria);
         }
 
         protected override async Task DeleteAsync(SnapshotMetadata metadata)
         {
+            if(DebugEnabled)
+                _log.Info("Starting to intercept snapshot {0} deletion using interceptor {1}", metadata, _deleteInterceptor.GetType().Name);
+            
             await _deleteInterceptor.InterceptAsync(metadata.PersistenceId, ToSelectionCriteria(metadata));
+            
+            if(DebugEnabled)
+                _log.Info("Completed intercept snapshot {0} deletion using interceptor {1}", metadata, _deleteInterceptor.GetType().Name);
+            
             await base.DeleteAsync(metadata);
         }
 
         protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
+            if(DebugEnabled)
+                _log.Info("Starting to intercept snapshot {0} deletion using interceptor {1}", persistenceId, _deleteInterceptor.GetType().Name);
+            
             await _deleteInterceptor.InterceptAsync(persistenceId, criteria);
+            
+            if(DebugEnabled)
+                _log.Info("Completed intercept snapshot {0} deletion using interceptor {1}", persistenceId, _deleteInterceptor.GetType().Name);
+            
             await base.DeleteAsync(persistenceId, criteria);
         }
 
-        static SnapshotSelectionCriteria ToSelectionCriteria(SnapshotMetadata metadata)
+        private static SnapshotSelectionCriteria ToSelectionCriteria(SnapshotMetadata metadata)
             => new(metadata.SequenceNr, metadata.Timestamp, metadata.SequenceNr, metadata.Timestamp);
 
         /// <summary>
