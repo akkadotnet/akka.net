@@ -353,7 +353,7 @@ namespace Akka.Cluster.Sharding
             string coordinatorPath,
             IMessageExtractor messageExtractor,
             object handOffStopMessage,
-            IRememberEntitiesProvider rememberEntitiesProvider)
+            IRememberEntitiesProvider? rememberEntitiesProvider)
         {
             return Actor.Props.Create(() => new ShardRegion(
                     typeName,

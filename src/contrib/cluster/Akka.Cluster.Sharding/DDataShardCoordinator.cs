@@ -123,7 +123,7 @@ namespace Akka.Cluster.Sharding
             else
                 _stateWriteConsistency = new WriteMajorityPlus(settings.TuningParameters.UpdatingStateTimeout, settings.TuningParameters.CoordinatorStateWriteMajorityPlus, majorityMinCap);
 
-            Cluster node = Cluster.Get(Context.System);
+            var node = Cluster.Get(Context.System);
             _selfUniqueAddress = node.SelfUniqueAddress;
 
             _coordinatorStateKey = new LWWRegisterKey<CoordinatorState>(typeName + "CoordinatorState");
