@@ -15,7 +15,6 @@ using Akka.Configuration;
 using Akka.DistributedData.Durable;
 using Akka.Event;
 using Akka.Serialization;
-using Akka.DistributedData.Internal;
 using LightningDB;
 using System.Diagnostics;
 using System.Linq;
@@ -37,7 +36,7 @@ namespace Akka.DistributedData.LightningDB
     /// to the durable store actor, which must then reply with the <see cref="StoreReply.SuccessMessage"/> or
     /// <see cref="StoreReply.FailureMessage"/> to the <see cref="StoreReply.ReplyTo"/>.
     /// </summary>
-    public sealed class LmdbDurableStore : ReceiveActor
+    public sealed class LmdbDurableStore : ReceiveActor, IWithTimers
     {
         public static Actor.Props Props(Config config) => Actor.Props.Create(() => new LmdbDurableStore(config));
 
@@ -172,7 +171,7 @@ namespace Akka.DistributedData.LightningDB
                     else
                     {
                         if (_pending.Count > 0)
-                            Context.System.Scheduler.ScheduleTellOnce(_writeBehindInterval, Self, WriteBehind.Instance, ActorRefs.NoSender);
+                           Timers.StartSingleTimer("write-behind", WriteBehind.Instance, _writeBehindInterval);
                         _pending[store.Key] = store.Data;
                     }
 
@@ -275,5 +274,7 @@ namespace Akka.DistributedData.LightningDB
                 }
             }
         }
+
+        public ITimerScheduler Timers { get; set; }
     }
 }
