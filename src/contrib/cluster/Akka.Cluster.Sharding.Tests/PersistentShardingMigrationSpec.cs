@@ -21,7 +21,7 @@ namespace Akka.Cluster.Sharding.Tests
 {
     /// <summary>
     /// Test migration from old persistent shard coordinator with remembered
-    /// entities to using a ddatabacked shard coordinator with an event sourced
+    /// entities to using a ddata-backed shard coordinator with an event sourced
     /// replicated entity store.
     /// </summary>
     public class PersistentShardingMigrationSpec : AkkaSpec
@@ -171,11 +171,11 @@ namespace Akka.Cluster.Sharding.Tests
                 }");
 
 
-        private Config configForNewMode;
+        private readonly Config _configForNewMode;
 
         public PersistentShardingMigrationSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
         {
-            configForNewMode = ConfigForNewMode.WithFallback(Sys.Settings.Config);
+            _configForNewMode = ConfigForNewMode.WithFallback(Sys.Settings.Config);
         }
 
         protected override void AtStartup()
@@ -187,7 +187,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Fact]
         public void Migration_should_allow_migration_of_remembered_shards_and_not_allow_going_back()
         {
-            var typeName = "Migration";
+            const string typeName = "Migration";
 
             WithSystem(Sys.Settings.Config, typeName, "OldMode", (_, region, _) =>
             {
@@ -200,7 +200,7 @@ namespace Akka.Cluster.Sharding.Tests
                 ExpectMsg("ack");
             });
 
-            WithSystem(configForNewMode, typeName, "NewMode", (system, region, rememberedEntitiesProbe) =>
+            WithSystem(_configForNewMode, typeName, "NewMode", (system, region, rememberedEntitiesProbe) =>
             {
                 AssertRegionRegistrationComplete(region);
                 var probe = CreateTestProbe(system);
@@ -224,11 +224,11 @@ namespace Akka.Cluster.Sharding.Tests
         [Fact]
         public void Migration_should_not_allow_going_back_to_persistence_mode_based_on_a_snapshot()
         {
-            var typeName = "Snapshots";
-            WithSystem(configForNewMode, typeName, "NewMode", (system, region, _) =>
+            const string typeName = "Snapshots";
+            WithSystem(_configForNewMode, typeName, "NewMode", (system, region, _) =>
             {
                 var probe = CreateTestProbe(system);
-                for (int i = 1; i <= 5; i++)
+                for (var i = 1; i <= 5; i++)
                 {
                     region.Tell(new Message(i), probe.Ref);
                     probe.ExpectMsg("ack");
