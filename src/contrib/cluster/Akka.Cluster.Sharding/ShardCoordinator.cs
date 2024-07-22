@@ -1630,7 +1630,7 @@ namespace Akka.Cluster.Sharding
         internal ILoggingAdapter Log { get; }
         internal bool VerboseDebug { get; }
         internal CoordinatorState State { get; set; }
-
+        private bool _preparingForShutdown = false;
 
         public ShardCoordinator(
             string typeName,
@@ -1668,7 +1668,15 @@ namespace Akka.Cluster.Sharding
 
             _rebalanceTask = context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TuningParameters.RebalanceInterval, Settings.TuningParameters.RebalanceInterval, context.Self, RebalanceTick.Instance, ActorRefs.NoSender);
 
-            _cluster.Subscribe(context.Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, new[] { typeof(ClusterEvent.ClusterShuttingDown) });
+            _cluster.Subscribe(
+                context.Self, 
+                ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, 
+                new[]
+                {
+                    typeof(ClusterEvent.ClusterShuttingDown),
+                    typeof(ClusterEvent.MemberReadyForShutdown),
+                    typeof(ClusterEvent.MemberPreparingForShutdown)
+                });
         }
 
 
@@ -1916,6 +1924,16 @@ namespace Akka.Cluster.Sharding
                     _context.Become(ShuttingDown);
                     return true;
 
+                case ClusterEvent.MemberPreparingForShutdown:
+                case ClusterEvent.MemberReadyForShutdown:
+                    if (!_preparingForShutdown)
+                    {
+                        _preparingForShutdown = true;
+                        Log.Info("{0}: Shard coordinator detected prepare for full cluster shutdown. No new rebalances will take place.", TypeName);
+                        _rebalanceTask.Cancel();
+                    }
+                    return true;
+                
                 case GetCurrentRegions _:
                     var reply = new CurrentRegions(State.Regions.Keys.Select(r =>
                         string.IsNullOrEmpty(r.Path.Address.Host) ? _cluster.SelfAddress : r.Path.Address).ToImmutableHashSet());

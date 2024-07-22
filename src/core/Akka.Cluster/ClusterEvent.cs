@@ -345,6 +345,18 @@ namespace Akka.Cluster
             public MemberLeft(Member member)
                 : base(member, MemberStatus.Leaving) { }
         }
+        
+        public sealed class MemberPreparingForShutdown: MemberStatusChange
+        {
+            public MemberPreparingForShutdown(Member member) 
+                : base(member, MemberStatus.PreparingForShutdown) { }
+        }
+        
+        public sealed class MemberReadyForShutdown: MemberStatusChange
+        {
+            public MemberReadyForShutdown(Member member) 
+                : base(member, MemberStatus.ReadyForShutdown) { }
+        }
 
         /// <summary>
         /// This class represents a <see cref="MemberStatusChange"/> event where the
@@ -913,6 +925,16 @@ namespace Akka.Cluster
                         break;
                     case MemberStatus.Down:
                         yield return new MemberDowned(member);
+                        break;
+                    case MemberStatus.PreparingForShutdown:
+                        yield return new MemberPreparingForShutdown(member);
+                        break;
+                    case MemberStatus.ReadyForShutdown:
+                        yield return new MemberReadyForShutdown(member);
+                        break;
+                    case MemberStatus.Removed:
+                    default:
+                        // no events for other transitions
                         break;
                 }
             }

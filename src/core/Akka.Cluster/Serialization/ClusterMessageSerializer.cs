@@ -35,6 +35,7 @@ namespace Akka.Cluster.Serialization
         internal const string WelcomeManifest = "Akka.Cluster.InternalClusterAction+Welcome, Akka.Cluster";
         internal const string LeaveManifest = "Akka.Cluster.ClusterUserAction+Leave, Akka.Cluster";
         internal const string DownManifest = "Akka.Cluster.ClusterUserAction+Down, Akka.Cluster";
+        internal const string PrepareForShutdownManifest = "PS";
 
         internal const string InitJoinManifest = "Akka.Cluster.InternalClusterAction+InitJoin, Akka.Cluster";
 
@@ -184,6 +185,8 @@ namespace Akka.Cluster.Serialization
                     return GossipEnvelopeManifest;
                 case ClusterRouterPool _:
                     return ClusterRouterPoolManifest;
+                case ClusterUserAction.PrepareForShutdown:
+                    return PrepareForShutdownManifest;
                 default:
                     throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{GetType()}]");
             }

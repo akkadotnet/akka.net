@@ -122,6 +122,17 @@ namespace Akka.Cluster
             {
             }
         }
+        
+        /// <summary>
+        /// Command to mark all nodes as shutting down
+        /// </summary>
+        internal sealed class PrepareForShutdown: BaseClusterUserAction, IClusterMessage
+        {
+            public static PrepareForShutdown Instance { get; } = new();
+            
+            private PrepareForShutdown() : base(Address.AllSystems)
+            { }
+        }
     }
 
     /// <summary>
@@ -959,6 +970,7 @@ namespace Akka.Cluster
         private readonly IActorRef _publisher;
         private int _leaderActionCounter = 0;
         private int _selfDownCounter = 0;
+        private bool _preparingForShutdown = false;
 
         private bool _exitingTasksInProgress = false;
         private readonly TaskCompletionSource<Done> _selfExiting = new();
@@ -1334,6 +1346,10 @@ namespace Akka.Cluster
             {
                 Leaving(leave.Address);
             }
+            else if (message is ClusterUserAction.PrepareForShutdown)
+            {
+                StartPrepareForShutdown();
+            }
             else if (message is InternalClusterAction.SendGossipTo sendGossipTo)
             {
                 SendGossipTo(sendGossipTo.Address);
@@ -1513,6 +1529,12 @@ namespace Akka.Cluster
         /// <param name="appVersion">The software version of the joining node.</param>
         public void Joining(UniqueAddress node, ImmutableHashSet<string> roles, AppVersion appVersion)
         {
+            if (_preparingForShutdown)
+            {
+                _log.Info("Ignoring join request from [{0}] as cluster is preparing for shutdown", node);
+                return;
+            }
+            
             var selfStatus = LatestGossip.GetMember(SelfUniqueAddress).Status;
             if (!node.Address.Protocol.Equals(_cluster.SelfAddress.Protocol))
             {
@@ -1627,6 +1649,32 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// State transition to PreparingForShutdown
+        /// </summary>
+        public void StartPrepareForShutdown()
+        {
+            if (!_preparingForShutdown)
+            {
+                _preparingForShutdown = true;
+                var changedMembers = LatestGossip.Members
+                    .Select(m => AllowedToPrepareToShutdown.Contains(m.Status)
+                        ? m.Copy(MemberStatus.PreparingForShutdown)
+                        : m)
+                    .ToImmutableSortedSet();
+                var newGossip = LatestGossip.Copy(changedMembers);
+                UpdateLatestGossip(newGossip);
+                foreach (var member in changedMembers)
+                {
+                    _log.Info("Preparing for shutdown [{0}] as [{1}]",
+                        member.Address,
+                        MemberStatus.PreparingForShutdown);
+                }
+                PublishMembershipState();
+                SendGossip();
+            }
+        }
+
+        /// <summary>
         /// State transition to LEAVING.
         /// The node will eventually be removed by the leader, after hand-off in EXITING, and only after
         /// removal a new node with same address can join the cluster through the normal joining procedure.
@@ -1635,7 +1683,13 @@ namespace Akka.Cluster
         public void Leaving(Address address)
         {
             // only try to update if the node is available (in the member ring)
-            if (LatestGossip.Members.Any(m => m.Address.Equals(address) && m.Status is MemberStatus.Joining or MemberStatus.WeaklyUp or MemberStatus.Up))
+            if (LatestGossip.Members.Any(m => 
+                    m.Address.Equals(address) 
+                    && m.Status is MemberStatus.Joining 
+                        or MemberStatus.WeaklyUp 
+                        or MemberStatus.Up 
+                        or MemberStatus.PreparingForShutdown 
+                        or MemberStatus.ReadyForShutdown))
             {
                 // mark node as LEAVING
                 var newMembers = LatestGossip.Members.Select(m =>
@@ -2116,7 +2170,7 @@ namespace Akka.Cluster
                 {
                     _leaderActionCounter += 1;
 
-                    if (_cluster.Settings.AllowWeaklyUpMembers && (_leaderActionCounter * _cluster.Settings.LeaderActionsInterval.TotalMilliseconds) >= _cluster.Settings.WeaklyUpAfter.TotalMilliseconds)
+                    if (!_preparingForShutdown && _cluster.Settings.AllowWeaklyUpMembers && (_leaderActionCounter * _cluster.Settings.LeaderActionsInterval.TotalMilliseconds) >= _cluster.Settings.WeaklyUpAfter.TotalMilliseconds)
                         MoveJoiningToWeaklyUp();
 
                     if (_leaderActionCounter == firstNotice || _leaderActionCounter % periodicNotice == 0)
@@ -2139,7 +2193,17 @@ namespace Akka.Cluster
             }
 
             CleanupExitingConfirmed();
+            CheckForPrepareForShutdown();
             ShutdownSelfWhenDown();
+        }
+
+        private void CheckForPrepareForShutdown()
+        {
+            if(
+                AllowedToPrepareToShutdown.Contains(LatestGossip.Members.First(m => m.UniqueAddress == SelfUniqueAddress).Status)
+                && LatestGossip.Members.Any(m => PrepareForShutdownStates.Contains(m.Status)))
+                _log.Debug("Detected full cluster shutdown");
+            Self.Tell(ClusterUserAction.PrepareForShutdown.Instance);
         }
 
         private void MoveJoiningToWeaklyUp()
@@ -2251,10 +2315,11 @@ namespace Akka.Cluster
             var upNumber = 0;
             var changedMembers = localMembers.Select(m =>
             {
-                if (IsJoiningUp(m))
+                if (IsJoiningUp(m) && !_preparingForShutdown)
                 {
                     // Move JOINING => UP (once all nodes have seen that this node is JOINING, i.e. we have a convergence)
-                    // and minimum number of nodes have joined the cluster
+                    // and minimum number of nodes have joined the cluster.
+                    // don't move members to up when preparing for shutdown
                     if (upNumber == 0)
                     {
                         // It is alright to use same upNumber as already used by a removed member, since the upNumber
@@ -2274,6 +2339,12 @@ namespace Akka.Cluster
                     // Move LEAVING => EXITING (once we have a convergence on LEAVING
                     // *and* if we have a successful partition handoff)
                     return m.Copy(MemberStatus.Exiting);
+                }
+
+                if (m.Status == MemberStatus.PreparingForShutdown)
+                {
+                    // Move PreparingForShutdown => ReadyForShutdown (once we have a convergence on PreparingForShutdown)
+                    return m.Copy(MemberStatus.ReadyForShutdown);
                 }
 
                 return null;

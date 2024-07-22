@@ -427,6 +427,7 @@ namespace Akka.Cluster.Sharding
         private bool _loggedFullBufferWarning;
         private const int RetryCountThreshold = 5;
         private bool _gracefulShutdownInProgress;
+        private bool _preparingForShutdown = false;
 
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
         private readonly TaskCompletionSource<Done> _gracefulShutdownProgress = new();
@@ -868,6 +869,15 @@ namespace Akka.Cluster.Sharding
                     break;
 
                 case GracefulShutdown _:
+                    if (_preparingForShutdown)
+                    {
+                        _log.Debug("{0}: Skipping graceful shutdown of region and all its shards as cluster is preparing for shutdown",
+                            _typeName);
+                        _gracefulShutdownProgress.TrySetResult(Done.Instance);
+                        Context.Stop(Self);
+                        return;
+                    }
+                    
                     _log.Debug("{0}: Starting graceful shutdown of region and all its shards", _typeName);
 
                     var coordShutdown = CoordinatedShutdown.Get(Context.System);
@@ -1162,6 +1172,12 @@ namespace Akka.Cluster.Sharding
                     break;
                 case ShardCoordinator.BeginHandOff bho:
                 {
+                    if (_preparingForShutdown)
+                    {
+                        _log.Debug("{0}: Ignoring begin handoff as preparing to shutdown", _typeName);
+                        break;
+                    }
+                    
                     var shard = bho.Shard;
                     _log.Debug("{0}: BeginHandOff shard [{1}]", _typeName, shard);
                     if (_regionByShard.TryGetValue(shard, out var regionRef))
@@ -1179,8 +1195,8 @@ namespace Akka.Cluster.Sharding
                     }
 
                     Sender.Tell(new ShardCoordinator.BeginHandOffAck(shard));
-                }
                     break;
+                }
                 case ShardCoordinator.HandOff ho:
                 {
                     var shard = ho.Shard;
@@ -1354,6 +1370,14 @@ namespace Akka.Cluster.Sharding
                         Context.Stop(Self);
                     }
 
+                    break;
+                case ClusterEvent.MemberReadyForShutdown:
+                case ClusterEvent.MemberPreparingForShutdown:
+                    if (!_preparingForShutdown)
+                    {
+                        _preparingForShutdown = true;
+                        _log.Info("{0}: Preparing for shutdown", _typeName);
+                    }
                     break;
                 case ClusterEvent.IMemberEvent _:
                     // these are expected, no need to warn about them

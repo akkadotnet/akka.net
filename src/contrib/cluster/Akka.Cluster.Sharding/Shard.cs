@@ -958,6 +958,7 @@ namespace Akka.Cluster.Sharding
         private readonly MessageBufferMap<EntityId> _messageBuffers = new();
 
         private IActorRef? _handOffStopper;
+        private bool _preparingForShutdown = false;
         private readonly ICancelable? _passivateIdleTask;
         private readonly Lease? _lease;
         private readonly TimeSpan _leaseRetryInterval = TimeSpan.FromSeconds(5); // won't be used
@@ -1030,6 +1031,14 @@ namespace Akka.Cluster.Sharding
 
         protected override void PreStart()
         {
+            Cluster.Get(system: Context.System).Subscribe(
+                subscriber: Self,
+                initialStateMode: ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents,
+                to: new []
+                {
+                    typeof(ClusterEvent.MemberPreparingForShutdown),
+                    typeof(ClusterEvent.MemberReadyForShutdown)
+                });
             AcquireLeaseIfNeeded();
         }
 
@@ -1110,6 +1119,10 @@ namespace Akka.Cluster.Sharding
                 case LeaseLost ll:
                     ReceiveLeaseLost(ll);
                     return true;
+                
+                case ClusterEvent.IMemberEvent evt:
+                    ReceiveMemberEvent(evt);
+                    return true;
             }
 
             if (_verboseDebug)
@@ -1119,6 +1132,18 @@ namespace Akka.Cluster.Sharding
                     Sender);
             Stash.Stash();
             return true;
+        }
+
+        private void ReceiveMemberEvent(ClusterEvent.IMemberEvent evt)
+        {
+            if (evt is ClusterEvent.MemberReadyForShutdown or ClusterEvent.MemberPreparingForShutdown)
+            {
+                if (!_preparingForShutdown)
+                {
+                    Log.Info("{0}: Preparing for shutdown", _typeName);
+                    _preparingForShutdown = true;
+                }
+            }
         }
 
         private void TryGetLease(Lease lease)
@@ -1163,6 +1188,9 @@ namespace Akka.Cluster.Sharding
                     return true;
                 case RememberEntityTimeout _:
                     LoadingEntityIdsFailed();
+                    return true;
+                case ClusterEvent.IMemberEvent me:
+                    ReceiveMemberEvent(me);
                     return true;
             }
 
@@ -1217,6 +1245,9 @@ namespace Akka.Cluster.Sharding
             {
                 case Terminated t:
                     ReceiveTerminated(t.ActorRef);
+                    return true;
+                case ClusterEvent.IMemberEvent me:
+                    ReceiveMemberEvent(me);
                     return true;
                 case EntityTerminated t:
                     ReceiveEntityTerminated(t.Ref);
@@ -1327,6 +1358,9 @@ namespace Akka.Cluster.Sharding
                             $"Async write timed out after {_settings.TuningParameters.UpdatingStateTimeout}");
                     case ShardRegion.StartEntity se:
                         StartEntity(se.EntityId, Sender);
+                        return true;
+                    case ClusterEvent.IMemberEvent me:
+                        ReceiveMemberEvent(me);
                         return true;
                     case Terminated t:
                         ReceiveTerminated(t.ActorRef);
@@ -1593,7 +1627,16 @@ namespace Akka.Cluster.Sharding
 
                 // does conversion so only do once
                 var activeEntities = _entities.ActiveEntities;
-                if (activeEntities.Count > 0)
+                if (_preparingForShutdown)
+                {
+                    Log.Info("{0}: HandOff shard [{1}] while preparing for shutdown. Stopping right away.", _typeName, _shardId);
+                    foreach (var entity in activeEntities)
+                    {
+                        entity.Tell(_handOffStopMessage);
+                        replyTo.Tell(new ShardStopped(_shardId));
+                        Context.Stop(Self);
+                    }
+                } else if (activeEntities.Count > 0 && !_preparingForShutdown)
                 {
                     var entityHandOffTimeout =
                         (_settings.TuningParameters.HandOffTimeout - TimeSpan.FromSeconds(5)).Max(
