@@ -40,6 +40,17 @@ namespace Akka.Cluster.Tools.Singleton
         /// the default configuration `akka.cluster.singleton-proxy`.
         /// </summary>
         /// <param name="config">TBD</param>
+        /// <param name="considerAppVersion">TBD</param>
+        /// <returns>TBD</returns>
+        [Obsolete("considerAppVersion is not supported anymore, please use Create method that does not have the considerAppVersion argument. Since 1.5.27")]
+        public static ClusterSingletonProxySettings Create(Config config, bool considerAppVersion)
+            => Create(config);
+        
+        /// <summary>
+        /// Create settings from a configuration with the same layout as
+        /// the default configuration `akka.cluster.singleton-proxy`.
+        /// </summary>
+        /// <param name="config">TBD</param>
         /// <returns>TBD</returns>
         public static ClusterSingletonProxySettings Create(Config config)
         {
@@ -75,6 +86,39 @@ namespace Akka.Cluster.Tools.Singleton
         /// If the location of the singleton is unknown the proxy will buffer this number of messages and deliver them when the singleton is identified.
         /// </summary>
         public int BufferSize { get; }
+
+        /// <summary>
+        /// Creates new instance of the <see cref="ClusterSingletonProxySettings"/>.
+        /// </summary>
+        /// <param name="singletonName">The actor name of the singleton actor that is started by the <see cref="ClusterSingletonManager"/>.</param>
+        /// <param name="role">The role of the cluster nodes where the singleton can be deployed. If None, then any node will do.</param>
+        /// <param name="singletonIdentificationInterval">Interval at which the proxy will try to resolve the singleton instance.</param>
+        /// <param name="bufferSize">
+        /// If the location of the singleton is unknown the proxy will buffer this number of messages and deliver them
+        /// when the singleton is identified.When the buffer is full old messages will be dropped when new messages
+        /// are sent via the proxy. Use 0 to disable buffering, i.e.messages will be dropped immediately if the location
+        /// of the singleton is unknown.
+        /// </param>
+        /// <param name="considerAppVersion">
+        /// Should <see cref="Member.AppVersion"/> be considered when the cluster singleton instance is being moved to another node.
+        /// When set to false, singleton instance will always be created on oldest member.
+        /// When set to true, singleton instance will be created on the oldest member with the highest <see cref="Member.AppVersion"/> number.
+        /// </param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the specified <paramref name="singletonIdentificationInterval"/>
+        /// or <paramref name="bufferSize"/> is less than or equal to zero.
+        /// </exception>
+        /// <exception cref="ArgumentNullException"></exception>
+        [Obsolete("considerAppVersion is not supported anymore, please use constructor that does not have the considerAppVersion argument. Since 1.5.27")]
+        public ClusterSingletonProxySettings(
+            string singletonName,
+            string role,
+            TimeSpan singletonIdentificationInterval,
+            int bufferSize,
+            bool considerAppVersion)
+            : this(singletonName, role, singletonIdentificationInterval, bufferSize)
+        {
+        }
 
         /// <summary>
         /// Creates new instance of the <see cref="ClusterSingletonProxySettings"/>.
