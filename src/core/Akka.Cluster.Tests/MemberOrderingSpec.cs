@@ -266,6 +266,23 @@ namespace Akka.Cluster.Tests
             var shuffled = expected.Shuffle().ToImmutableList();
             shuffled.Sort(Member.LeaderStatusOrdering).Should().BeEquivalentTo(expected);
         }
+
+        [Fact]
+        public void MemberAgeOrdering_must_order_members_by_ascending_UpNumber()
+        {
+            var address = new Address("akka.tcp", "sys1", "host1", 5000);
+            var m1 = TestMember.Create(address, MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 1);
+            var m2 = TestMember.Create(address.WithPort(7000), MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 2);
+            var m3 = TestMember.Create(address.WithPort(3000), MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 3);
+            var m4 = TestMember.Create(address.WithPort(6000), MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 4);
+            var m5 = TestMember.Create(address.WithPort(2000), MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 5);
+            
+            // shuffle the list so the members aren't initially sorted by order
+            var members = new List<Member>(){ m1, m2, m3, m4, m5 }.Shuffle();
+            var sortedMembers = ImmutableSortedSet<Member>.Empty.WithComparer(Member.AgeOrdering).Union(members);
+            sortedMembers.Should().BeEquivalentTo(new List<Member> { m1, m2, m3, m4, m5 });
+            m1.IsOlderThan(m5).Should().BeTrue();
+        }
     }
 }
 

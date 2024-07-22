@@ -154,6 +154,11 @@ namespace Akka.Actor.Scheduler
         }
 
         /// <summary>
+        /// Retrieves all current active timer keys
+        /// </summary>
+        public IReadOnlyCollection<object> ActiveTimers => _timers.Keys;
+        
+        /// <summary>
         /// Cancel a timer with a given <paramref name="key"/>.
         /// If canceling a timer that was already canceled, or key never was used to start a timer
         /// this operation will do nothing.
