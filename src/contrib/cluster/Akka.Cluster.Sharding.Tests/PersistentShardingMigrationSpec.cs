@@ -206,10 +206,22 @@ namespace Akka.Cluster.Sharding.Tests
                 var probe = CreateTestProbe(system);
                 region.Tell(new Message(1), probe.Ref);
                 probe.ExpectMsg("ack");
-                ImmutableHashSet.Create(
-                    rememberedEntitiesProbe.ExpectMsg<string>(),
-                    rememberedEntitiesProbe.ExpectMsg<string>(),
-                    rememberedEntitiesProbe.ExpectMsg<string>()).Should().BeEquivalentTo("1", "2", "3"); // 1-2 from the snapshot, 3 from a replayed message
+
+                // due to retries in the remember-entities system, we have to tolerate
+                // potentially receiving a duplicate message for the same entity
+                // therefore, we need to wait for at least 3 distinct messages or until the timeout
+                var maxTimeout = TimeSpan.FromSeconds(5);
+                var found = ImmutableHashSet<string>.Empty;
+                Within(maxTimeout, () =>
+                {
+                    while(found.Count < 3 && RemainingOrDefault > TimeSpan.Zero)
+                    {
+                        var msg = rememberedEntitiesProbe.ExpectMsg<string>();
+                        found = found.Add(msg);
+                    }
+                });
+                
+                found.Should().BeEquivalentTo("1", "2", "3"); // 1-2 from the snapshot, 3 from a replayed message
                 rememberedEntitiesProbe.ExpectNoMsg();
             });
 
