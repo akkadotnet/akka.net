@@ -74,5 +74,21 @@ namespace Akka.Cluster.Sharding.Tests
             clusterShardingSettings.TuningParameters.CoordinatorStateReadMajorityPlus.Should().Be(5);
             clusterShardingSettings.TuningParameters.CoordinatorStateWriteMajorityPlus.Should().Be(3);
         }
+
+        [Fact]
+        public void ClusterSharding_replicator_settings_should_have_default_values()
+        {
+            ClusterSharding.Get(Sys);
+            var clusterShardingSettings = ClusterShardingSettings.Create(Sys);
+            var replicatorSettings = ClusterShardingGuardian.GetReplicatorSettings(clusterShardingSettings);
+            
+            replicatorSettings.Should().NotBeNull();
+            replicatorSettings.Role.Should().BeNullOrEmpty();
+            
+            // only populated when remember-entities is enabled
+            replicatorSettings.DurableKeys.Should().BeEmpty();
+            replicatorSettings.MaxDeltaElements.Should().Be(5);
+            replicatorSettings.PreferOldest.Should().BeTrue();
+        }
     }
 }
