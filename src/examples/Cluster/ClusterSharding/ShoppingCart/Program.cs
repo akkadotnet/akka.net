@@ -47,21 +47,18 @@ namespace ShoppingCart
             #region RoleSetup
             var role = Environment.GetEnvironmentVariable("IS_FRONTEND") == "true" 
                 ? FrontEndRole : BackEndRole;
-
+            
             var config = ConfigurationFactory.ParseString(@$"
                     # We need to tell Akka to provide us cluster enabled actors
                     akka.actor.provider = cluster
-                    akka.remote.dot-netty.tcp.port = 19912
-                    akka.remote.dot-netty.tcp.public-hostname = localhost
-                    akka.cluster.seed-nodes = [""akka.tcp://shopping-cart@localhost:19912""]
 
                     # This tells Akka which role this node belongs to
                     akka.cluster.roles=[{role}]
 
                     # This tells Akka to wait for at least 4 nodes joining the cluster 
                     # before signaling that it is up and ready
-                    #akka.cluster.min-nr-of-members = 4");
-                //.BootstrapFromDocker();
+                    akka.cluster.min-nr-of-members = 4")
+                .BootstrapFromDocker();
 
             var system = ActorSystem.Create("shopping-cart", config);
             #endregion
@@ -103,7 +100,7 @@ namespace ShoppingCart
                         // .WithRole is important because we're dedicating a specific node role for
                         // the actors to be instantiated in; in this case, we're instantiating only
                         // in the "backend" roled nodes.
-                        settings: ClusterShardingSettings.Create(system).WithRole(BackEndRole).WithStateStoreMode(StateStoreMode.DData), 
+                        settings: ClusterShardingSettings.Create(system).WithRole(BackEndRole), 
                         messageExtractor: new MessageExtractor(10));
                     // </LaunchShardRegion>
                     break;
