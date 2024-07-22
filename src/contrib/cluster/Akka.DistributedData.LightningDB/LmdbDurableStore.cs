@@ -84,6 +84,12 @@ namespace Akka.DistributedData.LightningDB
 
             _path = _config.GetString("dir");
 
+            if (string.IsNullOrEmpty(_path))
+            {
+                _log.Warning("No directory path configured for LMDB durable store, using default path");
+                _path = DatabaseName;
+            }
+
             Init();
         }
 
