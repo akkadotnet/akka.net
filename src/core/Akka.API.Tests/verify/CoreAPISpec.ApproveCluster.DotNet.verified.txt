@@ -118,6 +118,14 @@ namespace Akka.Cluster
         {
             public MemberLeft(Akka.Cluster.Member member) { }
         }
+        public sealed class MemberPreparingForShutdown : Akka.Cluster.ClusterEvent.MemberStatusChange
+        {
+            public MemberPreparingForShutdown(Akka.Cluster.Member member) { }
+        }
+        public sealed class MemberReadyForShutdown : Akka.Cluster.ClusterEvent.MemberStatusChange
+        {
+            public MemberReadyForShutdown(Akka.Cluster.Member member) { }
+        }
         public sealed class MemberRemoved : Akka.Cluster.ClusterEvent.MemberStatusChange
         {
             public MemberRemoved(Akka.Cluster.Member member, Akka.Cluster.MemberStatus previousStatus) { }
@@ -268,6 +276,8 @@ namespace Akka.Cluster
         Down = 4,
         Removed = 5,
         WeaklyUp = 6,
+        PreparingForShutdown = 7,
+        ReadyForShutdown = 8,
     }
     public sealed class NoDowning : Akka.Cluster.IDowningProvider
     {

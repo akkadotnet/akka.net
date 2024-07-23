@@ -254,6 +254,14 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// Change the state of every member in preparation for a full cluster shutdown.
+        /// </summary>
+        internal void PrepareForFullClusterShutdown()
+        {
+            ClusterCore.Tell(ClusterUserAction.PrepareForShutdown.Instance);
+        }
+
+        /// <summary>
         /// Try to asynchronously join this cluster node specified by <paramref name="address"/>.
         /// A <see cref="Join"/> command is sent to the node to join. Returned task will be completed
         /// once current cluster node will be moved into <see cref="MemberStatus.Up"/> state,

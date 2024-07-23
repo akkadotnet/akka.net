@@ -388,21 +388,27 @@ namespace Akka.Cluster
                 return m1.IsOlderThan(m2) ? m1 : m2;
             }
 
-            var m1Status = m1.Status;
-            var m2Status = m2.Status;
-            if (m1Status == MemberStatus.Removed) return m1;
-            if (m2Status == MemberStatus.Removed) return m2;
-            if (m1Status == MemberStatus.Down) return m1;
-            if (m2Status == MemberStatus.Down) return m2;
-            if (m1Status == MemberStatus.Exiting) return m1;
-            if (m2Status == MemberStatus.Exiting) return m2;
-            if (m1Status == MemberStatus.Leaving) return m1;
-            if (m2Status == MemberStatus.Leaving) return m2;
-            if (m1Status == MemberStatus.Joining) return m2;
-            if (m2Status == MemberStatus.Joining) return m1;
-            if (m1Status == MemberStatus.WeaklyUp) return m2;
-            if (m2Status == MemberStatus.WeaklyUp) return m1;
-            return m1;
+            return (m1.Status, m2.Status) switch
+            {
+                (MemberStatus.Removed, _) => m1,
+                (_, MemberStatus.Removed) => m2,
+                (MemberStatus.ReadyForShutdown, _) => m1,
+                (_, MemberStatus.ReadyForShutdown) => m2,
+                (MemberStatus.Down, _) => m1,
+                (_, MemberStatus.Down) => m2,
+                (MemberStatus.Exiting, _) => m1,
+                (_, MemberStatus.Exiting) => m2,
+                (MemberStatus.Leaving, _) => m1,
+                (_, MemberStatus.Leaving) => m2,
+                (MemberStatus.Joining, _) => m1,
+                (_, MemberStatus.Joining) => m2,
+                (MemberStatus.WeaklyUp, _) => m1,
+                (_, MemberStatus.WeaklyUp) => m2,
+                (MemberStatus.PreparingForShutdown, _) => m1,
+                (_, MemberStatus.PreparingForShutdown) => m2,
+                (MemberStatus.Up, MemberStatus.Up) => m1,
+                _ => throw new InvalidOperationException($"Should never reach this line. m1.Status: {m1.Status}, m2.Status: {m2.Status}")
+            };
         }
 
         /// <summary>
@@ -413,10 +419,12 @@ namespace Akka.Cluster
             {
                 {MemberStatus.Joining, ImmutableHashSet.Create(MemberStatus.WeaklyUp, MemberStatus.Up,MemberStatus.Leaving, MemberStatus.Down, MemberStatus.Removed)},
                 {MemberStatus.WeaklyUp, ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving, MemberStatus.Down, MemberStatus.Removed) },
-                {MemberStatus.Up, ImmutableHashSet.Create(MemberStatus.Leaving, MemberStatus.Down, MemberStatus.Removed)},
+                {MemberStatus.Up, ImmutableHashSet.Create(MemberStatus.Leaving, MemberStatus.Down, MemberStatus.Removed, MemberStatus.PreparingForShutdown)},
                 {MemberStatus.Leaving, ImmutableHashSet.Create(MemberStatus.Exiting, MemberStatus.Down, MemberStatus.Removed)},
                 {MemberStatus.Down, ImmutableHashSet.Create(MemberStatus.Removed)},
                 {MemberStatus.Exiting, ImmutableHashSet.Create(MemberStatus.Removed, MemberStatus.Down)},
+                {MemberStatus.PreparingForShutdown, ImmutableHashSet.Create(MemberStatus.ReadyForShutdown, MemberStatus.Removed, MemberStatus.Leaving, MemberStatus.Down)},
+                {MemberStatus.ReadyForShutdown, ImmutableHashSet.Create(MemberStatus.Removed, MemberStatus.Leaving, MemberStatus.Down)},
                 {MemberStatus.Removed, ImmutableHashSet.Create<MemberStatus>()}
             }.ToImmutableDictionary();
     }
@@ -457,6 +465,8 @@ namespace Akka.Cluster
         /// because cluster convergence cannot be reached i.e. because of unreachable nodes.
         /// </summary>
         WeaklyUp = 6,
+        PreparingForShutdown = 7,
+        ReadyForShutdown = 8
     }
 
     /// <summary>

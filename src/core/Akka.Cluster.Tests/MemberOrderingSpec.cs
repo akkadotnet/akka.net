@@ -267,6 +267,34 @@ namespace Akka.Cluster.Tests
             shuffled.Sort(Member.LeaderStatusOrdering).Should().BeEquivalentTo(expected);
         }
 
+        [Theory(DisplayName = "HighestPriorityOf should return the correct priority member")]
+        [InlineData(MemberStatus.Removed, MemberStatus.Up, 0)]
+        [InlineData(MemberStatus.Up, MemberStatus.Removed, 1)]
+        [InlineData(MemberStatus.ReadyForShutdown, MemberStatus.Up, 0)]
+        [InlineData(MemberStatus.Up, MemberStatus.ReadyForShutdown, 1)]
+        [InlineData(MemberStatus.Down, MemberStatus.Up, 0)]
+        [InlineData(MemberStatus.Up, MemberStatus.Down, 1)]
+        [InlineData(MemberStatus.Exiting, MemberStatus.Up, 0)]
+        [InlineData(MemberStatus.Up, MemberStatus.Exiting, 1)]
+        [InlineData(MemberStatus.Leaving, MemberStatus.Up, 0)]
+        [InlineData(MemberStatus.Up, MemberStatus.Leaving, 1)]
+        [InlineData(MemberStatus.Joining, MemberStatus.Up, 0)]
+        [InlineData(MemberStatus.Up, MemberStatus.Joining, 1)]
+        [InlineData(MemberStatus.WeaklyUp, MemberStatus.Up, 0)]
+        [InlineData(MemberStatus.Up, MemberStatus.WeaklyUp, 1)]
+        [InlineData(MemberStatus.PreparingForShutdown, MemberStatus.Up, 0)]
+        [InlineData(MemberStatus.Up, MemberStatus.PreparingForShutdown, 1)]
+        [InlineData(MemberStatus.Up, MemberStatus.Up, 0)]
+        public void HighestPriorityOfTest(MemberStatus first, MemberStatus second, int returnIndex)
+        {
+            var address = new Address("akka.tcp", "sys1", "host1", 5000);
+            var members = new []{
+                TestMember.Create(address, first),
+                TestMember.Create(address.WithPort(7000), second)
+            };
+            Member.HighestPriorityOf(members[0], members[1]).Should().Be(members[returnIndex]);
+        }
+
         [Fact]
         public void MemberAgeOrdering_must_order_members_by_ascending_UpNumber()
         {

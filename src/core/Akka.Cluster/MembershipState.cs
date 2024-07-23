@@ -20,10 +20,10 @@ namespace Akka.Cluster
     internal sealed class MembershipState : IEquatable<MembershipState>
     {
         private static readonly ImmutableHashSet<MemberStatus> LeaderMemberStatus =
-            ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving);
+            ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving, MemberStatus.PreparingForShutdown, MemberStatus.ReadyForShutdown);
 
         private static readonly ImmutableHashSet<MemberStatus> ConvergenceMemberStatus =
-            ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving);
+            ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving, MemberStatus.PreparingForShutdown, MemberStatus.ReadyForShutdown);
 
         /// <summary>
         /// If there are unreachable members in the cluster with any of these statuses, they will be skipped during convergence checks.
@@ -37,6 +37,13 @@ namespace Akka.Cluster
         public static readonly ImmutableHashSet<MemberStatus> RemoveUnreachableWithMemberStatus =
             ImmutableHashSet.Create(MemberStatus.Down, MemberStatus.Exiting);
 
+        // If a member hasn't joined yet or has already started leaving don't mark it as shutting down
+        public static readonly ImmutableHashSet<MemberStatus> AllowedToPrepareToShutdown = 
+            ImmutableHashSet.Create(MemberStatus.Up);
+        
+        public static readonly ImmutableHashSet<MemberStatus> PrepareForShutdownStates = 
+            ImmutableHashSet.Create(MemberStatus.PreparingForShutdown, MemberStatus.ReadyForShutdown);
+        
         public MembershipState(Gossip latestGossip, UniqueAddress selfUniqueAddress)
         {
             LatestGossip = latestGossip;
