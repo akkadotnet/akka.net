@@ -92,7 +92,7 @@ namespace Akka.Cluster.Tools.Singleton
 
         #endregion
 
-        private readonly MemberAgeOrdering _memberAgeComparer;
+        private readonly IComparer<Member> _memberAgeComparer;
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
 
         /// <summary>
@@ -103,9 +103,7 @@ namespace Akka.Cluster.Tools.Singleton
         public OldestChangedBuffer(string role, bool considerAppVersion)
         {
             _role = role;
-            _memberAgeComparer = considerAppVersion
-                ? MemberAgeOrdering.DescendingWithAppVersion
-                : MemberAgeOrdering.Descending;
+            _memberAgeComparer = Member.AgeOrdering;
             _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(_memberAgeComparer);
             
             SetupCoordinatedShutdown();
@@ -147,8 +145,7 @@ namespace Akka.Cluster.Tools.Singleton
             var before = _membersByAge.FirstOrDefault();
             block();
             var after = _membersByAge.FirstOrDefault();
-
-            // todo: fix neq comparison
+            
             if (!Equals(before, after))
                 _changes = _changes.Enqueue(new OldestChanged(after?.UniqueAddress));
         }
@@ -221,21 +218,33 @@ namespace Akka.Cluster.Tools.Singleton
         /// <inheritdoc cref="UntypedActor.OnReceive"/>
         protected override void OnReceive(object message)
         {
-            if (message is ClusterEvent.CurrentClusterState state) HandleInitial(state);
-            else if (message is ClusterEvent.MemberUp up) Add(up.Member);
-            else if (message is ClusterEvent.MemberRemoved removed) Remove(removed.Member);
-            else if (message is ClusterEvent.MemberExited exited && exited.Member.UniqueAddress != _cluster.SelfUniqueAddress)
-                Remove(exited.Member);
-            else if (message is SelfExiting)
+            switch (message)
             {
-                Remove(_cluster.ReadView.Self);
-                Sender.Tell(Done.Instance); // reply to ask
-            }
-            else if (message is GetNext && _changes.IsEmpty) Context.BecomeStacked(OnDeliverNext);
-            else if (message is GetNext) SendFirstChange();
-            else
-            {
-                Unhandled(message);
+                case ClusterEvent.CurrentClusterState state:
+                    HandleInitial(state);
+                    break;
+                case ClusterEvent.MemberUp up:
+                    Add(up.Member);
+                    break;
+                case ClusterEvent.MemberRemoved removed:
+                    Remove(removed.Member);
+                    break;
+                case ClusterEvent.MemberExited exited when exited.Member.UniqueAddress != _cluster.SelfUniqueAddress:
+                    Remove(exited.Member);
+                    break;
+                case SelfExiting:
+                    Remove(_cluster.ReadView.Self);
+                    Sender.Tell(Done.Instance); // reply to ask
+                    break;
+                case GetNext when _changes.IsEmpty:
+                    Context.BecomeStacked(OnDeliverNext);
+                    break;
+                case GetNext:
+                    SendFirstChange();
+                    break;
+                default:
+                    Unhandled(message);
+                    break;
             }
         }
 
