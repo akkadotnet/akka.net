@@ -1490,7 +1490,7 @@ namespace Akka.Cluster.Sharding
 
             private ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
 
-            public ITimerScheduler Timers { get; set; }
+            public ITimerScheduler Timers { get; set; } = null!;
 
             /// <summary>
             /// TBD
