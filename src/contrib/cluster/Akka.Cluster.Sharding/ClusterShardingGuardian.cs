@@ -179,7 +179,7 @@ namespace Akka.Cluster.Sharding
                     {
                         // with the deprecated persistence state store mode we always use the event sourced provider for shard regions
                         // and no store for coordinator (the coordinator is a PersistentActor in that case)
-                        RememberEntitiesStore rememberEntitiesProvider =
+                        var rememberEntitiesProvider =
                           (settings.StateStoreMode == StateStoreMode.Persistence) ?
                             RememberEntitiesStore.Eventsourced : settings.RememberEntitiesStore;
 
