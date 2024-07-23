@@ -414,6 +414,9 @@ namespace Akka.Cluster.Tools.Singleton
         [System.ObsoleteAttribute("considerAppVersion is not supported anymore, please use constructor that does not" +
             " have the considerAppVersion argument. Since 1.5.27")]
         public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval, Akka.Coordination.LeaseUsageSettings leaseSettings, bool considerAppVersion) { }
+        [System.ObsoleteAttribute("considerAppVersion is not supported anymore, please use constructor that does not" +
+            " have the considerAppVersion argument. Since 1.5.27")]
+        public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval, bool considerAppVersion) { }
         public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval) { }
         public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval, Akka.Coordination.LeaseUsageSettings leaseSettings) { }
         public System.TimeSpan HandOverRetryInterval { get; }
