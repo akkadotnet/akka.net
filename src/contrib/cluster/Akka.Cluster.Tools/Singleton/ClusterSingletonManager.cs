@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Collections.Immutable;
 using System.Linq;
@@ -17,7 +17,6 @@ using Akka.Dispatch;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util.Internal;
-using DotNetty.Handlers.Logging;
 using static Akka.Cluster.ClusterEvent;
 
 namespace Akka.Cluster.Tools.Singleton
@@ -73,7 +72,6 @@ namespace Akka.Cluster.Tools.Singleton
     }
 
     /// <summary>
-    /// TBD
     /// Sent from from previous oldest to new oldest to
     /// initiate the normal hand-over process.
     /// Especially useful when new node joins and becomes
@@ -83,59 +81,36 @@ namespace Akka.Cluster.Tools.Singleton
     [Serializable]
     internal sealed class TakeOverFromMe : IClusterSingletonMessage, IDeadLetterSuppression
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static TakeOverFromMe Instance { get; } = new();
         private TakeOverFromMe() { }
     }
 
     /// <summary>
-    /// TBD
+    /// Scheduled task to cleanup overdue members that have been removed
     /// </summary>
     [Serializable]
     internal sealed class Cleanup
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static Cleanup Instance { get; } = new();
         private Cleanup() { }
     }
 
     /// <summary>
-    /// TBD
+    /// Initialize the oldest changed buffer actor.
     /// </summary>
     [Serializable]
     internal sealed class StartOldestChangedBuffer
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static StartOldestChangedBuffer Instance { get; } = new();
         private StartOldestChangedBuffer() { }
     }
 
     /// <summary>
-    /// TBD
+    /// Retry a failed cluster singleton handover.
     /// </summary>
+    /// <param name="Count">The number of retries</param>
     [Serializable]
-    internal sealed class HandOverRetry
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public int Count { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="count">TBD</param>
-        public HandOverRetry(int count)
-        {
-            Count = count;
-        }
-    }
+    internal sealed record HandOverRetry(int Count);
 
     /// <summary>
     /// TBD
@@ -211,20 +186,16 @@ namespace Akka.Cluster.Tools.Singleton
     }
 
     /// <summary>
-    /// TBD
+    /// State when we're transitioning to becoming the oldest singleton manager.
     /// </summary>
     [Serializable]
     internal sealed class BecomingOldestData : IClusterSingletonData
     {
         /// <summary>
-        /// TBD
+        /// The previous oldest nodes - can be empty
         /// </summary>
         public ImmutableList<UniqueAddress> PreviousOldest { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="previousOldest">TBD</param>
+        
         public BecomingOldestData(ImmutableList<UniqueAddress> previousOldest)
         {
             PreviousOldest = previousOldest;
@@ -253,7 +224,7 @@ namespace Akka.Cluster.Tools.Singleton
     }
 
     /// <summary>
-    /// TBD
+    /// State we're transitioning into once we know we've started the hand-over process.
     /// </summary>
     [Serializable]
     internal sealed class WasOldestData : IClusterSingletonData
@@ -830,7 +801,7 @@ namespace Akka.Cluster.Tools.Singleton
             }
         }
 
-        private State<ClusterSingletonState, IClusterSingletonData> HandleHandOverDone(IActorRef handOverTo)
+        private State<ClusterSingletonState, IClusterSingletonData> HandleHandOverDone(IActorRef? handOverTo)
         {
             var newOldest = handOverTo?.Path.Address;
             Log.Info("Singleton terminated, hand-over done [{0} -> {1}]", _cluster.SelfAddress, newOldest);
@@ -851,7 +822,7 @@ namespace Akka.Cluster.Tools.Singleton
             }
         }
 
-        private State<ClusterSingletonState, IClusterSingletonData> GoToHandingOver(IActorRef singleton, IActorRef handOverTo)
+        private State<ClusterSingletonState, IClusterSingletonData> GoToHandingOver(IActorRef? singleton, IActorRef? handOverTo)
         {
             if (singleton == null)
             {
