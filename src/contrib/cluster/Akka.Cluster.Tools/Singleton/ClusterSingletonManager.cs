@@ -1056,8 +1056,7 @@ namespace Akka.Cluster.Tools.Singleton
                                         return Stay();
                                     case null:
                                         Sender.Tell(HandOverToMe.Instance);
-                                        becomingOldestData.PreviousOldest.Insert(0, senderUniqueAddress);
-                                        return Stay().Using(new BecomingOldestData(becomingOldestData.PreviousOldest));
+                                        return Stay().Using(new BecomingOldestData(ImmutableList<UniqueAddress>.Empty.Add(senderUniqueAddress).AddRange(becomingOldestData.PreviousOldest)));
                                 }
                             }
                         }
