@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -16,7 +15,6 @@ using Akka.Configuration;
 using Akka.Coordination;
 using Akka.Dispatch;
 using Akka.Event;
-using Akka.Pattern;
 using Akka.Remote;
 using Akka.Util.Internal;
 using static Akka.Cluster.ClusterEvent;
@@ -199,13 +197,13 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public List<UniqueAddress> Oldest { get; }
+        public ImmutableList<UniqueAddress> Oldest { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="oldest">TBD</param>
-        public YoungerData(List<UniqueAddress> oldest)
+        public YoungerData(ImmutableList<UniqueAddress> oldest)
         {
             Oldest = oldest;
         }
@@ -220,13 +218,13 @@ namespace Akka.Cluster.Tools.Singleton
         /// <summary>
         /// TBD
         /// </summary>
-        public List<UniqueAddress> PreviousOldest { get; }
+        public ImmutableList<UniqueAddress> PreviousOldest { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="previousOldest">TBD</param>
-        public BecomingOldestData(List<UniqueAddress> previousOldest)
+        public BecomingOldestData(ImmutableList<UniqueAddress> previousOldest)
         {
             PreviousOldest = previousOldest;
         }
@@ -844,7 +842,7 @@ namespace Akka.Cluster.Tools.Singleton
             }
             else if (handOverTo == null)
             {
-                return GoTo(ClusterSingletonState.Younger).Using(new YoungerData(null));
+                return GoTo(ClusterSingletonState.Younger).Using(new YoungerData(ImmutableList<UniqueAddress>.Empty));
             }
             else
             {
@@ -926,9 +924,15 @@ namespace Akka.Cluster.Tools.Singleton
 
                         Log.Info("Younger observed OldestChanged: [{0} -> {1}]", youngerData.Oldest.Head()?.Address, oldestChanged.Oldest?.Address);
                         GetNextOldestChanged();
-                        if (oldestChanged.Oldest != null && !youngerData.Oldest.Contains(oldestChanged.Oldest))
-                            youngerData.Oldest.Insert(0, oldestChanged.Oldest);
-                        return Stay().Using(new YoungerData(youngerData.Oldest));
+
+                        var newOldest = oldestChanged.Oldest switch
+                        {
+                            not null when !youngerData.Oldest.Contains(oldestChanged.Oldest) => ImmutableList<
+                                UniqueAddress>.Empty.Add(oldestChanged.Oldest).AddRange(youngerData.Oldest),
+                            _ => youngerData.Oldest
+                        };
+                        
+                        return Stay().Using(new YoungerData(newOldest));
                     }
                     case MemberDowned memberDowned when memberDowned.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress):
                         Log.Info("Self downed, stopping ClusterSingletonManager");

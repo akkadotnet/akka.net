@@ -50,7 +50,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// The first event, corresponding to CurrentClusterState.
             /// </summary>
-            public List<UniqueAddress> Oldest { get; }
+            public ImmutableList<UniqueAddress> Oldest { get; }
 
             /// <summary>
             /// TBD
@@ -62,7 +62,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// </summary>
             /// <param name="oldest">TBD</param>
             /// <param name="safeToBeOldest">TBD</param>
-            public InitialOldestState(List<UniqueAddress> oldest, bool safeToBeOldest)
+            public InitialOldestState(ImmutableList<UniqueAddress> oldest, bool safeToBeOldest)
             {
                 Oldest = oldest;
                 SafeToBeOldest = safeToBeOldest;
@@ -172,7 +172,7 @@ namespace Akka.Cluster.Tools.Singleton
 
             var oldest = _membersByAge.TakeWhile(m => m.UpNumber <= selfUpNumber).ToList();
             var safeToBeOldest = !oldest.Any(m => m.Status is MemberStatus.Down or MemberStatus.Exiting or MemberStatus.Leaving);
-            var initial = new InitialOldestState(oldest.Select(m => m.UniqueAddress).ToList(), safeToBeOldest);
+            var initial = new InitialOldestState(oldest.Select(m => m.UniqueAddress).ToImmutableList(), safeToBeOldest);
             _changes = _changes.Enqueue(initial);
         }
 
