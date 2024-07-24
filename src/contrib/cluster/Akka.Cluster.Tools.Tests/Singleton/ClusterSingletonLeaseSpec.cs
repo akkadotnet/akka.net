@@ -71,11 +71,6 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 : base(message, innerEx)
             {
             }
-
-            protected TestException(SerializationInfo info, StreamingContext context)
-                : base(info, context)
-            {
-            }
         }
 
         private readonly Cluster _cluster;

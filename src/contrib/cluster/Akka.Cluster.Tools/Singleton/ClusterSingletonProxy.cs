@@ -76,6 +76,7 @@ namespace Akka.Cluster.Tools.Singleton
                 .WithDeploy(Deploy.Local);
         }
 
+        private readonly IComparer<Member> _memberAgeComparer;
         private readonly ClusterSingletonProxySettings _settings;
         private readonly Cluster _cluster = Cluster.Get(Context.System);
         private readonly Queue<KeyValuePair<object, IActorRef>> _buffer = new(); // queue seems to fit better
@@ -97,6 +98,9 @@ namespace Akka.Cluster.Tools.Singleton
             _settings = settings;
             _singletonPath = (singletonManagerPath + "/" + settings.SingletonName).Split('/');
             _identityId = CreateIdentifyId(_identityCounter);
+
+            _memberAgeComparer = Member.AgeOrdering;
+            _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(_memberAgeComparer);
 
             Receive<ClusterEvent.CurrentClusterState>(s => HandleInitial(s));
             Receive<ClusterEvent.MemberUp>(m => Add(m.Member));
