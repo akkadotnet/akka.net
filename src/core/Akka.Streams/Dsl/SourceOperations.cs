@@ -1749,6 +1749,29 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements that passes
+        /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
+        /// 
+        /// Emits when element is available and demand exists both from the Sink and the downstream.
+        ///
+        /// Backpressures when downstream or Sink backpressures
+        ///
+        /// Completes when upstream completes
+        ///
+        /// Cancels when downstream cancels
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <param name="propagateFailure">Propagate downstream failures and cancels parent stream</param>
+        /// <returns>TBD</returns>
+        public static Source<TOut, TMat> AlsoTo<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that, bool propagateFailure)
+        {
+            return (Source<TOut, TMat>)InternalFlowOperations.AlsoTo(flow, that, propagateFailure);
+        }
+
+        /// <summary>
         /// This is a simplified version of <seealso cref="WireTap{T}"/> that takes only a simple procedure.
         /// Elements will be passed into this "side channel" delegate, and any of its results will be ignored.
         /// <para>
