@@ -17,6 +17,7 @@ using Akka.Dispatch;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util.Internal;
+using DotNetty.Handlers.Logging;
 using static Akka.Cluster.ClusterEvent;
 
 namespace Akka.Cluster.Tools.Singleton
@@ -909,26 +910,37 @@ namespace Akka.Cluster.Tools.Singleton
                     case OldestChangedBuffer.OldestChanged oldestChanged when e.StateData is YoungerData youngerData:
                     {
                         _oldestChangedReceived = true;
-                        if (oldestChanged.Oldest != null && oldestChanged.Oldest.Equals(_selfUniqueAddress))
+                        if (oldestChanged.NewOldest != null && oldestChanged.NewOldest.Equals(_selfUniqueAddress))
                         {
                             Log.Info("Younger observed OldestChanged: [{0} -> myself]", youngerData.Oldest.Head()?.Address);
-
+                            Log.Info("Current state of cluster for our role type: [{0}]", _cluster.State.Members.Where(c => c.HasRole(_settings.Role)).Aggregate("", (s, u) => s + u + ", "));
+                            Log.Info("YoungerState: [{0}]", youngerData.Oldest.Aggregate("", (s, u) => s + u + ", "));
                             if (youngerData.Oldest.All(m => _removed.ContainsKey(m)))
                             {
                                 return TryGotoOldest();
                             }
 
-                            Peer(youngerData.Oldest.Head().Address).Tell(HandOverToMe.Instance);
-                            return GoTo(ClusterSingletonState.BecomingOldest).Using(new BecomingOldestData(youngerData.Oldest));
+                            // explicitly re-order the list to make sure that the oldest, as indicated to us by the OldestChangedBuffer,
+                            //  is the first element - resolves bug https://github.com/akkadotnet/akka.net/issues/6973
+                            var newOldestState = oldestChanged.PreviousOldest switch
+                            {
+                                not null => ImmutableList<UniqueAddress>.Empty.Add(oldestChanged.PreviousOldest)
+                                    .AddRange(youngerData.Oldest.Where(c => c != oldestChanged.PreviousOldest)),
+                                _ => youngerData.Oldest
+                            };
+                            
+                            Peer(newOldestState.Head().Address).Tell(HandOverToMe.Instance);
+                            return GoTo(ClusterSingletonState.BecomingOldest).Using(new BecomingOldestData(newOldestState));
                         }
 
-                        Log.Info("Younger observed OldestChanged: [{0} -> {1}]", youngerData.Oldest.Head()?.Address, oldestChanged.Oldest?.Address);
+                        Log.Info("Younger observed OldestChanged: [{0} -> {1}]", youngerData.Oldest.Head()?.Address, oldestChanged.NewOldest?.Address);
+                        Log.Info("YoungerState: [{0}]", youngerData.Oldest.Aggregate("", (s, u) => s + u + ", "));
                         GetNextOldestChanged();
 
-                        var newOldest = oldestChanged.Oldest switch
+                        var newOldest = oldestChanged.NewOldest switch
                         {
-                            not null when !youngerData.Oldest.Contains(oldestChanged.Oldest) => ImmutableList<
-                                UniqueAddress>.Empty.Add(oldestChanged.Oldest).AddRange(youngerData.Oldest),
+                            not null when !youngerData.Oldest.Contains(oldestChanged.NewOldest) => ImmutableList<
+                                UniqueAddress>.Empty.Add(oldestChanged.NewOldest).AddRange(youngerData.Oldest),
                             _ => youngerData.Oldest
                         };
                         
@@ -1060,8 +1072,6 @@ namespace Akka.Cluster.Tools.Singleton
                                 }
                             }
                         }
-
-                        break;
                     }
                     case HandOverRetry handOverRetry when e.StateData is BecomingOldestData becomingOldest:
                     {
@@ -1126,7 +1136,7 @@ namespace Akka.Cluster.Tools.Singleton
                         // instance in this case
                         return TryAcquireLease();
                     case OldestChangedBuffer.OldestChanged oldestChanged when e.StateData is AcquiringLeaseData ald2:
-                        return HandleOldestChanged(ald2.Singleton, oldestChanged.Oldest);
+                        return HandleOldestChanged(ald2.Singleton, oldestChanged.NewOldest);
                     case HandOverToMe when e.StateData is AcquiringLeaseData ald3:
                         return GoToHandingOver(ald3.Singleton, Sender);
                     case TakeOverFromMe:
@@ -1151,7 +1161,7 @@ namespace Akka.Cluster.Tools.Singleton
                 switch (e.FsmEvent)
                 {
                     case OldestChangedBuffer.OldestChanged oldestChanged when e.StateData is OldestData oldestData:
-                        return HandleOldestChanged(oldestData.Singleton, oldestChanged.Oldest);
+                        return HandleOldestChanged(oldestData.Singleton, oldestChanged.NewOldest);
                     
                     case HandOverToMe when e.StateData is OldestData oldest:
                         return GoToHandingOver(oldest.Singleton, Sender);
