@@ -417,6 +417,7 @@ namespace Akka.Cluster.Tools.Singleton
     {
         public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval, bool considerAppVersion) { }
         public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval, Akka.Coordination.LeaseUsageSettings leaseSettings, bool considerAppVersion) { }
+        [System.ObsoleteAttribute("ConsiderAppVersion is not used anymore and will be removed in future versions.")]
         public bool ConsiderAppVersion { get; }
         public System.TimeSpan HandOverRetryInterval { get; }
         public Akka.Coordination.LeaseUsageSettings LeaseSettings { get; }
