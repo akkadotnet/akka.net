@@ -256,28 +256,26 @@ namespace Akka.Cluster.Tools.Singleton
     }
 
     /// <summary>
-    /// TBD
+    /// State when we're handing over control of the singleton to another node.
     /// </summary>
     [Serializable]
     internal sealed class HandingOverData : IClusterSingletonData
     {
 
         /// <summary>
-        /// TBD
+        /// The current singleton reference
         /// </summary>
         public IActorRef Singleton { get; }
 
         /// <summary>
-        /// TBD
+        /// The actor we're handing over to.
         /// </summary>
-        public IActorRef HandOverTo { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="singleton">TBD</param>
-        /// <param name="handOverTo">TBD</param>
-        public HandingOverData(IActorRef singleton, IActorRef handOverTo)
+        /// <remarks>
+        /// Can be <c>null</c> if they haven't contacted us yet and some other edge conditions.
+        /// </remarks>
+        public IActorRef? HandOverTo { get; }
+        
+        public HandingOverData(IActorRef singleton, IActorRef? handOverTo)
         {
             Singleton = singleton;
             HandOverTo = handOverTo;
@@ -1243,7 +1241,7 @@ namespace Akka.Cluster.Tools.Singleton
                         return HandleHandOverDone(handingOverData.HandOverTo);
                     case HandOverToMe 
                     when e.StateData is HandingOverData d
-                         && d.HandOverTo.Equals(Sender):
+                         && Sender.Equals(d.HandOverTo):
                         // retry
                         Sender.Tell(HandOverInProgress.Instance);
                         return Stay();
