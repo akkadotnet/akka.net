@@ -395,6 +395,9 @@ namespace Akka.Cluster.Tools.Singleton
         public static Akka.Cluster.Tools.Singleton.ClusterSingleton Get(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.IActorRef Init(Akka.Cluster.Tools.Singleton.SingletonActor singleton) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1})]
     public sealed class ClusterSingletonManager : Akka.Actor.FSM<Akka.Cluster.Tools.Singleton.ClusterSingletonState, Akka.Cluster.Tools.Singleton.IClusterSingletonData>
     {
         public ClusterSingletonManager(Akka.Actor.Props singletonProps, object terminationMessage, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings settings) { }
@@ -404,6 +407,7 @@ namespace Akka.Cluster.Tools.Singleton
         public static Akka.Actor.Props Props(Akka.Actor.Props singletonProps, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings settings) { }
         public static Akka.Actor.Props Props(Akka.Actor.Props singletonProps, object terminationMessage, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings settings) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class ClusterSingletonManagerIsStuckException : Akka.Actor.AkkaException
     {
         public ClusterSingletonManagerIsStuckException(string message) { }

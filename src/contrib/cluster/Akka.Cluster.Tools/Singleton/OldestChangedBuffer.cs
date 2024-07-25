@@ -4,14 +4,13 @@
 //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Util.Internal;
 
 namespace Akka.Cluster.Tools.Singleton
 {
@@ -50,7 +49,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// <summary>
             /// The first event, corresponding to CurrentClusterState.
             /// </summary>
-            public List<UniqueAddress> Oldest { get; }
+            public ImmutableList<UniqueAddress> Oldest { get; }
 
             /// <summary>
             /// TBD
@@ -62,7 +61,7 @@ namespace Akka.Cluster.Tools.Singleton
             /// </summary>
             /// <param name="oldest">TBD</param>
             /// <param name="safeToBeOldest">TBD</param>
-            public InitialOldestState(List<UniqueAddress> oldest, bool safeToBeOldest)
+            public InitialOldestState(ImmutableList<UniqueAddress> oldest, bool safeToBeOldest)
             {
                 Oldest = oldest;
                 SafeToBeOldest = safeToBeOldest;
@@ -70,23 +69,28 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// TBD
+        /// Message propagated once the previous oldest member is exiting / downed / removed.
         /// </summary>
         [Serializable]
         public sealed class OldestChanged
         {
             /// <summary>
-            /// TBD
+            /// The new "oldest" - this node will become the new singleton manager.
             /// </summary>
-            public UniqueAddress Oldest { get; }
+            /// <remarks>
+            /// Can be <c>null</c> if we're the last node in the cluster.
+            /// </remarks>
+            public UniqueAddress? NewOldest { get; }
 
             /// <summary>
-            /// TBD
+            /// The previous oldest - will be `null` if this is the first oldest.
             /// </summary>
-            /// <param name="oldest">TBD</param>
-            public OldestChanged(UniqueAddress oldest)
+            public UniqueAddress? PreviousOldest { get; }
+            
+            public OldestChanged(UniqueAddress? newOldest, UniqueAddress? previousOldest)
             {
-                Oldest = oldest;
+                NewOldest = newOldest;
+                PreviousOldest = previousOldest;
             }
         }
 
@@ -147,7 +151,7 @@ namespace Akka.Cluster.Tools.Singleton
             var after = _membersByAge.FirstOrDefault();
             
             if (!Equals(before, after))
-                _changes = _changes.Enqueue(new OldestChanged(after?.UniqueAddress));
+                _changes = _changes.Enqueue(new OldestChanged(after?.UniqueAddress, before?.UniqueAddress));
         }
 
         private bool MatchingRole(Member member)
@@ -172,7 +176,7 @@ namespace Akka.Cluster.Tools.Singleton
 
             var oldest = _membersByAge.TakeWhile(m => m.UpNumber <= selfUpNumber).ToList();
             var safeToBeOldest = !oldest.Any(m => m.Status is MemberStatus.Down or MemberStatus.Exiting or MemberStatus.Leaving);
-            var initial = new InitialOldestState(oldest.Select(m => m.UniqueAddress).ToList(), safeToBeOldest);
+            var initial = new InitialOldestState(oldest.Select(m => m.UniqueAddress).ToImmutableList(), safeToBeOldest);
             _changes = _changes.Enqueue(initial);
         }
 
