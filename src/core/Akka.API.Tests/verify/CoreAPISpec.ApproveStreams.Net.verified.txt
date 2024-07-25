@@ -2058,6 +2058,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Aggregate<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, TOut2 zero, System.Func<TOut2, TOut1, TOut2> fold) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> AggregateAsync<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, TOut2 zero, System.Func<TOut2, TOut1, System.Threading.Tasks.Task<TOut2>> fold) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> AlsoTo<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat> that) { }
+        public static Akka.Streams.Dsl.Source<TOut, TMat> AlsoTo<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat> that, bool propagateFailure) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat3> AlsoToMaterialized<TOut, TMat, TMat2, TMat3>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> that, System.Func<TMat, TMat2, TMat3> materializerFunction) { }
         public static Akka.Streams.Dsl.SourceWithContext<TOut, TCtx, TMat> AsSourceWithContext<TOut, TCtx, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TOut, TCtx> fn) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> BackpressureTimeout<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.TimeSpan timeout) { }
