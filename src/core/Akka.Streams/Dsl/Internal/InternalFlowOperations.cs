@@ -2528,7 +2528,7 @@ namespace Akka.Streams.Dsl.Internal
             this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat2> that,
             Func<TMat, TMat2, TMat3> materializerFunction)
         {
-            return flow.ViaMaterialized(AlsoToGraph(that, false), materializerFunction);
+            return flow.ViaMaterialized(AlsoToGraph(that, true), materializerFunction);
         }
 
         /// <summary>
@@ -2566,7 +2566,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> AlsoTo<TOut, TMat>(this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that)
         {
-            return flow.Via(AlsoToGraph(that, false));
+            return flow.Via(AlsoToGraph(that, true));
         }
 
         /// <summary>
