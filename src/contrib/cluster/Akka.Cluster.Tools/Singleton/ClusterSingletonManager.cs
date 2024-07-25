@@ -872,8 +872,6 @@ namespace Akka.Cluster.Tools.Singleton
                         if (oldestChanged.NewOldest != null && oldestChanged.NewOldest.Equals(_selfUniqueAddress))
                         {
                             Log.Info("Younger observed OldestChanged: [{0} -> myself]", youngerData.Oldest.Head()?.Address);
-                            Log.Info("Current state of cluster for our role type: [{0}]", _cluster.State.Members.Where(c => c.HasRole(_settings.Role)).Aggregate("", (s, u) => s + u + ", "));
-                            Log.Info("YoungerState: [{0}]", youngerData.Oldest.Aggregate("", (s, u) => s + u + ", "));
                             if (youngerData.Oldest.All(m => _removed.ContainsKey(m)))
                             {
                                 return TryGotoOldest();
@@ -893,7 +891,6 @@ namespace Akka.Cluster.Tools.Singleton
                         }
 
                         Log.Info("Younger observed OldestChanged: [{0} -> {1}]", youngerData.Oldest.Head()?.Address, oldestChanged.NewOldest?.Address);
-                        Log.Info("YoungerState: [{0}]", youngerData.Oldest.Aggregate("", (s, u) => s + u + ", "));
                         GetNextOldestChanged();
 
                         var newOldest = oldestChanged.NewOldest switch
