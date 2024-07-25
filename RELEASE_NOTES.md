@@ -1,3 +1,54 @@
+#### 1.5.27 July 25th 2024 ####
+
+Akka.NET v1.5.27 is a significant release that includes new features, mission-critical bug fixes, and some performance improvements.
+
+**Major Akka.Cluster.Sharding and Akka.Cluster.Tools.Singleton Bug Fixes**
+
+In _all prior versions_ of Akka.NET, there are two high impact distributed systems bugs:
+
+1. [Akka.Cluster.Tools.Singleton: singleton moves earlier than expected - as soon as new node joins](https://github.com/akkadotnet/akka.net/issues/7196)
+2. [Akka.Cluster.Sharding: duplicate shards / entities](https://github.com/akkadotnet/akka.net/issues/6973)
+
+As we discovered during the course of our pains-taking bug investigation, these were, in fact, the same issue:
+
+1. The `ClusterSingletonManager` is supposed to _always_ belong on the oldest node of a given role type, but an original design error from the time Akka.Cluster.Tools was first introduced to Akka.NET meant that nodes were always sorted in _descending_ order of `UpNumber`. This is backwards: nodes should always be sorted in _ascending_ order of `UpNumber` - this means that the oldest possible node is always at the front of the "who is oldest?" list held by the `ClusterSingletonManager`. This explains why the singleton could appear to move early during deployments and restarts.
+2. The `ClusterSingletonManager` was suspectible to a race condition where if nodes were shutdown and restarted with the same address in under 20 seconds, the default "down removal margin" used by the `ClusterSingletonManager` to tolerate dirty exits, it would be possible after _multiple_ successive, fast, restarts for multiple instances of the singleton to be alive at the same time (for a short period.)
+
+Both of these varieties of problem, duplicate singletons, is what lead to duplicate shards.
+
+As a result we've made the following fixes:
+
+* [Akka.Cluster.Tools: deprecate ClustersSingletonManagerSettings.ConsiderAppVersion](https://github.com/akkadotnet/akka.net/pull/7302) - `AppVersion` is no longer considered for singleton placement as it could easily result in split brains.
+* [Akka.Cluster.Tools: fix mutability and oldest state bugs with `ClusterSingletonManager`](https://github.com/akkadotnet/akka.net/pull/7298) - resolves the issue with rapid rolling restarts creating duplicates. We've tested this fix in our test lab across thousands of coordinator restarts and haven't been able to reproduce the issue since (we could easily do it before.)
+* [Akka.Cluster.Tools.Singleton / Akka.Cluster.Sharding: fix duplicate shards caused by incorrect `ClusterSingletonManager` `HandOver`](https://github.com/akkadotnet/akka.net/pull/7297) - we fixed the member age problem here, which could cause a second singleton to start at inappropriate times.
+
+**Akka.Discovery and `ClusterClient` Discovery Support**
+
+In Akka.NET v1.5.27 we've added support for using Akka.Cluster.Tools.ClusterClient alongside with [Akka.Discovery plugins](https://getakka.net/articles/discovery/index.html) to automatically discover the initial contacts you need for `ClusterClientReceptionist` instances in your environment.
+
+You can read the documentation for how this works here: https://getakka.net/articles/clustering/cluster-client.html#contact-auto-discovery-using-akkadiscovery
+
+Related PRs and issues:
+
+* [Akka.Discovery: Add multi-config support to config-based discovery](https://github.com/akkadotnet/akka.net/issues/7271)
+* [Cluster.Tools: Fix missing VerboseLogging in ClusterClientSettings.Copy method](https://github.com/akkadotnet/akka.net/issues/7272)
+* [Cluster.Tools: Improve ClusterClientDiscovery to avoid thundering herd problem](https://github.com/akkadotnet/akka.net/issues/7270)
+* [Cluster.Tools: Change ClusterClientDiscovery to use the new Akka.Management "/cluster-client/receptionist" endpoint](https://github.com/akkadotnet/akka.net/issues/7274)
+
+**Other Bug Fixes and Improvements**
+
+* [Akka.Cluster: improve gossip serialization performance](https://github.com/akkadotnet/akka.net/pull/7281)
+* [Akka.Streams: Fix `ActorMaterializerImpl` `null` `LogSource`](https://github.com/akkadotnet/akka.net/pull/7300)
+* [Akka.Streams: `AlsoTo` may not be failing graph when its sink throws exception](https://github.com/akkadotnet/akka.net/issues/7269)
+* [Akka.DistributedData: if `lmdb.dir` is null or empty, log a warning and set to default](https://github.com/akkadotnet/akka.net/pull/7292)
+
+To [see the full set of changes in Akka.NET v1.5.27, click here](https://github.com/akkadotnet/akka.net/milestone/109).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 15 | 835 | 1001 | Aaron Stannard |
+| 12 | 1123 | 207 | Gregorius Soedharmo |
+
 #### 1.5.27-beta2 July 3rd 2024 ####
 
 * [Cluster.Tools: Fix missing port name argument in ClusterClientDiscovery](https://github.com/akkadotnet/akka.net/issues/7276)
