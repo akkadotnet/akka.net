@@ -39,7 +39,7 @@ public class FlowAlsoToSpec: AkkaSpec
                 .To(Sink.FromSubscriber(alsoDownstream));
             
             Source.From(Enumerable.Range(1, 5))
-                .AlsoTo(tapFlow)
+                .AlsoTo(tapFlow, false)
                 .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             await downstream.ExpectSubscriptionAsync();
@@ -102,4 +102,42 @@ public class FlowAlsoToSpec: AkkaSpec
             ex2.Should().Be(ex);
         }, Materializer);
     }
+    
+    [Fact(DisplayName = "AlsoTo by default should propagate failure")]
+    public async Task AlsoToDefaultFailurePropagationTest()
+    {
+        await this.AssertAllStagesStoppedAsync(async () => {
+            var downstream = this.CreateSubscriberProbe<int>();
+            var alsoDownstream = this.CreateSubscriberProbe<int>();
+
+            var tapFlow = Flow.Create<int>()
+                .Select(i => i == 3 ? throw new TestException("equals 3") : i)
+                .To(Sink.FromSubscriber(alsoDownstream));
+            
+            Source.From(Enumerable.Range(1, 5))
+                .AlsoTo(tapFlow)
+                .RunWith(Sink.FromSubscriber(downstream), Materializer);
+
+            await downstream.ExpectSubscriptionAsync();
+            await alsoDownstream.ExpectSubscriptionAsync();
+            await downstream.RequestAsync(4);
+            await alsoDownstream.RequestAsync(4);
+            
+            await downstream.ExpectNextAsync(1);
+            await alsoDownstream.ExpectNextAsync(1);
+            await downstream.ExpectNextAsync(2);
+            await alsoDownstream.ExpectNextAsync(2);
+            
+            // AlsoTo flow errored
+            var ex = await alsoDownstream.ExpectErrorAsync();
+            ex.Should().BeOfType<TestException>();
+            ex.Message.Should().Be("equals 3");
+            
+            // Parent stream should receive the last element and also error out
+            await downstream.ExpectNextAsync(3);
+            var ex2 = await downstream.ExpectErrorAsync();
+            ex2.Should().Be(ex);
+        }, Materializer);
+    }
+    
 }
