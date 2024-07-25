@@ -31,7 +31,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                                                                                            akka.loglevel = INFO
                                                                                            akka.actor.provider = "cluster"
                                                                                            akka.cluster.roles = [singleton]
-                                                                                           #akka.cluster.auto-down-unreachable-after = 2s
+                                                                                           akka.cluster.split-brain-resolver.stable-after = 2s
                                                                                            akka.cluster.singleton.min-number-of-hand-over-retries = 5
                                                                                            akka.remote {
                                                                                              dot-netty.tcp {
@@ -120,7 +120,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             await Join(_sys4, _sys3);
 
             // let it stabilize
-            //Task.Delay(TimeSpan.FromSeconds(5)).Wait();
+            await Task.Delay(TimeSpan.FromSeconds(5));
 
             await WithinAsync(TimeSpan.FromSeconds(10), () =>
             {
