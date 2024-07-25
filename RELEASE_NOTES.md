@@ -44,6 +44,10 @@ Related PRs and issues:
 
 To [see the full set of changes in Akka.NET v1.5.27, click here](https://github.com/akkadotnet/akka.net/milestone/109).
 
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 15 | 835 | 1001 | Aaron Stannard |
+| 12 | 1123 | 207 | Gregorius Soedharmo |
 
 #### 1.5.27-beta2 July 3rd 2024 ####
 
