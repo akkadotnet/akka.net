@@ -34,9 +34,6 @@ namespace Akka.Cluster.Tools.Singleton
     [Serializable]
     internal sealed class HandOverToMe : IClusterSingletonMessage, IDeadLetterSuppression
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static HandOverToMe Instance { get; } = new();
         private HandOverToMe() { }
     }
@@ -49,9 +46,6 @@ namespace Akka.Cluster.Tools.Singleton
     [Serializable]
     internal sealed class HandOverInProgress : IClusterSingletonMessage
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static HandOverInProgress Instance { get; } = new();
         private HandOverInProgress() { }
     }
@@ -64,9 +58,6 @@ namespace Akka.Cluster.Tools.Singleton
     [Serializable]
     internal sealed class HandOverDone : IClusterSingletonMessage
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static HandOverDone Instance { get; } = new();
         private HandOverDone() { }
     }
@@ -113,72 +104,47 @@ namespace Akka.Cluster.Tools.Singleton
     internal sealed record HandOverRetry(int Count);
 
     /// <summary>
-    /// TBD
+    /// Used to retry a failed takeover operation.
     /// </summary>
+    /// <param name="Count">The number of retries</param>
     [Serializable]
-    internal sealed class TakeOverRetry
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public int Count { get; }
+    internal sealed record TakeOverRetry(int Count);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="count">TBD</param>
-        public TakeOverRetry(int count)
-        {
-            Count = count;
-        }
-    }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     [Serializable]
     internal sealed class LeaseRetry: INoSerializationVerificationNeeded
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static LeaseRetry Instance { get; } = new();
         private LeaseRetry() { }
     }
 
     /// <summary>
-    /// TBD
+    /// The data type used by the <see cref="ClusterSingletonManager"/>
     /// </summary>
     public interface IClusterSingletonData { }
 
     /// <summary>
-    /// TBD
+    /// The initial state of the cluster singleton manager at startup before it receives any data.
     /// </summary>
     [Serializable]
     internal sealed class Uninitialized : IClusterSingletonData
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static Uninitialized Instance { get; } = new();
         private Uninitialized() { }
     }
 
     /// <summary>
-    /// TBD
+    /// The state used after we've initialized and are aware of all of the other
+    /// older members currently present in the cluster.
     /// </summary>
     [Serializable]
     internal sealed class YoungerData : IClusterSingletonData
     {
         /// <summary>
-        /// TBD
+        /// The age-ordered (ascending) set of addresses of older nodes than us in the cluster.
         /// </summary>
         public ImmutableList<UniqueAddress> Oldest { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="oldest">TBD</param>
+        
         public YoungerData(ImmutableList<UniqueAddress> oldest)
         {
             Oldest = oldest;
@@ -449,19 +415,19 @@ namespace Akka.Cluster.Tools.Singleton
         /// </summary>
         WasOldest,
         /// <summary>
-        /// We are c
+        /// We are handing over our singleton to the new oldest node.
         /// </summary>
         HandingOver,
         /// <summary>
-        /// TBD
+        /// Not used
         /// </summary>
         TakeOver,
         /// <summary>
-        /// TBD
+        /// We are shutting down.
         /// </summary>
         Stopping,
         /// <summary>
-        /// TBD
+        /// We have shut down and are terminating.
         /// </summary>
         End
     }
@@ -537,7 +503,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// </summary>
         /// <param name="singletonProps"><see cref="Actor.Props"/> of the singleton actor instance.</param>
         /// <param name="settings">Cluster singleton manager settings.</param>
-        /// <returns>TBD</returns>
+        /// <returns>Props for the <see cref="ClusterSingletonManager"/>.</returns>
         public static Props Props(Props singletonProps, ClusterSingletonManagerSettings settings)
         {
             return Props(singletonProps, PoisonPill.Instance, settings);
@@ -554,7 +520,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// perfectly fine <paramref name="terminationMessage"/> if you only need to stop the actor.
         /// </param>
         /// <param name="settings">Cluster singleton manager settings.</param>
-        /// <returns>TBD</returns>
+        /// <returns>Props for the <see cref="ClusterSingletonManager"/>.</returns>
         public static Props Props(Props singletonProps, object terminationMessage, ClusterSingletonManagerSettings settings)
         {
             return Actor.Props.Create(() => new ClusterSingletonManager(singletonProps, terminationMessage, settings))
@@ -576,7 +542,7 @@ namespace Akka.Cluster.Tools.Singleton
         private bool _selfExited;
 
         // started when self member is Up
-        private IActorRef _oldestChangedBuffer;
+        private IActorRef? _oldestChangedBuffer;
         // keep track of previously removed members
         private ImmutableDictionary<UniqueAddress, Deadline> _removed = ImmutableDictionary<UniqueAddress, Deadline>.Empty;
         private readonly TimeSpan _removalMargin;
@@ -584,7 +550,6 @@ namespace Akka.Cluster.Tools.Singleton
         private readonly int _maxTakeOverRetries;
         private readonly Cluster _cluster = Cluster.Get(Context.System);
         private readonly UniqueAddress _selfUniqueAddress;
-        private ILoggingAdapter _log;
 
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
         private readonly TaskCompletionSource<Done> _memberExitingProgress = new();
@@ -592,16 +557,7 @@ namespace Akka.Cluster.Tools.Singleton
         private readonly string _singletonLeaseName;
         private readonly Lease? _lease;
         private readonly TimeSpan _leaseRetryInterval = TimeSpan.FromSeconds(5); // won't be used
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="singletonProps">TBD</param>
-        /// <param name="terminationMessage">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <exception cref="ConfigurationException">TBD</exception>
-        /// <returns>TBD</returns>
+        
         public ClusterSingletonManager(Props singletonProps, object terminationMessage, ClusterSingletonManagerSettings settings)
         {
             var role = settings.Role;
@@ -618,6 +574,17 @@ namespace Akka.Cluster.Tools.Singleton
                 _lease = LeaseProvider.Get(Context.System)
                     .GetLease(_singletonLeaseName, settings.LeaseSettings.LeaseImplementation, _cluster.SelfAddress.HostPort());
                 _leaseRetryInterval = settings.LeaseSettings.LeaseRetryInterval;
+            }
+            
+            // Added in v1.5.27 to signal to users who were considering AppVersion
+            // in their singleton placement decisions that we don't do that any more
+#pragma warning disable CS0618 // Type or member is obsolete
+            if (settings.ConsiderAppVersion)
+#pragma warning restore CS0618 // Type or member is obsolete
+            {
+                Log.Warning("As of Akka.NET v1.5.27, The 'ConsiderAppVersion' setting is no longer supported and will " +
+                             "be removed in a future version because this setting is inherently unsafe and can result in split brains. " +
+                             "Singleton instances will always be created on the oldest member.");
             }
 
             _removalMargin = (settings.RemovalMargin <= TimeSpan.Zero) ? _cluster.DowningProvider.DownRemovalMargin : settings.RemovalMargin;
@@ -661,7 +628,7 @@ namespace Akka.Cluster.Tools.Singleton
             });
         }
 
-        private ILoggingAdapter Log { get { return _log ??= Context.GetLogger(); } }
+        private ILoggingAdapter Log { get; } = Context.GetLogger();
 
         /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void PreStart()

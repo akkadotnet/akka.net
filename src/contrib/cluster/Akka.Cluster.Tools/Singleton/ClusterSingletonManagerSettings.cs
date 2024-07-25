@@ -99,6 +99,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// When set to false, singleton instance will always be created on oldest member.
         /// When set to true, singleton instance will be created on the oldest member with the highest <see cref="Member.AppVersion"/> number.
         /// </summary>
+        [Obsolete("ConsiderAppVersion is not used anymore and will be removed in future versions.")]
         public bool ConsiderAppVersion { get; }
 
         /// <summary>
@@ -188,7 +189,9 @@ namespace Akka.Cluster.Tools.Singleton
             RemovalMargin = removalMargin;
             HandOverRetryInterval = handOverRetryInterval;
             LeaseSettings = leaseSettings;
+#pragma warning disable CS0618 // Type or member is obsolete
             ConsiderAppVersion = considerAppVersion;
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         /// <summary>
