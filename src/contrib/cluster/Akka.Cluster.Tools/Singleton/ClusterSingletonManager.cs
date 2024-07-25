@@ -1407,7 +1407,6 @@ namespace Akka.Cluster.Tools.Singleton
             {
                 Log.Debug("Schedule DelayedMemberRemoved for {0}", member.Address);
                 SetTimer("delayed-member-removed-" + member.UniqueAddress, new DelayedMemberRemoved(member), _removalMargin, repeat: false);
-                //Context.System.Scheduler.ScheduleTellOnce(_removalMargin, Self, new DelayedMemberRemoved(member), Self);
             }
             else Self.Tell(new DelayedMemberRemoved(member));
         }
