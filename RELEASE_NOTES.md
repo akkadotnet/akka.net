@@ -1,3 +1,7 @@
+#### 1.5.28 July 25th 2024 ####
+
+*Placeholder for nightlies*
+
 #### 1.5.27 July 25th 2024 ####
 
 Akka.NET v1.5.27 is a significant release that includes new features, mission-critical bug fixes, and some performance improvements.
