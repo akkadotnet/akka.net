@@ -390,8 +390,8 @@ namespace Akka.Streams.Implementation
             LogSource newSource;
             if (logSource is not LogSource s)
             {
-                actorPath = $"{s}({LogSource.FromActorRef(_supervisor, System)})";
-                newSource = LogSource.Create(actorPath, s.Type);
+                actorPath = $"{logSource}({LogSource.FromActorRef(_supervisor, System)})";
+                newSource = LogSource.Create(actorPath, logSource.GetType());
                 return Logging.GetLogger(System, newSource);
             }
             
