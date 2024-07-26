@@ -1,6 +1,15 @@
-#### 1.5.28 July 25th 2024 ####
+#### 1.5.27.1 July 25th 2024 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.27.1 is a minor patch to fix a race condition between the logging and remoting system.
+
+* [Akka: Fix Remoting-Logging DefaultAddress race condition](https://github.com/akkadotnet/akka.net/pull/7305)
+
+To [see the full set of changes in Akka.NET v1.5.27.1, click here](https://github.com/akkadotnet/akka.net/milestone/110).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 4    | 0    | Aaron Stannard      |
+| 1       | 10   | 3    | Gregorius Soedharmo |
 
 #### 1.5.27 July 25th 2024 ####
 
