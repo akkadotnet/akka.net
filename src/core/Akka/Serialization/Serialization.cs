@@ -393,6 +393,38 @@ namespace Akka.Serialization
             _serializerMap[type] = serializer;
         }
 
+        /// <summary>
+        /// Remove the serializer mapping for <see cref="Type"/> <paramref name="type"/> and all other types
+        /// that were derived from it.
+        /// </summary>
+        /// <param name="type">The <see cref="Type"/> that will be removed from the serializer mapping</param>
+        /// <exception cref="InvalidOperationException">>Thrown when <paramref name="type"/> is of type <see cref="Object"/></exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void RemoveSerializationMap(Type type)
+        {
+            if (type == typeof(object))
+                throw new InvalidOperationException("Could not remove the default object type serializer.");
+            
+            if(!_serializerMap.ContainsKey(type))
+                return;
+            
+            if (!_serializerMap.TryRemove(type, out _))
+            {
+                LogWarning($"Failed to remove serializer for type [{type}]");
+            }
+            
+            foreach (var serializerType in _serializerMap.Keys)
+            {
+                if (serializerType.IsAssignableFrom(type) && serializerType != _objectType)
+                {
+                    if (!_serializerMap.TryRemove(serializerType, out _))
+                    {
+                        LogWarning($"Failed to remove serializer for type [{serializerType}] which derives from type [{type}]");
+                    }
+                }
+            }
+        }
+
         private void LogWarning(string str)
         {
             // Logging.StandardOutLogger is a MinimalActorRef, i.e. not a "real" actor
@@ -542,6 +574,17 @@ namespace Akka.Serialization
             AddSerializationMap(type, serializer);
             return serializer;
         }
+        
+        /// <summary>
+        /// Deserializes an <see cref="IActorRef"/> from its string representation.
+        /// </summary>
+        /// <param name="path">The serialized path of the actor represented as a string.</param>
+        /// <returns>The <see cref="IActorRef"/>. If no such actor exists, it will be (equivalent to) a dead letter reference.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IActorRef DeserializeActorRef(string path)
+        {
+            return System.Provider.ResolveActorRef(path);
+        }
 
         /// <summary>
         /// The serialized path of an actorRef, based on the current transport serialization information.
@@ -557,7 +600,7 @@ namespace Akka.Serialization
         public static string SerializedActorPath(IActorRef actorRef)
         {
             if (Equals(actorRef, ActorRefs.NoSender))
-                return String.Empty;
+                return string.Empty;
 
             var path = actorRef.Path;
             ExtendedActorSystem originalSystem = null;

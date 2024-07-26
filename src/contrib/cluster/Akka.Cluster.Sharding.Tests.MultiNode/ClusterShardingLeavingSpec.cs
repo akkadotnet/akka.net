@@ -129,25 +129,28 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            switch (message)
-            {
-                case Ping msg:
-                    return (msg.Id, message);
-            }
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    Ping p => p.Id,
+                    _ => null
+                };
 
-        private ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case Ping msg:
-                    return msg.Id[0].ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    Ping p => p.Id[0].ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => entityId[0].ToString();
+        }
 
         private readonly Lazy<IActorRef> _region;
 
@@ -163,8 +166,7 @@ namespace Akka.Cluster.Sharding.Tests
                 Sys,
                 typeName: "Entity",
                 entityProps: Props.Create(() => new Entity()),
-                extractEntityId: extractEntityId,
-                extractShardId: extractShardId);
+                messageExtractor: new MessageExtractor());
         }
 
         #endregion
@@ -181,13 +183,13 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(20), () =>
             {
-                StartPersistenceIfNeeded(startOn: config.First, Roles.ToArray());
+                StartPersistenceIfNeeded(startOn: Config.First, Roles.ToArray());
 
-                Join(config.First, config.First, onJoinedRunOnFrom: StartSharding);
-                Join(config.Second, config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
-                Join(config.Third, config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
-                Join(config.Fourth, config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
-                Join(config.Fifth, config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
+                Join(Config.First, Config.First, onJoinedRunOnFrom: StartSharding);
+                Join(Config.Second, Config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
+                Join(Config.Third, Config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
+                Join(Config.Fourth, Config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
+                Join(Config.Fifth, Config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
 
                 // all Up, everywhere before continuing
                 AwaitAssert(() =>
@@ -204,7 +206,7 @@ namespace Akka.Cluster.Sharding.Tests
                         _region.Value.Tell(GetCurrentRegions.Instance);
                         ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(5);
                     });
-                }, config.First);
+                }, Config.First);
 
                 EnterBarrier("after-2");
             });
@@ -224,13 +226,13 @@ namespace Akka.Cluster.Sharding.Tests
 
                 shardLocations.Tell(new Locations(locations));
                 Sys.Log.Debug("Original locations: {0}", string.Join(",", locations.Select(x => $"{x.Key}->{x.Value}")));
-            }, config.First);
+            }, Config.First);
             EnterBarrier("after-3");
         }
 
         private void Cluster_sharding_with_leaving_member_must_recover_after_leaving_coordinator_node()
         {
-            Sys.ActorSelection(Node(config.First) / "user" / "shardLocations").Tell(GetLocations.Instance);
+            Sys.ActorSelection(Node(Config.First) / "user" / "shardLocations").Tell(GetLocations.Instance);
             var originalLocations = ExpectMsg<Locations>().LocationMap;
 
             var numberOfNodesLeaving = 2;
@@ -249,7 +251,7 @@ namespace Akka.Cluster.Sharding.Tests
                 var region = _region.Value;
                 Watch(region);
                 ExpectTerminated(region, TimeSpan.FromSeconds(15));
-            }, config.First);
+            }, Config.First);
             EnterBarrier("stopped");
             
             // more stress by not having the barrier here

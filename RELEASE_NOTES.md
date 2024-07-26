@@ -1,3 +1,429 @@
+#### 1.5.27.1 July 25th 2024 ####
+
+Akka.NET v1.5.27.1 is a minor patch to fix a race condition between the logging and remoting system.
+
+* [Akka: Fix Remoting-Logging DefaultAddress race condition](https://github.com/akkadotnet/akka.net/pull/7305)
+
+To [see the full set of changes in Akka.NET v1.5.27.1, click here](https://github.com/akkadotnet/akka.net/milestone/110).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 4    | 0    | Aaron Stannard      |
+| 1       | 10   | 3    | Gregorius Soedharmo |
+
+#### 1.5.27 July 25th 2024 ####
+
+Akka.NET v1.5.27 is a significant release that includes new features, mission-critical bug fixes, and some performance improvements.
+
+**Major Akka.Cluster.Sharding and Akka.Cluster.Tools.Singleton Bug Fixes**
+
+In _all prior versions_ of Akka.NET, there are two high impact distributed systems bugs:
+
+1. [Akka.Cluster.Tools.Singleton: singleton moves earlier than expected - as soon as new node joins](https://github.com/akkadotnet/akka.net/issues/7196)
+2. [Akka.Cluster.Sharding: duplicate shards / entities](https://github.com/akkadotnet/akka.net/issues/6973)
+
+As we discovered during the course of our pains-taking bug investigation, these were, in fact, the same issue:
+
+1. The `ClusterSingletonManager` is supposed to _always_ belong on the oldest node of a given role type, but an original design error from the time Akka.Cluster.Tools was first introduced to Akka.NET meant that nodes were always sorted in _descending_ order of `UpNumber`. This is backwards: nodes should always be sorted in _ascending_ order of `UpNumber` - this means that the oldest possible node is always at the front of the "who is oldest?" list held by the `ClusterSingletonManager`. This explains why the singleton could appear to move early during deployments and restarts.
+2. The `ClusterSingletonManager` was suspectible to a race condition where if nodes were shutdown and restarted with the same address in under 20 seconds, the default "down removal margin" used by the `ClusterSingletonManager` to tolerate dirty exits, it would be possible after _multiple_ successive, fast, restarts for multiple instances of the singleton to be alive at the same time (for a short period.)
+
+Both of these varieties of problem, duplicate singletons, is what lead to duplicate shards.
+
+As a result we've made the following fixes:
+
+* [Akka.Cluster.Tools: deprecate ClustersSingletonManagerSettings.ConsiderAppVersion](https://github.com/akkadotnet/akka.net/pull/7302) - `AppVersion` is no longer considered for singleton placement as it could easily result in split brains.
+* [Akka.Cluster.Tools: fix mutability and oldest state bugs with `ClusterSingletonManager`](https://github.com/akkadotnet/akka.net/pull/7298) - resolves the issue with rapid rolling restarts creating duplicates. We've tested this fix in our test lab across thousands of coordinator restarts and haven't been able to reproduce the issue since (we could easily do it before.)
+* [Akka.Cluster.Tools.Singleton / Akka.Cluster.Sharding: fix duplicate shards caused by incorrect `ClusterSingletonManager` `HandOver`](https://github.com/akkadotnet/akka.net/pull/7297) - we fixed the member age problem here, which could cause a second singleton to start at inappropriate times.
+
+**Akka.Discovery and `ClusterClient` Discovery Support**
+
+In Akka.NET v1.5.27 we've added support for using Akka.Cluster.Tools.ClusterClient alongside with [Akka.Discovery plugins](https://getakka.net/articles/discovery/index.html) to automatically discover the initial contacts you need for `ClusterClientReceptionist` instances in your environment.
+
+You can read the documentation for how this works here: https://getakka.net/articles/clustering/cluster-client.html#contact-auto-discovery-using-akkadiscovery
+
+Related PRs and issues:
+
+* [Akka.Discovery: Add multi-config support to config-based discovery](https://github.com/akkadotnet/akka.net/issues/7271)
+* [Cluster.Tools: Fix missing VerboseLogging in ClusterClientSettings.Copy method](https://github.com/akkadotnet/akka.net/issues/7272)
+* [Cluster.Tools: Improve ClusterClientDiscovery to avoid thundering herd problem](https://github.com/akkadotnet/akka.net/issues/7270)
+* [Cluster.Tools: Change ClusterClientDiscovery to use the new Akka.Management "/cluster-client/receptionist" endpoint](https://github.com/akkadotnet/akka.net/issues/7274)
+
+**Other Bug Fixes and Improvements**
+
+* [Akka.Cluster: improve gossip serialization performance](https://github.com/akkadotnet/akka.net/pull/7281)
+* [Akka.Streams: Fix `ActorMaterializerImpl` `null` `LogSource`](https://github.com/akkadotnet/akka.net/pull/7300)
+* [Akka.Streams: `AlsoTo` may not be failing graph when its sink throws exception](https://github.com/akkadotnet/akka.net/issues/7269)
+* [Akka.DistributedData: if `lmdb.dir` is null or empty, log a warning and set to default](https://github.com/akkadotnet/akka.net/pull/7292)
+
+To [see the full set of changes in Akka.NET v1.5.27, click here](https://github.com/akkadotnet/akka.net/milestone/109).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 15 | 835 | 1001 | Aaron Stannard |
+| 12 | 1123 | 207 | Gregorius Soedharmo |
+
+#### 1.5.27-beta2 July 3rd 2024 ####
+
+* [Cluster.Tools: Fix missing port name argument in ClusterClientDiscovery](https://github.com/akkadotnet/akka.net/issues/7276)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 1    | 1    | Gregorius Soedharmo |
+
+#### 1.5.27-beta1 July 3rd 2024 ####
+
+Akka.NET v1.5.27-beta1 improves upon the new ClusterClient initial contact auto-discovery feature to make it more robust in implementation.
+
+* [Akka.Discovery: Add multi-config support to config-based discovery](https://github.com/akkadotnet/akka.net/issues/7271)
+* [Cluster.Tools: Fix missing VerboseLogging in ClusterClientSettings.Copy method](https://github.com/akkadotnet/akka.net/issues/7272)
+* [Cluster.Tools: Improve ClusterClientDiscovery to avoid thundering herd problem](https://github.com/akkadotnet/akka.net/issues/7270)
+* [Cluster.Tools: Change ClusterClientDiscovery to use the new Akka.Management "/cluster-client/receptionist" endpoint](https://github.com/akkadotnet/akka.net/issues/7274)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 5       | 422  | 183  | Gregorius Soedharmo |
+| 1       | 4    | 0    | Aaron Stannard      |
+| 1       | 1    | 1    | Sean Killeen        |
+
+#### 1.5.26 June 27th 2024 ####
+
+Akka.NET v1.5.26 introduces a new Akka.Cluster.Tools feature and a logging improvement.
+
+* [Add ClusterClient initial contact auto-discovery feature](https://github.com/akkadotnet/akka.net/issues/7261)
+* [Improve traceability of `ITimerMsg`](https://github.com/akkadotnet/akka.net/issues/7262)
+
+**Preliminary ClusterClient Initial Contact Auto-Discovery Feature**
+
+> To use this feature, you will need to use Akka.Discovery implementation (Kubernetes or Azure) version 1.5.26-beta1 or higher
+
+This feature allows ClusterClient to use Akka.Discovery to automatically query for cluster client receptionists inside a dynamic environment such as Kubernetes.
+
+The preliminary documentation for this feature can be read [here](https://getakka.net/articles/clustering/cluster-client.html#contact-auto-discovery-using-akkadiscovery)
+
+You can [see the full set of changes for Akka.NET v1.5.26 here](https://github.com/akkadotnet/akka.net/milestones/1.5.26).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 3       | 45   | 11   | Aaron Stannard      |
+| 2       | 945  | 15   | Gregorius Soedharmo |
+
+#### 1.5.25 June 14th 2024 ####
+
+Akka.NET v1.5.25 includes a critical bug fix for logging and some other minor fixes.
+
+**Logging Errors Introduced in v1.5.21**
+
+Versions [v1.5.21,v1.5.24] are all affected by [Akka.Logging: v1.5.21 appears to have truncated log source, timestamps, etc from all log messages](https://github.com/akkadotnet/akka.net/issues/7255) - this was a bug introduced when we added [the log-filtering feature we shipped in Akka.NET v1.5.21](https://getakka.net/articles/utilities/logging.html#filtering-log-messages).
+
+This issue has been resolved in v1.5.25 and we've [added regression tests to ensure that the log format gets version-checked just like our APIs going forward](https://github.com/akkadotnet/akka.net/pull/7256).
+
+Other fixes:
+
+* [Akka.Router: sending a message to a remote actor via `IScheduledTellMsg` results in serialization error](https://github.com/akkadotnet/akka.net/issues/7247)
+* [Akka.Discovery: Make Akka.Discovery less coupled with Akka.Management](https://github.com/akkadotnet/akka.net/issues/7242)
+
+You can [see the full set of changes for Akka.NET v1.5.25 here](https://github.com/akkadotnet/akka.net/milestones/1.5.25).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 6 | 347 | 44 | Aaron Stannard |
+| 2 | 1197 | 1015 | Gregorius Soedharmo |
+
+#### 1.5.24 June 7th 2024 ####
+
+Akka.NET v1.5.24 is a patch release for Akka.NET that addresses CVE-2018-8292 and also adds a quality of life improvement to IActorRef serialization.
+
+* [Fix invalid serializer was being used when serialize-message is set to true](https://github.com/akkadotnet/akka.net/pull/7236)
+* [Add Serialization.DeserializeActorRef() QoL method](https://github.com/akkadotnet/akka.net/pull/7237)
+* Resolve CVE-2018-8292 in [this PR](https://github.com/akkadotnet/akka.net/pull/7235) and [this PR](https://github.com/akkadotnet/akka.net/pull/7238)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 3       | 35   | 22   | Gregorius Soedharmo |
+| 1       | 26   | 51   | Mike Perrin         |
+| 1       | 15   | 2    | Aaron Stannard      |
+
+You can [see the full set of changes for Akka.NET v1.5.24 here](https://github.com/akkadotnet/akka.net/milestones/1.5.24).
+
+#### 1.5.23 June 4th 2024 ####
+
+* [Fix missing `HandOverDone` handler in ClusterSingletonManager](https://github.com/akkadotnet/akka.net/pull/7230)
+* [Add push mode to `ShardedDaemonProcess`](https://github.com/akkadotnet/akka.net/pull/7229)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 2       | 299  | 44   | Aaron Stannard      |
+| 1       | 47   | 49   | Gregorius Soedharmo |
+| 1       | 1    | 1    | Hassan Abu Bakar    |
+
+You can [see the full set of changes for Akka.NET v1.5.23 here](https://github.com/akkadotnet/akka.net/milestones/1.5.23).
+
+#### 1.5.22 June 4th 2024 ####
+
+Akka.NET v1.5.22 is a patch release for Akka.NET with a few bug fixes and logging improvement.
+
+* [Streams: Bump Reactive.Streams to 1.0.4](https://github.com/akkadotnet/akka.net/pull/7213)
+* [Remote: Bump DotNetty.Handlers to 0.7.6](https://github.com/akkadotnet/akka.net/pull/7198)
+* [Core: Resolve CVE-2018-8292 for Akka.Streams and Akka.Remote](https://github.com/akkadotnet/akka.net/issues/7191)
+* [Core: Expose `BusLogging` `EventStream` as public API](https://github.com/akkadotnet/akka.net/pull/7210)
+* [Remote: Add cross-platform support to the exception serializer](https://github.com/akkadotnet/akka.net/pull/7222)
+
+**On Resolving CVE-2018-8292**
+
+In order to resolve this CVE, we had to update `DotNetty.Handlers` to the latest version and unfortunately, this comes with about 10% network throughput performance hit. We are looking into possible replacement for `DotNetty` to improve this performance lost in the future (see [`#7225`](https://github.com/akkadotnet/akka.net/issues/7225) for updates).
+
+**Before**
+
+```
+Num clients, Total [msg], Msgs/sec, Total [ms], Start Threads, End Threads  
+         1,  200000,    125000,    1600.62,            46,              76  
+         5, 1000000,    494072,    2024.04,            84,              95  
+        10, 2000000,    713013,    2805.73,           103,             107  
+        15, 3000000,    724463,    4141.38,           115,             115  
+        20, 4000000,    714669,    5597.66,           123,             123  
+        25, 5000000,    684932,    7300.37,           131,             107  
+        30, 6000000,    694525,    8639.88,           115,              93  
+```
+
+**After**
+
+```
+Num clients, Total [msg], Msgs/sec, Total [ms], Start Threads, End Threads
+         1,  200000,    123763,    1616.32,            46,              73
+         5, 1000000,    386101,    2590.66,            81,              90
+        10, 2000000,    662691,    3018.54,            98,             104
+        15, 3000000,    666223,    4503.86,           112,             113
+        20, 4000000,    669681,    5973.89,           121,             113
+        25, 5000000,    669255,    7471.86,           121,             105
+        30, 6000000,    669121,    8967.61,           113,              92
+```
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 6       | 167  | 188  | Aaron Stannard      |
+| 3       | 93   | 10   | Gregorius Soedharmo |
+
+You can [see the full set of changes for Akka.NET v1.5.22 here](https://github.com/akkadotnet/akka.net/milestones/1.5.22).
+
+#### 1.5.21 May 28th 2024 ####
+
+Akka.NET v1.5.21 is a significant release for Akka.NET with a major feature additions and bug fixes.
+
+* [Core: Fix error logging bug](https://github.com/akkadotnet/akka.net/pull/7186)
+* [Core: Add log filtering feature](https://github.com/akkadotnet/akka.net/pull/7179)
+* [Pub-Sub: Fix missing SendOneMessageToEachGroup property](https://github.com/akkadotnet/akka.net/pull/7202)
+* [Core: Fix incorrect IWrappedMessage deserialization when serialize-messages setting is on](https://github.com/akkadotnet/akka.net/pull/7200)
+* [Core: Bump Akka.Analyzers to 0.2.5](https://github.com/akkadotnet/akka.net/pull/7206)
+
+**Log Message Filtering**
+
+You can now filter out unwanted log messages based on either its source or message content. Documentation can be read in the [logging documentation](https://getakka.net/articles/utilities/logging.html#filtering-log-messages).
+
+**New Akka.Analyzers Rule**
+
+Added AK1006 rule to suggest user to use `PersistAll()` and `PersistAllAsync()` when applicable. Documentation can be read in the [documentation](https://getakka.net/articles/debugging/rules/AK1006.html)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 7       | 900  | 53   | Aaron Stannard      |
+| 5       | 497  | 1187 | Gregorius Soedharmo |
+| 1       | 1    | 1    | Åsmund              |
+
+You can [see the full set of changes for Akka.NET v1.5.21 here](https://github.com/akkadotnet/akka.net/milestones/1.5.21).
+
+#### 1.5.20 April 29th 2024 ####
+
+Akka.NET v1.5.20 is a patch release for Akka.NET with a few bug fixes and Akka.Streams quality of life improvement.
+
+* [Cluster: Fix split brain resolver downing all nodes when failure detector records are unclean/poisoned](https://github.com/akkadotnet/akka.net/pull/7141)
+* [TestKit: Fix `AkkaEqualException` message formatting](https://github.com/akkadotnet/akka.net/pull/7164)
+* [Core: Generate Protobuf code automatically during build](https://github.com/akkadotnet/akka.net/pull/7063)
+* [Streams: `LogSource` quality of life improvement](https://github.com/akkadotnet/akka.net/pull/7168)
+* [Core: Fix `HashedWheelTimer` startup crash](https://github.com/akkadotnet/akka.net/pull/7174)
+
+| COMMITS | LOC+ | LOC-  | AUTHOR              |
+|---------|------|-------|---------------------|
+| 5       | 360  | 93    | Aaron Stannard      |
+| 3       | 187  | 20    | Gregorius Soedharmo |
+| 1       | 81   | 41827 | Yan Pitangui        |
+
+You can [see the full set of changes for Akka.NET v1.5.20 here](https://github.com/akkadotnet/akka.net/milestones/1.5.20).
+
+#### 1.5.19 April 15th 2024 ####
+
+Akka.NET v1.5.19 is a patch release for Akka.NET with a few bug fixes.
+
+* [Persistence.SQLite: Bump Microsoft.Data.SQLite to 8.0.4](https://github.com/akkadotnet/akka.net/pull/7148)
+* [Core: Bump Google.Protobuf to 3.26.1](https://github.com/akkadotnet/akka.net/pull/7138)
+* [Core: Bump Akka.Analyzer to 0.2.4](https://github.com/akkadotnet/akka.net/pull/7143)
+* [Remote: Improve logging](https://github.com/akkadotnet/akka.net/pull/7149)
+* [Cluster: Improve logging](https://github.com/akkadotnet/akka.net/pull/7149)
+* [Core: Fix resource contention problem with HashedWheelTimerScheduler during start-up](https://github.com/akkadotnet/akka.net/pull/7144)
+* [TestKit: Fix async deadlock by replacing IAsyncQueue with System.Threading.Channel](https://github.com/akkadotnet/akka.net/pull/7157)
+
+**Akka.Analyzers**
+
+We've added 3 new analyzer rules to `Akka.Analyzers`:
+
+* **AK1004**
+
+  AK1004 warns users to replace any `ScheduleTellOnce()` and `ScheduleTellRepeatedly()` invocation inside an actor to implement `IWithTimers` interface instead. Documentation can be read [here](https://getakka.net/articles/debugging/rules/AK1004.html)
+
+* **AK1005**
+
+  AK1005 warns users about improper `Sender` and `Self` access from inside an async lambda callbacks inside actor implementation. Documentation can be read [here](https://getakka.net/articles/debugging/rules/AK1005.html)
+
+* **AK1007**
+
+  AK1007 is an error message for any `Timers.StartSingleTimer()` and `Timers.StartPeriodicTimer()` invocation from inside the actor `PreRestart()` and `AroundPreRestart()` lifecycle callback methods.  Documentation can be read [here](https://getakka.net/articles/debugging/rules/AK1007.html)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 9       | 366  | 1951 | Aaron Stannard      |
+| 9       | 14   | 14   | dependabot[bot]     |
+| 2       | 516  | 30   | Gregorius Soedharmo |
+
+You can [see the full set of changes for Akka.NET v1.5.19 here](https://github.com/akkadotnet/akka.net/milestones/1.5.19).
+
+#### 1.5.18 March 13th 2024 ####
+
+Akka.NET v1.5.18 is a patch release for Akka.NET with a feature addition.
+
+* [Migrate all internal dispatchers to default thread pool dispatcher](https://github.com/akkadotnet/akka.net/pull/7117)
+
+| COMMITS | LOC+ | LOC- | AUTHOR          |
+|---------|------|------|-----------------|
+| 1       | 9    | 9    | Aaron Stannard  |
+| 1       | 1    | 1    | dependabot[bot] |
+
+You can [see the full set of changes for Akka.NET v1.5.18 here](https://github.com/akkadotnet/akka.net/milestones/1.5.18).
+
+#### 1.5.17.1 March 1st 2024 ####
+
+Akka.NET v1.5.17.1 is a patch release for Akka.NET with a bug fix.
+
+* [Core: Bump Akka.Analyzers to 0.2.3.1](https://github.com/akkadotnet/akka.analyzers/releases/tag/0.2.3.1)
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 1    | 1    | Gregorius Soedharmo |
+| 1       | 1    | 1    | Aaron Stannard      |
+
+#### 1.5.17 February 29th 2024 ####
+
+Akka.NET v1.5.17 is a patch release for Akka.NET with some feature additions and bug fixes.
+
+* [Core: Fix null ref for `LogSource`](https://github.com/akkadotnet/akka.net/pull/7078)
+* [Persistence.TCK: Make all snapshot tests virtual](https://github.com/akkadotnet/akka.net/pull/7093)
+* [Core: Suppress extremely verbose `TimerScheduler` debug message](https://github.com/akkadotnet/akka.net/pull/7102)
+* [Sharding: Implement reliable delivery custom message bypass feature](https://github.com/akkadotnet/akka.net/pull/7106)
+* Update dependencies
+  * [Persistence: Bump Microsoft.Data.SQLite to 8.0.2](https://github.com/akkadotnet/akka.net/pull/7096)
+  * [Core: Bump Google.Protobuf to 3.25.3](https://github.com/akkadotnet/akka.net/pull/7100)
+  * [Core: Bump Akka.Analyzers to 0.2.3](https://github.com/akkadotnet/akka.analyzers/releases/tag/0.2.3)
+* Documentations
+  * [Actors: Fix typo](https://github.com/akkadotnet/akka.net/pull/7085)
+  * [Remoting: Fix remote deployment typo](https://github.com/akkadotnet/akka.net/pull/7095)
+  * [Analyzers: Add missing TOC links](https://github.com/akkadotnet/akka.net/pull/7098)
+  * [Sharding: Add missing custom sharding handoff stop documentation](https://github.com/akkadotnet/akka.net/pull/7101)
+
+**Akka.Analyzers**
+
+* The AK1001 rule has been removed due to the discussion [here](https://github.com/akkadotnet/akka.analyzers/issues/65).
+* AK1002 has been enhanced with better problem detection.
+
+You can [see the full set of changes for Akka.NET v1.5.17 here](https://github.com/akkadotnet/akka.net/milestones/1.5.17).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 7       | 1342 | 732  | Gregorius Soedharmo |
+| 4       | 5    | 5    | dependabot[bot]     |
+| 3       | 158  | 4    | Aaron Stannard      |
+| 2       | 3    | 3    | hassan-me           |
+| 1       | 2    | 8    | Massimiliano Donini |
+| 1       | 12   | 12   | Mattias Jakobsson   |
+
+#### 1.5.16 January 29th 2024 ####
+
+Akka.NET v1.5.16 is a patch release for Akka.NET with some feature additions and changes.
+
+* [Core: Bump Google.Protobuf to 3.25.2](https://github.com/akkadotnet/akka.net/pull/7056)
+* [Core: Remove redundant assembly titles](https://github.com/akkadotnet/akka.net/pull/6796)
+* [Akka.Cluster.Sharding: Fix sharding entity ID extractor nullability](https://github.com/akkadotnet/akka.net/pull/7059)
+* [Akka.Cluster.Sharding: Fix cluster sharding benchmark](https://github.com/akkadotnet/akka.net/pull/7061)
+* [Akka.TestKit: Fix Watch and Unwatch bug](https://github.com/akkadotnet/akka.net/pull/7037)
+* [Akka.Cluster.Metrics: Separate business models and wire format models](https://github.com/akkadotnet/akka.net/pull/7067)
+* [Akka.Analyzer: Bump Akka.Analyzer to 0.2.2](https://github.com/akkadotnet/akka.net/pull/7073)
+
+**Akka.Analyzers**
+
+We have expanded Akka.Analyzer and introduced 2 new rules to the Roslyn analyzer:
+* `AK1002`: Error: Must not await `Self.GracefulStop()` inside `ReceiveAsync<T>()` or `ReceiveAnyAsync`
+* `AK1003`: Warning: `ReceiveAsync<T>()` or `ReceiveAnyAsync()` message handler without async lambda body
+
+[See the full set of supported Akka.Analyzers rules here](https://getakka.net/articles/debugging/akka-analyzers.html)
+
+You can [see the full set of changes for Akka.NET v1.5.16 here](https://github.com/akkadotnet/akka.net/milestones/1.5.16).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 6       | 1268 | 628  | Gregorius Soedharmo |
+| 5       | 6    | 6    | dependabot[bot]     |
+| 2       | 286  | 224  | Aaron Stannard      |
+| 1       | 2120 | 0    | Yan Pitangui        |
+| 1       | 2    | 2    | Mattias Jakobsson   |
+| 1       | 2    | 0    | Ebere Abanonu       |
+| 1       | 0    | 65   | Simon Cropp         |
+
+#### 1.5.15 January 9th 2024 ####
+
+Akka.NET v1.5.15 is a significant release for Akka.NET with some major feature additions and changes.
+
+* [Introducing `Akka.Analyzers` - Roslyn Analysis for Akka.NET](https://getakka.net/articles/debugging/akka-analyzers.html)
+* [Akka.Cluster.Sharding: perf optimize message extraction, automate `StartEntity` and `ShardEnvelope` handling](https://github.com/akkadotnet/akka.net/pull/6863)
+* [Akka.Cluster.Tools: Make `ClusterClient` messages be serialized using `ClusterClientMessageSerializer`](https://github.com/akkadotnet/akka.net/pull/7032)
+* [Akka.Persistence: Fix `LocalSnapshotStore` Metadata Fetch to ensure persistenceid match.](https://github.com/akkadotnet/akka.net/pull/7040)
+* [Akka.Delivery: Fix `ProducerControllerImpl<T>` state bug](https://github.com/akkadotnet/akka.net/pull/7034)
+* [Change MS.EXT and System package versioning to range](https://github.com/akkadotnet/akka.net/pull/7029) - we now support all Microsoft.Extensions packages from `(6.0,]`.
+* [Akka.Serialization: `INoSerializationVerificationNeeded` does not handle `IWrappedMessage` correctly](https://github.com/akkadotnet/akka.net/pull/7010)
+
+**Akka.Analyzers**
+
+The core Akka NuGet package now references [Akka.Analyzers](https://github.com/akkadotnet/akka.analyzers), a new set of Roslyn Code Analysis and Code Fix Providers that we distribute via NuGet. You can [see the full set of supported Akka.Analyzers rules here](https://getakka.net/articles/debugging/akka-analyzers.html).
+
+**Akka.Cluster.Sharding Changes**
+
+In [#6863](https://github.com/akkadotnet/akka.net/pull/6863) we made some major changes to the Akka.Cluster.Sharding API aimed at helping improve Cluster.Sharding's performance _and_ ease of use. However, these changes _may require some effort on the part of the end user_ in order to take full advantage:
+
+* [`ExtractEntityId`](https://getakka.net/api/Akka.Cluster.Sharding.ExtractEntityId.html) and [`ExtractShardId`](https://getakka.net/api/Akka.Cluster.Sharding.ExtractShardId.html) have been deprecated as they _fundamentally can't be extended and can't benefit from the performance improvements introduced into Akka.NET v1.5.15_. It is **imperative** that you migrate to using the [`HashCodeMessageExtractor`](https://getakka.net/api/Akka.Cluster.Sharding.HashCodeMessageExtractor.html) instead.
+* You no longer need to handle [`ShardRegion.StartEntity`](https://getakka.net/api/Akka.Cluster.Sharding.ShardRegion.StartEntity.html) or [`ShardingEnvelope`](https://getakka.net/api/Akka.Cluster.Sharding.ShardingEnvelope.html) inside your `IMessageExtractor` implementations, and in fact [`AK2001`](https://getakka.net/articles/debugging/rules/AK2001.html) (part of Akka.Analyzers) will automatically detect this and remove those handlers for you. Akka.NET automatically handles these two message types internally now.
+
+**ClusterClient Serialization Changes**
+
+In [#7032](https://github.com/akkadotnet/akka.net/pull/7032) we solved a long-standing serialization problem with the [`ClusterClient`](https://getakka.net/api/Akka.Cluster.Tools.Client.ClusterClient.html) where  `Send`, `SendToAll`, and `Publish` were not handled by the correct internal serializer. This has been fixed by default in Akka.NET v1.5.15, but this can potentially cause wire compatibility problems during upgrades - therefore we have introduced a configuration setting to toggle this:
+
+```hocon
+# re-enable legacy serialization
+akka.cluster.client.use-legacy-serialization = on
+```
+
+That setting is currently set to `on` by default, so v1.5.15 will still behave like previous versions of Akka.NET. However, if you have been affected by serialization issues with the `ClusterClient` (such as [#6803](https://github.com/akkadotnet/akka.net/issues/6803)) you should toggle this setting to `off`.
+
+See "[Akka.NET v1.5.15 Upgrade Advisories](https://getakka.net/community/whats-new/akkadotnet-v1.5-upgrade-advisories.html)" for full details on some of the things you might need to do while upgrading to this version of Akka.NET.
+
+You can [see the full set of changes for Akka.NET v1.5.15 here](https://github.com/akkadotnet/akka.net/milestones/1.5.15).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |       
+| --- | --- | --- | --- |                
+| 16 | 2228 | 1490 | Aaron Stannard |    
+| 9 | 9 | 9 | dependabot[bot] |          
+| 2 | 610 | 173 | Gregorius Soedharmo |  
+| 2 | 337 | 0 | Drew |                   
+| 2 | 124 | 118 | Lehonti Ramos |        
+| 1 | 2 | 2 | Sergey Popov |             
+| 1 | 108 | 25 | Yaroslav Paslavskiy |   
+| 1 | 1 | 1 | Bert Lamb |                
+
 #### 1.5.14 September 24th 2023 ####
 
 Akka.NET v1.5.14 is a maintenance release with several bug fixes.

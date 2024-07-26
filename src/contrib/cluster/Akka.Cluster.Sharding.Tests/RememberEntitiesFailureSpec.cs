@@ -63,22 +63,32 @@ namespace Akka.Cluster.Sharding.Tests
             public object Msg { get; }
         }
 
-        private readonly ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            if (message is EntityEnvelope e)
-                return (e.EntityId.ToString(), e.Msg);
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    EntityEnvelope e => e.EntityId.ToString(),
+                    _ => null
+                };
 
-        private readonly ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case EntityEnvelope e:
-                    return (e.EntityId % 10).ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message switch
+                {
+                    EntityEnvelope e => e.Msg,
+                    _ => message
+                };
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    EntityEnvelope e => (e.EntityId % 10).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % 10).ToString();
+        }
 
         private interface IFail
         {
@@ -440,8 +450,7 @@ namespace Akka.Cluster.Sharding.Tests
                     $"initial-{wayToFail}",
                     Props.Create(() => new EntityActor()),
                     ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                    extractEntityId,
-                    extractShardId);
+                    new MessageExtractor());
 
                 sharding.Tell(new EntityEnvelope(1, "hello-1"), probe.Ref);
                 probe.ExpectNoMsg(); // message is lost because shard crashes
@@ -503,8 +512,7 @@ namespace Akka.Cluster.Sharding.Tests
                 $"shardStoreStart-{wayToFail}",
                 Props.Create(() => new EntityActor()),
                 ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                extractEntityId,
-                extractShardId);
+                new MessageExtractor());
 
             // trigger shard start and store creation
             var probe = CreateTestProbe();
@@ -584,8 +592,7 @@ namespace Akka.Cluster.Sharding.Tests
                 $"shardStoreStopAbrupt-{wayToFail}",
                 Props.Create(() => new EntityActor()),
                 ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                extractEntityId,
-                extractShardId);
+                new MessageExtractor());
 
             var probe = CreateTestProbe();
 
@@ -652,8 +659,7 @@ namespace Akka.Cluster.Sharding.Tests
                 $"shardStoreStopGraceful-{wayToFail}",
                 Props.Create(() => new EntityActor()),
                 ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                extractEntityId,
-                extractShardId,
+                new MessageExtractor(),
                 ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 1, relativeLimit: 0.1),
                 "graceful-stop");
 
@@ -726,8 +732,7 @@ namespace Akka.Cluster.Sharding.Tests
                 $"coordinatorStoreStopGraceful-{wayToFail}",
                 Props.Create(() => new EntityActor()),
                 ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                extractEntityId,
-                extractShardId,
+                new MessageExtractor(),
                 ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 1, relativeLimit: 0.1),
                 "graceful-stop");
 

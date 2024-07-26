@@ -2905,6 +2905,8 @@ namespace Akka.Streams.Implementation.Fusing
             private Attributes.LogLevels _logLevels;
             private ILoggingAdapter _log;
 
+            protected override object LogSource => Akka.Event.LogSource.Create(_stage._name);
+
             public Logic(Log<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
                 _stage = stage;
@@ -2981,17 +2983,7 @@ namespace Akka.Streams.Implementation.Fusing
                     _log = _stage._adapter;
                 else
                 {
-                    try
-                    {
-                        var materializer = ActorMaterializerHelper.Downcast(Materializer);
-                        _log = new BusLogging(materializer.System.EventStream, _stage._name, GetType(), materializer.System.Settings.LogFormatter);
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new Exception(
-                            "Log stage can only provide LoggingAdapter when used with ActorMaterializer! Provide a LoggingAdapter explicitly or use the actor based flow materializer.",
-                            ex);
-                    }
+                    _log = Log;
                 }
             }
 

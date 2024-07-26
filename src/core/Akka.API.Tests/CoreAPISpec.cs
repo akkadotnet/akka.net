@@ -5,9 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.IO;
-using System.Reflection;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster;
@@ -23,11 +20,11 @@ using Akka.Persistence.Query.InMemory;
 using Akka.Persistence.Query.Sql;
 using Akka.Persistence.Sql.Common.Journal;
 using Akka.Streams;
+using Akka.TestKit;
 using VerifyXunit;
 
 namespace Akka.API.Tests
 {
-    [UsesVerify]
     public class CoreAPISpec
     {
         static Task VerifyAssembly<T>()
@@ -123,6 +120,19 @@ namespace Akka.API.Tests
         public Task ApproveDiscovery()
         {
             return VerifyAssembly<Discovery.Lookup>();
+        }
+        
+        [Fact]
+        public Task ApproveTestKit()
+        {
+            return VerifyAssembly<TestKitBase>();
+        }
+        
+        
+        [Fact]
+        public Task ApproveTestKitXunit2()
+        {
+            return VerifyAssembly<TestKit.Xunit2.TestKit>();
         }
     }
 }

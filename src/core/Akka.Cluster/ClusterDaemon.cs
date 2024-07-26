@@ -1051,7 +1051,7 @@ namespace Akka.Cluster
             });
         }
 
-        private ActorSelection ClusterCore(Address address)
+        private static ActorSelection ClusterCore(Address address)
         {
             return Context.ActorSelection(new RootActorPath(address) / "system" / "cluster" / "core" / "daemon");
         }
@@ -1801,14 +1801,17 @@ namespace Akka.Cluster
 
             if (remoteGossip.Equals(Gossip.Empty))
             {
-                _log.Debug("Cluster Node [{0}] - Ignoring received gossip from [{1}] to protect against overload",
+                _log.Debug("Cluster Node [{0}] - Ignoring empty received gossip from [{1}] to protect against overload",
                     _cluster.SelfAddress, from);
                 return ReceiveGossipType.Ignored;
             }
             if (!envelope.To.Equals(SelfUniqueAddress))
             {
-                _cluster.LogInfo("Ignoring received gossip intended for someone else, from [{0}] to [{1}]",
-                    from.Address, envelope.To);
+                _cluster.LogInfo("Ignoring received gossip intended for someone else, from [{0}] to [{1}]. Our full address is [{2}]",
+                    from.Address, envelope.To, SelfUniqueAddress);
+                
+                // TODO: if the gossip is received for a version of ourselves with a different UID, do we issue a Down command?
+                
                 return ReceiveGossipType.Ignored;
             }
             if (!localGossip.HasMember(from))
@@ -2234,8 +2237,7 @@ namespace Akka.Cluster
             var localOverview = localGossip.Overview;
             var localSeen = localOverview.Seen;
 
-            bool enoughMembers = IsMinNrOfMembersFulfilled();
-            bool IsJoiningUp(Member m) => m.Status is MemberStatus.Joining or MemberStatus.WeaklyUp && enoughMembers;
+            var enoughMembers = IsMinNrOfMembersFulfilled();
 
             var removedUnreachable =
                 localOverview.Reachability.AllUnreachableOrTerminated.Select(localGossip.GetMember)
@@ -2339,15 +2341,19 @@ namespace Akka.Cluster
                 }
 
                 PublishMembershipState();
-                GossipExitingMembersToOldest(changedMembers.Where(i => i.Status == MemberStatus.Exiting));
+                GossipExitingMembersToOldest(changedMembers.Where(i => i.Status == MemberStatus.Exiting).ToArray());
             }
+
+            return;
+
+            bool IsJoiningUp(Member m) => m.Status is MemberStatus.Joining or MemberStatus.WeaklyUp && enoughMembers;
         }
 
         /// <summary>
         /// Gossip the Exiting change to the two oldest nodes for quick dissemination to potential Singleton nodes
         /// </summary>
         /// <param name="exitingMembers"></param>
-        private void GossipExitingMembersToOldest(IEnumerable<Member> exitingMembers)
+        private void GossipExitingMembersToOldest(IReadOnlyCollection<Member> exitingMembers)
         {
             var targets = GossipTargetsForExitingMembers(LatestGossip, exitingMembers);
             if (targets != null && targets.Any())
@@ -2509,9 +2515,9 @@ namespace Akka.Cluster
         /// <param name="latestGossip"></param>
         /// <param name="exitingMembers"></param>
         /// <returns></returns>
-        public static IEnumerable<Member> GossipTargetsForExitingMembers(Gossip latestGossip, IEnumerable<Member> exitingMembers)
+        public static IReadOnlyCollection<Member> GossipTargetsForExitingMembers(Gossip latestGossip, IReadOnlyCollection<Member> exitingMembers)
         {
-            if (exitingMembers.Any())
+            if (exitingMembers.Count > 0)
             {
                 var roles = exitingMembers.SelectMany(m => m.Roles);
                 var membersSortedByAge = latestGossip.Members

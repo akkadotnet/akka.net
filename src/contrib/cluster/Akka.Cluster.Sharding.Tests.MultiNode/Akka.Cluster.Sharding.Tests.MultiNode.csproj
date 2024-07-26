@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Cluster.Sharding.Tests.MultiNode</AssemblyTitle>
-    <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,7 +15,8 @@
   <ItemGroup>
       <PackageReference Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+      <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+      <PackageReference Include="xunit" Version="$(XunitVersion)"/>
       <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVersion)">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

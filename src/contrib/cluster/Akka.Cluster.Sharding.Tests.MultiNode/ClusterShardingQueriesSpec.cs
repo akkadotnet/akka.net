@@ -51,25 +51,28 @@ namespace Akka.Cluster.Sharding.Tests
     {
         #region setup
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            switch (message)
-            {
-                case PingPongActor.Ping msg:
-                    return (msg.Id.ToString(), message);
-            }
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    PingPongActor.Ping p => p.Id.ToString(),
+                    _ => null
+                };
 
-        private ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case PingPongActor.Ping msg:
-                    return (msg.Id % NumberOfShards).ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    PingPongActor.Ping p => (p.Id % NumberOfShards).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % NumberOfShards).ToString();
+        }
 
         private const int NumberOfShards = 6;
         private const string ShardTypeName = "DatatypeA";
@@ -100,7 +103,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void Querying_cluster_sharding_must_join_cluster_initialize_sharding()
         {
-            AwaitClusterUp(config.Controller, config.Busy, config.Second, config.Third);
+            AwaitClusterUp(Config.Controller, Config.Busy, Config.Second, Config.Third);
 
             RunOn(() =>
             {
@@ -108,9 +111,8 @@ namespace Akka.Cluster.Sharding.Tests
                     Sys,
                     typeName: ShardTypeName,
                     role: "shard",
-                    extractEntityId: extractEntityId,
-                    extractShardId: extractShardId);
-            }, config.Controller);
+                    messageExtractor: new MessageExtractor());
+            }, Config.Controller);
 
             RunOn(() =>
             {
@@ -118,10 +120,9 @@ namespace Akka.Cluster.Sharding.Tests
                     Sys,
                     typeName: ShardTypeName,
                     entityProps: Props.Create(() => new PingPongActor()),
-                    settings: settings.Value.WithRole("shard"),
-                    extractEntityId: extractEntityId,
-                    extractShardId: extractShardId);
-            }, config.Busy, config.Second, config.Third);
+                    settings: Settings.Value.WithRole("shard"),
+                    messageExtractor: new MessageExtractor());
+            }, Config.Busy, Config.Second, Config.Third);
 
             EnterBarrier("sharding started");
         }
@@ -142,7 +143,7 @@ namespace Akka.Cluster.Sharding.Tests
                         pingProbe.ReceiveWhile(null, m => (PingPongActor.Pong)m, 20);
                     });
                 });
-            }, config.Controller);
+            }, Config.Controller);
             EnterBarrier("sharded actors started");
         }
 
@@ -161,7 +162,7 @@ namespace Akka.Cluster.Sharding.Tests
                 // within shard-region-query-timeout, which only on first is 0ms
                 regions.Values.Select(i => i.Stats.Count).Sum().Should().Be(4);
                 regions.Values.Select(i => i.Failed.Count).Sum().Should().Be(timeouts);
-            }, config.Busy, config.Second, config.Third);
+            }, Config.Busy, Config.Second, Config.Third);
             EnterBarrier("received failed stats from timed out shards vs empty");
         }
 
@@ -175,7 +176,7 @@ namespace Akka.Cluster.Sharding.Tests
                 var state = probe.ExpectMsg<CurrentShardRegionState>();
                 state.Shards.Should().BeEmpty();
                 state.Failed.Should().HaveCount(2);
-            }, config.Busy);
+            }, Config.Busy);
             EnterBarrier("query-timeout-on-busy-node");
 
             RunOn(() =>
@@ -187,7 +188,7 @@ namespace Akka.Cluster.Sharding.Tests
                 var state = probe.ExpectMsg<CurrentShardRegionState>();
                 state.Shards.Should().HaveCount(2);
                 state.Failed.Should().BeEmpty();
-            }, config.Second, config.Third);
+            }, Config.Second, Config.Third);
             EnterBarrier("done");
         }
     }

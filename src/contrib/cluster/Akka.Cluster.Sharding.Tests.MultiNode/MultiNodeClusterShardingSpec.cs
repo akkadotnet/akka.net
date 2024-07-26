@@ -131,54 +131,58 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal ExtractEntityId IntExtractEntityId = message =>
+        private sealed class IntMessageExtractor: IMessageExtractor
         {
-            if (message is int id)
-                return (id.ToString(), message);
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    int id => id.ToString(),
+                    _ => null
+                };
 
-        internal ExtractShardId IntExtractShardId = message =>
-        {
-            switch (message)
-            {
-                case int id:
-                    return id.ToString();
-                case ShardRegion.StartEntity se:
-                    return se.EntityId;
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message;
 
-        protected readonly TConfig config;
+            public string ShardId(object message)
+                => message switch
+                {
+                    int id => id.ToString(),
+                    _ => null
+                };
 
-        protected readonly Lazy<ClusterShardingSettings> settings;
+            public string ShardId(string entityId, object messageHint = null)
+                => entityId;
+        }
 
-        private readonly Lazy<IShardAllocationStrategy> defaultShardAllocationStrategy;
+        protected readonly TConfig Config;
+
+        protected readonly Lazy<ClusterShardingSettings> Settings;
+
+        private readonly Lazy<IShardAllocationStrategy> _defaultShardAllocationStrategy;
 
         protected MultiNodeClusterShardingSpec(TConfig config, Type type)
             : base(config, type)
         {
-            this.config = config;
+            this.Config = config;
             ClearStorage();
             EnterBarrier("startup");
 
-            settings = new Lazy<ClusterShardingSettings>(() =>
+            Settings = new Lazy<ClusterShardingSettings>(() =>
             {
                 return ClusterShardingSettings.Create(Sys).WithRememberEntities(config.RememberEntities);
             });
-            defaultShardAllocationStrategy = new Lazy<IShardAllocationStrategy>(() =>
+            _defaultShardAllocationStrategy = new Lazy<IShardAllocationStrategy>(() =>
             {
-                return ClusterSharding.Get(Sys).DefaultShardAllocationStrategy(settings.Value);
+                return ClusterSharding.Get(Sys).DefaultShardAllocationStrategy(Settings.Value);
             });
         }
 
         protected override int InitialParticipantsValueFactory => Roles.Count;
 
 
-        protected bool IsDdataMode => config.Mode == StateStoreMode.DData;
+        protected bool IsDdataMode => Config.Mode == StateStoreMode.DData;
 
-        protected bool PersistenceIsNeeded => config.Mode == StateStoreMode.Persistence
+        protected bool PersistenceIsNeeded => Config.Mode == StateStoreMode.Persistence
             || Sys.Settings.Config.GetString("akka.cluster.sharding.remember-entities-store").Equals(RememberEntitiesStore.Eventsourced.ToString(), StringComparison.InvariantCultureIgnoreCase);
 
         private void ClearStorage()
@@ -236,24 +240,22 @@ namespace Akka.Cluster.Sharding.Tests
             }, from);
             EnterBarrier(from.Name + "-joined");
         }
-
+        
         protected IActorRef StartSharding(
             ActorSystem sys,
             string typeName,
+            IMessageExtractor messageExtractor = null,
             Props entityProps = null,
             ClusterShardingSettings settings = null,
-            ExtractEntityId extractEntityId = null,
-            ExtractShardId extractShardId = null,
             IShardAllocationStrategy allocationStrategy = null,
             object handOffStopMessage = null)
         {
             return ClusterSharding.Get(sys).Start(
                 typeName,
                 entityProps ?? SimpleEchoActor.Props(),
-                settings ?? this.settings.Value,
-                extractEntityId ?? IntExtractEntityId,
-                extractShardId ?? IntExtractShardId,
-                allocationStrategy ?? defaultShardAllocationStrategy.Value,
+                settings ?? Settings.Value,
+                messageExtractor ?? new IntMessageExtractor(),
+                allocationStrategy ?? _defaultShardAllocationStrategy.Value,
                 handOffStopMessage ?? PoisonPill.Instance);
         }
 
@@ -261,10 +263,9 @@ namespace Akka.Cluster.Sharding.Tests
             ActorSystem sys,
             string typeName,
             string role,
-            ExtractEntityId extractEntityId,
-            ExtractShardId extractShardId)
+            IMessageExtractor messageExtractor = null)
         {
-            return ClusterSharding.Get(sys).StartProxy(typeName, role, extractEntityId, extractShardId);
+            return ClusterSharding.Get(sys).StartProxy(typeName, role, messageExtractor ?? new IntMessageExtractor());
         }
 
         protected void SetStoreIfNeeded(ActorSystem sys, RoleName storeOn)

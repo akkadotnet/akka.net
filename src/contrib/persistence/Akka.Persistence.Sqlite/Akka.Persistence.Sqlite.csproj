@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.Persistence.Sqlite</AssemblyTitle>
         <Description>Akka.NET Persistence journal and snapshot store backed by SQLite.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;sqlite</PackageTags>
@@ -15,7 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Data.SQLite" Version="7.0.13"/>
+        <PackageReference Include="Microsoft.Data.SQLite" Version="8.0.4"/>
     </ItemGroup>
 
 </Project>

@@ -5,13 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Annotations;
 using Akka.Util;
-using Akka.Util.Internal;
-using Newtonsoft.Json;
 
 namespace Akka.Cluster.Metrics.Serialization
 {
@@ -21,9 +18,9 @@ namespace Akka.Cluster.Metrics.Serialization
     /// Metrics gossip message
     /// </summary>
     [InternalApi]
-    public sealed partial class MetricsGossip
+    public sealed class MetricsGossip
     {
-        public IImmutableSet<NodeMetrics> Nodes { get; private set; } = ImmutableHashSet<NodeMetrics>.Empty;
+        public IImmutableSet<NodeMetrics> Nodes { get; }
 
         /// <summary>
         /// Empty metrics gossip
@@ -40,7 +37,7 @@ namespace Akka.Cluster.Metrics.Serialization
         /// </summary>
         public MetricsGossip Remove(Actor.Address node)
         {
-            return new MetricsGossip(Nodes.Where(n => !n.Address.Equals(node)).ToImmutableHashSet());
+            return new MetricsGossip(Nodes.Where(n => !n.Address.Equals(node)).ToImmutableHashSet(NodeMetricsComparer.Instance));
         }
 
         /// <summary>
@@ -48,7 +45,7 @@ namespace Akka.Cluster.Metrics.Serialization
         /// </summary>
         public MetricsGossip Filter(IImmutableSet<Actor.Address> includeNodes)
         {
-            return new MetricsGossip(Nodes.Where(n => includeNodes.Contains(n.Address)).ToImmutableHashSet());
+            return new MetricsGossip(Nodes.Where(n => includeNodes.Contains(n.Address)).ToImmutableHashSet(NodeMetricsComparer.Instance));
         }
 
         /// <summary>
@@ -77,7 +74,7 @@ namespace Akka.Cluster.Metrics.Serialization
         public Option<NodeMetrics> NodeMetricsFor(Actor.Address address)
         {
             var node = Nodes.FirstOrDefault(m => m.Address.Equals(address));
-            return node ?? Option<NodeMetrics>.None;
+            return node is not null ? Option<NodeMetrics>.Create(node) : Option<NodeMetrics>.None;
         }
     }
 }

@@ -113,40 +113,51 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private static ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor1: IMessageExtractor
         {
-            switch (message)
-            {
-                case int id:
-                    return (id.ToString(), id);
-            }
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    int id => id.ToString(),
+                    _ => null
+                };
 
-        private static ExtractShardId extractShardId1 = message =>
-        {
-            switch (message)
-            {
-                case int id:
-                    return (id % ShardCount).ToString();
-                case ShardRegion.StartEntity msg:
-                    return extractShardId1(msg.EntityId);
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message;
 
-        private static ExtractShardId extractShardId2 = message =>
+            public string ShardId(object message)
+                => message switch
+                {
+                    int id => (id % ShardCount).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % ShardCount).ToString();
+        }
+        
+        private sealed class MessageExtractor2: IMessageExtractor
         {
-            // always bump it one shard id
-            switch (message)
-            {
-                case int id:
-                    return ((id + 1) % ShardCount).ToString();
-                case ShardRegion.StartEntity msg:
-                    return extractShardId2(msg.EntityId);
-            }
-            return null;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    int id => id.ToString(),
+                    _ => null
+                };
+
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    int id => ((id + 1) % ShardCount).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => ((int.Parse(entityId) + 1) % ShardCount).ToString();
+        }
 
         private const int ShardCount = 3;
         private const string TypeName = "Entity";
@@ -162,9 +173,8 @@ namespace Akka.Cluster.Sharding.Tests
                 Sys,
                 typeName: TypeName,
                 entityProps: Props.Create(() => new TestEntity(null)),
-                settings: settings.Value.WithRole("sharding"),
-                extractEntityId: extractEntityId,
-                extractShardId: extractShardId1);
+                settings: Settings.Value.WithRole("sharding"),
+                messageExtractor: new MessageExtractor1());
         }
 
         private void StartShardingWithExtractor2(ActorSystem sys, IActorRef probe)
@@ -173,9 +183,8 @@ namespace Akka.Cluster.Sharding.Tests
                 sys,
                 typeName: TypeName,
                 entityProps: Props.Create(() => new TestEntity(probe)),
-                settings: ClusterShardingSettings.Create(sys).WithRememberEntities(config.RememberEntities).WithRole("sharding"),
-                extractEntityId: extractEntityId,
-                extractShardId: extractShardId2);
+                settings: ClusterShardingSettings.Create(sys).WithRememberEntities(Config.RememberEntities).WithRole("sharding"),
+                messageExtractor: new MessageExtractor2());
         }
 
         private IActorRef Region(ActorSystem sys = null)
@@ -198,11 +207,11 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(15), () =>
             {
-                StartPersistenceIfNeeded(startOn: config.First, config.Second, config.Third);
+                StartPersistenceIfNeeded(startOn: Config.First, Config.Second, Config.Third);
 
-                Join(config.First, config.First);
-                Join(config.Second, config.First);
-                Join(config.Third, config.First);
+                Join(Config.First, Config.First);
+                Join(Config.Second, Config.First);
+                Join(Config.Third, Config.First);
 
                 RunOn(() =>
                 {
@@ -213,12 +222,12 @@ namespace Akka.Cluster.Sharding.Tests
                             Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(3);
                         });
                     });
-                }, config.First, config.Second, config.Third);
+                }, Config.First, Config.Second, Config.Third);
 
                 RunOn(() =>
                 {
                     StartShardingWithExtractor1();
-                }, config.Second, config.Third);
+                }, Config.Second, Config.Third);
                 EnterBarrier("first-cluster-up");
 
                 RunOn(() =>
@@ -229,7 +238,7 @@ namespace Akka.Cluster.Sharding.Tests
                         Region().Tell(n);
                         ExpectMsg(n);
                     }
-                }, config.Second, config.Third);
+                }, Config.Second, Config.Third);
                 EnterBarrier("first-cluster-entities-up");
             });
         }
@@ -240,9 +249,9 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 RunOn(() =>
                 {
-                    TestConductor.Exit(config.Second, 0).Wait();
-                    TestConductor.Exit(config.Third, 0).Wait();
-                }, config.First);
+                    TestConductor.Exit(Config.Second, 0).Wait();
+                    TestConductor.Exit(Config.Third, 0).Wait();
+                }, Config.First);
 
                 RunOn(() =>
                 {
@@ -253,7 +262,7 @@ namespace Akka.Cluster.Sharding.Tests
                             Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(1);
                         });
                     });
-                }, config.First);
+                }, Config.First);
 
             });
             EnterBarrier("first-sharding-cluster-stopped");
@@ -263,7 +272,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
-                // start it with a new shard id extractor, which will put the entities
+                // start it with a new shard id messageExtractor, which will put the entities
                 // on different shards
 
                 RunOn(() =>
@@ -276,7 +285,7 @@ namespace Akka.Cluster.Sharding.Tests
                         Cluster.Get(Sys).IsTerminated.Should().BeTrue();
                     });
 
-                }, config.Second, config.Third);
+                }, Config.Second, Config.Third);
                 EnterBarrier("first-cluster-terminated");
 
                 // no sharding nodes left of the original cluster, start a new nodes
@@ -287,16 +296,16 @@ namespace Akka.Cluster.Sharding.Tests
 
                     if (PersistenceIsNeeded)
                     {
-                        SetStore(sys2, storeOn: config.First);
+                        SetStore(sys2, storeOn: Config.First);
 
                         ////Persistence.Persistence.Instance.Apply(sys2);
-                        //sys2.ActorSelection(Node(config.First) / "system" / "akka.persistence.journal.sqlite").Tell(new Identify(null), probe2.Ref);
+                        //sys2.ActorSelection(Node(_config.First) / "system" / "akka.persistence.journal.sqlite").Tell(new Identify(null), probe2.Ref);
                         //var sharedStore = probe2.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
                         //sharedStore.Should().NotBeNull();
                         //SqliteJournalShared.SetStore(sharedStore, sys2);
                     }
 
-                    Cluster.Get(sys2).Join(Node(config.First).Address);
+                    Cluster.Get(sys2).Join(Node(Config.First).Address);
                     StartShardingWithExtractor2(sys2, probe2.Ref);
                     probe2.ExpectMsg<Started>(TimeSpan.FromSeconds(20));
 
@@ -312,23 +321,24 @@ namespace Akka.Cluster.Sharding.Tests
                         });
                     });
 
+                    var extractor = new MessageExtractor2();
                     foreach (var shardState in stats.Shards)
                     {
                         foreach (var entityId in shardState.EntityIds)
                         {
-                            var calculatedShardId = extractShardId2(int.Parse(entityId));
+                            var calculatedShardId = extractor.ShardId(entityId);
                             calculatedShardId.Should().BeEquivalentTo(shardState.ShardId);
                         }
                     }
 
                     EnterBarrier("verified");
                     Shutdown(sys2);
-                }, config.Second, config.Third);
+                }, Config.Second, Config.Third);
 
                 RunOn(() =>
                 {
                     EnterBarrier("verified");
-                }, config.First);
+                }, Config.First);
 
                 EnterBarrier("done");
             });

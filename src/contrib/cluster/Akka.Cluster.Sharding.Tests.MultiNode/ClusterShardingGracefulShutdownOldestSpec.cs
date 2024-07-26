@@ -125,14 +125,14 @@ namespace Akka.Cluster.Sharding.Tests
         // slow stop previously made it more likely that the coordinator would stop before the local region
         public class SlowStopShardedEntity : ActorBase, IWithTimers
         {
+            #region StopMessage
             public class Stop
             {
                 public static Stop Instance = new();
 
-                private Stop()
-                {
-                }
+                private Stop() { }
             }
+            #endregion
 
             public class ActualStop
             {
@@ -145,6 +145,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             public ITimerScheduler Timers { get; set; }
 
+            #region DelayedStop
             protected override bool Receive(object message)
             {
                 switch (message)
@@ -161,6 +162,30 @@ namespace Akka.Cluster.Sharding.Tests
                 }
                 return false;
             }
+            #endregion
+        }
+
+        private sealed class MessageExtractor: IMessageExtractor
+        {
+            public string EntityId(object message)
+                => message switch
+                {
+                    int id => id.ToString(),
+                    _ => null
+                };
+
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    int id => id.ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => entityId;
         }
 
         private const string TypeName = "Entity";
@@ -177,21 +202,17 @@ namespace Akka.Cluster.Sharding.Tests
             base.Join(from, to);
             RunOn(() =>
             {
-                StartSharding(typeName);
+                #region ClusterStart
+                ClusterSharding.Get(system: Sys).Start(
+                    typeName: typeName,
+                    entityProps: Props.Create(() => new SlowStopShardedEntity()),
+                    settings: Settings.Value,
+                    messageExtractor: new MessageExtractor(),
+                    allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0),
+                    handOffStopMessage: SlowStopShardedEntity.Stop.Instance); // This is the custom handoff message instance
+                #endregion
             }, from);
             EnterBarrier($"{from}-started");
-        }
-
-        private IActorRef StartSharding(string typeName)
-        {
-            return StartSharding(
-                Sys,
-                typeName,
-                entityProps: Props.Create(() => new SlowStopShardedEntity()),
-                extractEntityId: IntExtractEntityId,
-                extractShardId: IntExtractShardId,
-                allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0),
-                handOffStopMessage: SlowStopShardedEntity.Stop.Instance);
         }
 
         #endregion
@@ -207,10 +228,10 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
-                StartPersistenceIfNeeded(startOn: config.First, config.First, config.Second);
+                StartPersistenceIfNeeded(startOn: Config.First, Config.First, Config.Second);
 
-                Join(config.First, config.First, TypeName);
-                Join(config.Second, config.First, TypeName);
+                Join(Config.First, Config.First, TypeName);
+                Join(Config.Second, Config.First, TypeName);
 
                 AwaitAssert(() =>
                 {
@@ -245,12 +266,12 @@ namespace Akka.Cluster.Sharding.Tests
                     Sys.ActorOf(TerminationOrderActor.Props(terminationProbe.Ref, coordinator, _region.Value));
 
                     // trigger graceful shutdown
-                    Cluster.Leave(GetAddress(config.First));
+                    Cluster.Leave(GetAddress(Config.First));
 
                     // region first
                     terminationProbe.ExpectMsg<TerminationOrderActor.RegionTerminated>();
                     terminationProbe.ExpectMsg<TerminationOrderActor.CoordinatorTerminated>();
-                }, config.First);
+                }, Config.First);
 
                 EnterBarrier("terminated");
 
@@ -269,7 +290,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                         responses.Count.Should().Be(100);
                     });
-                }, config.Second);
+                }, Config.Second);
                 EnterBarrier("done-o");
             });
         }

@@ -39,12 +39,14 @@ public static class ShardingConsumerController
 {
     public sealed record Settings
     {
-        private Settings(int bufferSize, ConsumerController.Settings consumerControllerSettings)
+        private Settings(Config config, ConsumerController.Settings consumerControllerSettings)
         {
-            BufferSize = bufferSize;
+            AllowBypass = config.GetBoolean("allow-bypass");
+            BufferSize = config.GetInt("buffer-size");
             ConsumerControllerSettings = consumerControllerSettings;
         }
 
+        public bool AllowBypass { get; init; }
         public int BufferSize { get; init; }
         
         public ConsumerController.Settings ConsumerControllerSettings { get; init; }
@@ -58,7 +60,7 @@ public static class ShardingConsumerController
 
         internal static Settings Create(Config config, Config consumerControllerConfig) // made internal so users can't foot-gun themselves
         {
-            return new Settings(config.GetInt("buffer-size"), ConsumerController.Settings.Create(config.WithFallback(consumerControllerConfig)));
+            return new Settings(config, ConsumerController.Settings.Create(config.WithFallback(consumerControllerConfig)));
         }
 
         public override string ToString()

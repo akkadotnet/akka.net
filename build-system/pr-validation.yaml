@@ -56,7 +56,6 @@ jobs:
     displayName: Windows Build
     pool:
       vmImage: windows-latest
-      demands: Cmd
     steps:
       - checkout: self # self represents the repo where the initial Pipelines YAML file was found
         clean: false # whether to fetch clean each time
@@ -80,10 +79,12 @@ jobs:
           contents: "*"
           targetFolder: $(Build.ArtifactStagingDirectory)
           continueOnError: boolean # 'true' if future steps should run even if this step fails; defaults to 'false'
+
       - task: PublishBuildArtifacts@1
         inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
           artifactName: "incrementalistOutput-$(Build.BuildId)"
+
       - script: "echo 1>&2"
         failOnStderr: true
         displayName: "If above is partially succeeded, then fail"

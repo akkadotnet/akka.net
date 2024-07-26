@@ -12,9 +12,11 @@
     <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Query.InMemory\Akka.Persistence.Query.InMemory.csproj" />
     <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.csproj" />
     <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
     <ProjectReference Include="..\Akka.Coordination\Akka.Coordination.csproj" />
     <ProjectReference Include="..\Akka.Discovery\Akka.Discovery.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Query\Akka.Persistence.Query.csproj" />
+    <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
     <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
@@ -28,8 +30,8 @@
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
     <PackageReference Include="PublicApiGenerator" Version="9.3.0" />
-    <PackageReference Include="Verify.Xunit" Version="20.8.2" />
-    <PackageReference Include="Verify.DiffPlex" Version="2.2.1" />
+    <PackageReference Include="Verify.Xunit" Version="25.0.2" />
+    <PackageReference Include="Verify.DiffPlex" Version="3.0.0" />
   </ItemGroup>
 
 </Project>

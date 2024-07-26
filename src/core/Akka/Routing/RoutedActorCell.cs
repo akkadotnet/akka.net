@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Actor.Scheduler;
 using Akka.Dispatch;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -193,7 +194,14 @@ namespace Akka.Routing
             if (RouterConfig.IsManagementMessage(envelope.Message))
                 base.SendMessage(envelope);
             else
-                Router.Route(envelope.Message, envelope.Sender);
+            {
+                // Bugfix: https://github.com/akkadotnet/akka.net/issues/7247 
+                if(envelope.Message is IScheduledTellMsg scheduledTellMsg)
+                    Router.Route(scheduledTellMsg.Message, envelope.Sender);
+                else
+                    Router.Route(envelope.Message, envelope.Sender);
+            }
+               
         }
 
         /// <summary>

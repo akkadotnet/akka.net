@@ -14,6 +14,7 @@ public static class ModuleInit
     [ModuleInitializer]
     public static void Init()
     {
+        VerifyDiffPlex.Initialize();
         VerifierSettings.ScrubLinesContaining("[assembly: ReleaseDateAttribute(");
         Verifier.UseProjectRelativeDirectory("verify");
         VerifierSettings.UniqueForRuntime();

@@ -49,25 +49,28 @@ namespace Akka.Cluster.Sharding.Tests
         private const int NumberOfShards = 3;
         private const string ShardTypeName = "Ping";
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            switch (message)
-            {
-                case PingPongActor.Ping msg:
-                    return (msg.Id.ToString(), message);
-            }
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    PingPongActor.Ping p => p.Id.ToString(),
+                    _ => null
+                };
 
-        private ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case PingPongActor.Ping msg:
-                    return (msg.Id % NumberOfShards).ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    PingPongActor.Ping p => (p.Id % NumberOfShards).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % NumberOfShards).ToString();
+        }
 
         private readonly Lazy<IActorRef> _region;
 
@@ -88,9 +91,8 @@ namespace Akka.Cluster.Sharding.Tests
                 Sys,
                 typeName: ShardTypeName,
                 entityProps: Props.Create(() => new PingPongActor()),
-                settings: settings.Value.WithRole("shard"),
-                extractEntityId: extractEntityId,
-                extractShardId: extractShardId);
+                settings: Settings.Value.WithRole("shard"),
+                messageExtractor: new MessageExtractor());
         }
 
         #endregion
@@ -107,10 +109,10 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void Inspecting_cluster_sharding_state_must_join_cluster()
         {
-            Join(config.Controller, config.Controller);
-            Join(config.First, config.Controller);
-            Join(config.Second, config.Controller);
-            Join(config.Third, config.Controller);
+            Join(Config.Controller, Config.Controller);
+            Join(Config.First, Config.Controller);
+            Join(Config.Second, Config.Controller);
+            Join(Config.Third, Config.Controller);
 
             // make sure all nodes are up
             Within(TimeSpan.FromSeconds(10), () =>
@@ -127,15 +129,14 @@ namespace Akka.Cluster.Sharding.Tests
                     Sys,
                     typeName: ShardTypeName,
                     role: "shard",
-                    extractEntityId: extractEntityId,
-                    extractShardId: extractShardId);
+                    messageExtractor: new MessageExtractor());
 
-            }, config.Controller);
+            }, Config.Controller);
 
             RunOn(() =>
             {
                 StartShard();
-            }, config.First, config.Second, config.Third);
+            }, Config.First, Config.Second, Config.Third);
 
             EnterBarrier("sharding started");
         }
@@ -177,7 +178,7 @@ namespace Akka.Cluster.Sharding.Tests
                         pingProbe.ReceiveWhile(null, m => (PingPongActor.Pong)m, 4);
                     });
                 });
-            }, config.Controller);
+            }, Config.Controller);
 
             EnterBarrier("sharded actors started");
         }
@@ -206,8 +207,8 @@ namespace Akka.Cluster.Sharding.Tests
         {
             RunOn(() =>
             {
-                Cluster.Get(Sys).Leave(Node(config.Third).Address);
-            }, config.Controller);
+                Cluster.Get(Sys).Leave(Node(Config.Third).Address);
+            }, Config.Controller);
 
             RunOn(() =>
             {
@@ -218,7 +219,7 @@ namespace Akka.Cluster.Sharding.Tests
                         Cluster.Get(Sys).State.Members.Count.Should().Be(3);
                     });
                 });
-            }, config.First, config.Second);
+            }, Config.First, Config.Second);
 
             EnterBarrier("third node removed");
             Sys.Log.Info("third node removed");
@@ -238,7 +239,7 @@ namespace Akka.Cluster.Sharding.Tests
                         pingProbe.ReceiveWhile(null, m => (PingPongActor.Pong)m, 4);
                     });
                 });
-            }, config.Controller);
+            }, Config.Controller);
 
             EnterBarrier("shards revived");
 
@@ -255,7 +256,7 @@ namespace Akka.Cluster.Sharding.Tests
                         regions.Values.SelectMany(i => i.Stats.Values).Sum().Should().Be(4);
                     });
                 });
-            }, config.Controller);
+            }, Config.Controller);
 
             EnterBarrier("done");
         }

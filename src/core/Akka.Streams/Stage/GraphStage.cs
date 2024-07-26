@@ -46,7 +46,7 @@ namespace Akka.Streams.Stage
     /// TBD
     /// </summary>
     /// <typeparam name="TMaterialized">TBD</typeparam>
-    public struct LogicAndMaterializedValue<TMaterialized> : ILogicAndMaterializedValue<TMaterialized>
+    public readonly struct LogicAndMaterializedValue<TMaterialized> : ILogicAndMaterializedValue<TMaterialized>
     {
         /// <summary>
         /// TBD
@@ -840,7 +840,7 @@ namespace Akka.Streams.Stage
         /// <param name="shape">TBD</param>
         protected GraphStageLogic(Shape shape) : this(shape.Inlets.Count(), shape.Outlets.Count())
         {
-            LogSource = Akka.Event.LogSource.Create(shape);
+            LogSource = Akka.Event.LogSource.Create(shape.ToString());
         }
 
         /// <summary>
@@ -1708,7 +1708,7 @@ namespace Akka.Streams.Stage
         /// Override and return a name to be given to the StageActor of this stage.
         /// 
         /// This method will be only invoked and used once, during the first <see cref="GetStageActor"/>
-        /// invocation whichc reates the actor, since subsequent `getStageActors` calls function
+        /// invocation which creates the actor, since subsequent `getStageActors` calls function
         /// like `become`, rather than creating new actors.
         /// 
         /// Returns an empty string by default, which means that the name will a unique generated String (e.g. "$$a").

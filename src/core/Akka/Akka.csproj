@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyTitle>Akka</AssemblyTitle>
     <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
     <Description>Canonical actor model implementation for .NET with local + distributed actors in C# and F#.</Description>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
@@ -14,16 +13,19 @@
 
   <ItemGroup>
       <PackageReference Include="Polyfill" Version="1.28.0" PrivateAssets="all" />
-      <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="7.0.10" />
+      <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="$(MsExtVersion)" />
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
-      <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />     
+      <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
       <PackageReference Include="System.Collections.Immutable" Version="$(MicrosoftLibVersion)" />
       <PackageReference Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
-      <PackageReference Include="System.Configuration.ConfigurationManager">
-          <Version>$(ConfigurationManagerVersion)</Version>
-      </PackageReference>
+      <PackageReference Include="System.Configuration.ConfigurationManager" Version="$(ConfigurationManagerVersion)"/>
+      
   </ItemGroup>
-
+  
+  <ItemGroup Label="PublicAnalyzers">
+    <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" />
+  </ItemGroup>
+  
   <ItemGroup>
     <None Update="Util\MatchHandler\PartialHandlerArgumentsCapture.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

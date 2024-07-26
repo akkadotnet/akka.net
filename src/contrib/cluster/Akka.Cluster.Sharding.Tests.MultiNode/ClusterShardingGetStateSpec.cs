@@ -48,25 +48,28 @@ namespace Akka.Cluster.Sharding.Tests
         private const int NumberOfShards = 2;
         private const string ShardTypeName = "Ping";
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            switch (message)
-            {
-                case PingPongActor.Ping msg:
-                    return (msg.Id.ToString(), message);
-            }
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    PingPongActor.Ping p => p.Id.ToString(),
+                    _ => null
+                };
 
-        private ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case PingPongActor.Ping msg:
-                    return (msg.Id % NumberOfShards).ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    PingPongActor.Ping p => (p.Id % NumberOfShards).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % NumberOfShards).ToString();
+        }
 
         public ClusterShardingGetStateSpec()
             : this(new ClusterShardingGetStateSpecConfig(), typeof(ClusterShardingGetStateSpec))
@@ -91,9 +94,9 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void Inspecting_cluster_sharding_state_must_join_cluster()
         {
-            Join(config.Controller, config.Controller);
-            Join(config.First, config.Controller);
-            Join(config.Second, config.Controller);
+            Join(Config.Controller, Config.Controller);
+            Join(Config.First, Config.Controller);
+            Join(Config.Second, Config.Controller);
 
             // make sure all nodes are up
             AwaitAssert(() =>
@@ -108,9 +111,8 @@ namespace Akka.Cluster.Sharding.Tests
                     Sys,
                     typeName: ShardTypeName,
                     role: "shard",
-                    extractEntityId: extractEntityId,
-                    extractShardId: extractShardId);
-            }, config.Controller);
+                    messageExtractor: new MessageExtractor());
+            }, Config.Controller);
 
             RunOn(() =>
             {
@@ -118,10 +120,9 @@ namespace Akka.Cluster.Sharding.Tests
                     Sys,
                     typeName: ShardTypeName,
                     entityProps: Props.Create(() => new PingPongActor()),
-                    settings: settings.Value.WithRole("shard"),
-                    extractEntityId: extractEntityId,
-                    extractShardId: extractShardId);
-            }, config.First, config.Second);
+                    settings: Settings.Value.WithRole("shard"),
+                    messageExtractor: new MessageExtractor());
+            }, Config.First, Config.Second);
 
             EnterBarrier("sharding started");
         }
@@ -158,7 +159,7 @@ namespace Akka.Cluster.Sharding.Tests
                         pingProbe.ReceiveWhile(null, m => (PingPongActor.Pong)m, 4);
                     });
                 });
-            }, config.Controller);
+            }, Config.Controller);
 
             EnterBarrier("sharded actors started");
         }

@@ -29,7 +29,7 @@ namespace DocsExamples.Actors
             public ITimerScheduler Timers { get; set; }
 
             private int _count = 0;
-            private ILoggingAdapter _log = Context.GetLogger();
+            private readonly ILoggingAdapter _log = Context.GetLogger();
 
             public TimerActor()
             {
@@ -159,7 +159,7 @@ namespace DocsExamples.Actors
             await Task.Delay(100); // pause for 100ms
 
             timerActor.Tell(new Total());
-            var count2 = ExpectMsg<int>();
+            var count2 = await ExpectMsgAsync<int>();
 
             count1.Should().BeLessThan(count2);
         }

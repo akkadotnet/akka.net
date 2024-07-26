@@ -138,12 +138,6 @@ namespace Akka.Cluster
 
         private void AssertInvariants()
         {
-            void IfTrueThrow(bool func, string expected, string actual)
-            {
-                if (func) throw new ArgumentException($"{expected}, but found [{actual}]");
-            }
-
-
             IfTrueThrow(_members.Any(m => m.Status == MemberStatus.Removed),
                 expected: "Live members must not have status [Removed]",
                 actual: string.Join(", ",
@@ -165,6 +159,12 @@ namespace Akka.Cluster
             IfTrueThrow(!seenButNotMember.IsEmpty,
                 expected: "Nodes not part of cluster have marked the Gossip as seen",
                 actual: string.Join(", ", seenButNotMember.Select(a => a.ToString())));
+            return;
+
+            void IfTrueThrow(bool func, string expected, string actual)
+            {
+                if (func) throw new ArgumentException($"{expected}, but found [{actual}]");
+            }
         }
 
         //TODO: Serializer should ignore
@@ -442,43 +442,40 @@ namespace Akka.Cluster
     /// the node with same host:port. The `uid` in the `UniqueAddress` is
     /// different in that case.
     /// </summary>
-    class GossipEnvelope : IClusterMessage
+    internal class GossipEnvelope : IClusterMessage
     {
-        readonly UniqueAddress _from;
-        readonly UniqueAddress _to;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="from">TBD</param>
-        /// <param name="to">TBD</param>
-        /// <param name="gossip">TBD</param>
-        /// <param name="deadline">TBD</param>
-        /// <returns>TBD</returns>
         public GossipEnvelope(UniqueAddress from, UniqueAddress to, Gossip gossip, Deadline deadline = null)
         {
-            _from = from;
-            _to = to;
+            From = from;
+            To = to;
             Gossip = gossip;
             Deadline = deadline;
         }
 
         /// <summary>
-        /// TBD
+        /// The sender of the gossip.
         /// </summary>
-        public UniqueAddress From { get { return _from; } }
+        public UniqueAddress From { get; }
+
         /// <summary>
-        /// TBD
+        /// The receiver of the gossip.
         /// </summary>
-        public UniqueAddress To { get { return _to; } }
+        public UniqueAddress To { get; }
+
         /// <summary>
-        /// TBD
+        /// The gossip content itself
         /// </summary>
-        public Gossip Gossip { get; set; }
+        public Gossip Gossip { get; }
+        
         /// <summary>
-        /// TBD
+        /// The deadline for the gossip.
         /// </summary>
         public Deadline Deadline { get; set; }
+
+        public override string ToString()
+        {
+            return $"GossipEnvelope(from={From}, to={To}, gossip={Gossip}, deadline={Deadline})";
+        }
     }
 
     /// <summary>

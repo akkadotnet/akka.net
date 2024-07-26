@@ -111,6 +111,18 @@ namespace Akka.Actor
 
             LogLevel = Config.GetString("akka.loglevel", null);
             StdoutLogLevel = Config.GetString("akka.stdout-loglevel", null);
+            
+            // FILTER MUST ALWAYS BE LOADED BEFORE STANDARD OUT LOGGER
+            // check to see if we have a LogFilterSetup in the ActorSystemSetup
+            var logFilterSetup = Setup.Get<LogFilterSetup>();
+            if (logFilterSetup.HasValue)
+            {
+                LogFilter = logFilterSetup.Value.CreateEvaluator();
+            }
+            else
+            {
+                LogFilter = LogFilterEvaluator.NoFilters;
+            }
 
             var stdoutClassName = Config.GetString("akka.stdout-logger-class", null);
             if (string.IsNullOrWhiteSpace(stdoutClassName))
@@ -135,6 +147,9 @@ namespace Akka.Actor
                         "Standard out logger type must inherit from the MinimalLogger abstract class and have an empty constructor.");
                 }
             }
+            
+            // set the filter
+            StdoutLogger!.Filter = LogFilter;
             
             Loggers = Config.GetStringList("akka.loggers", new string[] { });
             LoggersDispatcher = Config.GetString("akka.loggers-dispatcher", null);
@@ -205,6 +220,7 @@ namespace Akka.Actor
             DebugEventStream = Config.GetBoolean("akka.actor.debug.event-stream", false);
             DebugUnhandledMessage = Config.GetBoolean("akka.actor.debug.unhandled", false);
             DebugRouterMisconfiguration = Config.GetBoolean("akka.actor.debug.router-misconfiguration", false);
+            DebugTimerScheduler = Config.GetBoolean("akka.actor.debug.log-timers");
             Home = Config.GetString("akka.home", "");
             DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor", 0);
 
@@ -360,6 +376,14 @@ namespace Akka.Actor
         /// Can be overridden on individual `Context.GetLogger()` calls.
         /// </remarks>
         public ILogMessageFormatter LogFormatter { get; }
+        
+        /// <summary>
+        /// Used to filter log messages based on the log source and message content.
+        /// </summary>
+        /// <remarks>
+        /// Not enabled by default and may not be supported in all third party logging implementations.
+        /// </remarks>
+        public LogFilterEvaluator LogFilter { get; }
 
         /// <summary>
         ///     Gets a value indicating whether [log serializer override on start].
@@ -425,6 +449,11 @@ namespace Akka.Actor
         /// </summary>
         /// <value><c>true</c> if [debug lifecycle]; otherwise, <c>false</c>.</value>
         public bool DebugLifecycle { get; private set; }
+        
+        /// <summary>
+        ///     Should TimerScheduler emit debug logs
+        /// </summary>
+        public bool DebugTimerScheduler { get; private set; }
 
         /// <summary>
         /// TBD

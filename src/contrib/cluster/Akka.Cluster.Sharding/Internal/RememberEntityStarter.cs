@@ -144,7 +144,7 @@ namespace Akka.Cluster.Sharding.Internal
         private void OnStartBatch(IImmutableSet<EntityId> entityIds)
         {
             // these go through the region rather the directly to the shard
-            // so that shard id extractor changes make them start on the right shard
+            // so that shard id messageExtractor changes make them start on the right shard
             _waitingForAck = _waitingForAck.Union(entityIds);
             foreach (var entityId in entityIds)
                 _region.Tell(new ShardRegion.StartEntity(entityId));

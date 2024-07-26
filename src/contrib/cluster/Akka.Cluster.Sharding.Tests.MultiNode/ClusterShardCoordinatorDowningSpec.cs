@@ -143,25 +143,28 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            switch (message)
-            {
-                case Ping p:
-                    return (p.Id, message);
-            }
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    Ping p => p.Id,
+                    _ => null
+                };
 
-        internal ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case Ping p:
-                    return p.Id[0].ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    Ping p => p.Id[0].ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => entityId[0].ToString();
+        }
 
         private readonly Lazy<IActorRef> _region;
 
@@ -177,8 +180,7 @@ namespace Akka.Cluster.Sharding.Tests
               Sys,
               typeName: "Entity",
               entityProps: Props.Create(() => new Entity()),
-              extractEntityId: extractEntityId,
-              extractShardId: extractShardId);
+              messageExtractor: new MessageExtractor());
         }
 
         #endregion
@@ -195,10 +197,10 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(20), () =>
             {
-                StartPersistenceIfNeeded(startOn: config.Controller, config.First, config.Second);
+                StartPersistenceIfNeeded(startOn: Config.Controller, Config.First, Config.Second);
 
-                Join(config.First, config.First, onJoinedRunOnFrom: StartSharding);
-                Join(config.Second, config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
+                Join(Config.First, Config.First, onJoinedRunOnFrom: StartSharding);
+                Join(Config.Second, Config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
 
                 // all Up, everywhere before continuing
                 RunOn(() =>
@@ -208,7 +210,7 @@ namespace Akka.Cluster.Sharding.Tests
                         Cluster.State.Members.Count.Should().Be(2);
                         Cluster.State.Members.Should().OnlyContain(m => m.Status == MemberStatus.Up);
                     });
-                }, config.First, config.Second);
+                }, Config.First, Config.Second);
 
                 EnterBarrier("after-2");
             });
@@ -228,7 +230,7 @@ namespace Akka.Cluster.Sharding.Tests
                 }).ToImmutableDictionary();
                 shardLocations.Tell(new Locations(locations));
                 Sys.Log.Debug("Original locations: [{0}]", string.Join(", ", locations.Select(i => $"{i.Key}: {i.Value}")));
-            }, config.First);
+            }, Config.First);
             EnterBarrier("after-3");
         }
 
@@ -236,22 +238,22 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(20), () =>
             {
-                var firstAddress = GetAddress(config.First);
-                Sys.ActorSelection(Node(config.First) / "user" / "shardLocations").Tell(GetLocations.Instance);
+                var firstAddress = GetAddress(Config.First);
+                Sys.ActorSelection(Node(Config.First) / "user" / "shardLocations").Tell(GetLocations.Instance);
                 var originalLocations = ExpectMsg<Locations>().Locs;
 
                 EnterBarrier("after-3-locations");
 
                 RunOn(() =>
                 {
-                    TestConductor.Blackhole(config.First, config.Second, Direction.Both).Wait();
-                }, config.Controller);
+                    TestConductor.Blackhole(Config.First, Config.Second, Direction.Both).Wait();
+                }, Config.Controller);
 
                 Thread.Sleep(3000);
 
                 RunOn(() =>
                 {
-                    Cluster.Down(GetAddress(config.First));
+                    Cluster.Down(GetAddress(Config.First));
                     AwaitAssert(() =>
                     {
                         Cluster.State.Members.Count.Should().Be(1);
@@ -288,7 +290,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                         }
                     });
-                }, config.Second);
+                }, Config.Second);
             });
 
             EnterBarrier("after-4");

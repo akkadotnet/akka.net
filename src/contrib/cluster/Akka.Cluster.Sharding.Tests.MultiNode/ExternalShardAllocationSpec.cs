@@ -69,23 +69,29 @@ namespace Akka.Cluster.Sharding.Tests
                 public Address Address { get; }
             }
 
-            // shard == id to make testing easier
-            public static readonly ExtractEntityId extractEntityId = message =>
+            public sealed class MessageExtractor: IMessageExtractor
             {
-                if (message is Get g)
-                    return (g.Id, g);
-                return Option<(string, object)>.None;
-            };
+                // shard == id to make testing easier
+                public string EntityId(object message)
+                    => message switch
+                    {
+                        Get g => g.Id,
+                        _ => null
+                    };
 
-            public static readonly ExtractShardId extractShardId = message =>
-            {
-                switch (message)
-                {
-                    case Get g:
-                        return g.Id;
-                }
-                return null;
-            };
+                public object EntityMessage(object message)
+                    => message;
+
+                public string ShardId(object message)
+                    => message switch
+                    {
+                        Get g => g.Id,
+                        _ => null
+                    };
+
+                public string ShardId(string entityId, object messageHint = null)
+                    => entityId;
+            }
 
             private readonly Address selfAddress = Cluster.Get(Context.System).SelfAddress;
             private readonly ILoggingAdapter log = Context.GetLogger();
@@ -125,8 +131,7 @@ namespace Akka.Cluster.Sharding.Tests
                 Sys,
                   typeName: TypeName,
                   entityProps: Props.Create(() => new GiveMeYourHome()),
-                  extractEntityId: GiveMeYourHome.extractEntityId,
-                  extractShardId: GiveMeYourHome.extractShardId,
+                  messageExtractor: new GiveMeYourHome.MessageExtractor(),
                   allocationStrategy: new ExternalShardAllocationStrategy(Sys, TypeName))
                 );
         }
@@ -146,7 +151,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void External_shard_allocation_must_form_cluster()
         {
-            AwaitClusterUp(config.First, config.Second, config.Third);
+            AwaitClusterUp(Config.First, Config.Second, Config.Third);
             EnterBarrier("cluster-started");
         }
 
@@ -164,7 +169,7 @@ namespace Akka.Cluster.Sharding.Tests
                 _shardRegion.Value.Tell(new GiveMeYourHome.Get(Myself.Name));
                 var actorLocation = ExpectMsg<GiveMeYourHome.Home>(TimeSpan.FromSeconds(20)).Address;
                 actorLocation.Should().Be(Cluster.Get(Sys).SelfAddress);
-            }, config.First, config.Second, config.Third);
+            }, Config.First, Config.Second, Config.Third);
             EnterBarrier("local-message-sent");
         }
 
@@ -177,7 +182,7 @@ namespace Akka.Cluster.Sharding.Tests
                     .ClientFor(TypeName)
                     .UpdateShardLocation(shardToSpecifyLocation, Cluster.Get(Sys).SelfAddress)
                     .Result;
-            }, config.First);
+            }, Config.First);
             EnterBarrier("shard-location-updated");
 
             RunOn(() =>
@@ -186,35 +191,35 @@ namespace Akka.Cluster.Sharding.Tests
                 AwaitAssert(() =>
                 {
                     _shardRegion.Value.Tell(new GiveMeYourHome.Get(shardToSpecifyLocation), probe.Ref);
-                    probe.ExpectMsg<GiveMeYourHome.Home>(m => m.Address.Equals(GetAddress(config.First)));
+                    probe.ExpectMsg<GiveMeYourHome.Home>(m => m.Address.Equals(GetAddress(Config.First)));
                 }, TimeSpan.FromSeconds(10));
-            }, config.Second, config.Third);
+            }, Config.Second, Config.Third);
             EnterBarrier("shard-allocated-to-specific-node");
         }
 
         private void External_shard_allocation_must_allocate_to_a_node_that_does_not_exist_yet()
         {
             var onForthShardId = "on-forth";
-            var forthAddress = GetAddress(config.Forth);
+            var forthAddress = GetAddress(Config.Forth);
             RunOn(() =>
             {
                 Sys.Log.Info("Allocating {0} on {1}", onForthShardId, forthAddress);
                 ExternalShardAllocation.Get(Sys).ClientFor(TypeName).UpdateShardLocations(ImmutableDictionary<string, Address>.Empty.Add(onForthShardId, forthAddress));
-            }, config.Second);
+            }, Config.Second);
             EnterBarrier("allocated-to-new-node");
             RunOn(() =>
             {
-                JoinWithin(config.First, max: TimeSpan.FromSeconds(10));
-            }, config.Forth);
+                JoinWithin(Config.First, max: TimeSpan.FromSeconds(10));
+            }, Config.Forth);
             EnterBarrier("forth-node-joined");
             RunOn(() =>
             {
                 AwaitAssert(() =>
                 {
                     _shardRegion.Value.Tell(new GiveMeYourHome.Get(InitiallyOnForth));
-                    ExpectMsg<GiveMeYourHome.Home>(m => m.Address.Equals(GetAddress(config.Forth)));
+                    ExpectMsg<GiveMeYourHome.Home>(m => m.Address.Equals(GetAddress(Config.Forth)));
                 }, TimeSpan.FromSeconds(10));
-            }, config.First, config.Second, config.Third);
+            }, Config.First, Config.Second, Config.Third);
             EnterBarrier("shard-allocated-to-forth");
         }
 
@@ -222,18 +227,18 @@ namespace Akka.Cluster.Sharding.Tests
         {
             RunOn(() =>
             {
-                Sys.Log.Info("Moving shard from forth to first: {0}", GetAddress(config.First));
-                ExternalShardAllocation.Get(Sys).ClientFor(TypeName).UpdateShardLocation(InitiallyOnForth, GetAddress(config.First));
-            }, config.Third);
+                Sys.Log.Info("Moving shard from forth to first: {0}", GetAddress(Config.First));
+                ExternalShardAllocation.Get(Sys).ClientFor(TypeName).UpdateShardLocation(InitiallyOnForth, GetAddress(Config.First));
+            }, Config.Third);
             EnterBarrier("shard-moved-from-forth-to-first");
             RunOn(() =>
             {
                 AwaitAssert(() =>
                 {
                     _shardRegion.Value.Tell(new GiveMeYourHome.Get(InitiallyOnForth));
-                    ExpectMsg<GiveMeYourHome.Home>(m => m.Address.Equals(GetAddress(config.First)));
+                    ExpectMsg<GiveMeYourHome.Home>(m => m.Address.Equals(GetAddress(Config.First)));
                 }, TimeSpan.FromSeconds(10));
-            }, config.First, config.Second, config.Third, config.Forth);
+            }, Config.First, Config.Second, Config.Third, Config.Forth);
             EnterBarrier("finished");
         }
     }

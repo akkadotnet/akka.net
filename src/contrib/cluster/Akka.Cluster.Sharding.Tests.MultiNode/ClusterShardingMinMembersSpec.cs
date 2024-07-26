@@ -83,8 +83,6 @@ namespace Akka.Cluster.Sharding.Tests
                 Sys,
                 typeName: "Entity",
                 entityProps: SimpleEchoActor.Props(),
-                extractEntityId: IntExtractEntityId,
-                extractShardId: IntExtractShardId,
                 allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0),
                 handOffStopMessage: ShardedEntity.Stop.Instance);
         }
@@ -101,12 +99,12 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
-                StartPersistenceIfNeeded(startOn: config.First, config.First, config.Second, config.Third);
+                StartPersistenceIfNeeded(startOn: Config.First, Config.First, Config.Second, Config.Third);
 
                 // the only test not asserting join status before starting to shard
-                Join(config.First, config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
-                Join(config.Second, config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
-                Join(config.Third, config.First, assertNodeUp: false);
+                Join(Config.First, Config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
+                Join(Config.Second, Config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
+                Join(Config.Third, Config.First, assertNodeUp: false);
                 // wait with starting sharding on third
                 Within(Remaining, () =>
                 {
@@ -123,13 +121,13 @@ namespace Akka.Cluster.Sharding.Tests
                     _region.Value.Tell(1);
                     // not allocated because third has not registered yet
                     ExpectNoMsg(TimeSpan.FromSeconds(2));
-                }, config.First);
+                }, Config.First);
                 EnterBarrier("verified");
 
                 RunOn(() =>
                 {
                     StartSharding();
-                }, config.Third);
+                }, Config.Third);
 
                 RunOn(() =>
                 {
@@ -139,14 +137,14 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectMsg(2);
                     _region.Value.Tell(3);
                     ExpectMsg(3);
-                }, config.First);
+                }, Config.First);
                 EnterBarrier("shards-allocated");
 
                 _region.Value.Tell(new GetClusterShardingStats(Remaining));
                 var stats = ExpectMsg<ClusterShardingStats>();
-                var firstAddress = Node(config.First).Address;
-                var secondAddress = Node(config.Second).Address;
-                var thirdAddress = Node(config.Third).Address;
+                var firstAddress = Node(Config.First).Address;
+                var secondAddress = Node(Config.Second).Address;
+                var thirdAddress = Node(Config.Third).Address;
 
                 stats.Regions.Keys.Should().BeEquivalentTo(firstAddress, secondAddress, thirdAddress);
                 stats.Regions[firstAddress].Stats.Values.Sum().Should().Be(1);

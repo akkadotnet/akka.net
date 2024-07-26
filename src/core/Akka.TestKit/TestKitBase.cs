@@ -9,6 +9,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
@@ -36,7 +37,7 @@ namespace Akka.TestKit
 
             public ActorSystem System { get; set; }
             public TestKitSettings TestKitSettings { get; set; }
-            public ITestQueue<MessageEnvelope> Queue { get; set; }
+            public Channel<MessageEnvelope> Queue { get; set; }
             public MessageEnvelope LastMessage  { get; set; }
             public IActorRef TestActor { get; set; }
             public TimeSpan? End { get; set; }
@@ -113,9 +114,7 @@ namespace Akka.TestKit
 
         protected TestKitBase(ITestKitAssertions assertions, ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName)
         {
-            if(assertions == null) throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
-
-            _assertions = assertions;
+            _assertions = assertions ?? throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
             
             InitializeTest(system, config, actorSystemName, testActorName);
         }
@@ -160,7 +159,7 @@ namespace Akka.TestKit
             system.RegisterExtension(new TestKitAssertionsExtension(_assertions));
 
             _testState.TestKitSettings = TestKitExtension.For(_testState.System);
-            _testState.Queue = new AsyncQueue<MessageEnvelope>();
+            _testState.Queue = Channel.CreateUnbounded<MessageEnvelope>();
             _testState.Log = Logging.GetLogger(system, GetType());
             _testState.EventFilterFactory = new EventFilterFactory(this);
 
@@ -176,11 +175,11 @@ namespace Akka.TestKit
             // Wait for the testactor to start
             WaitUntilTestActorIsReady(testActor);
 
-            if (!(this is INoImplicitSender))
+            if (this is not INoImplicitSender)
             {
                 InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)testActor).Underlying;
             }
-            else if (!(this is TestProbe))
+            else if (this is not TestProbe)
             //HACK: we need to clear the current context when running a No Implicit Sender test as sender from an async test may leak
             //but we should not clear the current context when creating a testprobe from a test
             {
@@ -203,7 +202,7 @@ namespace Akka.TestKit
             {
                 while (stopwatch.Elapsed < deadline)
                 {
-                    ready = !(testActor is IRepointableRef repRef) || repRef.IsStarted;
+                    ready = testActor is not IRepointableRef repRef || repRef.IsStarted;
                     if (ready) break;
                     Thread.Sleep(10);
                 }
@@ -308,7 +307,7 @@ namespace Akka.TestKit
         /// </value>
         public bool HasMessages
         {
-            get { return _testState.Queue.Count > 0; }
+            get { return _testState.Queue.Reader.Count > 0; }
         }
 
         /// <summary>
@@ -357,7 +356,31 @@ namespace Akka.TestKit
         /// <returns>The actor to watch, i.e. the parameter <paramref name="actorToWatch"/></returns>
         public IActorRef Watch(IActorRef actorToWatch)
         {
-            _testState.TestActor.Tell(new TestActor.Watch(actorToWatch));
+            /*
+             * Look, I know what you're thinking: wow, what kind of idiot would add this line of code?
+             * Did you know that this method is secretly asynchronous? And has been responsible for possibly dozens of
+             * racy unit tests? Why yes, yes dear reader - in fact it has!
+             *
+             * We have to ensure that the Watch completes before this method exit, so unfortunately we have to block.
+             *
+             * "Nuke the site from orbit. It's the only way to be sure."
+             */
+            WatchAsync(actorToWatch).Wait(RemainingOrDefault);
+            return actorToWatch;
+        }
+        
+        /// <summary>
+        /// Have the <see cref="TestActor"/> watch an actor and receive 
+        /// <see cref="Terminated"/> messages when the actor terminates.
+        /// </summary>
+        /// <param name="actorToWatch">The actor to watch.</param>
+        /// <returns>The actor to watch, i.e. the parameter <paramref name="actorToWatch"/></returns>
+        /// <remarks>
+        /// This method exists in order to make the asynchronous nature of the Watch method explicit.
+        /// </remarks>
+        public async Task<IActorRef> WatchAsync(IActorRef actorToWatch)
+        {
+            await _testState.TestActor.Ask(new TestActor.Watch(actorToWatch), RemainingOrDefault);
             return actorToWatch;
         }
 
@@ -368,7 +391,22 @@ namespace Akka.TestKit
         /// <returns>The actor to unwatch, i.e. the parameter <paramref name="actorToUnwatch"/></returns>
         public IActorRef Unwatch(IActorRef actorToUnwatch)
         {
-            _testState.TestActor.Tell(new TestActor.Unwatch(actorToUnwatch));
+            // See previous comment in Watch method
+            UnwatchAsync(actorToUnwatch).Wait(RemainingOrDefault);
+            return actorToUnwatch;
+        }
+        
+        /// <summary>
+        /// Have the <see cref="TestActor"/> stop watching an actor.
+        /// </summary>
+        /// <param name="actorToUnwatch">The actor to unwatch.</param>
+        /// <returns>The actor to unwatch, i.e. the parameter <paramref name="actorToUnwatch"/></returns>
+        /// <remarks>
+        /// This method exists in order to make the asynchronous nature of the Unwatch method explicit.
+        /// </remarks>
+        public async Task<IActorRef> UnwatchAsync(IActorRef actorToUnwatch)
+        {
+            await _testState.TestActor.Ask(new TestActor.Unwatch(actorToUnwatch), RemainingOrDefault);
             return actorToUnwatch;
         }
 
@@ -548,7 +586,7 @@ namespace Akka.TestKit
             SupervisorStrategy supervisorStrategy,
             CancellationToken cancellationToken = default)
             => ChildActorOfAsync(props, name, supervisorStrategy, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
 
         /// <summary>
         /// Spawns an actor as a child of this test actor, and returns the child's IActorRef
@@ -566,7 +604,7 @@ namespace Akka.TestKit
         {
             TestActor.Tell(new TestActor.Spawn(props, name, supervisorStrategy));
             return await ExpectMsgAsync<IActorRef>(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -579,7 +617,7 @@ namespace Akka.TestKit
         public IActorRef ChildActorOf(
             Props props, SupervisorStrategy supervisorStrategy, CancellationToken cancellationToken = default)
             => ChildActorOfAsync(props, supervisorStrategy, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
 
         /// <summary>
         /// Spawns an actor as a child of this test actor with an auto-generated name, and returns the child's ActorRef.
@@ -593,7 +631,7 @@ namespace Akka.TestKit
         {
             TestActor.Tell(new TestActor.Spawn(props, Option<string>.None, supervisorStrategy));
             return await ExpectMsgAsync<IActorRef>(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -605,7 +643,7 @@ namespace Akka.TestKit
         /// <returns></returns>
         public IActorRef ChildActorOf(Props props, string name, CancellationToken cancellationToken = default)
             => ChildActorOfAsync(props, name, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
         
         /// <summary>
         /// Spawns an actor as a child of this test actor with a stopping supervisor strategy, and returns the child's ActorRef.
@@ -619,7 +657,7 @@ namespace Akka.TestKit
         {
             TestActor.Tell(new TestActor.Spawn(props, name, Option<SupervisorStrategy>.None));
             return await ExpectMsgAsync<IActorRef>(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
         
         /// <summary>
@@ -630,7 +668,7 @@ namespace Akka.TestKit
         /// <returns></returns>
         public IActorRef ChildActorOf(Props props, CancellationToken cancellationToken = default)
             => ChildActorOfAsync(props, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
 
         /// <summary>
         /// Spawns an actor as a child of this test actor with an auto-generated name and stopping supervisor strategy, returning the child's ActorRef.
@@ -642,7 +680,7 @@ namespace Akka.TestKit
         {
             TestActor.Tell(new TestActor.Spawn(props, Option<string>.None, Option<SupervisorStrategy>.None));
             return await ExpectMsgAsync<IActorRef>(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -662,7 +700,7 @@ namespace Akka.TestKit
 
         private IActorRef CreateTestActor(ActorSystem system, string name)
         {
-            var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_testState.Queue)))
+            var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
             var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
             return testActor;

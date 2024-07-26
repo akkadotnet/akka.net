@@ -102,8 +102,6 @@ namespace Akka.Cluster.Sharding.Tests
                 Sys,
                 typeName,
                 entityProps: Props.Create(() => new ShardedEntity()),
-                extractEntityId: IntExtractEntityId,
-                extractShardId: IntExtractShardId,
                 allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0),
                 handOffStopMessage: ShardedEntity.Stop.Instance);
         }
@@ -122,10 +120,10 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
-                StartPersistenceIfNeeded(startOn: config.First, config.First, config.Second);
+                StartPersistenceIfNeeded(startOn: Config.First, Config.First, Config.Second);
 
-                Join(config.First, config.First, TypeName); // oldest
-                Join(config.Second, config.First, TypeName);
+                Join(Config.First, Config.First, TypeName); // oldest
+                Join(Config.Second, Config.First, TypeName);
 
                 AwaitAssert(() =>
                 {
@@ -161,7 +159,7 @@ namespace Akka.Cluster.Sharding.Tests
                         return Done.Instance;
                     });
                     CoordinatedShutdown.Get(Sys).Run(CoordinatedShutdown.UnknownReason.Instance);
-                }, config.Second);
+                }, Config.Second);
 
                 RunOn(() =>
                 {
@@ -175,7 +173,7 @@ namespace Akka.Cluster.Sharding.Tests
                             probe.LastSender.Path.Should().Be(_region.Value.Path / i.ToString() / i.ToString());
                         }
                     });
-                }, config.First);
+                }, Config.First);
                 EnterBarrier("handoff-completed");
 
                 // Check that the coordinator is correctly notified the region has stopped:
@@ -188,14 +186,14 @@ namespace Akka.Cluster.Sharding.Tests
                         ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(1);
                     });
                     // without having to wait for the member to be entirely removed (as that would cause unnecessary latency)
-                }, config.First);
+                }, Config.First);
 
 
                 RunOn(() =>
                 {
                     Watch(_region.Value);
                     ExpectTerminated(_region.Value);
-                }, config.Second);
+                }, Config.Second);
 
                 EnterBarrier("after-3");
             });
@@ -212,7 +210,7 @@ namespace Akka.Cluster.Sharding.Tests
                     Watch(regionEmpty);
                     regionEmpty.Tell(GracefulShutdown.Instance);
                     ExpectTerminated(regionEmpty, TimeSpan.FromSeconds(5));
-                }, config.First);
+                }, Config.First);
             });
         }
     }

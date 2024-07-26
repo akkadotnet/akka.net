@@ -218,7 +218,7 @@ namespace Akka.Event
                     
                     // Task ran to completion successfully
                     var response = t.Result;
-                    if (!(response is LoggerInitialized))
+                    if (response is not LoggerInitialized)
                     {
                         // Malformed logger, logger did not send a proper ack.
                         Publish(new Error(null, loggingBusName, GetType(),

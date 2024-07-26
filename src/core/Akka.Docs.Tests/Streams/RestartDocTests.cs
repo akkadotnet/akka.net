@@ -16,6 +16,7 @@ using Xunit.Abstractions;
 
 namespace DocsExamples.Streams
 {
+#if NETCOREAPP
     public class RestartDocTests : TestKit
     {
         private ActorMaterializer Materializer { get; }
@@ -65,4 +66,5 @@ namespace DocsExamples.Streams
             #endregion
         }
     }
+#endif
 }

@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.Cluster.Sharding</AssemblyTitle>
         <Description>Sharded actors with managed lifecycle for Akka.NET cluster. Used to distribute state in a fault-tolerant, consistent fashion over an Akka.NET cluster.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
