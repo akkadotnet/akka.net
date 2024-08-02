@@ -134,7 +134,8 @@ It is possible to make the cluster client stop entirely if it cannot find a rece
 ### Contact Auto-Discovery Using Akka.Discovery
 
 > [!NOTE]
-> This feature can only be used with: 
+> This feature can only be used with:
+> 
 > * Akka.Management v1.5.27 or later.
 > * Akka.Cluster.Hosting v1.5.27 or later
 > * Akka.Cluster.Tools v1.5.27 or later
@@ -143,7 +144,7 @@ This feature is added in Akka.NET 1.5.27. Instead of watching for actor terminat
 
 ### Contact Auto-Discovery Setup Using Akka.Hosting
 
-Cluster client discovery API has been added in `Akka.Cluster.Hosting` v1.5.27. You can use the `.WithClusterClientDiscovery()` extension method to use the cluster client initial contact auto discovery feature. 
+Cluster client discovery API has been added in `Akka.Cluster.Hosting` v1.5.27. You can use the `.WithClusterClientDiscovery()` extension method to use the cluster client initial contact auto discovery feature.
 
 #### Example: Setting Up Contact Auto-Discovery With Akka.Discovery.KubernetesApi
 
@@ -249,6 +250,7 @@ services.AddAkka("ClusterClientSys", (builder, provider) => {
 ```
 
 On the cluster client receptionist side, you will need to implement these code:
+
 ```csharp
 services.AddAkka("ReceptionistSys", (builder, provider) => {
     
