@@ -135,7 +135,7 @@ It is possible to make the cluster client stop entirely if it cannot find a rece
 
 > [!NOTE]
 > This feature can only be used with:
-> 
+>
 > * Akka.Management v1.5.27 or later.
 > * Akka.Cluster.Hosting v1.5.27 or later
 > * Akka.Cluster.Tools v1.5.27 or later
