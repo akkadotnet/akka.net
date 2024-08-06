@@ -100,7 +100,7 @@ namespace Akka.Persistence
         /// We will probably use nullable in the future, but for the time being
         /// we use <see cref="DateTime.MinValue"/> to represent "no timestamp"
         /// </summary>
-        public static DateTime TimestampNotSpecified => DateTime.MinValue;
+        internal static DateTime TimestampNotSpecified => DateTime.MinValue;
 
 
         public override bool Equals(object obj) => Equals(obj as SnapshotMetadata);
