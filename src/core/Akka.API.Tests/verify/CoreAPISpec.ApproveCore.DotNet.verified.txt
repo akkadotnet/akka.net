@@ -589,6 +589,7 @@ namespace Akka.Actor
         public CoordinatedShutdownExtension() { }
         public override Akka.Actor.CoordinatedShutdown CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
+    [System.ObsoleteAttribute("This class will be removed in Akka.NET v1.6.0 - use the IScheduler instead.")]
     public class DateTimeOffsetNowTimeProvider : Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider
     {
         public System.TimeSpan HighResMonotonicClock { get; }
