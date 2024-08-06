@@ -100,7 +100,7 @@ namespace Akka.Persistence.TCK.Snapshot
         {
             for (int i = 1; i <= 5; i++)
             {
-                var metadata = new SnapshotMetadata(Pid, i + 10);
+                var metadata = new SnapshotMetadata(Pid, i + 10, Sys.Scheduler.Now.DateTime);
                 SnapshotStore.Tell(new SaveSnapshot(metadata, $"s-{i}"), _senderProbe.Ref);
                 yield return _senderProbe.ExpectMsg<SaveSnapshotSuccess>().Metadata;
             }
@@ -181,7 +181,7 @@ namespace Akka.Persistence.TCK.Snapshot
         public virtual void SnapshotStore_should_delete_a_single_snapshot_identified_by_SequenceNr_in_snapshot_metadata()
         {
             var md = Metadata[2];
-            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr); // don't care about timestamp for delete of a single snap
+            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr, Sys.Scheduler.Now.DateTime); // don't care about timestamp for delete of a single snap
             var command = new DeleteSnapshot(md);
             var sub = CreateTestProbe();
 
@@ -260,7 +260,7 @@ namespace Akka.Persistence.TCK.Snapshot
         [Fact]
         public virtual void SnapshotStore_should_save_bigger_size_snapshot()
         {
-            var metadata = new SnapshotMetadata(Pid, 100);
+            var metadata = new SnapshotMetadata(Pid, 100, Sys.Scheduler.Now.DateTime);
             var bigSnapshot = new byte[SnapshotByteSizeLimit];
             new Random().NextBytes(bigSnapshot);
             SnapshotStore.Tell(new SaveSnapshot(metadata, bigSnapshot), _senderProbe.Ref);
@@ -274,7 +274,7 @@ namespace Akka.Persistence.TCK.Snapshot
             if (!SupportsSerialization) return;
 
             var probe = CreateTestProbe();
-            var metadata = new SnapshotMetadata(Pid, 100L);
+            var metadata = new SnapshotMetadata(Pid, 100L, Sys.Scheduler.Now.DateTime);
             var snap = new TestPayload(probe.Ref);
 
             SnapshotStore.Tell(new SaveSnapshot(metadata, snap), _senderProbe.Ref);

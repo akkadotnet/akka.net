@@ -218,7 +218,7 @@ namespace Akka.Persistence
         /// <param name="snapshot">TBD</param>
         public void SaveSnapshot(object snapshot)
         {
-            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(SnapshotterId, SnapshotSequenceNr), snapshot));
+            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(SnapshotterId, SnapshotSequenceNr, Context.System.Scheduler.Now.Date), snapshot));
         }
 
         /// <summary>
@@ -230,7 +230,7 @@ namespace Akka.Persistence
         /// <param name="sequenceNr">TBD</param>
         public void DeleteSnapshot(long sequenceNr)
         {
-            SnapshotStore.Tell(new DeleteSnapshot(new SnapshotMetadata(SnapshotterId, sequenceNr)));
+            SnapshotStore.Tell(new DeleteSnapshot(new SnapshotMetadata(SnapshotterId, sequenceNr, DateTime.MinValue)));
         }
 
         /// <summary>
