@@ -50,7 +50,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         ShardRegion = shardRegion;
         _durableQueueProps = durableQueueProps;
         Settings = settings;
-        _timeProvider = timeProvider ?? DateTimeOffsetNowTimeProvider.Instance;
+        _timeProvider = timeProvider ?? Context.System.Scheduler;
 
         WaitingForStart(Option<IActorRef>.None, CreateInitialState(_durableQueueProps.HasValue));
     }
