@@ -146,6 +146,7 @@ namespace Akka.Cluster.Tools.Singleton
                         // buffering mode
                         _singleton = null;
                         
+                        // Bugfix: https://github.com/akkadotnet/Akka.Management/issues/2490
                         // try to re-acquire singleton in-case this is caused by a lost lease condition
                         IdentifySingleton();
                     }
