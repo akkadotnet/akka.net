@@ -57,7 +57,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
         ProducerId = producerId;
         Settings = settings ?? ProducerController.Settings.Create(Context.System);
         _durableProducerQueueProps = durableProducerQueue;
-        _timeProvider = timeProvider ?? DateTimeOffsetNowTimeProvider.Instance;
+        _timeProvider = timeProvider ?? Context.System.Scheduler;
         _fuzzingControl = fuzzingControl;
 
         // this state gets overridden during the loading sequence, so it's not used at all really
@@ -86,7 +86,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
         ProducerId = producerId;
         Settings = settings ?? ProducerController.Settings.Create(Context.System);
         _durableProducerQueueProps = durableProducerQueue;
-        _timeProvider = timeProvider ?? DateTimeOffsetNowTimeProvider.Instance;
+        _timeProvider = timeProvider ?? Context.System.Scheduler;
         _fuzzingControl = fuzzingControl;
 
         // this state gets overridden during the loading sequence, so it's not used at all really
