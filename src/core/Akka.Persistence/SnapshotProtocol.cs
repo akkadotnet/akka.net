@@ -52,32 +52,28 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// The singleton comparer instance.
         /// </summary>
         public static IComparer<SnapshotMetadata> Comparer { get; } = new SnapshotMetadataComparer();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static DateTime TimestampNotSpecified = DateTime.MinValue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotMetadata"/> class.
         /// </summary>
         /// <param name="persistenceId">The id of the persistent actor fro which the snapshot was taken.</param>
         /// <param name="sequenceNr">The sequence number at which the snapshot was taken.</param>
+        [Obsolete("This constructor is deprecated and will be removed in v1.6. Use the constructor with the timestamp parameter instead. Since v1.5.28", true)]
         public SnapshotMetadata(string persistenceId, long sequenceNr)
-            : this(persistenceId, sequenceNr, TimestampNotSpecified)
+            : this(persistenceId, sequenceNr, DateTime.UtcNow)
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotMetadata"/> class.
         /// </summary>
-        /// <param name="persistenceId">The id of the persistent actor fro mwhich the snapshot was taken.</param>
+        /// <param name="persistenceId">The id of the persistent actor from which the snapshot was taken.</param>
         /// <param name="sequenceNr">The sequence number at which the snapshot was taken.</param>
         /// <param name="timestamp">The time at which the snapshot was saved.</param>
-        [JsonConstructor]
+        [JsonConstructor] // TODO: remove this
         public SnapshotMetadata(string persistenceId, long sequenceNr, DateTime timestamp)
         {
             PersistenceId = persistenceId;
@@ -100,7 +96,13 @@ namespace Akka.Persistence
         /// </summary>
         public DateTime Timestamp { get; }
 
-        
+        /// <summary>
+        /// We will probably use nullable in the future, but for the time being
+        /// we use <see cref="DateTime.MinValue"/> to represent "no timestamp"
+        /// </summary>
+        internal static DateTime TimestampNotSpecified => DateTime.MinValue;
+
+
         public override bool Equals(object obj) => Equals(obj as SnapshotMetadata);
 
         

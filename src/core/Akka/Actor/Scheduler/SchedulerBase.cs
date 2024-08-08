@@ -98,7 +98,7 @@ namespace Akka.Actor
         DateTimeOffset ITimeProvider.Now { get { return TimeNow; } }
 
         /// <summary>
-        /// TBD
+        /// The current time in UTC.
         /// </summary>
         protected abstract DateTimeOffset TimeNow { get; }
 

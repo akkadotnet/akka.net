@@ -463,7 +463,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             await connection.ExecuteInTransaction(WriteIsolationLevel, cancellationToken, async (tx, token) =>
             {
                 var sql = timestamp.HasValue
-                    ? DeleteSnapshotRangeSql + " AND { Configuration.TimestampColumnName} = @Timestamp"
+                    ? DeleteSnapshotSql + $" AND {Configuration.TimestampColumnName} <= @Timestamp"
                     : DeleteSnapshotSql;
 
                 using var command = GetCommand(connection, sql); 
