@@ -143,8 +143,12 @@ namespace Akka.Cluster.Tools.Singleton
                 {
                     if (Equals(_singleton, terminated.ActorRef))
                     {
-                        // buffering mode, identification of new will start when old node is removed
+                        // buffering mode
                         _singleton = null;
+                        
+                        // Bugfix: https://github.com/akkadotnet/Akka.Management/issues/2490
+                        // try to re-acquire singleton in-case this is caused by a lost lease condition
+                        IdentifySingleton();
                     }
                 });
             ReceiveAny(msg =>
