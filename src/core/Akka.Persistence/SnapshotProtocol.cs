@@ -61,7 +61,7 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="persistenceId">The id of the persistent actor fro which the snapshot was taken.</param>
         /// <param name="sequenceNr">The sequence number at which the snapshot was taken.</param>
-        [Obsolete("This constructor is deprecated and will be removed in v1.6. Use the constructor with the timestamp parameter instead.", true)]
+        [Obsolete("This constructor is deprecated and will be removed in v1.6. Use the constructor with the timestamp parameter instead. Since v1.5.28", true)]
         public SnapshotMetadata(string persistenceId, long sequenceNr)
             : this(persistenceId, sequenceNr, DateTime.UtcNow)
         {
