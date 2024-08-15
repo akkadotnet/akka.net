@@ -2,8 +2,10 @@
 #I @"tools/FAKE/tools"
 #r "FakeLib.dll"
 
+open System.Text
 open System
 open System.IO
+open System.Runtime.ExceptionServices
 
 
 open Fake
