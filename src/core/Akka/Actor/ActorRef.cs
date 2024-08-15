@@ -569,19 +569,19 @@ public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
 /// </summary>
 internal sealed class IgnoreActorRef : MinimalActorRef
 {
-    private const string fakeSystemName = "local";
+    private const string FakeSystemName = "local";
 
     private static readonly IgnoreActorRefSurrogate SurrogateInstance = new();
 
-    private static readonly string pathString = StaticPath.ToString();
+    public static ActorPath StaticPath { get; } = new RootActorPath(new Address("akka", FakeSystemName)) / "ignore";
+
+    private static readonly string PathString = StaticPath.ToString();
 
     public IgnoreActorRef(IActorRefProvider provider)
     {
         Provider = provider;
     }
-
-    public static ActorPath StaticPath { get; } = new RootActorPath(new Address("akka", fakeSystemName)) / "ignore";
-
+    
     public override ActorPath Path => StaticPath;
 
     public override IActorRefProvider Provider { get; }
@@ -593,7 +593,7 @@ internal sealed class IgnoreActorRef : MinimalActorRef
     /// <returns></returns>
     public static bool IsIgnoreRefPath(string otherPath)
     {
-        return pathString.Equals(otherPath);
+        return PathString.Equals(otherPath);
     }
 
     /// <summary>
