@@ -88,7 +88,7 @@ namespace Akka.Cluster.Tools.Singleton
                 mgrSettings.HandOverRetryInterval,
                 proxySettings.BufferSize,
                 mgrSettings.LeaseSettings,
-                mgrSettings.ConsiderAppVersion);
+                false);
         }
 
         private ClusterSingletonSettings(

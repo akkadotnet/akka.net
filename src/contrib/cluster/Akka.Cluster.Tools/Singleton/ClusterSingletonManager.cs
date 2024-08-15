@@ -860,7 +860,7 @@ namespace Akka.Cluster.Tools.Singleton
                     {
                         _oldestChangedBuffer = Context.ActorOf(
                             Actor.Props.Create(() =>
-                                    new OldestChangedBuffer(_settings.Role, _settings.ConsiderAppVersion))
+                                    new OldestChangedBuffer(_settings.Role, false))
                                 .WithDispatcher(Context.Props.Dispatcher));
                         GetNextOldestChanged();
                         return Stay();
@@ -1430,7 +1430,7 @@ namespace Akka.Cluster.Tools.Singleton
                             _lease.Release().ContinueWith(r =>
                             {
                                 if (r.IsCanceled || r.IsFaulted)
-                                    return (object)new ReleaseLeaseFailure(r.Exception);
+                                    return (object)new ReleaseLeaseFailure(r.Exception ?? (Exception)new LeaseException("Failed to release lease"));
                                 return new ReleaseLeaseResult(r.Result);
                             }).PipeTo(Self);
                         }

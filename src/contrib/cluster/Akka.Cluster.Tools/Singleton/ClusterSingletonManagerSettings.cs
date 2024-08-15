@@ -258,7 +258,7 @@ namespace Akka.Cluster.Tools.Singleton
                 removalMargin: removalMargin ?? RemovalMargin,
                 handOverRetryInterval: handOverRetryInterval ?? HandOverRetryInterval,
                 leaseSettings: leaseSettings.HasValue ? leaseSettings.Value : LeaseSettings,
-                considerAppVersion: considerAppVersion ?? ConsiderAppVersion
+                considerAppVersion: false
                 );
         }
     }

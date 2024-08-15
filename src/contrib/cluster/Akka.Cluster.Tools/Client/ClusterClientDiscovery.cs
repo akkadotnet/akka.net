@@ -287,7 +287,9 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
 
             case ActorPath?[] resolved:
             {
+#pragma warning disable CS8619 // Converting null literal or possible null value to non-nullable type.
                 var contacts = (ActorPath[]) resolved.Where(r => r is not null).ToArray();
+#pragma warning restore CS8619 // Converting null literal or possible null value to non-nullable type.
                 if (contacts.Length == 0)
                 {
                     if(_verboseLogging && _log.IsInfoEnabled)
