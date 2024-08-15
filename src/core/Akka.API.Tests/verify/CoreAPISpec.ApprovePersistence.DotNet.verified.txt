@@ -587,7 +587,8 @@ namespace Akka.Persistence
     }
     public sealed class SnapshotMetadata : System.IEquatable<Akka.Persistence.SnapshotMetadata>
     {
-        public static System.DateTime TimestampNotSpecified;
+        [System.ObsoleteAttribute("This constructor is deprecated and will be removed in v1.6. Use the constructor w" +
+            "ith the timestamp parameter instead. Since v1.5.28", true)]
         public SnapshotMetadata(string persistenceId, long sequenceNr) { }
         [Newtonsoft.Json.JsonConstructorAttribute()]
         public SnapshotMetadata(string persistenceId, long sequenceNr, System.DateTime timestamp) { }

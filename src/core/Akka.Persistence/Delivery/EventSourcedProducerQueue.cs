@@ -141,7 +141,7 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
     {
         PersistenceId = persistenceId;
         Settings = settings ?? EventSourcedProducerQueue.Settings.Create(Context.System);
-        _timeProvider = timeProvider ?? DateTimeOffsetNowTimeProvider.Instance;
+        _timeProvider = timeProvider ?? Context.System.Scheduler;
         JournalPluginId = Settings.JournalPluginId;
         SnapshotPluginId = Settings.SnapshotPluginId;
         Self.Tell(EventSourcedProducerQueue.CleanupTick.Instance);

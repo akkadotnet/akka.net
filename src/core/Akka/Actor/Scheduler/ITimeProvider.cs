@@ -10,8 +10,13 @@ using System;
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// Time provider used by the scheduler to obtain the current time.
     /// </summary>
+    /// <remarks>
+    /// Intended to be customizable to we can virtualize time for testing purposes.
+    ///
+    /// In the future we will drop this in favor of the time provider built into .NET 8 and later.
+    /// </remarks>
     public interface ITimeProvider
     {
         /// <summary>

@@ -82,9 +82,9 @@ public static class ProducerController
     {
         if (sendAdapter == null)
             return Props.Create(() => new ProducerController<T>(producerId, durableProducerQueue, settings,
-                DateTimeOffsetNowTimeProvider.Instance, fuzzing));
+                actorSystem.Scheduler, fuzzing));
         return Props.Create(() => new ProducerController<T>(producerId, durableProducerQueue, sendAdapter, settings,
-            DateTimeOffsetNowTimeProvider.Instance, fuzzing));
+            actorSystem.Scheduler, fuzzing));
     }
 
     public sealed record Settings
