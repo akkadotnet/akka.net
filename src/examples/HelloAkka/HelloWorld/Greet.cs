@@ -1,24 +1,25 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Greet.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Greet.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 #region hello-world-message
-namespace HelloWorld
-{
-    /// <summary>
-    /// Immutable message type that actor will respond to
-    /// </summary>
-    public class Greet
-    {
-        public string Who { get; private set; }
 
-        public Greet(string who)
-        {
-            Who = who;
-        }
+namespace HelloWorld;
+
+/// <summary>
+///     Immutable message type that actor will respond to
+/// </summary>
+public class Greet
+{
+    public Greet(string who)
+    {
+        Who = who;
     }
+
+    public string Who { get; private set; }
 }
+
 #endregion

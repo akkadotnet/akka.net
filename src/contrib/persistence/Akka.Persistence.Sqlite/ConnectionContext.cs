@@ -1,54 +1,53 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ConnectionContext.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ConnectionContext.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
 using System.Data;
 using Microsoft.Data.Sqlite;
 
-namespace Akka.Persistence.Sqlite
+namespace Akka.Persistence.Sqlite;
+
+/// <summary>
+///     This class has been made to make memory connections safe. In SQLite shared memory database exists as long, as there
+///     exists at least one opened connection to it.
+/// </summary>
+internal static class ConnectionContext
 {
+    private static readonly ConcurrentDictionary<string, SqliteConnection> Remembered = new();
+
     /// <summary>
-    /// This class has been made to make memory connections safe. In SQLite shared memory database exists as long, as there exists at least one opened connection to it.
+    ///     TBD
     /// </summary>
-    internal static class ConnectionContext
+    /// <param name="connectionString">TBD</param>
+    /// <exception cref="ArgumentNullException">
+    ///     This exception is thrown when the specified <paramref name="connectionString" /> is undefined.
+    /// </exception>
+    /// <returns>TBD</returns>
+    public static SqliteConnection Remember(string connectionString)
     {
-        private static readonly ConcurrentDictionary<string, SqliteConnection> Remembered = new();
+        if (string.IsNullOrEmpty(connectionString))
+            throw new ArgumentNullException(nameof(connectionString),
+                "No connection string with connection to remember");
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="connectionString">TBD</param>
-        /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="connectionString"/> is undefined.
-        /// </exception>
-        /// <returns>TBD</returns>
-        public static SqliteConnection Remember(string connectionString)
-        {
-            if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException(nameof(connectionString), "No connection string with connection to remember");
+        var conn = Remembered.GetOrAdd(connectionString, _ => new SqliteConnection(connectionString));
 
-            var conn = Remembered.GetOrAdd(connectionString, _ => new SqliteConnection(connectionString));
+        if (conn.State != ConnectionState.Open)
+            conn.Open();
 
-            if (conn.State != ConnectionState.Open)
-                conn.Open();
+        return conn;
+    }
 
-            return conn;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="connectionString">TBD</param>
-        public static void Forget(string connectionString)
-        {
-            if (Remembered.TryRemove(connectionString, out var conn))
-            {
-                conn.Dispose();
-            }
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="connectionString">TBD</param>
+    public static void Forget(string connectionString)
+    {
+        if (Remembered.TryRemove(connectionString, out var conn)) conn.Dispose();
     }
 }

@@ -1,22 +1,20 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ActorDslExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ActorDslExtensions.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 
-namespace Akka.TestKit
+namespace Akka.TestKit;
+
+public static class ActorDslExtensions
 {
-    public static class ActorDslExtensions
+    public static void Receive(this IActorDsl config, string message, Action<string, IActorContext> handler)
     {
-        public static void Receive(this IActorDsl config, string message, Action<string, IActorContext> handler)
-        {
-            config.Receive(m=>string.Equals(m,message,StringComparison.Ordinal), handler);
-        }
+        config.Receive(m => string.Equals(m, message, StringComparison.Ordinal), handler);
     }
 }
-

@@ -1,66 +1,62 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="EventFilterTestBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="EventFilterTestBase.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
-using System.Threading.Tasks;
 using Akka.Event;
 
-namespace Akka.TestKit.Tests.TestEventListenerTests
+namespace Akka.TestKit.Tests.TestEventListenerTests;
+
+public abstract class EventFilterTestBase : TestKit.Xunit2.TestKit
 {
-    public abstract class EventFilterTestBase : TestKit.Xunit2.TestKit
+    /// <summary>
+    ///     Used to signal that the test was successful and that we should ensure no more messages were logged
+    /// </summary>
+    protected bool TestSuccessful;
+
+    protected EventFilterTestBase(string config)
+        : base(@"akka.loggers = [""" + typeof(ForwardAllEventsTestEventListener).AssemblyQualifiedName + @"""], " +
+               (string.IsNullOrEmpty(config) ? "" : config))
     {
-        /// <summary>
-        /// Used to signal that the test was successful and that we should ensure no more messages were logged
-        /// </summary>
-        protected bool TestSuccessful;
+        //We send a ForwardAllEventsTo containing message to the TestEventListenerToForwarder logger (configured as a logger above).
+        //It should respond with an "OK" message when it has received the message.
+        var initLoggerMessage = new ForwardAllEventsTestEventListener.ForwardAllEventsTo(TestActor);
 
-        protected EventFilterTestBase(string config)
-            : base(@"akka.loggers = [""" + typeof(ForwardAllEventsTestEventListener).AssemblyQualifiedName + @"""], " + (string.IsNullOrEmpty(config) ? "" : config))
-        {
-            //We send a ForwardAllEventsTo containing message to the TestEventListenerToForwarder logger (configured as a logger above).
-            //It should respond with an "OK" message when it has received the message.
-            var initLoggerMessage = new ForwardAllEventsTestEventListener.ForwardAllEventsTo(TestActor);
-            
-            SendRawLogEventMessage(initLoggerMessage);
-            ExpectMsg("OK");
-            //From now on we know that all messages will be forwarded to TestActor
-        }
+        SendRawLogEventMessage(initLoggerMessage);
+        ExpectMsg("OK");
+        //From now on we know that all messages will be forwarded to TestActor
+    }
 
-        protected abstract void SendRawLogEventMessage(object message);
+    protected abstract void SendRawLogEventMessage(object message);
 
-        protected override void AfterAll()
-        {
-            //After every test we make sure no uncatched messages have been logged
-            Exception exception = null;
-            if(TestSuccessful)
+    protected override void AfterAll()
+    {
+        //After every test we make sure no uncatched messages have been logged
+        Exception exception = null;
+        if (TestSuccessful)
+            try
             {
-                try
-                {
-                    EnsureNoMoreLoggedMessages();
-                }
-                catch (Exception e)
-                {
-                    exception = e;
-                }
+                EnsureNoMoreLoggedMessages();
             }
-            base.AfterAll();
-            if (exception is { })
-                throw exception;
-        }
+            catch (Exception e)
+            {
+                exception = e;
+            }
 
-        private void EnsureNoMoreLoggedMessages()
-        {
-            //We log a Finished message. When it arrives to TestActor we know no other message has been logged.
-            //If we receive something else it means another message was logged, and ExpectMsg will fail
-            const string message = "<<Finished>>";
-            SendRawLogEventMessage(message);
-            ExpectMsg<LogEvent>(err => (string) err.Message == message,hint: "message to be \"" + message + "\"");
-        }
+        base.AfterAll();
+        if (exception is not null)
+            throw exception;
+    }
 
+    private void EnsureNoMoreLoggedMessages()
+    {
+        //We log a Finished message. When it arrives to TestActor we know no other message has been logged.
+        //If we receive something else it means another message was logged, and ExpectMsg will fail
+        const string message = "<<Finished>>";
+        SendRawLogEventMessage(message);
+        ExpectMsg<LogEvent>(err => (string)err.Message == message, hint: "message to be \"" + message + "\"");
     }
 }
-

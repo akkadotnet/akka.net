@@ -1,7 +1,7 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="TestDurableQueue.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  <copyright file="TestDurableProducerQueue.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
 
@@ -16,25 +16,31 @@ namespace Akka.Tests.Delivery;
 
 public class DurableProducerQueueStateHolder<T>
 {
-    public static DurableProducerQueueStateHolder<T> Empty => new(State<T>.Empty);
-
     public DurableProducerQueueStateHolder(State<T> state)
     {
         State = state;
     }
-    
+
+    public static DurableProducerQueueStateHolder<T> Empty => new(State<T>.Empty);
+
     public State<T> State { get; }
-    
+
     // add implicit conversion operators to simplify tests
-    public static implicit operator State<T>(DurableProducerQueueStateHolder<T> holder) => holder.State;
-    
-    public static implicit operator DurableProducerQueueStateHolder<T>(State<T> state) => new(state);
+    public static implicit operator State<T>(DurableProducerQueueStateHolder<T> holder)
+    {
+        return holder.State;
+    }
+
+    public static implicit operator DurableProducerQueueStateHolder<T>(State<T> state)
+    {
+        return new DurableProducerQueueStateHolder<T>(state);
+    }
 }
 
 public static class TestDurableProducerQueue
 {
     /// <summary>
-    /// Used to simplify tests.
+    ///     Used to simplify tests.
     /// </summary>
     public const long TestTimestamp = long.MaxValue;
 
@@ -44,29 +50,25 @@ public static class TestDurableProducerQueue
         return Props.Create(() => new TestDurableProducerQueue<T>(delay, failWhen, initialState));
     }
 
-    public static Props CreateProps<T>(TimeSpan delay, State<T> initialState, Predicate<IDurableProducerQueueCommand> failWhen)
+    public static Props CreateProps<T>(TimeSpan delay, State<T> initialState,
+        Predicate<IDurableProducerQueueCommand> failWhen)
     {
-        return Props.Create(() => new TestDurableProducerQueue<T>(delay, _ => false, new AtomicReference<DurableProducerQueueStateHolder<T>>(initialState)));
+        return Props.Create(() => new TestDurableProducerQueue<T>(delay, _ => false,
+            new AtomicReference<DurableProducerQueueStateHolder<T>>(initialState)));
     }
 }
 
 /// <summary>
-/// INTERNAL API
+///     INTERNAL API
 /// </summary>
 /// <typeparam name="T">The type of messages handled by the durable queue.</typeparam>
 public class TestDurableProducerQueue<T> : ReceiveActor
 {
-    private readonly ILoggingAdapter _log = Context.GetLogger();
     private readonly TimeSpan _delay;
     private readonly Predicate<IDurableProducerQueueCommand> _failWhen;
+    private readonly ILoggingAdapter _log = Context.GetLogger();
 
-    private AtomicReference<DurableProducerQueueStateHolder<T>> _internalState;
-
-    public State<T> CurrentState
-    {
-        get => _internalState.Value.State;
-        private set => _internalState.Value = value;
-    }
+    private readonly AtomicReference<DurableProducerQueueStateHolder<T>> _internalState;
 
     public TestDurableProducerQueue(TimeSpan delay, Predicate<IDurableProducerQueueCommand> failWhen,
         AtomicReference<DurableProducerQueueStateHolder<T>> initialState)
@@ -75,6 +77,12 @@ public class TestDurableProducerQueue<T> : ReceiveActor
         _failWhen = failWhen;
         _internalState = initialState;
         Active();
+    }
+
+    public State<T> CurrentState
+    {
+        get => _internalState.Value.State;
+        private set => _internalState.Value = value;
     }
 
     private void Active()
@@ -143,6 +151,7 @@ public class TestDurableProducerQueue<T> : ReceiveActor
         CurrentState = CurrentState.CleanUpPartialChunkedMessages();
         _log.Info("Starting with seqNr [{0}], confirmedSeqNr [{1}]", CurrentState.CurrentSeqNr,
             string.Join(",",
-                CurrentState.ConfirmedSeqNr.Select(c => $"[{c.Key}] -> (seqNr {c.Value.Item1}, timestamp {c.Value.Item2})")));
+                CurrentState.ConfirmedSeqNr.Select(c =>
+                    $"[{c.Key}] -> (seqNr {c.Value.Item1}, timestamp {c.Value.Item2})")));
     }
 }

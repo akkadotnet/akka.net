@@ -1,55 +1,56 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ExternalShardAllocation.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ExternalShardAllocation.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Concurrent;
 using Akka.Actor;
+using Akka.Cluster.Sharding.External.Internal;
 
-namespace Akka.Cluster.Sharding.External
+namespace Akka.Cluster.Sharding.External;
+
+/// <summary>
+///     API May Change
+/// </summary>
+public sealed class ExternalShardAllocation : IExtension
 {
-    using ShardId = String;
+    private readonly ConcurrentDictionary<string, IExternalShardAllocationClient> _clients = new();
 
-    /// <summary>
-    /// API May Change
-    /// </summary>
-    public sealed class ExternalShardAllocation : IExtension
+    private readonly ExtendedActorSystem _system;
+
+    public ExternalShardAllocation(ExtendedActorSystem system)
     {
-        public static ExternalShardAllocation Get(ActorSystem system)
-        {
-            return system.WithExtension<ExternalShardAllocation, ExternalShardAllocationExtensionProvider>();
-        }
-
-        private readonly ExtendedActorSystem _system;
-        private readonly ConcurrentDictionary<string, IExternalShardAllocationClient> _clients = new();
-
-        public ExternalShardAllocation(ExtendedActorSystem system)
-        {
-            _system = system;
-        }
-
-        public IExternalShardAllocationClient ClientFor(string typeName) => Client(typeName);
-
-        private IExternalShardAllocationClient Client(string typeName)
-        {
-            return _clients.GetOrAdd(typeName, key => new Internal.ExternalShardAllocationClientImpl(_system, key));
-        }
+        _system = system;
     }
 
-    public class ExternalShardAllocationExtensionProvider : ExtensionIdProvider<ExternalShardAllocation>
+    public static ExternalShardAllocation Get(ActorSystem system)
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
-        public override ExternalShardAllocation CreateExtension(ExtendedActorSystem system)
-        {
-            var extension = new ExternalShardAllocation(system);
-            return extension;
-        }
+        return system.WithExtension<ExternalShardAllocation, ExternalShardAllocationExtensionProvider>();
+    }
+
+    public IExternalShardAllocationClient ClientFor(string typeName)
+    {
+        return Client(typeName);
+    }
+
+    private IExternalShardAllocationClient Client(string typeName)
+    {
+        return _clients.GetOrAdd(typeName, key => new ExternalShardAllocationClientImpl(_system, key));
+    }
+}
+
+public class ExternalShardAllocationExtensionProvider : ExtensionIdProvider<ExternalShardAllocation>
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="system">TBD</param>
+    /// <returns>TBD</returns>
+    public override ExternalShardAllocation CreateExtension(ExtendedActorSystem system)
+    {
+        var extension = new ExternalShardAllocation(system);
+        return extension;
     }
 }

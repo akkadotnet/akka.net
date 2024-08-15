@@ -1,20 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-<PropertyGroup>
-  <Description>Akka.Remote x-plat performance benchmark</Description>
-  <Copyright>Copyright (c) Akka.NET Team</Copyright>
-  <Authors>Akka.NET Team</Authors>
-  <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);net6.0</TargetFrameworks>
-  <OutputType>Exe</OutputType>
-  <IsPackable>false</IsPackable>
-</PropertyGroup>
+  <PropertyGroup>
+    <Description>Akka.Remote x-plat performance benchmark</Description>
+    <Copyright>Copyright (c) Akka.NET Team</Copyright>
+    <Authors>Akka.NET Team</Authors>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);net6.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
 
-<PropertyGroup>
-  <ServerGarbageCollection>true</ServerGarbageCollection>
-  <TieredPGO>true</TieredPGO>
-</PropertyGroup>
+  <PropertyGroup>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+  </PropertyGroup>
 
-<ItemGroup>
-  <ProjectReference Include="..\..\core\Akka.Remote\Akka.Remote.csproj" />
-</ItemGroup>
-  
+  <ItemGroup>
+    <ProjectReference Include="..\..\core\Akka.Remote\Akka.Remote.csproj"/>
+  </ItemGroup>
+
 </Project>

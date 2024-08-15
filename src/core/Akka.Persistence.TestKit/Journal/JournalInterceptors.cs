@@ -1,106 +1,111 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="JournalInterceptors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="JournalInterceptors.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-namespace Akka.Persistence.TestKit
+using System;
+using System.Threading.Tasks;
+
+namespace Akka.Persistence.TestKit;
+
+internal static class JournalInterceptors
 {
-    using System;
-    using System.Threading.Tasks;
-
-    internal static class JournalInterceptors
+    internal class Noop : IJournalInterceptor
     {
-        internal class Noop : IJournalInterceptor
-        {
-            public static readonly IJournalInterceptor Instance = new Noop();
+        public static readonly IJournalInterceptor Instance = new Noop();
 
-            public Task InterceptAsync(IPersistentRepresentation message) => Task.FromResult(true);
+        public Task InterceptAsync(IPersistentRepresentation message)
+        {
+            return Task.FromResult(true);
+        }
+    }
+
+    internal class Failure : IJournalInterceptor
+    {
+        public static readonly IJournalInterceptor Instance = new Failure();
+
+        public Task InterceptAsync(IPersistentRepresentation message)
+        {
+            throw new TestJournalFailureException();
+        }
+    }
+
+    internal class Rejection : IJournalInterceptor
+    {
+        public static readonly IJournalInterceptor Instance = new Rejection();
+
+        public Task InterceptAsync(IPersistentRepresentation message)
+        {
+            throw new TestJournalRejectionException();
+        }
+    }
+
+    internal class Delay : IJournalInterceptor
+    {
+        private readonly TimeSpan _delay;
+        private readonly IJournalInterceptor _next;
+
+        public Delay(TimeSpan delay, IJournalInterceptor next)
+        {
+            _delay = delay;
+            _next = next;
         }
 
-        internal class Failure : IJournalInterceptor
+        public async Task InterceptAsync(IPersistentRepresentation message)
         {
-            public static readonly IJournalInterceptor Instance = new Failure();
+            await Task.Delay(_delay);
+            await _next.InterceptAsync(message);
+        }
+    }
 
-            public Task InterceptAsync(IPersistentRepresentation message) => throw new TestJournalFailureException(); 
+    internal sealed class OnCondition : IJournalInterceptor
+    {
+        private readonly bool _negate;
+        private readonly IJournalInterceptor _next;
+
+        private readonly Func<IPersistentRepresentation, Task<bool>> _predicate;
+
+        public OnCondition(Func<IPersistentRepresentation, Task<bool>> predicate, IJournalInterceptor next,
+            bool negate = false)
+        {
+            _predicate = predicate;
+            _next = next;
+            _negate = negate;
         }
 
-        internal class Rejection : IJournalInterceptor
+        public OnCondition(Func<IPersistentRepresentation, bool> predicate, IJournalInterceptor next,
+            bool negate = false)
         {
-            public static readonly IJournalInterceptor Instance = new Rejection();
-
-            public Task InterceptAsync(IPersistentRepresentation message) => throw new TestJournalRejectionException(); 
-        }
-        
-        internal class Delay : IJournalInterceptor
-        {
-            public Delay(TimeSpan delay, IJournalInterceptor next)
-            {
-                _delay = delay;
-                _next = next;
-            }
-
-            private readonly TimeSpan _delay;
-            private readonly IJournalInterceptor _next;
-
-            public async Task InterceptAsync(IPersistentRepresentation message)
-            {
-                await Task.Delay(_delay);
-                await _next.InterceptAsync(message);
-            }
+            _predicate = message => Task.FromResult(predicate(message));
+            _next = next;
+            _negate = negate;
         }
 
-        internal sealed class OnCondition : IJournalInterceptor
+        public async Task InterceptAsync(IPersistentRepresentation message)
         {
-            public OnCondition(Func<IPersistentRepresentation, Task<bool>> predicate, IJournalInterceptor next, bool negate = false)
-            {
-                _predicate = predicate;
-                _next = next;
-                _negate = negate;
-            }
+            var result = await _predicate(message);
+            if ((_negate && !result) || (!_negate && result)) await _next.InterceptAsync(message);
+        }
+    }
 
-            public OnCondition(Func<IPersistentRepresentation, bool> predicate, IJournalInterceptor next, bool negate = false)
-            {
-                _predicate = message => Task.FromResult(predicate(message));
-                _next = next;
-                _negate = negate;
-            }
+    internal class OnType : IJournalInterceptor
+    {
+        private readonly Type _messageType;
+        private readonly IJournalInterceptor _next;
 
-            private readonly Func<IPersistentRepresentation, Task<bool>> _predicate;
-            private readonly IJournalInterceptor _next;
-            private readonly bool _negate;
-
-            public async Task InterceptAsync(IPersistentRepresentation message)
-            {
-                var result = await _predicate(message);
-                if ((_negate && !result) || (!_negate && result))
-                {
-                    await _next.InterceptAsync(message);
-                }
-            }
+        public OnType(Type messageType, IJournalInterceptor next)
+        {
+            _messageType = messageType;
+            _next = next;
         }
 
-        internal class OnType : IJournalInterceptor
+        public async Task InterceptAsync(IPersistentRepresentation message)
         {
-            public OnType(Type messageType, IJournalInterceptor next)
-            {
-                _messageType = messageType;
-                _next = next;
-            }
+            var type = message.Payload.GetType();
 
-            private readonly Type _messageType;
-            private readonly IJournalInterceptor _next;
-
-            public async Task InterceptAsync(IPersistentRepresentation message)
-            {
-                var type = message.Payload.GetType();
-
-                if (_messageType.IsAssignableFrom(type))
-                {
-                    await _next.InterceptAsync(message);
-                }
-            }
+            if (_messageType.IsAssignableFrom(type)) await _next.InterceptAsync(message);
         }
     }
 }

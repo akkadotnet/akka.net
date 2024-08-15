@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="FileSourcesBenchmark.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="FileSourcesBenchmark.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.IO;
@@ -16,99 +16,105 @@ using Akka.Streams.Dsl;
 using Akka.Streams.IO;
 using NBench;
 
-namespace Akka.Streams.Tests.Performance.IO
+namespace Akka.Streams.Tests.Performance.IO;
+
+public class FileSourcesBenchmark
 {
-    public class FileSourcesBenchmark
+    private const int BufferSize = 2048;
+    private ActorSystem _actorSystem;
+    private FileInfo _file;
+    private Source<ByteString, Task<IOResult>> _fileChannelSource;
+    private Source<ByteString, Task<IOResult>> _fileInputStreamSource;
+    private Source<ByteString, NotUsed> _ioSourceLinesIterator;
+    private ActorMaterializer _materializer;
+
+    [PerfSetup]
+    public void Setup(BenchmarkContext context)
     {
-        private const int BufferSize = 2048;
-        private ActorSystem _actorSystem;
-        private ActorMaterializer _materializer;
-        private FileInfo _file;
-        private Source<ByteString, Task<IOResult>> _fileChannelSource;
-        private Source<ByteString, Task<IOResult>> _fileInputStreamSource;
-        private Source<ByteString, NotUsed> _ioSourceLinesIterator;
+        _actorSystem = ActorSystem.Create("FileSourcesBenchmark");
+        _materializer = _actorSystem.Materializer();
 
-        [PerfSetup]
-        public void Setup(BenchmarkContext context)
+        _file = CreateFile();
+
+        _fileChannelSource = FileIO.FromFile(_file, BufferSize);
+        _fileInputStreamSource = StreamConverters.FromInputStream(() => File.OpenRead(_file.FullName), BufferSize);
+        _ioSourceLinesIterator = Source.FromEnumerator(() =>
+            File.ReadLines(_file.FullName).Select(ByteString.FromString).GetEnumerator());
+    }
+
+    private FileInfo CreateFile()
+    {
+        var line = Enumerable.Repeat("x", 2048).Aggregate("", (agg, s) => agg + s) + "\n";
+
+        var file = new FileInfo(Path.GetTempFileName());
+        File.WriteAllLines(file.FullName, Enumerable.Repeat(line, 10 * 39062));
+        return file;
+    }
+
+    [PerfCleanup]
+    public void Shutdown()
+    {
+        _actorSystem.Terminate().Wait(TimeSpan.FromSeconds(5));
+        try
         {
-            _actorSystem = ActorSystem.Create("FileSourcesBenchmark");
-            _materializer = _actorSystem.Materializer();
-
-            _file = CreateFile();
-
-            _fileChannelSource = FileIO.FromFile(_file, BufferSize);
-            _fileInputStreamSource = StreamConverters.FromInputStream(() => File.OpenRead(_file.FullName), BufferSize);
-            _ioSourceLinesIterator = Source.FromEnumerator(() => File.ReadLines(_file.FullName).Select(ByteString.FromString).GetEnumerator());
+            _file.Delete();
         }
-
-        private FileInfo CreateFile()
+        catch
         {
-            var line = Enumerable.Repeat("x", 2048).Aggregate("", (agg, s) => agg + s) + "\n";
-
-            var file = new FileInfo(Path.GetTempFileName());
-            File.WriteAllLines(file.FullName, Enumerable.Repeat(line, 10 * 39062));
-            return file;
+            //try again...
+            Thread.Sleep(TimeSpan.FromSeconds(10));
+            _file.Delete();
         }
-
-        [PerfCleanup]
-        public void Shutdown()
-        {
-            _actorSystem.Terminate().Wait(TimeSpan.FromSeconds(5));
-            try
-            {
-                _file.Delete();
-            }
-            catch 
-            {
-                //try again...
-                Thread.Sleep(TimeSpan.FromSeconds(10));
-                _file.Delete();
-            }
-        }
+    }
 
 
-        [PerfBenchmark(Description = "Test the performance of a FileSource using a file channel",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 1)]
-        [TimingMeasurement]
-        [ElapsedTimeAssertion(MaxTimeMilliseconds = 2500)]
-        public void FileChannel()
-            => _fileChannelSource.To(Sink.Ignore<ByteString>())
-                .Run(_materializer)
-                .Wait(TimeSpan.FromMinutes(1));
+    [PerfBenchmark(Description = "Test the performance of a FileSource using a file channel",
+        RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 1)]
+    [TimingMeasurement]
+    [ElapsedTimeAssertion(MaxTimeMilliseconds = 2500)]
+    public void FileChannel()
+    {
+        _fileChannelSource.To(Sink.Ignore<ByteString>())
+            .Run(_materializer)
+            .Wait(TimeSpan.FromMinutes(1));
+    }
 
 
-        [PerfBenchmark(Description = "Test the performance of a FileSource using a file channel without read ahead",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 1)]
-        [TimingMeasurement]
-        [ElapsedTimeAssertion(MaxTimeMilliseconds = 2000)]
-        public void FileChannel_without_read_ahead()
-            => _fileChannelSource.WithAttributes(Attributes.CreateInputBuffer(1, 1))
-                .To(Sink.Ignore<ByteString>())
-                .Run(_materializer)
-                .Wait(TimeSpan.FromMinutes(1));
+    [PerfBenchmark(Description = "Test the performance of a FileSource using a file channel without read ahead",
+        RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 1)]
+    [TimingMeasurement]
+    [ElapsedTimeAssertion(MaxTimeMilliseconds = 2000)]
+    public void FileChannel_without_read_ahead()
+    {
+        _fileChannelSource.WithAttributes(Attributes.CreateInputBuffer(1, 1))
+            .To(Sink.Ignore<ByteString>())
+            .Run(_materializer)
+            .Wait(TimeSpan.FromMinutes(1));
+    }
 
 
-        [PerfBenchmark(Description = "Test the performance of a FileSource using a file stream",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 1)]
-        [TimingMeasurement]
-        [ElapsedTimeAssertion(MaxTimeMilliseconds = 2000)]
-        public void FileStream()
-            => _fileInputStreamSource.To(Sink.Ignore<ByteString>())
-                .Run(_materializer)
-                .Wait(TimeSpan.FromMinutes(1));
+    [PerfBenchmark(Description = "Test the performance of a FileSource using a file stream",
+        RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 1)]
+    [TimingMeasurement]
+    [ElapsedTimeAssertion(MaxTimeMilliseconds = 2000)]
+    public void FileStream()
+    {
+        _fileInputStreamSource.To(Sink.Ignore<ByteString>())
+            .Run(_materializer)
+            .Wait(TimeSpan.FromMinutes(1));
+    }
 
 
-        [PerfBenchmark(Description = "Test the performance of a FileSource using File.ReadLines enumerator",
-            RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 1)]
-        [TimingMeasurement]
-        [ElapsedTimeAssertion(MaxTimeMilliseconds = 8000)]
-        public void Naive_IO_lines_enumerator()
-        {
-            var c = new TaskCompletionSource<int>();
+    [PerfBenchmark(Description = "Test the performance of a FileSource using File.ReadLines enumerator",
+        RunMode = RunMode.Iterations, TestMode = TestMode.Test, NumberOfIterations = 1)]
+    [TimingMeasurement]
+    [ElapsedTimeAssertion(MaxTimeMilliseconds = 8000)]
+    public void Naive_IO_lines_enumerator()
+    {
+        var c = new TaskCompletionSource<int>();
 
-            _ioSourceLinesIterator.To(Sink.OnComplete<ByteString>(() => c.SetResult(-1), _ => { })).Run(_materializer);
+        _ioSourceLinesIterator.To(Sink.OnComplete<ByteString>(() => c.SetResult(-1), _ => { })).Run(_materializer);
 
-            c.Task.Wait(TimeSpan.FromMinutes(1));
-        }
+        c.Task.Wait(TimeSpan.FromMinutes(1));
     }
 }

@@ -1,350 +1,345 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="JsonFramingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="JsonFramingSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
-using Akka.Streams.Util;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using Akka.Util;
 using Akka.Util.Internal;
-using Akka.TestKit.Extensions;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
-using System.Threading.Tasks;
-using FluentAssertions.Extensions;
-using Akka.Streams.Tests.Actor;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class JsonFramingSpec : AkkaSpec
 {
-    public class JsonFramingSpec : AkkaSpec
+    public JsonFramingSpec(ITestOutputHelper helper) : base(helper)
     {
-        public JsonFramingSpec(ITestOutputHelper helper) : base(helper)
-        {
-            Materializer = Sys.Materializer();
-        }
+        Materializer = Sys.Materializer();
+    }
 
-        private ActorMaterializer Materializer { get; }
+    private ActorMaterializer Materializer { get; }
 
-        [Fact]
-        public async Task Collecting_multiple_json_should_parse_json_array()
-        {
-            var input = @"
+    [Fact]
+    public async Task Collecting_multiple_json_should_parse_json_array()
+    {
+        var input = @"
            [
             { ""name"" : ""john"" },
             { ""name"" : ""Ég get etið gler án þess að meiða mig"" },
             { ""name"" : ""jack"" },
            ]";
 
-            var result = Source.Single(ByteString.FromString(input))
-                .Via(JsonFraming.ObjectScanner(int.MaxValue))
-                .RunAggregate(new List<string>(), (list, s) =>
-                {
-                    list.Add(s.ToString());
-                    return list;
-                }, Materializer);
-
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEquivalentTo(new []
+        var result = Source.Single(ByteString.FromString(input))
+            .Via(JsonFraming.ObjectScanner(int.MaxValue))
+            .RunAggregate(new List<string>(), (list, s) =>
             {
-                @"{ ""name"" : ""john"" }",
-                @"{ ""name"" : ""Ég get etið gler án þess að meiða mig"" }",
-                @"{ ""name"" : ""jack"" }"
-            });
-        }
+                list.Add(s.ToString());
+                return list;
+            }, Materializer);
 
-        [Fact]
-        public async Task Collecting_multiple_json_should_emit_single_json_element_from_string()
-        {
-            var input = @"
+        var complete = await result.ShouldCompleteWithin(3.Seconds());
+        complete.Should().BeEquivalentTo(@"{ ""name"" : ""john"" }",
+            @"{ ""name"" : ""Ég get etið gler án þess að meiða mig"" }", @"{ ""name"" : ""jack"" }");
+    }
+
+    [Fact]
+    public async Task Collecting_multiple_json_should_emit_single_json_element_from_string()
+    {
+        var input = @"
             { ""name"" : ""john"" }
             { ""name"" : ""jack"" }
            ";
 
-            var result = Source.Single(ByteString.FromString(input))
-                .Via(JsonFraming.ObjectScanner(int.MaxValue))
-                .Take(1)
-                .RunAggregate(new List<string>(), (list, s) =>
-                {
-                    list.Add(s.ToString());
-                    return list;
-                }, Materializer);
+        var result = Source.Single(ByteString.FromString(input))
+            .Via(JsonFraming.ObjectScanner(int.MaxValue))
+            .Take(1)
+            .RunAggregate(new List<string>(), (list, s) =>
+            {
+                list.Add(s.ToString());
+                return list;
+            }, Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
-            complete.Should().HaveCount(1).And.Subject.Should().Contain(@"{ ""name"" : ""john"" }");
-        }
+        var complete = await result.ShouldCompleteWithin(3.Seconds());
+        complete.Should().HaveCount(1).And.Subject.Should().Contain(@"{ ""name"" : ""john"" }");
+    }
 
-        [Fact]
-        public async Task Collecting_multiple_json_should_parse_line_delimited()
-        {
-            var input = @"
+    [Fact]
+    public async Task Collecting_multiple_json_should_parse_line_delimited()
+    {
+        var input = @"
             { ""name"" : ""john"" }
             { ""name"" : ""jack"" }
             { ""name"" : ""katie"" }
            ";
 
-            var result = Source.Single(ByteString.FromString(input))
-                .Via(JsonFraming.ObjectScanner(int.MaxValue))
-                .RunAggregate(new List<string>(), (list, s) =>
-                {
-                    list.Add(s.ToString());
-                    return list;
-                }, Materializer);
-
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEquivalentTo(new[]
+        var result = Source.Single(ByteString.FromString(input))
+            .Via(JsonFraming.ObjectScanner(int.MaxValue))
+            .RunAggregate(new List<string>(), (list, s) =>
             {
-                @"{ ""name"" : ""john"" }",
-                @"{ ""name"" : ""jack"" }",
-                @"{ ""name"" : ""katie"" }"
-            });
-        }
+                list.Add(s.ToString());
+                return list;
+            }, Materializer);
 
-        [Fact]
-        public async Task Collecting_multiple_json_should_parse_comma_delimited()
-        {
-            var input = @"{ ""name"" : ""john"" }, { ""name"" : ""jack"" }, { ""name"" : ""katie"" }
+        var complete = await result.ShouldCompleteWithin(3.Seconds());
+        complete.Should().BeEquivalentTo(@"{ ""name"" : ""john"" }", @"{ ""name"" : ""jack"" }",
+            @"{ ""name"" : ""katie"" }");
+    }
+
+    [Fact]
+    public async Task Collecting_multiple_json_should_parse_comma_delimited()
+    {
+        var input = @"{ ""name"" : ""john"" }, { ""name"" : ""jack"" }, { ""name"" : ""katie"" }
            ";
 
-            var result = Source.Single(ByteString.FromString(input))
+        var result = Source.Single(ByteString.FromString(input))
+            .Via(JsonFraming.ObjectScanner(int.MaxValue))
+            .RunAggregate(new List<string>(), (list, s) =>
+            {
+                list.Add(s.ToString());
+                return list;
+            }, Materializer);
+
+        var complete = await result.ShouldCompleteWithin(3.Seconds());
+        complete.Should().BeEquivalentTo(@"{ ""name"" : ""john"" }", @"{ ""name"" : ""jack"" }",
+            @"{ ""name"" : ""katie"" }");
+    }
+
+    [Fact]
+    public async Task Collecting_multiple_json_should_parse_chunks_successfully()
+    {
+        var input = new[]
+        {
+            ByteString.FromString(@"[{ ""name"" : ""john"" "), ByteString.FromString("},"),
+            ByteString.FromString("{ \"na"), ByteString.FromString("me\" : \"jack\" "), ByteString.FromString("}]")
+        };
+        var result = await Source.From(input)
+            .Via(JsonFraming.ObjectScanner(int.MaxValue))
+            .RunAggregate(new List<string>(), (list, s) =>
+            {
+                list.Add(s.ToString());
+                return list;
+            }, Materializer)
+            .ShouldCompleteWithin(3.Seconds());
+        ;
+
+
+        result.Should().BeEquivalentTo(@"{ ""name"" : ""john"" }", @"{ ""name"" : ""jack"" }");
+    }
+
+    [Fact]
+    public void Collecting_multiple_json_should_emit_all_elements_after_input_completes()
+    {
+        var input = this.CreatePublisherProbe<ByteString>();
+        var output = this.CreateSubscriberProbe<string>();
+
+        var result =
+            Source.FromPublisher(input)
                 .Via(JsonFraming.ObjectScanner(int.MaxValue))
-                .RunAggregate(new List<string>(), (list, s) =>
-                {
-                    list.Add(s.ToString());
-                    return list;
-                }, Materializer);
+                .Select(b => b.ToString())
+                .RunWith(Sink.FromSubscriber(output), Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEquivalentTo(new[]
-            {
-                @"{ ""name"" : ""john"" }",
-                @"{ ""name"" : ""jack"" }",
-                @"{ ""name"" : ""katie"" }"
-            });
+        output.Request(1);
+        input.ExpectRequest();
+        input.SendNext(ByteString.FromString("[{\"a\":0}, {\"b\":1}, {\"c\":2}, {\"d\":3}, {\"e\":4}]"));
+        input.SendComplete();
+        Thread.Sleep(100); // another of those races, we don't know the order of next and complete
+        output.ExpectNext("{\"a\":0}");
+        output.Request(1);
+        output.ExpectNext("{\"b\":1}");
+        output.Request(1);
+        output.ExpectNext("{\"c\":2}");
+        output.Request(1);
+        output.ExpectNext("{\"d\":3}");
+        output.Request(1);
+        output.ExpectNext("{\"e\":4}");
+        output.Request(1);
+        output.ExpectComplete();
+    }
 
-        }
+    [Fact]
+    public void Collecting_json_buffer_when_nothing_is_supplied_should_return_nothing()
+    {
+        new JsonObjectParser().Poll().Should().Be(Option<ByteString>.None);
+    }
 
-        [Fact]
-        public async Task Collecting_multiple_json_should_parse_chunks_successfully()
-        {
-            var input = new[]
-            {
-                ByteString.FromString(@"[{ ""name"" : ""john"" "), ByteString.FromString("},"),
-                ByteString.FromString("{ \"na"), ByteString.FromString("me\" : \"jack\" "),
-                ByteString.FromString("}]")
-            };
-            var result = await Source.From(input)
-                .Via(JsonFraming.ObjectScanner(int.MaxValue))
-                .RunAggregate(new List<string>(), (list, s) =>
-                {
-                    list.Add(s.ToString());
-                    return list;
-                }, Materializer)
-                .ShouldCompleteWithin(3.Seconds()); ;
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_empty_object()
+    {
+        var buffer = new JsonObjectParser();
+        buffer.Offer(ByteString.FromString("{}"));
+        buffer.Poll().Value.ToString().Should().Be("{}");
+    }
 
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value()
+    {
+        var buffer = new JsonObjectParser();
+        buffer.Offer(ByteString.FromString("{ \"name\": \"john\" }"));
+        buffer.Poll().Value.ToString().Should().Be("{ \"name\": \"john\" }");
+    }
 
-            result.Should().BeEquivalentTo(new[]
-            {
-                @"{ ""name"" : ""john"" }",
-                @"{ ""name"" : ""jack"" }"
-            });
-        }
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_space()
+    {
+        var buffer = new JsonObjectParser();
+        buffer.Offer(ByteString.FromString("{ \"name\": \"john doe\" }"));
+        buffer.Poll().Value.ToString().Should().Be("{ \"name\": \"john doe\" }");
+    }
 
-        [Fact]
-        public void Collecting_multiple_json_should_emit_all_elements_after_input_completes()
-        {
-            var input = this.CreatePublisherProbe<ByteString>();
-            var output = this.CreateSubscriberProbe<string>();
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_single_quote()
+    {
+        var buffer = new JsonObjectParser();
+        buffer.Offer(ByteString.FromString("{ \"name\": \"john o'doe\" }"));
+        buffer.Poll().Value.ToString().Should().Be("{ \"name\": \"john o'doe\" }");
+    }
 
-            var result =
-                Source.FromPublisher(input)
-                    .Via(JsonFraming.ObjectScanner(int.MaxValue))
-                    .Select(b => b.ToString())
-                    .RunWith(Sink.FromSubscriber(output), Materializer);
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_curly_brace()
+    {
+        var buffer = new JsonObjectParser();
+        buffer.Offer(ByteString.FromString("{ \"name\": \"john{"));
+        buffer.Offer(ByteString.FromString("}"));
+        buffer.Offer(ByteString.FromString("\""));
+        buffer.Offer(ByteString.FromString("}"));
+        buffer.Poll().Value.ToString().Should().Be("{ \"name\": \"john{}\"}");
+    }
 
-            output.Request(1);
-            input.ExpectRequest();
-            input.SendNext(ByteString.FromString("[{\"a\":0}, {\"b\":1}, {\"c\":2}, {\"d\":3}, {\"e\":4}]"));
-            input.SendComplete();
-            Thread.Sleep(100); // another of those races, we don't know the order of next and complete
-            output.ExpectNext("{\"a\":0}");
-            output.Request(1);
-            output.ExpectNext("{\"b\":1}");
-            output.Request(1);
-            output.ExpectNext("{\"c\":2}");
-            output.Request(1);
-            output.ExpectNext("{\"d\":3}");
-            output.Request(1);
-            output.ExpectNext("{\"e\":4}");
-            output.Request(1);
-            output.ExpectComplete();
-        }
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_curly_brace_and_escape_character()
+    {
+        var buffer = new JsonObjectParser();
+        buffer.Offer(ByteString.FromString("{ \"name\": \"john"));
+        buffer.Offer(ByteString.FromString("\\\""));
+        buffer.Offer(ByteString.FromString("{"));
+        buffer.Offer(ByteString.FromString("}"));
+        buffer.Offer(ByteString.FromString("\\\""));
+        buffer.Offer(ByteString.FromString(" "));
+        buffer.Offer(ByteString.FromString("hey"));
+        buffer.Offer(ByteString.FromString("\""));
+        buffer.Offer(ByteString.FromString("}"));
+        buffer.Poll().Value.ToString().Should().Be("{ \"name\": \"john\\\"{}\\\" hey\"}");
+    }
 
-        [Fact]
-        public void Collecting_json_buffer_when_nothing_is_supplied_should_return_nothing()
-            => new JsonObjectParser().Poll().Should().Be(Option<ByteString>.None);
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_integer_value()
+    {
+        var buffer = new JsonObjectParser();
+        buffer.Offer(ByteString.FromString("{ \"age\" : 101}"));
+        buffer.Poll().Value.ToString().Should().Be("{ \"age\" : 101}");
+    }
 
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_empty_object()
-        {
-            var buffer = new JsonObjectParser();
-            buffer.Offer(ByteString.FromString("{}"));
-            buffer.Poll().Value.ToString().Should().Be("{}");
-        }
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_decimal_value()
+    {
+        var buffer = new JsonObjectParser();
+        buffer.Offer(ByteString.FromString("{ \"age\" : 10.1}"));
+        buffer.Poll().Value.ToString().Should().Be("{ \"age\" : 10.1}");
+    }
 
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value()
-        {
-            var buffer = new JsonObjectParser();
-            buffer.Offer(ByteString.FromString("{ \"name\": \"john\" }"));
-            buffer.Poll().Value.ToString().Should().Be("{ \"name\": \"john\" }");
-        }
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_nested_object()
+    {
+        var buffer = new JsonObjectParser();
+        const string content = "{ \"name\" : \"john\"," +
+                               "  \"age\"  : 101," +
+                               "  \"address\": {" +
+                               "       \"street\": \"Straight Street\"," +
+                               "       \"postcode\": 1234" +
+                               "  }" +
+                               "}";
+        buffer.Offer(ByteString.FromString(content));
+        buffer.Poll().Value.ToString().Should().Be(content);
+    }
 
-        [Fact] 
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_space()
-        {
-            var buffer = new JsonObjectParser();
-            buffer.Offer(ByteString.FromString("{ \"name\": \"john doe\" }"));
-            buffer.Poll().Value.ToString().Should().Be("{ \"name\": \"john doe\" }");
-        }
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_multiple_level_of_nested_object()
+    {
+        var buffer = new JsonObjectParser();
+        const string content = "{ \"name\" : \"john\"," +
+                               "  \"age\"  : 101," +
+                               "  \"address\": {" +
+                               "       \"street\": {" +
+                               "            \"name\": \"Straight\"," +
+                               "            \"type\": \"Avenue\"" +
+                               "       }," +
+                               "       \"postcode\": 1234" +
+                               "  }" +
+                               "}";
+        buffer.Offer(ByteString.FromString(content));
+        buffer.Poll().Value.ToString().Should().Be(content);
+    }
 
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_single_quote()
-        {
-            var buffer = new JsonObjectParser();
-            buffer.Offer(ByteString.FromString("{ \"name\": \"john o'doe\" }"));
-            buffer.Poll().Value.ToString().Should().Be("{ \"name\": \"john o'doe\" }");
-        }
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_an_escaped_backslash_followed_by_a_double_quote()
+    {
+        var buffer = new JsonObjectParser();
+        const string content = @"{ ""key"": ""\\"" }";
 
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_curly_brace()
-        {
-
-            var buffer = new JsonObjectParser();
-            buffer.Offer(ByteString.FromString("{ \"name\": \"john{"));
-            buffer.Offer(ByteString.FromString("}"));
-            buffer.Offer(ByteString.FromString("\""));
-            buffer.Offer(ByteString.FromString("}"));
-            buffer.Poll().Value.ToString().Should().Be("{ \"name\": \"john{}\"}");
-        }
-
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_string_value_containing_curly_brace_and_escape_character()
-        {
-            var buffer = new JsonObjectParser();
-            buffer.Offer(ByteString.FromString("{ \"name\": \"john"));
-            buffer.Offer(ByteString.FromString("\\\""));
-            buffer.Offer(ByteString.FromString("{"));
-            buffer.Offer(ByteString.FromString("}"));
-            buffer.Offer(ByteString.FromString("\\\""));
-            buffer.Offer(ByteString.FromString(" "));
-            buffer.Offer(ByteString.FromString("hey"));
-            buffer.Offer(ByteString.FromString("\""));
-            buffer.Offer(ByteString.FromString("}"));
-            buffer.Poll().Value.ToString().Should().Be("{ \"name\": \"john\\\"{}\\\" hey\"}");
-        }
-
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_integer_value()
-        {
-            var buffer = new JsonObjectParser();
-            buffer.Offer(ByteString.FromString("{ \"age\" : 101}"));
-            buffer.Poll().Value.ToString().Should().Be("{ \"age\" : 101}");
-        }
-
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_decimal_value()
-        {
-            var buffer = new JsonObjectParser();
-            buffer.Offer(ByteString.FromString("{ \"age\" : 10.1}"));
-            buffer.Poll().Value.ToString().Should().Be("{ \"age\" : 10.1}");
-        }
-
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_nested_object()
-        {
-            var buffer = new JsonObjectParser();
-            const string content = "{ \"name\" : \"john\"," +
-                                   "  \"age\"  : 101," +
-                                   "  \"address\": {" +
-                                   "       \"street\": \"Straight Street\"," +
-                                   "       \"postcode\": 1234" +
-                                   "  }" +
-                                   "}";
-            buffer.Offer(ByteString.FromString(content));
-            buffer.Poll().Value.ToString().Should().Be(content);
-        }
-
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_single_field_having_multiple_level_of_nested_object()
-        {
-            var buffer = new JsonObjectParser();
-            const string content = "{ \"name\" : \"john\"," +
-                                   "  \"age\"  : 101," +
-                                   "  \"address\": {" +
-                                   "       \"street\": {" +
-                                   "            \"name\": \"Straight\"," +
-                                   "            \"type\": \"Avenue\"" +
-                                   "       }," +
-                                   "       \"postcode\": 1234" +
-                                   "  }" +
-                                   "}";
-            buffer.Offer(ByteString.FromString(content));
-            buffer.Poll().Value.ToString().Should().Be(content);
-        }
-
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_an_escaped_backslash_followed_by_a_double_quote()
-        {
-            var buffer = new JsonObjectParser();
-            const string content = @"{ ""key"": ""\\"" }";
-
-            buffer.Offer(ByteString.FromString(content));
-            buffer.Poll().Value.ToString().Should().Be(content);
-        }
+        buffer.Offer(ByteString.FromString(content));
+        buffer.Poll().Value.ToString().Should().Be(content);
+    }
 
 
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_a_string_that_contains_an_escaped_quote()
-        {
-            var buffer = new JsonObjectParser();
-            const string content = "{ \"key\": \"\\\"\" }";
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_one_object_should_successfully_parse_a_string_that_contains_an_escaped_quote()
+    {
+        var buffer = new JsonObjectParser();
+        const string content = "{ \"key\": \"\\\"\" }";
 
-            buffer.Offer(ByteString.FromString(content));
-            buffer.Poll().Value.ToString().Should().Be(content);
-        }
+        buffer.Offer(ByteString.FromString(content));
+        buffer.Poll().Value.ToString().Should().Be(content);
+    }
 
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_nested_array_should_successfully_parse()
-        {
-            var buffer = new JsonObjectParser();
-            const string content = "{ \"name\" : \"john\"," +
-                                   "  \"things\": [" +
-                                   "      1," +
-                                   "      \"hey\"," +
-                                   "      3" +
-                                   "      \"there\"" +
-                                   "  ]" +
-                                   "}";
-            buffer.Offer(ByteString.FromString(content));
-            buffer.Poll().Value.ToString().Should().Be(content);
-        }
+    [Fact]
+    public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_nested_array_should_successfully_parse()
+    {
+        var buffer = new JsonObjectParser();
+        const string content = "{ \"name\" : \"john\"," +
+                               "  \"things\": [" +
+                               "      1," +
+                               "      \"hey\"," +
+                               "      3" +
+                               "      \"there\"" +
+                               "  ]" +
+                               "}";
+        buffer.Offer(ByteString.FromString(content));
+        buffer.Poll().Value.ToString().Should().Be(content);
+    }
 
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_complex_object_graph_should_successfully_parse()
-        {
-            var buffer = new JsonObjectParser();
-            const string content = @"{
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_complex_object_graph_should_successfully_parse()
+    {
+        var buffer = new JsonObjectParser();
+        const string content = @"{
                  ""name"": ""john"",
                  ""addresses"": [
                    {
@@ -366,121 +361,122 @@ namespace Akka.Streams.Tests.Dsl
                    }
                  ]
                }";
-            buffer.Offer(ByteString.FromString(content));
-            buffer.Poll().Value.ToString().Should().Be(content);
-        }
+        buffer.Offer(ByteString.FromString(content));
+        buffer.Poll().Value.ToString().Should().Be(content);
+    }
 
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_multiple_fields_should_parse_successfully()
-        {
-            var buffer = new JsonObjectParser();
-            const string content = "{ \"name\": \"john\", \"age\" : 101}";
-            buffer.Offer(ByteString.FromString(content));
-            buffer.Poll().Value.ToString().Should().Be(content);
-        }
+    [Fact]
+    public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_multiple_fields_should_parse_successfully()
+    {
+        var buffer = new JsonObjectParser();
+        const string content = "{ \"name\": \"john\", \"age\" : 101}";
+        buffer.Offer(ByteString.FromString(content));
+        buffer.Poll().Value.ToString().Should().Be(content);
+    }
 
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_multiple_fields_should_parse_successfully_despite_valid_whitespaces_around_json()
-        {
-            var buffer = new JsonObjectParser();
-            const string content = "        " +
-                                   "        " +
-                                   "{ \"name\": \"john\"" +
-                                   ", \"age\" : 101}";
-            buffer.Offer(ByteString.FromString(content));
-            buffer.Poll().Value.ToString().Should().Be(content.TrimStart());
-        }
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_multiple_fields_should_parse_successfully_despite_valid_whitespaces_around_json()
+    {
+        var buffer = new JsonObjectParser();
+        const string content = "        " +
+                               "        " +
+                               "{ \"name\": \"john\"" +
+                               ", \"age\" : 101}";
+        buffer.Offer(ByteString.FromString(content));
+        buffer.Poll().Value.ToString().Should().Be(content.TrimStart());
+    }
 
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_has_multiple_objects_should_pops_the_right_object_as_buffer_is_filled()
-        {
-            var buffer = new JsonObjectParser();
-            const string input1 = @"{
+    [Fact]
+    public void
+        Collecting_json_buffer_when_valid_json_is_supplied_which_has_multiple_objects_should_pops_the_right_object_as_buffer_is_filled()
+    {
+        var buffer = new JsonObjectParser();
+        const string input1 = @"{
                  ""name"": ""john"",
                  ""age"": 32
                }";
-            const string input2 = @"{
+        const string input2 = @"{
                  ""name"": ""katie"",
                  ""age"": 25
                }";
-            buffer.Offer(ByteString.FromString(input1 + "," + input2));
-            buffer.Poll().Value.ToString().Should().Be(input1);
-            buffer.Poll().Value.ToString().Should().Be(input2);
+        buffer.Offer(ByteString.FromString(input1 + "," + input2));
+        buffer.Poll().Value.ToString().Should().Be(input1);
+        buffer.Poll().Value.ToString().Should().Be(input2);
 
-            buffer.Poll().Should().Be(Option<ByteString>.None);
-            buffer.Offer(ByteString.FromString("{\"name\":\"jenkins\",\"age\": "));
-            buffer.Poll().Should().Be(Option<ByteString>.None);
+        buffer.Poll().Should().Be(Option<ByteString>.None);
+        buffer.Offer(ByteString.FromString("{\"name\":\"jenkins\",\"age\": "));
+        buffer.Poll().Should().Be(Option<ByteString>.None);
 
-            buffer.Offer(ByteString.FromString("65 }"));
-            buffer.Poll().Value.ToString().Should().Be("{\"name\":\"jenkins\",\"age\": 65 }");
-        }
+        buffer.Offer(ByteString.FromString("65 }"));
+        buffer.Poll().Value.ToString().Should().Be("{\"name\":\"jenkins\",\"age\": 65 }");
+    }
 
-        [Fact]
-        public void Collecting_json_buffer_when_valid_json_is_supplied_which_returns_none_until_valid_json_is_encountered()
+    [Fact]
+    public void Collecting_json_buffer_when_valid_json_is_supplied_which_returns_none_until_valid_json_is_encountered()
+    {
+        var buffer = new JsonObjectParser();
+        @"{ ""name"" : ""john""".ForEach(c =>
         {
-            var buffer = new JsonObjectParser();
-            @"{ ""name"" : ""john""".ForEach(c =>
+            buffer.Offer(ByteString.FromString(c.ToString()));
+            buffer.Poll().Should().Be(Option<ByteString>.None);
+        });
+
+        buffer.Offer(ByteString.FromString("}"));
+        buffer.Poll().Value.Should().BeEquivalentTo(ByteString.FromString(@"{ ""name"" : ""john""}"));
+    }
+
+    [Fact]
+    public void Collecting_json_buffer_when_invalid_json_is_supplied_should_fail_if_it_is_broken_from_the_start()
+    {
+        var buffer = new JsonObjectParser();
+        buffer.Offer(ByteString.FromString("THIS IS NOT VALID { \name\": \"john\"}"));
+        buffer.Invoking(b => b.Poll()).Should().Throw<Framing.FramingException>();
+    }
+
+    [Fact]
+    public void Collecting_json_buffer_when_invalid_json_is_supplied_should_fail_if_it_is_broken_at_the_end()
+    {
+        var buffer = new JsonObjectParser();
+        buffer.Offer(ByteString.FromString("{ \"name\": \"john\"} THIS IS NOT VALID "));
+        buffer.Poll(); // first emitting the valid element
+        buffer.Invoking(b => b.Poll()).Should().Throw<Framing.FramingException>();
+    }
+
+    [Fact]
+    public void Collecting_multiple_json_should_fail_on_too_large_initial_object()
+    {
+        var input = @"{ ""name"": ""john"" },{ ""name"": ""jack"" }";
+
+        var result = Source.Single(ByteString.FromString(input))
+            .Via(JsonFraming.ObjectScanner(5))
+            .Select(b => b.ToString())
+            .RunAggregate(new List<string>(), (list, s) =>
             {
-                buffer.Offer(ByteString.FromString(c.ToString()));
-                buffer.Poll().Should().Be(Option<ByteString>.None);
-            });
+                list.Add(s);
+                return list;
+            }, Materializer);
 
-            buffer.Offer(ByteString.FromString("}"));
-            buffer.Poll().Value.Should().BeEquivalentTo(ByteString.FromString(@"{ ""name"" : ""john""}"));
-        }
+        result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Framing.FramingException>();
+    }
 
-        [Fact]
-        public void Collecting_json_buffer_when_invalid_json_is_supplied_should_fail_if_it_is_broken_from_the_start()
-        {
-            var buffer = new JsonObjectParser();
-            buffer.Offer(ByteString.FromString("THIS IS NOT VALID { \name\": \"john\"}"));
-            buffer.Invoking(b => b.Poll()).Should().Throw<Framing.FramingException>();
-        }
-
-        [Fact]
-        public void Collecting_json_buffer_when_invalid_json_is_supplied_should_fail_if_it_is_broken_at_the_end()
-        {
-            var buffer = new JsonObjectParser();
-            buffer.Offer(ByteString.FromString("{ \"name\": \"john\"} THIS IS NOT VALID "));
-            buffer.Poll(); // first emitting the valid element
-            buffer.Invoking(b => b.Poll()).Should().Throw<Framing.FramingException>();
-        }
-
-        [Fact]
-        public void Collecting_multiple_json_should_fail_on_too_large_initial_object()
-        {
-            var input = @"{ ""name"": ""john"" },{ ""name"": ""jack"" }";
-
-            var result = Source.Single(ByteString.FromString(input))
-                .Via(JsonFraming.ObjectScanner(5))
-                .Select(b => b.ToString())
-                .RunAggregate(new List<string>(), (list, s) =>
-                {
-                    list.Add(s);
-                    return list;
-                }, Materializer);
-
-            result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Framing.FramingException>();
-        }
-
-        [Fact]
-        public void Collecting_multiple_json_should_fail_when_2nd_object_is_too_large()
-        {
-            var input = @"
+    [Fact]
+    public void Collecting_multiple_json_should_fail_when_2nd_object_is_too_large()
+    {
+        var input = @"
                  { ""name"": ""john"" },
                  { ""name"": ""jack"" },
                  { ""name"": ""very very long name somehow. how did this happen?"" }"
-                .Split(',').Select(ByteString.FromString);
+            .Split(',').Select(ByteString.FromString);
 
-            var probe = Source.From(input)
-                .Via(JsonFraming.ObjectScanner(48))
-                .RunWith(this.SinkProbe<ByteString>(), Materializer);
+        var probe = Source.From(input)
+            .Via(JsonFraming.ObjectScanner(48))
+            .RunWith(this.SinkProbe<ByteString>(), Materializer);
 
-            probe.EnsureSubscription();
+        probe.EnsureSubscription();
 
-            probe.Request(1).ExpectNext(ByteString.FromString(@"{ ""name"": ""john"" }"));
-            probe.Request(1).ExpectNext(ByteString.FromString(@"{ ""name"": ""jack"" }"));
-            probe.Request(1).ExpectError().Message.Should().Contain("exceeded");
-        }
+        probe.Request(1).ExpectNext(ByteString.FromString(@"{ ""name"": ""john"" }"));
+        probe.Request(1).ExpectNext(ByteString.FromString(@"{ ""name"": ""jack"" }"));
+        probe.Request(1).ExpectError().Message.Should().Contain("exceeded");
     }
 }

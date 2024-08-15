@@ -1,158 +1,154 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Program.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Actor;
-using Akka.Configuration;
-using Akka.Persistence;
 
-namespace PersistenceExample
+namespace PersistenceExample;
+
+public static class Program
 {
-    public static class Program
+    public static void Main(string[] args)
     {
-        public static void Main(string[] args)
-        {
-            using var system = ActorSystem.Create("example");
-            
-            //SqlServerPersistence.Init(system);
-            //BasicUsage(system);
+        using var system = ActorSystem.Create("example");
 
-            //FailingActorExample(system);
+        //SqlServerPersistence.Init(system);
+        //BasicUsage(system);
 
-            SnapshotedActor(system);
+        //FailingActorExample(system);
 
-            //ViewExample(system);
+        SnapshotedActor(system);
 
-            AtLeastOnceDelivery(system);
+        //ViewExample(system);
 
-            Console.ReadLine();
-        }
+        AtLeastOnceDelivery(system);
 
-        private static void AtLeastOnceDelivery(ActorSystem system)
-        {
-            Console.WriteLine("\n--- AT LEAST ONCE DELIVERY EXAMPLE ---\n");
-            var delivery = system.ActorOf(Props.Create(()=> new DeliveryActor()),"delivery");
+        Console.ReadLine();
+    }
 
-            var deliverer = system.ActorOf(Props.Create(() => new AtLeastOnceDeliveryExampleActor(delivery.Path)));
-            delivery.Tell("start");
-            deliverer.Tell(new Message("foo"));
-            
+    private static void AtLeastOnceDelivery(ActorSystem system)
+    {
+        Console.WriteLine("\n--- AT LEAST ONCE DELIVERY EXAMPLE ---\n");
+        var delivery = system.ActorOf(Props.Create(() => new DeliveryActor()), "delivery");
 
-            System.Threading.Thread.Sleep(1000); //making sure delivery stops before send other commands
-            delivery.Tell("stop");
+        var deliverer = system.ActorOf(Props.Create(() => new AtLeastOnceDeliveryExampleActor(delivery.Path)));
+        delivery.Tell("start");
+        deliverer.Tell(new Message("foo"));
 
-            deliverer.Tell(new Message("bar"));
 
-            Console.WriteLine("\nSYSTEM: Throwing exception in Deliverer\n");
-            deliverer.Tell("boom");
-            System.Threading.Thread.Sleep(1000);
+        Thread.Sleep(1000); //making sure delivery stops before send other commands
+        delivery.Tell("stop");
 
-            deliverer.Tell(new Message("bar1"));
-            Console.WriteLine("\nSYSTEM: Enabling confirmations in 3 seconds\n");
+        deliverer.Tell(new Message("bar"));
 
-            System.Threading.Thread.Sleep(3000);
-            Console.WriteLine("\nSYSTEM: Enabled confirmations\n");
-            delivery.Tell("start");
-            
-        }
+        Console.WriteLine("\nSYSTEM: Throwing exception in Deliverer\n");
+        deliverer.Tell("boom");
+        Thread.Sleep(1000);
 
-        private static void SnapshotedActor(ActorSystem system)
-        {
-            Console.WriteLine("\n--- SNAPSHOTED ACTOR EXAMPLE ---\n");
-            var pref = system.ActorOf(Props.Create<SnapshotedExampleActor>(), "snapshoted-actor");
+        deliverer.Tell(new Message("bar1"));
+        Console.WriteLine("\nSYSTEM: Enabling confirmations in 3 seconds\n");
 
-            // send two messages (a, b) and persist them
-            pref.Tell("a");
-            pref.Tell("b");
+        Thread.Sleep(3000);
+        Console.WriteLine("\nSYSTEM: Enabled confirmations\n");
+        delivery.Tell("start");
+    }
 
-            // make a snapshot: a, b will be stored in durable memory
-            pref.Tell("snap");
+    private static void SnapshotedActor(ActorSystem system)
+    {
+        Console.WriteLine("\n--- SNAPSHOTED ACTOR EXAMPLE ---\n");
+        var pref = system.ActorOf(Props.Create<SnapshotedExampleActor>(), "snapshoted-actor");
 
-            // send next two messages - those will be cleared, since MemoryJournal is not "persistent"
-            pref.Tell("c");
-            pref.Tell("d");
+        // send two messages (a, b) and persist them
+        pref.Tell("a");
+        pref.Tell("b");
 
-            // print internal actor's state
-            pref.Tell("print");
+        // make a snapshot: a, b will be stored in durable memory
+        pref.Tell("snap");
 
-            // result after first run should be like:
+        // send next two messages - those will be cleared, since MemoryJournal is not "persistent"
+        pref.Tell("c");
+        pref.Tell("d");
 
-            // Current actor's state: d, c, b, a
+        // print internal actor's state
+        pref.Tell("print");
 
-            // after second run:
+        // result after first run should be like:
 
-            // Offered state (from snapshot): b, a      - taken from the snapshot
-            // Current actor's state: d, c, b, a, b, a  - 2 last messages loaded from the snapshot, rest send in this run
+        // Current actor's state: d, c, b, a
 
-            // after third run:
+        // after second run:
 
-            // Offered state (from snapshot): b, a, b, a        - taken from the snapshot
-            // Current actor's state: d, c, b, a, b, a, b, a    - 4 last messages loaded from the snapshot, rest send in this run
+        // Offered state (from snapshot): b, a      - taken from the snapshot
+        // Current actor's state: d, c, b, a, b, a  - 2 last messages loaded from the snapshot, rest send in this run
 
-            // etc...
-        }
+        // after third run:
 
-        private static void FailingActorExample(ActorSystem system)
-        {
-            Console.WriteLine("\n--- FAILING ACTOR EXAMPLE ---\n");
-            var pref = system.ActorOf(Props.Create<ExamplePersistentFailingActor>(), "failing-actor");
+        // Offered state (from snapshot): b, a, b, a        - taken from the snapshot
+        // Current actor's state: d, c, b, a, b, a, b, a    - 4 last messages loaded from the snapshot, rest send in this run
 
-            pref.Tell("a");
-            pref.Tell("print");
-            // restart and recovery
-            pref.Tell("boom");
-            pref.Tell("print");
-            pref.Tell("b");
-            pref.Tell("print");
-            pref.Tell("c");
-            pref.Tell("print");
+        // etc...
+    }
 
-            // Will print in a first run (i.e. with empty journal):
+    private static void FailingActorExample(ActorSystem system)
+    {
+        Console.WriteLine("\n--- FAILING ACTOR EXAMPLE ---\n");
+        var pref = system.ActorOf(Props.Create<ExamplePersistentFailingActor>(), "failing-actor");
 
-            // Received: a
-            // Received: a, b
-            // Received: a, b, c
-        }
+        pref.Tell("a");
+        pref.Tell("print");
+        // restart and recovery
+        pref.Tell("boom");
+        pref.Tell("print");
+        pref.Tell("b");
+        pref.Tell("print");
+        pref.Tell("c");
+        pref.Tell("print");
 
-        private static void BasicUsage(ActorSystem system)
-        {
-            Console.WriteLine("\n--- BASIC EXAMPLE ---\n");
+        // Will print in a first run (i.e. with empty journal):
 
-            // create a persistent actor, using LocalSnapshotStore and MemoryJournal
-            var aref = system.ActorOf(Props.Create<ExamplePersistentActor>(), "basic-actor");
+        // Received: a
+        // Received: a, b
+        // Received: a, b, c
+    }
 
-            // all commands are stacked in internal actor's state as a list
-            aref.Tell(new Command("foo"));
-            aref.Tell(new Command("baz"));
-            aref.Tell(new Command("bar"));
+    private static void BasicUsage(ActorSystem system)
+    {
+        Console.WriteLine("\n--- BASIC EXAMPLE ---\n");
 
-            // save current actor state using LocalSnapshotStore (it will be serialized and stored inside file on example bin/snapshots folder)
-            aref.Tell("snap");
+        // create a persistent actor, using LocalSnapshotStore and MemoryJournal
+        var aref = system.ActorOf(Props.Create<ExamplePersistentActor>(), "basic-actor");
 
-            // add one more message, this one is not snapshoted and won't be persisted (because of MemoryJournal characteristics)
-            aref.Tell(new Command("buzz"));
+        // all commands are stacked in internal actor's state as a list
+        aref.Tell(new Command("foo"));
+        aref.Tell(new Command("baz"));
+        aref.Tell(new Command("bar"));
 
-            // print current actor state
-            aref.Tell("print");
+        // save current actor state using LocalSnapshotStore (it will be serialized and stored inside file on example bin/snapshots folder)
+        aref.Tell("snap");
 
-            // on first run displayed state should be: 
-            
-            // buzz-3, bar-2, baz-1, foo-0 
-            // (numbers denotes current actor's sequence numbers for each stored event)
+        // add one more message, this one is not snapshoted and won't be persisted (because of MemoryJournal characteristics)
+        aref.Tell(new Command("buzz"));
 
-            // on the second run: 
+        // print current actor state
+        aref.Tell("print");
 
-            // buzz-6, bar-5, baz-4, foo-3, bar-2, baz-1, foo-0
-            // (sequence numbers are continuously increasing taken from last snapshot, 
-            // also buzz-3 event isn't present since it's has been called after snapshot request,
-            // and MemoryJournal will destroy stored events on program stop)
+        // on first run displayed state should be: 
 
-            // on next run's etc...
-        }
+        // buzz-3, bar-2, baz-1, foo-0 
+        // (numbers denotes current actor's sequence numbers for each stored event)
+
+        // on the second run: 
+
+        // buzz-6, bar-5, baz-4, foo-3, bar-2, baz-1, foo-0
+        // (sequence numbers are continuously increasing taken from last snapshot, 
+        // also buzz-3 event isn't present since it's has been called after snapshot request,
+        // and MemoryJournal will destroy stored events on program stop)
+
+        // on next run's etc...
     }
 }
-

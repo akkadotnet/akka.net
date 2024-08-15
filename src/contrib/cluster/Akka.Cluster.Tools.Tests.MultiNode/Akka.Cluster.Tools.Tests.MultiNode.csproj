@@ -5,22 +5,22 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\core\Akka.Coordination.Tests\Akka.Coordination.Tests.csproj" />
-    <ProjectReference Include="..\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
-    <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj" />
-    <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+    <ProjectReference Include="..\..\..\core\Akka.Coordination.Tests\Akka.Coordination.Tests.csproj"/>
+    <ProjectReference Include="..\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj"/>
+    <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj"/>
+    <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-      <PackageReference Include="Akka.Management" Version="1.5.26-beta3" />
-      <PackageReference Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)" />
-      <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-      <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
-      <PackageReference Include="xunit" Version="$(XunitVersion)"/>
-      <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVersion)">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
+    <PackageReference Include="Akka.Management" Version="1.5.26-beta3"/>
+    <PackageReference Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)"/>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)"/>
+    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)"/>
+    <PackageReference Include="xunit" Version="$(XunitVersion)"/>
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

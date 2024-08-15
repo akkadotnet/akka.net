@@ -1,44 +1,43 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="LeaseUsageSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="LeaseUsageSettings.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 
-namespace Akka.Coordination
+namespace Akka.Coordination;
+
+/// <summary>
+///     Lease settings for use in singleton and sharding
+/// </summary>
+public sealed class LeaseUsageSettings
 {
     /// <summary>
-    /// Lease settings for use in singleton and sharding
+    ///     Creates a new <see cref="LeaseUsageSettings" /> instance.
     /// </summary>
-    public sealed class LeaseUsageSettings
+    /// <param name="leaseImplementation">TConfig path of the lease to be taken</param>
+    /// <param name="leaseRetryInterval">The interval between retries for acquiring the lease</param>
+    public LeaseUsageSettings(string leaseImplementation, TimeSpan leaseRetryInterval)
     {
-        /// <summary>
-        /// Config path of the lease to be taken
-        /// </summary>
-        public string LeaseImplementation { get; }
+        LeaseImplementation = leaseImplementation;
+        LeaseRetryInterval = leaseRetryInterval;
+    }
 
-        /// <summary>
-        /// The interval between retries for acquiring the lease
-        /// </summary>
-        public TimeSpan LeaseRetryInterval { get; }
+    /// <summary>
+    ///     Config path of the lease to be taken
+    /// </summary>
+    public string LeaseImplementation { get; }
 
-        /// <summary>
-        /// Creates a new <see cref="LeaseUsageSettings"/> instance.
-        /// </summary>
-        /// <param name="leaseImplementation">TConfig path of the lease to be taken</param>
-        /// <param name="leaseRetryInterval">The interval between retries for acquiring the lease</param>
-        public LeaseUsageSettings(string leaseImplementation, TimeSpan leaseRetryInterval)
-        {
-            LeaseImplementation = leaseImplementation;
-            LeaseRetryInterval = leaseRetryInterval;
-        }
+    /// <summary>
+    ///     The interval between retries for acquiring the lease
+    /// </summary>
+    public TimeSpan LeaseRetryInterval { get; }
 
-       
-        public override string ToString()
-        {
-            return $"LeaseUsageSettings({ LeaseImplementation }, { LeaseRetryInterval })";
-        }
+
+    public override string ToString()
+    {
+        return $"LeaseUsageSettings({LeaseImplementation}, {LeaseRetryInterval})";
     }
 }

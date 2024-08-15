@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ShardedDaemonProcessSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ShardedDaemonProcessSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Linq;
@@ -15,61 +15,18 @@ using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 
-namespace Akka.Cluster.Sharding.Tests
+namespace Akka.Cluster.Sharding.Tests;
+
+public class ShardedDaemonProcessSpec : AkkaSpec
 {
-    public class ShardedDaemonProcessSpec : AkkaSpec
+    public ShardedDaemonProcessSpec()
+        : base(GetConfig())
     {
-        private sealed class Stop
-        {
-            public static Stop Instance { get; } = new();
+    }
 
-            private Stop()
-            {
-            }
-        }
-
-        private sealed class Started
-        {
-            public int Id { get; }
-            public IActorRef SelfRef { get; }
-
-            public Started(int id, IActorRef selfRef)
-            {
-                Id = id;
-                SelfRef = selfRef;
-            }
-        }
-
-        private class MyActor : UntypedActor
-        {
-            public int Id { get; }
-            public IActorRef Probe { get; }
-
-            public static Props Props(int id, IActorRef probe) =>
-                Actor.Props.Create(() => new MyActor(id, probe));
-
-            public MyActor(int id, IActorRef probe)
-            {
-                Id = id;
-                Probe = probe;
-            }
-
-            protected override void PreStart()
-            {
-                base.PreStart();
-                Probe.Tell(new Started(Id, Context.Self));
-            }
-
-            protected override void OnReceive(object message)
-            {
-                if (message is Stop _)
-                    Context.Stop(Self);
-            }
-        }
-
-        private static Config GetConfig()
-        {
-            return ConfigurationFactory.ParseString(@"
+    private static Config GetConfig()
+    {
+        return ConfigurationFactory.ParseString(@"
                 akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0
                 akka.remote.dot-netty.tcp.hostname = 127.0.0.1
@@ -79,92 +36,141 @@ namespace Akka.Cluster.Sharding.Tests
 
                 akka.coordinated-shutdown.terminate-actor-system = off
                 akka.coordinated-shutdown.run-by-actor-system-terminate = off")
-                .WithFallback(ClusterSharding.DefaultConfig())
-                .WithFallback(ClusterSingletonProxy.DefaultConfig());
-        }
+            .WithFallback(ClusterSharding.DefaultConfig())
+            .WithFallback(ClusterSingletonProxy.DefaultConfig());
+    }
 
-        public ShardedDaemonProcessSpec()
-            : base(GetConfig())
+    [Fact]
+    public void ShardedDaemonProcess_must_have_a_single_node_cluster_running_first()
+    {
+        var probe = CreateTestProbe();
+        Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
+        probe.AwaitAssert(() => Cluster.Get(Sys).SelfMember.Status.ShouldBe(MemberStatus.Up),
+            TimeSpan.FromSeconds(3));
+    }
+
+    [Fact]
+    public void ShardedDaemonProcess_must_start_N_actors_with_unique_ids()
+    {
+        Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
+
+        var probe = CreateTestProbe();
+        ShardedDaemonProcess.Get(Sys).Init("a", 5, id => MyActor.Props(id, probe.Ref));
+
+        var started = probe.ReceiveN(5);
+        started.Count.ShouldBe(5);
+        probe.ExpectNoMsg();
+    }
+
+    [Fact]
+    public void ShardedDaemonProcess_must_restart_actors_if_they_stop()
+    {
+        Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
+
+        var probe = CreateTestProbe();
+        ShardedDaemonProcess.Get(Sys).Init("stop", 2, id => MyActor.Props(id, probe.Ref));
+
+        foreach (var started in Enumerable.Range(0, 2).Select(_ => probe.ExpectMsg<Started>()))
+            started.SelfRef.Tell(Stop.Instance);
+
+        // periodic ping every 1s makes it restart
+        Enumerable.Range(0, 2).Select(_ => probe.ExpectMsg<Started>(TimeSpan.FromSeconds(3)));
+    }
+
+    [Fact]
+    public void ShardedDaemonProcess_must_not_run_if_the_role_does_not_match_node_role()
+    {
+        Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
+
+        var probe = CreateTestProbe();
+        var settings = ShardedDaemonProcessSettings.Create(Sys).WithRole("workers");
+        var actorRef = ShardedDaemonProcess.Get(Sys).Init("roles", 3, id => MyActor.Props(id, probe.Ref), settings,
+            PoisonPill.Instance);
+        actorRef.Should().BeNull();
+
+        probe.ExpectNoMsg();
+    }
+
+    private void DocExample()
+    {
+        #region tag-processing
+
+        var tags = new[] { "tag-1", "tag-2", "tag-3" };
+        ShardedDaemonProcess.Get(Sys).Init("TagProcessors", tags.Length, id => TagProcessor.Props(tags[id]));
+
+        #endregion
+    }
+
+    private sealed class Stop
+    {
+        private Stop()
         {
         }
 
-        [Fact]
-        public void ShardedDaemonProcess_must_have_a_single_node_cluster_running_first()
+        public static Stop Instance { get; } = new();
+    }
+
+    private sealed class Started
+    {
+        public Started(int id, IActorRef selfRef)
         {
-            var probe = CreateTestProbe();
-            Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
-            probe.AwaitAssert(() => Cluster.Get(Sys).SelfMember.Status.ShouldBe(MemberStatus.Up),
-                TimeSpan.FromSeconds(3));
+            Id = id;
+            SelfRef = selfRef;
         }
 
-        [Fact]
-        public void ShardedDaemonProcess_must_start_N_actors_with_unique_ids()
+        public int Id { get; }
+        public IActorRef SelfRef { get; }
+    }
+
+    private class MyActor : UntypedActor
+    {
+        public MyActor(int id, IActorRef probe)
         {
-            Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
-
-            var probe = CreateTestProbe();
-            ShardedDaemonProcess.Get(Sys).Init("a", 5, id => MyActor.Props(id, probe.Ref));
-
-            var started = probe.ReceiveN(5);
-            started.Count.ShouldBe(5);
-            probe.ExpectNoMsg();
+            Id = id;
+            Probe = probe;
         }
 
-        [Fact]
-        public void ShardedDaemonProcess_must_restart_actors_if_they_stop()
+        public int Id { get; }
+        public IActorRef Probe { get; }
+
+        public static Props Props(int id, IActorRef probe)
         {
-            Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
-
-            var probe = CreateTestProbe();
-            ShardedDaemonProcess.Get(Sys).Init("stop", 2, id => MyActor.Props(id, probe.Ref));
-
-            foreach (var started in Enumerable.Range(0, 2).Select(_ => probe.ExpectMsg<Started>()))
-                started.SelfRef.Tell(Stop.Instance);
-
-            // periodic ping every 1s makes it restart
-            Enumerable.Range(0, 2).Select(_ => probe.ExpectMsg<Started>(TimeSpan.FromSeconds(3)));
+            return Actor.Props.Create(() => new MyActor(id, probe));
         }
 
-        [Fact]
-        public void ShardedDaemonProcess_must_not_run_if_the_role_does_not_match_node_role()
+        protected override void PreStart()
         {
-            Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
-
-            var probe = CreateTestProbe();
-            var settings = ShardedDaemonProcessSettings.Create(Sys).WithRole("workers");
-            var actorRef = ShardedDaemonProcess.Get(Sys).Init("roles", 3, id => MyActor.Props(id, probe.Ref), settings,
-                PoisonPill.Instance);
-            actorRef.Should().BeNull();
-
-            probe.ExpectNoMsg();
+            base.PreStart();
+            Probe.Tell(new Started(Id, Context.Self));
         }
 
-        // only used in documentation
-        private class TagProcessor : ReceiveActor
+        protected override void OnReceive(object message)
         {
-            public string Tag { get; }
+            if (message is Stop _)
+                Context.Stop(Self);
+        }
+    }
 
-            public static Props Props(string tag) =>
-                Actor.Props.Create(() => new TagProcessor(tag));
-
-            public TagProcessor(string tag) => Tag = tag;
-
-            protected override void PreStart()
-            {
-                // start the processing ...
-                base.PreStart();
-                Context.System.Log.Debug("Starting processor for tag {0}", Tag);
-            }
+    // only used in documentation
+    private class TagProcessor : ReceiveActor
+    {
+        public TagProcessor(string tag)
+        {
+            Tag = tag;
         }
 
-        private void DocExample()
+        public string Tag { get; }
+
+        public static Props Props(string tag)
         {
-            #region tag-processing
+            return Actor.Props.Create(() => new TagProcessor(tag));
+        }
 
-            var tags = new[] { "tag-1", "tag-2", "tag-3" };
-            ShardedDaemonProcess.Get(Sys).Init("TagProcessors", tags.Length, id => TagProcessor.Props(tags[id]));
-
-            #endregion
+        protected override void PreStart()
+        {
+            // start the processing ...
+            base.PreStart();
+            Context.System.Log.Debug("Starting processor for tag {0}", Tag);
         }
     }
 }

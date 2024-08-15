@@ -1,242 +1,241 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SystemMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SystemMessageSerializer.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
-using System.Text;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
+using Akka.Remote.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.Protobuf;
 
-namespace Akka.Remote.Serialization
+namespace Akka.Remote.Serialization;
+
+public sealed class SystemMessageSerializer : Serializer
 {
-    public sealed class SystemMessageSerializer : Serializer
+    private static readonly byte[] EmptyBytes = { };
+    private readonly WrappedPayloadSupport _payloadSupport;
+    private readonly ExceptionSupport _exceptionSupport;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="SystemMessageSerializer" /> class.
+    /// </summary>
+    /// <param name="system">The actor system to associate with this serializer. </param>
+    public SystemMessageSerializer(ExtendedActorSystem system) : base(system)
     {
-        private readonly WrappedPayloadSupport _payloadSupport;
-        private ExceptionSupport _exceptionSupport;
+        _payloadSupport = new WrappedPayloadSupport(system);
+        _exceptionSupport = new ExceptionSupport(system);
+    }
 
-        private static readonly byte[] EmptyBytes = {};
+    /// <inheritdoc />
+    public override bool IncludeManifest { get; } = true; // TODO: should be false
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SystemMessageSerializer" /> class.
-        /// </summary>
-        /// <param name="system">The actor system to associate with this serializer. </param>
-        public SystemMessageSerializer(ExtendedActorSystem system) : base(system)
-        {
-            _payloadSupport = new WrappedPayloadSupport(system);
-            _exceptionSupport = new ExceptionSupport(system);
-        }
+    /// <inheritdoc />
+    public override byte[] ToBinary(object obj)
+    {
+        if (obj is Create create) return CreateToProto(create);
+        if (obj is Recreate recreate) return RecreateToProto(recreate);
+        if (obj is Suspend) return EmptyBytes;
+        if (obj is Resume resume) return ResumeToProto(resume);
+        if (obj is Terminate) return EmptyBytes;
+        if (obj is Supervise supervise) return SuperviseToProto(supervise);
+        if (obj is Watch watch) return WatchToProto(watch);
+        if (obj is Unwatch unwatch) return UnwatchToProto(unwatch);
+        if (obj is Failed failed) return FailedToProto(failed);
+        if (obj is DeathWatchNotification notification) return DeathWatchNotificationToProto(notification);
+        if (obj is NoMessage) throw new ArgumentException("NoMessage should never be serialized or deserialized");
 
-        /// <inheritdoc />
-        public override bool IncludeManifest { get; } = true; // TODO: should be false
+        throw new ArgumentException($"Cannot serialize object of type [{obj.GetType().TypeQualifiedName()}]");
+    }
 
-        /// <inheritdoc />
-        public override byte[] ToBinary(object obj)
-        {
-            if (obj is Create create) return CreateToProto(create);
-            if (obj is Recreate recreate) return RecreateToProto(recreate);
-            if (obj is Suspend) return EmptyBytes;
-            if (obj is Resume resume) return ResumeToProto(resume);
-            if (obj is Terminate) return EmptyBytes;
-            if (obj is Supervise supervise) return SuperviseToProto(supervise);
-            if (obj is Watch watch) return WatchToProto(watch);
-            if (obj is Unwatch unwatch) return UnwatchToProto(unwatch);
-            if (obj is Failed failed) return FailedToProto(failed);
-            if (obj is DeathWatchNotification notification) return DeathWatchNotificationToProto(notification);
-            if (obj is NoMessage) throw new ArgumentException("NoMessage should never be serialized or deserialized");
+    /// <inheritdoc />
+    public override object FromBinary(byte[] bytes, Type type)
+    {
+        if (type == typeof(Create)) return CreateFromProto(bytes);
+        if (type == typeof(Recreate)) return RecreateFromProto(bytes);
+        if (type == typeof(Suspend)) return new Suspend();
+        if (type == typeof(Resume)) return ResumeFromProto(bytes);
+        if (type == typeof(Terminate)) return new Terminate();
+        if (type == typeof(Supervise)) return SuperviseFromProto(bytes);
+        if (type == typeof(Watch)) return WatchFromProto(bytes);
+        if (type == typeof(Unwatch)) return UnwatchFromProto(bytes);
+        if (type == typeof(Failed)) return FailedFromProto(bytes);
+        if (type == typeof(DeathWatchNotification)) return DeathWatchNotificationFromProto(bytes);
 
-            throw new ArgumentException($"Cannot serialize object of type [{obj.GetType().TypeQualifiedName()}]");
-        }
+        throw new ArgumentException(
+            $"Unimplemented deserialization of message with manifest [{type.TypeQualifiedName()}] in [${nameof(SystemMessageSerializer)}]");
+    }
 
-        /// <inheritdoc />
-        public override object FromBinary(byte[] bytes, Type type)
-        {
-            if (type == typeof(Create)) return CreateFromProto(bytes);
-            if (type == typeof(Recreate)) return RecreateFromProto(bytes);
-            if (type == typeof(Suspend)) return new Suspend();
-            if (type == typeof(Resume)) return ResumeFromProto(bytes);
-            if (type == typeof(Terminate)) return new Terminate();
-            if (type == typeof(Supervise)) return SuperviseFromProto(bytes);
-            if (type == typeof(Watch)) return WatchFromProto(bytes);
-            if (type == typeof(Unwatch)) return UnwatchFromProto(bytes);
-            if (type == typeof(Failed)) return FailedFromProto(bytes);
-            if (type == typeof(DeathWatchNotification)) return DeathWatchNotificationFromProto(bytes);
+    //
+    // Create
+    //
+    private byte[] CreateToProto(Create create)
+    {
+        var message = new CreateData();
+        message.Cause = _exceptionSupport.ExceptionToProto(create.Failure);
+        return message.ToByteArray();
+    }
 
-            throw new ArgumentException($"Unimplemented deserialization of message with manifest [{type.TypeQualifiedName()}] in [${nameof(SystemMessageSerializer)}]");
-        }
+    private Create CreateFromProto(byte[] bytes)
+    {
+        var proto = CreateData.Parser.ParseFrom(bytes);
+        var payload = (ActorInitializationException)_exceptionSupport.ExceptionFromProto(proto.Cause);
+        return new Create(payload);
+    }
 
-        //
-        // Create
-        //
-        private byte[] CreateToProto(Create create)
-        {
-            var message = new Proto.Msg.CreateData();
-            message.Cause = _exceptionSupport.ExceptionToProto(create.Failure);
-            return message.ToByteArray();
-        }
+    //
+    // Recreate
+    //
+    private byte[] RecreateToProto(Recreate recreate)
+    {
+        var message = new RecreateData();
+        message.Cause = _exceptionSupport.ExceptionToProto(recreate.Cause);
+        return message.ToByteArray();
+    }
 
-        private Create CreateFromProto(byte[] bytes)
-        {
-            var proto = Proto.Msg.CreateData.Parser.ParseFrom(bytes);
-            var payload = (ActorInitializationException)_exceptionSupport.ExceptionFromProto(proto.Cause);
-            return new Create(payload);
-        }
+    private Recreate RecreateFromProto(byte[] bytes)
+    {
+        var proto = RecreateData.Parser.ParseFrom(bytes);
+        var payload = _exceptionSupport.ExceptionFromProto(proto.Cause);
+        return new Recreate(payload);
+    }
 
-        //
-        // Recreate
-        //
-        private byte[] RecreateToProto(Recreate recreate)
-        {
-            var message = new Proto.Msg.RecreateData();
-            message.Cause = _exceptionSupport.ExceptionToProto(recreate.Cause);
-            return message.ToByteArray();
-        }
+    //
+    // Recreate
+    //
+    private byte[] ResumeToProto(Resume resume)
+    {
+        var message = new ResumeData();
+        message.Cause = _exceptionSupport.ExceptionToProto(resume.CausedByFailure);
+        return message.ToByteArray();
+    }
 
-        private Recreate RecreateFromProto(byte[] bytes)
-        {
-            var proto = Proto.Msg.RecreateData.Parser.ParseFrom(bytes);
-            var payload = (Exception)_exceptionSupport.ExceptionFromProto(proto.Cause);
-            return new Recreate(payload);
-        }
+    private Resume ResumeFromProto(byte[] bytes)
+    {
+        var proto = ResumeData.Parser.ParseFrom(bytes);
+        var payload = _exceptionSupport.ExceptionFromProto(proto.Cause);
+        return new Resume(payload);
+    }
 
-        //
-        // Recreate
-        //
-        private byte[] ResumeToProto(Resume resume)
-        {
-            var message = new Proto.Msg.ResumeData();
-            message.Cause = _exceptionSupport.ExceptionToProto(resume.CausedByFailure);
-            return message.ToByteArray();
-        }
+    //
+    // Supervise
+    //
+    private byte[] SuperviseToProto(Supervise supervise)
+    {
+        var message = new SuperviseData();
+        message.Child = new ActorRefData();
+        message.Child.Path = Akka.Serialization.Serialization.SerializedActorPath(supervise.Child);
+        message.Async = supervise.Async;
+        return message.ToByteArray();
+    }
 
-        private Resume ResumeFromProto(byte[] bytes)
-        {
-            var proto = Proto.Msg.ResumeData.Parser.ParseFrom(bytes);
-            var payload = (Exception)_exceptionSupport.ExceptionFromProto(proto.Cause);
-            return new Resume(payload);
-        }
+    private Supervise SuperviseFromProto(byte[] bytes)
+    {
+        var proto = SuperviseData.Parser.ParseFrom(bytes);
+        return new Supervise(ResolveActorRef(proto.Child.Path), proto.Async);
+    }
 
-        //
-        // Supervise
-        //
-        private byte[] SuperviseToProto(Supervise supervise)
-        {
-            var message = new Proto.Msg.SuperviseData();
-            message.Child = new Proto.Msg.ActorRefData();
-            message.Child.Path = Akka.Serialization.Serialization.SerializedActorPath(supervise.Child);
-            message.Async = supervise.Async;
-            return message.ToByteArray();
-        }
+    //
+    // Watch
+    //
+    private byte[] WatchToProto(Watch watch)
+    {
+        var message = new WatchData();
+        message.Watchee = new ActorRefData();
+        message.Watchee.Path = Akka.Serialization.Serialization.SerializedActorPath(watch.Watchee);
+        message.Watcher = new ActorRefData();
+        message.Watcher.Path = Akka.Serialization.Serialization.SerializedActorPath(watch.Watcher);
+        return message.ToByteArray();
+    }
 
-        private Supervise SuperviseFromProto(byte[] bytes)
-        {
-            var proto = Proto.Msg.SuperviseData.Parser.ParseFrom(bytes);
-            return new Supervise(ResolveActorRef(proto.Child.Path), proto.Async);
-        }
+    private Watch WatchFromProto(byte[] bytes)
+    {
+        var proto = WatchData.Parser.ParseFrom(bytes);
+        return new Watch(
+            ResolveActorRef(proto.Watchee.Path).AsInstanceOf<IInternalActorRef>(),
+            ResolveActorRef(proto.Watcher.Path).AsInstanceOf<IInternalActorRef>());
+    }
 
-        //
-        // Watch
-        //
-        private byte[] WatchToProto(Watch watch)
-        {
-            var message = new Proto.Msg.WatchData();
-            message.Watchee = new Proto.Msg.ActorRefData();
-            message.Watchee.Path = Akka.Serialization.Serialization.SerializedActorPath(watch.Watchee);
-            message.Watcher = new Proto.Msg.ActorRefData();
-            message.Watcher.Path = Akka.Serialization.Serialization.SerializedActorPath(watch.Watcher);
-            return message.ToByteArray();
-        }
+    //
+    // Unwatch
+    //
+    private byte[] UnwatchToProto(Unwatch unwatch)
+    {
+        var message = new WatchData();
+        message.Watchee = new ActorRefData();
+        message.Watchee.Path = Akka.Serialization.Serialization.SerializedActorPath(unwatch.Watchee);
+        message.Watcher = new ActorRefData();
+        message.Watcher.Path = Akka.Serialization.Serialization.SerializedActorPath(unwatch.Watcher);
+        return message.ToByteArray();
+    }
 
-        private Watch WatchFromProto(byte[] bytes)
-        {
-            var proto = Proto.Msg.WatchData.Parser.ParseFrom(bytes);
-            return new Watch(
-                ResolveActorRef(proto.Watchee.Path).AsInstanceOf<IInternalActorRef>(),
-                ResolveActorRef(proto.Watcher.Path).AsInstanceOf<IInternalActorRef>());
-        }
+    private Unwatch UnwatchFromProto(byte[] bytes)
+    {
+        var proto = WatchData.Parser.ParseFrom(bytes);
+        return new Unwatch(
+            ResolveActorRef(proto.Watchee.Path).AsInstanceOf<IInternalActorRef>(),
+            ResolveActorRef(proto.Watcher.Path).AsInstanceOf<IInternalActorRef>());
+    }
 
-        //
-        // Unwatch
-        //
-        private byte[] UnwatchToProto(Unwatch unwatch)
-        {
-            var message = new Proto.Msg.WatchData();
-            message.Watchee = new Proto.Msg.ActorRefData();
-            message.Watchee.Path = Akka.Serialization.Serialization.SerializedActorPath(unwatch.Watchee);
-            message.Watcher = new Proto.Msg.ActorRefData();
-            message.Watcher.Path = Akka.Serialization.Serialization.SerializedActorPath(unwatch.Watcher);
-            return message.ToByteArray();
-        }
+    //
+    // Failed
+    //
+    private byte[] FailedToProto(Failed failed)
+    {
+        var message = new FailedData();
+        message.Cause = _exceptionSupport.ExceptionToProto(failed.Cause);
+        message.Child = new ActorRefData();
+        message.Child.Path = Akka.Serialization.Serialization.SerializedActorPath(failed.Child);
+        message.Uid = (ulong)failed.Uid;
+        return message.ToByteArray();
+    }
 
-        private Unwatch UnwatchFromProto(byte[] bytes)
-        {
-            var proto = Proto.Msg.WatchData.Parser.ParseFrom(bytes);
-            return new Unwatch(
-                ResolveActorRef(proto.Watchee.Path).AsInstanceOf<IInternalActorRef>(),
-                ResolveActorRef(proto.Watcher.Path).AsInstanceOf<IInternalActorRef>());
-        }
+    private Failed FailedFromProto(byte[] bytes)
+    {
+        var proto = FailedData.Parser.ParseFrom(bytes);
 
-        //
-        // Failed
-        //
-        private byte[] FailedToProto(Failed failed)
-        {
-            var message = new Proto.Msg.FailedData();
-            message.Cause = _exceptionSupport.ExceptionToProto(failed.Cause);
-            message.Child = new Proto.Msg.ActorRefData();
-            message.Child.Path = Akka.Serialization.Serialization.SerializedActorPath(failed.Child);
-            message.Uid = (ulong)failed.Uid;
-            return message.ToByteArray();
-        }
+        return new Failed(
+            ResolveActorRef(proto.Child.Path),
+            _exceptionSupport.ExceptionFromProto(proto.Cause),
+            (long)proto.Uid);
+    }
 
-        private Failed FailedFromProto(byte[] bytes)
-        {
-            var proto = Proto.Msg.FailedData.Parser.ParseFrom(bytes);
+    //
+    // DeathWatchNotification
+    //
+    private byte[] DeathWatchNotificationToProto(DeathWatchNotification deathWatchNotification)
+    {
+        var message = new DeathWatchNotificationData();
+        message.Actor = new ActorRefData();
+        message.Actor.Path = Akka.Serialization.Serialization.SerializedActorPath(deathWatchNotification.Actor);
+        message.AddressTerminated = deathWatchNotification.AddressTerminated;
+        message.ExistenceConfirmed = deathWatchNotification.ExistenceConfirmed;
+        return message.ToByteArray();
+    }
 
-            return new Failed(
-                ResolveActorRef(proto.Child.Path),
-                (Exception)_exceptionSupport.ExceptionFromProto(proto.Cause),
-                (long)proto.Uid);
-        }
+    private DeathWatchNotification DeathWatchNotificationFromProto(byte[] bytes)
+    {
+        var proto = DeathWatchNotificationData.Parser.ParseFrom(bytes);
 
-        //
-        // DeathWatchNotification
-        //
-        private byte[] DeathWatchNotificationToProto(DeathWatchNotification deathWatchNotification)
-        {
-            var message = new Proto.Msg.DeathWatchNotificationData();
-            message.Actor = new Proto.Msg.ActorRefData();
-            message.Actor.Path = Akka.Serialization.Serialization.SerializedActorPath(deathWatchNotification.Actor);
-            message.AddressTerminated = deathWatchNotification.AddressTerminated;
-            message.ExistenceConfirmed = deathWatchNotification.ExistenceConfirmed;
-            return message.ToByteArray();
-        }
+        return new DeathWatchNotification(
+            system.Provider.ResolveActorRef(proto.Actor.Path),
+            proto.ExistenceConfirmed,
+            proto.AddressTerminated);
+    }
 
-        private DeathWatchNotification DeathWatchNotificationFromProto(byte[] bytes)
-        {
-            var proto = Proto.Msg.DeathWatchNotificationData.Parser.ParseFrom(bytes);
+    //
+    // ActorRef
+    //
+    private IActorRef ResolveActorRef(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return null;
 
-            return new DeathWatchNotification(
-                system.Provider.ResolveActorRef(proto.Actor.Path),
-                proto.ExistenceConfirmed,
-                proto.AddressTerminated);
-        }
-
-        //
-        // ActorRef
-        //
-        private IActorRef ResolveActorRef(string path)
-        {
-            if (string.IsNullOrEmpty(path))
-                return null;
-
-            return system.Provider.ResolveActorRef(path);
-        }
+        return system.Provider.ResolveActorRef(path);
     }
 }

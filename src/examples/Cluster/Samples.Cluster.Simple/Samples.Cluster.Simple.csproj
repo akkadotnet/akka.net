@@ -7,10 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
+    <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj"/>
   </ItemGroup>
-  
-   <ItemGroup>
-    <Reference Include="System.Configuration" />
+
+  <ItemGroup>
+    <Reference Include="System.Configuration"/>
   </ItemGroup>
 </Project>

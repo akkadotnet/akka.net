@@ -1,172 +1,177 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="EventSequences.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="EventSequences.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Akka.Persistence.Journal
+namespace Akka.Persistence.Journal;
+
+/// <summary>
+///     TBD
+/// </summary>
+public interface IEventSequence
 {
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    public interface IEventSequence
+    IEnumerable<object> Events { get; }
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+public interface IEmptyEventSequence : IEventSequence
+{
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+[Serializable]
+public sealed class EmptyEventSequence : IEmptyEventSequence, IEquatable<IEventSequence>
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public static readonly EmptyEventSequence Instance = new();
+
+    private EmptyEventSequence()
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        IEnumerable<object> Events { get; }
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    public interface IEmptyEventSequence : IEventSequence { }
+    public IEnumerable<object> Events => Enumerable.Empty<object>();
+
+
+    public bool Equals(IEventSequence other)
+    {
+        return other is EmptyEventSequence;
+    }
+
+
+    public override bool Equals(object obj)
+    {
+        return Equals(obj as IEventSequence);
+    }
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+[Serializable]
+public class EventSequence<T> : IEventSequence, IEquatable<IEventSequence>
+{
+    private readonly IList<object> _events;
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    [Serializable]
-    public sealed class EmptyEventSequence : IEmptyEventSequence, IEquatable<IEventSequence>
+    /// <param name="events">TBD</param>
+    public EventSequence(IEnumerable<object> events)
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static readonly EmptyEventSequence Instance = new();
+        _events = events.ToList();
+    }
 
-        private EmptyEventSequence() { }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public IEnumerable<object> Events => Enumerable.Empty<object>();
-
-       
-        public bool Equals(IEventSequence other)
-        {
-            return other is EmptyEventSequence;
-        }
-
-       
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as IEventSequence);
-        }
+    public bool Equals(IEventSequence other)
+    {
+        return other != null && _events.SequenceEqual(other.Events);
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    [Serializable]
-    public class EventSequence<T> : IEventSequence, IEquatable<IEventSequence>
+    public IEnumerable<object> Events => _events;
+
+
+    public override bool Equals(object obj)
     {
-        private readonly IList<object> _events;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="events">TBD</param>
-        public EventSequence(IEnumerable<object> events)
-        {
-            _events = events.ToList();
-        }
+        return Equals(obj as IEventSequence);
+    }
+}
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public IEnumerable<object> Events => _events;
+/// <summary>
+///     TBD
+/// </summary>
+[Serializable]
+public struct SingleEventSequence : IEventSequence, IEquatable<IEventSequence>
+{
+    private readonly object[] _events;
 
-        
-        public bool Equals(IEventSequence other)
-        {
-            return other != null && _events.SequenceEqual(other.Events);
-        }
-
-        
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as IEventSequence);
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="e">TBD</param>
+    public SingleEventSequence(object e) : this()
+    {
+        _events = new[] { e };
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    [Serializable]
-    public struct SingleEventSequence : IEventSequence, IEquatable<IEventSequence>
+    public IEnumerable<object> Events => _events;
+
+
+    public bool Equals(IEventSequence other)
     {
-        private readonly object[] _events;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="e">TBD</param>
-        public SingleEventSequence(object e) : this()
-        {
-            _events = new[] { e };
-        }
+        if (other == null) return false;
+        var e = other.Events.FirstOrDefault();
+        return e != null && e.Equals(_events[0]) && other.Events.Count() == 1;
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public IEnumerable<object> Events => _events;
 
-        
-        public bool Equals(IEventSequence other)
-        {
-            if (other == null) return false;
-            var e = other.Events.FirstOrDefault();
-            return e != null && e.Equals(_events[0]) && other.Events.Count() == 1;
-        }
+    public override bool Equals(object obj)
+    {
+        return Equals(obj as IEventSequence);
+    }
+}
 
-        
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as IEventSequence);
-        }
+/// <summary>
+///     TBD
+/// </summary>
+public static class EventSequence
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public static IEventSequence Empty = EmptyEventSequence.Instance;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="e">TBD</param>
+    /// <returns>TBD</returns>
+    public static IEventSequence Single(object e)
+    {
+        return new SingleEventSequence(e);
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    public static class EventSequence
+    /// <param name="events">TBD</param>
+    /// <returns>TBD</returns>
+    public static IEventSequence Create(params object[] events)
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static IEventSequence Empty = EmptyEventSequence.Instance;
+        return new EventSequence<object>(events);
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="e">TBD</param>
-        /// <returns>TBD</returns>
-        public static IEventSequence Single(object e)
-        {
-            return new SingleEventSequence(e);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="events">TBD</param>
-        /// <returns>TBD</returns>
-        public static IEventSequence Create(params object[] events)
-        {
-            return new EventSequence<object>(events);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="events">TBD</param>
-        /// <returns>TBD</returns>
-        public static IEventSequence Create(IEnumerable<object> events)
-        {
-            return new EventSequence<object>(events);
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="events">TBD</param>
+    /// <returns>TBD</returns>
+    public static IEventSequence Create(IEnumerable<object> events)
+    {
+        return new EventSequence<object>(events);
     }
 }

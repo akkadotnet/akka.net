@@ -1,77 +1,82 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SnapshotStoreInterceptors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SnapshotStoreInterceptors.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-namespace Akka.Persistence.TestKit
+using System;
+using System.Threading.Tasks;
+
+namespace Akka.Persistence.TestKit;
+
+internal static class SnapshotStoreInterceptors
 {
-    using System;
-    using System.Threading.Tasks;
-
-    internal static class SnapshotStoreInterceptors
+    internal class Noop : ISnapshotStoreInterceptor
     {
-        internal class Noop : ISnapshotStoreInterceptor
-        {
-            public static readonly ISnapshotStoreInterceptor Instance = new Noop();
+        public static readonly ISnapshotStoreInterceptor Instance = new Noop();
 
-            public Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria) => Task.FromResult(true);
+        public Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        {
+            return Task.FromResult(true);
+        }
+    }
+
+    internal class Failure : ISnapshotStoreInterceptor
+    {
+        public static readonly ISnapshotStoreInterceptor Instance = new Failure();
+
+        public Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        {
+            throw new TestSnapshotStoreFailureException();
+        }
+    }
+
+    internal class Delay : ISnapshotStoreInterceptor
+    {
+        private readonly TimeSpan _delay;
+        private readonly ISnapshotStoreInterceptor _next;
+
+        public Delay(TimeSpan delay, ISnapshotStoreInterceptor next)
+        {
+            _delay = delay;
+            _next = next;
         }
 
-        internal class Failure : ISnapshotStoreInterceptor
+        public async Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
-            public static readonly ISnapshotStoreInterceptor Instance = new Failure();
+            await Task.Delay(_delay);
+            await _next.InterceptAsync(persistenceId, criteria);
+        }
+    }
 
-            public Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria) => throw new TestSnapshotStoreFailureException(); 
+    internal sealed class OnCondition : ISnapshotStoreInterceptor
+    {
+        private readonly bool _negate;
+        private readonly ISnapshotStoreInterceptor _next;
+
+        private readonly Func<string, SnapshotSelectionCriteria, Task<bool>> _predicate;
+
+        public OnCondition(Func<string, SnapshotSelectionCriteria, Task<bool>> predicate,
+            ISnapshotStoreInterceptor next, bool negate = false)
+        {
+            _predicate = predicate;
+            _next = next;
+            _negate = negate;
         }
 
-        internal class Delay : ISnapshotStoreInterceptor
+        public OnCondition(Func<string, SnapshotSelectionCriteria, bool> predicate, ISnapshotStoreInterceptor next,
+            bool negate = false)
         {
-            public Delay(TimeSpan delay, ISnapshotStoreInterceptor next)
-            {
-                _delay = delay;
-                _next = next;
-            }
-
-            private readonly TimeSpan _delay;
-            private readonly ISnapshotStoreInterceptor _next;
-
-            public async Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria)
-            {
-                await Task.Delay(_delay);
-                await _next.InterceptAsync(persistenceId, criteria);
-            }
+            _predicate = (persistenceId, criteria) => Task.FromResult(predicate(persistenceId, criteria));
+            _next = next;
+            _negate = negate;
         }
 
-        internal sealed class OnCondition : ISnapshotStoreInterceptor
+        public async Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
-            public OnCondition(Func<string, SnapshotSelectionCriteria, Task<bool>> predicate, ISnapshotStoreInterceptor next, bool negate = false)
-            {
-                _predicate = predicate;
-                _next = next;
-                _negate = negate;
-            }
-
-            public OnCondition(Func<string, SnapshotSelectionCriteria, bool> predicate, ISnapshotStoreInterceptor next, bool negate = false)
-            {
-                _predicate = (persistenceId, criteria) => Task.FromResult(predicate(persistenceId, criteria));
-                _next = next;
-                _negate = negate;
-            }
-
-            private readonly Func<string, SnapshotSelectionCriteria, Task<bool>> _predicate;
-            private readonly ISnapshotStoreInterceptor _next;
-            private readonly bool _negate;
-
-            public async Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria)
-            {
-                var result = await _predicate(persistenceId, criteria);
-                if ((_negate && !result) || (!_negate && result))
-                {
-                    await _next.InterceptAsync(persistenceId, criteria);
-                }
-            }
+            var result = await _predicate(persistenceId, criteria);
+            if ((_negate && !result) || (!_negate && result)) await _next.InterceptAsync(persistenceId, criteria);
         }
     }
 }

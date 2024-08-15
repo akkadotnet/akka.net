@@ -1,9 +1,10 @@
 ﻿// -----------------------------------------------------------------------
 //  <copyright file="TestConsumer.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using System.Collections.Immutable;
@@ -18,24 +19,16 @@ using Akka.Serialization;
 namespace Akka.Tests.Delivery;
 
 /// <summary>
-/// INTERNAL API
+///     INTERNAL API
 /// </summary>
 public sealed class TestConsumer : ReceiveActor, IWithTimers
 {
     public static readonly TimeSpan DefaultConsumerDelay = TimeSpan.FromMilliseconds(10);
 
-    public TimeSpan Delay { get; }
-
-    public Func<SomeAsyncJob, bool> EndCondition { get; }
-
-    public IActorRef EndReplyTo { get; }
-
-    public IActorRef ConsumerController { get; }
-
     private readonly ILoggingAdapter _log = Context.GetLogger();
+    private readonly bool _supportRestarts;
+    private int _messageCount;
     private ImmutableHashSet<(string, long)> _processed = ImmutableHashSet<(string, long)>.Empty;
-    private readonly bool _supportRestarts = false;
-    private int _messageCount = 0;
 
     public TestConsumer(TimeSpan delay, Func<SomeAsyncJob, bool> endCondition, IActorRef endReplyTo,
         IActorRef consumerController, bool supportRestarts = false)
@@ -45,9 +38,19 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
         EndReplyTo = endReplyTo;
         ConsumerController = consumerController;
         _supportRestarts = supportRestarts;
-        
+
         Active();
     }
+
+    public TimeSpan Delay { get; }
+
+    public Func<SomeAsyncJob, bool> EndCondition { get; }
+
+    public IActorRef EndReplyTo { get; }
+
+    public IActorRef ConsumerController { get; }
+
+    public ITimerScheduler Timers { get; set; } = null!;
 
     private void Active()
     {
@@ -57,7 +60,7 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
             var delivery = new JobDelivery(job.Message, job.ConfirmTo, job.ProducerId, job.SeqNr);
             ReceiveJobDelivery(delivery);
         });
-        
+
         Receive<JobDelivery>(ReceiveJobDelivery);
 
         Receive<SomeAsyncJob>(job =>
@@ -73,7 +76,7 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
                 throw new InvalidOperationException($"Received duplicate [{nextMsg}]");
 
             _log.Info("processed [{0}] [msg: {1}] from [{2}]", job.SeqNr, job.Msg.Payload, job.ProducerId);
-            job.ConfirmTo.Tell(global::Akka.Delivery.ConsumerController.Confirmed.Instance);
+            job.ConfirmTo.Tell(Akka.Delivery.ConsumerController.Confirmed.Instance);
 
             if (EndCondition(job) && (_messageCount > 0 || _supportRestarts))
             {
@@ -100,17 +103,43 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
         if (Delay == TimeSpan.Zero)
             Self.Tell(new SomeAsyncJob(delivery.Msg, delivery.ConfirmTo, delivery.ProducerId, delivery.SeqNr));
         else
-        {
             // schedule to simulate slower consumer
-            Timers.StartSingleTimer(delivery, // have to use a unique-per-message key here, otherwise messages from multiple producers will cancel each other
+            Timers.StartSingleTimer(
+                delivery, // have to use a unique-per-message key here, otherwise messages from multiple producers will cancel each other
                 new SomeAsyncJob(delivery.Msg, delivery.ConfirmTo, delivery.ProducerId, delivery.SeqNr),
                 TimeSpan.FromMilliseconds(10));
-        }
     }
 
     protected override void PreStart()
     {
         ConsumerController.Tell(new ConsumerController.Start<Job>(Self));
+    }
+
+    public static ConsumerController.SequencedMessage<Job> SequencedMessage(string producerId, long seqNr,
+        IActorRef producerController,
+        bool ack = false)
+    {
+        return new ConsumerController.SequencedMessage<Job>(producerId, seqNr, new Job($"msg-{seqNr}"),
+            seqNr == 1, ack, producerController);
+    }
+
+    private static Func<SomeAsyncJob, bool> ConsumerEndCondition(long seqNr)
+    {
+        return msg => msg.SeqNr >= seqNr;
+    }
+
+    public static Props PropsFor(TimeSpan delay, long seqNr, IActorRef endReplyTo, IActorRef consumerController,
+        bool supportsRestarts = false)
+    {
+        return Props.Create(() =>
+            new TestConsumer(delay, ConsumerEndCondition(seqNr), endReplyTo, consumerController, supportsRestarts));
+    }
+
+    public static Props PropsFor(TimeSpan delay, Func<SomeAsyncJob, bool> endCondition, IActorRef endReplyTo,
+        IActorRef consumerController, bool supportsRestarts = false)
+    {
+        return Props.Create(() =>
+            new TestConsumer(delay, endCondition, endReplyTo, consumerController, supportsRestarts));
     }
 
     public sealed class Job : IEquatable<Job>
@@ -131,14 +160,14 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
 
         public override bool Equals(object? obj)
         {
-            return ReferenceEquals(this, obj) || obj is Job other && Equals(other);
+            return ReferenceEquals(this, obj) || (obj is Job other && Equals(other));
         }
 
         public override int GetHashCode()
         {
             return Payload.GetHashCode();
         }
-        
+
         public override string ToString()
         {
             return $"Job({Payload})";
@@ -178,28 +207,10 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
         public ImmutableHashSet<string> ProducerIds { get; }
         public int MessageCount { get; }
     }
-
-    public static ConsumerController.SequencedMessage<Job> SequencedMessage(string producerId, long seqNr, IActorRef producerController,
-        bool ack = false)
-    {
-        return new ConsumerController.SequencedMessage<Job>(producerId, seqNr, new Job($"msg-{seqNr}"),
-            seqNr == 1, ack, producerController);
-    }
-
-    private static Func<SomeAsyncJob, bool> ConsumerEndCondition(long seqNr) => msg => msg.SeqNr >= seqNr;
-
-    public static Props PropsFor(TimeSpan delay, long seqNr, IActorRef endReplyTo, IActorRef consumerController, bool supportsRestarts = false) =>
-        Props.Create(() => new TestConsumer(delay, ConsumerEndCondition(seqNr), endReplyTo, consumerController, supportsRestarts));
-
-    public static Props PropsFor(TimeSpan delay, Func<SomeAsyncJob, bool> endCondition, IActorRef endReplyTo,
-        IActorRef consumerController, bool supportsRestarts = false) =>
-        Props.Create(() => new TestConsumer(delay, endCondition, endReplyTo, consumerController, supportsRestarts));
-
-    public ITimerScheduler Timers { get; set; } = null!;
 }
 
 /// <summary>
-/// For testing purposes
+///     For testing purposes
 /// </summary>
 public sealed class ZeroLengthSerializer : SerializerWithStringManifest
 {
@@ -212,18 +223,12 @@ public sealed class ZeroLengthSerializer : SerializerWithStringManifest
                 ""Akka.Tests.Delivery.ZeroLengthSerializer+TestMsg, Akka.Tests"" = delivery-zero-length
             }
         }");
-    
-    public class TestMsg
-    {
-        private TestMsg()
-        {
-        }
-        public static readonly TestMsg Instance = new();
-    }
 
     public ZeroLengthSerializer(ExtendedActorSystem system) : base(system)
     {
     }
+
+    public override int Identifier => 919191;
 
     public override byte[] ToBinary(object obj)
     {
@@ -243,9 +248,9 @@ public sealed class ZeroLengthSerializer : SerializerWithStringManifest
             case "A":
                 return TestMsg.Instance;
             default:
-                throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType()}]");
+                throw new ArgumentException(
+                    $"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType()}]");
         }
-       
     }
 
     public override string Manifest(object obj)
@@ -258,12 +263,19 @@ public sealed class ZeroLengthSerializer : SerializerWithStringManifest
                 throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}]");
         }
     }
-    
-    public override int Identifier => 919191;
+
+    public class TestMsg
+    {
+        public static readonly TestMsg Instance = new();
+
+        private TestMsg()
+        {
+        }
+    }
 }
 
 /// <summary>
-/// INTERNAL API
+///     INTERNAL API
 /// </summary>
 public sealed class TestSerializer : SerializerWithStringManifest
 {
@@ -276,10 +288,12 @@ public sealed class TestSerializer : SerializerWithStringManifest
                 ""Akka.Tests.Delivery.TestConsumer+Job, Akka.Tests"" = delivery-test
             }
         }");
-    
+
     public TestSerializer(ExtendedActorSystem system) : base(system)
     {
     }
+
+    public override int Identifier => 787878;
 
     public override byte[] ToBinary(object obj)
     {
@@ -301,6 +315,4 @@ public sealed class TestSerializer : SerializerWithStringManifest
     {
         return string.Empty;
     }
-    
-    public override int Identifier => 787878;
 }

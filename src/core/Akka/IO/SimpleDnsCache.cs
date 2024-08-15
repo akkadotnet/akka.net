@@ -1,186 +1,186 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SimpleDnsCache.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SimpleDnsCache.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Util;
 
-namespace Akka.IO
+namespace Akka.IO;
+
+/// <summary>
+///     TBD
+/// </summary>
+internal interface IPeriodicCacheCleanup
 {
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    internal interface IPeriodicCacheCleanup
+    void CleanUp();
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+public class SimpleDnsCache : DnsBase, IPeriodicCacheCleanup
+{
+    private readonly AtomicReference<Cache> _cache;
+    private readonly long _ticksBase;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public SimpleDnsCache()
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        void CleanUp();
+        _cache = new AtomicReference<Cache>(new Cache(new SortedSet<ExpiryEntry>(new ExpiryEntryComparer()),
+            new Dictionary<string, CacheEntry>(), Clock));
+        _ticksBase = DateTime.Now.Ticks;
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    public class SimpleDnsCache : DnsBase, IPeriodicCacheCleanup
+    public void CleanUp()
     {
-        private readonly AtomicReference<Cache> _cache;
-        private readonly long _ticksBase;
+        var c = _cache.Value;
+        if (!_cache.CompareAndSet(c, c.Cleanup()))
+            CleanUp();
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public SimpleDnsCache()
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="name">TBD</param>
+    /// <returns>TBD</returns>
+    public override Dns.Resolved Cached(string name)
+    {
+        return _cache.Value.Get(name);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    protected virtual long Clock()
+    {
+        var now = DateTime.Now.Ticks;
+        return now - _ticksBase < 0
+            ? 0
+            : (now - _ticksBase) / 10000;
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="r">TBD</param>
+    /// <param name="ttl">TBD</param>
+    /// <returns>TBD</returns>
+    internal void Put(Dns.Resolved r, long ttl)
+    {
+        var c = _cache.Value;
+        if (!_cache.CompareAndSet(c, c.Put(r, ttl)))
+            Put(r, ttl);
+    }
+
+    private class Cache
+    {
+        private readonly Dictionary<string, CacheEntry> _cache;
+        private readonly Func<long> _clock;
+        private readonly SortedSet<ExpiryEntry> _queue;
+        private readonly object _queueCleanupLock = new();
+
+        public Cache(SortedSet<ExpiryEntry> queue, Dictionary<string, CacheEntry> cache, Func<long> clock)
         {
-            _cache = new AtomicReference<Cache>(new Cache(new SortedSet<ExpiryEntry>(new ExpiryEntryComparer()), new Dictionary<string, CacheEntry>(), Clock));
-            _ticksBase = DateTime.Now.Ticks;
+            _queue = queue;
+            _cache = cache;
+            _clock = clock;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
-        public override Dns.Resolved Cached(string name)
+        public Dns.Resolved Get(string name)
         {
-            return _cache.Value.Get(name);
+            if (_cache.TryGetValue(name, out var e) && e.IsValid(_clock()))
+                return e.Answer;
+            return null;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        protected virtual long Clock()
+        public Cache Put(Dns.Resolved answer, long ttl)
         {
-            var now = DateTime.Now.Ticks;
-            return now - _ticksBase < 0
-                ? 0
-                : (now - _ticksBase) / 10000;
+            var until = _clock() + ttl;
+
+            var cache = new Dictionary<string, CacheEntry>(_cache);
+
+            cache[answer.Name] = new CacheEntry(answer, until);
+
+            return new Cache(
+                new SortedSet<ExpiryEntry>(_queue, new ExpiryEntryComparer()) { new(answer.Name, until) },
+                cache,
+                _clock);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="r">TBD</param>
-        /// <param name="ttl">TBD</param>
-        /// <returns>TBD</returns>
-        internal void Put(Dns.Resolved r, long ttl)
+        public Cache Cleanup()
         {
-            var c = _cache.Value;
-            if (!_cache.CompareAndSet(c, c.Put(r, ttl)))
-                Put(r, ttl);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public void CleanUp()
-        {
-            var c = _cache.Value;
-            if (!_cache.CompareAndSet(c, c.Cleanup()))
-                CleanUp();
-        }
-
-        class Cache
-        {
-            private readonly SortedSet<ExpiryEntry> _queue;
-            private readonly Dictionary<string, CacheEntry> _cache;
-            private readonly Func<long> _clock;
-            private readonly object _queueCleanupLock = new();
-
-            public Cache(SortedSet<ExpiryEntry> queue, Dictionary<string, CacheEntry> cache, Func<long> clock)
+            lock (_queueCleanupLock)
             {
-                _queue = queue;
-                _cache = cache;
-                _clock = clock;
-            }
-
-            public Dns.Resolved Get(string name)
-            {
-                if (_cache.TryGetValue(name, out var e) && e.IsValid(_clock()))
-                    return e.Answer;
-                return null;
-            }
-
-            public Cache Put(Dns.Resolved answer, long ttl)
-            {
-                var until = _clock() + ttl;
-
-                var cache = new Dictionary<string, CacheEntry>(_cache);
-
-                cache[answer.Name] = new CacheEntry(answer, until);
-
-                return new Cache(
-                    queue: new SortedSet<ExpiryEntry>(_queue, new ExpiryEntryComparer()) { new(answer.Name, until) },
-                    cache: cache,
-                    clock: _clock); 
-            }
-
-            public Cache Cleanup()
-            {
-                lock (_queueCleanupLock)
+                var now = _clock();
+                while (_queue.Any() && !_queue.First().IsValid(now))
                 {
-                    var now = _clock();
-                    while (_queue.Any() && !_queue.First().IsValid(now))
-                    {
-                        var minEntry = _queue.First();
-                        var name = minEntry.Name;
-                        _queue.Remove(minEntry);
+                    var minEntry = _queue.First();
+                    var name = minEntry.Name;
+                    _queue.Remove(minEntry);
 
-                        if (_cache.TryGetValue(name, out var cacheEntry) && !cacheEntry.IsValid(now))
-                            _cache.Remove(name);
-                    }
+                    if (_cache.TryGetValue(name, out var cacheEntry) && !cacheEntry.IsValid(now))
+                        _cache.Remove(name);
                 }
-                
-                return new Cache(new SortedSet<ExpiryEntry>(), new Dictionary<string, CacheEntry>(_cache), _clock);
             }
+
+            return new Cache(new SortedSet<ExpiryEntry>(), new Dictionary<string, CacheEntry>(_cache), _clock);
+        }
+    }
+
+    private class CacheEntry
+    {
+        public CacheEntry(Dns.Resolved answer, long until)
+        {
+            Answer = answer;
+            Until = until;
         }
 
-        class CacheEntry
+        public Dns.Resolved Answer { get; }
+        public long Until { get; }
+
+        public bool IsValid(long clock)
         {
-            public CacheEntry(Dns.Resolved answer, long until)
-            {
-                Answer = answer;
-                Until = until;
-            }
+            return clock < Until;
+        }
+    }
 
-            public Dns.Resolved Answer { get; private set; }
-            public long Until { get; private set; }
-
-            public bool IsValid(long clock)
-            {
-                return clock < Until;
-            }
+    private class ExpiryEntry
+    {
+        public ExpiryEntry(string name, long until)
+        {
+            Name = name;
+            Until = until;
         }
 
-        class ExpiryEntry 
+        public string Name { get; }
+        public long Until { get; }
+
+        public bool IsValid(long clock)
         {
-            public ExpiryEntry(string name, long until)
-            {
-                Name = name;
-                Until = until;
-            }
-
-            public string Name { get; private set; }
-            public long Until { get; private set; }
-
-            public bool IsValid(long clock)
-            {
-                return clock < Until;
-            }
+            return clock < Until;
         }
+    }
 
-        class ExpiryEntryComparer : IComparer<ExpiryEntry>
+    private class ExpiryEntryComparer : IComparer<ExpiryEntry>
+    {
+        /// <inheritdoc />
+        public int Compare(ExpiryEntry x, ExpiryEntry y)
         {
-            /// <inheritdoc/>
-            public int Compare(ExpiryEntry x, ExpiryEntry y)
-            {
-                return x.Until.CompareTo(y.Until);
-            }
+            return x.Until.CompareTo(y.Until);
         }
     }
 }

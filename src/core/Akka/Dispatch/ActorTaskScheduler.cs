@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ActorTaskScheduler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ActorTaskScheduler.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -16,45 +16,47 @@ using Akka.Util.Internal;
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     public class ActorTaskScheduler : TaskScheduler
     {
         private readonly ActorCell _actorCell;
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        public object CurrentMessage { get; private set; }
-        
-        /// <summary>
-        /// Called when async task is scheduled, before Task.StartNew call
-        /// </summary>
-        protected virtual void OnBeforeTaskStarted() { }
-        /// <summary>
-        /// Called in completed scheduled task continuation
-        /// </summary>
-        protected virtual void OnAfterTaskCompleted() { }
-        
-        /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="actorCell">TBD</param>
         internal ActorTaskScheduler(ActorCell actorCell)
         {
             _actorCell = actorCell;
         }
-        
+
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
-        public override int MaximumConcurrencyLevel
+        public object CurrentMessage { get; private set; }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        public override int MaximumConcurrencyLevel => 1;
+
+        /// <summary>
+        ///     Called when async task is scheduled, before Task.StartNew call
+        /// </summary>
+        protected virtual void OnBeforeTaskStarted()
         {
-            get { return 1; }
         }
 
         /// <summary>
-        /// TBD
+        ///     Called in completed scheduled task continuation
+        /// </summary>
+        protected virtual void OnAfterTaskCompleted()
+        {
+        }
+
+        /// <summary>
+        ///     TBD
         /// </summary>
         /// <returns>TBD</returns>
         protected override IEnumerable<Task> GetScheduledTasks()
@@ -63,7 +65,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="task">TBD</param>
         protected override void QueueTask(Task task)
@@ -80,23 +82,19 @@ namespace Akka.Dispatch
 
             // Schedule the task execution, run inline if we are already in the actor context.
             if (ActorCell.Current == _actorCell)
-            {
                 TryExecuteTask(task);
-            }
             else
-            {
                 ScheduleTask(task);
-            }
         }
 
         private void ScheduleTask(Task task)
-        {            
+        {
             //we are in a max concurrency level 1 scheduler. reading CurrentMessage should be OK
             _actorCell.SendSystemMessage(new ActorTaskSchedulerMessage(this, task, CurrentMessage));
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="task">TBD</param>
         internal void ExecuteTask(Task task)
@@ -105,7 +103,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="task">TBD</param>
         /// <param name="taskWasPreviouslyQueued">TBD</param>
@@ -118,7 +116,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="action">TBD</param>
         public static void RunTask(Action action)
@@ -131,11 +129,11 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="asyncAction">TBD</param>
         /// <exception cref="InvalidOperationException">
-        /// This exception is thrown if this method is called outside an actor context.
+        ///     This exception is thrown if this method is called outside an actor context.
         /// </exception>
         public static void RunTask(Func<Task> asyncAction)
         {
@@ -153,30 +151,31 @@ namespace Akka.Dispatch
             actorScheduler.CurrentMessage = context.CurrentMessage;
 
             actorScheduler.OnBeforeTaskStarted();
-            
+
             Task<Task>.Factory.StartNew(asyncAction, CancellationToken.None, TaskCreationOptions.None, actorScheduler)
-                              .Unwrap()
-                              .ContinueWith(parent =>
-                              {
-                                  var exception = GetTaskException(parent);
-                                  if (exception == null)
-                                  {
-                                      dispatcher.Resume(context);
-                                      context.CheckReceiveTimeout(context.CurrentMessage is not INotInfluenceReceiveTimeout);
-                                  }
-                                  else
-                                  {
-                                      context.Self.AsInstanceOf<IInternalActorRef>().SendSystemMessage(new ActorTaskSchedulerMessage(exception, actorScheduler.CurrentMessage));
-                                  }
-                                  
-                                  // Used by TestActorRef to intercept async execution result
-                                  if(actorScheduler is IAsyncResultInterceptor interceptor)
-                                      interceptor.OnTaskCompleted(actorScheduler.CurrentMessage, exception);
-                                  
-                                  //clear the current message field of the scheduler
-                                  actorScheduler.CurrentMessage = null;
-                                  actorScheduler.OnAfterTaskCompleted();
-                              }, actorScheduler);
+                .Unwrap()
+                .ContinueWith(parent =>
+                {
+                    var exception = GetTaskException(parent);
+                    if (exception == null)
+                    {
+                        dispatcher.Resume(context);
+                        context.CheckReceiveTimeout(context.CurrentMessage is not INotInfluenceReceiveTimeout);
+                    }
+                    else
+                    {
+                        context.Self.AsInstanceOf<IInternalActorRef>()
+                            .SendSystemMessage(new ActorTaskSchedulerMessage(exception, actorScheduler.CurrentMessage));
+                    }
+
+                    // Used by TestActorRef to intercept async execution result
+                    if (actorScheduler is IAsyncResultInterceptor interceptor)
+                        interceptor.OnTaskCompleted(actorScheduler.CurrentMessage, exception);
+
+                    //clear the current message field of the scheduler
+                    actorScheduler.CurrentMessage = null;
+                    actorScheduler.OnAfterTaskCompleted();
+                }, actorScheduler);
         }
 
         private static Exception GetTaskException(Task task)

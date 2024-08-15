@@ -8,11 +8,11 @@
 
 
   <ItemGroup>
-    <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
+    <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NBench" Version="$(NBenchVersion)" />
+    <PackageReference Include="NBench" Version="$(NBenchVersion)"/>
   </ItemGroup>
 
 </Project>

@@ -1,19 +1,19 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="TestConsumer.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  <copyright file="SlowStopConsumerEntity.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using Akka.Actor;
 using Akka.Delivery;
-using Akka.Event;
 
 namespace Akka.Cluster.Sharding.Tests.MultiNode.Delivery;
 
 /// <summary>
-/// INTERNAL API
+///     INTERNAL API
 /// </summary>
 public sealed class SlowStopConsumerEntity : ReceiveActor, IWithTimers
 {
@@ -22,7 +22,7 @@ public sealed class SlowStopConsumerEntity : ReceiveActor, IWithTimers
     public SlowStopConsumerEntity(string persistenceId, IActorRef consumerController)
     {
         _consumerController = consumerController;
-        
+
         Receive<ConsumerController.Delivery<Job>>(delivery =>
         {
             var job = delivery.Message;
@@ -38,24 +38,30 @@ public sealed class SlowStopConsumerEntity : ReceiveActor, IWithTimers
         Receive<ActualStop>(_ => Context.Stop(Self));
     }
 
+    public ITimerScheduler Timers { get; set; } = null!;
+
     protected override void PreStart()
     {
         _consumerController.Tell(new ConsumerController.Start<Job>(Self));
     }
 
-    public sealed class Stop: ConsumerController.IConsumerCommand<Job>
+    public sealed class Stop : ConsumerController.IConsumerCommand<Job>
     {
         public static readonly Stop Instance = new();
-        private Stop() { }
+
+        private Stop()
+        {
+        }
     }
-    
+
     public sealed class ActualStop
     {
         public static readonly ActualStop Instance = new();
-        private ActualStop() { }
+
+        private ActualStop()
+        {
+        }
     }
 
     public sealed record Job(int Payload, IActorRef Probe);
-    
-    public ITimerScheduler Timers { get; set; } = null!;
 }

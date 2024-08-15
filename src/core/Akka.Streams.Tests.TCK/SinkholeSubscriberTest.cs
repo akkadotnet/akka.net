@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SinkholeSubscriberTest.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SinkholeSubscriberTest.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
@@ -11,65 +11,75 @@ using Akka.Streams.Implementation;
 using Reactive.Streams;
 using Reactive.Streams.TCK;
 
-namespace Akka.Streams.Tests.TCK
+namespace Akka.Streams.Tests.TCK;
+
+internal class SinkholeSubscriberTest : SubscriberWhiteboxVerification<int?>
 {
-    class SinkholeSubscriberTest : SubscriberWhiteboxVerification<int?>
+    public SinkholeSubscriberTest() : base(new TestEnvironment())
     {
-        public SinkholeSubscriberTest() : base(new TestEnvironment())
+    }
+
+    public override int? CreateElement(int element)
+    {
+        return element;
+    }
+
+    public override ISubscriber<int?> CreateSubscriber(WhiteboxSubscriberProbe<int?> probe)
+    {
+        return new Subscriber(probe);
+    }
+
+    private sealed class Subscriber : ISubscriber<int?>
+    {
+        private readonly SinkholeSubscriber<int?> _hole = new(new TaskCompletionSource<NotUsed>());
+        private readonly WhiteboxSubscriberProbe<int?> _probe;
+
+        public Subscriber(WhiteboxSubscriberProbe<int?> probe)
         {
+            _probe = probe;
         }
 
-        public override int? CreateElement(int element) => element;
-
-        public override ISubscriber<int?> CreateSubscriber(WhiteboxSubscriberProbe<int?> probe)
-            => new Subscriber(probe);
-
-        private sealed class Subscriber : ISubscriber<int?>
+        public void OnSubscribe(ISubscription subscription)
         {
-            private readonly SinkholeSubscriber<int?> _hole = new(new TaskCompletionSource<NotUsed>());
-            private readonly WhiteboxSubscriberProbe<int?> _probe;
+            _probe.RegisterOnSubscribe(new Puppet(subscription));
+            _hole.OnSubscribe(subscription);
+        }
 
-            public Subscriber(WhiteboxSubscriberProbe<int?> probe)
+        public void OnNext(int? element)
+        {
+            _hole.OnNext(element);
+            _probe.RegisterOnNext(element);
+        }
+
+        public void OnComplete()
+        {
+            _hole.OnComplete();
+            _probe.RegisterOnComplete();
+        }
+
+        public void OnError(Exception cause)
+        {
+            _hole.OnError(cause);
+            _probe.RegisterOnError(cause);
+        }
+
+        private sealed class Puppet : ISubscriberPuppet
+        {
+            private readonly ISubscription _subscription;
+
+            public Puppet(ISubscription subscription)
             {
-                _probe = probe;
+                _subscription = subscription;
             }
 
-            public void OnSubscribe(ISubscription subscription)
+            public void TriggerRequest(long elements)
             {
-                _probe.RegisterOnSubscribe(new Puppet(subscription));
-                _hole.OnSubscribe(subscription);
+                _subscription.Request(elements);
             }
 
-            private sealed class Puppet : ISubscriberPuppet
+            public void SignalCancel()
             {
-                private readonly ISubscription _subscription;
-
-                public Puppet(ISubscription subscription)
-                {
-                    _subscription = subscription;
-                }
-
-                public void TriggerRequest(long elements) => _subscription.Request(elements);
-
-                public void SignalCancel() => _subscription.Cancel();
-            }
-
-            public void OnNext(int? element)
-            {
-                _hole.OnNext(element);
-                _probe.RegisterOnNext(element);
-            }
-
-            public void OnComplete()
-            {
-                _hole.OnComplete();
-                _probe.RegisterOnComplete();
-            }
-
-            public void OnError(Exception cause)
-            {
-                _hole.OnError(cause);
-                _probe.RegisterOnError(cause);
+                _subscription.Cancel();
             }
         }
     }

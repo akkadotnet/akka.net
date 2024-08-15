@@ -1,54 +1,53 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SourceRefSurrogate.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SourceRefSurrogate.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Util;
 
-namespace Akka.Streams.Serialization
+namespace Akka.Streams.Serialization;
+
+/// <summary>
+///     INTERNAL API
+///     Allows <see cref="ISourceRef{TOut}" /> to be safely serialized and deserialized during POCO serialization.
+/// </summary>
+internal sealed class SourceRefSurrogate : ISurrogate
 {
-    /// <summary>
-    /// INTERNAL API
-    ///
-    /// Allows <see cref="ISourceRef{TOut}"/> to be safely serialized and deserialized during POCO serialization.
-    /// </summary>
-    internal sealed class SourceRefSurrogate : ISurrogate
+    public SourceRefSurrogate(string eventType, string originPath)
     {
-        public SourceRefSurrogate(string eventType, string originPath)
-        {
-            EventType = eventType;
-            OriginPath = originPath;
-        }
-
-        public string EventType { get; }
-        public string OriginPath { get; }
-
-        public ISurrogated FromSurrogate(ActorSystem system) =>
-            SerializationTools.ToSourceRefImpl((ExtendedActorSystem) system, EventType, OriginPath);
+        EventType = eventType;
+        OriginPath = originPath;
     }
 
-    /// <summary>
-    /// INTERNAL API
-    ///
-    /// Allows <see cref="ISinkRef{TOut}"/> to be safely serialized and deserialized during POCO serialization.
-    /// </summary>
-    internal sealed class SinkRefSurrogate : ISurrogate
+    public string EventType { get; }
+    public string OriginPath { get; }
+
+    public ISurrogated FromSurrogate(ActorSystem system)
     {
-        public SinkRefSurrogate(string eventType, string originPath)
-        {
-            EventType = eventType;
-            OriginPath = originPath;
-        }
+        return SerializationTools.ToSourceRefImpl((ExtendedActorSystem)system, EventType, OriginPath);
+    }
+}
 
-        public string EventType { get; }
-        public string OriginPath { get; }
+/// <summary>
+///     INTERNAL API
+///     Allows <see cref="ISinkRef{TOut}" /> to be safely serialized and deserialized during POCO serialization.
+/// </summary>
+internal sealed class SinkRefSurrogate : ISurrogate
+{
+    public SinkRefSurrogate(string eventType, string originPath)
+    {
+        EventType = eventType;
+        OriginPath = originPath;
+    }
 
-        public ISurrogated FromSurrogate(ActorSystem system)
-        {
-            return SerializationTools.ToSinkRefImpl((ExtendedActorSystem)system, EventType, OriginPath);
-        }
+    public string EventType { get; }
+    public string OriginPath { get; }
+
+    public ISurrogated FromSurrogate(ActorSystem system)
+    {
+        return SerializationTools.ToSinkRefImpl((ExtendedActorSystem)system, EventType, OriginPath);
     }
 }

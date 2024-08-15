@@ -1,20 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <Description>Akka.NET Persistence journal and snapshot store backed by SQLite.</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
-        <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;sqlite</PackageTags>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    </PropertyGroup>
+  <PropertyGroup>
+    <Description>Akka.NET Persistence journal and snapshot store backed by SQLite.</Description>
+    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;sqlite</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <EmbeddedResource Include="sqlite.conf"/>
-        <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj"/>
-        <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj"/>
-    </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="sqlite.conf"/>
+    <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj"/>
+    <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj"/>
+  </ItemGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Microsoft.Data.SQLite" Version="8.0.4"/>
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SQLite" Version="8.0.4"/>
+  </ItemGroup>
 
 </Project>

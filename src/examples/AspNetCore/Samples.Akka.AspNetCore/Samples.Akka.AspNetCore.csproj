@@ -3,7 +3,7 @@
     <TargetFramework>$(NetTestVersion)</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="app.conf" />
+    <None Remove="app.conf"/>
   </ItemGroup>
   <ItemGroup>
     <Content Include="app.conf">
@@ -11,8 +11,8 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\contrib\dependencyinjection\Akka.DependencyInjection\Akka.DependencyInjection.csproj" />
-    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
+    <ProjectReference Include="..\..\..\contrib\dependencyinjection\Akka.DependencyInjection\Akka.DependencyInjection.csproj"/>
+    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj"/>
   </ItemGroup>
 
 </Project>

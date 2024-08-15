@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ConfigurationSample.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ConfigurationSample.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 //using System;
 //using System.Collections.Generic;
@@ -19,7 +19,7 @@
 //{
 //    public class ConfigurationSample
 //    {
-       
+
 //        [Fact]
 //        public void StringSubstitutionSample()
 //        {
@@ -35,7 +35,6 @@
 //        }
 
 
-        
 //        [Fact]
 //        public void ArraySubstitutionSample()
 //        {
@@ -48,7 +47,7 @@
 //            (new[] { 1, 2, 3, 4 }).Should().BeEquivalentTo(config.GetIntList("b"));
 //            // </ArraySubstitutionSample>
 //        }
-       
+
 //        [Fact]
 //        public void ObjectMergeSubstitutionSample()
 //        {
@@ -74,7 +73,6 @@
 //        }
 
 
-        
 //        [Fact]
 //        public void SelfReferencingSubstitutionWithString()
 //        {
@@ -90,7 +88,7 @@
 //            config.GetString("a").Should().Be("foobar");
 //            // </SelfReferencingSubstitutionWithString>
 //        }
-        
+
 //        [Fact]
 //        public void SelfReferencingSubstitutionWithArray()
 //        {
@@ -206,3 +204,4 @@
 
 //    }
 //}
+

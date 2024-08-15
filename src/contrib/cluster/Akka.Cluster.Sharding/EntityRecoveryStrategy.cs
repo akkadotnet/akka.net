@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="EntityRecoveryStrategy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="EntityRecoveryStrategy.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -12,100 +12,104 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 
-namespace Akka.Cluster.Sharding
+namespace Akka.Cluster.Sharding;
+
+using EntityId = String;
+
+internal abstract class EntityRecoveryStrategy
 {
-    using EntityId = String;
+    public static EntityRecoveryStrategy AllStrategy => new AllAtOnceEntityRecoveryStrategy();
 
-    internal abstract class EntityRecoveryStrategy
+    public static EntityRecoveryStrategy ConstantStrategy(ActorSystem actorSystem, TimeSpan frequency,
+        int numberOfEntities)
     {
-        public static EntityRecoveryStrategy AllStrategy => new AllAtOnceEntityRecoveryStrategy();
-
-        public static EntityRecoveryStrategy ConstantStrategy(ActorSystem actorSystem, TimeSpan frequency, int numberOfEntities)
-            => new ConstantRateEntityRecoveryStrategy(actorSystem, frequency, numberOfEntities);
-
-        public abstract IImmutableSet<Task<IImmutableSet<EntityId>>> RecoverEntities(IImmutableSet<EntityId> entities);
+        return new ConstantRateEntityRecoveryStrategy(actorSystem, frequency, numberOfEntities);
     }
 
-    internal class AllAtOnceEntityRecoveryStrategy : EntityRecoveryStrategy
+    public abstract IImmutableSet<Task<IImmutableSet<EntityId>>> RecoverEntities(IImmutableSet<EntityId> entities);
+}
+
+internal class AllAtOnceEntityRecoveryStrategy : EntityRecoveryStrategy
+{
+    public override IImmutableSet<Task<IImmutableSet<EntityId>>> RecoverEntities(IImmutableSet<EntityId> entities)
     {
-        public override IImmutableSet<Task<IImmutableSet<EntityId>>> RecoverEntities(IImmutableSet<EntityId> entities)
-        {
-            return entities.Count == 0
-                ? ImmutableHashSet<Task<IImmutableSet<EntityId>>>.Empty
-                : ImmutableHashSet.Create(Task.FromResult(entities));
-        }
+        return entities.Count == 0
+            ? ImmutableHashSet<Task<IImmutableSet<EntityId>>>.Empty
+            : ImmutableHashSet.Create(Task.FromResult(entities));
+    }
+}
+
+internal class ConstantRateEntityRecoveryStrategy : EntityRecoveryStrategy
+{
+    private readonly ActorSystem _actorSystem;
+    private readonly TimeSpan _frequency;
+    private readonly int _numberOfEntities;
+
+    public ConstantRateEntityRecoveryStrategy(ActorSystem actorSystem, TimeSpan frequency, int numberOfEntities)
+    {
+        _actorSystem = actorSystem;
+        _frequency = frequency;
+        _numberOfEntities = numberOfEntities;
     }
 
-    internal class ConstantRateEntityRecoveryStrategy : EntityRecoveryStrategy
+    public override IImmutableSet<Task<IImmutableSet<EntityId>>> RecoverEntities(IImmutableSet<EntityId> entities)
     {
-        private readonly ActorSystem _actorSystem;
-        private readonly TimeSpan _frequency;
-        private readonly int _numberOfEntities;
-
-        public ConstantRateEntityRecoveryStrategy(ActorSystem actorSystem, TimeSpan frequency, int numberOfEntities)
+        var stamp = _frequency;
+        var builder = ImmutableHashSet<Task<IImmutableSet<EntityId>>>.Empty.ToBuilder();
+        foreach (var bucket in entities.Grouped(_numberOfEntities))
         {
-            _actorSystem = actorSystem;
-            _frequency = frequency;
-            _numberOfEntities = numberOfEntities;
+            var scheduled = ScheduleEntities(stamp, bucket.ToImmutableHashSet());
+            builder.Add(scheduled);
+            stamp += _frequency;
         }
 
-        public override IImmutableSet<Task<IImmutableSet<EntityId>>> RecoverEntities(IImmutableSet<EntityId> entities)
+        return builder.ToImmutable();
+    }
+
+    private Task<IImmutableSet<EntityId>> ScheduleEntities(TimeSpan interval, IImmutableSet<EntityId> entityIds)
+    {
+        return After(interval, _actorSystem.Scheduler, () => Task.FromResult(entityIds));
+    }
+
+    /// <summary>
+    ///     Returns a Task that will be completed with the success or failure of the provided value after the specified
+    ///     duration.
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <param name="value">TBD</param>
+    /// <param name="timeout">TBD</param>
+    /// <param name="scheduler">TBD</param>
+    private static Task<T> After<T>(TimeSpan timeout, IScheduler scheduler, Func<Task<T>> value)
+    {
+        var promise = new TaskCompletionSource<T>();
+
+        scheduler.Advanced.ScheduleOnce(timeout, () =>
         {
-            var stamp = _frequency;
-            var builder = ImmutableHashSet<Task<IImmutableSet<EntityId>>>.Empty.ToBuilder();
-            foreach (var bucket in entities.Grouped(_numberOfEntities))
+            value().ContinueWith(t =>
             {
-                var scheduled = ScheduleEntities(stamp, bucket.ToImmutableHashSet());
-                builder.Add(scheduled);
-                stamp += _frequency;
-            }
-            return builder.ToImmutable();
-        }
-
-        private Task<IImmutableSet<EntityId>> ScheduleEntities(TimeSpan interval, IImmutableSet<EntityId> entityIds)
-        {
-            return After(interval, _actorSystem.Scheduler, () => Task.FromResult(entityIds));
-        }
-
-        /// <summary>
-        /// Returns a Task that will be completed with the success or failure of the provided value after the specified duration.
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="value">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="scheduler">TBD</param>
-        private static Task<T> After<T>(TimeSpan timeout, IScheduler scheduler, Func<Task<T>> value)
-        {
-            var promise = new TaskCompletionSource<T>();
-
-            scheduler.Advanced.ScheduleOnce(timeout, () =>
-            {
-                value().ContinueWith(t =>
-                {
-                    if (t.IsFaulted || t.IsCanceled)
-                        promise.SetCanceled();
-                    else
-                        promise.SetResult(t.Result);
-                });
+                if (t.IsFaulted || t.IsCanceled)
+                    promise.SetCanceled();
+                else
+                    promise.SetResult(t.Result);
             });
+        });
 
-            return promise.Task;
-        }
+        return promise.Task;
     }
+}
 
-    public static class EnumerableExtensions
+public static class EnumerableExtensions
+{
+    /// <summary>
+    ///     Partitions elements in fixed size
+    ///     Credits to http://stackoverflow.com/a/13731854/465132
+    /// </summary>
+    /// <param name="items">TBD</param>
+    /// <param name="size">The number of elements per group</param>
+    public static IEnumerable<IEnumerable<T>> Grouped<T>(this IEnumerable<T> items, int size)
     {
-        /// <summary>
-        /// Partitions elements in fixed size
-        /// Credits to http://stackoverflow.com/a/13731854/465132
-        /// </summary>
-        /// <param name="items">TBD</param>
-        /// <param name="size">The number of elements per group</param>
-        public static IEnumerable<IEnumerable<T>> Grouped<T>(this IEnumerable<T> items, int size)
-        {
-            return items.Select((item, inx) => new { item, inx })
-                .GroupBy(x => x.inx / size)
-                .Select(g => g.Select(x => x.item));
-        }
+        return items.Select((item, inx) => new { item, inx })
+            .GroupBy(x => x.inx / size)
+            .Select(g => g.Select(x => x.item));
     }
 }

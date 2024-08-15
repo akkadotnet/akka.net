@@ -1,29 +1,32 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TestSocketOption.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="TestSocketOption.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Net.Sockets;
 using Akka.IO;
 
-namespace Akka.Tests.IO
+namespace Akka.Tests.IO;
+
+internal class TestSocketOption : Inet.SocketOptionV2
 {
-    internal class TestSocketOption : Inet.SocketOptionV2
+    private readonly Action<Socket> _callback;
+
+    public TestSocketOption(Action<Socket> callback)
     {
-        private readonly Action<Socket> _callback;
+        _callback = callback;
+    }
 
-        public TestSocketOption(Action<Socket> callback)
-        {
-            _callback = callback;
-        }
+    public override void AfterBind(Socket s)
+    {
+        _callback(s);
+    }
 
-        public override void AfterBind(Socket s)
-            => _callback(s);
-
-        public override void AfterConnect(Socket s)
-            => _callback(s);
+    public override void AfterConnect(Socket s)
+    {
+        _callback(s);
     }
 }

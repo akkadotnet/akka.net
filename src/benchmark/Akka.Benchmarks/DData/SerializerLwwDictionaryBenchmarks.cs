@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="RDLwwDictionaryBenchmarks.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SerializerLwwDictionaryBenchmarks.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -22,33 +22,33 @@ namespace Akka.Benchmarks.DData;
 [Config(typeof(MicroBenchmarkConfig))]
 public class SerializerLwwDictionaryBenchmarks
 {
+    private object _c1;
+    private string _c1Manifest;
+    private byte[] _c1Ser;
+
+    private UniqueAddress[] _nodes;
+
     [Params(typeof(RDDBenchTypes.TestKey), typeof(RDDBenchTypes.TestVal))]
     public Type KeyType;
 
+    [Params(25)] public int NumElements;
+
+    [Params(10)] public int NumNodes;
+
+    private ReplicatedDataSerializer ser;
+    private ActorSystem sys;
+
     [Params(typeof(RDDBenchTypes.TestKey), typeof(RDDBenchTypes.TestVal))]
     public Type ValueType;
-    
-    [Params(25)] 
-    public int NumElements;
-
-    [Params(10)]
-    public int NumNodes;
-
-    private UniqueAddress[] _nodes;
-    private object _c1;
-    private ActorSystem sys;
-    private ReplicatedDataSerializer ser;
-    private byte[] _c1Ser;
-    private string _c1Manifest;
 
     [GlobalSetup]
     public void SetupSystem()
     {
         typeof(SerializerLwwDictionaryBenchmarks).GetMethod(
-                nameof(SerializerLwwDictionaryBenchmarks.CreateItems),
+                nameof(CreateItems),
                 BindingFlags.Instance | BindingFlags.NonPublic)
-            .MakeGenericMethod(new []{KeyType,ValueType})
-            .Invoke(this, new object[]{});
+            .MakeGenericMethod(KeyType, ValueType)
+            .Invoke(this, new object[] { });
         var conf = ConfigurationFactory.ParseString(@"akka.actor {
   serializers {
     akka-replicated-data = ""Akka.DistributedData.Serialization.ReplicatedDataSerializer, Akka.DistributedData""
@@ -67,7 +67,7 @@ public class SerializerLwwDictionaryBenchmarks
         _c1Manifest = ser.Manifest(_c1);
     }
 
-    private void CreateItems<TKey,TValue>()
+    private void CreateItems<TKey, TValue>()
     {
         var newNodes = new List<UniqueAddress>(NumNodes);
         foreach (var i in Enumerable.Range(0, NumNodes))
@@ -79,15 +79,11 @@ public class SerializerLwwDictionaryBenchmarks
 
         _nodes = newNodes.ToArray();
         var newElements = new List<TValue>(NumNodes);
-        foreach (var i in Enumerable.Range(0, NumElements))
-        {
-            
-                newElements.Add(generate<TValue>(i));
-        }
+        foreach (var i in Enumerable.Range(0, NumElements)) newElements.Add(generate<TValue>(i));
 
         var _c1 = LWWDictionary<TKey, List<TValue>>
             .Empty;
-        int j = 0;
+        var j = 0;
         foreach (var node in _nodes)
         {
             _c1 = _c1.SetItem(node, generate<TKey>(j),
@@ -101,29 +97,16 @@ public class SerializerLwwDictionaryBenchmarks
     private TValue generate<TValue>(int i)
     {
         if (typeof(TValue) == typeof(RDDBenchTypes.TestVal))
-        {
             return (TValue)(object)new RDDBenchTypes.TestVal(i.ToString());
-        }
-        else if (typeof(TValue) == typeof(RDDBenchTypes.TestKey))
-        {
+        if (typeof(TValue) == typeof(RDDBenchTypes.TestKey))
             return (TValue)(object)new RDDBenchTypes.TestKey(i);
-        }
-        else if (typeof(TValue) == typeof(int))
-        {
+        if (typeof(TValue) == typeof(int))
             return (TValue)(object)i;
-        }
-        else if (typeof(TValue) == typeof(string))
-        {
+        if (typeof(TValue) == typeof(string))
             return (TValue)(object)i.ToString();
-        }
-        else if (typeof(TValue) == typeof(long))
-        {
-            return (TValue)(object)(i);
-        }
-        else
-        {
-            return (TValue)(object)(i);
-        }
+        if (typeof(TValue) == typeof(long))
+            return (TValue)(object)i;
+        return (TValue)(object)i;
     }
 
     [Benchmark]

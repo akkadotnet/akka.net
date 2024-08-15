@@ -1,143 +1,151 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ReadAggregator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ReadAggregator.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using Akka.Actor;
-using Akka.DistributedData.Internal;
 using System;
 using System.Collections.Immutable;
+using Akka.Actor;
+using Akka.DistributedData.Internal;
 using Akka.Event;
 
-namespace Akka.DistributedData
+namespace Akka.DistributedData;
+
+internal class ReadAggregator : ReadWriteAggregator
 {
-    internal class ReadAggregator : ReadWriteAggregator
+    private readonly IReadConsistency _consistency;
+
+    private readonly IKey _key;
+    private readonly Read _read;
+    private readonly IActorRef _replyTo;
+    private readonly object _req;
+
+    private DataEnvelope _result;
+
+    public ReadAggregator(IKey key, IReadConsistency consistency, object req, IImmutableList<Address> nodes,
+        IImmutableSet<Address> unreachable, bool shuffle, DataEnvelope localValue, IActorRef replyTo)
+        : base(nodes, unreachable, consistency.Timeout, shuffle)
     {
-        internal static Props Props(IKey key, IReadConsistency consistency, object req, IImmutableList<Address> nodes, IImmutableSet<Address> unreachable, bool shuffle, DataEnvelope localValue, IActorRef replyTo) =>
-            Actor.Props.Create(() => new ReadAggregator(key, consistency, req, nodes, unreachable, shuffle, localValue, replyTo)).WithDeploy(Deploy.Local);
+        _key = key;
+        _consistency = consistency;
+        _req = req;
+        _replyTo = replyTo;
+        _result = localValue;
+        _read = new Read(key.Id);
+        DoneWhenRemainingSize = GetDoneWhenRemainingSize();
+    }
 
-        private readonly IKey _key;
-        private readonly IReadConsistency _consistency;
-        private readonly object _req;
-        private readonly IActorRef _replyTo;
-        private readonly Read _read;
+    protected override int DoneWhenRemainingSize { get; }
 
-        private DataEnvelope _result;
+    internal static Props Props(IKey key, IReadConsistency consistency, object req, IImmutableList<Address> nodes,
+        IImmutableSet<Address> unreachable, bool shuffle, DataEnvelope localValue, IActorRef replyTo)
+    {
+        return Actor.Props
+            .Create(() =>
+                new ReadAggregator(key, consistency, req, nodes, unreachable, shuffle, localValue, replyTo))
+            .WithDeploy(Deploy.Local);
+    }
 
-        public ReadAggregator(IKey key, IReadConsistency consistency, object req, IImmutableList<Address> nodes, IImmutableSet<Address> unreachable, bool shuffle, DataEnvelope localValue, IActorRef replyTo)
-            : base(nodes, unreachable, consistency.Timeout, shuffle)
+    private int GetDoneWhenRemainingSize()
+    {
+        switch (_consistency)
         {
-            _key = key;
-            _consistency = consistency;
-            _req = req;
-            _replyTo = replyTo;
-            _result = localValue;
-            _read = new Read(key.Id);
-            DoneWhenRemainingSize = GetDoneWhenRemainingSize();
-        }
-        protected override int DoneWhenRemainingSize { get; }
-
-        private int GetDoneWhenRemainingSize()
-        {
-            switch (_consistency)
+            case ReadFrom read: return Nodes.Count - (read.N - 1);
+            case ReadAll _: return 0;
+            case ReadMajority read:
             {
-                case ReadFrom read: return Nodes.Count - (read.N - 1);
-                case ReadAll _: return 0;
-                case ReadMajority read:
-                    {
-                        // +1 because local node is not included in 'Nodes'
-                        var n = Nodes.Count + 1;
-                        var r = CalculateMajority(read.MinCapacity, n, 0);
-                        Log.Debug("ReadMajority [{0}] [{1}] of [{2}].", _key, r, n);
-                        return n - r;
-                    }
-                case ReadMajorityPlus read:
-                    {
-                        // +1 because local node is not included in 'Nodes'
-                        var n = Nodes.Count + 1;
-                        var r = CalculateMajority(read.MinCapacity, n, read.Additional);
-                        Log.Debug("ReadMajorityPlus [{0}] [{1}] of [{2}].", _key, r, n);
-                        return n - r;
-                    }
-                case ReadLocal _: throw new ArgumentException("ReadAggregator does not support ReadLocal");
-                default: throw new ArgumentException("Invalid consistency level");
+                // +1 because local node is not included in 'Nodes'
+                var n = Nodes.Count + 1;
+                var r = CalculateMajority(read.MinCapacity, n, 0);
+                Log.Debug("ReadMajority [{0}] [{1}] of [{2}].", _key, r, n);
+                return n - r;
             }
+            case ReadMajorityPlus read:
+            {
+                // +1 because local node is not included in 'Nodes'
+                var n = Nodes.Count + 1;
+                var r = CalculateMajority(read.MinCapacity, n, read.Additional);
+                Log.Debug("ReadMajorityPlus [{0}] [{1}] of [{2}].", _key, r, n);
+                return n - r;
+            }
+            case ReadLocal _: throw new ArgumentException("ReadAggregator does not support ReadLocal");
+            default: throw new ArgumentException("Invalid consistency level");
+        }
+    }
+
+    protected override void PreStart()
+    {
+        foreach (var n in PrimaryNodes)
+        {
+            var replica = Replica(n);
+            Log.Debug("Sending {0} to primary replica {1}", _read, replica);
+            replica.Tell(_read);
         }
 
-        protected override void PreStart()
-        {
-            foreach (var n in PrimaryNodes)
-            {
-                var replica = Replica(n);
-                Log.Debug("Sending {0} to primary replica {1}", _read, replica);
-                replica.Tell(_read);
-            }
+        if (Remaining.Count == DoneWhenRemainingSize)
+            Reply(true);
+        else if (DoneWhenRemainingSize < 0 || Remaining.Count < DoneWhenRemainingSize)
+            Reply(false);
+    }
 
-            if (Remaining.Count == DoneWhenRemainingSize)
-                Reply(true);
-            else if (DoneWhenRemainingSize < 0 || Remaining.Count < DoneWhenRemainingSize)
+    protected override bool Receive(object message)
+    {
+        switch (message)
+        {
+            case ReadResult x:
+                if (x.Envelope != null) _result = _result?.Merge(x.Envelope) ?? x.Envelope;
+
+                Remaining = Remaining.Remove(Sender.Path.Address);
+                var done = DoneWhenRemainingSize;
+                Log.Debug("read acks remaining: {0}, done when: {1}, current state: {2}", Remaining.Count, done,
+                    _result);
+                if (Remaining.Count == done) Reply(true);
+                return true;
+
+            case SendToSecondary x:
+                foreach (var n in SecondaryNodes)
+                    Replica(n).Tell(_read);
+                return true;
+
+            case ReceiveTimeout _:
                 Reply(false);
-        }
+                return true;
 
-        protected override bool Receive(object message)
+            default:
+                return false;
+        }
+    }
+
+    private void Reply(bool ok)
+    {
+        if (ok && _result != null)
         {
-            switch (message)
-            {
-                case ReadResult x:
-                    if (x.Envelope != null)
-                    {
-                        _result = _result?.Merge(x.Envelope) ?? x.Envelope;
-                    }
-
-                    Remaining = Remaining.Remove(Sender.Path.Address);
-                    var done = DoneWhenRemainingSize;
-                    Log.Debug("read acks remaining: {0}, done when: {1}, current state: {2}", Remaining.Count, done,
-                        _result);
-                    if (Remaining.Count == done) Reply(true);
-                    return true;
-                
-                case SendToSecondary x:
-                    foreach (var n in SecondaryNodes)
-                        Replica(n).Tell(_read);
-                    return true;
-                
-                case ReceiveTimeout _:
-                    Reply(false);
-                    return true;
-                
-                default:
-                    return false;
-            }
+            Context.Parent.Tell(new ReadRepair(_key.Id, _result));
+            Context.Become(WaitRepairAck(_result));
         }
-
-        private void Reply(bool ok)
+        else if (ok && _result == null)
         {
-            if (ok && _result != null)
-            {
-                Context.Parent.Tell(new ReadRepair(_key.Id, _result));
-                Context.Become(WaitRepairAck(_result));
-            }
-            else if (ok && _result == null)
-            {
-                _replyTo.Tell(new NotFound(_key, _req), Context.Parent);
-                Context.Stop(Self);
-            }
-            else
-            {
-                _replyTo.Tell(new GetFailure(_key, _req), Context.Parent);
-                Context.Stop(Self);
-            }
+            _replyTo.Tell(new NotFound(_key, _req), Context.Parent);
+            Context.Stop(Self);
         }
+        else
+        {
+            _replyTo.Tell(new GetFailure(_key, _req), Context.Parent);
+            Context.Stop(Self);
+        }
+    }
 
-        private Receive WaitRepairAck(DataEnvelope envelope) => msg =>
+    private Receive WaitRepairAck(DataEnvelope envelope)
+    {
+        return msg =>
         {
             switch (msg)
             {
                 case ReadRepairAck _:
                     var reply = envelope.Data is DeletedData
-                        ? (object)new DataDeleted(_key, null)
+                        ? (object)new DataDeleted(_key)
                         : new GetSuccess(_key, _req, envelope.Data);
                     _replyTo.Tell(reply, Context.Parent);
                     Context.Stop(Self);
@@ -156,182 +164,211 @@ namespace Akka.DistributedData
             }
         };
     }
+}
 
-    public interface IReadConsistency
+public interface IReadConsistency
+{
+    TimeSpan Timeout { get; }
+}
+
+public sealed class ReadLocal : IReadConsistency
+{
+    public static readonly ReadLocal Instance = new();
+
+    private ReadLocal()
     {
-        TimeSpan Timeout { get; }
     }
 
-    public sealed class ReadLocal : IReadConsistency
+    public TimeSpan Timeout => TimeSpan.Zero;
+
+
+    public override bool Equals(object obj)
     {
-        public static readonly ReadLocal Instance = new();
-
-        public TimeSpan Timeout => TimeSpan.Zero;
-
-        private ReadLocal() { }
-
-        
-        public override bool Equals(object obj) => obj != null && obj is ReadLocal;
-
-        
-        public override string ToString() => "ReadLocal";
-        
-        public override int GetHashCode() => nameof(ReadLocal).GetHashCode();
+        return obj != null && obj is ReadLocal;
     }
 
-    public sealed class ReadFrom : IReadConsistency, IEquatable<ReadFrom>
+
+    public override string ToString()
     {
-        public int N { get; }
-
-        public TimeSpan Timeout { get; }
-
-        public ReadFrom(int n, TimeSpan timeout)
-        {
-            N = n;
-            Timeout = timeout;
-        }
-
-        
-        public override bool Equals(object obj) => obj is ReadFrom from && Equals(from);
-
-        
-        public bool Equals(ReadFrom other)
-        {
-            if (ReferenceEquals(other, null)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return N == other.N && Timeout.Equals(other.Timeout);
-        }
-
-        
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (N * 397) ^ Timeout.GetHashCode();
-            }
-        }
-
-        
-        public override string ToString() => $"ReadFrom({N}, timeout={Timeout})";
+        return "ReadLocal";
     }
 
-    public sealed class ReadMajority : IReadConsistency, IEquatable<ReadMajority>
+    public override int GetHashCode()
     {
-        public TimeSpan Timeout { get; }
-        public int MinCapacity { get; }
+        return nameof(ReadLocal).GetHashCode();
+    }
+}
 
-        public ReadMajority(TimeSpan timeout, int minCapacity = 0)
+public sealed class ReadFrom : IReadConsistency, IEquatable<ReadFrom>
+{
+    public ReadFrom(int n, TimeSpan timeout)
+    {
+        N = n;
+        Timeout = timeout;
+    }
+
+    public int N { get; }
+
+
+    public bool Equals(ReadFrom other)
+    {
+        if (ReferenceEquals(other, null)) return false;
+        if (ReferenceEquals(this, other)) return true;
+        return N == other.N && Timeout.Equals(other.Timeout);
+    }
+
+    public TimeSpan Timeout { get; }
+
+
+    public override bool Equals(object obj)
+    {
+        return obj is ReadFrom from && Equals(from);
+    }
+
+
+    public override int GetHashCode()
+    {
+        unchecked
         {
-            Timeout = timeout;
-            MinCapacity = minCapacity;
-        }
-
-        
-        public override bool Equals(object obj)
-        {
-            return obj is ReadMajority majority && Equals(majority);
-        }
-
-        
-        public override string ToString() => $"ReadMajority(timeout={Timeout})";
-
-        
-        public bool Equals(ReadMajority other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return Timeout.Equals(other.Timeout) && MinCapacity == other.MinCapacity;
-        }
-
-        
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (Timeout.GetHashCode() * 397) ^ MinCapacity;
-            }
+            return (N * 397) ^ Timeout.GetHashCode();
         }
     }
 
-    /// <summary>
-    /// <see cref="ReadMajority"/> but with the given number of <see cref="Additional"/> nodes added to the majority count. At most
-    /// all nodes. Exiting nodes are excluded using `ReadMajorityPlus` because those are typically
-    /// about to be removed and will not be able to respond.
-    /// </summary>
-    public sealed class ReadMajorityPlus : IReadConsistency, IEquatable<ReadMajorityPlus>
+
+    public override string ToString()
     {
-        public TimeSpan Timeout { get; }
-        public int Additional { get; }
-        public int MinCapacity { get; }
+        return $"ReadFrom({N}, timeout={Timeout})";
+    }
+}
 
-        public ReadMajorityPlus(TimeSpan timeout, int additional, int minCapacity = 0)
-        {
-            Timeout = timeout;
-            Additional = additional;
-            MinCapacity = minCapacity;
-        }
-
-        
-        public override bool Equals(object obj)
-        {
-            return obj is ReadMajorityPlus plus && Equals(plus);
-        }
-
-        
-        public override string ToString() => $"ReadMajorityPlus(timeout={Timeout}, additional={Additional})";
-
-        
-        public bool Equals(ReadMajorityPlus other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return Timeout.Equals(other.Timeout) && Additional == other.Additional && MinCapacity == other.MinCapacity;
-        }
-
-        
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = 13;
-                hashCode = (hashCode * 397) ^ Timeout.GetHashCode();
-                hashCode = (hashCode * 397) ^ Additional.GetHashCode();
-                hashCode = (hashCode * 397) ^ MinCapacity.GetHashCode();
-                return hashCode;
-            }
-        }
+public sealed class ReadMajority : IReadConsistency, IEquatable<ReadMajority>
+{
+    public ReadMajority(TimeSpan timeout, int minCapacity = 0)
+    {
+        Timeout = timeout;
+        MinCapacity = minCapacity;
     }
 
-    public sealed class ReadAll : IReadConsistency, IEquatable<ReadAll>
+    public int MinCapacity { get; }
+
+
+    public bool Equals(ReadMajority other)
     {
-        public TimeSpan Timeout { get; }
+        if (ReferenceEquals(null, other)) return false;
+        if (ReferenceEquals(this, other)) return true;
+        return Timeout.Equals(other.Timeout) && MinCapacity == other.MinCapacity;
+    }
 
-        public ReadAll(TimeSpan timeout)
+    public TimeSpan Timeout { get; }
+
+
+    public override bool Equals(object obj)
+    {
+        return obj is ReadMajority majority && Equals(majority);
+    }
+
+
+    public override string ToString()
+    {
+        return $"ReadMajority(timeout={Timeout})";
+    }
+
+
+    public override int GetHashCode()
+    {
+        unchecked
         {
-            Timeout = timeout;
+            return (Timeout.GetHashCode() * 397) ^ MinCapacity;
         }
+    }
+}
 
-        
-        public override bool Equals(object obj)
+/// <summary>
+///     <see cref="ReadMajority" /> but with the given number of <see cref="Additional" /> nodes added to the majority
+///     count. At most
+///     all nodes. Exiting nodes are excluded using `ReadMajorityPlus` because those are typically
+///     about to be removed and will not be able to respond.
+/// </summary>
+public sealed class ReadMajorityPlus : IReadConsistency, IEquatable<ReadMajorityPlus>
+{
+    public ReadMajorityPlus(TimeSpan timeout, int additional, int minCapacity = 0)
+    {
+        Timeout = timeout;
+        Additional = additional;
+        MinCapacity = minCapacity;
+    }
+
+    public int Additional { get; }
+    public int MinCapacity { get; }
+
+
+    public bool Equals(ReadMajorityPlus other)
+    {
+        if (ReferenceEquals(null, other)) return false;
+        if (ReferenceEquals(this, other)) return true;
+        return Timeout.Equals(other.Timeout) && Additional == other.Additional && MinCapacity == other.MinCapacity;
+    }
+
+    public TimeSpan Timeout { get; }
+
+
+    public override bool Equals(object obj)
+    {
+        return obj is ReadMajorityPlus plus && Equals(plus);
+    }
+
+
+    public override string ToString()
+    {
+        return $"ReadMajorityPlus(timeout={Timeout}, additional={Additional})";
+    }
+
+
+    public override int GetHashCode()
+    {
+        unchecked
         {
-            return obj is ReadAll all && Equals(all);
+            var hashCode = 13;
+            hashCode = (hashCode * 397) ^ Timeout.GetHashCode();
+            hashCode = (hashCode * 397) ^ Additional.GetHashCode();
+            hashCode = (hashCode * 397) ^ MinCapacity.GetHashCode();
+            return hashCode;
         }
+    }
+}
 
-        
-        public override string ToString() => $"ReadAll(timeout={Timeout})";
+public sealed class ReadAll : IReadConsistency, IEquatable<ReadAll>
+{
+    public ReadAll(TimeSpan timeout)
+    {
+        Timeout = timeout;
+    }
 
-        
-        public bool Equals(ReadAll other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return Timeout.Equals(other.Timeout);
-        }
 
-        
-        public override int GetHashCode()
-        {
-            return Timeout.GetHashCode();
-        }
+    public bool Equals(ReadAll other)
+    {
+        if (ReferenceEquals(null, other)) return false;
+        if (ReferenceEquals(this, other)) return true;
+        return Timeout.Equals(other.Timeout);
+    }
+
+    public TimeSpan Timeout { get; }
+
+
+    public override bool Equals(object obj)
+    {
+        return obj is ReadAll all && Equals(all);
+    }
+
+
+    public override string ToString()
+    {
+        return $"ReadAll(timeout={Timeout})";
+    }
+
+
+    public override int GetHashCode()
+    {
+        return Timeout.GetHashCode();
     }
 }

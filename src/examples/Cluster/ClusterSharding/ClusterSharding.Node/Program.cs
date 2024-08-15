@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Program.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.IO;
@@ -18,68 +18,72 @@ using Akka.Configuration;
 using Akka.Persistence.Sqlite;
 using Akka.Util;
 
-namespace ClusterSharding.Node
+namespace ClusterSharding.Node;
+
+using ClusterSharding = Akka.Cluster.Sharding.ClusterSharding;
+
+public static class Program
 {
-    using ClusterSharding = Akka.Cluster.Sharding.ClusterSharding;
-
-    public static class Program
+    public static async Task Main(string[] args)
     {
-        public static async Task Main(string[] args)
+        #region Console shutdown setup
+
+        var exitEvent = new ManualResetEvent(false);
+        Console.CancelKeyPress += (_, eventArgs) =>
         {
-            #region Console shutdown setup
-            
-            var exitEvent = new ManualResetEvent(false);
-            Console.CancelKeyPress += (_, eventArgs) =>
-            {
-                eventArgs.Cancel = true;
-                exitEvent.Set();
-            };
-            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
-            {
-                exitEvent.Set();
-            };
-            
-            #endregion
-            
-            var config = ConfigurationFactory.ParseString(await File.ReadAllTextAsync("app.conf"))
-                .BootstrapFromDocker()
-                .WithFallback(ClusterSingletonManager.DefaultConfig())
-                .WithFallback(SqlitePersistence.DefaultConfiguration());
+            eventArgs.Cancel = true;
+            exitEvent.Set();
+        };
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => { exitEvent.Set(); };
 
-            var system = ActorSystem.Create("sharded-cluster-system", config);
-            
-            var sharding = ClusterSharding.Get(system);
-            var shardRegion = await sharding.StartAsync(
-                typeName: "customer",
-                entityPropsFactory: e => Props.Create(() => new Customer(e)),
-                settings: ClusterShardingSettings.Create(system),
-                messageExtractor: new MessageExtractor(10));
+        #endregion
 
-            var cluster = Cluster.Get(system);
-            cluster.RegisterOnMemberUp(() =>
-            {
-                ProduceMessages(system, shardRegion);
-            });
+        var config = ConfigurationFactory.ParseString(await File.ReadAllTextAsync("app.conf"))
+            .BootstrapFromDocker()
+            .WithFallback(ClusterSingletonManager.DefaultConfig())
+            .WithFallback(SqlitePersistence.DefaultConfiguration());
 
-            exitEvent.WaitOne();
-            await system.Terminate();
-        }
+        var system = ActorSystem.Create("sharded-cluster-system", config);
 
-        private static void ProduceMessages(ActorSystem system, IActorRef shardRegion)
+        var sharding = ClusterSharding.Get(system);
+        var shardRegion = await sharding.StartAsync(
+            "customer",
+            e => Props.Create(() => new Customer(e)),
+            ClusterShardingSettings.Create(system),
+            new MessageExtractor(10));
+
+        var cluster = Cluster.Get(system);
+        cluster.RegisterOnMemberUp(() => { ProduceMessages(system, shardRegion); });
+
+        exitEvent.WaitOne();
+        await system.Terminate();
+    }
+
+    private static void ProduceMessages(ActorSystem system, IActorRef shardRegion)
+    {
+        var customers = new[]
         {
-            var customers = new[] { "Yoda", "Obi-Wan", "Darth Vader", "Princess Leia", "Luke Skywalker", "R2D2", "Han Solo", "Chewbacca", "Jabba" };
-            var items = new[] { "Yoghurt", "Fruits", "Lightsaber", "Fluffy toy", "Dreamcatcher", "Candies", "Cigars", "Chicken nuggets", "French fries" };
+            "Yoda", "Obi-Wan", "Darth Vader", "Princess Leia", "Luke Skywalker", "R2D2", "Han Solo", "Chewbacca",
+            "Jabba"
+        };
+        var items = new[]
+        {
+            "Yoghurt", "Fruits", "Lightsaber", "Fluffy toy", "Dreamcatcher", "Candies", "Cigars", "Chicken nuggets",
+            "French fries"
+        };
 
-            system.Scheduler.Advanced.ScheduleRepeatedly(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(3), () =>
-            {
-                var customer = PickRandom(customers);
-                var item = PickRandom(items);
-                var message = new ShardEnvelope(customer, new Customer.PurchaseItem(item));
+        system.Scheduler.Advanced.ScheduleRepeatedly(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(3), () =>
+        {
+            var customer = PickRandom(customers);
+            var item = PickRandom(items);
+            var message = new ShardEnvelope(customer, new Customer.PurchaseItem(item));
 
-                shardRegion.Tell(message);
-            });
-        }
+            shardRegion.Tell(message);
+        });
+    }
 
-        private static T PickRandom<T>(T[] items) => items[ThreadLocalRandom.Current.Next(items.Length)];
+    private static T PickRandom<T>(T[] items)
+    {
+        return items[ThreadLocalRandom.Current.Next(items.Length)];
     }
 }

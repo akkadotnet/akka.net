@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="Producers.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Producer.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -17,36 +17,30 @@ namespace ShoppingCart;
 #region MessageProducer
 
 /// <summary>
-/// Actor is responsible for producing messages
+///     Actor is responsible for producing messages
 /// </summary>
 public sealed class Producer : ReceiveActor, IWithTimers
 {
-    private static readonly string[] Customers = new[]
+    private static readonly string[] Customers =
     {
-        "Yoda", "Obi-Wan", "Darth Vader", "Princess Leia", 
-        "Luke Skywalker", "R2D2", "Han Solo", "Chewbacca", "Jabba"
+        "Yoda", "Obi-Wan", "Darth Vader", "Princess Leia", "Luke Skywalker", "R2D2", "Han Solo", "Chewbacca",
+        "Jabba"
     };
-    
-    private static readonly string [] Items = new[]
+
+    private static readonly string[] Items =
     {
-        "Yoghurt", "Fruits", "Lightsaber", "Fluffy toy", "Dreamcatcher", 
-        "Candies", "Cigars", "Chicken nuggets", "French fries"
+        "Yoghurt", "Fruits", "Lightsaber", "Fluffy toy", "Dreamcatcher", "Candies", "Cigars", "Chicken nuggets",
+        "French fries"
     };
-    
-    private sealed class Produce
-    {
-        public static readonly Produce Instance = new();
-        private Produce() {}
-    }
-
-    public ITimerScheduler Timers { get; set; }
-
-    public IActorRef SendNext { get; set; } = ActorRefs.Nobody;
 
     public Producer()
     {
         Idle();
     }
+
+    public IActorRef SendNext { get; set; } = ActorRefs.Nobody;
+
+    public ITimerScheduler Timers { get; set; }
 
     protected override void PreStart()
     {
@@ -75,7 +69,7 @@ public sealed class Producer : ReceiveActor, IWithTimers
     // </MessageProduction>
 
     /// <summary>
-    /// Waiting for demand for messages to come from sharding system
+    ///     Waiting for demand for messages to come from sharding system
     /// </summary>
     private void Idle()
     {
@@ -83,15 +77,27 @@ public sealed class Producer : ReceiveActor, IWithTimers
         {
             // ignore
         });
-        
+
         Receive<ShardingProducerController.RequestNext<Customer.ICustomerCommand>>(next =>
         {
             Become(Active);
             SendNext = next.SendNextTo;
         });
     }
-    
-    private static T PickRandom<T>(IReadOnlyList<T> items) => items[ThreadLocalRandom.Current.Next(items.Count)];
+
+    private static T PickRandom<T>(IReadOnlyList<T> items)
+    {
+        return items[ThreadLocalRandom.Current.Next(items.Count)];
+    }
+
+    private sealed class Produce
+    {
+        public static readonly Produce Instance = new();
+
+        private Produce()
+        {
+        }
+    }
 }
 
 #endregion

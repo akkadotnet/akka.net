@@ -1,26 +1,24 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="StashCapacitySpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="StashCapacitySpecs.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using FluentAssertions;
 
 namespace Akka.Tests.Actor.Stash;
 
 public class StashCapacitySpecs : AkkaSpec
 {
-    public StashCapacitySpecs(ITestOutputHelper output) : base(Config.Empty, output: output)
+    public StashCapacitySpecs(ITestOutputHelper output) : base(Config.Empty, output)
     {
-        
     }
 
     [Fact]
@@ -36,7 +34,7 @@ public class StashCapacitySpecs : AkkaSpec
         readout1.Size.Should().Be(2);
         readout1.IsEmpty.Should().BeFalse();
         readout1.IsFull.Should().BeFalse();
-        
+
         stashActor.Tell(UnstashMessage.Instance);
         stashActor.Tell(GetStashReadout.Instance);
         var readout2 = await ExpectMsgAsync<StashReadout>();
@@ -44,7 +42,7 @@ public class StashCapacitySpecs : AkkaSpec
         readout2.Size.Should().Be(1);
         readout2.IsEmpty.Should().BeFalse();
         readout2.IsFull.Should().BeFalse();
-        
+
         stashActor.Tell(UnstashMessage.Instance);
         stashActor.Tell(GetStashReadout.Instance);
         var readout3 = await ExpectMsgAsync<StashReadout>();
@@ -53,7 +51,7 @@ public class StashCapacitySpecs : AkkaSpec
         readout3.IsEmpty.Should().BeTrue();
         readout3.IsFull.Should().BeFalse();
     }
-    
+
     public class StashMessage
     {
         public StashMessage(string message)
@@ -63,25 +61,25 @@ public class StashCapacitySpecs : AkkaSpec
 
         public string Message { get; }
     }
-        
+
     public class UnstashMessage
     {
+        public static readonly UnstashMessage Instance = new();
+
         private UnstashMessage()
         {
-                
         }
-        public static readonly UnstashMessage Instance = new();
     }
-        
+
     public class GetStashReadout
     {
+        public static readonly GetStashReadout Instance = new();
+
         private GetStashReadout()
         {
-                
         }
-        public static readonly GetStashReadout Instance = new();
     }
-        
+
     public class StashReadout
     {
         public StashReadout(int capacity, int size, bool isEmpty, bool isFull)
@@ -94,16 +92,14 @@ public class StashCapacitySpecs : AkkaSpec
 
         public int Capacity { get; }
         public int Size { get; }
-            
+
         public bool IsEmpty { get; }
-            
+
         public bool IsFull { get; }
     }
 
     private class UnboundedStashActor : UntypedActorWithUnboundedStash
     {
-      
-        
         protected override void OnReceive(object message)
         {
             switch (message)

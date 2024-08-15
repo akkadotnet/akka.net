@@ -1,114 +1,110 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AttemptSysMsgRedeliverySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="AttemptSysMsgRedeliverySpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
-using System.Text.RegularExpressions;
 using Akka.Actor;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 
-namespace Akka.Remote.Tests.MultiNode
+namespace Akka.Remote.Tests.MultiNode;
+
+public class AttemptSysMsgRedeliveryMultiNetSpec : MultiNodeConfig
 {
-    public class AttemptSysMsgRedeliveryMultiNetSpec : MultiNodeConfig
+    public AttemptSysMsgRedeliveryMultiNetSpec()
     {
-        public AttemptSysMsgRedeliveryMultiNetSpec()
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
 
-            CommonConfig = DebugConfig(true);
+        CommonConfig = DebugConfig(true);
 
-            TestTransport = true;
-        }
-
-        public RoleName First { get; }
-        public RoleName Second { get; }
-        public RoleName Third { get; }
-
-        public class Echo : UntypedActor
-        {
-            protected override void OnReceive(object message)
-            {
-                Sender.Tell(message);
-            }
-        }
+        TestTransport = true;
     }
 
-    public class AttemptSysMsgRedeliverySpec : MultiNodeSpec
+    public RoleName First { get; }
+    public RoleName Second { get; }
+    public RoleName Third { get; }
+
+    public class Echo : UntypedActor
     {
-        private readonly AttemptSysMsgRedeliveryMultiNetSpec _config;
-
-        public AttemptSysMsgRedeliverySpec() : this(new AttemptSysMsgRedeliveryMultiNetSpec())
+        protected override void OnReceive(object message)
         {
+            Sender.Tell(message);
         }
+    }
+}
 
-        protected AttemptSysMsgRedeliverySpec(AttemptSysMsgRedeliveryMultiNetSpec config) : base(config, typeof(AttemptSysMsgRedeliverySpec))
-        {
-            _config = config;
-        }
+public class AttemptSysMsgRedeliverySpec : MultiNodeSpec
+{
+    private readonly AttemptSysMsgRedeliveryMultiNetSpec _config;
 
-        protected override int InitialParticipantsValueFactory
-        {
-            get { return Roles.Count; }
-        }
+    public AttemptSysMsgRedeliverySpec() : this(new AttemptSysMsgRedeliveryMultiNetSpec())
+    {
+    }
 
-        [MultiNodeFact()]
-        public void AttemptSysMsgRedelivery()
-        {
-            RedeliverSystemMessageAfterInactivity();
-        }
+    protected AttemptSysMsgRedeliverySpec(AttemptSysMsgRedeliveryMultiNetSpec config) : base(config,
+        typeof(AttemptSysMsgRedeliverySpec))
+    {
+        _config = config;
+    }
 
-        public void RedeliverSystemMessageAfterInactivity()
-        {
-            var echo = ActorOf<AttemptSysMsgRedeliveryMultiNetSpec.Echo>("echo");
+    protected override int InitialParticipantsValueFactory => Roles.Count;
 
-            EnterBarrier("echo-started");
+    [MultiNodeFact]
+    public void AttemptSysMsgRedelivery()
+    {
+        RedeliverSystemMessageAfterInactivity();
+    }
 
-            Sys.ActorSelection(Node(_config.First)/"user"/"echo").Tell(new Identify(null));
-            var firstRef = ExpectMsg<ActorIdentity>().Subject;
+    public void RedeliverSystemMessageAfterInactivity()
+    {
+        var echo = ActorOf<AttemptSysMsgRedeliveryMultiNetSpec.Echo>("echo");
 
-            Sys.ActorSelection(Node(_config.Second)/"user"/"echo").Tell(new Identify(null));
-            var secondRef = ExpectMsg<ActorIdentity>().Subject;
+        EnterBarrier("echo-started");
 
-            EnterBarrier("refs-retrieved");
+        Sys.ActorSelection(Node(_config.First) / "user" / "echo").Tell(new Identify(null));
+        var firstRef = ExpectMsg<ActorIdentity>().Subject;
 
-            RunOn(() =>
+        Sys.ActorSelection(Node(_config.Second) / "user" / "echo").Tell(new Identify(null));
+        var secondRef = ExpectMsg<ActorIdentity>().Subject;
+
+        EnterBarrier("refs-retrieved");
+
+        RunOn(() =>
                 TestConductor.Blackhole(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both)
-                             .Wait(),
-                _config.First);
+                    .Wait(),
+            _config.First);
 
-            EnterBarrier("blackhole");
+        EnterBarrier("blackhole");
 
-            RunOn(() => Watch(secondRef),
-                _config.First, _config.Third);
+        RunOn(() => Watch(secondRef),
+            _config.First, _config.Third);
 
-            RunOn(() => Watch(firstRef),
-                _config.Second);
+        RunOn(() => Watch(firstRef),
+            _config.Second);
 
-            EnterBarrier("watch-established");
+        EnterBarrier("watch-established");
 
-            RunOn(() =>
+        RunOn(() =>
                 TestConductor.PassThrough(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both)
-                             .Wait(),
-                _config.First);
+                    .Wait(),
+            _config.First);
 
-            EnterBarrier("pass-through");
+        EnterBarrier("pass-through");
 
-            Sys.ActorSelection("/user/echo").Tell(PoisonPill.Instance);
+        Sys.ActorSelection("/user/echo").Tell(PoisonPill.Instance);
 
-            RunOn(() => ExpectTerminated(secondRef, TimeSpan.FromSeconds(10)),
-                _config.First, _config.Third);
+        RunOn(() => ExpectTerminated(secondRef, TimeSpan.FromSeconds(10)),
+            _config.First, _config.Third);
 
-            RunOn(() => ExpectTerminated(firstRef, TimeSpan.FromSeconds(10)),
-                _config.Second);
+        RunOn(() => ExpectTerminated(firstRef, TimeSpan.FromSeconds(10)),
+            _config.Second);
 
-            EnterBarrier("done");
-        }
+        EnterBarrier("done");
     }
 }

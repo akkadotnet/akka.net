@@ -1,3 +1,10 @@
+// -----------------------------------------------------------------------
+//  <copyright file="ConsumerControllerImpl.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using System.Buffers;
@@ -61,7 +68,7 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
             _log.Debug("[Testing] dropping message [{0}] due to fuzzing factor", message);
             return true;
         }
-            
+
         return base.AroundReceive(receive, message);
     }
 
@@ -402,10 +409,7 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
             ReceiveRegisterToProducerController(controller, () => WaitingForConfirmation(sequencedMessage));
         });
 
-        Receive<DeliverThenStop<T>>(_ =>
-        {
-            ReceiveDeliverThenStop(() => WaitingForConfirmation(sequencedMessage));
-        });
+        Receive<DeliverThenStop<T>>(_ => { ReceiveDeliverThenStop(() => WaitingForConfirmation(sequencedMessage)); });
     }
 
     protected override void PostStop()

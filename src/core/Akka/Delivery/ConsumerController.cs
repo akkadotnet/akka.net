@@ -1,9 +1,10 @@
 // -----------------------------------------------------------------------
 //  <copyright file="ConsumerController.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using Akka.Actor;
@@ -23,8 +24,9 @@ public static class ConsumerController
             throw new ArgumentException(
                 $"Consumer [{consumer}] must be local");
     }
-    
-    public static Props Create<T>(IActorRefFactory actorRefFactory, Option<IActorRef> producerControllerReference, Settings? settings = null)
+
+    public static Props Create<T>(IActorRefFactory actorRefFactory, Option<IActorRef> producerControllerReference,
+        Settings? settings = null)
     {
         Props p;
         switch (actorRefFactory)
@@ -36,13 +38,15 @@ public static class ConsumerController
                 p = ConsumerControllerProps<T>(system, producerControllerReference, settings);
                 break;
             default:
-                throw new ArgumentOutOfRangeException(nameof(actorRefFactory), $"Unrecognized IActorRefFactory: {actorRefFactory} - this is probably a bug.");
+                throw new ArgumentOutOfRangeException(nameof(actorRefFactory),
+                    $"Unrecognized IActorRefFactory: {actorRefFactory} - this is probably a bug.");
         }
 
         return p;
     }
-    
-    internal static Props CreateWithFuzzing<T>(IActorRefFactory actorRefFactory, Option<IActorRef> producerControllerReference, Func<object, double> fuzzing, Settings? settings = null)
+
+    internal static Props CreateWithFuzzing<T>(IActorRefFactory actorRefFactory,
+        Option<IActorRef> producerControllerReference, Func<object, double> fuzzing, Settings? settings = null)
     {
         Props p;
         switch (actorRefFactory)
@@ -54,25 +58,28 @@ public static class ConsumerController
                 p = ConsumerControllerProps<T>(system, producerControllerReference, settings, fuzzing);
                 break;
             default:
-                throw new ArgumentOutOfRangeException(nameof(actorRefFactory), $"Unrecognized IActorRefFactory: {actorRefFactory} - this is probably a bug.");
+                throw new ArgumentOutOfRangeException(nameof(actorRefFactory),
+                    $"Unrecognized IActorRefFactory: {actorRefFactory} - this is probably a bug.");
         }
 
         return p;
     }
 
-    private static Props ConsumerControllerProps<T>(IActorContext context, Option<IActorRef> producerControllerReference, Settings? settings = null, Func<object, double>? fuzzing = null)
+    private static Props ConsumerControllerProps<T>(IActorContext context,
+        Option<IActorRef> producerControllerReference, Settings? settings = null, Func<object, double>? fuzzing = null)
     {
         return ConsumerControllerProps<T>(context.System, producerControllerReference, settings, fuzzing);
     }
 
-    private static Props ConsumerControllerProps<T>(ActorSystem system, Option<IActorRef> producerControllerReference, Settings? settings = null,  Func<object, double>? fuzzing = null)
+    private static Props ConsumerControllerProps<T>(ActorSystem system, Option<IActorRef> producerControllerReference,
+        Settings? settings = null, Func<object, double>? fuzzing = null)
     {
-        var realSettings = settings ?? ConsumerController.Settings.Create(system);
+        var realSettings = settings ?? Settings.Create(system);
         // need to set the stash size equal to the flow control window
         return Props.Create(() => new ConsumerController<T>(producerControllerReference, realSettings, fuzzing))
             .WithStashCapacity(realSettings.FlowControlWindow);
     }
-    
+
     /// <summary>
     ///     Commands that are specific to the consumer side of the reliable delivery pattern.
     /// </summary>
@@ -93,9 +100,10 @@ public static class ConsumerController
 
         public IActorRef DeliverTo { get; }
     }
-    
+
     /// <summary>
-    /// Instructs the <see cref="ConsumerController{T}"/> to register itself with the <see cref="ProducerController{T}"/>.
+    ///     Instructs the <see cref="ConsumerController{T}" /> to register itself with the <see cref="ProducerController{T}" />
+    ///     .
     /// </summary>
     public sealed class RegisterToProducerController<T> : IConsumerCommand<T>
     {
@@ -108,7 +116,7 @@ public static class ConsumerController
     }
 
     /// <summary>
-    /// INTERNAL API - used by serialization system
+    ///     INTERNAL API - used by serialization system
     /// </summary>
     internal interface ISequencedMessage
     {
@@ -119,7 +127,12 @@ public static class ConsumerController
     ///     A sequenced message that is delivered to the consumer via the ProducerController.
     /// </summary>
     [InternalApi]
-    public sealed record SequencedMessage<T>(string ProducerId, long SeqNr, MessageOrChunk<T> Message, bool First, bool Ack) : IConsumerCommand<T>, IDeliverySerializable, IDeadLetterSuppression, ISequencedMessage
+    public sealed record SequencedMessage<T>(
+        string ProducerId,
+        long SeqNr,
+        MessageOrChunk<T> Message,
+        bool First,
+        bool Ack) : IConsumerCommand<T>, IDeliverySerializable, IDeadLetterSuppression, ISequencedMessage
     {
         internal SequencedMessage(string producerId, long seqNr, MessageOrChunk<T> messageOrChunk, bool first, bool ack,
             IActorRef producerController)
@@ -131,42 +144,42 @@ public static class ConsumerController
         internal bool IsFirstChunk => Message.Chunk is { FirstChunk: true } || Message.IsMessage;
 
         internal bool IsLastChunk => Message.Chunk is { LastChunk: true } || Message.IsMessage;
-        
-        
-        /// <summary>
-        /// INTERNAL API
-        /// </summary>
-        Type ISequencedMessage.PayloadType => typeof(T);
 
         /// <summary>
-        /// TESTING ONLY
+        ///     TESTING ONLY
         /// </summary>
         internal IActorRef ProducerController { get; init; } = ActorRefs.Nobody;
+
+        public bool Equals(SequencedMessage<T>? other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return ProducerId == other.ProducerId
+                   && SeqNr == other.SeqNr
+                   && Message.Equals(other.Message)
+                   && First == other.First
+                   && Ack == other.Ack
+                   && ProducerController.Equals(other.ProducerController);
+        }
+
+
+        /// <summary>
+        ///     INTERNAL API
+        /// </summary>
+        Type ISequencedMessage.PayloadType => typeof(T);
 
         internal static SequencedMessage<T> FromChunkedMessage(string producerId, long seqNr,
             ChunkedMessage chunkedMessage, bool first, bool ack, IActorRef producerController)
         {
             return new SequencedMessage<T>(producerId, seqNr, chunkedMessage, first, ack, producerController);
         }
-        
+
         /// <summary>
-        /// INTERNAL API
+        ///     INTERNAL API
         /// </summary>
         internal SequencedMessage<T> AsFirst()
         {
             return this with { First = true };
-        }
-
-        public bool Equals(SequencedMessage<T>? other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return ProducerId == other.ProducerId 
-                   && SeqNr == other.SeqNr 
-                   && Message.Equals(other.Message) 
-                   && First == other.First 
-                   && Ack == other.Ack
-                   && ProducerController.Equals(other.ProducerController);
         }
 
         public override int GetHashCode()
@@ -186,7 +199,8 @@ public static class ConsumerController
     /// <summary>
     ///     Sent from the consumer controller to the consumer.
     /// </summary>
-    public sealed record Delivery<T>(T Message, IActorRef ConfirmTo, string ProducerId, long SeqNr) : IConsumerCommand<T>, IDeliverySerializable, IDeadLetterSuppression
+    public sealed record Delivery<T>(T Message, IActorRef ConfirmTo, string ProducerId, long SeqNr)
+        : IConsumerCommand<T>, IDeliverySerializable, IDeadLetterSuppression
     {
         public override string ToString()
         {
@@ -195,14 +209,15 @@ public static class ConsumerController
     }
 
     /// <summary>
-    /// Deliver all buffered messages to consumer then shutdown.
+    ///     Deliver all buffered messages to consumer then shutdown.
     /// </summary>
     public sealed class DeliverThenStop<T> : IConsumerCommand<T>
     {
+        public static readonly DeliverThenStop<T> Instance = new();
+
         private DeliverThenStop()
         {
         }
-        public static readonly DeliverThenStop<T> Instance = new();
     }
 
     /// <summary>
@@ -218,21 +233,10 @@ public static class ConsumerController
     }
 
     /// <summary>
-    /// ConsumerController settings.
+    ///     ConsumerController settings.
     /// </summary>
     public sealed record Settings
     {
-        public static Settings Create(ActorSystem actorSystem)
-        {
-            return Create(actorSystem.Settings.Config.GetConfig("akka.reliable-delivery.consumer-controller")!);
-        }
-        
-        public static Settings Create(Config config)
-        {
-            return new Settings(config.GetInt("flow-control-window"), config.GetTimeSpan("resend-interval-min"),
-                config.GetTimeSpan("resend-interval-max"), config.GetBoolean("only-flow-control"));
-        }
-
         private Settings(int flowControlWindow, TimeSpan resendIntervalMin, TimeSpan resendIntervalMax,
             bool onlyFlowControl)
         {
@@ -250,9 +254,21 @@ public static class ConsumerController
 
         public bool OnlyFlowControl { get; init; }
 
+        public static Settings Create(ActorSystem actorSystem)
+        {
+            return Create(actorSystem.Settings.Config.GetConfig("akka.reliable-delivery.consumer-controller")!);
+        }
+
+        public static Settings Create(Config config)
+        {
+            return new Settings(config.GetInt("flow-control-window"), config.GetTimeSpan("resend-interval-min"),
+                config.GetTimeSpan("resend-interval-max"), config.GetBoolean("only-flow-control"));
+        }
+
         public override string ToString()
         {
-            return $"ConsumerController.Settings({FlowControlWindow}, {ResendIntervalMin}, {ResendIntervalMax}, {OnlyFlowControl})";
+            return
+                $"ConsumerController.Settings({FlowControlWindow}, {ResendIntervalMin}, {ResendIntervalMax}, {OnlyFlowControl})";
         }
     }
 }

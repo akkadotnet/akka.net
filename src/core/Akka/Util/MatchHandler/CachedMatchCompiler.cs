@@ -1,76 +1,76 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="CachedMatchCompiler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="CachedMatchCompiler.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Reflection.Emit;
 
-namespace Akka.Tools.MatchHandler
+namespace Akka.Tools.MatchHandler;
+
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+internal class CachedMatchCompiler<T> : IMatchCompiler<T>
 {
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    internal class CachedMatchCompiler<T> : IMatchCompiler<T>
+    public static readonly CachedMatchCompiler<T> Instance = new(new MatchExpressionBuilder<T>(),
+        new PartialActionBuilder(), new LambdaExpressionCompiler());
+
+    private readonly IPartialActionBuilder _actionBuilder;
+    private readonly ConcurrentDictionary<MatchBuilderSignature, Delegate> _cache = new();
+    private readonly IMatchExpressionBuilder _expressionBuilder;
+    private readonly ILambdaExpressionCompiler _expressionCompiler;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="expressionBuilder">TBD</param>
+    /// <param name="actionBuilder">TBD</param>
+    /// <param name="expressionCompiler">TBD</param>
+    public CachedMatchCompiler(IMatchExpressionBuilder expressionBuilder, IPartialActionBuilder actionBuilder,
+        ILambdaExpressionCompiler expressionCompiler)
     {
-        private readonly IMatchExpressionBuilder _expressionBuilder;
-        private readonly IPartialActionBuilder _actionBuilder;
-        private readonly ILambdaExpressionCompiler _expressionCompiler;
-        private readonly ConcurrentDictionary<MatchBuilderSignature, Delegate> _cache = new();
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static readonly CachedMatchCompiler<T> Instance = new(new MatchExpressionBuilder<T>(), new PartialActionBuilder(), new LambdaExpressionCompiler());
+        _expressionBuilder = expressionBuilder;
+        _actionBuilder = actionBuilder;
+        _expressionCompiler = expressionCompiler;
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="expressionBuilder">TBD</param>
-        /// <param name="actionBuilder">TBD</param>
-        /// <param name="expressionCompiler">TBD</param>
-        public CachedMatchCompiler(IMatchExpressionBuilder expressionBuilder, IPartialActionBuilder actionBuilder, ILambdaExpressionCompiler expressionCompiler)
-        {
-            _expressionBuilder = expressionBuilder;
-            _actionBuilder = actionBuilder;
-            _expressionCompiler = expressionCompiler;
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="handlers">TBD</param>
+    /// <param name="capturedArguments">TBD</param>
+    /// <param name="signature">TBD</param>
+    /// <returns>TBD</returns>
+    public PartialAction<T> Compile(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments,
+        MatchBuilderSignature signature)
+    {
+        object[] delegateArguments = null;
+        var compiledDelegate = _cache.GetOrAdd(signature,
+            _ => CompileToDelegate(handlers, capturedArguments, out delegateArguments));
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="handlers">TBD</param>
-        /// <param name="capturedArguments">TBD</param>
-        /// <param name="signature">TBD</param>
-        /// <returns>TBD</returns>
-        public PartialAction<T> Compile(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments, MatchBuilderSignature signature)
-        {
-            object[] delegateArguments = null;
-            var compiledDelegate = _cache.GetOrAdd(signature, _ => CompileToDelegate(handlers, capturedArguments, out delegateArguments));
+        //If we got a cached version of the delegate we need to restructure the captured arguments suitable for the delegate
+        if (delegateArguments == null)
+            delegateArguments = _expressionBuilder.CreateArgumentValuesArray(capturedArguments);
 
-            //If we got a cached version of the delegate we need to restructure the captured arguments suitable for the delegate
-            if(delegateArguments == null)
-            {
-                delegateArguments = _expressionBuilder.CreateArgumentValuesArray(capturedArguments);
-            }
+        var partialAction =
+            _actionBuilder.Build<T>(new CompiledMatchHandlerWithArguments(compiledDelegate, delegateArguments));
+        return partialAction;
+    }
 
-            var partialAction = _actionBuilder.Build<T>(new CompiledMatchHandlerWithArguments(compiledDelegate, delegateArguments));
-            return partialAction;
-        }
-
-        private Delegate CompileToDelegate(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments, out object[] delegateArguments)
-        {
-            var result = _expressionBuilder.BuildLambdaExpression(handlers);
-            var compiledLambda = _expressionCompiler.Compile(result.LambdaExpression);
-            delegateArguments = result.Arguments;
-            return compiledLambda;
-        }
+    private Delegate CompileToDelegate(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments,
+        out object[] delegateArguments)
+    {
+        var result = _expressionBuilder.BuildLambdaExpression(handlers);
+        var compiledLambda = _expressionCompiler.Compile(result.LambdaExpression);
+        delegateArguments = result.Arguments;
+        return compiledLambda;
     }
 }
-

@@ -1,3 +1,10 @@
+// -----------------------------------------------------------------------
+//  <copyright file="ShardingProducerControllerImpl.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using System.Collections.Immutable;
@@ -22,26 +29,10 @@ using OutSeqNr = Int64;
 
 internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, IWithTimers
 {
-    public string ProducerId { get; }
-
-    public IActorRef ShardRegion { get; }
-
-    public ShardingProducerController.Settings Settings { get; }
-
-    public Option<IActorRef> DurableQueueRef { get; private set; } = Option<IActorRef>.None;
     private readonly Option<Props> _durableQueueProps;
-    private readonly ITimeProvider _timeProvider;
-
-    public IActorRef MsgAdapter { get; private set; } = ActorRefs.Nobody;
-
-    public IActorRef RequestNextAdapter { get; private set; } = ActorRefs.Nobody;
-
-    public State<T> CurrentState { get; private set; } = State<T>.Empty;
 
     private readonly ILoggingAdapter _log = Context.GetLogger();
-    public IStash Stash { get; set; } = null!;
-
-    public ITimerScheduler Timers { get; set; } = null!;
+    private readonly ITimeProvider _timeProvider;
 
     public ShardingProducerController(string producerId, IActorRef shardRegion, Option<Props> durableQueueProps,
         ShardingProducerController.Settings settings, ITimeProvider? timeProvider = null)
@@ -54,6 +45,23 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
 
         WaitingForStart(Option<IActorRef>.None, CreateInitialState(_durableQueueProps.HasValue));
     }
+
+    public string ProducerId { get; }
+
+    public IActorRef ShardRegion { get; }
+
+    public ShardingProducerController.Settings Settings { get; }
+
+    public Option<IActorRef> DurableQueueRef { get; private set; } = Option<IActorRef>.None;
+
+    public IActorRef MsgAdapter { get; private set; } = ActorRefs.Nobody;
+
+    public IActorRef RequestNextAdapter { get; private set; } = ActorRefs.Nobody;
+
+    public State<T> CurrentState { get; private set; } = State<T>.Empty;
+    public IStash Stash { get; set; } = null!;
+
+    public ITimerScheduler Timers { get; set; } = null!;
 
     protected override void PreStart()
     {
@@ -80,27 +88,19 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         {
             ProducerController.AssertLocalProducer(start.Producer);
             if (initialState.HasValue)
-            {
                 BecomeActive(start.Producer, initialState);
-            }
             else
-            {
                 // waiting for load state reply
                 producer = start.Producer.AsOption();
-            }
         });
 
         Receive<LoadStateReply<T>>(reply =>
         {
             if (producer.HasValue)
-            {
                 BecomeActive(producer.Value, reply.State);
-            }
             else
-            {
                 // waiting for Start
                 initialState = reply.State;
-            }
         });
 
         Receive<LoadStateFailed>(failed =>
@@ -111,13 +111,11 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
                 _log.Error(errorMsg);
                 throw new TimeoutException(errorMsg);
             }
-            else
-            {
-                _log.Warning("LoadState failed, attempt [{0}] of [{1}], retrying.", failed.Attempt,
-                    Settings.ProducerControllerSettings.DurableQueueRetryAttempts);
-                // retry
-                AskLoadState(DurableQueueRef, failed.Attempt + 1);
-            }
+
+            _log.Warning("LoadState failed, attempt [{0}] of [{1}], retrying.", failed.Attempt,
+                Settings.ProducerControllerSettings.DurableQueueRetryAttempts);
+            // retry
+            AskLoadState(DurableQueueRef, failed.Attempt + 1);
         });
 
         Receive<DurableQueueTerminated>(_ =>
@@ -146,7 +144,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
             var unconfirmedDeliveries = s.Unconfirmed.Select(c =>
                 new Envelope(new Msg(
                     new ShardingEnvelope(c.ConfirmationQualifier,
-                        (c.Message.IsMessage ? c.Message.Message : c.Message.Chunk)!), AlreadyStored:c.SeqNr), Self));
+                        (c.Message.IsMessage ? c.Message.Message : c.Message.Chunk)!), c.SeqNr), Self));
             Stash.Prepend(unconfirmedDeliveries);
         });
 
@@ -171,7 +169,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
 
         CurrentState = CurrentState with
         {
-            Producer = producer, CurrentSeqNr = initialState.HasValue ? initialState.Value.CurrentSeqNr : 0,
+            Producer = producer, CurrentSeqNr = initialState.HasValue ? initialState.Value.CurrentSeqNr : 0
         };
 
         Become(Active);
@@ -198,7 +196,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
             {
                 StoreMessageSent(
                     new DurableProducerQueue.MessageSent<T>(CurrentState.CurrentSeqNr, (T)msg.Envelope.Message, false,
-                        msg.Envelope.EntityId, _timeProvider.Now.Ticks), attempt: 1);
+                        msg.Envelope.EntityId, _timeProvider.Now.Ticks), 1);
 
                 CurrentState = CurrentState with { CurrentSeqNr = CurrentState.CurrentSeqNr + 1 };
             }
@@ -215,7 +213,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
             else
             {
                 StoreMessageSent(new DurableProducerQueue.MessageSent<T>(CurrentState.CurrentSeqNr, message, true,
-                    entityId, _timeProvider.Now.Ticks), attempt: 1);
+                    entityId, _timeProvider.Now.Ticks), 1);
                 var newReplyAfterStore = CurrentState.ReplyAfterStore.SetItem(CurrentState.CurrentSeqNr, replyTo);
                 CurrentState = CurrentState with
                 {
@@ -340,7 +338,6 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         if (confirmed.Any())
         {
             foreach (var c in confirmed)
-            {
                 switch (c)
                 {
                     case (_, _, { IsEmpty: true }): // no reply
@@ -349,7 +346,6 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
                         replyTo.Value.Tell(Done.Instance);
                         break;
                 }
-            }
 
             DurableQueueRef.OnSuccess(d =>
             {
@@ -385,12 +381,10 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
             _log.Error(errorMessage);
             throw new TimeoutException(errorMessage);
         }
-        else
-        {
-            _log.Info("StoreMessageSent seqNr [{0}] failed, attempt [{1}], retrying", f.MessageSent.SeqNr, f.Attempt);
-            // retry
-            StoreMessageSent(f.MessageSent, f.Attempt + 1);
-        }
+
+        _log.Info("StoreMessageSent seqNr [{0}] failed, attempt [{1}], retrying", f.MessageSent.SeqNr, f.Attempt);
+        // retry
+        StoreMessageSent(f.MessageSent, f.Attempt + 1);
     }
 
     private void ReceiveAck(Ack ack)
@@ -512,27 +506,27 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
                 Context.Stop(outState.ProducerController);
                 return outKey.AsOption();
             }
-            else
-            {
-                return Option<string>.None;
-            }
+
+            return Option<string>.None;
         }).Where(c => c.HasValue).Select(c => c.Value).ToImmutableList();
 
         if (removeOutKeys.Any())
-        {
             CurrentState = CurrentState with { OutStates = CurrentState.OutStates.RemoveRange(removeOutKeys) };
-        }
     }
 
     private void StoreMessageSent(DurableProducerQueue.MessageSent<T> messageSent, int attempt)
     {
         var askTimeout = Settings.ProducerControllerSettings.DurableQueueRequestTimeout;
-        DurableProducerQueue.StoreMessageSent<T> Mapper(IActorRef r) => new(messageSent, r);
+
+        DurableProducerQueue.StoreMessageSent<T> Mapper(IActorRef r)
+        {
+            return new DurableProducerQueue.StoreMessageSent<T>(messageSent, r);
+        }
 
         var self = Self;
 
         DurableQueueRef.Value.Ask<DurableProducerQueue.StoreMessageSentAck>(Mapper,
-                askTimeout, cancellationToken: default)
+                askTimeout, default)
             .PipeTo(self, success: _ => new StoreMessageSentCompleted<T>(messageSent),
                 failure: _ => new StoreMessageSentFailed<T>(messageSent, attempt));
     }
@@ -595,10 +589,13 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         var loadTimeout = Settings.ProducerControllerSettings.DurableQueueRequestTimeout;
         durableProducerQueue.OnSuccess(@ref =>
         {
-            DurableProducerQueue.LoadState Mapper(IActorRef r) => new(r);
+            DurableProducerQueue.LoadState Mapper(IActorRef r)
+            {
+                return new DurableProducerQueue.LoadState(r);
+            }
 
             var self = Self;
-            @ref.Ask<DurableProducerQueue.State<T>>(Mapper, timeout: loadTimeout, cancellationToken: default)
+            @ref.Ask<DurableProducerQueue.State<T>>(Mapper, loadTimeout, default)
                 .PipeTo(self, success: state => new LoadStateReply<T>(state),
                     failure: _ => new LoadStateFailed(attempt)); // timeout
         });

@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ClusterShardingInternalsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ClusterShardingInternalsSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
@@ -16,106 +16,109 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Cluster.Sharding.Tests
+namespace Akka.Cluster.Sharding.Tests;
+
+public class ClusterShardingInternalsSpec : AkkaSpec
 {
-    public class ClusterShardingInternalsSpec : AkkaSpec
+    private readonly ClusterSharding clusterSharding;
+
+    public ClusterShardingInternalsSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
     {
-        private Option<(string, object)> ExtractEntityId(object message)
-        {
-            switch (message)
-            {
-                case int i:
-                    return (i.ToString(), message);
-            }
-            throw new NotSupportedException();
-        }
+        clusterSharding = ClusterSharding.Get(Sys);
+    }
 
-        private string ExtractShardId(object message)
-        {
-            switch (message)
-            {
-                case int i:
-                    return (i % 10).ToString();
-            }
-            throw new NotSupportedException();
-        }
-
-        private static Config SpecConfig =>
-            ConfigurationFactory.ParseString(@"
+    private static Config SpecConfig =>
+        ConfigurationFactory.ParseString(@"
                 akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
+            .WithFallback(ClusterSharding.DefaultConfig())
+            .WithFallback(DistributedData.DistributedData.DefaultConfig())
+            .WithFallback(ClusterSingletonManager.DefaultConfig());
 
-                .WithFallback(Sharding.ClusterSharding.DefaultConfig())
-                .WithFallback(DistributedData.DistributedData.DefaultConfig())
-                .WithFallback(ClusterSingletonManager.DefaultConfig());
-
-        ClusterSharding clusterSharding;
-
-        public ClusterShardingInternalsSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
+    private Option<(string, object)> ExtractEntityId(object message)
+    {
+        switch (message)
         {
-            clusterSharding = ClusterSharding.Get(Sys);
+            case int i:
+                return (i.ToString(), message);
         }
 
-        [Fact]
-        public void ClusterSharding_must_start_a_region_in_proxy_mode_in_case_of_node_role_mismatch()
+        throw new NotSupportedException();
+    }
+
+    private string ExtractShardId(object message)
+    {
+        switch (message)
         {
-            var settingsWithRole = ClusterShardingSettings.Create(Sys).WithRole("nonExistingRole");
-            var typeName = "typeName";
-
-            var region = clusterSharding.Start(
-                  typeName: typeName,
-                  entityProps: Props.Empty,
-                  settings: settingsWithRole,
-                  extractEntityId: ExtractEntityId,
-                  extractShardId: ExtractShardId,
-                  allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(3, 0.1),
-                  handOffStopMessage: PoisonPill.Instance);
-
-            var proxy = clusterSharding.StartProxy(
-                  typeName: typeName,
-                  role: settingsWithRole.Role,
-                  extractEntityId: ExtractEntityId,
-                  extractShardId: ExtractShardId
-                );
-
-            region.Should().BeSameAs(proxy);
+            case int i:
+                return (i % 10).ToString();
         }
 
-        [Fact]
-        public void ClusterSharding_must_stop_entities_from_HandOffStopper_even_if_the_entity_doesnt_handle_handOffStopMessage()
+        throw new NotSupportedException();
+    }
+
+    [Fact]
+    public void ClusterSharding_must_start_a_region_in_proxy_mode_in_case_of_node_role_mismatch()
+    {
+        var settingsWithRole = ClusterShardingSettings.Create(Sys).WithRole("nonExistingRole");
+        var typeName = "typeName";
+
+        var region = clusterSharding.Start(
+            typeName,
+            Props.Empty,
+            settingsWithRole,
+            ExtractEntityId,
+            ExtractShardId,
+            ShardAllocationStrategy.LeastShardAllocationStrategy(3, 0.1),
+            PoisonPill.Instance);
+
+        var proxy = clusterSharding.StartProxy(
+            typeName,
+            settingsWithRole.Role,
+            ExtractEntityId,
+            ExtractShardId
+        );
+
+        region.Should().BeSameAs(proxy);
+    }
+
+    [Fact]
+    public void
+        ClusterSharding_must_stop_entities_from_HandOffStopper_even_if_the_entity_doesnt_handle_handOffStopMessage()
+    {
+        var probe = CreateTestProbe();
+        var typeName = "typeName";
+        var shard = "7";
+        var emptyHandlerActor = Sys.ActorOf(Props.Create(() => new EmptyHandlerActor()));
+        var handOffStopper = Sys.ActorOf(
+            Props.Create(() => new ShardRegion.HandOffStopper(typeName, shard, probe.Ref,
+                ImmutableHashSet.Create(emptyHandlerActor), HandOffStopMessage.Instance, TimeSpan.FromMilliseconds(10)))
+        );
+
+        Watch(emptyHandlerActor);
+        ExpectTerminated(emptyHandlerActor, TimeSpan.FromSeconds(1));
+
+        probe.ExpectMsg(new ShardCoordinator.ShardStopped(shard), TimeSpan.FromSeconds(1));
+        probe.LastSender.Should().BeSameAs(handOffStopper);
+
+        Watch(handOffStopper);
+        ExpectTerminated(handOffStopper, TimeSpan.FromSeconds(1));
+    }
+
+    internal class HandOffStopMessage : INoSerializationVerificationNeeded
+    {
+        public static readonly HandOffStopMessage Instance = new();
+
+        private HandOffStopMessage()
         {
-            var probe = CreateTestProbe();
-            var typeName = "typeName";
-            var shard = "7";
-            var emptyHandlerActor = Sys.ActorOf(Props.Create(() => new EmptyHandlerActor()));
-            var handOffStopper = Sys.ActorOf(
-                Props.Create(() => new ShardRegion.HandOffStopper(typeName, shard, probe.Ref, ImmutableHashSet.Create(emptyHandlerActor), HandOffStopMessage.Instance, TimeSpan.FromMilliseconds(10)))
-              );
-
-            Watch(emptyHandlerActor);
-            ExpectTerminated(emptyHandlerActor, TimeSpan.FromSeconds(1));
-
-            probe.ExpectMsg(new ShardCoordinator.ShardStopped(shard), TimeSpan.FromSeconds(1));
-            probe.LastSender.Should().BeSameAs(handOffStopper);
-
-            Watch(handOffStopper);
-            ExpectTerminated(handOffStopper, TimeSpan.FromSeconds(1));
         }
+    }
 
-        internal class HandOffStopMessage : INoSerializationVerificationNeeded
+    internal class EmptyHandlerActor : UntypedActor
+    {
+        protected override void OnReceive(object message)
         {
-            public static readonly HandOffStopMessage Instance = new();
-            private HandOffStopMessage()
-            {
-            }
-        }
-
-        internal class EmptyHandlerActor : UntypedActor
-        {
-            protected override void OnReceive(object message)
-            {
-            }
         }
     }
 }

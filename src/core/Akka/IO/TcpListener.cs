@@ -1,51 +1,52 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TcpListener.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="TcpListener.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
-using System.Net;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util.Internal;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace Akka.IO
+namespace Akka.IO;
+
+internal class TcpListener : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
 {
-    class TcpListener : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    private readonly IActorRef _bindCommander;
+    private readonly ILoggingAdapter _log = Context.GetLogger();
+    private readonly TcpExt _tcp;
+    private int _acceptLimit;
+    private Tcp.Bind _bind;
+    private bool _binding;
+    private SocketAsyncEventArgs[] _saeas;
+    private Socket _socket;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="tcp">TBD</param>
+    /// <param name="bindCommander">TBD</param>
+    /// <param name="bind">TBD</param>
+    public TcpListener(TcpExt tcp, IActorRef bindCommander,
+        Tcp.Bind bind)
     {
-        private readonly TcpExt _tcp;
-        private readonly IActorRef _bindCommander;
-        private Tcp.Bind _bind;
-        private Socket _socket;
-        private readonly ILoggingAdapter _log = Context.GetLogger();
-        private int _acceptLimit;
-        private SocketAsyncEventArgs[] _saeas;
-        private bool _binding;
+        _tcp = tcp;
+        _bindCommander = bindCommander;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="tcp">TBD</param>
-        /// <param name="bindCommander">TBD</param>
-        /// <param name="bind">TBD</param>
-        public TcpListener(TcpExt tcp, IActorRef bindCommander,
-            Tcp.Bind bind)
-        {
-            _tcp = tcp;
-            _bindCommander = bindCommander;
-            
-            Become(Initializing());
-            Self.Tell(bind);
-        }
+        Become(Initializing());
+        Self.Tell(bind);
+    }
 
-        private Receive Initializing() => message =>
+    private Receive Initializing()
+    {
+        return message =>
         {
             switch (message)
             {
@@ -55,40 +56,46 @@ namespace Akka.IO
                         _log.Warning("Already trying to bind to TCP channel on endpoint [{0}]", _bind.LocalAddress);
                         return true;
                     }
+
                     _binding = true;
                     _bind = bind;
                     _acceptLimit = bind.PullMode ? 0 : _tcp.Settings.BatchAcceptLimit;
                     BindAsync().PipeTo(Self);
                     return true;
-                
+
                 case Status.Failure fail:
                     _bindCommander.Tell(_bind.FailureMessage.WithCause(fail.Cause));
                     _log.Error(fail.Cause, "Bind failed for TCP channel on endpoint [{0}]", _bind.LocalAddress);
                     Context.Stop(Self);
                     _binding = false;
                     return true;
-                
+
                 case Tcp.Bound bound:
                     Context.Watch(_bind.Handler);
                     _bindCommander.Tell(bound);
                     Become(Bound());
                     _binding = false;
                     return true;
-                
+
                 default:
                     return false;
             }
         };
+    }
 
-        private Receive Bound() => message =>
+    private Receive Bound()
+    {
+        return message =>
         {
             switch (message)
             {
                 case SocketEvent evt:
                     var saea = evt.Args;
                     if (saea.SocketError == SocketError.Success)
-                        Context.ActorOf(Props.Create<TcpIncomingConnection>(_tcp, saea.AcceptSocket, _bind.Handler, _bind.Options, _bind.PullMode).WithDeploy(Deploy.Local));
-                    
+                        Context.ActorOf(Props
+                            .Create<TcpIncomingConnection>(_tcp, saea.AcceptSocket, _bind.Handler, _bind.Options,
+                                _bind.PullMode).WithDeploy(Deploy.Local));
+
                     saea.AcceptSocket = null;
                     if (!_socket.AcceptAsync(saea))
                         Self.Tell(new SocketEvent(saea));
@@ -109,8 +116,11 @@ namespace Akka.IO
                     return false;
             }
         };
+    }
 
-        private Receive Unbinding(IActorRef requester) => message =>
+    private Receive Unbinding(IActorRef requester)
+    {
+        return message =>
         {
             switch (message)
             {
@@ -119,100 +129,100 @@ namespace Akka.IO
                     _log.Debug("Unbound endpoint {0}, stopping listener", _bind.LocalAddress);
                     Context.Stop(Self);
                     return true;
-                
+
                 case Status.Failure fail:
                     _log.Error(fail.Cause, "Failed to unbind TCP listener for address [{0}]", _bind.LocalAddress);
                     Context.Stop(Self);
                     return true;
-                
+
                 default:
                     return false;
             }
         };
-        
-        private IEnumerable<SocketAsyncEventArgs> Accept(int limit)
+    }
+
+    private IEnumerable<SocketAsyncEventArgs> Accept(int limit)
+    {
+        for (var i = 0; i < limit; i++)
         {
-            for(var i = 0; i < limit; i++)
-            {
-                var self = Self;
-                var saea = new SocketAsyncEventArgs();
-                saea.Completed += (_, e) => self.Tell(new SocketEvent(e));
-                if (!_socket.AcceptAsync(saea))
-                    Self.Tell(new SocketEvent(saea));
-                yield return saea;
-            }
+            var self = Self;
+            var saea = new SocketAsyncEventArgs();
+            saea.Completed += (_, e) => self.Tell(new SocketEvent(e));
+            if (!_socket.AcceptAsync(saea))
+                Self.Tell(new SocketEvent(saea));
+            yield return saea;
         }
+    }
 
-        private Task<Tcp.Bound> BindAsync()
+    private Task<Tcp.Bound> BindAsync()
+    {
+        try
         {
-            try
+            _socket = new Socket(_bind.LocalAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
             {
-                _socket = new Socket(_bind.LocalAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
-                {
-                    Blocking = false
-                };
+                Blocking = false
+            };
 
-                _bind.Options.ForEach(x => x.BeforeServerSocketBind(_socket));
-                _socket.Bind(_bind.LocalAddress);
-                _socket.Listen(_bind.Backlog);
-                _saeas = Accept(_acceptLimit).ToArray();
+            _bind.Options.ForEach(x => x.BeforeServerSocketBind(_socket));
+            _socket.Bind(_bind.LocalAddress);
+            _socket.Listen(_bind.Backlog);
+            _saeas = Accept(_acceptLimit).ToArray();
 
-                return Task.FromResult(new Tcp.Bound(_socket.LocalEndPoint));
-            }
-            catch (Exception ex)
-            {
-                return Task.FromException<Tcp.Bound>(ex);
-            }
+            return Task.FromResult(new Tcp.Bound(_socket.LocalEndPoint));
         }
-
-        private Task<Tcp.Unbound> UnbindAsync()
+        catch (Exception ex)
         {
-            try
-            {
-                _log.Debug("Unbinding endpoint {0}", _bind.LocalAddress);
-                _socket.Close();
-                return Task.FromResult(Tcp.Unbound.Instance);
-            }
-            catch (Exception ex)
-            {
-                return Task.FromException<Tcp.Unbound>(ex);
-            }
+            return Task.FromException<Tcp.Bound>(ex);
         }
-        
-        protected override SupervisorStrategy SupervisorStrategy()
+    }
+
+    private Task<Tcp.Unbound> UnbindAsync()
+    {
+        try
         {
-            return Tcp.ConnectionSupervisorStrategy;
+            _log.Debug("Unbinding endpoint {0}", _bind.LocalAddress);
+            _socket.Close();
+            return Task.FromResult(Tcp.Unbound.Instance);
         }
-
-        protected override bool Receive(object message)
+        catch (Exception ex)
         {
-            throw new NotImplementedException();
+            return Task.FromException<Tcp.Unbound>(ex);
         }
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override void PostStop()
+    protected override SupervisorStrategy SupervisorStrategy()
+    {
+        return Tcp.ConnectionSupervisorStrategy;
+    }
+
+    protected override bool Receive(object message)
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override void PostStop()
+    {
+        try
         {
-            try
-            {
-                _socket?.Dispose();
-                _saeas?.ForEach(x => x.Dispose());
-            }
-            catch (Exception e)
-            {
-                _log.Debug("Error closing ServerSocketChannel: {0}", e);
-            }
+            _socket?.Dispose();
+            _saeas?.ForEach(x => x.Dispose());
         }
-
-        private readonly struct SocketEvent : INoSerializationVerificationNeeded
+        catch (Exception e)
         {
-            public readonly SocketAsyncEventArgs Args;
+            _log.Debug("Error closing ServerSocketChannel: {0}", e);
+        }
+    }
 
-            public SocketEvent(SocketAsyncEventArgs args)
-            {
-                Args = args;
-            }
+    private readonly struct SocketEvent : INoSerializationVerificationNeeded
+    {
+        public readonly SocketAsyncEventArgs Args;
+
+        public SocketEvent(SocketAsyncEventArgs args)
+        {
+            Args = args;
         }
     }
 }

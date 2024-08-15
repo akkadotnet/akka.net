@@ -1,13 +1,11 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AssemblyInfo.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="AssemblyInfo.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System.Reflection;
 using System.Runtime.InteropServices;
-using Xunit;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
@@ -32,4 +30,3 @@ using Xunit;
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
 // [assembly: CollectionBehavior(DisableTestParallelization = true)]
-

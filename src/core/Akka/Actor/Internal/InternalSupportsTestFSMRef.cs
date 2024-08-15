@@ -1,51 +1,52 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="InternalSupportsTestFSMRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="InternalSupportsTestFSMRef.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Annotations;
 
-namespace Akka.Actor.Internal
+namespace Akka.Actor.Internal;
+
+/// <summary>
+///     INTERNAL API. Used for testing.
+///     This is used to let TestFSMRef in TestKit access to internal methods.
+///     <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+/// </summary>
+/// <typeparam name="TState">TBD</typeparam>
+/// <typeparam name="TData">TBD</typeparam>
+[InternalApi]
+public interface IInternalSupportsTestFSMRef<TState, TData>
 {
     /// <summary>
-    /// INTERNAL API. Used for testing.
-    /// This is used to let TestFSMRef in TestKit access to internal methods.
-    /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+    ///     INTERNAL API. Used for testing.
+    ///     <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    /// <typeparam name="TState">TBD</typeparam>
-    /// <typeparam name="TData">TBD</typeparam>
-    [InternalApi]
-    public interface IInternalSupportsTestFSMRef<TState, TData>
-    {
-        /// <summary>
-        /// INTERNAL API. Used for testing.
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
-        /// </summary>
-        /// <param name="upcomingState">TBD</param>
-        void ApplyState(FSMBase.State<TState, TData> upcomingState);
+    bool IsStateTimerActive { get; }
 
-        /// <summary>
-        /// INTERNAL API. Used for testing.
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
-        /// </summary>
-        bool IsStateTimerActive { get; }
+    /// <summary>
+    ///     INTERNAL API. Used for testing.
+    ///     <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+    /// </summary>
+    /// <param name="upcomingState">TBD</param>
+    void ApplyState(FSMBase.State<TState, TData> upcomingState);
+}
+
+/// <summary>
+///     INTERNAL API. Used for testing.
+///     <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+/// </summary>
+[InternalApi]
+public class InternalActivateFsmLogging
+{
+    private InternalActivateFsmLogging()
+    {
     }
 
     /// <summary>
-    /// INTERNAL API. Used for testing.
-    /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+    ///     INTERNAL API. Used for testing.
+    ///     <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    [InternalApi]
-    public class InternalActivateFsmLogging
-    {
-        private InternalActivateFsmLogging(){}
-        /// <summary>
-        /// INTERNAL API. Used for testing.
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
-        /// </summary>
-        public static InternalActivateFsmLogging Instance { get; } = new();
-    }
+    public static InternalActivateFsmLogging Instance { get; } = new();
 }
-

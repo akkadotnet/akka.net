@@ -26,15 +26,15 @@ namespace Akka.Event;
 public enum LogFilterType
 {
     /// <summary>
-    /// Filter log messages based on their source
+    ///     Filter log messages based on their source
     /// </summary>
     Source,
 
     /// <summary>
-    /// Filter log messages based on their content: message, exception, etc.
+    ///     Filter log messages based on their content: message, exception, etc.
     /// </summary>
     /// <remarks>
-    /// This is the slowest filter type, as it requires fully expanding the log message.
+    ///     This is the slowest filter type, as it requires fully expanding the log message.
     /// </remarks>
     Content
 }
@@ -45,43 +45,39 @@ public enum LogFilterDecision
     Drop,
 
     /// <summary>
-    /// If we're asked to evaluate a filter and we don't have enough information to make a decision.
-    ///
-    /// For instance: a <see cref="LogFilterType.Source"/> stage gets asked to evaluate a message body.
+    ///     If we're asked to evaluate a filter and we don't have enough information to make a decision.
+    ///     For instance: a <see cref="LogFilterType.Source" /> stage gets asked to evaluate a message body.
     /// </summary>
     NoDecision
 }
 
 // <LogFilterBase>
 /// <summary>
-/// Base class for all log filters
+///     Base class for all log filters
 /// </summary>
 /// <remarks>
-/// Worth noting: these run inside the Logging actors, so they're out of band
-/// from any high performance workloads already.
-///
-/// In addition to this - all log filters will only run if the log level is enabled.
-///
-/// i.e. if we're at INFO level and the filter is set to a lower level, i.e. filtering DEBUG
-/// logs, the filter won't even run.
+///     Worth noting: these run inside the Logging actors, so they're out of band
+///     from any high performance workloads already.
+///     In addition to this - all log filters will only run if the log level is enabled.
+///     i.e. if we're at INFO level and the filter is set to a lower level, i.e. filtering DEBUG
+///     logs, the filter won't even run.
 /// </remarks>
 public abstract class LogFilterBase : INoSerializationVerificationNeeded, IDeadLetterSuppression
 {
     /// <summary>
-    /// Which part of the log message this filter is evaluating?
+    ///     Which part of the log message this filter is evaluating?
     /// </summary>
     /// <remarks>
-    /// This actually has a performance implication - if we're filtering on the source, which
-    /// is already fully "expanded" into its final string representation, we can try to fail fast
-    /// on that without any additional allocations.
-    ///
-    /// If we're filtering on the message, we have to fully expand the log message first which
-    /// involves allocations. Users on really tight performance budgets should be aware of this.
+    ///     This actually has a performance implication - if we're filtering on the source, which
+    ///     is already fully "expanded" into its final string representation, we can try to fail fast
+    ///     on that without any additional allocations.
+    ///     If we're filtering on the message, we have to fully expand the log message first which
+    ///     involves allocations. Users on really tight performance budgets should be aware of this.
     /// </remarks>
     public abstract LogFilterType FilterType { get; }
 
     /// <summary>
-    /// Fast path designed to avoid allocating strings if we're filtering on the message content.
+    ///     Fast path designed to avoid allocating strings if we're filtering on the message content.
     /// </summary>
     /// <param name="part">The part of the message to evaluate.</param>
     /// <param name="content">Usually the fully expanded message content.</param>
@@ -91,7 +87,7 @@ public abstract class LogFilterBase : INoSerializationVerificationNeeded, IDeadL
 // </LogFilterBase>
 
 /// <summary>
-/// Uses a regular expression to filter log messages based on their source.
+///     Uses a regular expression to filter log messages based on their source.
 /// </summary>
 public sealed class RegexLogSourceFilter : LogFilterBase
 {
@@ -112,8 +108,8 @@ public sealed class RegexLogSourceFilter : LogFilterBase
 
 public sealed class ExactMatchLogSourceFilter : LogFilterBase
 {
-    private readonly string _source;
     private readonly StringComparison _comparison;
+    private readonly string _source;
 
     public ExactMatchLogSourceFilter(string source, StringComparison comparison = StringComparison.OrdinalIgnoreCase)
     {
@@ -144,17 +140,17 @@ public sealed class RegexLogMessageFilter : LogFilterBase
     public override LogFilterDecision ShouldKeepMessage(LogEvent content,
         string? expandedMessage = null)
     {
-        if(expandedMessage is not null)
+        if (expandedMessage is not null)
             return _messageRegex.IsMatch(expandedMessage ?? string.Empty)
                 ? LogFilterDecision.Drop
                 : LogFilterDecision.Keep;
-        
+
         return LogFilterDecision.NoDecision;
     }
 }
 
 /// <summary>
-/// Runs inside the logging actor and evaluates if a log message should be kept.
+///     Runs inside the logging actor and evaluates if a log message should be kept.
 /// </summary>
 public class LogFilterEvaluator
 {
@@ -162,17 +158,17 @@ public class LogFilterEvaluator
 
     private readonly LogFilterBase[] _filters;
 
-
-    /// <summary>
-    /// "Fast path" indicator - if this is true, we only evaluate log sources and not the message content.
-    /// </summary>
-    public bool EvaluatesLogSourcesOnly { get; }
-
     public LogFilterEvaluator(LogFilterBase[] filters)
     {
         _filters = filters;
         EvaluatesLogSourcesOnly = filters.All(x => x.FilterType == LogFilterType.Source);
     }
+
+
+    /// <summary>
+    ///     "Fast path" indicator - if this is true, we only evaluate log sources and not the message content.
+    /// </summary>
+    public bool EvaluatesLogSourcesOnly { get; }
 
     public virtual bool ShouldTryKeepMessage(LogEvent evt, out string expandedLogMessage)
     {
@@ -182,11 +178,9 @@ public class LogFilterEvaluator
         if (EvaluatesLogSourcesOnly)
         {
             foreach (var filter in _filters)
-            {
                 // saves on allocations in negative cases, where we can avoid expanding the message
                 if (filter.ShouldKeepMessage(evt) == LogFilterDecision.Drop)
                     return false;
-            }
         }
         else
         {
@@ -199,10 +193,8 @@ public class LogFilterEvaluator
             expandedLogMessage = nullCheck;
 
             foreach (var filter in _filters)
-            {
                 if (filter.ShouldKeepMessage(evt, expandedLogMessage) == LogFilterDecision.Drop)
                     return false;
-            }
         }
 
         // expand the message if we haven't already
@@ -213,7 +205,7 @@ public class LogFilterEvaluator
     }
 
     /// <summary>
-    /// INTERNAL API - used to prevent unnecessary iterations when no filters are present
+    ///     INTERNAL API - used to prevent unnecessary iterations when no filters are present
     /// </summary>
     private class EmptyLogFilterEvaluator : LogFilterEvaluator
     {
@@ -232,22 +224,25 @@ public class LogFilterEvaluator
 }
 
 /// <summary>
-/// Used to specify filters that can be used to curtail noise from sources in the Akka.NET log stream.
+///     Used to specify filters that can be used to curtail noise from sources in the Akka.NET log stream.
 /// </summary>
 public sealed class LogFilterSetup : Setup
 {
-    public LogFilterBase[] Filters { get; }
-
-    public LogFilterEvaluator CreateEvaluator() => new(Filters);
-
     public LogFilterSetup(LogFilterBase[] filters)
     {
         Filters = filters;
     }
+
+    public LogFilterBase[] Filters { get; }
+
+    public LogFilterEvaluator CreateEvaluator()
+    {
+        return new LogFilterEvaluator(Filters);
+    }
 }
 
 /// <summary>
-/// Can be used to build a set of log filters to be used in conjunction with the <see cref="LogFilterSetup"/>.
+///     Can be used to build a set of log filters to be used in conjunction with the <see cref="LogFilterSetup" />.
 /// </summary>
 public sealed class LogFilterBuilder
 {
@@ -279,7 +274,7 @@ public sealed class LogFilterBuilder
     }
 
     /// <summary>
-    /// Performance boost: use your own pre-compiled Regex instance to filter log sources.
+    ///     Performance boost: use your own pre-compiled Regex instance to filter log sources.
     /// </summary>
     public LogFilterBuilder ExcludeSourceRegex(Regex regex)
     {
@@ -288,7 +283,7 @@ public sealed class LogFilterBuilder
     }
 
     /// <summary>
-    /// Performance boost: use your own pre-compiled Regex instance to filter log messages.
+    ///     Performance boost: use your own pre-compiled Regex instance to filter log messages.
     /// </summary>
     public LogFilterBuilder ExcludeMessageRegex(Regex regex)
     {

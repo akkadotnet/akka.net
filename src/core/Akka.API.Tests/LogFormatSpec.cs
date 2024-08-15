@@ -22,35 +22,18 @@ using Xunit;
 namespace Akka.API.Tests;
 
 /// <summary>
-/// Regression test for https://github.com/akkadotnet/akka.net/issues/7255
-///
-/// Need to assert that the default log format is still working as expected.
+///     Regression test for https://github.com/akkadotnet/akka.net/issues/7255
+///     Need to assert that the default log format is still working as expected.
 /// </summary>
 public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
 {
+    private readonly CustomLogger _logger;
+
     public DefaultLogFormatSpec() : base(CustomLoggerSetup())
     {
         _logger = (CustomLogger)Sys.Settings.StdoutLogger;
     }
-    
-    private readonly CustomLogger _logger;
-    
-    public class CustomLogger : StandardOutLogger
-    {
-        protected override void Log(object message)
-        {
-            base.Log(message); // log first, just so we can be sure it's hit STDOUT
-            if (message is LogEvent e)
-            {
-                _events.Add(e);
-            }
-           
-        }
-            
-        private readonly ConcurrentBag<LogEvent> _events = new();
-        public IReadOnlyCollection<LogEvent> Events => _events;
-    }
-    
+
     public static ActorSystemSetup CustomLoggerSetup()
     {
         var hocon = @$"
@@ -58,25 +41,6 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
             akka.stdout-logger-class = ""{typeof(CustomLogger).AssemblyQualifiedName}""";
         var bootstrapSetup = BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString(hocon));
         return ActorSystemSetup.Create(bootstrapSetup);
-    }
-
-    public class OutputRedirector : IDisposable
-    {
-        private readonly TextWriter _originalOutput;
-        private readonly StreamWriter _writer;
-
-        public OutputRedirector(string filePath)
-        {
-            _originalOutput = Console.Out;
-            _writer = new StreamWriter(filePath) { AutoFlush = true };
-            Console.SetOut(_writer);
-        }
-
-        public void Dispose()
-        {
-            Console.SetOut(_originalOutput);
-            _writer.Dispose();
-        }
     }
 
     [Fact]
@@ -107,26 +71,57 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
         // need to sanitize the thread id
         text = SanitizeDateTime(text);
         text = SanitizeThreadNumber(text);
-        
+
         await Verifier.Verify(text);
     }
 
-    static string SanitizeThreadNumber(string log)
+    private static string SanitizeThreadNumber(string log)
     {
-        string pattern = @"(\[Thread )\d+(\])";
-        string replacement = "[Thread 0001]";
-        string result = Regex.Replace(log, pattern, replacement);
+        var pattern = @"(\[Thread )\d+(\])";
+        var replacement = "[Thread 0001]";
+        var result = Regex.Replace(log, pattern, replacement);
         return result;
     }
 
-    static string SanitizeDateTime(string logs, string replacement = "DateTime")
+    private static string SanitizeDateTime(string logs, string replacement = "DateTime")
     {
         // Regular expression to match the datetime
-        string pattern = @"\[\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}\.\d{3}Z\]";
+        var pattern = @"\[\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}\.\d{3}Z\]";
 
         // Replace all occurrences of the datetime with the constant value
-        string result = Regex.Replace(logs, pattern, $"[{replacement}]", RegexOptions.Multiline);
+        var result = Regex.Replace(logs, pattern, $"[{replacement}]", RegexOptions.Multiline);
 
         return result;
+    }
+
+    public class CustomLogger : StandardOutLogger
+    {
+        private readonly ConcurrentBag<LogEvent> _events = new();
+        public IReadOnlyCollection<LogEvent> Events => _events;
+
+        protected override void Log(object message)
+        {
+            base.Log(message); // log first, just so we can be sure it's hit STDOUT
+            if (message is LogEvent e) _events.Add(e);
+        }
+    }
+
+    public class OutputRedirector : IDisposable
+    {
+        private readonly TextWriter _originalOutput;
+        private readonly StreamWriter _writer;
+
+        public OutputRedirector(string filePath)
+        {
+            _originalOutput = Console.Out;
+            _writer = new StreamWriter(filePath) { AutoFlush = true };
+            Console.SetOut(_writer);
+        }
+
+        public void Dispose()
+        {
+            Console.SetOut(_originalOutput);
+            _writer.Dispose();
+        }
     }
 }

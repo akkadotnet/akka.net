@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SchedulerSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SchedulerSpecs.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
@@ -13,169 +13,171 @@ using Akka.TestKit.Xunit2;
 using FluentAssertions;
 using Xunit;
 
-namespace DocsExamples.Actors
+namespace DocsExamples.Actors;
+
+public class SchedulerSpecs : TestKit
 {
-    public class SchedulerSpecs : TestKit
+    // </Scheduler>
+
+    [Fact]
+    public async Task TimerActorShouldIncrementOverTime()
     {
-        public sealed class StopPrinting{}
-        public sealed class CanPrint{}
+        var timerActor = Sys.ActorOf(Props.Create(() => new TimerActor()), "timers");
 
-        // <TimerActor>
-        public sealed class Print { }
-        public sealed class Total { }
+        timerActor.Tell(new Total());
+        var count1 = ExpectMsg<int>();
 
-        public sealed class TimerActor : ReceiveActor, IWithTimers
+        await Task.Delay(100); // pause for 100ms
+
+        timerActor.Tell(new Total());
+        var count2 = await ExpectMsgAsync<int>();
+
+        count1.Should().BeLessThan(count2);
+    }
+
+    [Fact]
+    public async Task TimerShouldStopCorrectly()
+    {
+        var timerActor = Sys.ActorOf(Props.Create(() => new StartStopTimerActor()), "timers");
+
+        var canPrint1 = await timerActor.Ask<bool>(new CanPrint(), TimeSpan.FromSeconds(1));
+        canPrint1.Should().BeTrue();
+
+        timerActor.Tell(new StopPrinting());
+
+        var canPrint2 = await timerActor.Ask<bool>(new CanPrint(), TimeSpan.FromSeconds(1));
+        canPrint2.Should().BeFalse();
+    }
+
+    public sealed class StopPrinting
+    {
+    }
+
+    public sealed class CanPrint
+    {
+    }
+
+    // <TimerActor>
+    public sealed class Print
+    {
+    }
+
+    public sealed class Total
+    {
+    }
+
+    public sealed class TimerActor : ReceiveActor, IWithTimers
+    {
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+
+        private int _count;
+
+        public TimerActor()
         {
-            public ITimerScheduler Timers { get; set; }
+            Receive<int>(i => { _count += i; });
 
-            private int _count = 0;
-            private readonly ILoggingAdapter _log = Context.GetLogger();
-
-            public TimerActor()
-            {
-                Receive<int>(i =>
-                {
-                    _count += i;
-                });
-
-                Receive<Print>(_ => _log.Info("Current count is [{0}]", _count));
-                Receive<Total>(_ => Sender.Tell(_count));
-            }
-
-            protected override void PreStart()
-            {
-                // start two recurring timers
-                // both timers will be automatically disposed when actor is stopped
-                Timers.StartPeriodicTimer("print", new Print(), TimeSpan.FromSeconds(0.1), TimeSpan.FromSeconds(5));
-                Timers.StartPeriodicTimer("add", 1, TimeSpan.FromMilliseconds(0), TimeSpan.FromMilliseconds(20));
-            }
-        }
-        // </TimerActor>
-
-        public sealed class StartStopTimerActor : ReceiveActor, IWithTimers
-        {
-            public ITimerScheduler Timers { get; set; }
-
-            private int _count = 0;
-            private ILoggingAdapter _log = Context.GetLogger();
-
-            public StartStopTimerActor()
-            {
-                Receive<int>(i =>
-                {
-                    _count += i;
-                });
-
-                Receive<StopPrinting>(_ => StopPrintTimer());
-                Receive<CanPrint>(_ =>
-                {
-                    // <CheckTimer>
-                    var isPrintTimerActive = Timers.IsTimerActive("print");
-                    Sender.Tell(isPrintTimerActive);
-                    // </CheckTimer>
-                });
-                Receive<Print>(_ => _log.Info("Current count is [{0}]", _count));
-                Receive<Total>(_ => Sender.Tell(_count));
-            }
-
-            protected override void PreStart()
-            {
-                StartTimers();
-            }
-
-            private void StartTimers()
-            {
-                // <StartTimers>
-                
-                // start single timer that fires off 5 seconds in the future
-                Timers.StartSingleTimer("print", new Print(), TimeSpan.FromSeconds(5));
-
-                // start recurring timer
-                Timers.StartPeriodicTimer("add", 1, TimeSpan.FromMilliseconds(0), TimeSpan.FromMilliseconds(20));
-                // </StartTimers>
-            }
-
-            private void StopPrintTimer()
-            {
-                // <StopTimers>
-                // cancels the print timer
-                Timers.Cancel("print");
-
-                // cancels all of the timers that belong to this actor
-                // (also called automatically when this actor is stopped)
-                Timers.CancelAll();
-                // </StopTimers>
-            }
+            Receive<Print>(_ => _log.Info("Current count is [{0}]", _count));
+            Receive<Total>(_ => Sender.Tell(_count));
         }
 
-        // <Scheduler>
-        public class SchedulerActor : ReceiveActor
+        public ITimerScheduler Timers { get; set; }
+
+        protected override void PreStart()
         {
-            private int _count = 0;
-            private ILoggingAdapter _log = Context.GetLogger();
-
-            private ICancelable _printTask;
-            private ICancelable _addTask;
-
-            public SchedulerActor()
-            {
-                Receive<int>(i =>
-                {
-                    _count += i;
-                });
-
-                Receive<Print>(_ => _log.Info("Current count is [{0}]", _count));
-                Receive<Total>(_ => Sender.Tell(_count));
-            }
-
-            protected override void PreStart()
-            {
-                // start two recurring timers
-                // both timers will be automatically disposed when actor is stopped
-                _printTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.FromSeconds(0.1),
-                    TimeSpan.FromSeconds(5), Self, new Print(), ActorRefs.NoSender);
-
-                _addTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.FromMilliseconds(0), 
-                    TimeSpan.FromMilliseconds(20), Self, 1, ActorRefs.NoSender);
-            }
-
-            protected override void PostStop()
-            {
-                // have to cancel all recurring scheduled tasks
-                _printTask?.Cancel();
-                _addTask?.Cancel();
-            }
+            // start two recurring timers
+            // both timers will be automatically disposed when actor is stopped
+            Timers.StartPeriodicTimer("print", new Print(), TimeSpan.FromSeconds(0.1), TimeSpan.FromSeconds(5));
+            Timers.StartPeriodicTimer("add", 1, TimeSpan.FromMilliseconds(0), TimeSpan.FromMilliseconds(20));
         }
-        // </Scheduler>
+    }
+    // </TimerActor>
 
-        [Fact]
-        public async Task TimerActorShouldIncrementOverTime()
+    public sealed class StartStopTimerActor : ReceiveActor, IWithTimers
+    {
+        private int _count;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+
+        public StartStopTimerActor()
         {
-            var timerActor = Sys.ActorOf(Props.Create(() => new TimerActor()), "timers");
+            Receive<int>(i => { _count += i; });
 
-            timerActor.Tell(new Total());
-            var count1 = ExpectMsg<int>();
-
-            await Task.Delay(100); // pause for 100ms
-
-            timerActor.Tell(new Total());
-            var count2 = await ExpectMsgAsync<int>();
-
-            count1.Should().BeLessThan(count2);
+            Receive<StopPrinting>(_ => StopPrintTimer());
+            Receive<CanPrint>(_ =>
+            {
+                // <CheckTimer>
+                var isPrintTimerActive = Timers.IsTimerActive("print");
+                Sender.Tell(isPrintTimerActive);
+                // </CheckTimer>
+            });
+            Receive<Print>(_ => _log.Info("Current count is [{0}]", _count));
+            Receive<Total>(_ => Sender.Tell(_count));
         }
 
-        [Fact]
-        public async Task TimerShouldStopCorrectly()
+        public ITimerScheduler Timers { get; set; }
+
+        protected override void PreStart()
         {
-            var timerActor = Sys.ActorOf(Props.Create(() => new StartStopTimerActor()), "timers");
+            StartTimers();
+        }
 
-            var canPrint1 = await timerActor.Ask<bool>(new CanPrint(), TimeSpan.FromSeconds(1));
-            canPrint1.Should().BeTrue();
+        private void StartTimers()
+        {
+            // <StartTimers>
 
-            timerActor.Tell(new StopPrinting());
+            // start single timer that fires off 5 seconds in the future
+            Timers.StartSingleTimer("print", new Print(), TimeSpan.FromSeconds(5));
 
-            var canPrint2 = await timerActor.Ask<bool>(new CanPrint(), TimeSpan.FromSeconds(1));
-            canPrint2.Should().BeFalse();
+            // start recurring timer
+            Timers.StartPeriodicTimer("add", 1, TimeSpan.FromMilliseconds(0), TimeSpan.FromMilliseconds(20));
+            // </StartTimers>
+        }
+
+        private void StopPrintTimer()
+        {
+            // <StopTimers>
+            // cancels the print timer
+            Timers.Cancel("print");
+
+            // cancels all of the timers that belong to this actor
+            // (also called automatically when this actor is stopped)
+            Timers.CancelAll();
+            // </StopTimers>
+        }
+    }
+
+    // <Scheduler>
+    public class SchedulerActor : ReceiveActor
+    {
+        private ICancelable _addTask;
+        private int _count;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+
+        private ICancelable _printTask;
+
+        public SchedulerActor()
+        {
+            Receive<int>(i => { _count += i; });
+
+            Receive<Print>(_ => _log.Info("Current count is [{0}]", _count));
+            Receive<Total>(_ => Sender.Tell(_count));
+        }
+
+        protected override void PreStart()
+        {
+            // start two recurring timers
+            // both timers will be automatically disposed when actor is stopped
+            _printTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.FromSeconds(0.1),
+                TimeSpan.FromSeconds(5), Self, new Print(), ActorRefs.NoSender);
+
+            _addTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.FromMilliseconds(0),
+                TimeSpan.FromMilliseconds(20), Self, 1, ActorRefs.NoSender);
+        }
+
+        protected override void PostStop()
+        {
+            // have to cancel all recurring scheduled tasks
+            _printTask?.Cancel();
+            _addTask?.Cancel();
         }
     }
 }

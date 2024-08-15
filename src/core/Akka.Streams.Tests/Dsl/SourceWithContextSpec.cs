@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SourceWithContextSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SourceWithContextSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -14,200 +14,193 @@ using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class SourceWithContextSpec : AkkaSpec
 {
-    public class SourceWithContextSpec : AkkaSpec
+    public SourceWithContextSpec(ITestOutputHelper output) : base(output)
     {
-        sealed class Message : IEquatable<Message>
-        {
-            public string Data { get; }
-            public long Offset { get; }
+        var settings = ActorMaterializerSettings.Create(Sys);
+        Materializer = ActorMaterializer.Create(Sys, settings);
+    }
 
-            public Message(string data, long offset)
+    private ActorMaterializer Materializer { get; }
+
+    [Fact]
+    public void SourceWithContext_must_get_created_from_AsSourceWithContext()
+    {
+        var msg = new Message("a", 1);
+
+        Source.From(new[] { msg })
+            .AsSourceWithContext(x => x.Offset)
+            .ToMaterialized(this.SinkProbe<(Message, long)>(), Keep.Right)
+            .Run(Materializer)
+            .Request(1)
+            .ExpectNext((msg, 1L))
+            .ExpectComplete();
+    }
+
+    [Fact]
+    public void SourceWithContext_must_get_created_from_a_source_of_tuple2()
+    {
+        var msg = new Message("a", 1L);
+
+        SourceWithContext.FromTuples(Source.From(new[] { (msg, msg.Offset) }))
+            .AsSource()
+            .RunWith(this.SinkProbe<(Message, long)>(), Materializer)
+            .Request(1)
+            .ExpectNext((msg, 1L))
+            .ExpectComplete();
+    }
+
+    [Fact]
+    public void SourceWithContext_must_be_able_to_get_turned_back_into_a_normal_source()
+    {
+        var msg = new Message("a", 1);
+
+        var sink = this.CreateSubscriberProbe<Message>();
+
+        Source.From(new[] { msg })
+            .AsSourceWithContext(x => x.Offset)
+            .AsSource()
+            .Select(t => t.Item1)
+            .RunWith(Sink.FromSubscriber(sink), Materializer);
+
+        var sub = sink.ExpectSubscription();
+        sub.Request(1);
+        sink.ExpectNext(msg);
+        sink.ExpectComplete();
+    }
+
+    [Fact]
+    public void SourceWithContext_must_pass_through_context_using_Select_and_Where()
+    {
+        Source.From(new[] { new Message("A", 1), new Message("B", 2), new Message("D", 3), new Message("C", 4) })
+            .AsSourceWithContext(x => x.Offset)
+            .Select(m => m.Data.ToLower())
+            .Where(x => x != "b")
+            .WhereNot(x => x == "d")
+            .ToMaterialized(this.SinkProbe<(string, long)>(), Keep.Right)
+            .Run(Materializer)
+            .Request(2)
+            .ExpectNext(("a", 1L))
+            .ExpectNext(("c", 4L))
+            .ExpectComplete();
+    }
+
+    [Fact]
+    public void SourceWithContext_must_pass_through_context_using_FlowWithContext()
+    {
+        var flowWithContext = FlowWithContext.Create<string, long>();
+
+        var sink = this.CreateSubscriberProbe<(string, long)>();
+
+        Source.From(new[] { new Message("a", 1L) })
+            .AsSourceWithContext(x => x.Offset)
+            .Select(x => x.Data)
+            .Via(flowWithContext.Select(s => s + "b"))
+            .RunWith(Sink.FromSubscriber(sink), Materializer);
+
+        var sub = sink.ExpectSubscription();
+        sub.Request(1);
+        sink.ExpectNext(("ab", 1L));
+        sink.ExpectComplete();
+    }
+
+    [Fact]
+    public void SourceWithContext_must_pass_through_context_via_SelectConcat()
+    {
+        var msg = new Message("a", 1);
+
+        var sink = this.CreateSubscriberProbe<(string, long)>();
+
+        Source.From(new[] { msg })
+            .AsSourceWithContext(x => x.Offset)
+            .Select(x => x.Data)
+            .SelectConcat(str => new[] { 1, 2, 3 }.Select(i => $"{str}-{i}"))
+            .AsSource()
+            .RunWith(Sink.FromSubscriber(sink), Materializer);
+
+        var sub = sink.ExpectSubscription();
+        sub.Request(3);
+        sink.ExpectNext(("a-1", 1L));
+        sink.ExpectNext(("a-2", 1L));
+        sink.ExpectNext(("a-3", 1L));
+        sink.ExpectComplete();
+    }
+
+    [Fact]
+    public void SourceWithContext_must_pass_through_sequence_of_context_per_element_via_Grouped()
+    {
+        var msg = new Message("a", 1);
+
+        var sink = this.CreateSubscriberProbe<(IReadOnlyList<string>, IReadOnlyList<long>)>();
+
+        Source.From(new[] { msg })
+            .AsSourceWithContext(x => x.Offset)
+            .Select(x => x.Data)
+            .SelectConcat(str => new[] { 1, 2, 3, 4 }.Select(i => $"{str}-{i}"))
+            .Grouped(2)
+            .AsSource()
+            .RunWith(Sink.FromSubscriber(sink), Materializer);
+
+        var sub = sink.ExpectSubscription();
+        sub.Request(3);
+        var a = sink.ExpectNext();
+        var b = sink.ExpectNext();
+
+        a.Item1.ShouldBe(new[] { "a-1", "a-2" });
+        a.Item2.ShouldBe(new[] { 1L, 1L });
+        b.Item1.ShouldBe(new[] { "a-3", "a-4" });
+        b.Item2.ShouldBe(new[] { 1L, 1L });
+
+        sink.ExpectComplete();
+    }
+
+    [Fact]
+    public void SourceWithContext_must_be_able_to_change_materialized_value_via_MapMaterializedValue()
+    {
+        var materializedValue = "MatedValue";
+
+        Source.Empty<Message>()
+            .AsSourceWithContext(m => m.Offset)
+            .MapMaterializedValue(_ => materializedValue)
+            .To(Sink.Ignore<(Message, long)>())
+            .Run(Materializer)
+            .ShouldBe(materializedValue);
+    }
+
+    private sealed class Message : IEquatable<Message>
+    {
+        public Message(string data, long offset)
+        {
+            Data = data;
+            Offset = offset;
+        }
+
+        public string Data { get; }
+        public long Offset { get; }
+
+        public bool Equals(Message other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return string.Equals(Data, other.Data) && Offset == other.Offset;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is Message other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
             {
-                Data = data;
-                Offset = offset;
+                return ((Data != null ? Data.GetHashCode() : 0) * 397) ^ Offset.GetHashCode();
             }
-
-            public bool Equals(Message other)
-            {
-                if (ReferenceEquals(null, other)) return false;
-                if (ReferenceEquals(this, other)) return true;
-                return string.Equals(Data, other.Data) && Offset == other.Offset;
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                return obj is Message other && Equals(other);
-            }
-
-            public override int GetHashCode()
-            {
-                unchecked
-                {
-                    return ((Data != null ? Data.GetHashCode() : 0) * 397) ^ Offset.GetHashCode();
-                }
-            }
-        }
-
-        private ActorMaterializer Materializer { get; }
-
-        public SourceWithContextSpec(ITestOutputHelper output) : base(output)
-        {
-            var settings = ActorMaterializerSettings.Create(Sys);
-            Materializer = ActorMaterializer.Create(Sys, settings);
-        }
-
-        [Fact]
-        public void SourceWithContext_must_get_created_from_AsSourceWithContext()
-        {
-            var msg = new Message("a", 1);
-
-            Source.From(new[] { msg })
-                .AsSourceWithContext(x => x.Offset)
-                .ToMaterialized(this.SinkProbe<(Message, long)>(), Keep.Right)
-                .Run(Materializer)
-                .Request(1)
-                .ExpectNext((msg, 1L))
-                .ExpectComplete();
-        }
-
-        [Fact]
-        public void SourceWithContext_must_get_created_from_a_source_of_tuple2()
-        {
-            var msg = new Message("a", 1L);
-
-            SourceWithContext.FromTuples(Source.From(new[] { (msg, msg.Offset) }))
-                .AsSource()
-                .RunWith(this.SinkProbe<(Message, long)>(), Materializer)
-                .Request(1)
-                .ExpectNext((msg, 1L))
-                .ExpectComplete();
-        }
-
-        [Fact]
-        public void SourceWithContext_must_be_able_to_get_turned_back_into_a_normal_source()
-        {
-            var msg = new Message("a", 1);
-
-            var sink = this.CreateSubscriberProbe<Message>();
-
-            Source.From(new[] { msg })
-                .AsSourceWithContext(x => x.Offset)
-                .AsSource()
-                .Select(t => t.Item1)
-                .RunWith(Sink.FromSubscriber(sink), Materializer);
-
-            var sub = sink.ExpectSubscription();
-            sub.Request(1);
-            sink.ExpectNext(msg);
-            sink.ExpectComplete();
-        }
-
-        [Fact]
-        public void SourceWithContext_must_pass_through_context_using_Select_and_Where()
-        {
-            Source.From(new[]
-                {
-                    new Message("A", 1),
-                    new Message("B", 2),
-                    new Message("D", 3),
-                    new Message("C", 4),
-                })
-                .AsSourceWithContext(x => x.Offset)
-                .Select(m => m.Data.ToLower())
-                .Where(x => x != "b")
-                .WhereNot(x => x == "d")
-                .ToMaterialized(this.SinkProbe<(string, long)>(), Keep.Right)
-                .Run(Materializer)
-                .Request(2)
-                .ExpectNext(("a", 1L))
-                .ExpectNext(("c", 4L))
-                .ExpectComplete();
-        }
-
-        [Fact]
-        public void SourceWithContext_must_pass_through_context_using_FlowWithContext()
-        {
-            var flowWithContext = FlowWithContext.Create<string, long>();
-
-            var sink = this.CreateSubscriberProbe<(string, long)>();
-
-            Source.From(new[] { new Message("a", 1L) })
-                .AsSourceWithContext(x => x.Offset)
-                .Select(x => x.Data)
-                .Via(flowWithContext.Select(s => s + "b"))
-                .RunWith(Sink.FromSubscriber(sink), Materializer);
-
-            var sub = sink.ExpectSubscription();
-            sub.Request(1);
-            sink.ExpectNext(("ab", 1L));
-            sink.ExpectComplete();
-        }
-
-        [Fact]
-        public void SourceWithContext_must_pass_through_context_via_SelectConcat()
-        {
-            var msg = new Message("a", 1);
-
-            var sink = this.CreateSubscriberProbe<(string, long)>();
-
-            Source.From(new[] { msg })
-                .AsSourceWithContext(x => x.Offset)
-                .Select(x => x.Data)
-                .SelectConcat(str => new[] { 1, 2, 3 }.Select(i => $"{str}-{i}"))
-                .AsSource()
-                .RunWith(Sink.FromSubscriber(sink), Materializer);
-
-            var sub = sink.ExpectSubscription();
-            sub.Request(3);
-            sink.ExpectNext(("a-1", 1L));
-            sink.ExpectNext(("a-2", 1L));
-            sink.ExpectNext(("a-3", 1L));
-            sink.ExpectComplete();
-        }
-
-        [Fact]
-        public void SourceWithContext_must_pass_through_sequence_of_context_per_element_via_Grouped()
-        {
-            var msg = new Message("a", 1);
-
-            var sink = this.CreateSubscriberProbe<(IReadOnlyList<string>, IReadOnlyList<long>)>();
-
-            Source.From(new[] { msg })
-                .AsSourceWithContext(x => x.Offset)
-                .Select(x => x.Data)
-                .SelectConcat(str => new[] { 1, 2, 3, 4 }.Select(i => $"{str}-{i}"))
-                .Grouped(2)
-                .AsSource()
-                .RunWith(Sink.FromSubscriber(sink), Materializer);
-
-            var sub = sink.ExpectSubscription();
-            sub.Request(3);
-            var a = sink.ExpectNext();
-            var b = sink.ExpectNext();
-
-            a.Item1.ShouldBe(new[] { "a-1", "a-2" });
-            a.Item2.ShouldBe(new[] { 1L, 1L });
-            b.Item1.ShouldBe(new[] { "a-3", "a-4" });
-            b.Item2.ShouldBe(new[] { 1L, 1L });
-
-            sink.ExpectComplete();
-        }
-
-        [Fact]
-        public void SourceWithContext_must_be_able_to_change_materialized_value_via_MapMaterializedValue()
-        {
-            var materializedValue = "MatedValue";
-
-            Source.Empty<Message>()
-                .AsSourceWithContext(m => m.Offset)
-                .MapMaterializedValue(_ => materializedValue)
-                .To(Sink.Ignore<(Message, long)>())
-                .Run(Materializer)
-                .ShouldBe(materializedValue);
         }
     }
 }

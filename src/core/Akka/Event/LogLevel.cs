@@ -1,36 +1,34 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="LogLevel.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="LogLevel.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-namespace Akka.Event
+namespace Akka.Event;
+
+/// <summary>
+///     Enumeration representing the various log levels in the system.
+/// </summary>
+public enum LogLevel
 {
     /// <summary>
-    /// Enumeration representing the various log levels in the system.
+    ///     The debug log level.
     /// </summary>
-    public enum LogLevel
-    {
-        /// <summary>
-        /// The debug log level.
-        /// </summary>
-        DebugLevel,
+    DebugLevel,
 
-        /// <summary>
-        /// The information log level.
-        /// </summary>
-        InfoLevel,
+    /// <summary>
+    ///     The information log level.
+    /// </summary>
+    InfoLevel,
 
-        /// <summary>
-        /// The warning log level.
-        /// </summary>
-        WarningLevel,
+    /// <summary>
+    ///     The warning log level.
+    /// </summary>
+    WarningLevel,
 
-        /// <summary>
-        /// The error log level.
-        /// </summary>
-        ErrorLevel,
-    }
+    /// <summary>
+    ///     The error log level.
+    /// </summary>
+    ErrorLevel
 }
-

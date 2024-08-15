@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="RestartNode2Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="RestartNode2Spec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
@@ -15,160 +15,178 @@ using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.Cluster.Tests.MultiNode;
+
+/*
+ * N.B. - Regions are used for targeting by DocFx to include
+ * code inside relevant documentation.
+ */
+
+#region MultiNodeSpecConfig
+
+public class RestartNode2SpecConfig : MultiNodeConfig
 {
-    /*
-     * N.B. - Regions are used for targeting by DocFx to include
-     * code inside relevant documentation.
-     */
-    #region MultiNodeSpecConfig
-    public class RestartNode2SpecConfig : MultiNodeConfig
+    public RestartNode2SpecConfig()
     {
-        public RoleName Seed1 { get; }
+        Seed1 = Role("seed1");
+        Seed2 = Role("seed2");
 
-        public RoleName Seed2 { get; }
-
-        public RestartNode2SpecConfig()
-        {
-            Seed1 = Role("seed1");
-            Seed2 = Role("seed2");
-
-            CommonConfig = DebugConfig(true)
-                .WithFallback(ConfigurationFactory.ParseString(@"
+        CommonConfig = DebugConfig(true)
+            .WithFallback(ConfigurationFactory.ParseString(@"
                   akka.cluster.auto-down-unreachable-after = 2s
                   akka.cluster.retry-unsuccessful-join-after = 3s
                   akka.remote.retry-gate-closed-for = 45s
                   akka.remote.log-remote-lifecycle-events = INFO
                 "))
-                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
-        }
+            .WithFallback(MultiNodeClusterSpec.ClusterConfig());
     }
+
+    public RoleName Seed1 { get; }
+
+    public RoleName Seed2 { get; }
+}
+
+#endregion
+
+#region MultiNodeSpec
+
+public class RestartNode2Spec : MultiNodeClusterSpec
+{
+    private static Address seedNode1Address;
+
+    private readonly RestartNode2SpecConfig _config;
+    private readonly Lazy<ActorSystem> restartedSeed1System;
+
+    private readonly Lazy<ActorSystem> seed1System;
+
+    #region PublicConstructor
+
+    public RestartNode2Spec() : this(new RestartNode2SpecConfig())
+    {
+    }
+
     #endregion
 
-    #region MultiNodeSpec
-    public class RestartNode2Spec : MultiNodeClusterSpec
+    #region ProtectedConstructor
+
+    protected RestartNode2Spec(RestartNode2SpecConfig config) : base(config, typeof(RestartNode2Spec))
     {
-        private class Watcher : ReceiveActor
-        {
-            public Watcher()
-            {
-                Receive<Address>(a =>
-                {
-                    seedNode1Address = a;
-                    Sender.Tell("ok");
-                });
-            }
-        }
+        _config = config;
+        seed1System = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, Sys.Settings.Config));
+        restartedSeed1System = new Lazy<ActorSystem>(
+            () => ActorSystem.Create(Sys.Name, ConfigurationFactory
+                .ParseString("akka.remote.netty.tcp.port = " + SeedNodes.First().Port)
+                .WithFallback(Sys.Settings.Config)));
+    }
 
-        readonly RestartNode2SpecConfig _config;
+    #endregion
 
-        private Lazy<ActorSystem> seed1System;
-        private Lazy<ActorSystem> restartedSeed1System;
-        private static Address seedNode1Address;
+    #region SeedNodesProperty
 
-        #region SeedNodesProperty
-        private ImmutableList<Address> SeedNodes => 
-            ImmutableList.Create(seedNode1Address, GetAddress(_config.Seed2));
-        #endregion
+    private ImmutableList<Address> SeedNodes =>
+        ImmutableList.Create(seedNode1Address, GetAddress(_config.Seed2));
 
-        #region PublicConstructor
-        public RestartNode2Spec() : this(new RestartNode2SpecConfig()) { }
-        #endregion
+    #endregion
 
-        #region ProtectedConstructor
-        protected RestartNode2Spec(RestartNode2SpecConfig config) : base(config, typeof(RestartNode2Spec))
-        {
-            _config = config;
-            seed1System = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, Sys.Settings.Config));
-            restartedSeed1System = new Lazy<ActorSystem>(
-                () => ActorSystem.Create(Sys.Name, ConfigurationFactory
-                    .ParseString("akka.remote.netty.tcp.port = " + SeedNodes.First().Port)
-                    .WithFallback(Sys.Settings.Config)));
-        }
-        #endregion
-
-        protected override void AfterTermination()
-        {
-            RunOn(() =>
+    protected override void AfterTermination()
+    {
+        RunOn(
+            () =>
             {
                 Shutdown(seed1System.Value.WhenTerminated.IsCompleted ? restartedSeed1System.Value : seed1System.Value);
             }, _config.Seed1);
-        }
+    }
 
-        #region MultiNodeFact
-        [MultiNodeFact]
-        public void RestartNode2Specs()
-        {
-            Cluster_seed_nodes_must_be_able_to_restart_first_seed_node_and_join_other_seed_nodes();
-        }
-        #endregion
+    #region MultiNodeFact
 
-        public void Cluster_seed_nodes_must_be_able_to_restart_first_seed_node_and_join_other_seed_nodes()
+    [MultiNodeFact]
+    public void RestartNode2Specs()
+    {
+        Cluster_seed_nodes_must_be_able_to_restart_first_seed_node_and_join_other_seed_nodes();
+    }
+
+    #endregion
+
+    public void Cluster_seed_nodes_must_be_able_to_restart_first_seed_node_and_join_other_seed_nodes()
+    {
+        Within(TimeSpan.FromSeconds(60), () =>
         {
-            Within(TimeSpan.FromSeconds(60), () =>
+            #region RunOnSample
+
+            RunOn(() =>
             {
-                #region RunOnSample
-                RunOn(() =>
-                {
-                    // seed1System is a separate ActorSystem, to be able to simulate restart
-                    // we must transfer its address to seed2
-                    Sys.ActorOf(Props.Create<Watcher>().WithDeploy(Deploy.Local), "address-receiver");
-                    EnterBarrier("seed1-address-receiver-ready");
-                }, _config.Seed2);
+                // seed1System is a separate ActorSystem, to be able to simulate restart
+                // we must transfer its address to seed2
+                Sys.ActorOf(Props.Create<Watcher>().WithDeploy(Deploy.Local), "address-receiver");
+                EnterBarrier("seed1-address-receiver-ready");
+            }, _config.Seed2);
 
 
-                RunOn(() =>
+            RunOn(() =>
+            {
+                EnterBarrier("seed1-address-receiver-ready");
+                seedNode1Address = Cluster.Get(seed1System.Value).SelfAddress;
+                foreach (var r in ImmutableList.Create(_config.Seed2))
                 {
-                    EnterBarrier("seed1-address-receiver-ready");
-                    seedNode1Address = Cluster.Get(seed1System.Value).SelfAddress;
-                    foreach (var r in ImmutableList.Create(_config.Seed2))
-                    {
-                        Sys.ActorSelection(new RootActorPath(GetAddress(r)) / "user" / "address-receiver").Tell(seedNode1Address);
-                        ExpectMsg("ok", TimeSpan.FromSeconds(5));
-                    }
-                }, _config.Seed1);
-                #endregion
-                EnterBarrier("seed1-address-transfered");
+                    Sys.ActorSelection(new RootActorPath(GetAddress(r)) / "user" / "address-receiver")
+                        .Tell(seedNode1Address);
+                    ExpectMsg("ok", TimeSpan.FromSeconds(5));
+                }
+            }, _config.Seed1);
 
-                // now we can join seed1System, seed2 together
-                RunOn(() =>
-                {
-                    Cluster.Get(seed1System.Value).JoinSeedNodes(SeedNodes);
-                    AwaitAssert(() => Cluster.Get(seed1System.Value).State.Members.Count.Should().Be(2));
-                    AwaitAssert(() => Cluster.Get(seed1System.Value).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue());
-                }, _config.Seed1);
+            #endregion
 
-                RunOn(() =>
-                {
-                    Cluster.JoinSeedNodes(SeedNodes);
-                    AwaitMembersUp(2);
-                }, _config.Seed2);
-                EnterBarrier("started");
+            EnterBarrier("seed1-address-transfered");
 
-                // shutdown seed1System
-                RunOn(() =>
-                {
-                    Shutdown(seed1System.Value, RemainingOrDefault);
-                }, _config.Seed1);
-                EnterBarrier("seed1-shutdown");
+            // now we can join seed1System, seed2 together
+            RunOn(() =>
+            {
+                Cluster.Get(seed1System.Value).JoinSeedNodes(SeedNodes);
+                AwaitAssert(() => Cluster.Get(seed1System.Value).State.Members.Count.Should().Be(2));
+                AwaitAssert(() =>
+                    Cluster.Get(seed1System.Value).State.Members.All(x => x.Status == MemberStatus.Up).Should()
+                        .BeTrue());
+            }, _config.Seed1);
 
-                RunOn(() =>
-                {
-                    Cluster.Get(restartedSeed1System.Value).JoinSeedNodes(SeedNodes);
-                    Within(TimeSpan.FromSeconds(30), () =>
-                    {
-                        AwaitAssert(() => Cluster.Get(restartedSeed1System.Value).State.Members.Count.Should().Be(2));
-                        AwaitAssert(() => Cluster.Get(restartedSeed1System.Value).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue());
-                    });
-                }, _config.Seed1);
+            RunOn(() =>
+            {
+                Cluster.JoinSeedNodes(SeedNodes);
+                AwaitMembersUp(2);
+            }, _config.Seed2);
+            EnterBarrier("started");
 
-                RunOn(() =>
+            // shutdown seed1System
+            RunOn(() => { Shutdown(seed1System.Value, RemainingOrDefault); }, _config.Seed1);
+            EnterBarrier("seed1-shutdown");
+
+            RunOn(() =>
+            {
+                Cluster.Get(restartedSeed1System.Value).JoinSeedNodes(SeedNodes);
+                Within(TimeSpan.FromSeconds(30), () =>
                 {
-                    AwaitMembersUp(2);
-                }, _config.Seed2);
-                EnterBarrier("seed1-restarted");
+                    AwaitAssert(() => Cluster.Get(restartedSeed1System.Value).State.Members.Count.Should().Be(2));
+                    AwaitAssert(() =>
+                        Cluster.Get(restartedSeed1System.Value).State.Members.All(x => x.Status == MemberStatus.Up)
+                            .Should().BeTrue());
+                });
+            }, _config.Seed1);
+
+            RunOn(() => { AwaitMembersUp(2); }, _config.Seed2);
+            EnterBarrier("seed1-restarted");
+        });
+    }
+
+    private class Watcher : ReceiveActor
+    {
+        public Watcher()
+        {
+            Receive<Address>(a =>
+            {
+                seedNode1Address = a;
+                Sender.Tell("ok");
             });
         }
     }
-    #endregion
 }
+
+#endregion

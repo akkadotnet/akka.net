@@ -1,7 +1,7 @@
 ﻿// -----------------------------------------------------------------------
 //  <copyright file="ReliableDeliveryRandomSpecs.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
 
@@ -28,6 +28,8 @@ public class ReliableDeliveryRandomSpecs : TestKit.Xunit2.TestKit
     akka.loglevel = DEBUG
     ";
 
+    private int _idCount;
+
     public ReliableDeliveryRandomSpecs(ITestOutputHelper output) : this(output, Config)
     {
     }
@@ -40,10 +42,12 @@ public class ReliableDeliveryRandomSpecs : TestKit.Xunit2.TestKit
     private bool Chunked => ProducerController.Settings.Create(Sys).ChunkLargeMessagesBytes != null &&
                             ProducerController.Settings.Create(Sys).ChunkLargeMessagesBytes > 0;
 
-    private int _idCount = 0;
-    private int NextId() => _idCount++;
-
     private string ProducerId => $"p-{_idCount}";
+
+    private int NextId()
+    {
+        return _idCount++;
+    }
 
     private async Task Test(int numberOfMessages, double producerDropProbability, double consumerDropProbability,
         Option<double> durableFailProbability, bool resendLost)
@@ -60,14 +64,19 @@ public class ReliableDeliveryRandomSpecs : TestKit.Xunit2.TestKit
             consumerDelay, producerDelay, durableFailProbability, durableDelay);
 
         var consumerEndProbe = CreateTestProbe();
-        var consumerController = Sys.ActorOf(ConsumerController.CreateWithFuzzing<TestConsumer.Job>(Sys, Option<IActorRef>.None, ConsumerDrop, consumerControllerSettings), $"consumer-controller-{_idCount}");
+        var consumerController =
+            Sys.ActorOf(
+                ConsumerController.CreateWithFuzzing<TestConsumer.Job>(Sys, Option<IActorRef>.None, ConsumerDrop,
+                    consumerControllerSettings), $"consumer-controller-{_idCount}");
 
         var consumer =
             Sys.ActorOf(
                 TestConsumer.PropsFor(consumerDelay, numberOfMessages, consumerEndProbe.Ref, consumerController),
                 $"consumer-{_idCount}");
 
-        var stateHolder = new AtomicReference<DurableProducerQueueStateHolder<TestConsumer.Job>>(DurableProducerQueueStateHolder<TestConsumer.Job>.Empty);
+        var stateHolder =
+            new AtomicReference<DurableProducerQueueStateHolder<TestConsumer.Job>>(
+                DurableProducerQueueStateHolder<TestConsumer.Job>.Empty);
         var durableQueue = durableFailProbability.Select(p =>
         {
             return TestDurableProducerQueue.CreateProps(durableDelay, stateHolder,
@@ -75,7 +84,7 @@ public class ReliableDeliveryRandomSpecs : TestKit.Xunit2.TestKit
         });
 
         var producerController = Sys.ActorOf(
-            ProducerController.CreateWithFuzzing<TestConsumer.Job>(Sys, ProducerId, ProducerDrop, durableQueue, 
+            ProducerController.CreateWithFuzzing<TestConsumer.Job>(Sys, ProducerId, ProducerDrop, durableQueue,
                 ProducerController.Settings.Create(Sys)), $"producer-controller-{_idCount}");
 
         var producer = Sys.ActorOf(Props.Create(() => new TestProducer(producerDelay, producerController)),
@@ -117,20 +126,20 @@ public class ReliableDeliveryRandomSpecs : TestKit.Xunit2.TestKit
         var consumerDropProbability = 0.1 + ThreadLocalRandom.Current.NextDouble() * 0.2;
         var producerDropProbability = 0.1 + ThreadLocalRandom.Current.NextDouble() * 0.2;
 
-        return Test(numberOfMessages: 63, producerDropProbability: producerDropProbability,
-            consumerDropProbability: consumerDropProbability, Option<double>.None, true);
+        return Test(63, producerDropProbability,
+            consumerDropProbability, Option<double>.None, true);
     }
-    
+
     [Fact]
     public Task ReliableDelivery_with_random_failures_must_work_with_flaky_DurableProducerQueue()
     {
         NextId();
         var durableFailProbability = 0.1 + ThreadLocalRandom.Current.NextDouble() * 0.1;
 
-        return Test(numberOfMessages: 31, producerDropProbability: 0.0,
-            consumerDropProbability:0.0, durableFailProbability, true);
+        return Test(31, 0.0,
+            0.0, durableFailProbability, true);
     }
-    
+
     [Fact]
     public Task ReliableDelivery_with_random_failures_must_work_with_flaky_network_and_flaky_DurableProducerQueue()
     {
@@ -138,12 +147,12 @@ public class ReliableDeliveryRandomSpecs : TestKit.Xunit2.TestKit
         var consumerDropProbability = 0.1 + ThreadLocalRandom.Current.NextDouble() * 0.1;
         var producerDropProbability = 0.1 + ThreadLocalRandom.Current.NextDouble() * 0.1;
         var durableFailProbability = 0.1 + ThreadLocalRandom.Current.NextDouble() * 0.1;
-        
 
-        return Test(numberOfMessages: 17, producerDropProbability: producerDropProbability,
-            consumerDropProbability: consumerDropProbability, durableFailProbability, true);
+
+        return Test(17, producerDropProbability,
+            consumerDropProbability, durableFailProbability, true);
     }
-    
+
     [Fact]
     public Task ReliableDelivery_with_random_failures_must_work_with_flaky_network_without_resending()
     {
@@ -151,7 +160,7 @@ public class ReliableDeliveryRandomSpecs : TestKit.Xunit2.TestKit
         var consumerDropProbability = 0.1 + ThreadLocalRandom.Current.NextDouble() * 0.4;
         var producerDropProbability = 0.1 + ThreadLocalRandom.Current.NextDouble() * 0.3;
 
-        return Test(numberOfMessages: 63, producerDropProbability: producerDropProbability,
-            consumerDropProbability: consumerDropProbability, Option<double>.None, false);
+        return Test(63, producerDropProbability,
+            consumerDropProbability, Option<double>.None, false);
     }
 }

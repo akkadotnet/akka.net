@@ -1,14 +1,13 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="BugFix4376Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="BugFix4376Spec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
@@ -18,282 +17,259 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Tests.Actor
+namespace Akka.Tests.Actor;
+
+/// <summary>
+///     Spec for https://github.com/akkadotnet/akka.net/issues/4376
+/// </summary>
+public class BugFix4376Spec : AkkaSpec
 {
-    /// <summary>
-    /// Spec for https://github.com/akkadotnet/akka.net/issues/4376
-    /// </summary>
-    public class BugFix4376Spec : AkkaSpec
+    private readonly TimeSpan _delay = TimeSpan.FromSeconds(0.08);
+
+    public BugFix4376Spec(ITestOutputHelper output) : base(output)
     {
-        public BugFix4376Spec(ITestOutputHelper output): base(output) { }
+    }
 
-        private readonly TimeSpan _delay = TimeSpan.FromSeconds(0.08);
+    [Fact]
+    public async Task Supervisor_with_RoundRobin_Pool_router_should_handle_multiple_child_failure()
+    {
+        var poolProps = Props.Create<SimpleActor>().WithRouter(new RoundRobinPool(10));
+        var poolActorRef = Sys.ActorOf(poolProps, "roundrobin-pool-freeze-test");
 
-        private class SimpleActor : ReceiveActor
-        {
-            private readonly object _lock = new();
-            private static int Counter = 0;
+        // rapidly fail children. the router should handle children failing
+        // while itself is still being recreated
+        for (var i = 0; i < 10; i++) poolActorRef.Tell(1);
 
-            public SimpleActor()
+        var failCount = 0;
+        for (var i = 0; i < 20; i++)
+            try
             {
-                Receive<int>(i => i == 1, _ => {
-                    lock (_lock)
-                        Counter++;
-                    throw new InvalidOperationException($"I'm dead. #{Counter}");
-                });
-
-                Receive<int>(i => i == 2, _ => {
-                    Sender.Tell(2);
-                });
+                await poolActorRef.Ask<int>(2, _delay);
             }
-        }
-
-        private class SimpleBroadcastActor : ReceiveActor
-        {
-            private readonly AtomicCounter _counter = null;
-            private readonly object _lock = new();
-            private static int Counter = 0;
-
-            public SimpleBroadcastActor(AtomicCounter counter)
+            catch
             {
-                _counter = counter;
-
-                Receive<int>(i => i == 1, _ => {
-                    lock (_lock)
-                        Counter++;
-                    throw new InvalidOperationException($"I'm dead. #{Counter}");
-                });
-
-                Receive<int>(i => i == 2, _ => {
-                    _counter.AddAndGet(1);
-                    Sender.Tell(2);
-                });
-            }
-        }
-
-        private class ParentActor : ReceiveActor
-        {
-            private readonly AtomicCounter _counter;
-            private readonly List<IActorRef> _children = new();
-
-            public ParentActor(AtomicCounter counter)
-            {
-                _counter = counter;
-
-                for(var i = 0; i < 10; ++i)
-                {
-                    var child = Context.ActorOf(Props.Create<SimpleActor>(), $"child-{i}");
-                    _children.Add(child);
-                }
-
-                ReceiveAsync<string>(str => str.Equals("spam-fails"), async _ =>
-                {
-                    foreach (var child in _children)
-                    {
-                        child.Tell(1);
-                    }
-                    await Task.Delay(1000);
-                });
-
-                ReceiveAsync<string>(str => str.Equals("run-test"), async _ =>
-                {
-                    for (var i = 0; i < 2; ++i)
-                    {
-                        foreach (var child in _children)
-                        {
-                            try
-                            {
-                                await child.Ask<int>(1, TimeSpan.FromSeconds(0.08));
-                            } catch 
-                            {
-                                _counter.AddAndGet(1);
-                            }
-                        }
-                    }
-                });
-            }
-        }
-
-        [Fact]
-        public async Task Supervisor_with_RoundRobin_Pool_router_should_handle_multiple_child_failure()
-        {
-            var poolProps = Props.Create<SimpleActor>().WithRouter(new RoundRobinPool(10));
-            var poolActorRef = Sys.ActorOf(poolProps, "roundrobin-pool-freeze-test");
-
-            // rapidly fail children. the router should handle children failing
-            // while itself is still being recreated
-            for (var i = 0; i < 10; i++)
-            {
-                poolActorRef.Tell(1);
+                failCount++;
             }
 
-            var failCount = 0;
-            for (var i = 0; i < 20; i++)
+        failCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Supervisor_with_Random_Pool_router_should_handle_multiple_child_failure()
+    {
+        var poolProps = Props.Create<SimpleActor>().WithRouter(new RandomPool(10));
+        var poolActorRef = Sys.ActorOf(poolProps, "random-pool-freeze-test");
+
+        // rapidly fail children. the router should handle children failing
+        // while itself is still being recreated
+        for (var i = 0; i < 10; i++) poolActorRef.Tell(1);
+
+        var failCount = 0;
+        for (var i = 0; i < 20; i++)
+            try
             {
-                try
-                {
-                    await poolActorRef.Ask<int>(2, _delay);
-                }
-                catch
-                {
-                    failCount++;
-                }
+                await poolActorRef.Ask<int>(2, _delay);
             }
-            failCount.Should().Be(0);
-        }
-
-        [Fact]
-        public async Task Supervisor_with_Random_Pool_router_should_handle_multiple_child_failure()
-        {
-            var poolProps = Props.Create<SimpleActor>().WithRouter(new RandomPool(10));
-            var poolActorRef = Sys.ActorOf(poolProps, "random-pool-freeze-test");
-
-            // rapidly fail children. the router should handle children failing
-            // while itself is still being recreated
-            for (var i = 0; i < 10; i++)
+            catch
             {
-                poolActorRef.Tell(1);
+                failCount++;
             }
 
-            var failCount = 0;
-            for (var i = 0; i < 20; i++)
-            {
-                try
-                {
-                    await poolActorRef.Ask<int>(2, _delay);
-                }
-                catch
-                {
-                    failCount++;
-                }
-            }
-            failCount.Should().Be(0);
-        }
+        failCount.Should().Be(0);
+    }
 
-        [Fact]
-        public async Task Supervisor_with_Broadcast_Pool_router_should_handle_multiple_child_failure()
-        {
-            var poolActorRef = Sys.ActorOf(
-                new BroadcastPool(5)
+    [Fact]
+    public async Task Supervisor_with_Broadcast_Pool_router_should_handle_multiple_child_failure()
+    {
+        var poolActorRef = Sys.ActorOf(
+            new BroadcastPool(5)
                 .Props(Props.Create<SimpleActor>()));
 
-            // rapidly fail children. the router should handle children failing
-            // while itself is still being recreated
-            for (var i = 0; i < 20; i++)
-            {
-                poolActorRef.Tell(1);
-            }
+        // rapidly fail children. the router should handle children failing
+        // while itself is still being recreated
+        for (var i = 0; i < 20; i++) poolActorRef.Tell(1);
 
-            poolActorRef.Tell(2);
-            await ExpectMsgAsync<int>();
-            await ExpectMsgAsync<int>();
-            await ExpectMsgAsync<int>();
-            await ExpectMsgAsync<int>();
-            await ExpectMsgAsync<int>();
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
-        }
+        poolActorRef.Tell(2);
+        await ExpectMsgAsync<int>();
+        await ExpectMsgAsync<int>();
+        await ExpectMsgAsync<int>();
+        await ExpectMsgAsync<int>();
+        await ExpectMsgAsync<int>();
+        await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+    }
 
-        [Fact]
-        public async Task Supervisor_with_RoundRobin_Group_router_should_handle_multiple_child_failure()
+    [Fact]
+    public async Task Supervisor_with_RoundRobin_Group_router_should_handle_multiple_child_failure()
+    {
+        const int connectionCount = 10;
+        var doneLatch = new TestLatch(connectionCount);
+
+        var replies = new Dictionary<string, int>();
+        for (var i = 1; i <= connectionCount; i++) replies["target-" + i] = 0;
+
+        var paths = Enumerable.Range(1, connectionCount).Select(n =>
         {
-            const int connectionCount = 10;
-            var doneLatch = new TestLatch(connectionCount);
+            var routee = Sys.ActorOf(Props.Create(() => new SimpleActor()), "target-" + n);
+            return routee.Path.ToStringWithoutAddress();
+        });
 
-            var replies = new Dictionary<string, int>();
-            for (int i = 1; i <= connectionCount; i++)
+        var groupProps = Props.Empty
+            .WithRouter(new RoundRobinGroup(paths))
+            .WithSupervisorStrategy(new OneForOneStrategy(Decider.From(Directive.Escalate)));
+        var groupActorRef = Sys.ActorOf(groupProps, "round-robin-group1");
+
+        // rapidly fail children. the router should handle children failing
+        // while itself is still being recreated
+        for (var i = 0; i < 20; i++) groupActorRef.Tell(1);
+
+        var failCount = 0;
+        for (var i = 0; i < 20; i++)
+            try
             {
-                replies["target-" + i] = 0;
+                await groupActorRef.Ask<int>(2, _delay);
+            }
+            catch
+            {
+                failCount++;
             }
 
-            var paths = Enumerable.Range(1, connectionCount).Select(n =>
+        failCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Supervisor_with_Random_Group_router_should_handle_multiple_child_failure()
+    {
+        const int connectionCount = 10;
+        var doneLatch = new TestLatch(connectionCount);
+
+        var replies = new Dictionary<string, int>();
+        for (var i = 1; i <= connectionCount; i++) replies["target-" + i] = 0;
+
+        var paths = Enumerable.Range(1, connectionCount).Select(n =>
+        {
+            var routee = Sys.ActorOf(Props.Create(() => new SimpleActor()), "target-" + n);
+            return routee.Path.ToStringWithoutAddress();
+        });
+
+        var groupProps = Props.Empty
+            .WithRouter(new RandomGroup(paths))
+            .WithSupervisorStrategy(new OneForOneStrategy(Decider.From(Directive.Escalate)));
+        var groupActorRef = Sys.ActorOf(groupProps, "random-group1");
+
+        // rapidly fail children. the router should handle children failing
+        // while itself is still being recreated
+        for (var i = 0; i < 20; i++) groupActorRef.Tell(1);
+
+        var failCount = 0;
+        for (var i = 0; i < 20; i++)
+            try
             {
-                var routee = Sys.ActorOf(Props.Create(() => new SimpleActor()), "target-" + n);
-                return routee.Path.ToStringWithoutAddress();
+                await groupActorRef.Ask<int>(2, _delay);
+            }
+            catch
+            {
+                failCount++;
+            }
+
+        failCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Supervisor_should_handle_multiple_child_failure()
+    {
+        var counter = new AtomicCounter(0);
+
+        var supervisor = Sys.ActorOf(Props.Create<ParentActor>(counter), "supervisor");
+        supervisor.Tell("spam-fails");
+        supervisor.Tell("run-test");
+
+        await Task.Delay(1000);
+        counter.Current.Should().Be(0);
+    }
+
+    private class SimpleActor : ReceiveActor
+    {
+        private static int Counter;
+        private readonly object _lock = new();
+
+        public SimpleActor()
+        {
+            Receive<int>(i => i == 1, _ =>
+            {
+                lock (_lock)
+                {
+                    Counter++;
+                }
+
+                throw new InvalidOperationException($"I'm dead. #{Counter}");
             });
 
-            var groupProps = Props.Empty
-                .WithRouter(new RoundRobinGroup(paths))
-                .WithSupervisorStrategy(new OneForOneStrategy(Decider.From(Directive.Escalate)));
-            var groupActorRef = Sys.ActorOf(groupProps, "round-robin-group1");
-
-            // rapidly fail children. the router should handle children failing
-            // while itself is still being recreated
-            for (var i = 0; i < 20; i++)
-            {
-                groupActorRef.Tell(1);
-            }
-
-            var failCount = 0;
-            for (var i = 0; i < 20; i++)
-            {
-                try
-                {
-                    await groupActorRef.Ask<int>(2, _delay);
-                }
-                catch
-                {
-                    failCount++;
-                }
-            }
-            failCount.Should().Be(0);
+            Receive<int>(i => i == 2, _ => { Sender.Tell(2); });
         }
+    }
 
-        [Fact]
-        public async Task Supervisor_with_Random_Group_router_should_handle_multiple_child_failure()
+    private class SimpleBroadcastActor : ReceiveActor
+    {
+        private static int Counter;
+        private readonly AtomicCounter _counter;
+        private readonly object _lock = new();
+
+        public SimpleBroadcastActor(AtomicCounter counter)
         {
-            const int connectionCount = 10;
-            var doneLatch = new TestLatch(connectionCount);
+            _counter = counter;
 
-            var replies = new Dictionary<string, int>();
-            for (int i = 1; i <= connectionCount; i++)
+            Receive<int>(i => i == 1, _ =>
             {
-                replies["target-" + i] = 0;
-            }
+                lock (_lock)
+                {
+                    Counter++;
+                }
 
-            var paths = Enumerable.Range(1, connectionCount).Select(n =>
-            {
-                var routee = Sys.ActorOf(Props.Create(() => new SimpleActor()), "target-" + n);
-                return routee.Path.ToStringWithoutAddress();
+                throw new InvalidOperationException($"I'm dead. #{Counter}");
             });
 
-            var groupProps = Props.Empty
-                .WithRouter(new RandomGroup(paths))
-                .WithSupervisorStrategy(new OneForOneStrategy(Decider.From(Directive.Escalate)));
-            var groupActorRef = Sys.ActorOf(groupProps, "random-group1");
-
-            // rapidly fail children. the router should handle children failing
-            // while itself is still being recreated
-            for (var i = 0; i < 20; i++)
+            Receive<int>(i => i == 2, _ =>
             {
-                groupActorRef.Tell(1);
-            }
-
-            var failCount = 0;
-            for (var i = 0; i < 20; i++)
-            {
-                try
-                {
-                    await groupActorRef.Ask<int>(2, _delay);
-                }
-                catch
-                {
-                    failCount++;
-                }
-            }
-            failCount.Should().Be(0);
+                _counter.AddAndGet(1);
+                Sender.Tell(2);
+            });
         }
+    }
 
-        [Fact]
-        public async Task Supervisor_should_handle_multiple_child_failure()
+    private class ParentActor : ReceiveActor
+    {
+        private readonly List<IActorRef> _children = new();
+        private readonly AtomicCounter _counter;
+
+        public ParentActor(AtomicCounter counter)
         {
-            var counter = new AtomicCounter(0);
+            _counter = counter;
 
-            var supervisor = Sys.ActorOf(Props.Create<ParentActor>(counter), "supervisor");
-            supervisor.Tell("spam-fails");
-            supervisor.Tell("run-test");
+            for (var i = 0; i < 10; ++i)
+            {
+                var child = Context.ActorOf(Props.Create<SimpleActor>(), $"child-{i}");
+                _children.Add(child);
+            }
 
-            await Task.Delay(1000);
-            counter.Current.Should().Be(0);
+            ReceiveAsync<string>(str => str.Equals("spam-fails"), async _ =>
+            {
+                foreach (var child in _children) child.Tell(1);
+                await Task.Delay(1000);
+            });
+
+            ReceiveAsync<string>(str => str.Equals("run-test"), async _ =>
+            {
+                for (var i = 0; i < 2; ++i)
+                    foreach (var child in _children)
+                        try
+                        {
+                            await child.Ask<int>(1, TimeSpan.FromSeconds(0.08));
+                        }
+                        catch
+                        {
+                            _counter.AddAndGet(1);
+                        }
+            });
         }
     }
 }

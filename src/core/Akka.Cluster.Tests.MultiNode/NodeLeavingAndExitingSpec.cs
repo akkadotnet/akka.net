@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="NodeLeavingAndExitingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="NodeLeavingAndExitingSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Linq;
 using Akka.Actor;
@@ -12,111 +12,103 @@ using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.Cluster.Tests.MultiNode;
+
+public class NodeLeavingAndExitingConfig : MultiNodeConfig
 {
-    public class NodeLeavingAndExitingConfig : MultiNodeConfig
+    public NodeLeavingAndExitingConfig()
     {
-        public RoleName First { get; set; }
-        public RoleName Second { get; set; }
-        public RoleName Third { get; set; }
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
 
-        public NodeLeavingAndExitingConfig()
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
-
-            CommonConfig = DebugConfig(false)
-                .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
-        }
+        CommonConfig = DebugConfig(false)
+            .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
     }
 
-    public class NodeLeavingAndExitingSpec : MultiNodeClusterSpec
+    public RoleName First { get; set; }
+    public RoleName Second { get; set; }
+    public RoleName Third { get; set; }
+}
+
+public class NodeLeavingAndExitingSpec : MultiNodeClusterSpec
+{
+    private readonly NodeLeavingAndExitingConfig _config;
+
+    public NodeLeavingAndExitingSpec() : this(new NodeLeavingAndExitingConfig())
     {
-        private class Listener : UntypedActor
-        {
-            private TestLatch _exitingLatch;
-            private readonly Address _secondAddress;
+    }
 
-            public Listener(TestLatch exitingLatch, Address secondAddress)
+    protected NodeLeavingAndExitingSpec(NodeLeavingAndExitingConfig config) : base(config,
+        typeof(NodeLeavingAndExitingSpec))
+    {
+        _config = config;
+    }
+
+    [MultiNodeFact]
+    public void NodeLeavingAndExitingSpecs()
+    {
+        Node_that_is_leaving_non_singleton_cluster_must_be_moved_to_exiting_by_the_leader();
+    }
+
+    public void Node_that_is_leaving_non_singleton_cluster_must_be_moved_to_exiting_by_the_leader()
+    {
+        AwaitClusterUp(_config.First, _config.Second, _config.Third);
+
+        RunOn(() =>
+        {
+            var secondAddress = GetAddress(_config.Second);
+            var exitingLatch = new TestLatch();
+            Cluster.Subscribe(Sys.ActorOf(Props
+                .Create(() => new Listener(exitingLatch, secondAddress))
+                .WithDeploy(Deploy.Local)), typeof(ClusterEvent.IMemberEvent));
+
+            EnterBarrier("registered-listener");
+
+            RunOn(() => { Cluster.Leave(GetAddress(_config.Second)); }, _config.Third);
+            EnterBarrier("second-left");
+
+            // Verify that 'second' node is set to EXITING
+            exitingLatch.Ready();
+        }, _config.First, _config.Third);
+
+
+        // node that is leaving
+        RunOn(() =>
+        {
+            EnterBarrier("registered-listener");
+            EnterBarrier("second-left");
+        }, _config.Second);
+
+        EnterBarrier("finished");
+    }
+
+    private class Listener : UntypedActor
+    {
+        private readonly Address _secondAddress;
+        private readonly TestLatch _exitingLatch;
+
+        public Listener(TestLatch exitingLatch, Address secondAddress)
+        {
+            _exitingLatch = exitingLatch;
+            _secondAddress = secondAddress;
+        }
+
+        protected override void OnReceive(object message)
+        {
+            switch (message)
             {
-                _exitingLatch = exitingLatch;
-                _secondAddress = secondAddress;
+                case ClusterEvent.CurrentClusterState state:
+                    if (state.Members.Any(c => c.Address.Equals(_secondAddress) && c.Status == MemberStatus.Exiting))
+                        _exitingLatch.CountDown();
+                    break;
+                case ClusterEvent.MemberExited m:
+                    if (m.Member.Address.Equals(_secondAddress)) _exitingLatch.CountDown();
+                    break;
+                case ClusterEvent.MemberRemoved _:
+                    // not tested here
+                    break;
             }
-
-            protected override void OnReceive(object message)
-            {
-                switch (message)
-                {
-                    case ClusterEvent.CurrentClusterState state:
-                        if (state.Members.Any(c => c.Address.Equals(_secondAddress) && c.Status == MemberStatus.Exiting))
-                        {
-                            _exitingLatch.CountDown();
-                        }
-                        break;
-                    case ClusterEvent.MemberExited m:
-                        if (m.Member.Address.Equals(_secondAddress))
-                        {
-                            _exitingLatch.CountDown();
-                        }
-                        break;
-                    case ClusterEvent.MemberRemoved _:
-                        // not tested here
-                        break;
-                }
-            }
-        }
-
-        private readonly NodeLeavingAndExitingConfig _config;
-
-        public NodeLeavingAndExitingSpec() : this(new NodeLeavingAndExitingConfig())
-        {
-        }
-
-        protected NodeLeavingAndExitingSpec(NodeLeavingAndExitingConfig config) : base(config, typeof(NodeLeavingAndExitingSpec))
-        {
-            _config = config;
-        }
-
-        [MultiNodeFact]
-        public void NodeLeavingAndExitingSpecs()
-        {
-            Node_that_is_leaving_non_singleton_cluster_must_be_moved_to_exiting_by_the_leader();
-        }
-
-        public void Node_that_is_leaving_non_singleton_cluster_must_be_moved_to_exiting_by_the_leader()
-        {
-            AwaitClusterUp(_config.First, _config.Second, _config.Third);
-
-            RunOn(() =>
-            {
-                var secondAddress = GetAddress(_config.Second);
-                var exitingLatch = new TestLatch();
-                Cluster.Subscribe(Sys.ActorOf(Props
-                    .Create(() => new Listener(exitingLatch, secondAddress))
-                    .WithDeploy(Deploy.Local)), new[] { typeof(ClusterEvent.IMemberEvent) });
-
-                EnterBarrier("registered-listener");
-
-                RunOn(() =>
-                {
-                    Cluster.Leave(GetAddress(_config.Second));
-                }, _config.Third);
-                EnterBarrier("second-left");
-
-                // Verify that 'second' node is set to EXITING
-                exitingLatch.Ready();
-            }, _config.First, _config.Third);
-
-
-            // node that is leaving
-            RunOn(() =>
-            {
-                EnterBarrier("registered-listener");
-                EnterBarrier("second-left");
-            }, _config.Second);
-
-            EnterBarrier("finished");
         }
     }
 }

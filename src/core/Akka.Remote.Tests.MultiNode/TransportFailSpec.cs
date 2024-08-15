@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TransportFailSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="TransportFailSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
@@ -13,25 +13,23 @@ using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Util;
-using Xunit;
 
-namespace Akka.Remote.Tests.MultiNode
+namespace Akka.Remote.Tests.MultiNode;
+
+public class TransportFailSpecConfig : MultiNodeConfig
 {
-    public class TransportFailSpecConfig : MultiNodeConfig
+    internal static AtomicBoolean FdAvailable = new(true);
+
+    public TransportFailSpecConfig()
     {
-        public RoleName First { get; }
-        public RoleName Second { get; }
+        First = Role("first");
+        Second = Role("second");
 
-        public TransportFailSpecConfig()
-        {
-            First = Role("first");
-            Second = Role("second");
-
-            CommonConfig = DebugConfig(true).WithFallback(ConfigurationFactory.ParseString(@"
+        CommonConfig = DebugConfig(true).WithFallback(ConfigurationFactory.ParseString(@"
               akka.loglevel = INFO
               akka.remote{
                  transport-failure-detector {
-                  implementation-class = """+ typeof(TestFailureDetector).AssemblyQualifiedName + @"""
+                  implementation-class = """ + typeof(TestFailureDetector).AssemblyQualifiedName + @"""
                   heartbeat-interval = 1 s
                 }
                 retry-gate-closed-for = 3 s
@@ -40,125 +38,125 @@ namespace Akka.Remote.Tests.MultiNode
                 #use-passive-connections = off
               }
             "));
+    }
+
+    public RoleName First { get; }
+    public RoleName Second { get; }
+
+    /// <summary>
+    ///     Failure detector implementation that will fail when <see cref="FdAvailable" /> is false.
+    /// </summary>
+    public class TestFailureDetector : FailureDetector
+    {
+        private volatile bool _active;
+
+        public TestFailureDetector(Config config, EventStream eventStream)
+        {
         }
 
-        internal static AtomicBoolean FdAvailable = new(true);
+        public override bool IsAvailable => _active ? FdAvailable.Value : true;
 
-        /// <summary>
-        /// Failure detector implementation that will fail when <see cref="FdAvailable"/> is false.
-        /// </summary>
-        public class TestFailureDetector : FailureDetector
+        public override bool IsMonitoring => _active;
+
+        public override void HeartBeat()
         {
-            public TestFailureDetector(Config config, EventStream eventStream)
-            {
-
-            }
-
-            private volatile bool _active = false;
-
-            public override bool IsAvailable => _active ? FdAvailable.Value : true;
-
-            public override bool IsMonitoring => _active;
-
-            public override void HeartBeat()
-            {
-                _active = true;
-            }
-        }
-
-        public class Subject : ReceiveActor
-        {
-            public Subject()
-            {
-                ReceiveAny(_ => Sender.Tell(_));
-            }
+            _active = true;
         }
     }
 
-    public class TransportFailSpec : MultiNodeSpec
+    public class Subject : ReceiveActor
     {
-        private readonly TransportFailSpecConfig _config;
-
-        public TransportFailSpec() : this(new TransportFailSpecConfig()) { }
-
-        private TransportFailSpec(TransportFailSpecConfig config) : base(config, typeof(TransportFailSpecConfig))
+        public Subject()
         {
-            _config = config;
+            ReceiveAny(_ => Sender.Tell(_));
         }
+    }
+}
 
-        protected override int InitialParticipantsValueFactory => 2;
+public class TransportFailSpec : MultiNodeSpec
+{
+    private readonly TransportFailSpecConfig _config;
 
-        private IActorRef Identify(RoleName role, string actorName)
+    public TransportFailSpec() : this(new TransportFailSpecConfig())
+    {
+    }
+
+    private TransportFailSpec(TransportFailSpecConfig config) : base(config, typeof(TransportFailSpecConfig))
+    {
+        _config = config;
+    }
+
+    protected override int InitialParticipantsValueFactory => 2;
+
+    private IActorRef Identify(RoleName role, string actorName)
+    {
+        var p = CreateTestProbe();
+        Sys.ActorSelection(Node(role) / "user" / actorName).Tell(new Identify(actorName), p.Ref);
+        return p.ExpectMsg<ActorIdentity>(RemainingOrDefault).Subject;
+    }
+
+    [MultiNodeFact]
+    public void TransportFail_should_reconnect()
+    {
+        RunOn(() =>
         {
-            var p = CreateTestProbe();
-            Sys.ActorSelection(Node(role) / "user" / actorName).Tell(new Identify(actorName), p.Ref);
-            return p.ExpectMsg<ActorIdentity>(RemainingOrDefault).Subject;
-        }
+            EnterBarrier("actors-started");
+            var subject = Identify(_config.Second, "subject");
+            Watch(subject);
+            subject.Tell("hello");
+            ExpectMsg("hello");
+        }, _config.First);
 
-        [MultiNodeFact]
-        public void TransportFail_should_reconnect()
+        RunOn(() =>
         {
-            RunOn(() =>
+            Sys.ActorOf(Props.Create(() => new TransportFailSpecConfig.Subject()), "subject");
+            EnterBarrier("actors-started");
+        }, _config.Second);
+
+        EnterBarrier("watch-established");
+
+        // trigger transport failure detector
+        TransportFailSpecConfig.FdAvailable.GetAndSet(false);
+
+        // wait for ungated (also later awaitAssert retry)
+        Task.Delay(RARP.For(Sys).Provider.RemoteSettings.RetryGateClosedFor).Wait();
+        TransportFailSpecConfig.FdAvailable.GetAndSet(true);
+
+        RunOn(() =>
+        {
+            EnterBarrier("actors-started2");
+            var quarantineProbe = CreateTestProbe();
+            Sys.EventStream.Subscribe(quarantineProbe.Ref, typeof(QuarantinedEvent));
+
+            IActorRef subject2 = null;
+            AwaitAssert(() =>
             {
-                EnterBarrier("actors-started");
-                var subject = Identify(_config.Second, "subject");
-                Watch(subject);
-                subject.Tell("hello");
-                ExpectMsg("hello");
-            }, _config.First);
-
-            RunOn(() =>
-            {
-                Sys.ActorOf(Props.Create(() => new TransportFailSpecConfig.Subject()), "subject");
-                EnterBarrier("actors-started");
-            }, _config.Second);
-
-            EnterBarrier("watch-established");
-
-            // trigger transport failure detector
-            TransportFailSpecConfig.FdAvailable.GetAndSet(false);
-
-            // wait for ungated (also later awaitAssert retry)
-            Task.Delay(RARP.For(Sys).Provider.RemoteSettings.RetryGateClosedFor).Wait();
-            TransportFailSpecConfig.FdAvailable.GetAndSet(true);
-
-            RunOn(() =>
-            {
-                EnterBarrier("actors-started2");
-                var quarantineProbe = CreateTestProbe();
-                Sys.EventStream.Subscribe(quarantineProbe.Ref, typeof(QuarantinedEvent));
-
-                IActorRef subject2 = null;
-                AwaitAssert(() =>
+                // TODO: harden
+                Within(TimeSpan.FromSeconds(3), () =>
                 {
-                    // TODO: harden
-                    Within(TimeSpan.FromSeconds(3), () =>
+                    AwaitCondition(() =>
                     {
-                        AwaitCondition(() =>
-                        {
-                            subject2 = Identify(_config.Second, "subject2");
-                            return subject2 != null;
-                        }, RemainingOrDefault, TimeSpan.FromSeconds(1));
-                        
-                    });
-                }, TimeSpan.FromSeconds(5));
-                Watch(subject2);
-                quarantineProbe.ExpectNoMsg(TimeSpan.FromSeconds(1));
-                subject2.Tell("hello2");
-                ExpectMsg("hello2");
-                EnterBarrier("watch-established2");
-                ExpectTerminated(subject2);
-            }, _config.First);
+                        subject2 = Identify(_config.Second, "subject2");
+                        return subject2 != null;
+                    }, RemainingOrDefault, TimeSpan.FromSeconds(1));
+                });
+            }, TimeSpan.FromSeconds(5));
+            Watch(subject2);
+            quarantineProbe.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            subject2.Tell("hello2");
+            ExpectMsg("hello2");
+            EnterBarrier("watch-established2");
+            ExpectTerminated(subject2);
+        }, _config.First);
 
-            RunOn(() =>
-            {
-                var subject2 = Sys.ActorOf(Props.Create(() => new TransportFailSpecConfig.Subject()), "subject2");
-                EnterBarrier("actors-started2");
-                EnterBarrier("watch-established2");
-                subject2.Tell(PoisonPill.Instance);
-            }, _config.Second);
+        RunOn(() =>
+        {
+            var subject2 = Sys.ActorOf(Props.Create(() => new TransportFailSpecConfig.Subject()), "subject2");
+            EnterBarrier("actors-started2");
+            EnterBarrier("watch-established2");
+            subject2.Tell(PoisonPill.Instance);
+        }, _config.Second);
 
-            EnterBarrier("done");
-        }
+        EnterBarrier("done");
     }
 }

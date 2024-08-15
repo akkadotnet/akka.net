@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="BugFix3724Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="BugFix3724Spec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
@@ -13,41 +13,41 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Cluster.Tests.Serialization
+namespace Akka.Cluster.Tests.Serialization;
+
+/// <summary>
+///     https://github.com/akkadotnet/akka.net/issues/3724
+///     Used to validate that `akka.actor.serialize-messages = on` works while
+///     using Akka.Cluster
+/// </summary>
+public class BugFix3724Spec : AkkaSpec
 {
-    /// <summary>
-    ///     https://github.com/akkadotnet/akka.net/issues/3724
-    ///     Used to validate that `akka.actor.serialize-messages = on` works while
-    ///     using Akka.Cluster
-    /// </summary>
-    public class BugFix3724Spec : AkkaSpec
-    {
-        public BugFix3724Spec(ITestOutputHelper helper)
-            : base(@"akka.actor.provider = cluster
+    private readonly Cluster _cluster;
+
+    private readonly Address _selfAddress;
+
+    public BugFix3724Spec(ITestOutputHelper helper)
+        : base(@"akka.actor.provider = cluster
                      akka.actor.serialize-messages = on", helper)
-        {
-            _cluster = Cluster.Get(Sys);
-            _selfAddress = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
-        }
+    {
+        _cluster = Cluster.Get(Sys);
+        _selfAddress = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
+    }
 
-        private readonly Address _selfAddress;
-        private readonly Cluster _cluster;
-
-        [Fact(DisplayName = "Should be able to use 'akka.actor.serialize-messages' while running Akka.Cluster")]
-        public void Should_serialize_all_AkkaCluster_messages()
+    [Fact(DisplayName = "Should be able to use 'akka.actor.serialize-messages' while running Akka.Cluster")]
+    public void Should_serialize_all_AkkaCluster_messages()
+    {
+        _cluster.Subscribe(TestActor, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents,
+            typeof(ClusterEvent.MemberUp));
+        Within(TimeSpan.FromSeconds(10), () =>
         {
-            _cluster.Subscribe(TestActor, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents,
-                typeof(ClusterEvent.MemberUp));
-            Within(TimeSpan.FromSeconds(10), () =>
+            EventFilter.Exception<Exception>().Expect(0, () =>
             {
-                EventFilter.Exception<Exception>().Expect(0, () =>
-                {
-                    // wait for a singleton cluster to fully form and publish a member up event
-                    _cluster.Join(_selfAddress);
-                    var up = ExpectMsg<ClusterEvent.MemberUp>();
-                    up.Member.Address.Should().Be(_selfAddress);
-                });
+                // wait for a singleton cluster to fully form and publish a member up event
+                _cluster.Join(_selfAddress);
+                var up = ExpectMsg<ClusterEvent.MemberUp>();
+                up.Member.Address.Should().Be(_selfAddress);
             });
-        }
+        });
     }
 }

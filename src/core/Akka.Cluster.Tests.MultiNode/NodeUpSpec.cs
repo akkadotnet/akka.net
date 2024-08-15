@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="NodeUpSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="NodeUpSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -16,106 +16,96 @@ using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.Util;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.Cluster.Tests.MultiNode;
+
+public class NodeUpConfig : MultiNodeConfig
 {
-    public class NodeUpConfig : MultiNodeConfig
+    public NodeUpConfig()
     {
-        public RoleName First { get; set; }
-        public RoleName Second { get; set; }
+        First = Role("first");
+        Second = Role("second");
 
-        public NodeUpConfig()
+        CommonConfig = DebugConfig(false)
+            .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
+    }
+
+    public RoleName First { get; set; }
+    public RoleName Second { get; set; }
+}
+
+public class NodeUpSpec : MultiNodeClusterSpec
+{
+    private readonly NodeUpConfig _config;
+
+    public NodeUpSpec() : this(new NodeUpConfig())
+    {
+    }
+
+    protected NodeUpSpec(NodeUpConfig config) : base(config, typeof(NodeUpSpec))
+    {
+        _config = config;
+    }
+
+    [MultiNodeFact]
+    public void NodeUpSpecs()
+    {
+        Cluster_node_that_is_joining_another_cluster_must_not_be_able_to_join_node_that_is_not_cluster_member();
+        Cluster_node_that_is_joining_another_cluster_must_be_moved_to_up_by_the_leader_after_convergence();
+        Cluster_node_that_is_joining_another_cluster_must_be_unaffected_when_joining_again();
+    }
+
+    public void Cluster_node_that_is_joining_another_cluster_must_not_be_able_to_join_node_that_is_not_cluster_member()
+    {
+        RunOn(() => { Cluster.Join(GetAddress(_config.Second)); }, _config.First);
+        EnterBarrier("first-join-attempt");
+
+        Thread.Sleep(2000);
+        ClusterView.Members.Count.ShouldBe(0);
+        EnterBarrier("after-0");
+    }
+
+    public void Cluster_node_that_is_joining_another_cluster_must_be_moved_to_up_by_the_leader_after_convergence()
+    {
+        AwaitClusterUp(_config.First, _config.Second);
+        EnterBarrier("after-1");
+    }
+
+    public void Cluster_node_that_is_joining_another_cluster_must_be_unaffected_when_joining_again()
+    {
+        var unexpected = new AtomicReference<SortedSet<Member>>(new SortedSet<Member>());
+        Cluster.Subscribe(Sys.ActorOf(Props.Create(() => new Listener(unexpected))), typeof(ClusterEvent.IMemberEvent));
+        EnterBarrier("listener-registered");
+
+        RunOn(() => { Cluster.Join(GetAddress(_config.First)); }, _config.Second);
+        EnterBarrier("joined-again");
+
+        foreach (var n in Enumerable.Range(1, 20))
         {
-            First = Role("first");
-            Second = Role("second");
-
-            CommonConfig = DebugConfig(false)
-                .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
+            Thread.Sleep(Dilated(TimeSpan.FromMilliseconds(100)));
+            unexpected.Value.Count.ShouldBe(0);
+            ClusterView.Members.All(c => c.Status == MemberStatus.Up).ShouldBeTrue();
         }
     }
 
-    public class NodeUpSpec : MultiNodeClusterSpec
+    private class Listener : UntypedActor
     {
-        private class Listener : UntypedActor
+        private readonly AtomicReference<SortedSet<Member>> _unexpected;
+
+        public Listener(AtomicReference<SortedSet<Member>> unexpected)
         {
-            private readonly AtomicReference<SortedSet<Member>> _unexpected;
-
-            public Listener(AtomicReference<SortedSet<Member>> unexpected)
-            {
-                _unexpected = unexpected;
-            }
-
-            protected override void OnReceive(object message)
-            {
-                switch (message)
-                {
-                    case ClusterEvent.IMemberEvent evt:
-                        _unexpected.Value.Add(evt.Member);
-                        break;
-                    case ClusterEvent.CurrentClusterState _:
-                        // ignore
-                        break;
-                }
-            }
+            _unexpected = unexpected;
         }
 
-        private readonly NodeUpConfig _config;
-
-        public NodeUpSpec() : this(new NodeUpConfig())
+        protected override void OnReceive(object message)
         {
-        }
-
-        protected NodeUpSpec(NodeUpConfig config) : base(config, typeof(NodeUpSpec))
-        {
-            _config = config;
-        }
-
-        [MultiNodeFact]
-        public void NodeUpSpecs()
-        {
-            Cluster_node_that_is_joining_another_cluster_must_not_be_able_to_join_node_that_is_not_cluster_member();
-            Cluster_node_that_is_joining_another_cluster_must_be_moved_to_up_by_the_leader_after_convergence();
-            Cluster_node_that_is_joining_another_cluster_must_be_unaffected_when_joining_again();
-        }
-
-        public void Cluster_node_that_is_joining_another_cluster_must_not_be_able_to_join_node_that_is_not_cluster_member()
-        {
-            RunOn(() =>
+            switch (message)
             {
-                Cluster.Join(GetAddress(_config.Second));
-            }, _config.First);
-            EnterBarrier("first-join-attempt");
-
-            Thread.Sleep(2000);
-            ClusterView.Members.Count.ShouldBe(0);
-            EnterBarrier("after-0");
-        }
-
-        public void Cluster_node_that_is_joining_another_cluster_must_be_moved_to_up_by_the_leader_after_convergence()
-        {
-            AwaitClusterUp(_config.First, _config.Second);
-            EnterBarrier("after-1");
-        }
-
-        public void Cluster_node_that_is_joining_another_cluster_must_be_unaffected_when_joining_again()
-        {
-            var unexpected = new AtomicReference<SortedSet<Member>>(new SortedSet<Member>());
-            Cluster.Subscribe(Sys.ActorOf(Props.Create(() => new Listener(unexpected))), new[]
-            {
-                typeof(ClusterEvent.IMemberEvent)
-            });
-            EnterBarrier("listener-registered");
-
-            RunOn(() =>
-            {
-                Cluster.Join(GetAddress(_config.First));
-            }, _config.Second);
-            EnterBarrier("joined-again");
-
-            foreach (var n in Enumerable.Range(1, 20))
-            {
-                Thread.Sleep(Dilated(TimeSpan.FromMilliseconds(100)));
-                unexpected.Value.Count.ShouldBe(0);
-                ClusterView.Members.All(c => c.Status == MemberStatus.Up).ShouldBeTrue();
+                case ClusterEvent.IMemberEvent evt:
+                    _unexpected.Value.Add(evt.Member);
+                    break;
+                case ClusterEvent.CurrentClusterState _:
+                    // ignore
+                    break;
             }
         }
     }

@@ -1,58 +1,58 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="DeadLettersFilter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="DeadLettersFilter.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Event;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
 
-namespace Akka.TestKit
+namespace Akka.TestKit;
+
+/// <summary>
+///     Filter which matches DeadLetter events, if the wrapped message conforms to the given type.
+/// </summary>
+public sealed class DeadLettersFilter : EventFilterBase
 {
+    private readonly Predicate<DeadLetter> _isMatch;
+
     /// <summary>
-    /// Filter which matches DeadLetter events, if the wrapped message conforms to the given type.
+    ///     TBD
     /// </summary>
-    public sealed class DeadLettersFilter : EventFilterBase
+    /// <param name="messageMatcher">TBD</param>
+    /// <param name="sourceMatcher">TBD</param>
+    /// <param name="isMatch">TBD</param>
+    public DeadLettersFilter(IStringMatcher messageMatcher, IStringMatcher sourceMatcher,
+        Predicate<DeadLetter> isMatch = null)
+        : base(messageMatcher, sourceMatcher)
     {
-        private readonly Predicate<DeadLetter> _isMatch;
+        _isMatch = isMatch;
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="messageMatcher">TBD</param>
-        /// <param name="sourceMatcher">TBD</param>
-        /// <param name="isMatch">TBD</param>
-        public DeadLettersFilter(IStringMatcher messageMatcher, IStringMatcher sourceMatcher, Predicate<DeadLetter> isMatch = null)
-            : base(messageMatcher, sourceMatcher)
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override string FilterDescriptiveName => "DeadLetter";
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="evt">TBD</param>
+    /// <returns>TBD</returns>
+    protected override bool IsMatch(LogEvent evt)
+    {
+        var warning = evt as Warning;
+        if (warning != null)
         {
-            _isMatch = isMatch;
+            var deadLetter = warning.Message as DeadLetter;
+            if (deadLetter != null)
+                if (_isMatch == null || _isMatch(deadLetter))
+                    return InternalDoMatch(warning.LogSource, deadLetter.Message);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="evt">TBD</param>
-        /// <returns>TBD</returns>
-        protected override bool IsMatch(LogEvent evt)
-        {
-            var warning = evt as Warning;
-            if(warning != null)
-            {
-                var deadLetter = warning.Message as DeadLetter;
-                if(deadLetter != null)
-                    if(_isMatch == null || _isMatch(deadLetter))
-                        return InternalDoMatch(warning.LogSource, deadLetter.Message);
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override string FilterDescriptiveName { get { return "DeadLetter"; } }
+        return false;
     }
 }

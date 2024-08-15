@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="FlowScanSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="FlowScanSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -17,139 +17,142 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class FlowScanSpec : AkkaSpec
 {
-    public class FlowScanSpec : AkkaSpec
+    public FlowScanSpec(ITestOutputHelper helper) : base(helper)
     {
-        private ActorMaterializer Materializer { get; }
+        var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
+        Materializer = ActorMaterializer.Create(Sys, settings);
+    }
 
-        public FlowScanSpec(ITestOutputHelper helper):base(helper)
+    private ActorMaterializer Materializer { get; }
+
+    private IEnumerable<int> Scan(Source<int, NotUsed> source, TimeSpan? duration = null)
+    {
+        duration = duration ?? TimeSpan.FromSeconds(5);
+
+        var t = source.Scan(0, (i, i1) => i + i1).RunAggregate(new List<int>(), (list, i) =>
         {
-            var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
-            Materializer = ActorMaterializer.Create(Sys, settings);
-        }
+            list.Add(i);
+            return list;
+        }, Materializer);
 
-        private IEnumerable<int> Scan(Source<int, NotUsed> source, TimeSpan? duration = null)
+        t.Wait(duration.Value).Should().BeTrue();
+        return t.Result;
+    }
+
+    [Fact]
+    public async Task A_Scan_must_Scan()
+    {
+        Func<int[], int[]> scan = source =>
         {
-            duration = duration ?? TimeSpan.FromSeconds(5);
+            var result = new int[source.Length + 1];
+            result[0] = 0;
 
-            var t = source.Scan(0, (i, i1) => i + i1).RunAggregate(new List<int>(), (list, i) =>
-            {
-                list.Add(i);
-                return list;
-            }, Materializer);
+            for (var i = 1; i <= source.Length; i++)
+                result[i] = result[i - 1] + source[i - 1];
 
-            t.Wait(duration.Value).Should().BeTrue();
-            return t.Result;
-        }
-        
-        [Fact]
-        public async Task A_Scan_must_Scan()
+            return result;
+        };
+
+        await this.AssertAllStagesStoppedAsync(() =>
         {
-            Func<int[], int[]> scan = source =>
-            {
-                var result = new int[source.Length+1];
-                result[0] = 0;
+            var random = new Random();
+            var v = Enumerable.Range(1, random.Next(100, 1000)).Select(_ => random.Next()).ToArray();
+            Scan(Source.From(v)).Should().BeEquivalentTo(scan(v));
+            return Task.CompletedTask;
+        }, Materializer);
+    }
 
-                for (var i = 1; i <= source.Length; i++)
-                    result[i] = result[i - 1] + source[i - 1];
-
-                return result;
-            };
-
-            await this.AssertAllStagesStoppedAsync(() => {
-                var random = new Random();
-                var v = Enumerable.Range(1, random.Next(100, 1000)).Select(_ => random.Next()).ToArray();
-                Scan(Source.From(v)).Should().BeEquivalentTo(scan(v));
-                return Task.CompletedTask;
-            }, Materializer);
-        }
-
-        [Fact]
-        public async Task A_Scan_must_Scan_empty_failed()
+    [Fact]
+    public async Task A_Scan_must_Scan_empty_failed()
+    {
+        await this.AssertAllStagesStoppedAsync(() =>
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var error = new TestException("fail!");
-                Action fail = () => Scan(Source.Failed<int>(error));
-                fail.Should().Throw<TestException>();
-                return Task.CompletedTask;
-            }, Materializer);
-        }
+            var error = new TestException("fail!");
+            Action fail = () => Scan(Source.Failed<int>(error));
+            fail.Should().Throw<TestException>();
+            return Task.CompletedTask;
+        }, Materializer);
+    }
 
-        [Fact]
-        public async Task A_Scan_must_Scan_empty() =>
-            await this.AssertAllStagesStoppedAsync(() => Task.FromResult(Scan(Source.Empty<int>()).Should().BeEquivalentTo(new[] {0})), Materializer);
+    [Fact]
+    public async Task A_Scan_must_Scan_empty()
+    {
+        await this.AssertAllStagesStoppedAsync(
+            () => Task.FromResult(Scan(Source.Empty<int>()).Should().BeEquivalentTo(new[] { 0 })), Materializer);
+    }
 
-        [Fact]
-        public void A_Scan_must_emit_values_promptly()
+    [Fact]
+    public void A_Scan_must_emit_values_promptly()
+    {
+        var task = Source.Single(1).MapMaterializedValue<TaskCompletionSource<int>>(_ => null)
+            .Concat(Source.Maybe<int>())
+            .Scan(0, (i, i1) => i + i1)
+            .Take(2)
+            .RunWith(Sink.Seq<int>(), Materializer);
+
+        task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
+        task.Result.Should().BeEquivalentTo(new[] { 0, 1 });
+    }
+
+    [Fact]
+    public void A_Scan_must_restart_properly()
+    {
+        var scan = Flow.Create<int>().Scan(0, (old, current) =>
         {
-            var task = Source.Single(1).MapMaterializedValue<TaskCompletionSource<int>>(_ => null)
-                .Concat(Source.Maybe<int>())
-                .Scan(0, (i, i1) => i + i1)
-                .Take(2)
-                .RunWith(Sink.Seq<int>(), Materializer);
+            if (current <= 0)
+                throw new ArgumentException("current must be greater than zero");
 
-            task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(new[] {0, 1});
-        }
+            return old + current;
+        }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider));
 
-        [Fact]
-        public void A_Scan_must_restart_properly()
+        Source.From(new[] { 1, 3, -1, 5, 7 })
+            .Via(scan)
+            .RunWith(this.SinkProbe<int>(), Materializer)
+            .ToStrict(TimeSpan.FromSeconds(1))
+            .Should().BeEquivalentTo(new[] { 0, 1, 4, 0, 5, 12 });
+    }
+
+    [Fact]
+    public void A_Scan_must_resume_properly()
+    {
+        var scan = Flow.Create<int>().Scan(0, (old, current) =>
         {
-            var scan = Flow.Create<int>().Scan(0, (old, current) =>
-            {
-                if (current <= 0)
-                    throw new ArgumentException("current must be greater than zero");
+            if (current <= 0)
+                throw new ArgumentException("current must be greater than zero");
 
-                return old + current;
-            }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider));
+            return old + current;
+        }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider));
 
-            Source.From(new[] {1, 3, -1, 5, 7})
-                .Via(scan)
-                .RunWith(this.SinkProbe<int>(), Materializer)
-                .ToStrict(TimeSpan.FromSeconds(1))
-                .Should().BeEquivalentTo(new[] {0, 1, 4, 0, 5, 12});
+        Source.From(new[] { 1, 3, -1, 5, 7 })
+            .Via(scan)
+            .RunWith(this.SinkProbe<int>(), Materializer)
+            .ToStrict(TimeSpan.FromSeconds(1))
+            .Should().BeEquivalentTo(new[] { 0, 1, 4, 9, 16 });
+    }
 
-        }
+    [Fact]
+    public void A_Scan_must_scan_normally_for_empty_source()
+    {
+        Source.Empty<int>()
+            .Scan(0, (i, i1) => i + i1)
+            .RunWith(this.SinkProbe<int>(), Materializer)
+            .Request(2)
+            .ExpectNext(0)
+            .ExpectComplete();
+    }
 
-        [Fact]
-        public void A_Scan_must_resume_properly()
-        {
-            var scan = Flow.Create<int>().Scan(0, (old, current) =>
-            {
-                if (current <= 0)
-                    throw new ArgumentException("current must be greater than zero");
-
-                return old + current;
-            }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider));
-
-            Source.From(new[] {1, 3, -1, 5, 7})
-                .Via(scan)
-                .RunWith(this.SinkProbe<int>(), Materializer)
-                .ToStrict(TimeSpan.FromSeconds(1))
-                .Should().BeEquivalentTo(new[] {0, 1, 4, 9, 16});
-        }
-        
-        [Fact]
-        public void A_Scan_must_scan_normally_for_empty_source()
-        {
-            Source.Empty<int>()
-                .Scan(0, (i, i1) => i + i1)
-                .RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(2)
-                .ExpectNext(0)
-                .ExpectComplete();
-        }
-
-        [Fact]
-        public void A_Scan_must_fail_when_upstream_failed()
-        {
-            var cause = new TestException("");
-            Source.Failed<int>(cause)
-                .Scan(0, (i, i1) => i + i1)
-                .RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(2)
-                .ExpectError().Should().Be(cause);
-        }
+    [Fact]
+    public void A_Scan_must_fail_when_upstream_failed()
+    {
+        var cause = new TestException("");
+        Source.Failed<int>(cause)
+            .Scan(0, (i, i1) => i + i1)
+            .RunWith(this.SinkProbe<int>(), Materializer)
+            .Request(2)
+            .ExpectError().Should().Be(cause);
     }
 }

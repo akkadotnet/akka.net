@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="MaterializationBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="MaterializationBenchmarks.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -12,38 +12,37 @@ using Akka.Streams;
 using Akka.Streams.Dsl;
 using BenchmarkDotNet.Attributes;
 
-namespace Akka.Benchmarks.Streams
+namespace Akka.Benchmarks.Streams;
+
+[Config(typeof(MicroBenchmarkConfig))]
+public class MaterializationBenchmarks
 {
-    [Config(typeof(MicroBenchmarkConfig))]
-    public class MaterializationBenchmarks
+    private ActorMaterializer materializer;
+
+    private IRunnableGraph<Task> simpleGraph;
+    private ActorSystem system;
+
+    [GlobalSetup]
+    public void Setup()
     {
-        private ActorSystem system;
-        private ActorMaterializer materializer;
+        system = ActorSystem.Create("system");
+        materializer = system.Materializer();
 
-        private IRunnableGraph<Task> simpleGraph;
+        simpleGraph = Source.Single(1)
+            .Select(x => x + 1)
+            .ToMaterialized(Sink.ForEach<int>(_ => { }), Keep.Right);
+    }
 
-        [GlobalSetup]
-        public void Setup()
-        {
-            system = ActorSystem.Create("system");
-            materializer = system.Materializer();
+    [GlobalCleanup]
+    public void Cleanup()
+    {
+        materializer.Dispose();
+        system.Dispose();
+    }
 
-            simpleGraph = Source.Single(1)
-                .Select(x => x + 1)
-                .ToMaterialized(Sink.ForEach<int>(_ => { }), Keep.Right);
-        }
-
-        [GlobalCleanup]
-        public void Cleanup()
-        {
-            materializer.Dispose();
-            system.Dispose();
-        }
-
-        [Benchmark]
-        public void Actor_materializer_run_simple_linear_graph()
-        {
-            simpleGraph.Run(materializer);
-        }
+    [Benchmark]
+    public void Actor_materializer_run_simple_linear_graph()
+    {
+        simpleGraph.Run(materializer);
     }
 }

@@ -1,87 +1,30 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ConsistentHashingRouterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ConsistentHashingRouterSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
-using Xunit;
 using FluentAssertions;
+using Xunit;
 
-namespace Akka.Tests.Routing
+namespace Akka.Tests.Routing;
+
+public class ConsistentHashingRouterSpec : AkkaSpec
 {
-    public class ConsistentHashingRouterSpec : AkkaSpec
-    {
-        #region Actors & Message Classes
+    private readonly IActorRef _router1;
+    private readonly IActorRef _router3;
+    private IActorRef a, b;
+    private readonly IActorRef c;
 
-        public class Echo : UntypedActor
-        {
-            protected override void OnReceive(object message)
-            {
-                if (message is ConsistentHashableEnvelope)
-                {
-                    Sender.Tell(string.Format("Unexpected envelope: {0}", message));
-                }
-                else
-                {
-                    Sender.Tell(Self);
-                }
-            }
-        }
-
-        public sealed class Msg : IConsistentHashable
-        {
-            public Msg(object consistentHashKey, string data)
-            {
-                ConsistentHashKey = consistentHashKey;
-                Data = data;
-            }
-
-            public string Data { get; private set; }
-
-            public object Key { get { return ConsistentHashKey; } }
-
-            public object ConsistentHashKey { get; private set; }
-        }
-
-        public sealed class MsgKey
-        {
-            public MsgKey(string name)
-            {
-                Name = name;
-            }
-
-            public string Name { get; private set; }
-        }
-
-        public sealed class Msg2
-        {
-            public Msg2(object key, string data)
-            {
-                Data = data;
-                Key = key;
-            }
-
-            public string Data { get; private set; }
-
-            public object Key { get; private set; }
-        }
-
-        #endregion
-
-        private readonly IActorRef _router1;
-        private readonly IActorRef _router3;
-        private IActorRef a, b, c;
-
-        public ConsistentHashingRouterSpec()
-            : base(@"
+    public ConsistentHashingRouterSpec()
+        : base(@"
             akka.actor.deployment {
               /router1 {
                 router = consistent-hashing-pool
@@ -103,128 +46,180 @@ namespace Akka.Tests.Routing
               }
             }
         ")
+    {
+        _router1 = Sys.ActorOf(Props.Create<Echo>().WithRouter(FromConfig.Instance), "router1");
+        a = Sys.ActorOf(Props.Create<Echo>(), "A");
+        b = Sys.ActorOf(Props.Create<Echo>(), "B");
+        c = Sys.ActorOf(Props.Create<Echo>(), "C");
+        _router3 = Sys.ActorOf(Props.Create<Echo>().WithRouter(FromConfig.Instance), "router3");
+    }
+
+    [Fact]
+    public async Task Consistent_hashing_pool_router_must_create_routees_from_configuration()
+    {
+        var currentRoutees = await _router1.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
+        currentRoutees.Members.Count().Should().Be(3);
+    }
+
+    [Fact]
+    public async Task Consistent_hashing_pool_router_must_select_destination_based_on_consistent_hash_key_of_message()
+    {
+        _router1.Tell(new Msg("a", "A"));
+        var destinationA = await ExpectMsgAsync<IActorRef>();
+        _router1.Tell(new ConsistentHashableEnvelope("AA", "a"));
+        await ExpectMsgAsync(destinationA);
+
+        _router1.Tell(new Msg(17, "A"));
+        var destinationB = await ExpectMsgAsync<IActorRef>();
+        _router1.Tell(new ConsistentHashableEnvelope("BB", 17));
+        await ExpectMsgAsync(destinationB);
+
+        _router1.Tell(new Msg(new MsgKey("c"), "C"));
+        var destinationC = await ExpectMsgAsync<IActorRef>();
+        _router1.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
+        await ExpectMsgAsync(destinationC);
+    }
+
+    [Fact]
+    public async Task Consistent_hashing_pool_router_must_select_destination_with_defined_hash_mapping()
+    {
+        ConsistentHashMapping hashMapping = msg =>
         {
-            _router1 = Sys.ActorOf(Props.Create<Echo>().WithRouter(FromConfig.Instance), "router1");
-            a = Sys.ActorOf(Props.Create<Echo>(), "A");
-            b = Sys.ActorOf(Props.Create<Echo>(), "B");
-            c = Sys.ActorOf(Props.Create<Echo>(), "C");
-            _router3 = Sys.ActorOf(Props.Create<Echo>().WithRouter(FromConfig.Instance), "router3");
-        }
-
-        [Fact]
-        public async Task Consistent_hashing_pool_router_must_create_routees_from_configuration()
-        {
-            var currentRoutees = await _router1.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
-            currentRoutees.Members.Count().Should().Be(3);
-        }
-
-        [Fact]
-        public async Task Consistent_hashing_pool_router_must_select_destination_based_on_consistent_hash_key_of_message()
-        {
-            _router1.Tell(new Msg("a", "A"));
-            var destinationA = await ExpectMsgAsync<IActorRef>();
-            _router1.Tell(new ConsistentHashableEnvelope("AA", "a"));
-            await ExpectMsgAsync(destinationA);
-
-            _router1.Tell(new Msg(17, "A"));
-            var destinationB = await ExpectMsgAsync<IActorRef>();
-            _router1.Tell(new ConsistentHashableEnvelope("BB", 17));
-            await ExpectMsgAsync(destinationB);
-
-            _router1.Tell(new Msg(new MsgKey("c"), "C"));
-            var destinationC = await ExpectMsgAsync<IActorRef>();
-            _router1.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
-            await ExpectMsgAsync(destinationC);
-        }
-
-        [Fact]
-        public async Task Consistent_hashing_pool_router_must_select_destination_with_defined_hash_mapping()
-        {
-            ConsistentHashMapping hashMapping = msg =>
+            if (msg is Msg2)
             {
-                if (msg is Msg2)
-                {
-                    var m2 = msg as Msg2;
-                    return m2.Key;
-                }
+                var m2 = msg as Msg2;
+                return m2.Key;
+            }
 
-                return null;
-            };
-            var router2 = Sys.ActorOf(new ConsistentHashingPool(1, hashMapping).Props(Props.Create<Echo>()), "router2");
+            return null;
+        };
+        var router2 = Sys.ActorOf(new ConsistentHashingPool(1, hashMapping).Props(Props.Create<Echo>()), "router2");
 
-            router2.Tell(new Msg2("a", "A"));
-            var destinationA = await ExpectMsgAsync<IActorRef>();
-            router2.Tell(new ConsistentHashableEnvelope("AA", "a"));
-            await ExpectMsgAsync(destinationA);
+        router2.Tell(new Msg2("a", "A"));
+        var destinationA = await ExpectMsgAsync<IActorRef>();
+        router2.Tell(new ConsistentHashableEnvelope("AA", "a"));
+        await ExpectMsgAsync(destinationA);
 
-            router2.Tell(new Msg2(17, "A"));
-            var destinationB = await ExpectMsgAsync<IActorRef>();
-            router2.Tell(new ConsistentHashableEnvelope("BB", 17));
-            await ExpectMsgAsync(destinationB);
+        router2.Tell(new Msg2(17, "A"));
+        var destinationB = await ExpectMsgAsync<IActorRef>();
+        router2.Tell(new ConsistentHashableEnvelope("BB", 17));
+        await ExpectMsgAsync(destinationB);
 
-            router2.Tell(new Msg2(new MsgKey("c"), "C"));
-            var destinationC = await ExpectMsgAsync<IActorRef>();
-            router2.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
-            await ExpectMsgAsync(destinationC);
-        }
+        router2.Tell(new Msg2(new MsgKey("c"), "C"));
+        var destinationC = await ExpectMsgAsync<IActorRef>();
+        router2.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
+        await ExpectMsgAsync(destinationC);
+    }
 
-        [Fact]
-        public async Task Consistent_hashing_group_router_must_create_routees_from_configuration()
+    [Fact]
+    public async Task Consistent_hashing_group_router_must_create_routees_from_configuration()
+    {
+        var currentRoutees = await _router3.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
+        currentRoutees.Members.Count().ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task Consistent_hashing_group_router_must_select_destination_based_on_consistent_hash_key_of_message()
+    {
+        _router3.Tell(new Msg("a", "A"));
+        var destinationA = await ExpectMsgAsync<IActorRef>();
+        _router3.Tell(new ConsistentHashableEnvelope("AA", "a"));
+        await ExpectMsgAsync(destinationA);
+
+        _router3.Tell(new Msg(17, "A"));
+        var destinationB = await ExpectMsgAsync<IActorRef>();
+        _router3.Tell(new ConsistentHashableEnvelope("BB", 17));
+        await ExpectMsgAsync(destinationB);
+
+        _router3.Tell(new Msg(new MsgKey("c"), "C"));
+        var destinationC = await ExpectMsgAsync<IActorRef>();
+        _router3.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
+        await ExpectMsgAsync(destinationC);
+    }
+
+    [Fact]
+    public async Task Consistent_hashing_group_router_must_select_destination_with_defined_hash_mapping()
+    {
+        ConsistentHashMapping hashMapping = msg =>
         {
-            var currentRoutees = await _router3.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
-            currentRoutees.Members.Count().ShouldBe(3);
-        }
-
-        [Fact]
-        public async Task Consistent_hashing_group_router_must_select_destination_based_on_consistent_hash_key_of_message()
-        {
-            _router3.Tell(new Msg("a", "A"));
-            var destinationA = await ExpectMsgAsync<IActorRef>();
-            _router3.Tell(new ConsistentHashableEnvelope("AA", "a"));
-            await ExpectMsgAsync(destinationA);
-
-            _router3.Tell(new Msg(17, "A"));
-            var destinationB = await ExpectMsgAsync<IActorRef>();
-            _router3.Tell(new ConsistentHashableEnvelope("BB", 17));
-            await ExpectMsgAsync(destinationB);
-
-            _router3.Tell(new Msg(new MsgKey("c"), "C"));
-            var destinationC = await ExpectMsgAsync<IActorRef>();
-            _router3.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
-            await ExpectMsgAsync(destinationC);
-        }
-
-        [Fact]
-        public async Task Consistent_hashing_group_router_must_select_destination_with_defined_hash_mapping()
-        {
-            ConsistentHashMapping hashMapping = msg =>
+            if (msg is Msg2)
             {
-                if (msg is Msg2)
-                {
-                    var m2 = msg as Msg2;
-                    return m2.Key;
-                }
+                var m2 = msg as Msg2;
+                return m2.Key;
+            }
 
-                return null;
-            };
+            return null;
+        };
 
-            var paths = new List<string> { c.Path.ToString() };
-            var router4 = Sys.ActorOf(new ConsistentHashingGroup(paths, hashMapping).Props(), "router4");
+        var paths = new List<string> { c.Path.ToString() };
+        var router4 = Sys.ActorOf(new ConsistentHashingGroup(paths, hashMapping).Props(), "router4");
 
-            router4.Tell(new Msg2("a", "A"));
-            var destinationA = await ExpectMsgAsync<IActorRef>();
-            router4.Tell(new ConsistentHashableEnvelope("AA", "a"));
-            await ExpectMsgAsync(destinationA);
+        router4.Tell(new Msg2("a", "A"));
+        var destinationA = await ExpectMsgAsync<IActorRef>();
+        router4.Tell(new ConsistentHashableEnvelope("AA", "a"));
+        await ExpectMsgAsync(destinationA);
 
-            router4.Tell(new Msg2(17, "A"));
-            var destinationB = await ExpectMsgAsync<IActorRef>();
-            router4.Tell(new ConsistentHashableEnvelope("BB", 17));
-            await ExpectMsgAsync(destinationB);
+        router4.Tell(new Msg2(17, "A"));
+        var destinationB = await ExpectMsgAsync<IActorRef>();
+        router4.Tell(new ConsistentHashableEnvelope("BB", 17));
+        await ExpectMsgAsync(destinationB);
 
-            router4.Tell(new Msg2(new MsgKey("c"), "C"));
-            var destinationC = await ExpectMsgAsync<IActorRef>();
-            router4.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
-            await ExpectMsgAsync(destinationC);
+        router4.Tell(new Msg2(new MsgKey("c"), "C"));
+        var destinationC = await ExpectMsgAsync<IActorRef>();
+        router4.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
+        await ExpectMsgAsync(destinationC);
+    }
+
+    #region Actors & Message Classes
+
+    public class Echo : UntypedActor
+    {
+        protected override void OnReceive(object message)
+        {
+            if (message is ConsistentHashableEnvelope)
+                Sender.Tell(string.Format("Unexpected envelope: {0}", message));
+            else
+                Sender.Tell(Self);
         }
     }
+
+    public sealed class Msg : IConsistentHashable
+    {
+        public Msg(object consistentHashKey, string data)
+        {
+            ConsistentHashKey = consistentHashKey;
+            Data = data;
+        }
+
+        public string Data { get; private set; }
+
+        public object Key => ConsistentHashKey;
+
+        public object ConsistentHashKey { get; }
+    }
+
+    public sealed class MsgKey
+    {
+        public MsgKey(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; private set; }
+    }
+
+    public sealed class Msg2
+    {
+        public Msg2(object key, string data)
+        {
+            Data = data;
+            Key = key;
+        }
+
+        public string Data { get; private set; }
+
+        public object Key { get; }
+    }
+
+    #endregion
 }

@@ -1,69 +1,93 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="RestartSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="RestartSettings.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 
-namespace Akka.Streams
+namespace Akka.Streams;
+
+public class RestartSettings
 {
-    public class RestartSettings
+    private RestartSettings(TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, int maxRestarts,
+        TimeSpan maxRestartsWithin)
     {
-        public TimeSpan MinBackoff { get; }
-        public TimeSpan MaxBackoff { get; }
-        public double RandomFactor { get; }
-        public int MaxRestarts { get; }
-        public TimeSpan MaxRestartsWithin { get; }
+        MinBackoff = minBackoff;
+        MaxBackoff = maxBackoff;
+        RandomFactor = randomFactor;
+        MaxRestarts = maxRestarts;
+        MaxRestartsWithin = maxRestartsWithin;
+    }
 
-        private RestartSettings(TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, int maxRestarts, TimeSpan maxRestartsWithin)
-        {
-            MinBackoff = minBackoff;
-            MaxBackoff = maxBackoff;
-            RandomFactor = randomFactor;
-            MaxRestarts = maxRestarts;
-            MaxRestartsWithin = maxRestartsWithin;
-        }
+    public TimeSpan MinBackoff { get; }
+    public TimeSpan MaxBackoff { get; }
+    public double RandomFactor { get; }
+    public int MaxRestarts { get; }
+    public TimeSpan MaxRestartsWithin { get; }
 
-        /// <summary>
-        /// Creates a new instance of <see cref="RestartSettings"/> class 
-        /// </summary>
-        /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
-        /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
-        /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
-        public static RestartSettings Create(TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor) =>
-            new(minBackoff, maxBackoff, randomFactor, int.MaxValue, minBackoff);
+    /// <summary>
+    ///     Creates a new instance of <see cref="RestartSettings" /> class
+    /// </summary>
+    /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
+    /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
+    /// <param name="randomFactor">
+    ///     After calculation of the exponential back-off an additional random delay based on this
+    ///     factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.
+    /// </param>
+    public static RestartSettings Create(TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor)
+    {
+        return new RestartSettings(minBackoff, maxBackoff, randomFactor, int.MaxValue, minBackoff);
+    }
 
-        /// <summary>
-        /// Minimum (initial) duration until the child actor will started again, if it is terminated
-        /// </summary>
-        public RestartSettings WithMinBackoff(TimeSpan value) => Copy(minBackoff: value);
+    /// <summary>
+    ///     Minimum (initial) duration until the child actor will started again, if it is terminated
+    /// </summary>
+    public RestartSettings WithMinBackoff(TimeSpan value)
+    {
+        return Copy(value);
+    }
 
-        /// <summary>
-        /// The exponential back-off is capped to this duration
-        /// </summary>
-        public RestartSettings WithMaxBackoff(TimeSpan value) => Copy(maxBackoff: value);
+    /// <summary>
+    ///     The exponential back-off is capped to this duration
+    /// </summary>
+    public RestartSettings WithMaxBackoff(TimeSpan value)
+    {
+        return Copy(maxBackoff: value);
+    }
 
-        /// <summary>
-        /// After calculation of the exponential back-off an additional random delay based on this factor is added
-        /// * e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`
-        /// </summary>
-        public RestartSettings WithRandomFactor(double value) => Copy(randomFactor: value);
+    /// <summary>
+    ///     After calculation of the exponential back-off an additional random delay based on this factor is added
+    ///     * e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`
+    /// </summary>
+    public RestartSettings WithRandomFactor(double value)
+    {
+        return Copy(randomFactor: value);
+    }
 
-        /// <summary>
-        /// The amount of restarts is capped to `count` within a timeframe of `within`
-        /// </summary>
-        public RestartSettings WithMaxRestarts(int count, TimeSpan within) => Copy(maxRestarts: count, maxRestartsWithin: within);
+    /// <summary>
+    ///     The amount of restarts is capped to `count` within a timeframe of `within`
+    /// </summary>
+    public RestartSettings WithMaxRestarts(int count, TimeSpan within)
+    {
+        return Copy(maxRestarts: count, maxRestartsWithin: within);
+    }
 
-        public override string ToString() => $"RestartSettings(" +
-            $"minBackoff={MinBackoff}," +
-            $"maxBackoff={MaxBackoff}," +
-            $"randomFactor={RandomFactor}," +
-            $"maxRestarts={MaxRestarts}," +
-            $"maxRestartsWithin={MaxRestartsWithin})";
+    public override string ToString()
+    {
+        return $"RestartSettings(" +
+               $"minBackoff={MinBackoff}," +
+               $"maxBackoff={MaxBackoff}," +
+               $"randomFactor={RandomFactor}," +
+               $"maxRestarts={MaxRestarts}," +
+               $"maxRestartsWithin={MaxRestartsWithin})";
+    }
 
-        private RestartSettings Copy(TimeSpan? minBackoff = null, TimeSpan? maxBackoff = null, double? randomFactor = null, int? maxRestarts = null, TimeSpan? maxRestartsWithin = null) =>
-            new(minBackoff ?? MinBackoff, maxBackoff ?? MaxBackoff, randomFactor ?? RandomFactor, maxRestarts ?? MaxRestarts, maxRestartsWithin ?? MaxRestartsWithin);
+    private RestartSettings Copy(TimeSpan? minBackoff = null, TimeSpan? maxBackoff = null, double? randomFactor = null,
+        int? maxRestarts = null, TimeSpan? maxRestartsWithin = null)
+    {
+        return new RestartSettings(minBackoff ?? MinBackoff, maxBackoff ?? MaxBackoff, randomFactor ?? RandomFactor,
+            maxRestarts ?? MaxRestarts, maxRestartsWithin ?? MaxRestartsWithin);
     }
 }

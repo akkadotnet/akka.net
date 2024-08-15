@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ActorSelectionSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ActorSelectionSpecs.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Threading;
@@ -11,125 +11,140 @@ using Akka.Actor;
 using Akka.Util.Internal;
 using NBench;
 
-namespace Akka.Tests.Performance.Actor
+namespace Akka.Tests.Performance.Actor;
+
+/// <summary>
+///     Specs for benchmarking <see cref="ActorSelection" /> instances
+/// </summary>
+public class ActorSelectionSpecs
 {
-    /// <summary>
-    /// Specs for benchmarking <see cref="ActorSelection"/> instances
-    /// </summary>
-    public class ActorSelectionSpecs
+    private const string ActorSelectionCounterName = "ActorSelectionOperationCompleted";
+    private const long NumberOfMessages = 10000L;
+
+    private static readonly AtomicCounter Counter = new(0);
+
+    private readonly ManualResetEventSlim _resetEvent = new(false);
+    private Props _oneMessageBenchmarkProps;
+    private IActorRef _receiver;
+    private ActorPath _receiverActorPath;
+
+    private Counter _selectionOpCounter;
+    protected ActorSystem System;
+
+    [PerfSetup]
+    public void Setup(BenchmarkContext context)
     {
-        private const string ActorSelectionCounterName = "ActorSelectionOperationCompleted";
-        private const long NumberOfMessages = 10000L;
+        _selectionOpCounter = context.GetCounter(ActorSelectionCounterName);
+        System = ActorSystem.Create("MailboxThroughputSpecBase" + Counter.GetAndIncrement());
+        _receiver = System.ActorOf(Props.Create(() =>
+            new BenchmarkActor(_selectionOpCounter, NumberOfMessages, _resetEvent)));
+        _receiverActorPath = _receiver.Path;
+        _oneMessageBenchmarkProps = Props.Create(() => new BenchmarkActor(_selectionOpCounter, 1, _resetEvent));
+    }
 
-        private Counter _selectionOpCounter;
-        private IActorRef _receiver;
-        private ActorPath _receiverActorPath;
+    [PerfBenchmark(Description = "Tests the message delivery throughput of NEW ActorSelections to NEW actors",
+        NumberOfIterations = 13, RunMode = RunMode.Throughput, RunTimeMilliseconds = 1000,
+        TestMode = TestMode.Measurement)]
+    [CounterMeasurement(ActorSelectionCounterName)]
+    [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
+    public void New_ActorSelection_on_new_actor_throughput(BenchmarkContext context)
+    {
+        var actorRef = System.ActorOf(_oneMessageBenchmarkProps); // create a new actor every time
+        System.ActorSelection(actorRef.Path).Tell("foo"); // send that actor a message via selection
+        _resetEvent.Wait();
+        _resetEvent.Reset();
+    }
 
-        private static readonly AtomicCounter Counter = new(0);
-        protected ActorSystem System;
-
-        private readonly ManualResetEventSlim _resetEvent = new(false);
-        private Props _oneMessageBenchmarkProps;
-
-        private class BenchmarkActor : UntypedActor
+    [PerfBenchmark(
+        Description = "Tests the message delivery throughput of REUSABLE ActorSelections to PRE-EXISTING actors",
+        NumberOfIterations = 13, RunMode = RunMode.Iterations, TestMode = TestMode.Measurement)]
+    [CounterMeasurement(ActorSelectionCounterName)]
+    [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
+    public void Reused_ActorSelection_on_pre_existing_actor_throughput(BenchmarkContext context)
+    {
+        var actorSelection = System.ActorSelection(_receiverActorPath);
+        for (var i = 0; i < NumberOfMessages;)
         {
-            private readonly Counter _counter;
-            private readonly long _maxExpectedMessages;
-            private long _currentMessages = 0;
-            private readonly ManualResetEventSlim _resetEvent;
-
-            public BenchmarkActor(Counter counter, long maxExpectedMessages, ManualResetEventSlim resetEvent)
-            {
-                _counter = counter;
-                _maxExpectedMessages = maxExpectedMessages;
-                _resetEvent = resetEvent;
-            }
-
-            protected override void OnReceive(object message)
-            {
-                _counter.Increment();
-                if (++_currentMessages == _maxExpectedMessages)
-                    _resetEvent.Set();
-            }
+            actorSelection.Tell("foo");
+            ++i;
         }
 
-        [PerfSetup]
-        public void Setup(BenchmarkContext context)
+        _resetEvent.Wait();
+    }
+
+    [PerfBenchmark(
+        Description =
+            "Tests the message delivery throughput of NEW ActorSelections to PRE-EXISTING actors. This is really a stress test.",
+        NumberOfIterations = 13, RunMode = RunMode.Iterations, TestMode = TestMode.Measurement)]
+    [CounterMeasurement(ActorSelectionCounterName)]
+    [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
+    public void New_ActorSelection_on_pre_existing_actor_throughput(BenchmarkContext context)
+    {
+        for (var i = 0; i < NumberOfMessages;)
         {
-            _selectionOpCounter = context.GetCounter(ActorSelectionCounterName);
-            System = ActorSystem.Create("MailboxThroughputSpecBase" + Counter.GetAndIncrement());
-            _receiver = System.ActorOf(Props.Create(() => new BenchmarkActor(_selectionOpCounter, NumberOfMessages, _resetEvent)));
-            _receiverActorPath = _receiver.Path;
-            _oneMessageBenchmarkProps = Props.Create(() => new BenchmarkActor(_selectionOpCounter, 1, _resetEvent));
+            System.ActorSelection(_receiverActorPath).Tell("foo");
+            ++i;
         }
 
-        [PerfBenchmark(Description = "Tests the message delivery throughput of NEW ActorSelections to NEW actors", 
-            NumberOfIterations = 13, RunMode = RunMode.Throughput, RunTimeMilliseconds = 1000, TestMode = TestMode.Measurement)]
-        [CounterMeasurement(ActorSelectionCounterName)]
-        [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
-        public void New_ActorSelection_on_new_actor_throughput(BenchmarkContext context)
+        _resetEvent.Wait();
+    }
+
+    [PerfBenchmark(
+        Description = "Tests the throughput of resolving an ActorSelection on a pre-existing actor via ResolveOne",
+        NumberOfIterations = 13, RunMode = RunMode.Throughput, RunTimeMilliseconds = 1000,
+        TestMode = TestMode.Measurement)]
+    [CounterMeasurement(ActorSelectionCounterName)]
+    [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
+    public void ActorSelection_ResolveOne_throughput(BenchmarkContext context)
+    {
+        var actorRef =
+            System.ActorSelection(_receiverActorPath).ResolveOne(TimeSpan.FromSeconds(2))
+                .Result; // send that actor a message via selection
+        _selectionOpCounter.Increment();
+    }
+
+    [PerfBenchmark(
+        Description =
+            "Continuously creates actors and attempts to resolve them immediately. Used to surface race conditions.",
+        NumberOfIterations = 13, RunMode = RunMode.Throughput, RunTimeMilliseconds = 1000,
+        TestMode = TestMode.Measurement)]
+    [CounterMeasurement(ActorSelectionCounterName)]
+    [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
+    public void ActorSelection_ResolveOne_stress_test(BenchmarkContext context)
+    {
+        var actorRef = System.ActorOf(_oneMessageBenchmarkProps); // create a new actor every time
+        var actorRef2 =
+            System.ActorSelection(actorRef.Path).ResolveOne(TimeSpan.FromSeconds(2))
+                .Result; // send that actor a message via selection
+        _selectionOpCounter.Increment();
+    }
+
+    [PerfCleanup]
+    public void Cleanup()
+    {
+        System.Terminate().Wait();
+        _resetEvent.Dispose();
+    }
+
+    private class BenchmarkActor : UntypedActor
+    {
+        private readonly Counter _counter;
+        private readonly long _maxExpectedMessages;
+        private readonly ManualResetEventSlim _resetEvent;
+        private long _currentMessages;
+
+        public BenchmarkActor(Counter counter, long maxExpectedMessages, ManualResetEventSlim resetEvent)
         {
-            var actorRef = System.ActorOf(_oneMessageBenchmarkProps); // create a new actor every time
-            System.ActorSelection(actorRef.Path).Tell("foo"); // send that actor a message via selection
-            _resetEvent.Wait();
-            _resetEvent.Reset();
+            _counter = counter;
+            _maxExpectedMessages = maxExpectedMessages;
+            _resetEvent = resetEvent;
         }
 
-        [PerfBenchmark(Description = "Tests the message delivery throughput of REUSABLE ActorSelections to PRE-EXISTING actors",
-            NumberOfIterations = 13, RunMode = RunMode.Iterations, TestMode = TestMode.Measurement)]
-        [CounterMeasurement(ActorSelectionCounterName)]
-        [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
-        public void Reused_ActorSelection_on_pre_existing_actor_throughput(BenchmarkContext context)
+        protected override void OnReceive(object message)
         {
-            var actorSelection = System.ActorSelection(_receiverActorPath);
-            for (var i = 0; i < NumberOfMessages;)
-            {
-                actorSelection.Tell("foo");
-                ++i;
-            }
-            _resetEvent.Wait();
-        }
-
-        [PerfBenchmark(Description = "Tests the message delivery throughput of NEW ActorSelections to PRE-EXISTING actors. This is really a stress test.",
-            NumberOfIterations = 13, RunMode = RunMode.Iterations, TestMode = TestMode.Measurement)]
-        [CounterMeasurement(ActorSelectionCounterName)]
-        [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
-        public void New_ActorSelection_on_pre_existing_actor_throughput(BenchmarkContext context)
-        {
-            for (var i = 0; i < NumberOfMessages;)
-            {
-                System.ActorSelection(_receiverActorPath).Tell("foo");
-                ++i;
-            }
-            _resetEvent.Wait();
-        }
-
-        [PerfBenchmark(Description = "Tests the throughput of resolving an ActorSelection on a pre-existing actor via ResolveOne",
-            NumberOfIterations = 13, RunMode = RunMode.Throughput, RunTimeMilliseconds = 1000, TestMode = TestMode.Measurement)]
-        [CounterMeasurement(ActorSelectionCounterName)]
-        [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
-        public void ActorSelection_ResolveOne_throughput(BenchmarkContext context)
-        {
-            var actorRef= System.ActorSelection(_receiverActorPath).ResolveOne(TimeSpan.FromSeconds(2)).Result; // send that actor a message via selection
-            _selectionOpCounter.Increment();
-        }
-
-        [PerfBenchmark(Description = "Continuously creates actors and attempts to resolve them immediately. Used to surface race conditions.",
-            NumberOfIterations = 13, RunMode = RunMode.Throughput, RunTimeMilliseconds = 1000, TestMode = TestMode.Measurement)]
-        [CounterMeasurement(ActorSelectionCounterName)]
-        [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
-        public void ActorSelection_ResolveOne_stress_test(BenchmarkContext context)
-        {
-            var actorRef = System.ActorOf(_oneMessageBenchmarkProps); // create a new actor every time
-            var actorRef2 = System.ActorSelection(actorRef.Path).ResolveOne(TimeSpan.FromSeconds(2)).Result; // send that actor a message via selection
-            _selectionOpCounter.Increment();
-        }
-
-        [PerfCleanup]
-        public void Cleanup()
-        {
-            System.Terminate().Wait();
-            _resetEvent.Dispose();
+            _counter.Increment();
+            if (++_currentMessages == _maxExpectedMessages)
+                _resetEvent.Set();
         }
     }
 }

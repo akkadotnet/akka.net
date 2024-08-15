@@ -1,30 +1,32 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ActorSystemSetupSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ActorSystemSetupSpecs.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Xunit;
 
-namespace Akka.TestKit.Tests
+namespace Akka.TestKit.Tests;
+
+/// <summary>
+///     Validate that an <see cref="ActorSystem" /> inside the testkit
+///     can be configured using an <see cref="ActorSystemSetup" /> instance.
+/// </summary>
+public class ActorSystemSetupSpecs : AkkaSpec
 {
-    /// <summary>
-    /// Validate that an <see cref="ActorSystem"/> inside the testkit
-    /// can be configured using an <see cref="ActorSystemSetup"/> instance.
-    /// </summary>
-    public class ActorSystemSetupSpecs : AkkaSpec
+    public static readonly ActorSystemSetup Setup = ActorSystemSetup.Create()
+        .WithSetup(BootstrapSetup.Create().WithConfig(@"akka.hi = true"));
+
+    public ActorSystemSetupSpecs() : base(Setup)
     {
-        public static readonly ActorSystemSetup Setup = ActorSystemSetup.Create().WithSetup(BootstrapSetup.Create().WithConfig(@"akka.hi = true"));
+    }
 
-        public ActorSystemSetupSpecs() : base(Setup) { }
-
-        [Fact]
-        public void ShouldReadConfigFromActorSystemSetup()
-        {
-            Assert.True(Sys.Settings.Config.HasPath("akka.hi"));
-        }
+    [Fact]
+    public void ShouldReadConfigFromActorSystemSetup()
+    {
+        Assert.True(Sys.Settings.Config.HasPath("akka.hi"));
     }
 }

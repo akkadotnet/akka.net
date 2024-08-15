@@ -1,246 +1,246 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="UdpListenerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="UdpListenerSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using UdpListener = Akka.IO.UdpListener;
-using FluentAssertions;
-using System.Threading.Tasks;
 
-namespace Akka.Tests.IO
+namespace Akka.Tests.IO;
+
+public class UdpListenerSpec : AkkaSpec
 {
-    public class UdpListenerSpec : AkkaSpec
-    {
-        public UdpListenerSpec(ITestOutputHelper output)
-            : base(@"
+    public UdpListenerSpec(ITestOutputHelper output)
+        : base(@"
                     akka.actor.serialize-creators = on
                     akka.actor.serialize-messages = on
                     akka.io.udp.max-channels = unlimited
                     akka.io.udp.nr-of-selectors = 1
                     akka.io.udp.direct-buffer-pool-limit = 100
                     akka.io.udp.direct-buffer-size = 1024", output)
-        { }
+    {
+    }
 
-        [Fact]
-        public async Task UDP_should_return_IPv4_endpoint_if_bound_using_IPv4_address()
+    [Fact]
+    public async Task UDP_should_return_IPv4_endpoint_if_bound_using_IPv4_address()
+    {
+        var probe = CreateTestProbe();
+        try
         {
-            var probe = CreateTestProbe();
-            try
+            var endpoint = new IPEndPoint(IPAddress.Loopback, 12345);
+            var handler = Sys.ActorOf(Props.Create(() => new MockUdpHandler()));
+            Sys.Udp().Tell(new Udp.Bind(handler, endpoint), probe.Ref);
+            var bound = await probe.ExpectMsgAsync<Udp.Bound>();
+
+            bound.LocalAddress.Should().BeOfType<IPEndPoint>();
+            var boundEndpoint = (IPEndPoint)bound.LocalAddress;
+            boundEndpoint.AddressFamily.Should().Be(AddressFamily.InterNetwork);
+            boundEndpoint.Address.IsIPv4MappedToIPv6.Should().BeFalse();
+            boundEndpoint.Address.Should().Be(IPAddress.Loopback);
+        }
+        finally
+        {
+            if (probe.LastSender != null && !ReferenceEquals(probe.LastSender, Nobody.Instance))
+                probe.Reply(Udp.Unbind.Instance);
+        }
+    }
+
+    [Fact]
+    public async Task UDP_should_return_IPv6_endpoint_if_bound_using_IPv6_address()
+    {
+        var probe = CreateTestProbe();
+        try
+        {
+            var endpoint = new IPEndPoint(IPAddress.IPv6Loopback, 12345);
+            var handler = Sys.ActorOf(Props.Create(() => new MockUdpHandler()));
+            Sys.Udp().Tell(new Udp.Bind(handler, endpoint), probe.Ref);
+            var bound = await probe.ExpectMsgAsync<Udp.Bound>();
+
+            bound.LocalAddress.Should().BeOfType<IPEndPoint>();
+            var boundEndpoint = (IPEndPoint)bound.LocalAddress;
+            boundEndpoint.AddressFamily.Should().Be(AddressFamily.InterNetworkV6);
+            boundEndpoint.Address.IsIPv4MappedToIPv6.Should().BeFalse();
+            boundEndpoint.Address.Should().Be(IPAddress.IPv6Loopback);
+        }
+        finally
+        {
+            if (probe.LastSender != null && !ReferenceEquals(probe.LastSender, Nobody.Instance))
+                probe.Reply(Udp.Unbind.Instance);
+        }
+    }
+
+    [Fact]
+    public async Task A_UDP_Listener_must_let_the_bind_commander_know_when_binding_is_complete()
+    {
+        await new TestSetup(this).RunAsync(async x => { await x.BindCommander.ExpectMsgAsync<Udp.Bound>(); });
+    }
+
+    [Fact]
+    public async Task A_UDP_Listener_must_forward_incoming_packets_to_handler_actor()
+    {
+        const string dgram = "Fly little packet!";
+        await new TestSetup(this).RunAsync(async x =>
+        {
+            await x.BindCommander.ExpectMsgAsync<Udp.Bound>();
+            x.SendDataToLocal(Encoding.UTF8.GetBytes(dgram));
+            await x.Handler.ExpectMsgAsync<Udp.Received>(_ =>
+                Assert.Equal(dgram, Encoding.UTF8.GetString(_.Data.ToArray())));
+            x.SendDataToLocal(Encoding.UTF8.GetBytes(dgram));
+            await x.Handler.ExpectMsgAsync<Udp.Received>(_ =>
+                Assert.Equal(dgram, Encoding.UTF8.GetString(_.Data.ToArray())));
+        });
+    }
+
+    [Fact]
+    public async Task A_UDP_Listener_must_be_able_to_send_and_receive_when_server_goes_away()
+    {
+        await new TestSetup(this).RunAsync(async x =>
+        {
+            await x.BindCommander.ExpectMsgAsync<Udp.Bound>();
+
+            // Receive UDP messages from a sender
+            const string requestMessage = "This is my last request!";
+            var notExistingEndPoint = x.SendDataToLocal(Encoding.UTF8.GetBytes(requestMessage));
+            await x.Handler.ExpectMsgAsync<Udp.Received>(_ =>
             {
-                var endpoint = new IPEndPoint(IPAddress.Loopback, 12345);
-                var handler = Sys.ActorOf(Props.Create(() => new MockUdpHandler()));
-                Sys.Udp().Tell(new Udp.Bind(handler, endpoint), probe.Ref);
-                var bound = await probe.ExpectMsgAsync<Udp.Bound>();
-                
-                bound.LocalAddress.Should().BeOfType<IPEndPoint>();
-                var boundEndpoint = (IPEndPoint)bound.LocalAddress;
-                boundEndpoint.AddressFamily.Should().Be(AddressFamily.InterNetwork);
-                boundEndpoint.Address.IsIPv4MappedToIPv6.Should().BeFalse();
-                boundEndpoint.Address.Should().Be(IPAddress.Loopback);
-            }
-            finally
+                Assert.Equal(requestMessage, Encoding.UTF8.GetString(_.Data.ToArray()));
+            });
+
+            // Try to reply to this sender which DOES NOT EXIST any more
+            // Important: The UDP port of the reply must match the listing UDP port!
+            // This UDP port will also be used for ICMP error reporting.
+            // Hint: On Linux the listener port cannot be reused. We are using the udp actor to respond.
+            var localSender = x.Listener;
+            const string response = "Are you still alive?"; // he is not
+            localSender.Tell(Udp.Send.Create(ByteString.FromBytes(Encoding.UTF8.GetBytes(response)),
+                notExistingEndPoint));
+
+            // Now an ICMP error message "port unreachable" (SocketError.ConnectionReset) is sent to our UDP server port
+            await x.Handler.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+
+            const string followUpMessage = "Back online!";
+            x.SendDataToLocal(Encoding.UTF8.GetBytes(followUpMessage));
+            await x.Handler.ExpectMsgAsync<Udp.Received>(_ =>
+                Assert.Equal(followUpMessage, Encoding.UTF8.GetString(_.Data.ToArray())));
+        });
+    }
+
+    private class MockUdpHandler : ReceiveActor
+    {
+        public MockUdpHandler()
+        {
+            Receive<Udp.Received>(_ =>
             {
-                if(probe.LastSender != null && !ReferenceEquals(probe.LastSender, Nobody.Instance))
-                    probe.Reply(Udp.Unbind.Instance);
+                // Empty handler
+            });
+        }
+    }
+
+    private class TestSetup
+    {
+        private readonly TestKitBase _kit;
+        private readonly TestProbe _parent;
+        private readonly TestActorRef<ListenerParent> _parentRef;
+        private Socket _socket;
+
+        public TestSetup(TestKitBase kit)
+        {
+            _kit = kit;
+            Handler = kit.CreateTestProbe();
+            BindCommander = kit.CreateTestProbe();
+            _parent = kit.CreateTestProbe();
+            _parentRef = new TestActorRef<ListenerParent>(kit.Sys, Props.Create(() => new ListenerParent(this)));
+        }
+
+        public IActorRef Listener => _parentRef.UnderlyingActor.Listener;
+
+        public TestProbe BindCommander { get; }
+
+        public TestProbe Handler { get; }
+
+        public IPEndPoint LocalEndPoint =>
+            (IPEndPoint)_socket?.LocalEndPoint ?? throw new Exception("Socket not bound");
+
+        public void Run(Action<TestSetup> test)
+        {
+            test(this);
+        }
+
+        public async Task RunAsync(Func<TestSetup, Task> test)
+        {
+            await test(this);
+        }
+
+        public async Task BindListener()
+        {
+            await BindCommander.ExpectMsgAsync<Udp.Bound>();
+        }
+
+        public IPEndPoint SendDataToLocal(byte[] buffer)
+        {
+            return SendDataToEndpoint(buffer, LocalEndPoint);
+        }
+
+        public IPEndPoint SendDataToEndpoint(byte[] buffer, IPEndPoint receiverEndpoint)
+        {
+            using (var udpClient = new UdpClient(0))
+            {
+                udpClient.Connect(receiverEndpoint);
+                udpClient.Send(buffer, buffer.Length);
+
+                return (IPEndPoint)udpClient.Client.LocalEndPoint;
             }
         }
-        
-        [Fact]
-        public async Task UDP_should_return_IPv6_endpoint_if_bound_using_IPv6_address()
+
+        internal void AfterBind(Socket socket)
         {
-            var probe = CreateTestProbe();
-            try
-            {
-                var endpoint = new IPEndPoint(IPAddress.IPv6Loopback, 12345);
-                var handler = Sys.ActorOf(Props.Create(() => new MockUdpHandler()));
-                Sys.Udp().Tell(new Udp.Bind(handler, endpoint), probe.Ref);
-                var bound = await probe.ExpectMsgAsync<Udp.Bound>();
-                
-                bound.LocalAddress.Should().BeOfType<IPEndPoint>();
-                var boundEndpoint = (IPEndPoint)bound.LocalAddress;
-                boundEndpoint.AddressFamily.Should().Be(AddressFamily.InterNetworkV6);
-                boundEndpoint.Address.IsIPv4MappedToIPv6.Should().BeFalse();
-                boundEndpoint.Address.Should().Be(IPAddress.IPv6Loopback);
-            }
-            finally
-            {
-                if(probe.LastSender != null && !ReferenceEquals(probe.LastSender, Nobody.Instance))
-                    probe.Reply(Udp.Unbind.Instance);
-            }
-        }        
-        
-        [Fact]
-        public async Task A_UDP_Listener_must_let_the_bind_commander_know_when_binding_is_complete()
-        {
-            await new TestSetup(this).RunAsync(async x =>
-            {
-                await x.BindCommander.ExpectMsgAsync<Udp.Bound>();
-            });           
+            _socket = socket;
         }
 
-        [Fact]
-        public async Task A_UDP_Listener_must_forward_incoming_packets_to_handler_actor()
+        private class ListenerParent : ActorBase
         {
-            const string dgram = "Fly little packet!";
-            await new TestSetup(this).RunAsync(async x =>
+            private readonly TestSetup _test;
+
+            public ListenerParent(TestSetup test)
             {
-                await x.BindCommander.ExpectMsgAsync<Udp.Bound>();
-                x.SendDataToLocal(Encoding.UTF8.GetBytes(dgram));
-                await x.Handler.ExpectMsgAsync<Udp.Received>(_ => Assert.Equal(dgram, Encoding.UTF8.GetString(_.Data.ToArray())));
-                x.SendDataToLocal(Encoding.UTF8.GetBytes(dgram));
-                await x.Handler.ExpectMsgAsync<Udp.Received>(_ => Assert.Equal(dgram, Encoding.UTF8.GetString(_.Data.ToArray())));
-            });           
-        }
-        
-        [Fact]
-        public async Task A_UDP_Listener_must_be_able_to_send_and_receive_when_server_goes_away()
-        {
-            await new TestSetup(this).RunAsync(async x =>
-            {
-               await  x.BindCommander.ExpectMsgAsync<Udp.Bound>();
-                
-                // Receive UDP messages from a sender
-                const string requestMessage = "This is my last request!";
-                var notExistingEndPoint = x.SendDataToLocal(Encoding.UTF8.GetBytes(requestMessage));
-                await x.Handler.ExpectMsgAsync<Udp.Received>(_ =>
-                {
-                    Assert.Equal(requestMessage, Encoding.UTF8.GetString(_.Data.ToArray()));
-                });
+                _test = test;
 
-                // Try to reply to this sender which DOES NOT EXIST any more
-                // Important: The UDP port of the reply must match the listing UDP port!
-                // This UDP port will also be used for ICMP error reporting.
-                // Hint: On Linux the listener port cannot be reused. We are using the udp actor to respond.
-                IActorRef localSender = x.Listener;
-                const string response = "Are you still alive?"; // he is not
-                localSender.Tell(Udp.Send.Create(ByteString.FromBytes(Encoding.UTF8.GetBytes(response)), notExistingEndPoint));
-
-                // Now an ICMP error message "port unreachable" (SocketError.ConnectionReset) is sent to our UDP server port
-                await x.Handler.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
-
-                const string followUpMessage = "Back online!";
-                x.SendDataToLocal(Encoding.UTF8.GetBytes(followUpMessage));
-                await x.Handler.ExpectMsgAsync<Udp.Received>(_ => Assert.Equal(followUpMessage, Encoding.UTF8.GetString(_.Data.ToArray())));
-            });         
-        }
-
-        class MockUdpHandler : ReceiveActor
-        {
-            public MockUdpHandler()
-            {
-                Receive<Udp.Received>(_ =>
-                {
-                    // Empty handler
-                });
-            }
-        }
-        
-        class TestSetup
-        {
-            private readonly TestKitBase _kit;
-
-            private readonly TestProbe _handler;
-            private readonly TestProbe _bindCommander;
-            private readonly TestProbe _parent;
-            private readonly TestActorRef<ListenerParent> _parentRef;
-            private Socket _socket;
-            
-            public TestSetup(TestKitBase kit)
-            {
-                _kit = kit;
-                _handler = kit.CreateTestProbe();
-                _bindCommander = kit.CreateTestProbe();
-                _parent = kit.CreateTestProbe();
-                _parentRef = new TestActorRef<ListenerParent>(kit.Sys, Props.Create(() => new ListenerParent(this)));
-            }
-
-            public void Run(Action<TestSetup> test)
-            {
-                test(this);
-            }
-            public async Task RunAsync(Func<TestSetup, Task> test)
-            {
-                await test(this);
-            }
-            public async Task BindListener()
-            {
-                await _bindCommander.ExpectMsgAsync<Udp.Bound>();
-            }
-
-            public IPEndPoint SendDataToLocal(byte[] buffer)
-            {
-                return SendDataToEndpoint(buffer, LocalEndPoint);
-            }
-
-            public IPEndPoint SendDataToEndpoint(byte[] buffer, IPEndPoint receiverEndpoint)
-            {
-                using (var udpClient = new UdpClient(0))
-                {
-                    udpClient.Connect(receiverEndpoint);
-                    udpClient.Send(buffer, buffer.Length);
-
-                    return (IPEndPoint)udpClient.Client.LocalEndPoint;
-                }
-            }
-            
-            public IActorRef Listener { get { return _parentRef.UnderlyingActor.Listener; } }
-            
-            public TestProbe BindCommander { get { return _bindCommander; } }
-
-            public TestProbe Handler { get { return _handler; } }
-
-            public IPEndPoint LocalEndPoint => (IPEndPoint)_socket?.LocalEndPoint ?? throw new Exception("Socket not bound");
-
-            internal void AfterBind(Socket socket)
-            {
-                _socket = socket;
-            }
-
-            class ListenerParent : ActorBase
-            {
-                private readonly TestSetup _test;
-                private readonly IActorRef _listener;
-                public ListenerParent(TestSetup test)
-                {
-                    _test = test;
-
-                    _listener = Context.ActorOf(Props.Create(() =>
+                Listener = Context.ActorOf(Props.Create(() =>
                         new UdpListener(
                             Udp.Instance.Apply(Context.System),
-                            test._bindCommander.Ref,
+                            test.BindCommander.Ref,
                             new Udp.Bind(
-                                _test._handler.Ref, 
-                                new IPEndPoint(IPAddress.Loopback, 0), 
-                                new Inet.SocketOption[]{ new TestSocketOption(socket => _test.AfterBind(socket)) })))
-                        .WithDeploy(Deploy.Local));
-                    
-                    _test._parent.Watch(_listener);
-                }
+                                _test.Handler.Ref,
+                                new IPEndPoint(IPAddress.Loopback, 0),
+                                new Inet.SocketOption[] { new TestSocketOption(socket => _test.AfterBind(socket)) })))
+                    .WithDeploy(Deploy.Local));
 
-                internal IActorRef Listener { get { return _listener; } }
+                _test._parent.Watch(Listener);
+            }
 
-                protected override bool Receive(object message)
-                {
-                    _test._parent.Forward(message);
-                    return true;
-                }
+            internal IActorRef Listener { get; }
 
-                protected override SupervisorStrategy SupervisorStrategy()
-                {
-                    return Akka.Actor.SupervisorStrategy.StoppingStrategy;
-                }
+            protected override bool Receive(object message)
+            {
+                _test._parent.Forward(message);
+                return true;
+            }
 
+            protected override SupervisorStrategy SupervisorStrategy()
+            {
+                return Akka.Actor.SupervisorStrategy.StoppingStrategy;
             }
         }
     }

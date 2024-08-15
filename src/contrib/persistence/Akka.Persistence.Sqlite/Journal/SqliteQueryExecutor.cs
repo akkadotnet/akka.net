@@ -1,34 +1,35 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SqliteQueryExecutor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SqliteQueryExecutor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Data.Common;
-using Microsoft.Data.Sqlite;
 using Akka.Persistence.Sql.Common.Journal;
+using Microsoft.Data.Sqlite;
 
-namespace Akka.Persistence.Sqlite.Journal
+namespace Akka.Persistence.Sqlite.Journal;
+
+/// <summary>
+///     TBD
+/// </summary>
+internal class SqliteQueryExecutor : AbstractQueryExecutor
 {
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    internal class SqliteQueryExecutor : AbstractQueryExecutor
+    /// <param name="configuration">TBD</param>
+    /// <param name="serialization">TBD</param>
+    /// <param name="timestampProvider">TBD</param>
+    public SqliteQueryExecutor(QueryConfiguration configuration, Akka.Serialization.Serialization serialization,
+        ITimestampProvider timestampProvider)
+        : base(configuration, serialization, timestampProvider)
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="configuration">TBD</param>
-        /// <param name="serialization">TBD</param>
-        /// <param name="timestampProvider">TBD</param>
-        public SqliteQueryExecutor(QueryConfiguration configuration, Akka.Serialization.Serialization serialization, ITimestampProvider timestampProvider) 
-            : base(configuration, serialization, timestampProvider)
-        {
-            ByTagSql = base.ByTagSql + " LIMIT @Take";
-            AllEventsSql = base.AllEventsSql + " LIMIT @Take";
+        ByTagSql = base.ByTagSql + " LIMIT @Take";
+        AllEventsSql = base.AllEventsSql + " LIMIT @Take";
 
-            CreateEventsJournalSql = $@"
+        CreateEventsJournalSql = $@"
                 CREATE TABLE IF NOT EXISTS {configuration.FullJournalTableName} (
                     {configuration.OrderingColumnName} INTEGER PRIMARY KEY NOT NULL,
                     {configuration.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
@@ -42,39 +43,38 @@ namespace Akka.Persistence.Sqlite.Journal
                     UNIQUE ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName})
                 );";
 
-            CreateMetaTableSql = $@"
+        CreateMetaTableSql = $@"
                 CREATE TABLE IF NOT EXISTS {configuration.FullMetaTableName} (
                     {configuration.PersistenceIdColumnName} VARCHAR(255) NOT NULL,
                     {configuration.SequenceNrColumnName} INTEGER(8) NOT NULL,
                     PRIMARY KEY ({configuration.PersistenceIdColumnName}, {configuration.SequenceNrColumnName})
                 );";
-        }
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override string CreateEventsJournalSql { get; }
-        
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override string CreateMetaTableSql { get; }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override string CreateEventsJournalSql { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override string ByTagSql { get; }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override string CreateMetaTableSql { get; }
 
-        protected override string AllEventsSql { get; }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override string ByTagSql { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="connection">TBD</param>
-        /// <returns>TBD</returns>
-        protected override DbCommand CreateCommand(DbConnection connection)
-        {
-            return new SqliteCommand { Connection = (SqliteConnection)connection };
-        }
+    protected override string AllEventsSql { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="connection">TBD</param>
+    /// <returns>TBD</returns>
+    protected override DbCommand CreateCommand(DbConnection connection)
+    {
+        return new SqliteCommand { Connection = (SqliteConnection)connection };
     }
 }

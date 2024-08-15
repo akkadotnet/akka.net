@@ -1,31 +1,32 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Comparable.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Comparable.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-namespace Akka.Tests.TestUtils
+using Newtonsoft.Json;
+
+namespace Akka.Tests.TestUtils;
+
+public class Comparable
 {
-    public class Comparable
+    public override bool Equals(object obj)
     {
-        public override bool Equals(object obj)
-        {
-            if (obj == null)
-                return false;
+        if (obj == null)
+            return false;
 
-            return this.ToString() == obj.ToString();
-        }
-        public override int GetHashCode()
-        {
-            return this.ToString().GetHashCode();
-        }
+        return ToString() == obj.ToString();
+    }
 
-        public override string ToString()
-        {
-            var res = Newtonsoft.Json.JsonConvert.SerializeObject(this);
-            return res;
-        }
+    public override int GetHashCode()
+    {
+        return ToString().GetHashCode();
+    }
+
+    public override string ToString()
+    {
+        var res = JsonConvert.SerializeObject(this);
+        return res;
     }
 }
-

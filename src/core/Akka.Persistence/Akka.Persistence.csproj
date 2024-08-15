@@ -6,19 +6,19 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <EmbeddedResource Include="persistence.conf" />
-    <ProjectReference Include="..\Akka\Akka.csproj" />
+    <EmbeddedResource Include="persistence.conf"/>
+    <ProjectReference Include="..\Akka\Akka.csproj"/>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
+    <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)"/>
     <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
-  
+
   <ItemGroup>
-    <Protobuf Access="internal" Include="../../protobuf/Persistence.proto" />
+    <Protobuf Access="internal" Include="../../protobuf/Persistence.proto"/>
 
   </ItemGroup>
 </Project>

@@ -1,59 +1,59 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AtLeastOnceDeliveryActor.Messages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="AtLeastOnceDeliveryActor.Messages.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-namespace DocsExamples.Persistence.AtLeastOnceDelivery
+namespace DocsExamples.Persistence.AtLeastOnceDelivery;
+
+#region AtLeastOnceDelivery
+
+public class Msg
 {
-    #region AtLeastOnceDelivery
-    public class Msg
+    public Msg(long deliveryId, string message)
     {
-        public Msg(long deliveryId, string message)
-        {
-            DeliveryId = deliveryId;
-            Message = message;
-        }
-
-        public long DeliveryId { get; }
-
-        public string Message { get; }
+        DeliveryId = deliveryId;
+        Message = message;
     }
 
-    public class Confirm
-    {
-        public Confirm(long deliveryId)
-        {
-            DeliveryId = deliveryId;
-        }
+    public long DeliveryId { get; }
 
-        public long DeliveryId { get; }
-    }
-
-    public interface IEvent
-    {
-
-    }
-
-    public class MsgSent : IEvent
-    {
-        public MsgSent(string message)
-        {
-            Message = message;
-        }
-
-        public string Message { get; }
-    }
-
-    public class MsgConfirmed : IEvent
-    {
-        public MsgConfirmed(long deliveryId)
-        {
-            DeliveryId = deliveryId;
-        }
-
-        public long DeliveryId { get; }
-    }
-    #endregion
+    public string Message { get; }
 }
+
+public class Confirm
+{
+    public Confirm(long deliveryId)
+    {
+        DeliveryId = deliveryId;
+    }
+
+    public long DeliveryId { get; }
+}
+
+public interface IEvent
+{
+}
+
+public class MsgSent : IEvent
+{
+    public MsgSent(string message)
+    {
+        Message = message;
+    }
+
+    public string Message { get; }
+}
+
+public class MsgConfirmed : IEvent
+{
+    public MsgConfirmed(long deliveryId)
+    {
+        DeliveryId = deliveryId;
+    }
+
+    public long DeliveryId { get; }
+}
+
+#endregion

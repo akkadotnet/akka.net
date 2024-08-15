@@ -1,50 +1,52 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="IRunnable.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="IRunnable.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
+#if !NETSTANDARD
 using System.Threading;
+#endif
 
-namespace Akka.Dispatch
-{
-    /// <summary>
-    /// An asynchronous operation will be executed by a <see cref="MessageDispatcher"/>.
-    /// </summary>
+namespace Akka.Dispatch;
+
+/// <summary>
+///     An asynchronous operation will be executed by a <see cref="MessageDispatcher" />.
+/// </summary>
 #if NETSTANDARD
-    public interface IRunnable
+public interface IRunnable
 #else
     public interface IRunnable : IThreadPoolWorkItem
 #endif
-    {
-        /// <summary>
-        /// Executes the task.
-        /// </summary>
-        void Run();
-    }
+{
+    /// <summary>
+    ///     Executes the task.
+    /// </summary>
+    void Run();
+}
+
+/// <summary>
+///     <see cref="IRunnable" /> which executes an <see cref="Action" />
+/// </summary>
+public sealed class ActionRunnable : IRunnable
+{
+    private readonly Action _action;
 
     /// <summary>
-    /// <see cref="IRunnable"/> which executes an <see cref="Action"/>
+    ///     Creates a new thread pool work item that executes a delegate.
     /// </summary>
-    public sealed class ActionRunnable : IRunnable
+    /// <param name="action">The delegate to execute</param>
+    public ActionRunnable(Action action)
     {
-        private readonly Action _action;
+        _action = action;
+    }
 
-        /// <summary>
-        /// Creates a new thread pool work item that executes a delegate.
-        /// </summary>
-        /// <param name="action">The delegate to execute</param>
-        public ActionRunnable(Action action)
-        {
-            _action = action;
-        }
-
-        public void Run()
-        {
-            _action();
-        }
+    public void Run()
+    {
+        _action();
+    }
 
 #if !NETSTANDARD
         public void Execute()
@@ -52,31 +54,32 @@ namespace Akka.Dispatch
             _action();
         }
 #endif
-    }
+}
+
+/// <summary>
+///     <see cref="IRunnable" /> which executes an <see cref="Action{state}" /> and an <see cref="object" /> representing
+///     the state.
+/// </summary>
+public sealed class ActionWithStateRunnable : IRunnable
+{
+    private readonly Action<object> _actionWithState;
+    private readonly object _state;
 
     /// <summary>
-    /// <see cref="IRunnable"/> which executes an <see cref="Action{state}"/> and an <see cref="object"/> representing the state.
+    ///     Creates a new thread pool work item that executes a delegate along with state.
     /// </summary>
-    public sealed class ActionWithStateRunnable : IRunnable
+    /// <param name="actionWithState">The delegate to execute.</param>
+    /// <param name="state">The state to execute with this delegate.</param>
+    public ActionWithStateRunnable(Action<object> actionWithState, object state)
     {
-        private readonly Action<object> _actionWithState;
-        private readonly object _state;
+        _actionWithState = actionWithState;
+        _state = state;
+    }
 
-        /// <summary>
-        /// Creates a new thread pool work item that executes a delegate along with state.
-        /// </summary>
-        /// <param name="actionWithState">The delegate to execute.</param>
-        /// <param name="state">The state to execute with this delegate.</param>
-        public ActionWithStateRunnable(Action<object> actionWithState, object state)
-        {
-            _actionWithState = actionWithState;
-            _state = state;
-        }
-
-        public void Run()
-        {
-            _actionWithState(_state);
-        }
+    public void Run()
+    {
+        _actionWithState(_state);
+    }
 
 #if !NETSTANDARD
         public void Execute()
@@ -84,5 +87,4 @@ namespace Akka.Dispatch
             _actionWithState(_state);
         }
 #endif
-    }
 }

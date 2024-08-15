@@ -1,10 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="UnfoldResourceSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
-
+﻿// -----------------------------------------------------------------------
+//  <copyright file="UnfoldResourceSourceSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.IO;
@@ -23,82 +22,90 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class UnfoldResourceSourceSpec : AkkaSpec
 {
-    public class UnfoldResourceSourceSpec : AkkaSpec
+    private static int _counter;
+
+    private static readonly string ManyLines =
+        new[] { 'a', 'b', 'c', 'd', 'e', 'f' }.SelectMany(c => Enumerable.Repeat(CreateLine(c), 10))
+            .Aggregate("", (s, s1) => s + s1);
+
+    private static readonly string[] ManyLinesArray =
+        ManyLines.Split(new[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+    private static readonly Func<StreamReader, Option<string>> Read =
+        reader => reader.ReadLine() ?? Option<string>.None;
+
+    private static readonly Action<StreamReader> Close = reader => reader.Dispose();
+
+    private readonly FileInfo _manyLinesFile;
+    private readonly Func<StreamReader> _open;
+
+    public UnfoldResourceSourceSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)
     {
-        private static int _counter;
+        _open = () => new StreamReader(_manyLinesFile.OpenRead());
 
-        private static string CreateLine(char c) => Enumerable.Repeat(c, 100).Aggregate("", (s, c1) => s + c1) + "\n";
+        Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
+        var settings = ActorMaterializerSettings.Create(Sys).WithDispatcher("akka.actor.default-dispatcher");
+        Materializer = Sys.Materializer(settings);
 
-        private static readonly string ManyLines =
-            new[] {'a', 'b', 'c', 'd', 'e', 'f'}.SelectMany(c => Enumerable.Repeat(CreateLine(c), 10))
-                .Aggregate("", (s, s1) => s + s1);
+        _manyLinesFile = new FileInfo(Path.Combine(Path.GetTempPath(), $"blocking-source-spec-{_counter++}.tmp"));
+        if (_manyLinesFile.Exists)
+            _manyLinesFile.Delete();
 
-        private static readonly string[] ManyLinesArray = ManyLines.Split(new[] {"\n"}, StringSplitOptions.RemoveEmptyEntries);
-
-        private readonly FileInfo _manyLinesFile;
-        private readonly Func<StreamReader> _open;
-
-        private static readonly Func<StreamReader, Option<string>> Read =
-            reader => reader.ReadLine() ?? Option<string>.None;
-
-        private static readonly Action<StreamReader> Close = reader => reader.Dispose();
-
-        public UnfoldResourceSourceSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)
+        using (var stream = _manyLinesFile.CreateText())
         {
-            _open = () => new StreamReader(_manyLinesFile.OpenRead());
-
-            Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
-            var settings = ActorMaterializerSettings.Create(Sys).WithDispatcher("akka.actor.default-dispatcher");
-            Materializer = Sys.Materializer(settings);
-
-            _manyLinesFile = new FileInfo(Path.Combine(Path.GetTempPath(), $"blocking-source-spec-{_counter++}.tmp"));
-            if(_manyLinesFile.Exists)
-                _manyLinesFile.Delete();
-
-            using (var stream = _manyLinesFile.CreateText())
-                stream.Write(ManyLines);
+            stream.Write(ManyLines);
         }
+    }
 
-        public ActorMaterializer Materializer { get; }
+    public ActorMaterializer Materializer { get; }
+
+    private static string CreateLine(char c)
+    {
+        return Enumerable.Repeat(c, 100).Aggregate("", (s, c1) => s + c1) + "\n";
+    }
 
 
-        [Fact]
-        public async Task A_UnfoldResourceSource_must_read_contents_from_a_file()
+    [Fact]
+    public async Task A_UnfoldResourceSource_must_read_contents_from_a_file()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
-                var p = Source.UnfoldResource(_open, Read, Close).RunWith(Sink.AsPublisher<string>(false), Materializer);
+            var p = Source.UnfoldResource(_open, Read, Close).RunWith(Sink.AsPublisher<string>(false), Materializer);
 
-                var c = this.CreateManualSubscriberProbe<string>();
-                p.Subscribe(c);
-                var sub = await c.ExpectSubscriptionAsync();
+            var c = this.CreateManualSubscriberProbe<string>();
+            p.Subscribe(c);
+            var sub = await c.ExpectSubscriptionAsync();
 
-                sub.Request(1);
-                var next = await c.ExpectNextAsync();
-                next.Should().Be(ManyLinesArray[0]);
+            sub.Request(1);
+            var next = await c.ExpectNextAsync();
+            next.Should().Be(ManyLinesArray[0]);
+            sub.Request(1);
+            next = await c.ExpectNextAsync();
+            next.Should().Be(ManyLinesArray[1]);
+            await c.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+
+            for (var i = 2; i < ManyLinesArray.Length; i++)
+            {
                 sub.Request(1);
                 next = await c.ExpectNextAsync();
-                next.Should().Be(ManyLinesArray[1]);
-                await c.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+                next.Should().Be(ManyLinesArray[i]);
+            }
 
-                for (var i = 2; i < ManyLinesArray.Length; i++)
-                {
-                    sub.Request(1);
-                    next = await c.ExpectNextAsync();
-                    next.Should().Be(ManyLinesArray[i]);
-                }
+            sub.Request(1);
+            await c.ExpectCompleteAsync();
+        }, Materializer);
+    }
 
-                sub.Request(1);
-                await c.ExpectCompleteAsync();
-            }, Materializer);
-        }
-
-        [Fact]
-        public async Task A_UnfoldResourceSource_must_continue_when_strategy_is_resume_and_exception_happened()
+    [Fact]
+    public async Task A_UnfoldResourceSource_must_continue_when_strategy_is_resume_and_exception_happened()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
-                var p = Source.UnfoldResource(_open, reader =>
+            var p = Source.UnfoldResource(_open, reader =>
                 {
                     var s = reader.ReadLine();
                     if (s != null && s.Contains('b'))
@@ -107,27 +114,29 @@ namespace Akka.Streams.Tests.Dsl
                 }, Close)
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualSubscriberProbe<string>();
+            var c = this.CreateManualSubscriberProbe<string>();
 
-                p.Subscribe(c);
-                var sub = await c.ExpectSubscriptionAsync();
+            p.Subscribe(c);
+            var sub = await c.ExpectSubscriptionAsync();
 
-                foreach (var i in Enumerable.Range(0, 50))
-                {
-                    sub.Request(1);
-                    var next = await c.ExpectNextAsync();
-                    next.Should().Be(i < 10 ? ManyLinesArray[i] : ManyLinesArray[i + 10]);
-                }
+            foreach (var i in Enumerable.Range(0, 50))
+            {
                 sub.Request(1);
-                await c.ExpectCompleteAsync();
-            }, Materializer);
-        }
+                var next = await c.ExpectNextAsync();
+                next.Should().Be(i < 10 ? ManyLinesArray[i] : ManyLinesArray[i + 10]);
+            }
 
-        [Fact]
-        public async Task A_UnfoldResourceSource_must_close_and_open_stream_again_when_strategy_is_restart()
+            sub.Request(1);
+            await c.ExpectCompleteAsync();
+        }, Materializer);
+    }
+
+    [Fact]
+    public async Task A_UnfoldResourceSource_must_close_and_open_stream_again_when_strategy_is_restart()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
-                var p = Source.UnfoldResource(_open, reader =>
+            var p = Source.UnfoldResource(_open, reader =>
                 {
                     var s = reader.ReadLine();
                     if (s != null && s.Contains('b'))
@@ -136,29 +145,30 @@ namespace Akka.Streams.Tests.Dsl
                 }, Close)
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                 .RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualSubscriberProbe<string>();
+            var c = this.CreateManualSubscriberProbe<string>();
 
-                p.Subscribe(c);
-                var sub = await c.ExpectSubscriptionAsync();
-                foreach (var i in Enumerable.Range(0, 20))
-                {
-                    sub.Request(1);
-                    var next = await c.ExpectNextAsync();
-                    next.Should().Be(ManyLinesArray[0]);
-                }
-                
-                sub.Cancel();
-            }, Materializer);
-        }
+            p.Subscribe(c);
+            var sub = await c.ExpectSubscriptionAsync();
+            foreach (var i in Enumerable.Range(0, 20))
+            {
+                sub.Request(1);
+                var next = await c.ExpectNextAsync();
+                next.Should().Be(ManyLinesArray[0]);
+            }
 
-        [Fact]
-        public async Task A_UnfoldResourceSource_must_work_with_ByteString_as_well()
+            sub.Cancel();
+        }, Materializer);
+    }
+
+    [Fact]
+    public async Task A_UnfoldResourceSource_must_work_with_ByteString_as_well()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
-                var chunkSize = 50;
-                var buffer = new char[chunkSize];
+            var chunkSize = 50;
+            var buffer = new char[chunkSize];
 
-                var p = Source.UnfoldResource(_open, reader =>
+            var p = Source.UnfoldResource(_open, reader =>
                 {
                     var s = reader.Read(buffer, 0, chunkSize);
 
@@ -167,153 +177,151 @@ namespace Akka.Streams.Tests.Dsl
                         : Option<ByteString>.None;
                 }, reader => reader.Dispose())
                 .RunWith(Sink.AsPublisher<ByteString>(false), Materializer);
-                var c = this.CreateManualSubscriberProbe<ByteString>();
+            var c = this.CreateManualSubscriberProbe<ByteString>();
 
-                var remaining = ManyLines;
-                Func<string> nextChunk = () =>
-                {
-                    if (remaining.Length <= chunkSize)
-                        return remaining;
-                    var chunk = remaining.Take(chunkSize).Aggregate("", (s, c1) => s + c1);
-                    remaining = remaining.Substring(chunkSize);
-                    return chunk;
-                };
+            var remaining = ManyLines;
+            var nextChunk = () =>
+            {
+                if (remaining.Length <= chunkSize)
+                    return remaining;
+                var chunk = remaining.Take(chunkSize).Aggregate("", (s, c1) => s + c1);
+                remaining = remaining.Substring(chunkSize);
+                return chunk;
+            };
 
-                p.Subscribe(c);
-                var sub = await c.ExpectSubscriptionAsync();
+            p.Subscribe(c);
+            var sub = await c.ExpectSubscriptionAsync();
 
-                foreach (var i in Enumerable.Range(0, 122))
-                {
-                    sub.Request(1);
-                    var next = await c.ExpectNextAsync();
-                    next.ToString().Should().Be(nextChunk());
-                }
-                
+            foreach (var i in Enumerable.Range(0, 122))
+            {
                 sub.Request(1);
-                await c.ExpectCompleteAsync();
-            }, Materializer);
-        }
+                var next = await c.ExpectNextAsync();
+                next.ToString().Should().Be(nextChunk());
+            }
 
-        [Fact]
-        public async Task A_UnfoldResourceSource_must_use_dedicated_blocking_io_dispatcher_by_default()
+            sub.Request(1);
+            await c.ExpectCompleteAsync();
+        }, Materializer);
+    }
+
+    [Fact]
+    public async Task A_UnfoldResourceSource_must_use_dedicated_blocking_io_dispatcher_by_default()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
-                var sys = ActorSystem.Create("dispatcher-testing", Utils.UnboundedMailboxConfig);
-                var materializer = sys.Materializer();
+            var sys = ActorSystem.Create("dispatcher-testing", Utils.UnboundedMailboxConfig);
+            var materializer = sys.Materializer();
 
+            try
+            {
+                var p = Source.UnfoldResource(_open, Read, Close)
+                    .RunWith(this.SinkProbe<string>(), materializer);
+
+                ((ActorMaterializerImpl)materializer).Supervisor.Tell(StreamSupervisor.GetChildren.Instance,
+                    TestActor);
+                var msg = await ExpectMsgAsync<StreamSupervisor.Children>();
+                var refs = msg.Refs;
+                var actorRef = refs.First(@ref => @ref.Path.ToString().Contains("unfoldResourceSource"));
                 try
                 {
-                    var p = Source.UnfoldResource(_open, Read, Close)
-                        .RunWith(this.SinkProbe<string>(), materializer);
-
-                    ((ActorMaterializerImpl)materializer).Supervisor.Tell(StreamSupervisor.GetChildren.Instance,
-                        TestActor);
-                    var msg = await ExpectMsgAsync<StreamSupervisor.Children>();
-                    var refs = msg.Refs;
-                    var actorRef = refs.First(@ref => @ref.Path.ToString().Contains("unfoldResourceSource"));
-                    try
-                    {
-                        Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
-                    }
-                    finally
-                    {
-                        p.Cancel();
-                    }
-
+                    Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
                 }
                 finally
                 {
-                    Shutdown(sys);
+                    p.Cancel();
                 }
+            }
+            finally
+            {
+                Shutdown(sys);
+            }
+        }, Materializer);
+    }
 
-            }, Materializer);
-        }
-
-        [Fact]
-        public async Task A_UnfoldResourceSource_must_fail_when_create_throws_exception()
+    [Fact]
+    public async Task A_UnfoldResourceSource_must_fail_when_create_throws_exception()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
-                var testException = new TestException("");
-                var p = Source.UnfoldResource(() =>
-                {
-                    throw testException;
-                }, Read, Close).RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualSubscriberProbe<string>();
-                p.Subscribe(c);
+            var testException = new TestException("");
+            var p = Source.UnfoldResource(() => { throw testException; }, Read, Close)
+                .RunWith(Sink.AsPublisher<string>(false), Materializer);
+            var c = this.CreateManualSubscriberProbe<string>();
+            p.Subscribe(c);
 
-                await c.ExpectSubscriptionAsync();
-                c.ExpectError().Should().Be(testException);
-            }, Materializer);
-        }
+            await c.ExpectSubscriptionAsync();
+            c.ExpectError().Should().Be(testException);
+        }, Materializer);
+    }
 
-        [Fact]
-        public async Task A_UnfoldResourceSource_must_fail_when_close_throws_exception()
+    [Fact]
+    public async Task A_UnfoldResourceSource_must_fail_when_close_throws_exception()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
-                var testException = new TestException("");
-                var p = Source.UnfoldResource(_open, Read, reader =>
-                {
-                    reader.Dispose();
-                    throw testException;
-                }).RunWith(Sink.AsPublisher<string>(false), Materializer);
-                var c = this.CreateManualSubscriberProbe<string>();
-                p.Subscribe(c);
+            var testException = new TestException("");
+            var p = Source.UnfoldResource(_open, Read, reader =>
+            {
+                reader.Dispose();
+                throw testException;
+            }).RunWith(Sink.AsPublisher<string>(false), Materializer);
+            var c = this.CreateManualSubscriberProbe<string>();
+            p.Subscribe(c);
 
-                var sub = await c.ExpectSubscriptionAsync();
-                sub.Request(61);
-                c.ExpectNextN(60);
-                c.ExpectError().Should().Be(testException);
-            }, Materializer);
-        }
+            var sub = await c.ExpectSubscriptionAsync();
+            sub.Request(61);
+            c.ExpectNextN(60);
+            c.ExpectError().Should().Be(testException);
+        }, Materializer);
+    }
 
-        [Fact]
-        public async Task A_UnfoldResourceSource_must_not_close_the_resource_twice_when_read_fails()
+    [Fact]
+    public async Task A_UnfoldResourceSource_must_not_close_the_resource_twice_when_read_fails()
+    {
+        var closedCounter = new AtomicCounter(0);
+        var testException = new TestException("failing read");
+
+        var probe = Source.UnfoldResource<int, int>(
+            () => 23, // the best resource there is
+            _ => throw testException,
+            _ => closedCounter.IncrementAndGet()
+        ).RunWith(this.SinkProbe<int>(), Materializer);
+
+        probe.Request(1);
+        var error = await probe.ExpectErrorAsync();
+        error.Should().Be(testException);
+        closedCounter.Current.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task A_UnfoldResourceSource_must_not_close_the_resource_twice_when_read_fails_and_then_close_fails()
+    {
+        var closedCounter = new AtomicCounter(0);
+        var testException = new TestException("boom");
+
+        var probe = Source.UnfoldResource<int, int>(
+            () => 23, // the best resource there is
+            _ => throw new TestException("failing read"),
+            _ =>
+            {
+                closedCounter.IncrementAndGet();
+                if (closedCounter.Current == 1) throw testException;
+            }
+        ).RunWith(this.SinkProbe<int>(), Materializer);
+
+        await EventFilter.Exception<TestException>().ExpectAsync(1, async () =>
         {
-            var closedCounter = new AtomicCounter(0);
-            var testException = new TestException("failing read");
-            
-            var probe = Source.UnfoldResource<int, int>(
-                () => 23, // the best resource there is
-                _ => throw testException, 
-                _ => closedCounter.IncrementAndGet()
-                ).RunWith(this.SinkProbe<int>(), Materializer);
-
             probe.Request(1);
             var error = await probe.ExpectErrorAsync();
             error.Should().Be(testException);
-            closedCounter.Current.Should().Be(1);
-        }
+        });
 
-        [Fact]
-        public async Task A_UnfoldResourceSource_must_not_close_the_resource_twice_when_read_fails_and_then_close_fails()
-        {
-            var closedCounter = new AtomicCounter(0);
-            var testException = new TestException("boom");
-            
-            var probe = Source.UnfoldResource<int, int>(
-                () => 23, // the best resource there is
-                _ => throw new TestException("failing read"),
-                _ =>
-                {
-                    closedCounter.IncrementAndGet();
-                    if (closedCounter.Current == 1) throw testException;
-                }
-            ).RunWith(this.SinkProbe<int>(), Materializer);
+        closedCounter.Current.Should().Be(1);
+    }
 
-            await EventFilter.Exception<TestException>().ExpectAsync(1, async () =>
-            {
-                probe.Request(1);
-                var error = await probe.ExpectErrorAsync();
-                error.Should().Be(testException);
-            });
-            
-            closedCounter.Current.Should().Be(1);
-        }
-
-        protected override void AfterAll()
-        {
-            _manyLinesFile.Delete();
-            base.AfterAll();
-        }
+    protected override void AfterAll()
+    {
+        _manyLinesFile.Delete();
+        base.AfterAll();
     }
 }

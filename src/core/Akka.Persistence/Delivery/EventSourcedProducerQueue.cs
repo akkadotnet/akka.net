@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="EventSourcedProducerQueue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="EventSourcedProducerQueue.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 #nullable enable
 using System;
@@ -20,48 +20,53 @@ using static Akka.Delivery.DurableProducerQueue;
 namespace Akka.Persistence.Delivery;
 
 /// <summary>
-/// A <see cref="DurableProducerQueue"/> implementation that can be used with <see cref="ProducerController"/>
-/// for reliable delivery of messages. It is implemented with event-sourcing and stores one event before
-/// sending the message to the destination and one event for the confirmation that the message has been
-/// delivered and processed.
+///     A <see cref="DurableProducerQueue" /> implementation that can be used with <see cref="ProducerController" />
+///     for reliable delivery of messages. It is implemented with event-sourcing and stores one event before
+///     sending the message to the destination and one event for the confirmation that the message has been
+///     delivered and processed.
 /// </summary>
 public static class EventSourcedProducerQueue
 {
     /// <summary>
-    /// <see cref="EventSourcedProducerQueue"/> settings.
+    ///     Creates <see cref="Props" /> for an <see cref="EventSourcedProducerQueue{T}" /> that can be passed
+    ///     to a <see cref="ProducerController" /> for reliable message delivery.
+    /// </summary>
+    /// <param name="persistentId">The Akka.Persistence id used by this actor - must be globally unique.</param>
+    /// <param name="settings">The settings for this producer queue.</param>
+    /// <typeparam name="T">The type of message that is supported by the <see cref="ProducerController" />.</typeparam>
+    public static Props Create<T>(string persistentId, Settings settings)
+    {
+        var childProps = Props.Create(() => new EventSourcedProducerQueue<T>(persistentId, settings, null));
+        var backoffSupervisorProps = Backoff.OnStop(childProps, "producer-queue",
+            TimeSpan.FromSeconds(1).Min(settings.RestartMaxBackoff), settings.RestartMaxBackoff, 0.1, 100);
+        return backoffSupervisorProps.Props;
+    }
+
+    /// <summary>
+    ///     Creates <see cref="Props" /> for an <see cref="EventSourcedProducerQueue{T}" /> that can be passed
+    ///     to a <see cref="ProducerController" /> for reliable message delivery.
+    /// </summary>
+    /// <param name="persistentId">The Akka.Persistence id used by this actor - must be globally unique.</param>
+    /// <param name="system">
+    ///     The <see cref="ActorSystem" /> or <see cref="IActorContext" /> this actor might be created under.
+    ///     This value is only used to load the <see cref="Settings" />.
+    /// </param>
+    /// <typeparam name="T">The type of message that is supported by the <see cref="ProducerController" />.</typeparam>
+    public static Props Create<T>(string persistentId, IActorRefFactory system)
+    {
+        return system switch
+        {
+            IActorContext context => Create<T>(persistentId, Settings.Create(context.System)),
+            ActorSystem actorSystem => Create<T>(persistentId, Settings.Create(actorSystem)),
+            _ => throw new ArgumentOutOfRangeException(nameof(system), $"Unknown IActorRefFactory {system}")
+        };
+    }
+
+    /// <summary>
+    ///     <see cref="EventSourcedProducerQueue" /> settings.
     /// </summary>
     public record Settings
     {
-        /// <summary>
-        /// Creates a new settings instance from the `akka.reliable-delivery.producer-controller.event-sourced-durable-queue`
-        /// of the <see cref="ActorSystem"/>.
-        /// </summary>
-        public static Settings Create(ActorSystem sys)
-        {
-            if (sys.Settings.Config.HasPath("akka.reliable-delivery.producer-controller.event-sourced-durable-queue"))
-            {
-                var config =
-                    sys.Settings.Config.GetConfig("akka.reliable-delivery.producer-controller.event-sourced-durable-queue");
-                return Create(config);
-            }
-
-            // in case Akka.Persistence hasn't been loaded into the ActorSystem yet
-            return Create(Persistence.DefaultConfig()
-                .GetConfig("akka.reliable-delivery.producer-controller.event-sourced-durable-queue"));
-
-        }
-
-        /// <summary>
-        /// Creates a new settings instance from Config corresponding to `akka.reliable-delivery.producer-controller.event-sourced-durable-queue`.
-        /// </summary>
-        public static Settings Create(Config config)
-        {
-            return new Settings(config.GetTimeSpan("restart-max-backoff"), config.GetInt("snapshot-every"),
-                config.GetInt("keep-n-snapshots"), config.GetBoolean("delete-events"),
-                config.GetTimeSpan("cleanup-unused-after"),
-                config.GetString("journal-plugin-id"), config.GetString("snapshot-plugin-id"));
-        }
-
         private Settings(TimeSpan restartMaxBackoff, int snapshotEvery, int keepNSnapshots, bool deleteEvents,
             TimeSpan cleanupUnusedAfter, string journalPluginId, string snapshotPluginId)
         {
@@ -81,10 +86,41 @@ public static class EventSourcedProducerQueue
         public TimeSpan CleanupUnusedAfter { get; init; }
         public string JournalPluginId { get; init; }
         public string SnapshotPluginId { get; init; }
+
+        /// <summary>
+        ///     Creates a new settings instance from the `akka.reliable-delivery.producer-controller.event-sourced-durable-queue`
+        ///     of the <see cref="ActorSystem" />.
+        /// </summary>
+        public static Settings Create(ActorSystem sys)
+        {
+            if (sys.Settings.Config.HasPath("akka.reliable-delivery.producer-controller.event-sourced-durable-queue"))
+            {
+                var config =
+                    sys.Settings.Config.GetConfig(
+                        "akka.reliable-delivery.producer-controller.event-sourced-durable-queue");
+                return Create(config);
+            }
+
+            // in case Akka.Persistence hasn't been loaded into the ActorSystem yet
+            return Create(Persistence.DefaultConfig()
+                .GetConfig("akka.reliable-delivery.producer-controller.event-sourced-durable-queue"));
+        }
+
+        /// <summary>
+        ///     Creates a new settings instance from Config corresponding to
+        ///     `akka.reliable-delivery.producer-controller.event-sourced-durable-queue`.
+        /// </summary>
+        public static Settings Create(Config config)
+        {
+            return new Settings(config.GetTimeSpan("restart-max-backoff"), config.GetInt("snapshot-every"),
+                config.GetInt("keep-n-snapshots"), config.GetBoolean("delete-events"),
+                config.GetTimeSpan("cleanup-unused-after"),
+                config.GetString("journal-plugin-id"), config.GetString("snapshot-plugin-id"));
+        }
     }
 
     /// <summary>
-    /// INTERNAL API
+    ///     INTERNAL API
     /// </summary>
     internal sealed class CleanupTick
     {
@@ -94,48 +130,20 @@ public static class EventSourcedProducerQueue
         {
         }
     }
-
-    /// <summary>
-    /// Creates <see cref="Props"/> for an <see cref="EventSourcedProducerQueue{T}"/> that can be passed
-    /// to a <see cref="ProducerController"/> for reliable message delivery.
-    /// </summary>
-    /// <param name="persistentId">The Akka.Persistence id used by this actor - must be globally unique.</param>
-    /// <param name="settings">The settings for this producer queue.</param>
-    /// <typeparam name="T">The type of message that is supported by the <see cref="ProducerController"/>.</typeparam>
-    public static Props Create<T>(string persistentId, Settings settings)
-    {
-        var childProps = Props.Create(() => new EventSourcedProducerQueue<T>(persistentId, settings, null));
-        var backoffSupervisorProps = Backoff.OnStop(childProps, "producer-queue",
-            TimeSpan.FromSeconds(1).Min(settings.RestartMaxBackoff), settings.RestartMaxBackoff, 0.1, 100);
-        return backoffSupervisorProps.Props;
-    }
-
-    /// <summary>
-    /// Creates <see cref="Props"/> for an <see cref="EventSourcedProducerQueue{T}"/> that can be passed
-    /// to a <see cref="ProducerController"/> for reliable message delivery.
-    /// </summary>
-    /// <param name="persistentId">The Akka.Persistence id used by this actor - must be globally unique.</param>
-    /// <param name="system">The <see cref="ActorSystem"/> or <see cref="IActorContext"/> this actor might be created under.
-    /// This value is only used to load the <see cref="Settings"/>.
-    /// </param>
-    /// <typeparam name="T">The type of message that is supported by the <see cref="ProducerController"/>.</typeparam>
-    public static Props Create<T>(string persistentId, IActorRefFactory system)
-    {
-        return system switch
-        {
-            IActorContext context => Create<T>(persistentId, Settings.Create(context.System)),
-            ActorSystem actorSystem => Create<T>(persistentId, Settings.Create(actorSystem)),
-            _ => throw new ArgumentOutOfRangeException(nameof(system), $"Unknown IActorRefFactory {system}")
-        };
-    }
 }
 
 /// <summary>
-/// INTERNAL API
+///     INTERNAL API
 /// </summary>
-/// <typeparam name="T">The types of messages that can be handled by the <see cref="ProducerController"/>.</typeparam>
+/// <typeparam name="T">The types of messages that can be handled by the <see cref="ProducerController" />.</typeparam>
 internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWithTimers, IWithStash
 {
+    private readonly ILoggingAdapter _log = Context.GetLogger();
+    private readonly ITimeProvider _timeProvider;
+
+    // transient
+    private bool _initialCleanupDone;
+
     public EventSourcedProducerQueue(string persistenceId, EventSourcedProducerQueue.Settings? settings = null,
         ITimeProvider? timeProvider = null)
     {
@@ -153,14 +161,9 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
     public EventSourcedProducerQueue.Settings Settings { get; }
 
     public override string PersistenceId { get; }
-    public ITimerScheduler Timers { get; set; } = null!;
-    private readonly ITimeProvider _timeProvider;
-    private readonly ILoggingAdapter _log = Context.GetLogger();
-
-    // transient
-    private bool _initialCleanupDone = false;
 
     public State<T> State { get; private set; } = State<T>.Empty;
+    public ITimerScheduler Timers { get; set; } = null!;
 
     protected override void OnCommand(object message)
     {
@@ -169,7 +172,7 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
             OnCommandBeforeInitialCleanup(message);
             return;
         }
-            
+
 
         switch (message)
         {
@@ -213,19 +216,15 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
 
                 var previousConfirmedSeqNr = 0L;
                 if (State.ConfirmedSeqNr.TryGetValue(confirmationQualifier, out var confirmedNr))
-                {
                     previousConfirmedSeqNr = confirmedNr.Item1;
-                }
 
                 if (seqNr > previousConfirmedSeqNr)
-                {
                     Persist(new Confirmed(seqNr, confirmationQualifier, timestamp),
                         e =>
                         {
-                            State = State.AddConfirmed(e.SeqNr, e.Qualifier, e.Timestamp); 
+                            State = State.AddConfirmed(e.SeqNr, e.Qualifier, e.Timestamp);
                             TakeSnapshotWhenReady();
                         });
-                }
 
                 break;
             }
@@ -243,7 +242,7 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
             {
                 if (Settings.DeleteEvents)
                     DeleteMessages(saveSnapshotSuccess.Metadata.SequenceNr);
-                DeleteSnapshots(new SnapshotSelectionCriteria((saveSnapshotSuccess.Metadata.SequenceNr - 1) -
+                DeleteSnapshots(new SnapshotSelectionCriteria(saveSnapshotSuccess.Metadata.SequenceNr - 1 -
                                                               Settings.KeepNSnapshots * Settings.SnapshotEvery));
                 break;
             }
@@ -342,7 +341,7 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
         var e = new Cleanup(oldUnconfirmed);
         Persist(e, cleanup =>
         {
-            State = State.CleanUp(cleanup.ConfirmationQualifiers); 
+            State = State.CleanUp(cleanup.ConfirmationQualifiers);
             TakeSnapshotWhenReady();
         });
     }
@@ -350,10 +349,10 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
     private ImmutableHashSet<string> OldUnconfirmedToCleanup(State<T> state)
     {
         var now = _timeProvider.Now.Ticks;
-        var oldUnconfirmed = state.ConfirmedSeqNr.Where(c => 
+        var oldUnconfirmed = state.ConfirmedSeqNr.Where(c =>
                 now - c.Value.Item2 >= Settings.CleanupUnusedAfter.Ticks
-                                                             && !state.Unconfirmed.Any(m =>
-                                                                 m.ConfirmationQualifier.Equals(c.Key)))
+                && !state.Unconfirmed.Any(m =>
+                    m.ConfirmationQualifier.Equals(c.Key)))
             .Select(c => c.Key).ToImmutableHashSet();
         return oldUnconfirmed;
     }

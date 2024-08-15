@@ -1,14 +1,13 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="QueryApi.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="QueryApi.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence.Journal;
@@ -16,24 +15,26 @@ using Akka.Persistence.Journal;
 namespace Akka.Persistence.Sql.Common.Journal
 {
     [Obsolete("Query is not implemented.")]
-    public interface ISubscriptionCommand { }
+    public interface ISubscriptionCommand
+    {
+    }
 
     /// <summary>
-    /// Subscribe the `sender` to changes (appended events) for a specific `persistenceId`.
-    /// Used by query-side. The journal will send <see cref="EventAppended"/> messages to
-    /// the subscriber when <see cref="AsyncWriteJournal.WriteMessagesAsync"/> has been called.
+    ///     Subscribe the `sender` to changes (appended events) for a specific `persistenceId`.
+    ///     Used by query-side. The journal will send <see cref="EventAppended" /> messages to
+    ///     the subscriber when <see cref="AsyncWriteJournal.WriteMessagesAsync" /> has been called.
     /// </summary>
     [Serializable]
     [Obsolete("Query is not implemented.", true)]
     public sealed class SubscribePersistenceId : ISubscriptionCommand
     {
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly string PersistenceId;
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         public SubscribePersistenceId(string persistenceId)
@@ -43,19 +44,19 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     [Serializable]
     [Obsolete("Query is not implemented.", true)]
     public sealed class EventAppended : IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly string PersistenceId;
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         public EventAppended(string persistenceId)
@@ -67,31 +68,31 @@ namespace Akka.Persistence.Sql.Common.Journal
     [Serializable]
     public sealed class SelectCurrentPersistenceIds : IJournalRequest
     {
-        public IActorRef ReplyTo { get; }
-        public long Offset { get; }
-
         public SelectCurrentPersistenceIds(long offset, IActorRef replyTo)
         {
             Offset = offset;
             ReplyTo = replyTo;
         }
+
+        public IActorRef ReplyTo { get; }
+        public long Offset { get; }
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     [Serializable]
     public sealed class CurrentPersistenceIds : IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly IEnumerable<string> AllPersistenceIds;
 
         public readonly long HighestOrderingNumber;
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="allPersistenceIds">TBD</param>
         /// <param name="highestOrderingNumber">TBD</param>
@@ -103,9 +104,9 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     /// <summary>
-    /// Subscribe the `sender` to new appended events.
-    /// Used by query-side. The journal will send <see cref="NewEventAppended"/> messages to
-    /// the subscriber when `asyncWriteMessages` has been called.
+    ///     Subscribe the `sender` to new appended events.
+    ///     Used by query-side. The journal will send <see cref="NewEventAppended" /> messages to
+    ///     the subscriber when `asyncWriteMessages` has been called.
     /// </summary>
     [Serializable]
     [Obsolete("Query is not implemented.", true)]
@@ -113,7 +114,9 @@ namespace Akka.Persistence.Sql.Common.Journal
     {
         public static SubscribeNewEvents Instance = new SubscribeNewEvents();
 
-        private SubscribeNewEvents() { }
+        private SubscribeNewEvents()
+        {
+        }
     }
 
     [Serializable]
@@ -122,27 +125,29 @@ namespace Akka.Persistence.Sql.Common.Journal
     {
         public static NewEventAppended Instance = new NewEventAppended();
 
-        private NewEventAppended() { }
+        private NewEventAppended()
+        {
+        }
     }
 
     /// <summary>
-    /// Subscribe the `sender` to changes (appended events) for a specific `tag`.
-    /// Used by query-side. The journal will send <see cref="TaggedEventAppended"/> messages to
-    /// the subscriber when `asyncWriteMessages` has been called.
-    /// Events are tagged by wrapping in <see cref="Tagged"/>
-    /// via an <see cref="IEventAdapter"/>.
+    ///     Subscribe the `sender` to changes (appended events) for a specific `tag`.
+    ///     Used by query-side. The journal will send <see cref="TaggedEventAppended" /> messages to
+    ///     the subscriber when `asyncWriteMessages` has been called.
+    ///     Events are tagged by wrapping in <see cref="Tagged" />
+    ///     via an <see cref="IEventAdapter" />.
     /// </summary>
     [Serializable]
     [Obsolete("Query is not implemented.", true)]
     public sealed class SubscribeTag : ISubscriptionCommand
     {
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly string Tag;
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="tag">TBD</param>
         public SubscribeTag(string tag)
@@ -152,19 +157,19 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     [Serializable]
     [Obsolete("Query is not implemented.", true)]
     public sealed class TaggedEventAppended : IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly string Tag;
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="tag">TBD</param>
         public TaggedEventAppended(string tag)
@@ -174,48 +179,54 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     [Serializable]
     public sealed class ReplayAllEvents : IJournalRequest
     {
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly long FromOffset;
+
         /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly long ToOffset;
-        /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly long Max;
+
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly IActorRef ReplyTo;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ReplayAllEvents"/> class.
+        ///     TBD
+        /// </summary>
+        public readonly long ToOffset;
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="ReplayAllEvents" /> class.
         /// </summary>
         /// <param name="fromOffset">TBD</param>
         /// <param name="toOffset">TBD</param>
         /// <param name="max">TBD</param>
         /// <param name="replyTo">TBD</param>
         /// <exception cref="ArgumentException">
-        /// This exception is thrown for a number of reasons. These include the following:
-        /// <ul>
-        /// <li>The specified <paramref name="fromOffset"/> is less than zero.</li>
-        /// <li>The specified <paramref name="toOffset"/> is less than or equal to zero.</li>
-        /// <li>The specified <paramref name="max"/> is less than or equal to zero.</li>
-        /// </ul>
+        ///     This exception is thrown for a number of reasons. These include the following:
+        ///     <ul>
+        ///         <li>The specified <paramref name="fromOffset" /> is less than zero.</li>
+        ///         <li>The specified <paramref name="toOffset" /> is less than or equal to zero.</li>
+        ///         <li>The specified <paramref name="max" /> is less than or equal to zero.</li>
+        ///     </ul>
         /// </exception>
         public ReplayAllEvents(long fromOffset, long toOffset, long max, IActorRef replyTo)
         {
-            if (fromOffset < 0) throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
+            if (fromOffset < 0)
+                throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
             if (toOffset <= 0) throw new ArgumentException("To offset must be a positive number", nameof(toOffset));
-            if (max <= 0) throw new ArgumentException("Maximum number of replayed messages must be a positive number", nameof(max));
+            if (max <= 0)
+                throw new ArgumentException("Maximum number of replayed messages must be a positive number",
+                    nameof(max));
 
             FromOffset = fromOffset;
             ToOffset = toOffset;
@@ -225,22 +236,23 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     [Serializable]
     public sealed class ReplayedEvent : INoSerializationVerificationNeeded, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly IPersistentRepresentation Persistent;
-        /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly long Offset;
 
         /// <summary>
-        /// TBD
+        ///     TBD
+        /// </summary>
+        public readonly IPersistentRepresentation Persistent;
+
+        /// <summary>
+        ///     TBD
         /// </summary>
         /// <param name="persistent">TBD</param>
         /// <param name="offset">TBD</param>
@@ -259,7 +271,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
-        /// Highest stored sequence number.
+        ///     Highest stored sequence number.
         /// </summary>
         public long HighestSequenceNr { get; }
 
@@ -271,18 +283,24 @@ namespace Akka.Persistence.Sql.Common.Journal
             return Equals(HighestSequenceNr, other.HighestSequenceNr);
         }
 
-        
+
         public override bool Equals(object obj)
         {
             if (!(obj is EventReplaySuccess evt)) return false;
             return Equals(evt);
         }
 
-        
-        public override int GetHashCode() => HighestSequenceNr.GetHashCode();
 
-        
-        public override string ToString() => $"EventReplaySuccess<highestSequenceNr: {HighestSequenceNr}>";
+        public override int GetHashCode()
+        {
+            return HighestSequenceNr.GetHashCode();
+        }
+
+
+        public override string ToString()
+        {
+            return $"EventReplaySuccess<highestSequenceNr: {HighestSequenceNr}>";
+        }
     }
 
     public sealed class EventReplayFailure
@@ -293,7 +311,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
-        /// Highest stored sequence number.
+        ///     Highest stored sequence number.
         /// </summary>
         public Exception Cause { get; }
 
@@ -305,49 +323,59 @@ namespace Akka.Persistence.Sql.Common.Journal
             return Equals(Cause, other.Cause);
         }
 
-        
+
         public override bool Equals(object obj)
         {
             if (!(obj is EventReplayFailure f)) return false;
             return Equals(f);
         }
 
-        
-        public override int GetHashCode() => Cause.GetHashCode();
 
-        
-        public override string ToString() => $"EventReplayFailure<cause: {Cause.Message}>";
+        public override int GetHashCode()
+        {
+            return Cause.GetHashCode();
+        }
+
+
+        public override string ToString()
+        {
+            return $"EventReplayFailure<cause: {Cause.Message}>";
+        }
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     [Serializable]
     public sealed class ReplayTaggedMessages : IJournalRequest
     {
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly long FromOffset;
+
         /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly long ToOffset;
-        /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly long Max;
+
         /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly string Tag;
-        /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly IActorRef ReplyTo;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ReplayTaggedMessages"/> class.
+        ///     TBD
+        /// </summary>
+        public readonly string Tag;
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        public readonly long ToOffset;
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="ReplayTaggedMessages" /> class.
         /// </summary>
         /// <param name="fromOffset">TBD</param>
         /// <param name="toOffset">TBD</param>
@@ -355,22 +383,27 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="tag">TBD</param>
         /// <param name="replyTo">TBD</param>
         /// <exception cref="ArgumentException">
-        /// This exception is thrown for a number of reasons. These include the following:
-        /// <ul>
-        /// <li>The specified <paramref name="fromOffset"/> is less than zero.</li>
-        /// <li>The specified <paramref name="toOffset"/> is less than or equal to zero.</li>
-        /// <li>The specified <paramref name="max"/> is less than or equal to zero.</li>
-        /// </ul>
+        ///     This exception is thrown for a number of reasons. These include the following:
+        ///     <ul>
+        ///         <li>The specified <paramref name="fromOffset" /> is less than zero.</li>
+        ///         <li>The specified <paramref name="toOffset" /> is less than or equal to zero.</li>
+        ///         <li>The specified <paramref name="max" /> is less than or equal to zero.</li>
+        ///     </ul>
         /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="tag"/> is null or empty.
+        ///     This exception is thrown when the specified <paramref name="tag" /> is null or empty.
         /// </exception>
         public ReplayTaggedMessages(long fromOffset, long toOffset, long max, string tag, IActorRef replyTo)
         {
-            if (fromOffset < 0) throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
+            if (fromOffset < 0)
+                throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
             if (toOffset <= 0) throw new ArgumentException("To offset must be a positive number", nameof(toOffset));
-            if (max <= 0) throw new ArgumentException("Maximum number of replayed messages must be a positive number", nameof(max));
-            if (string.IsNullOrEmpty(tag)) throw new ArgumentNullException(nameof(tag), "Replay tagged messages require a tag value to be provided");
+            if (max <= 0)
+                throw new ArgumentException("Maximum number of replayed messages must be a positive number",
+                    nameof(max));
+            if (string.IsNullOrEmpty(tag))
+                throw new ArgumentNullException(nameof(tag),
+                    "Replay tagged messages require a tag value to be provided");
 
             FromOffset = fromOffset;
             ToOffset = toOffset;
@@ -381,26 +414,28 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     [Serializable]
     public sealed class ReplayedTaggedMessage : INoSerializationVerificationNeeded, IDeadLetterSuppression
     {
         /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly IPersistentRepresentation Persistent;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly string Tag;
-        /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly long Offset;
 
         /// <summary>
-        /// TBD
+        ///     TBD
+        /// </summary>
+        public readonly IPersistentRepresentation Persistent;
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        public readonly string Tag;
+
+        /// <summary>
+        ///     TBD
         /// </summary>
         /// <param name="persistent">TBD</param>
         /// <param name="tag">TBD</param>

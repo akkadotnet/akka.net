@@ -1,36 +1,41 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ActorSubscriberTest.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ActorSubscriberTest.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Streams.Actors;
 using Reactive.Streams;
 
-namespace Akka.Streams.Tests.TCK
+namespace Akka.Streams.Tests.TCK;
+
+internal class ActorSubscriberOneByOneRequestTest : AkkaSubscriberBlackboxVerification<int?>
 {
-    class ActorSubscriberOneByOneRequestTest : AkkaSubscriberBlackboxVerification<int?>
+    public override int? CreateElement(int element)
     {
-        private sealed class StrategySubscriber : ActorSubscriber
+        return element;
+    }
+
+    public override ISubscriber<int?> CreateSubscriber()
+    {
+        var props = Props.Create(() => new StrategySubscriber(OneByOneRequestStrategy.Instance));
+        return ActorSubscriber.Create<int?>(System.ActorOf(props.WithDispatcher("akka.test.stream-dispatcher")));
+    }
+
+    private sealed class StrategySubscriber : ActorSubscriber
+    {
+        public StrategySubscriber(IRequestStrategy requestStrategy)
         {
-            public StrategySubscriber(IRequestStrategy requestStrategy)
-            {
-                RequestStrategy = requestStrategy;
-            }
-
-            protected override bool Receive(object message) => true;
-
-            public override IRequestStrategy RequestStrategy { get; }
+            RequestStrategy = requestStrategy;
         }
 
-        public override int? CreateElement(int element) => element;
+        public override IRequestStrategy RequestStrategy { get; }
 
-        public override ISubscriber<int?> CreateSubscriber()
+        protected override bool Receive(object message)
         {
-            var props = Props.Create(() => new StrategySubscriber(OneByOneRequestStrategy.Instance));
-            return ActorSubscriber.Create<int?>(System.ActorOf(props.WithDispatcher("akka.test.stream-dispatcher")));
+            return true;
         }
     }
 }

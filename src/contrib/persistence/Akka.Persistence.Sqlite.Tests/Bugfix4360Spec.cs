@@ -1,14 +1,13 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Bugfix4360Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Bugfix4360Spec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util;
@@ -16,11 +15,11 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Sqlite.Tests
+namespace Akka.Persistence.Sqlite.Tests;
+
+public class Bugfix4360Spec : Akka.TestKit.Xunit2.TestKit
 {
-    public class Bugfix4360Spec : Akka.TestKit.Xunit2.TestKit
-    {
-        public static Config TestConf = @"
+    public static Config TestConf = @"
 akka.persistence {
   journal {
     plugin = ""akka.persistence.journal.sqlite""
@@ -47,118 +46,123 @@ akka.persistence {
   #end persistence
 }";
 
-        private class RecoverActor : UntypedPersistentActor
+    public Bugfix4360Spec(ITestOutputHelper output) : base(TestConf, output: output)
+    {
+    }
+
+    [Fact]
+    public void Should_recover_persistentactor_sqlite()
+    {
+        var id = ThreadLocalRandom.Current.Next(0, 100000).ToString();
+        var recoveryActor = Sys.ActorOf(Props.Create(() => new RecoverActor(TestActor, id)));
+
+        var r1 = ExpectMsg<IEnumerable<string>>();
+        r1.Count().Should().Be(0); // empty recovery
+
+        recoveryActor.Tell("foo");
+        recoveryActor.Tell("bar");
+        recoveryActor.Tell(RecoverActor.DoSnapshot.Instance);
+        ExpectMsgAllOf("foo", "bar");
+        ExpectMsg<SaveSnapshotSuccess>();
+
+        Watch(recoveryActor);
+        recoveryActor.Tell(PoisonPill.Instance);
+        ExpectTerminated(recoveryActor);
+
+        // recreate the actor and recover
+        var recoveryActor2 = Sys.ActorOf(Props.Create(() => new RecoverActor(TestActor, id)));
+
+        var r2 = ExpectMsg<IEnumerable<string>>();
+        r2.Should().Contain(new[] { "foo", "bar" });
+    }
+
+    [Fact]
+    public void Should_override_default_Sqlite_fallback_values()
+    {
+        SqlitePersistence.Get(Sys);
+
+        var journalConfig = Sys.Settings.Config.GetConfig("akka.persistence.journal.sqlite");
+        Assert.Equal(TimeSpan.FromSeconds(25), journalConfig.GetTimeSpan("connection-timeout"));
+        Assert.Equal("event_journal", journalConfig.GetString("table-name"));
+        Assert.Equal("journal_metadata", journalConfig.GetString("metadata-table-name"));
+
+        var snapshotConfig = Sys.Settings.Config.GetConfig("akka.persistence.snapshot-store.sqlite");
+
+        Assert.False(snapshotConfig.IsNullOrEmpty());
+        Assert.Equal("DataSource=AkkaSnapShotfxR16.db", snapshotConfig.GetString("connection-string"));
+        Assert.Equal(TimeSpan.FromSeconds(25), snapshotConfig.GetTimeSpan("connection-timeout"));
+        Assert.Equal("snapshot_store", snapshotConfig.GetString("table-name"));
+    }
+
+    private class RecoverActor : UntypedPersistentActor
+    {
+        private HashSet<string> _values = new();
+
+        public RecoverActor(IActorRef reply, string persistenceId)
         {
-            private HashSet<string> _values = new();
+            PersistenceId = persistenceId;
+            Reply = reply;
+        }
 
-            public class DoSnapshot
-            {
-                public static readonly DoSnapshot Instance = new();
-                private DoSnapshot() { }
-            }
+        public IActorRef Reply { get; }
+        public override string PersistenceId { get; }
 
-            public RecoverActor(IActorRef reply, string persistenceId)
+        protected override void OnCommand(object message)
+        {
+            switch (message)
             {
-                PersistenceId = persistenceId;
-                Reply = reply;
-            }
-
-            public IActorRef Reply { get; }
-            public override string PersistenceId { get; }
-            protected override void OnCommand(object message)
-            {
-                switch (message)
-                {
-                    case DoSnapshot _:
-                        SaveSnapshot(_values.ToArray());
-                        break;
-                    case SaveSnapshotSuccess succ:
-                        Reply.Tell(succ);
-                        break;
-                    case string str:
-                        Persist(str, s =>
-                        {
-                            _values.Add(s);
-                            Reply.Tell(s);
-                        });
-                        break;
-                    default:
-                        Unhandled(message);
-                        break;
-                }
-            }
-
-            protected override void OnRecover(object message)
-            {
-                switch (message)
-                {
-                    case SnapshotOffer offer:
-                        if (offer.Snapshot is IEnumerable<string> strs)
-                            _values = new HashSet<string>(strs);
-                        break;
-                    case string str:
-                        _values.Add(str);
-                        break;
-                    case RecoveryCompleted _:
-                        Reply.Tell(_values.ToList());
-                        break;
-                    default:
-                        Unhandled(message);
-                        break;
-                }
-            }
-
-            protected override void OnRecoveryFailure(Exception reason, object message = null)
-            {
-                Reply.Tell(reason);
-                base.OnRecoveryFailure(reason, message);
+                case DoSnapshot _:
+                    SaveSnapshot(_values.ToArray());
+                    break;
+                case SaveSnapshotSuccess succ:
+                    Reply.Tell(succ);
+                    break;
+                case string str:
+                    Persist(str, s =>
+                    {
+                        _values.Add(s);
+                        Reply.Tell(s);
+                    });
+                    break;
+                default:
+                    Unhandled(message);
+                    break;
             }
         }
 
-        public Bugfix4360Spec(ITestOutputHelper output) : base(TestConf, output: output) { }
-
-        [Fact]
-        public void Should_recover_persistentactor_sqlite()
+        protected override void OnRecover(object message)
         {
-            var id = ThreadLocalRandom.Current.Next(0, 100000).ToString();
-            var recoveryActor = Sys.ActorOf(Props.Create(() => new RecoverActor(TestActor, id)));
-
-            var r1 = ExpectMsg<IEnumerable<string>>();
-            r1.Count().Should().Be(0); // empty recovery
-
-            recoveryActor.Tell("foo");
-            recoveryActor.Tell("bar");
-            recoveryActor.Tell(RecoverActor.DoSnapshot.Instance);
-            ExpectMsgAllOf(new []{ "foo", "bar" });
-            ExpectMsg<SaveSnapshotSuccess>();
-
-            Watch(recoveryActor);
-            recoveryActor.Tell(PoisonPill.Instance);
-            ExpectTerminated(recoveryActor);
-
-            // recreate the actor and recover
-            var recoveryActor2 = Sys.ActorOf(Props.Create(() => new RecoverActor(TestActor, id)));
-
-            var r2 = ExpectMsg<IEnumerable<string>>();
-            r2.Should().Contain(new[] { "foo", "bar" });
+            switch (message)
+            {
+                case SnapshotOffer offer:
+                    if (offer.Snapshot is IEnumerable<string> strs)
+                        _values = new HashSet<string>(strs);
+                    break;
+                case string str:
+                    _values.Add(str);
+                    break;
+                case RecoveryCompleted _:
+                    Reply.Tell(_values.ToList());
+                    break;
+                default:
+                    Unhandled(message);
+                    break;
+            }
         }
 
-        [Fact]
-        public void Should_override_default_Sqlite_fallback_values()
+        protected override void OnRecoveryFailure(Exception reason, object message = null)
         {
-            SqlitePersistence.Get(Sys);
+            Reply.Tell(reason);
+            base.OnRecoveryFailure(reason, message);
+        }
 
-            var journalConfig = Sys.Settings.Config.GetConfig("akka.persistence.journal.sqlite");
-            Assert.Equal(TimeSpan.FromSeconds(25), journalConfig.GetTimeSpan("connection-timeout"));
-            Assert.Equal("event_journal", journalConfig.GetString("table-name"));
-            Assert.Equal("journal_metadata", journalConfig.GetString("metadata-table-name"));
+        public class DoSnapshot
+        {
+            public static readonly DoSnapshot Instance = new();
 
-            var snapshotConfig = Sys.Settings.Config.GetConfig("akka.persistence.snapshot-store.sqlite");
-
-            Assert.False(snapshotConfig.IsNullOrEmpty());
-            Assert.Equal("DataSource=AkkaSnapShotfxR16.db", snapshotConfig.GetString("connection-string"));
-            Assert.Equal(TimeSpan.FromSeconds(25), snapshotConfig.GetTimeSpan("connection-timeout"));
-            Assert.Equal("snapshot_store", snapshotConfig.GetString("table-name"));
+            private DoSnapshot()
+            {
+            }
         }
     }
 }

@@ -1,34 +1,33 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ByteHelpers.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ByteHelpers.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.IO;
 
-namespace Akka.Util
-{
-    public static class ByteHelpers
-    {
-        public static byte[] PutInt(this byte[] target, int x, int offset = 0, ByteOrder order = ByteOrder.BigEndian)
-        {
-            if (order == ByteOrder.BigEndian)
-            {
-                target[offset + 0] = (byte)(x >> 24);
-                target[offset + 1] = (byte)(x >> 16);
-                target[offset + 2] = (byte)(x >> 8);
-                target[offset + 3] = (byte)(x >> 0);
-            }
-            else
-            {
-                target[offset + 0] = (byte)(x >> 0);
-                target[offset + 1] = (byte)(x >> 8);
-                target[offset + 2] = (byte)(x >> 16);
-                target[offset + 3] = (byte)(x >> 24);
-            }
+namespace Akka.Util;
 
-            return target;
+public static class ByteHelpers
+{
+    public static byte[] PutInt(this byte[] target, int x, int offset = 0, ByteOrder order = ByteOrder.BigEndian)
+    {
+        if (order == ByteOrder.BigEndian)
+        {
+            target[offset + 0] = (byte)(x >> 24);
+            target[offset + 1] = (byte)(x >> 16);
+            target[offset + 2] = (byte)(x >> 8);
+            target[offset + 3] = (byte)(x >> 0);
         }
+        else
+        {
+            target[offset + 0] = (byte)(x >> 0);
+            target[offset + 1] = (byte)(x >> 8);
+            target[offset + 2] = (byte)(x >> 16);
+            target[offset + 3] = (byte)(x >> 24);
+        }
+
+        return target;
     }
 }

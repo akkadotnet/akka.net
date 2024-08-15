@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="MinMembersBeforeUpSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="MinMembersBeforeUpSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -16,208 +16,206 @@ using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.Cluster.Tests.MultiNode;
+
+#region Member.Up
+
+public class MinMembersBeforeUpSpecConfig : MultiNodeConfig
 {
-    #region Member.Up
+    public readonly RoleName First;
+    public readonly RoleName Second;
+    public readonly RoleName Third;
 
-    public class MinMembersBeforeUpSpecConfig : MultiNodeConfig
+    public MinMembersBeforeUpSpecConfig()
     {
-        public readonly RoleName First;
-        public readonly RoleName Second;
-        public readonly RoleName Third;
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
 
-        public MinMembersBeforeUpSpecConfig()
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
-
-            CommonConfig = ConfigurationFactory.ParseString(@"
+        CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.cluster.min-nr-of-members = 3
             ").WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
-        }
     }
+}
 
-    public class MinMembersOfRoleBeforeUpSpecConfig : MultiNodeConfig
+public class MinMembersOfRoleBeforeUpSpecConfig : MultiNodeConfig
+{
+    public readonly RoleName First;
+    public readonly RoleName Second;
+    public readonly RoleName Third;
+
+    public MinMembersOfRoleBeforeUpSpecConfig()
     {
-        public readonly RoleName First;
-        public readonly RoleName Second;
-        public readonly RoleName Third;
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
 
-        public MinMembersOfRoleBeforeUpSpecConfig()
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
-
-            CommonConfig = ConfigurationFactory.ParseString(@"
+        CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.cluster.role.backend.min-nr-of-members = 2
             ").WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
 
-            NodeConfig(new List<RoleName> { First }, new List<Config>
-            {
-                ConfigurationFactory.ParseString("akka.cluster.roles =[frontend]")
-            });
+        NodeConfig(new List<RoleName> { First },
+            new List<Config> { ConfigurationFactory.ParseString("akka.cluster.roles =[frontend]") });
 
-            NodeConfig(new List<RoleName> { Second, Third }, new List<Config>
-            {
-                ConfigurationFactory.ParseString("akka.cluster.roles =[backend]")
-            });
-        }
+        NodeConfig(new List<RoleName> { Second, Third },
+            new List<Config> { ConfigurationFactory.ParseString("akka.cluster.roles =[backend]") });
+    }
+}
+
+public class MinMembersBeforeUpSpec : MinMembersBeforeUpBase
+{
+    public MinMembersBeforeUpSpec() : this(new MinMembersBeforeUpSpecConfig())
+    {
     }
 
-    public class MinMembersBeforeUpSpec : MinMembersBeforeUpBase
+    protected MinMembersBeforeUpSpec(MinMembersBeforeUpSpecConfig config) : base(config, typeof(MinMembersBeforeUpSpec))
     {
-        public MinMembersBeforeUpSpec() : this(new MinMembersBeforeUpSpecConfig())
-        {
-        }
-
-        protected MinMembersBeforeUpSpec(MinMembersBeforeUpSpecConfig config) : base(config, typeof(MinMembersBeforeUpSpec))
-        {
-            First = config.First;
-            Second = config.Second;
-            Third = config.Third;
-        }
-
-        [MultiNodeFact]
-        public void Cluster_leader_must_wait_with_moving_members_to_up_until_minimum_number_of_members_have_joined()
-        {
-            TestWaitMovingMembersToUp();
-        }
+        First = config.First;
+        Second = config.Second;
+        Third = config.Third;
     }
 
-    #endregion
-
-    #region Member.WeaklyUp
-
-    public class MinMembersBeforeUpWithWeaklyUpSpecConfig : MultiNodeConfig
+    [MultiNodeFact]
+    public void Cluster_leader_must_wait_with_moving_members_to_up_until_minimum_number_of_members_have_joined()
     {
-        public readonly RoleName First;
-        public readonly RoleName Second;
-        public readonly RoleName Third;
+        TestWaitMovingMembersToUp();
+    }
+}
 
-        public MinMembersBeforeUpWithWeaklyUpSpecConfig()
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
+#endregion
 
-            CommonConfig = ConfigurationFactory.ParseString(@"
+#region Member.WeaklyUp
+
+public class MinMembersBeforeUpWithWeaklyUpSpecConfig : MultiNodeConfig
+{
+    public readonly RoleName First;
+    public readonly RoleName Second;
+    public readonly RoleName Third;
+
+    public MinMembersBeforeUpWithWeaklyUpSpecConfig()
+    {
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
+
+        CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.cluster.min-nr-of-members = 3
                 akka.cluster.allow-weakly-up-members = 3s
             ").WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
-        }
     }
-    public class MinMembersBeforeUpWithWeaklyUpNode1 : MinMembersBeforeUpWithWeaklyUpSpec { }
-    public class MinMembersBeforeUpWithWeaklyUpNode2 : MinMembersBeforeUpWithWeaklyUpSpec { }
-    public class MinMembersBeforeUpWithWeaklyUpNode3 : MinMembersBeforeUpWithWeaklyUpSpec { }
+}
 
-    public abstract class MinMembersBeforeUpWithWeaklyUpSpec : MinMembersBeforeUpBase
+public class MinMembersBeforeUpWithWeaklyUpNode1 : MinMembersBeforeUpWithWeaklyUpSpec
+{
+}
+
+public class MinMembersBeforeUpWithWeaklyUpNode2 : MinMembersBeforeUpWithWeaklyUpSpec
+{
+}
+
+public class MinMembersBeforeUpWithWeaklyUpNode3 : MinMembersBeforeUpWithWeaklyUpSpec
+{
+}
+
+public abstract class MinMembersBeforeUpWithWeaklyUpSpec : MinMembersBeforeUpBase
+{
+    protected MinMembersBeforeUpWithWeaklyUpSpec() : this(new MinMembersBeforeUpWithWeaklyUpSpecConfig())
     {
-        protected MinMembersBeforeUpWithWeaklyUpSpec() : this(new MinMembersBeforeUpWithWeaklyUpSpecConfig())
-        {
-        }
-
-        protected MinMembersBeforeUpWithWeaklyUpSpec(MinMembersBeforeUpWithWeaklyUpSpecConfig config) 
-            : base(config, typeof(MinMembersBeforeUpWithWeaklyUpSpec))
-        {
-            First = config.First;
-            Second = config.Second;
-            Third = config.Third;
-        }
-
-        [MultiNodeFact]
-        public void Cluster_leader_must_wait_with_moving_members_to_up_until_minimum_number_of_members_have_joined_with_WeaklyUp_enabled()
-        {
-            TestWaitMovingMembersToUp();
-        }
     }
 
-    #endregion
-
-    public class MinMembersOfRoleBeforeUpSpec : MinMembersBeforeUpBase
+    protected MinMembersBeforeUpWithWeaklyUpSpec(MinMembersBeforeUpWithWeaklyUpSpecConfig config)
+        : base(config, typeof(MinMembersBeforeUpWithWeaklyUpSpec))
     {
-        public MinMembersOfRoleBeforeUpSpec() : this(new MinMembersOfRoleBeforeUpSpecConfig())
-        {
-        }
-
-        protected MinMembersOfRoleBeforeUpSpec(MinMembersOfRoleBeforeUpSpecConfig config) : base(config, typeof(MinMembersOfRoleBeforeUpSpec))
-        {
-            First = config.First;
-            Second = config.Second;
-            Third = config.Third;
-        }
-
-        [MultiNodeFact]
-        public void Cluster_leader_must_wait_with_moving_members_to_up_until_minimum_number_of_members_with_specific_role_have_joined()
-        {
-            TestWaitMovingMembersToUp();
-        }
+        First = config.First;
+        Second = config.Second;
+        Third = config.Third;
     }
 
-    public abstract class MinMembersBeforeUpBase : MultiNodeClusterSpec
+    [MultiNodeFact]
+    public void
+        Cluster_leader_must_wait_with_moving_members_to_up_until_minimum_number_of_members_have_joined_with_WeaklyUp_enabled()
     {
-        protected RoleName First;
-        protected RoleName Second;
-        protected RoleName Third;
+        TestWaitMovingMembersToUp();
+    }
+}
 
-        protected MinMembersBeforeUpBase(MultiNodeConfig config, Type type) : base(config, type)
-        {
-        }
+#endregion
 
-        protected void TestWaitMovingMembersToUp()
+public class MinMembersOfRoleBeforeUpSpec : MinMembersBeforeUpBase
+{
+    public MinMembersOfRoleBeforeUpSpec() : this(new MinMembersOfRoleBeforeUpSpecConfig())
+    {
+    }
+
+    protected MinMembersOfRoleBeforeUpSpec(MinMembersOfRoleBeforeUpSpecConfig config) : base(config,
+        typeof(MinMembersOfRoleBeforeUpSpec))
+    {
+        First = config.First;
+        Second = config.Second;
+        Third = config.Third;
+    }
+
+    [MultiNodeFact]
+    public void
+        Cluster_leader_must_wait_with_moving_members_to_up_until_minimum_number_of_members_with_specific_role_have_joined()
+    {
+        TestWaitMovingMembersToUp();
+    }
+}
+
+public abstract class MinMembersBeforeUpBase : MultiNodeClusterSpec
+{
+    protected RoleName First;
+    protected RoleName Second;
+    protected RoleName Third;
+
+    protected MinMembersBeforeUpBase(MultiNodeConfig config, Type type) : base(config, type)
+    {
+    }
+
+    protected void TestWaitMovingMembersToUp()
+    {
+        var onUpLatch = new TestLatch(1);
+        Cluster.RegisterOnMemberUp(() => { onUpLatch.CountDown(); });
+
+        RunOn(() =>
         {
-            var onUpLatch = new TestLatch(1);
-            Cluster.RegisterOnMemberUp(() =>
+            Cluster.Join(GetAddress(Myself));
+            AwaitAssert(() =>
             {
-                onUpLatch.CountDown();
+                ClusterView.RefreshCurrentState();
+                ClusterView.Status.ShouldBe(MemberStatus.Joining);
             });
+        }, First);
+        EnterBarrier("first-started");
 
-            RunOn(() =>
+        onUpLatch.IsOpen.ShouldBeFalse();
+
+        RunOn(() => { Cluster.Join(GetAddress(First)); }, Second);
+
+        RunOn(() =>
+        {
+            var expectedAddresses = new List<Address> { GetAddress(First), GetAddress(Second) };
+            AwaitAssert(() =>
             {
-                Cluster.Join(GetAddress(Myself));
-                AwaitAssert(() =>
-                {
-                    ClusterView.RefreshCurrentState();
-                    ClusterView.Status.ShouldBe(MemberStatus.Joining);
-                });
-            }, First);
-            EnterBarrier("first-started");
-
-            onUpLatch.IsOpen.ShouldBeFalse();
-
-            RunOn(() =>
+                ClusterView.RefreshCurrentState();
+                ClusterView.Members.Select(c => c.Address).Except(expectedAddresses).Count().ShouldBe(0);
+            });
+            ClusterView.Members.All(c => c.Status == MemberStatus.Joining).ShouldBeTrue();
+            // and it should not change
+            foreach (var _ in Enumerable.Range(1, 5))
             {
-                Cluster.Join(GetAddress(First));
-            }, Second);
-
-            RunOn(() =>
-            {
-                var expectedAddresses = new List<Address> { GetAddress(First), GetAddress(Second) };
-                AwaitAssert(() =>
-                {
-                    ClusterView.RefreshCurrentState();
-                    ClusterView.Members.Select(c => c.Address).Except(expectedAddresses).Count().ShouldBe(0);
-                });
+                Thread.Sleep(1000);
+                ClusterView.Members.Select(c => c.Address).Except(expectedAddresses).Count().ShouldBe(0);
                 ClusterView.Members.All(c => c.Status == MemberStatus.Joining).ShouldBeTrue();
-                // and it should not change
-                foreach (var _ in Enumerable.Range(1, 5))
-                {
-                    Thread.Sleep(1000);
-                    ClusterView.Members.Select(c => c.Address).Except(expectedAddresses).Count().ShouldBe(0);
-                    ClusterView.Members.All(c => c.Status == MemberStatus.Joining).ShouldBeTrue();
-                }
-            }, First, Second);
-            EnterBarrier("second-joined");
+            }
+        }, First, Second);
+        EnterBarrier("second-joined");
 
-            RunOn(() =>
-            {
-                Cluster.Join(GetAddress(First));
-            }, Third);
-            AwaitClusterUp(First, Second, Third);
+        RunOn(() => { Cluster.Join(GetAddress(First)); }, Third);
+        AwaitClusterUp(First, Second, Third);
 
-            onUpLatch.Ready(TestKitSettings.DefaultTimeout);
-            EnterBarrier("after-1");
-        }
+        onUpLatch.Ready(TestKitSettings.DefaultTimeout);
+        EnterBarrier("after-1");
     }
 }

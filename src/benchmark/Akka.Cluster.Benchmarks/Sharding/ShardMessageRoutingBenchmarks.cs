@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ShardMessageRoutingBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ShardMessageRoutingBenchmarks.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -17,78 +17,81 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using static Akka.Cluster.Benchmarks.Sharding.ShardingHelper;
 
-namespace Akka.Cluster.Benchmarks.Sharding
+namespace Akka.Cluster.Benchmarks.Sharding;
+
+[Config(typeof(MonitoringConfig))]
+[SimpleJob(RunStrategy.Monitoring, 10, 10)]
+public class ShardMessageRoutingBenchmarks
 {
-    [Config(typeof(MonitoringConfig))]
-    [SimpleJob(RunStrategy.Monitoring, launchCount: 10, warmupCount: 10)]
-    public class ShardMessageRoutingBenchmarks
-    {
-        [Params(StateStoreMode.Persistence, StateStoreMode.DData)]
-        public StateStoreMode StateMode;
+    [Params(StateStoreMode.Persistence, StateStoreMode.DData)]
+    public StateStoreMode StateMode;
 
-        public const int MsgCount = 10_000;
+    public const int MsgCount = 10_000;
 
-        public const int BatchSize = 20;
+    public const int BatchSize = 20;
 
-        private ActorSystem _sys1;
-        private ActorSystem _sys2;
+    private ActorSystem _sys1;
+    private ActorSystem _sys2;
 
-        private IActorRef _shardRegion1;
-        private IActorRef _shardRegion2;
-        private IActorRef _localRouter;
+    private IActorRef _shardRegion1;
+    private IActorRef _shardRegion2;
+    private IActorRef _localRouter;
 
-        private string _entityOnSys1;
-        private string _entityOnSys2;
+    private string _entityOnSys1;
+    private string _entityOnSys2;
 
-        private ShardedMessage _messageToSys1;
-        private ShardedMessage _messageToSys2;
+    private ShardedMessage _messageToSys1;
+    private ShardedMessage _messageToSys2;
 
-        private IActorRef _batchActor;
-        private Task _batchComplete;
+    private IActorRef _batchActor;
+    private Task _batchComplete;
 
 #if (DEBUG)
-        [GlobalSetup]
-        public void Setup()
+    [GlobalSetup]
+    public void Setup()
+    {
+        var config = StateMode switch
         {
-            var config = StateMode switch
-            {
-                StateStoreMode.Persistence => CreatePersistenceConfig(),
-                StateStoreMode.DData => CreateDDataConfig(),
-                _ => null
-            };
+            StateStoreMode.Persistence => CreatePersistenceConfig(),
+            StateStoreMode.DData => CreateDDataConfig(),
+            _ => null
+        };
 
-            _sys1 = ActorSystem.Create("BenchSys", config);
-            _sys2 = ActorSystem.Create("BenchSys", config);
+        _sys1 = ActorSystem.Create("BenchSys", config);
+        _sys2 = ActorSystem.Create("BenchSys", config);
 
-            var c1 = Cluster.Get(_sys1);
-            var c2 = Cluster.Get(_sys2);
+        var c1 = Cluster.Get(_sys1);
+        var c2 = Cluster.Get(_sys2);
 
-            c1.JoinAsync(c1.SelfAddress).Wait();
-            c2.JoinAsync(c1.SelfAddress).Wait();
+        c1.JoinAsync(c1.SelfAddress).Wait();
+        c2.JoinAsync(c1.SelfAddress).Wait();
 
-            _shardRegion1 = StartShardRegion(_sys1);
-            _shardRegion2 = StartShardRegion(_sys2);
+        _shardRegion1 = StartShardRegion(_sys1);
+        _shardRegion2 = StartShardRegion(_sys2);
 
-            _localRouter = _sys1.ActorOf(Props.Create<ShardedProxyEntityActor>(_shardRegion1).WithRouter(new RoundRobinPool(50)));
+        _localRouter =
+            _sys1.ActorOf(Props.Create<ShardedProxyEntityActor>(_shardRegion1).WithRouter(new RoundRobinPool(50)));
 
-            var s1Asks = new List<Task<ShardedEntityActor.ResolveResp>>(20);
-            var s2Asks = new List<Task<ShardedEntityActor.ResolveResp>>(20);
+        var s1Asks = new List<Task<ShardedEntityActor.ResolveResp>>(20);
+        var s2Asks = new List<Task<ShardedEntityActor.ResolveResp>>(20);
 
-            foreach (var i in Enumerable.Range(0, 20))
-            {
-                s1Asks.Add(_shardRegion1.Ask<ShardedEntityActor.ResolveResp>(new ShardingEnvelope(i.ToString(), ShardedEntityActor.Resolve.Instance), TimeSpan.FromSeconds(3)));
-                s2Asks.Add(_shardRegion2.Ask<ShardedEntityActor.ResolveResp>(new ShardingEnvelope(i.ToString(), ShardedEntityActor.Resolve.Instance), TimeSpan.FromSeconds(3)));
-            }
-
-            // wait for all Ask operations to complete
-            Task.WhenAll(s1Asks.Concat(s2Asks)).Wait();
-
-            _entityOnSys2 = s1Asks.First(x => x.Result.Addr.Equals(c2.SelfAddress)).Result.EntityId;
-            _entityOnSys1 = s2Asks.First(x => x.Result.Addr.Equals(c1.SelfAddress)).Result.EntityId;
-
-            _messageToSys1 = new ShardedMessage(_entityOnSys1, 10);
-            _messageToSys2 = new ShardedMessage(_entityOnSys2, 10);
+        foreach (var i in Enumerable.Range(0, 20))
+        {
+            s1Asks.Add(_shardRegion1.Ask<ShardedEntityActor.ResolveResp>(
+                new ShardingEnvelope(i.ToString(), ShardedEntityActor.Resolve.Instance), TimeSpan.FromSeconds(3)));
+            s2Asks.Add(_shardRegion2.Ask<ShardedEntityActor.ResolveResp>(
+                new ShardingEnvelope(i.ToString(), ShardedEntityActor.Resolve.Instance), TimeSpan.FromSeconds(3)));
         }
+
+        // wait for all Ask operations to complete
+        Task.WhenAll(s1Asks.Concat(s2Asks)).Wait();
+
+        _entityOnSys2 = s1Asks.First(x => x.Result.Addr.Equals(c2.SelfAddress)).Result.EntityId;
+        _entityOnSys1 = s2Asks.First(x => x.Result.Addr.Equals(c1.SelfAddress)).Result.EntityId;
+
+        _messageToSys1 = new ShardedMessage(_entityOnSys1, 10);
+        _messageToSys2 = new ShardedMessage(_entityOnSys2, 10);
+    }
 #else
         [GlobalSetup]
         public async Task Setup()
@@ -112,7 +115,8 @@ namespace Akka.Cluster.Benchmarks.Sharding
             _shardRegion1 = StartShardRegion(_sys1);
             _shardRegion2 = StartShardRegion(_sys2);
 
-            _localRouter = _sys1.ActorOf(Props.Create<ShardedProxyEntityActor>(_shardRegion1).WithRouter(new RoundRobinPool(1000)));
+            _localRouter =
+ _sys1.ActorOf(Props.Create<ShardedProxyEntityActor>(_shardRegion1).WithRouter(new RoundRobinPool(1000)));
 
             var s1Asks = new List<Task<ShardedEntityActor.ResolveResp>>(20);
             var s2Asks = new List<Task<ShardedEntityActor.ResolveResp>>(20);
@@ -134,62 +138,61 @@ namespace Akka.Cluster.Benchmarks.Sharding
         }
 #endif
 
-        [IterationSetup]
-        public void PerIteration()
-        {
-            var tcs = new TaskCompletionSource<bool>();
-            _batchComplete = tcs.Task;
-            _batchActor = _sys1.ActorOf(Props.Create(() => new BulkSendActor(tcs, MsgCount)));
-        }
+    [IterationSetup]
+    public void PerIteration()
+    {
+        var tcs = new TaskCompletionSource<bool>();
+        _batchComplete = tcs.Task;
+        _batchActor = _sys1.ActorOf(Props.Create(() => new BulkSendActor(tcs, MsgCount)));
+    }
 
-        [Benchmark(OperationsPerInvoke = MsgCount)]
-        public async Task SingleRequestResponseToLocalEntity()
-        {
-            for (var i = 0; i < MsgCount; i++)
-                await _shardRegion1.Ask<ShardedMessage>(_messageToSys1);
-        }
+    [Benchmark(OperationsPerInvoke = MsgCount)]
+    public async Task SingleRequestResponseToLocalEntity()
+    {
+        for (var i = 0; i < MsgCount; i++)
+            await _shardRegion1.Ask<ShardedMessage>(_messageToSys1);
+    }
 
-        [Benchmark(OperationsPerInvoke = MsgCount)]
-        public async Task StreamingToLocalEntity()
-        {
-            _batchActor.Tell(new BulkSendActor.BeginSend(_messageToSys1, _shardRegion1, BatchSize));
-            await _batchComplete;
-        }
+    [Benchmark(OperationsPerInvoke = MsgCount)]
+    public async Task StreamingToLocalEntity()
+    {
+        _batchActor.Tell(new BulkSendActor.BeginSend(_messageToSys1, _shardRegion1, BatchSize));
+        await _batchComplete;
+    }
 
-        [Benchmark(OperationsPerInvoke = MsgCount)]
-        public async Task SingleRequestResponseToRemoteEntity()
-        {
-            for (var i = 0; i < MsgCount; i++)
-                await _shardRegion1.Ask<ShardedMessage>(_messageToSys2);
-        }
+    [Benchmark(OperationsPerInvoke = MsgCount)]
+    public async Task SingleRequestResponseToRemoteEntity()
+    {
+        for (var i = 0; i < MsgCount; i++)
+            await _shardRegion1.Ask<ShardedMessage>(_messageToSys2);
+    }
 
 
-        [Benchmark(OperationsPerInvoke = MsgCount)]
-        public async Task SingleRequestResponseToRemoteEntityWithLocalProxy()
-        {
-            for (var i = 0; i < MsgCount; i++)
-                await _localRouter.Ask<ShardedMessage>(new SendShardedMessage(_messageToSys2.EntityId, _messageToSys2));
-        }
+    [Benchmark(OperationsPerInvoke = MsgCount)]
+    public async Task SingleRequestResponseToRemoteEntityWithLocalProxy()
+    {
+        for (var i = 0; i < MsgCount; i++)
+            await _localRouter.Ask<ShardedMessage>(new SendShardedMessage(_messageToSys2.EntityId, _messageToSys2));
+    }
 
-        [Benchmark(OperationsPerInvoke = MsgCount)]
-        public async Task StreamingToRemoteEntity()
-        {
-            _batchActor.Tell(new BulkSendActor.BeginSend(_messageToSys2, _shardRegion1, BatchSize));
-            await _batchComplete;
-        }
+    [Benchmark(OperationsPerInvoke = MsgCount)]
+    public async Task StreamingToRemoteEntity()
+    {
+        _batchActor.Tell(new BulkSendActor.BeginSend(_messageToSys2, _shardRegion1, BatchSize));
+        await _batchComplete;
+    }
 
-        [IterationCleanup]
-        public void IterationCleanup()
-        {
-            _sys1.Stop(_batchActor);
-        }
+    [IterationCleanup]
+    public void IterationCleanup()
+    {
+        _sys1.Stop(_batchActor);
+    }
 
-        [GlobalCleanup]
-        public async Task Cleanup()
-        {
-            var t1 = _sys1.Terminate();
-            var t2 = _sys2.Terminate();
-            await Task.WhenAll(t1, t2);
-        }
+    [GlobalCleanup]
+    public async Task Cleanup()
+    {
+        var t1 = _sys1.Terminate();
+        var t2 = _sys2.Terminate();
+        await Task.WhenAll(t1, t2);
     }
 }

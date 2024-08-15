@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AggregateServiceDiscoverySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="AggregateServiceDiscoverySpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -15,28 +15,37 @@ using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Discovery.Tests.Aggregate
-{
-    public class StubbedServiceDiscovery : ServiceDiscovery
-    {
-        public StubbedServiceDiscovery(ExtendedActorSystem system)
-        {
-        }
+namespace Akka.Discovery.Tests.Aggregate;
 
-        public override Task<Resolved> Lookup(Lookup query, TimeSpan resolveTimeout)
-        {
-            return query.ServiceName switch
-            {
-                "stubbed" => Task.FromResult(new Resolved(query.ServiceName, new[] {new ResolvedTarget("stubbed1", 1234)})),
-                "fail" => throw new Exception("No resolving for you!"),
-                _ => Task.FromResult(new Resolved(query.ServiceName, new List<ResolvedTarget>()))
-            };
-        }
+public class StubbedServiceDiscovery : ServiceDiscovery
+{
+    public StubbedServiceDiscovery(ExtendedActorSystem system)
+    {
     }
 
-    public class AggregateServiceDiscoverySpec : TestKit.Xunit2.TestKit
+    public override Task<Resolved> Lookup(Lookup query, TimeSpan resolveTimeout)
     {
-        private static Configuration.Config Config => ConfigurationFactory.ParseString(@"
+        return query.ServiceName switch
+        {
+            "stubbed" => Task.FromResult(
+                new Resolved(query.ServiceName, new[] { new ResolvedTarget("stubbed1", 1234) })),
+            "fail" => throw new Exception("No resolving for you!"),
+            _ => Task.FromResult(new Resolved(query.ServiceName, new List<ResolvedTarget>()))
+        };
+    }
+}
+
+public class AggregateServiceDiscoverySpec : TestKit.Xunit2.TestKit
+{
+    private readonly ServiceDiscovery _discovery;
+
+    public AggregateServiceDiscoverySpec(ITestOutputHelper output)
+        : base(Config, "AggregateDiscoverySpec", output)
+    {
+        _discovery = Discovery.Get(Sys).Default;
+    }
+
+    private static Configuration.Config Config => ConfigurationFactory.ParseString(@"
             akka {
                 loglevel = DEBUG
                 discovery {
@@ -63,50 +72,31 @@ namespace Akka.Discovery.Tests.Aggregate
                 }
             }");
 
-        private readonly ServiceDiscovery _discovery;
+    [Fact]
+    public void Aggregate_service_discovery_must_only_call_first_one_if_returns_results()
+    {
+        var result = _discovery.Lookup("stubbed", 100.Milliseconds()).Result;
+        result.Should().Be(new ServiceDiscovery.Resolved(
+            "stubbed",
+            new List<ServiceDiscovery.ResolvedTarget> { new("stubbed1", 1234) }));
+    }
 
-        public AggregateServiceDiscoverySpec(ITestOutputHelper output)
-            : base(Config, "AggregateDiscoverySpec", output)
-        {
-            _discovery = Discovery.Get(Sys).Default;
-        }
+    [Fact]
+    public void Aggregate_service_discovery_must_move_onto_the_next_if_no_resolved_targets()
+    {
+        var result = _discovery.Lookup("config1", 100.Milliseconds()).Result;
+        result.Should().Be(new ServiceDiscovery.Resolved(
+            "config1",
+            new List<ServiceDiscovery.ResolvedTarget> { new("cat", 1233), new("dog", 1234) }));
+    }
 
-        [Fact]
-        public void Aggregate_service_discovery_must_only_call_first_one_if_returns_results()
-        {
-            var result = _discovery.Lookup("stubbed", 100.Milliseconds()).Result;
-            result.Should().Be(new ServiceDiscovery.Resolved(
-                "stubbed",
-                new List<ServiceDiscovery.ResolvedTarget>
-                {
-                    new("stubbed1", 1234)
-                }));
-        }
-
-        [Fact]
-        public void Aggregate_service_discovery_must_move_onto_the_next_if_no_resolved_targets()
-        {
-            var result = _discovery.Lookup("config1", 100.Milliseconds()).Result;
-            result.Should().Be(new ServiceDiscovery.Resolved(
-                "config1",
-                new List<ServiceDiscovery.ResolvedTarget>
-                {
-                    new("cat", 1233),
-                    new("dog", 1234)
-                }));
-        }
-        
-        [Fact]
-        public void Aggregate_service_discovery_must_move_onto_next_if_fails()
-        {
-            var result = _discovery.Lookup("fail", 100.Milliseconds()).Result;
-            // Stub fails then result comes from config
-            result.Should().Be(new ServiceDiscovery.Resolved(
-                "fail",
-                new List<ServiceDiscovery.ResolvedTarget>
-                {
-                    new("from-config")
-                }));
-        }
+    [Fact]
+    public void Aggregate_service_discovery_must_move_onto_next_if_fails()
+    {
+        var result = _discovery.Lookup("fail", 100.Milliseconds()).Result;
+        // Stub fails then result comes from config
+        result.Should().Be(new ServiceDiscovery.Resolved(
+            "fail",
+            new List<ServiceDiscovery.ResolvedTarget> { new("from-config") }));
     }
 }

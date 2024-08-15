@@ -1,25 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\xunitSettings.props" />
+  <Import Project="..\..\xunitSettings.props"/>
 
   <PropertyGroup>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
   </PropertyGroup>
-  
+
   <ItemGroup>
-    <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />
-    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+    <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj"/>
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-    <PackageReference Include="xunit" Version="$(XunitVersion)" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
-    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)"/>
+    <PackageReference Include="xunit" Version="$(XunitVersion)"/>
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)"/>
+    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)"/>
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Xml"/>
+    <Reference Include="System.Xml.Linq"/>
   </ItemGroup>
 
 </Project>

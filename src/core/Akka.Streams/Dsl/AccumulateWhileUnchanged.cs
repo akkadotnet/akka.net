@@ -1,96 +1,96 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AccumulateWhileUnchanged.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="AccumulateWhileUnchanged.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Streams.Stage;
-using Akka.Streams.Util;
 using Akka.Util;
 
-namespace Akka.Streams.Dsl
+namespace Akka.Streams.Dsl;
+
+/// <summary>
+///     Accumulates elements of type <typeparamref name="TElement" /> while extracted property of type
+///     <typeparamref name="TProperty" /> remains unchanged,
+///     emits an accumulated sequence when the property changes
+/// </summary>
+/// <typeparam name="TElement">type of accumulated elements</typeparam>
+/// <typeparam name="TProperty">type of the observed property</typeparam>
+public class AccumulateWhileUnchanged<TElement, TProperty> : GraphStage<FlowShape<TElement, IEnumerable<TElement>>>
 {
-    /// <summary>
-    /// Accumulates elements of type <typeparamref name="TElement"/> while extracted property of type <typeparamref name="TProperty"/> remains unchanged,
-    /// emits an accumulated sequence when the property changes
-    /// </summary>
-    /// <typeparam name="TElement">type of accumulated elements</typeparam>
-    /// <typeparam name="TProperty">type of the observed property</typeparam>
-    public class AccumulateWhileUnchanged<TElement, TProperty> : GraphStage<FlowShape<TElement, IEnumerable<TElement>>>
+    private readonly Func<TElement, TProperty> _propertyExtractor;
+
+    /// <param name="propertyExtractor">a function to extract the observed element property</param>
+    public AccumulateWhileUnchanged(Func<TElement, TProperty> propertyExtractor)
     {
-        #region Logic
+        _propertyExtractor = propertyExtractor;
 
-        private sealed class Logic : GraphStageLogic
+        In = new Inlet<TElement>("AccumulateWhileUnchanged.in");
+        Out = new Outlet<IEnumerable<TElement>>("AccumulateWhileUnchanged.out");
+        Shape = new FlowShape<TElement, IEnumerable<TElement>>(In, Out);
+    }
+
+    public override FlowShape<TElement, IEnumerable<TElement>> Shape { get; }
+
+    public Inlet<TElement> In { get; }
+    public Outlet<IEnumerable<TElement>> Out { get; }
+
+    protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+    {
+        return new Logic(this);
+    }
+
+    #region Logic
+
+    private sealed class Logic : GraphStageLogic
+    {
+        private readonly List<TElement> _buffer = new();
+        private Option<TProperty> _currentState = Option<TProperty>.None;
+
+        public Logic(AccumulateWhileUnchanged<TElement, TProperty> accumulateWhileUnchanged) : base(
+            accumulateWhileUnchanged.Shape)
         {
-            private Option<TProperty> _currentState = Option<TProperty>.None;
-            private readonly List<TElement> _buffer = new();
-
-            public Logic(AccumulateWhileUnchanged<TElement, TProperty> accumulateWhileUnchanged) : base(accumulateWhileUnchanged.Shape)
+            SetHandler(accumulateWhileUnchanged.In, () =>
             {
-                SetHandler(accumulateWhileUnchanged.In, onPush: () =>
+                var nextElement = Grab(accumulateWhileUnchanged.In);
+                var nextState = accumulateWhileUnchanged._propertyExtractor(nextElement);
+
+                if (!_currentState.HasValue)
+                    _currentState = Option<TProperty>.Create(nextState);
+
+                if (EqualityComparer<TProperty>.Default.Equals(_currentState.Value, nextState))
                 {
-                    var nextElement = Grab(accumulateWhileUnchanged.In);
-                    var nextState = accumulateWhileUnchanged._propertyExtractor(nextElement);
-
-                    if (!_currentState.HasValue)
-                        _currentState = Option<TProperty>.Create(nextState);
-
-                    if (EqualityComparer<TProperty>.Default.Equals(_currentState.Value, nextState))
-                    {
-                        _buffer.Add(nextElement);
-                        Pull(accumulateWhileUnchanged.In);
-                    }
-                    else
-                    {
-                        var result = _buffer.ToArray();
-                        _buffer.Clear();
-                        _buffer.Add(nextElement);
-                        Push(accumulateWhileUnchanged.Out, result);
-                        _currentState = Option<TProperty>.Create(nextState);
-                    }
-                }, onUpstreamFinish: () =>
+                    _buffer.Add(nextElement);
+                    Pull(accumulateWhileUnchanged.In);
+                }
+                else
                 {
                     var result = _buffer.ToArray();
-                    if (result.Any())
-                        Emit(accumulateWhileUnchanged.Out, result);
-                    CompleteStage();
-                });
-
-                SetHandler(accumulateWhileUnchanged.Out, onPull: () =>
-                {
-                    Pull(accumulateWhileUnchanged.In);
-                });
-            }
-
-            public override void PostStop()
+                    _buffer.Clear();
+                    _buffer.Add(nextElement);
+                    Push(accumulateWhileUnchanged.Out, result);
+                    _currentState = Option<TProperty>.Create(nextState);
+                }
+            }, () =>
             {
-                _buffer.Clear();
-            }
+                var result = _buffer.ToArray();
+                if (result.Any())
+                    Emit(accumulateWhileUnchanged.Out, result);
+                CompleteStage();
+            });
+
+            SetHandler(accumulateWhileUnchanged.Out, () => { Pull(accumulateWhileUnchanged.In); });
         }
 
-        #endregion
-
-        private readonly Func<TElement, TProperty> _propertyExtractor;
-
-        /// <param name="propertyExtractor">a function to extract the observed element property</param>
-        public AccumulateWhileUnchanged(Func<TElement, TProperty> propertyExtractor)
+        public override void PostStop()
         {
-            _propertyExtractor = propertyExtractor;
-
-            In = new Inlet<TElement>("AccumulateWhileUnchanged.in");
-            Out = new Outlet<IEnumerable<TElement>>("AccumulateWhileUnchanged.out");
-            Shape = new FlowShape<TElement, IEnumerable<TElement>>(In, Out);
+            _buffer.Clear();
         }
-
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
-
-        public override FlowShape<TElement, IEnumerable<TElement>> Shape { get; }
-
-        public Inlet<TElement> In { get; }
-        public Outlet<IEnumerable<TElement>> Out { get; }
     }
+
+    #endregion
 }

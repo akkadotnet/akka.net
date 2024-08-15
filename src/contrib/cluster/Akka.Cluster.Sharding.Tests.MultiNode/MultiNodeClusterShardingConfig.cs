@@ -1,62 +1,45 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="MultiNodeClusterShardingConfig.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="MultiNodeClusterShardingConfig.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System;
 using Akka.Cluster.TestKit;
+using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 
-namespace Akka.Cluster.Sharding.Tests
+namespace Akka.Cluster.Sharding.Tests;
+
+public abstract class MultiNodeClusterShardingConfig : MultiNodeConfig
 {
-    public abstract class MultiNodeClusterShardingConfig : MultiNodeConfig
+    /// <summary>
+    /// </summary>
+    /// <param name="mode">mode the state store mode</param>
+    /// <param name="rememberEntities">rememberEntities defaults to off</param>
+    /// <param name="additionalConfig">additionalConfig additional _config</param>
+    /// <param name="loglevel">loglevel defaults to INFO</param>
+    protected MultiNodeClusterShardingConfig(
+        StateStoreMode mode = StateStoreMode.DData,
+        bool rememberEntities = false,
+        RememberEntitiesStore rememberEntitiesStore = RememberEntitiesStore.DData,
+        string additionalConfig = "",
+        string loglevel = "INFO")
     {
-        protected static Config PersistenceConfig()
-        {
-            return ConfigurationFactory.ParseString(@"
-                akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
-                akka.persistence.journal.memory-journal-shared {
-                    class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
-                    plugin-dispatcher = ""akka.actor.default-dispatcher""
-                    timeout = 5s
-                }
+        Mode = mode;
+        RememberEntities = rememberEntities;
+        RememberEntitiesStore = rememberEntitiesStore;
+        AdditionalConfig = additionalConfig;
+        Loglevel = loglevel;
 
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.memory-snapshot-store-shared""
-                akka.persistence.memory-snapshot-store-shared {
-                    class = ""Akka.Cluster.Sharding.Tests.MemorySnapshotStoreShared, Akka.Cluster.Sharding.Tests.MultiNode""
-                    plugin-dispatcher = ""akka.actor.default-dispatcher""
-                    timeout = 5s
-                }
-                ");
-        }
+        var persistenceConfig =
+            mode == StateStoreMode.DData && rememberEntitiesStore != RememberEntitiesStore.Eventsourced
+                ? ConfigurationFactory.Empty
+                : PersistenceConfig();
 
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="mode">mode the state store mode</param>
-        /// <param name="rememberEntities">rememberEntities defaults to off</param>
-        /// <param name="additionalConfig">additionalConfig additional _config</param>
-        /// <param name="loglevel">loglevel defaults to INFO</param>
-        protected MultiNodeClusterShardingConfig(
-            StateStoreMode mode = StateStoreMode.DData,
-            bool rememberEntities = false,
-            RememberEntitiesStore rememberEntitiesStore = RememberEntitiesStore.DData,
-            string additionalConfig = "",
-            string loglevel = "INFO")
-        {
-            Mode = mode;
-            RememberEntities = rememberEntities;
-            RememberEntitiesStore = rememberEntitiesStore;
-            AdditionalConfig = additionalConfig;
-            Loglevel = loglevel;
-
-            Config persistenceConfig = (mode == StateStoreMode.DData && rememberEntitiesStore != RememberEntitiesStore.Eventsourced) ? ConfigurationFactory.Empty : PersistenceConfig();
-
-            Common =
-                ConfigurationFactory.ParseString($@"
+        Common =
+            ConfigurationFactory.ParseString($@"
                     akka.actor.provider = ""cluster""
                     akka.cluster.auto-down-unreachable-after = 0s
                     akka.cluster.sharding.state-store-mode = ""{mode}""
@@ -79,19 +62,38 @@ namespace Akka.Cluster.Sharding.Tests
                         }}
                     }}
                     ")
-                    .WithFallback(Sharding.ClusterSharding.DefaultConfig())
-                    .WithFallback(DistributedData.DistributedData.DefaultConfig())
-                    .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
-                    .WithFallback(MultiNodeClusterSpec.ClusterConfig());
+                .WithFallback(ClusterSharding.DefaultConfig())
+                .WithFallback(DistributedData.DistributedData.DefaultConfig())
+                .WithFallback(ClusterSingletonManager.DefaultConfig())
+                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
-            CommonConfig = (ConfigurationFactory.ParseString(additionalConfig).WithFallback(persistenceConfig).WithFallback(Common));
-        }
+        CommonConfig = ConfigurationFactory.ParseString(additionalConfig).WithFallback(persistenceConfig)
+            .WithFallback(Common);
+    }
 
-        public StateStoreMode Mode { get; }
-        public bool RememberEntities { get; }
-        public RememberEntitiesStore RememberEntitiesStore { get; }
-        public string AdditionalConfig { get; }
-        public string Loglevel { get; }
-        public Config Common { get; }
+    public StateStoreMode Mode { get; }
+    public bool RememberEntities { get; }
+    public RememberEntitiesStore RememberEntitiesStore { get; }
+    public string AdditionalConfig { get; }
+    public string Loglevel { get; }
+    public Config Common { get; }
+
+    protected static Config PersistenceConfig()
+    {
+        return ConfigurationFactory.ParseString(@"
+                akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
+                akka.persistence.journal.memory-journal-shared {
+                    class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
+                    plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    timeout = 5s
+                }
+
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.memory-snapshot-store-shared""
+                akka.persistence.memory-snapshot-store-shared {
+                    class = ""Akka.Cluster.Sharding.Tests.MemorySnapshotStoreShared, Akka.Cluster.Sharding.Tests.MultiNode""
+                    plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    timeout = 5s
+                }
+                ");
     }
 }

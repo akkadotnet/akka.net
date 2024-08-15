@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="LocalSnapshotStoreSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="LocalSnapshotStoreSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Configuration;
@@ -12,45 +12,45 @@ using Akka.Persistence.TestKit.Tests;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.TCK.Tests
+namespace Akka.Persistence.TCK.Tests;
+
+public class LocalSnapshotStoreSpec : SnapshotStoreSpec
 {
-    public class LocalSnapshotStoreSpec : SnapshotStoreSpec
-    {
-        private readonly string _path;
-        public LocalSnapshotStoreSpec(ITestOutputHelper output) 
-            : base(ConfigurationFactory.ParseString(
+    private readonly string _path;
+
+    public LocalSnapshotStoreSpec(ITestOutputHelper output)
+        : base(ConfigurationFactory.ParseString(
                 @"akka.test.timefactor = 3
                   akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
-                  akka.persistence.snapshot-store.local.dir = ""target/snapshots-" + Guid.NewGuid() + @""""), 
+                  akka.persistence.snapshot-store.local.dir = ""target/snapshots-" + Guid.NewGuid() + @""""),
             "LocalSnapshotStoreSpec", output)
-        {
-            _path = Sys.Settings.Config.GetString("akka.persistence.snapshot-store.local.dir", null);
-            Sys.CreateStorageLocations(_path);
+    {
+        _path = Sys.Settings.Config.GetString("akka.persistence.snapshot-store.local.dir");
+        Sys.CreateStorageLocations(_path);
 
-            Initialize();
-        }
+        Initialize();
+    }
 
-        protected override bool SupportsSerialization => true;
+    protected override bool SupportsSerialization => true;
 
-        protected override void AfterAll()
-        {
-            Sys.DeleteStorageLocations(_path);
-            base.AfterAll();
-        }
+    protected override void AfterAll()
+    {
+        Sys.DeleteStorageLocations(_path);
+        base.AfterAll();
+    }
 
-        [Fact]
-        public void LocalSnapshotStore_can_snapshot_actors_with_PersistenceId_containing_invalid_path_characters()
-        {
-            var pid = @"p\/:*?-1";
-            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(pid, 1, Sys.Scheduler.Now.DateTime), "sample data"), TestActor);
-            ExpectMsg<SaveSnapshotSuccess>();
+    [Fact]
+    public void LocalSnapshotStore_can_snapshot_actors_with_PersistenceId_containing_invalid_path_characters()
+    {
+        var pid = @"p\/:*?-1";
+        SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(pid, 1, Sys.Scheduler.Now.DateTime), "sample data"),
+            TestActor);
+        ExpectMsg<SaveSnapshotSuccess>();
 
-            SnapshotStore.Tell(new LoadSnapshot(pid, SnapshotSelectionCriteria.Latest, long.MaxValue), TestActor);
-            ExpectMsg<LoadSnapshotResult>(res => 
-                res.Snapshot.Snapshot.Equals("sample data") 
-                && res.Snapshot.Metadata.PersistenceId == pid
-                && res.Snapshot.Metadata.SequenceNr == 1);
-        }
+        SnapshotStore.Tell(new LoadSnapshot(pid, SnapshotSelectionCriteria.Latest, long.MaxValue), TestActor);
+        ExpectMsg<LoadSnapshotResult>(res =>
+            res.Snapshot.Snapshot.Equals("sample data")
+            && res.Snapshot.Metadata.PersistenceId == pid
+            && res.Snapshot.Metadata.SequenceNr == 1);
     }
 }
-

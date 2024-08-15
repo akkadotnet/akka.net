@@ -1,10 +1,11 @@
 # Akka.Cluster.Cpu.Benchmark
 
-This project is a standalone console CPU benchmark to measure Akka.Cluster actors CPU usage. It will: 
+This project is a standalone console CPU benchmark to measure Akka.Cluster actors CPU usage. It will:
 
-* Spin up a single bare minimum cluster node as a seed node, 
-* Spins up a cluster with a predetermined size that uses that node as seed, and then 
-* Collect CPU usage at regular interval and save the result in a comma separated value (.csv) file that can be imported into a spreadsheet application.
+* Spin up a single bare minimum cluster node as a seed node,
+* Spins up a cluster with a predetermined size that uses that node as seed, and then
+* Collect CPU usage at regular interval and save the result in a comma separated value (.csv) file that can be imported
+  into a spreadsheet application.
 
 ## Usage
 

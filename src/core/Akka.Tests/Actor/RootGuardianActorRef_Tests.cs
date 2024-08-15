@@ -1,10 +1,11 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="RootGuardianActorRef_Tests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="RootGuardianActorRef_Tests.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Akka.Actor;
@@ -13,100 +14,105 @@ using Akka.Dispatch;
 using Akka.TestKit;
 using Xunit;
 
-namespace Akka.Tests.Actor
+namespace Akka.Tests.Actor;
+
+public class RootGuardianActorRef_Tests : AkkaSpec
 {
-    
-    public class RootGuardianActorRef_Tests : AkkaSpec
+    private static readonly RootActorPath _rootActorPath = new(new Address("akka", "test"));
+    private readonly DummyActorRef _deadLetters = new(_rootActorPath / "deadLetters");
+    private readonly MessageDispatcher _dispatcher;
+
+    private readonly ReadOnlyDictionary<string, IInternalActorRef> _emptyExtraNames =
+        new(new Dictionary<string, IInternalActorRef>());
+
+    public RootGuardianActorRef_Tests()
     {
-        static RootActorPath _rootActorPath = new(new Address("akka", "test"));
-        DummyActorRef _deadLetters = new(_rootActorPath / "deadLetters");
-        ReadOnlyDictionary<string, IInternalActorRef> _emptyExtraNames = new(new Dictionary<string, IInternalActorRef>());
-        MessageDispatcher _dispatcher;
+        _dispatcher = Sys.Dispatchers.Lookup(CallingThreadDispatcher.Id);
+    }
 
-        public RootGuardianActorRef_Tests()
+    [Fact]
+    public void Path_Should_be_the_same_path_as_specified()
+    {
+        var props = Props.Create<GuardianActor>(new OneForOneStrategy(_ => Directive.Stop));
+        var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher,
+            Sys.Mailboxes.GetMailboxType(props, _dispatcher.Configurator.Config), ActorRefs.Nobody, _rootActorPath,
+            _deadLetters, _emptyExtraNames);
+        Assert.Equal(_rootActorPath, rootGuardianActorRef.Path);
+    }
+
+    [Fact]
+    public void Parent_Should_be_itself()
+    {
+        var props = Props.Create<GuardianActor>(new OneForOneStrategy(_ => Directive.Stop));
+        var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher,
+            Sys.Mailboxes.GetMailboxType(props, _dispatcher.Configurator.Config), ActorRefs.Nobody, _rootActorPath,
+            _deadLetters, _emptyExtraNames);
+        var parent = rootGuardianActorRef.Parent;
+        Assert.Same(rootGuardianActorRef, parent);
+    }
+
+
+    [Fact]
+    public void Getting_temp_child_Should_return_tempContainer()
+    {
+        var props = Props.Create<GuardianActor>(new OneForOneStrategy(_ => Directive.Stop));
+        var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher,
+            Sys.Mailboxes.GetMailboxType(props, _dispatcher.Configurator.Config), ActorRefs.Nobody, _rootActorPath,
+            _deadLetters, _emptyExtraNames);
+        var tempContainer = new DummyActorRef(_rootActorPath / "temp");
+        rootGuardianActorRef.SetTempContainer(tempContainer);
+        var actorRef = rootGuardianActorRef.GetSingleChild("temp");
+        Assert.Same(tempContainer, actorRef);
+    }
+
+    [Fact]
+    public void Getting_deadLetters_child_Should_return_tempContainer()
+    {
+        var props = Props.Create<GuardianActor>(new OneForOneStrategy(_ => Directive.Stop));
+        var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher,
+            Sys.Mailboxes.GetMailboxType(props, _dispatcher.Configurator.Config), ActorRefs.Nobody, _rootActorPath,
+            _deadLetters, _emptyExtraNames);
+        var actorRef = rootGuardianActorRef.GetSingleChild("deadLetters");
+        Assert.Same(_deadLetters, actorRef);
+    }
+
+
+    [Fact]
+    public void Getting_a_child_that_exists_in_extraNames_Should_return_the_child()
+    {
+        var extraNameChild = new DummyActorRef(_rootActorPath / "extra");
+        var extraNames = new Dictionary<string, IInternalActorRef> { { "extra", extraNameChild } };
+        var props = Props.Create<GuardianActor>(new OneForOneStrategy(_ => Directive.Stop));
+        var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher,
+            Sys.Mailboxes.GetMailboxType(props, _dispatcher.Configurator.Config), ActorRefs.Nobody, _rootActorPath,
+            _deadLetters, extraNames);
+        var actorRef = rootGuardianActorRef.GetSingleChild("extra");
+        Assert.Same(extraNameChild, actorRef);
+    }
+
+    [Fact]
+    public void Getting_an_unknown_child_that_exists_in_extraNames_Should_return_nobody()
+    {
+        var props = Props.Create<GuardianActor>(new OneForOneStrategy(_ => Directive.Stop));
+        var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher,
+            Sys.Mailboxes.GetMailboxType(props, _dispatcher.Configurator.Config), ActorRefs.Nobody, _rootActorPath,
+            _deadLetters, _emptyExtraNames);
+        var actorRef = rootGuardianActorRef.GetSingleChild("unknown-child");
+        Assert.Same(ActorRefs.Nobody, actorRef);
+    }
+
+
+    private class DummyActorRef : MinimalActorRef
+    {
+        private readonly ActorPath _path;
+
+        public DummyActorRef(ActorPath path)
         {
-            _dispatcher = Sys.Dispatchers.Lookup(CallingThreadDispatcher.Id);
+            _path = path;
         }
 
-        [Fact]
-        public void Path_Should_be_the_same_path_as_specified()
-        {
-            var props = Props.Create<GuardianActor>(new OneForOneStrategy(_ => Directive.Stop));
-            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl) Sys, props, _dispatcher, Sys.Mailboxes.GetMailboxType(props, _dispatcher.Configurator.Config), ActorRefs.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
-            Assert.Equal(_rootActorPath, rootGuardianActorRef.Path);
-        }
+        public override ActorPath Path => _path;
 
-        [Fact]
-        public void Parent_Should_be_itself()
-        {
-            var props = Props.Create<GuardianActor>(new OneForOneStrategy(_ => Directive.Stop));
-            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl) Sys, props, _dispatcher, Sys.Mailboxes.GetMailboxType(props, _dispatcher.Configurator.Config), ActorRefs.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
-            var parent = rootGuardianActorRef.Parent;
-            Assert.Same(rootGuardianActorRef, parent);
-        }
-
-
-        [Fact]
-        public void Getting_temp_child_Should_return_tempContainer()
-        {
-            var props = Props.Create<GuardianActor>(new OneForOneStrategy(_ => Directive.Stop));
-            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher, Sys.Mailboxes.GetMailboxType(props, _dispatcher.Configurator.Config), ActorRefs.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
-            var tempContainer = new DummyActorRef(_rootActorPath / "temp");
-            rootGuardianActorRef.SetTempContainer(tempContainer);
-            var actorRef = rootGuardianActorRef.GetSingleChild("temp");
-            Assert.Same(tempContainer, actorRef);
-        }
-
-        [Fact]
-        public void Getting_deadLetters_child_Should_return_tempContainer()
-        {
-            var props = Props.Create<GuardianActor>(new OneForOneStrategy(_ => Directive.Stop));
-            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher, Sys.Mailboxes.GetMailboxType(props, _dispatcher.Configurator.Config), ActorRefs.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
-            var actorRef = rootGuardianActorRef.GetSingleChild("deadLetters");
-            Assert.Same(_deadLetters, actorRef);
-        }
-
-
-        [Fact]
-        public void Getting_a_child_that_exists_in_extraNames_Should_return_the_child()
-        {
-            var extraNameChild = new DummyActorRef(_rootActorPath / "extra");
-            var extraNames = new Dictionary<string, IInternalActorRef> { { "extra", extraNameChild } };
-            var props = Props.Create<GuardianActor>(new OneForOneStrategy(_ => Directive.Stop));
-            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher, Sys.Mailboxes.GetMailboxType(props, _dispatcher.Configurator.Config), ActorRefs.Nobody, _rootActorPath, _deadLetters, extraNames);
-            var actorRef = rootGuardianActorRef.GetSingleChild("extra");
-            Assert.Same(extraNameChild, actorRef);
-        }
-
-        [Fact]
-        public void Getting_an_unknown_child_that_exists_in_extraNames_Should_return_nobody()
-        {
-            var props = Props.Create<GuardianActor>(new OneForOneStrategy(_ => Directive.Stop));
-            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher, Sys.Mailboxes.GetMailboxType(props, _dispatcher.Configurator.Config), ActorRefs.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
-            var actorRef = rootGuardianActorRef.GetSingleChild("unknown-child");
-            Assert.Same(ActorRefs.Nobody, actorRef);
-        }
-
-
-        private class DummyActorRef : MinimalActorRef
-        {
-            private readonly ActorPath _path;
-
-            public DummyActorRef(ActorPath path)
-            {
-                _path = path;
-            }
-
-            public override ActorPath Path
-            {
-                get { return _path; }
-            }
-
-            public override IActorRefProvider Provider
-            {
-                get { throw new System.NotImplementedException(); }
-            }
-        }
+        public override IActorRefProvider Provider => throw new NotImplementedException();
     }
 }
-

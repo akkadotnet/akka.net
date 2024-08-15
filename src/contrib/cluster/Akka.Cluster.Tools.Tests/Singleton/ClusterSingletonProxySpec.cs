@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ClusterSingletonProxySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ClusterSingletonProxySpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Linq;
@@ -12,101 +12,65 @@ using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.TestKit;
+using Akka.TestKit.Configs;
 using Xunit;
 
-namespace Akka.Cluster.Tools.Tests.Singleton
-{
-    public class ClusterSingletonProxySpec : TestKit.Xunit2.TestKit
-    {
-        [Fact]
-        public void ClusterSingletonProxy_must_correctly_identify_the_singleton()
-        {
-            var seed = new ActorSys();
-            seed.Cluster.Join(seed.Cluster.SelfAddress);
+namespace Akka.Cluster.Tools.Tests.Singleton;
 
-            var testSystems =
-                Enumerable.Range(0, 4).Select(_ => new ActorSys(joinTo: seed.Cluster.SelfAddress))
-                .Concat(new[] {seed})
+public class ClusterSingletonProxySpec : TestKit.Xunit2.TestKit
+{
+    [Fact]
+    public void ClusterSingletonProxy_must_correctly_identify_the_singleton()
+    {
+        var seed = new ActorSys();
+        seed.Cluster.Join(seed.Cluster.SelfAddress);
+
+        var testSystems =
+            Enumerable.Range(0, 4).Select(_ => new ActorSys(joinTo: seed.Cluster.SelfAddress))
+                .Concat(new[] { seed })
                 .ToList();
 
-            try
-            {
-                testSystems.ForEach(s => s.TestProxy("Hello"));
-                testSystems.ForEach(s => s.TestProxy("World"));
-            }
-            finally
-            {
-                // force everything to cleanup
-                Task.WhenAll(testSystems.Select(s => s.Sys.Terminate()))
-                    .Wait(TimeSpan.FromSeconds(30));
-            }
-        }
-
-        [Fact]
-        public async Task ClusterSingletonProxy_with_zero_buffering_should_work()
+        try
         {
-            var seed = new ActorSys();
-            seed.Cluster.Join(seed.Cluster.SelfAddress);
-
-            var testSystem = new ActorSys(joinTo: seed.Cluster.SelfAddress, bufferSize: 0);
-            
-            // have to wait for cluster singleton to be ready, otherwise message will be rejected
-            await AwaitConditionAsync(
-                () => Task.FromResult(Cluster.Get(testSystem.Sys).State.Members.Count(m => m.Status == MemberStatus.Up) == 2),
-                TimeSpan.FromSeconds(30));
-
-            try
-            {
-                testSystem.TestProxy("Hello");
-            }
-            finally
-            {
-                // force everything to cleanup
-                Task.WhenAll(testSystem.Sys.Terminate()).Wait(TimeSpan.FromSeconds(30));
-            }
+            testSystems.ForEach(s => s.TestProxy("Hello"));
+            testSystems.ForEach(s => s.TestProxy("World"));
         }
-
-        private class ActorSys : TestKit.Xunit2.TestKit
+        finally
         {
-            public Cluster Cluster { get; }
+            // force everything to cleanup
+            Task.WhenAll(testSystems.Select(s => s.Sys.Terminate()))
+                .Wait(TimeSpan.FromSeconds(30));
+        }
+    }
 
-            public ActorSys(string name = "ClusterSingletonProxySystem", Address joinTo = null, int bufferSize = 1000)
-                : base(ActorSystem.Create(name, ConfigurationFactory.ParseString(_cfg).WithFallback(TestKit.Configs.TestConfigs.DefaultConfig)))
-            {
-                Cluster = Cluster.Get(Sys);
-                if (joinTo != null)
-                {
-                    Cluster.Join(joinTo);
-                }
+    [Fact]
+    public async Task ClusterSingletonProxy_with_zero_buffering_should_work()
+    {
+        var seed = new ActorSys();
+        seed.Cluster.Join(seed.Cluster.SelfAddress);
 
-                Cluster.RegisterOnMemberUp(() =>
-                {
-                    Sys.ActorOf(ClusterSingletonManager.Props(Props.Create(() => new Singleton()), PoisonPill.Instance,
-                        ClusterSingletonManagerSettings.Create(Sys)
-                            .WithRemovalMargin(TimeSpan.FromSeconds(5))), "singletonmanager");
-                });
+        var testSystem = new ActorSys(joinTo: seed.Cluster.SelfAddress, bufferSize: 0);
 
-                Proxy =
-                    Sys.ActorOf(
-                        ClusterSingletonProxy.Props(
-                            "user/singletonmanager",
-                            ClusterSingletonProxySettings.Create(Sys).WithBufferSize(bufferSize)), 
-                        $"singletonProxy-{Cluster.SelfAddress.Port ?? 0}");
-            }
+        // have to wait for cluster singleton to be ready, otherwise message will be rejected
+        await AwaitConditionAsync(
+            () => Task.FromResult(
+                Cluster.Get(testSystem.Sys).State.Members.Count(m => m.Status == MemberStatus.Up) == 2),
+            TimeSpan.FromSeconds(30));
 
-            public IActorRef Proxy { get; private set; }
+        try
+        {
+            testSystem.TestProxy("Hello");
+        }
+        finally
+        {
+            // force everything to cleanup
+            Task.WhenAll(testSystem.Sys.Terminate()).Wait(TimeSpan.FromSeconds(30));
+        }
+    }
 
-            public void TestProxy(string msg)
-            {
-                var probe = CreateTestProbe();
-                probe.Send(Proxy, msg);
-
-                // 25 seconds to make sure the singleton was started up
-                probe.ExpectMsg("Got " + msg, TimeSpan.FromSeconds(25));
-            }
-
-            private static readonly string _cfg = @"
+    private class ActorSys : TestKit.Xunit2.TestKit
+    {
+        private static readonly string _cfg = @"
                 akka {
                   loglevel = INFO
                   cluster {
@@ -123,21 +87,55 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                         }
                  }
               }";
+
+        public ActorSys(string name = "ClusterSingletonProxySystem", Address joinTo = null, int bufferSize = 1000)
+            : base(ActorSystem.Create(name,
+                ConfigurationFactory.ParseString(_cfg).WithFallback(TestConfigs.DefaultConfig)))
+        {
+            Cluster = Cluster.Get(Sys);
+            if (joinTo != null) Cluster.Join(joinTo);
+
+            Cluster.RegisterOnMemberUp(() =>
+            {
+                Sys.ActorOf(ClusterSingletonManager.Props(Props.Create(() => new Singleton()), PoisonPill.Instance,
+                    ClusterSingletonManagerSettings.Create(Sys)
+                        .WithRemovalMargin(TimeSpan.FromSeconds(5))), "singletonmanager");
+            });
+
+            Proxy =
+                Sys.ActorOf(
+                    ClusterSingletonProxy.Props(
+                        "user/singletonmanager",
+                        ClusterSingletonProxySettings.Create(Sys).WithBufferSize(bufferSize)),
+                    $"singletonProxy-{Cluster.SelfAddress.Port ?? 0}");
         }
 
-        private class Singleton : UntypedActor
+        public Cluster Cluster { get; }
+
+        public IActorRef Proxy { get; }
+
+        public void TestProxy(string msg)
         {
-            private readonly ILoggingAdapter _log = Context.GetLogger();
+            var probe = CreateTestProbe();
+            probe.Send(Proxy, msg);
 
-            protected override void PreStart()
-            {
-                _log.Info("Singleton created on {0}", Cluster.Get(Context.System).SelfAddress);
-            }
+            // 25 seconds to make sure the singleton was started up
+            probe.ExpectMsg("Got " + msg, TimeSpan.FromSeconds(25));
+        }
+    }
 
-            protected override void OnReceive(object message)
-            {
-                Sender.Tell("Got " + message);
-            }
+    private class Singleton : UntypedActor
+    {
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+
+        protected override void PreStart()
+        {
+            _log.Info("Singleton created on {0}", Cluster.Get(Context.System).SelfAddress);
+        }
+
+        protected override void OnReceive(object message)
+        {
+            Sender.Tell("Got " + message);
         }
     }
 }

@@ -1,13 +1,10 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ProtobufSerializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ProtobufSerializerSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System;
-using Akka.Actor;
-using Akka.Configuration;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
@@ -15,37 +12,36 @@ using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 
-namespace Akka.Remote.Tests.Serialization
+namespace Akka.Remote.Tests.Serialization;
+
+public class ProtobufSerializerSpec : AkkaSpec
 {
-    public class ProtobufSerializerSpec : AkkaSpec
+    public ProtobufSerializerSpec() : base(RemoteConfigFactory.Default())
     {
-        public ProtobufSerializerSpec() : base(RemoteConfigFactory.Default())
-        {
-        }
+    }
 
-        [Fact]
-        public void Can_serialize_ProtobufMessage()
-        {
-            var message = new AddressData();
-            message.System = "sys";
-            message.Hostname = "localhost";
-            message.Protocol = "akka.tcp";
-            message.Port = 54645;
-            AssertEqual(message);
-        }
+    [Fact]
+    public void Can_serialize_ProtobufMessage()
+    {
+        var message = new AddressData();
+        message.System = "sys";
+        message.Hostname = "localhost";
+        message.Protocol = "akka.tcp";
+        message.Port = 54645;
+        AssertEqual(message);
+    }
 
-        private T AssertAndReturn<T>(T message)
-        {
-            var serializer = Sys.Serialization.FindSerializerFor(message);
-            serializer.Should().BeOfType<ProtobufSerializer>();
-            var serializedBytes = serializer.ToBinary(message);
-            return (T)serializer.FromBinary(serializedBytes, typeof(T));
-        }
+    private T AssertAndReturn<T>(T message)
+    {
+        var serializer = Sys.Serialization.FindSerializerFor(message);
+        serializer.Should().BeOfType<ProtobufSerializer>();
+        var serializedBytes = serializer.ToBinary(message);
+        return (T)serializer.FromBinary(serializedBytes, typeof(T));
+    }
 
-        private void AssertEqual<T>(T message)
-        {
-            var deserialized = AssertAndReturn(message);
-            Assert.Equal(message, deserialized);
-        }
+    private void AssertEqual<T>(T message)
+    {
+        var deserialized = AssertAndReturn(message);
+        Assert.Equal(message, deserialized);
     }
 }

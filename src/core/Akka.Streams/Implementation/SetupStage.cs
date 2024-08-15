@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Sources.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SetupStage.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
@@ -11,166 +11,170 @@ using Akka.Annotations;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
 
-namespace Akka.Streams.Implementation
+namespace Akka.Streams.Implementation;
+
+[InternalApi]
+public sealed class SetupFlowStage<TIn, TOut, TMat> : GraphStageWithMaterializedValue<FlowShape<TIn, TOut>, Task<TMat>>
 {
-    [InternalApi]
-    public sealed class SetupFlowStage<TIn, TOut, TMat> : GraphStageWithMaterializedValue<FlowShape<TIn, TOut>, Task<TMat>>
+    private readonly Func<ActorMaterializer, Attributes, Flow<TIn, TOut, TMat>> _factory;
+
+    public SetupFlowStage(Func<ActorMaterializer, Attributes, Flow<TIn, TOut, TMat>> factory)
     {
-        #region Logic
+        _factory = factory;
+        Shape = new FlowShape<TIn, TOut>(In, Out);
+    }
 
-        private sealed class Logic : GraphStageLogic
+    public Inlet<TIn> In { get; } = new("SetupFlowStage.in");
+
+    public Outlet<TOut> Out { get; } = new("SetupFlowStage.out");
+
+    public override FlowShape<TIn, TOut> Shape { get; }
+
+    protected override Attributes InitialAttributes => Attributes.CreateName("setup");
+
+    public override ILogicAndMaterializedValue<Task<TMat>> CreateLogicAndMaterializedValue(
+        Attributes inheritedAttributes)
+    {
+        var matPromise = new TaskCompletionSource<TMat>();
+        var logic = new Logic(this, matPromise, inheritedAttributes);
+        return new LogicAndMaterializedValue<Task<TMat>>(logic, matPromise.Task);
+    }
+
+    #region Logic
+
+    private sealed class Logic : GraphStageLogic
+    {
+        private readonly Attributes _inheritedAttributes;
+        private readonly TaskCompletionSource<TMat> _matPromise;
+        private readonly SetupFlowStage<TIn, TOut, TMat> _stage;
+        private readonly SubSinkInlet<TOut> _subInlet;
+        private readonly SubSourceOutlet<TIn> _subOutlet;
+
+        public Logic(SetupFlowStage<TIn, TOut, TMat> stage, TaskCompletionSource<TMat> matPromise,
+            Attributes inheritedAttributes)
+            : base(stage.Shape)
         {
-            private readonly SetupFlowStage<TIn, TOut, TMat> _stage;
-            private readonly TaskCompletionSource<TMat> _matPromise;
-            private readonly Attributes _inheritedAttributes;
-            private readonly SubSinkInlet<TOut> _subInlet;
-            private readonly SubSourceOutlet<TIn> _subOutlet;
+            _stage = stage;
+            _matPromise = matPromise;
+            _inheritedAttributes = inheritedAttributes;
 
-            public Logic(SetupFlowStage<TIn, TOut, TMat> stage, TaskCompletionSource<TMat> matPromise, Attributes inheritedAttributes)
-                : base(stage.Shape)
-            {
-                _stage = stage;
-                _matPromise = matPromise;
-                _inheritedAttributes = inheritedAttributes;
+            _subInlet = new SubSinkInlet<TOut>(this, "SetupFlowStage");
+            _subOutlet = new SubSourceOutlet<TIn>(this, "SetupFlowStage");
 
-                _subInlet = new SubSinkInlet<TOut>(this, "SetupFlowStage");
-                _subOutlet = new SubSourceOutlet<TIn>(this, "SetupFlowStage");
+            _subInlet.SetHandler(new LambdaInHandler(
+                () => Push(_stage.Out, _subInlet.Grab()),
+                () => Complete(_stage.Out),
+                ex => Fail(_stage.Out, ex)));
+            _subOutlet.SetHandler(new LambdaOutHandler(
+                () => Pull(_stage.In),
+                ex => Cancel(_stage.In, ex)));
 
-                _subInlet.SetHandler(new LambdaInHandler(
-                    onPush: () => Push(_stage.Out, _subInlet.Grab()),
-                    onUpstreamFinish: () => Complete(_stage.Out),
-                    onUpstreamFailure: ex => Fail(_stage.Out, ex)));
-                _subOutlet.SetHandler(new LambdaOutHandler(
-                    onPull: () => Pull(_stage.In),
-                    onDownstreamFinish: ex => Cancel(_stage.In, ex)));
-
-                SetHandler(_stage.In, new LambdaInHandler(
-                    onPush: () => Grab(_stage.In),
-                    onUpstreamFinish: _subOutlet.Complete,
-                    onUpstreamFailure: _subOutlet.Fail));
-                SetHandler(_stage.Out, new LambdaOutHandler(
-                    onPull: _subInlet.Pull,
-                    onDownstreamFinish: _subInlet.Cancel));
-            }
-
-            public override void PreStart()
-            {
-                base.PreStart();
-
-                try
-                {
-                    var flow = _stage._factory(ActorMaterializerHelper.Downcast(Materializer), _inheritedAttributes);
-                    var mat = SubFusingMaterializer.Materialize(
-                        Source.FromGraph(_subOutlet.Source)
-                            .ViaMaterialized(flow, Keep.Right)
-                            .To(Sink.FromGraph(_subInlet.Sink)), _inheritedAttributes);
-                    _matPromise.SetResult(mat);
-                }
-                catch (Exception ex)
-                {
-                    _matPromise.SetException(ex);
-                    throw;
-                }
-            }
+            SetHandler(_stage.In, new LambdaInHandler(
+                () => Grab(_stage.In),
+                _subOutlet.Complete,
+                _subOutlet.Fail));
+            SetHandler(_stage.Out, new LambdaOutHandler(
+                _subInlet.Pull,
+                _subInlet.Cancel));
         }
 
-        #endregion
-
-        private readonly Func<ActorMaterializer, Attributes, Flow<TIn, TOut, TMat>> _factory;
-
-        public SetupFlowStage(Func<ActorMaterializer, Attributes, Flow<TIn, TOut, TMat>> factory)
+        public override void PreStart()
         {
-            _factory = factory;
-            Shape = new FlowShape<TIn, TOut>(In, Out);
-        }
+            base.PreStart();
 
-        public Inlet<TIn> In { get; } = new("SetupFlowStage.in");
-
-        public Outlet<TOut> Out { get; } = new("SetupFlowStage.out");
-
-        public override FlowShape<TIn, TOut> Shape { get; }
-
-        protected override Attributes InitialAttributes => Attributes.CreateName("setup");
-
-        public override ILogicAndMaterializedValue<Task<TMat>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
-        {
-            var matPromise = new TaskCompletionSource<TMat>();
-            var logic = new Logic(this, matPromise, inheritedAttributes);
-            return new LogicAndMaterializedValue<Task<TMat>>(logic, matPromise.Task);
+            try
+            {
+                var flow = _stage._factory(ActorMaterializerHelper.Downcast(Materializer), _inheritedAttributes);
+                var mat = SubFusingMaterializer.Materialize(
+                    Source.FromGraph(_subOutlet.Source)
+                        .ViaMaterialized(flow, Keep.Right)
+                        .To(Sink.FromGraph(_subInlet.Sink)), _inheritedAttributes);
+                _matPromise.SetResult(mat);
+            }
+            catch (Exception ex)
+            {
+                _matPromise.SetException(ex);
+                throw;
+            }
         }
     }
 
-    [InternalApi]
-    public sealed class SetupSourceStage<TOut, TMat> : GraphStageWithMaterializedValue<SourceShape<TOut>, Task<TMat>>
+    #endregion
+}
+
+[InternalApi]
+public sealed class SetupSourceStage<TOut, TMat> : GraphStageWithMaterializedValue<SourceShape<TOut>, Task<TMat>>
+{
+    private readonly Func<ActorMaterializer, Attributes, Source<TOut, TMat>> _factory;
+
+    /// <summary>
+    ///     Creates a new <see cref="LazySource{TOut,TMat}" />
+    /// </summary>
+    /// <param name="factory">The factory that generates the source when needed</param>
+    public SetupSourceStage(Func<ActorMaterializer, Attributes, Source<TOut, TMat>> factory)
     {
-        #region Logic
+        _factory = factory;
+        Shape = new SourceShape<TOut>(Out);
+    }
 
-        private sealed class Logic : GraphStageLogic
+    public Outlet<TOut> Out { get; } = new("SetupSourceStage.out");
+
+    public override SourceShape<TOut> Shape { get; }
+
+    protected override Attributes InitialAttributes => Attributes.CreateName("setup");
+
+    public override ILogicAndMaterializedValue<Task<TMat>> CreateLogicAndMaterializedValue(
+        Attributes inheritedAttributes)
+    {
+        var matPromise = new TaskCompletionSource<TMat>();
+        var logic = new Logic(this, matPromise, inheritedAttributes);
+        return new LogicAndMaterializedValue<Task<TMat>>(logic, matPromise.Task);
+    }
+
+    #region Logic
+
+    private sealed class Logic : GraphStageLogic
+    {
+        private readonly Attributes _inheritedAttributes;
+        private readonly TaskCompletionSource<TMat> _matPromise;
+        private readonly SetupSourceStage<TOut, TMat> _stage;
+        private readonly SubSinkInlet<TOut> _subInlet;
+
+        public Logic(SetupSourceStage<TOut, TMat> stage, TaskCompletionSource<TMat> matPromise,
+            Attributes inheritedAttributes)
+            : base(stage.Shape)
         {
-            private readonly SetupSourceStage<TOut, TMat> _stage;
-            private readonly TaskCompletionSource<TMat> _matPromise;
-            private readonly Attributes _inheritedAttributes;
-            private readonly SubSinkInlet<TOut> _subInlet;
+            _stage = stage;
+            _matPromise = matPromise;
+            _inheritedAttributes = inheritedAttributes;
 
-            public Logic(SetupSourceStage<TOut, TMat> stage, TaskCompletionSource<TMat> matPromise, Attributes inheritedAttributes)
-                : base(stage.Shape)
-            {
-                _stage = stage;
-                _matPromise = matPromise;
-                _inheritedAttributes = inheritedAttributes;
+            _subInlet = new SubSinkInlet<TOut>(this, "SetupSourceStage");
+            _subInlet.SetHandler(new LambdaInHandler(
+                () => Push(_stage.Out, _subInlet.Grab()),
+                () => Complete(_stage.Out),
+                ex => Fail(_stage.Out, ex)));
 
-                _subInlet = new SubSinkInlet<TOut>(this, "SetupSourceStage");
-                _subInlet.SetHandler(new LambdaInHandler(
-                    onPush: () => Push(_stage.Out, _subInlet.Grab()),
-                    onUpstreamFinish: () => Complete(_stage.Out),
-                    onUpstreamFailure: ex => Fail(_stage.Out, ex)));
-
-                SetHandler(_stage.Out, new LambdaOutHandler(onPull: _subInlet.Pull, onDownstreamFinish: _subInlet.Cancel));
-            }
-
-            public override void PreStart()
-            {
-                base.PreStart();
-
-                try
-                {
-                    var source = _stage._factory(ActorMaterializerHelper.Downcast(Materializer), _inheritedAttributes);
-                    var mat = SubFusingMaterializer.Materialize(source.To(Sink.FromGraph(_subInlet.Sink)), _inheritedAttributes);
-                    _matPromise.SetResult(mat);
-                }
-                catch (Exception ex)
-                {
-                    _matPromise.SetException(ex);
-                    throw;
-                }
-            }
+            SetHandler(_stage.Out, new LambdaOutHandler(_subInlet.Pull, _subInlet.Cancel));
         }
 
-        #endregion
-
-        private readonly Func<ActorMaterializer, Attributes, Source<TOut, TMat>> _factory;
-
-        /// <summary>
-        /// Creates a new <see cref="LazySource{TOut,TMat}"/>
-        /// </summary>
-        /// <param name="factory">The factory that generates the source when needed</param>
-        public SetupSourceStage(Func<ActorMaterializer, Attributes, Source<TOut, TMat>> factory)
+        public override void PreStart()
         {
-            _factory = factory;
-            Shape = new SourceShape<TOut>(Out);
-        }
+            base.PreStart();
 
-        public Outlet<TOut> Out { get; } = new("SetupSourceStage.out");
-
-        public override SourceShape<TOut> Shape { get; }
-
-        protected override Attributes InitialAttributes => Attributes.CreateName("setup");
-
-        public override ILogicAndMaterializedValue<Task<TMat>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
-        {
-            var matPromise = new TaskCompletionSource<TMat>();
-            var logic = new Logic(this, matPromise, inheritedAttributes);
-            return new LogicAndMaterializedValue<Task<TMat>>(logic, matPromise.Task);
+            try
+            {
+                var source = _stage._factory(ActorMaterializerHelper.Downcast(Materializer), _inheritedAttributes);
+                var mat = SubFusingMaterializer.Materialize(source.To(Sink.FromGraph(_subInlet.Sink)),
+                    _inheritedAttributes);
+                _matPromise.SetResult(mat);
+            }
+            catch (Exception ex)
+            {
+                _matPromise.SetException(ex);
+                throw;
+            }
         }
     }
+
+    #endregion
 }

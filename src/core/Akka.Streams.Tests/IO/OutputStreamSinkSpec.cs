@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="OutputStreamSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="OutputStreamSinkSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -22,250 +22,251 @@ using Xunit;
 using Xunit.Abstractions;
 using static FluentAssertions.FluentActions;
 
-namespace Akka.Streams.Tests.IO
+namespace Akka.Streams.Tests.IO;
+
+public class OutputStreamSinkSpec : AkkaSpec
 {
-    public class OutputStreamSinkSpec : AkkaSpec
+    private readonly ActorMaterializer _materializer;
+
+    public OutputStreamSinkSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)
     {
-        #region Internal classes
+        Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
+        var settings = ActorMaterializerSettings.Create(Sys).WithDispatcher("akka.actor.default-dispatcher");
+        _materializer = Sys.Materializer(settings);
+    }
 
-        private sealed class VoidOutputStream : Stream
+    [Fact]
+    public async Task OutputStreamSink_must_write_bytes_to_void_OutputStream()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
         {
-            private readonly TestProbe _p;
-
-            public VoidOutputStream(TestProbe p)
+            var p = CreateTestProbe();
+            var datas = new List<ByteString>
             {
-                _p = p;
-            }
+                ByteString.FromString("a"), ByteString.FromString("c"), ByteString.FromString("c")
+            };
 
-            public override void Flush()
+            var completion = Source.From(datas)
+                .RunWith(StreamConverters.FromOutputStream(() => new VoidOutputStream(p)), _materializer);
+
+            await p.ExpectMsgAsync(datas[0].ToString());
+            await p.ExpectMsgAsync(datas[1].ToString());
+            await p.ExpectMsgAsync(datas[2].ToString());
+            await completion.ShouldCompleteWithin(3.Seconds());
+        }, _materializer);
+    }
+
+    [Fact]
+    public async Task OutputStreamSink_must_close_underlying_stream_when_error_received()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            var p = CreateTestProbe();
+            var completion = Source.Failed<ByteString>(new Exception("Boom!"))
+                .RunWith(StreamConverters.FromOutputStream(() => new CloseOutputStream(p)), _materializer);
+
+            await p.ExpectMsgAsync("closed");
+            await completion.ShouldThrowWithin<AbruptIOTerminationException>(3.Seconds());
+        }, _materializer);
+    }
+
+    [Fact]
+    public async Task OutputStreamSink_must_complete_materialized_value_with_the_error()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            await Awaiting(async () =>
             {
-                throw new NotImplementedException();
-            }
+                await Source.Failed<ByteString>(new Exception("Boom!"))
+                    .RunWith(StreamConverters.FromOutputStream(() => new OutputStream()), _materializer)
+                    .ShouldCompleteWithin(3.Seconds());
+            }).Should().ThrowAsync<AbruptIOTerminationException>();
+        }, _materializer);
+    }
 
-            public override long Seek(long offset, SeekOrigin origin)
-            {
-                throw new NotImplementedException();
-            }
+    [Fact]
+    public async Task OutputStreamSink_must_close_underlying_stream_when_completion_received()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            var p = CreateTestProbe();
+            var completion = Source.Empty<ByteString>()
+                .RunWith(StreamConverters.FromOutputStream(() => new CompletionOutputStream(p)), _materializer);
 
-            public override void SetLength(long value)
-            {
-                throw new NotImplementedException();
-            }
+            await p.ExpectMsgAsync("closed");
+            await completion.ShouldCompleteWithin(3.Seconds());
+        }, _materializer);
+    }
 
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                throw new NotImplementedException();
-            }
+    #region Internal classes
 
-            public override void Write(byte[] buffer, int offset, int count)
-                => _p.Ref.Tell(ByteString.FromBytes(buffer, offset, count).ToString());
+    private sealed class VoidOutputStream : Stream
+    {
+        private readonly TestProbe _p;
 
-            public override bool CanRead { get; }
-            public override bool CanSeek { get; }
-            public override bool CanWrite { get; } = true;
-            public override long Length { get; }
-            public override long Position { get; set; }
+        public VoidOutputStream(TestProbe p)
+        {
+            _p = p;
         }
 
-        private sealed class CloseOutputStream : Stream
+        public override bool CanRead { get; }
+        public override bool CanSeek { get; }
+        public override bool CanWrite { get; } = true;
+        public override long Length { get; }
+        public override long Position { get; set; }
+
+        public override void Flush()
         {
-            private readonly TestProbe _p;
-
-            public CloseOutputStream(TestProbe p)
-            {
-                _p = p;
-            }
-
-            public override void Flush()
-            {
-                throw new NotImplementedException();
-            }
-
-            public override long Seek(long offset, SeekOrigin origin)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void SetLength(long value)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void Write(byte[] buffer, int offset, int count)
-            {
-                throw new NotImplementedException();
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                base.Dispose(disposing);
-                _p.Ref.Tell("closed");
-            }
-
-            public override bool CanRead { get; }
-            public override bool CanSeek { get; }
-            public override bool CanWrite { get; } = true;
-            public override long Length { get; }
-            public override long Position { get; set; }
+            throw new NotImplementedException();
         }
 
-        private sealed class CompletionOutputStream : Stream
+        public override long Seek(long offset, SeekOrigin origin)
         {
-            private readonly TestProbe _p;
-
-            public CompletionOutputStream(TestProbe p)
-            {
-                _p = p;
-            }
-
-            public override void Flush()
-            {
-                throw new NotImplementedException();
-            }
-
-            public override long Seek(long offset, SeekOrigin origin)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void SetLength(long value)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void Write(byte[] buffer, int offset, int count)
-                => _p.Ref.Tell(ByteString.FromBytes(buffer, offset, count).ToString());
-
-            protected override void Dispose(bool disposing)
-            {
-                base.Dispose(disposing);
-                _p.Ref.Tell("closed");
-            }
-
-            public override bool CanRead { get; }
-            public override bool CanSeek { get; }
-            public override bool CanWrite { get; } = true;
-            public override long Length { get; }
-            public override long Position { get; set; }
+            throw new NotImplementedException();
         }
 
-        private sealed class OutputStream : Stream
+        public override void SetLength(long value)
         {
-            public override void Flush()
-            {
-                throw new NotImplementedException();
-            }
-
-            public override long Seek(long offset, SeekOrigin origin)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void SetLength(long value)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void Write(byte[] buffer, int offset, int count)
-            {
-            }
-
-            public override bool CanRead { get; }
-            public override bool CanSeek { get; }
-            public override bool CanWrite => true;
-            public override long Length { get; }
-            public override long Position { get; set; }
+            throw new NotImplementedException();
         }
 
-        #endregion
-
-        private readonly ActorMaterializer _materializer;
-
-        public OutputStreamSinkSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)
+        public override int Read(byte[] buffer, int offset, int count)
         {
-            Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
-            var settings = ActorMaterializerSettings.Create(Sys).WithDispatcher("akka.actor.default-dispatcher");
-            _materializer = Sys.Materializer(settings);
+            throw new NotImplementedException();
         }
 
-        [Fact]
-        public async Task OutputStreamSink_must_write_bytes_to_void_OutputStream()
+        public override void Write(byte[] buffer, int offset, int count)
         {
-            await this.AssertAllStagesStoppedAsync(async () =>
-            {
-                var p = CreateTestProbe();
-                var datas = new List<ByteString>
-                {
-                    ByteString.FromString("a"),
-                    ByteString.FromString("c"),
-                    ByteString.FromString("c")
-                };
-
-                var completion = Source.From(datas)
-                    .RunWith(StreamConverters.FromOutputStream(() => new VoidOutputStream(p)), _materializer);
-
-                await p.ExpectMsgAsync(datas[0].ToString());
-                await p.ExpectMsgAsync(datas[1].ToString());
-                await p.ExpectMsgAsync(datas[2].ToString());
-                await completion.ShouldCompleteWithin(3.Seconds());
-            }, _materializer);
-        }
-
-        [Fact]
-        public async Task OutputStreamSink_must_close_underlying_stream_when_error_received()
-        {
-            await this.AssertAllStagesStoppedAsync(async () =>
-            {
-                var p = CreateTestProbe();
-                var completion = Source.Failed<ByteString>(new Exception("Boom!"))
-                    .RunWith(StreamConverters.FromOutputStream(() => new CloseOutputStream(p)), _materializer);
-
-                await p.ExpectMsgAsync("closed");
-                await completion.ShouldThrowWithin<AbruptIOTerminationException>(3.Seconds());
-            }, _materializer);
-        }
-
-        [Fact]
-        public async Task OutputStreamSink_must_complete_materialized_value_with_the_error()
-        {
-            await this.AssertAllStagesStoppedAsync(async () =>
-            {
-                await Awaiting(async () =>
-                {
-                    await Source.Failed<ByteString>(new Exception("Boom!"))
-                        .RunWith(StreamConverters.FromOutputStream(() => new OutputStream()), _materializer)
-                        .ShouldCompleteWithin(3.Seconds());
-                }).Should().ThrowAsync<AbruptIOTerminationException>();
-            }, _materializer);
-        }
-
-        [Fact]
-        public async Task OutputStreamSink_must_close_underlying_stream_when_completion_received()
-        {
-            await this.AssertAllStagesStoppedAsync(async () =>
-            {
-                var p = CreateTestProbe();
-                var completion = Source.Empty<ByteString>()
-                    .RunWith(StreamConverters.FromOutputStream(() => new CompletionOutputStream(p)), _materializer);
-
-                await p.ExpectMsgAsync("closed");
-                await completion.ShouldCompleteWithin(3.Seconds());
-            }, _materializer);
+            _p.Ref.Tell(ByteString.FromBytes(buffer, offset, count).ToString());
         }
     }
+
+    private sealed class CloseOutputStream : Stream
+    {
+        private readonly TestProbe _p;
+
+        public CloseOutputStream(TestProbe p)
+        {
+            _p = p;
+        }
+
+        public override bool CanRead { get; }
+        public override bool CanSeek { get; }
+        public override bool CanWrite { get; } = true;
+        public override long Length { get; }
+        public override long Position { get; set; }
+
+        public override void Flush()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void SetLength(long value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            _p.Ref.Tell("closed");
+        }
+    }
+
+    private sealed class CompletionOutputStream : Stream
+    {
+        private readonly TestProbe _p;
+
+        public CompletionOutputStream(TestProbe p)
+        {
+            _p = p;
+        }
+
+        public override bool CanRead { get; }
+        public override bool CanSeek { get; }
+        public override bool CanWrite { get; } = true;
+        public override long Length { get; }
+        public override long Position { get; set; }
+
+        public override void Flush()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void SetLength(long value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            _p.Ref.Tell(ByteString.FromBytes(buffer, offset, count).ToString());
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            _p.Ref.Tell("closed");
+        }
+    }
+
+    private sealed class OutputStream : Stream
+    {
+        public override bool CanRead { get; }
+        public override bool CanSeek { get; }
+        public override bool CanWrite => true;
+        public override long Length { get; }
+        public override long Position { get; set; }
+
+        public override void Flush()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void SetLength(long value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+        }
+    }
+
+    #endregion
 }

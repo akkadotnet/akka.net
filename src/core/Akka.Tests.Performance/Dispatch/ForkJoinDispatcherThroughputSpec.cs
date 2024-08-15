@@ -1,18 +1,18 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ForkJoinDispatcherThroughputSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ForkJoinDispatcherThroughputSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Configuration;
 using Akka.Dispatch;
 
-namespace Akka.Tests.Performance.Dispatch
+namespace Akka.Tests.Performance.Dispatch;
+
+public class ForkJoinDispatcherColdThroughputSpec : ColdDispatcherThroughputSpecBase
 {
-    public class ForkJoinDispatcherColdThroughputSpec : ColdDispatcherThroughputSpecBase
-    {
-        public static Config DispatcherConfiguration => ConfigurationFactory.ParseString(@"
+    public static Config DispatcherConfiguration => ConfigurationFactory.ParseString(@"
                     id = PerfTest
                     executor = fork-join-executor
                     dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
@@ -22,15 +22,15 @@ namespace Akka.Tests.Performance.Dispatch
                     }
         ");
 
-        protected override MessageDispatcherConfigurator Configurator()
-        {
-            return new DispatcherConfigurator(DispatcherConfiguration, Prereqs);
-        }
-    }
-
-    public class ForkJoinDispatcherWarmThroughputSpec : WarmDispatcherThroughputSpecBase
+    protected override MessageDispatcherConfigurator Configurator()
     {
-       public static Config DispatcherConfiguration => ConfigurationFactory.ParseString(@"
+        return new DispatcherConfigurator(DispatcherConfiguration, Prereqs);
+    }
+}
+
+public class ForkJoinDispatcherWarmThroughputSpec : WarmDispatcherThroughputSpecBase
+{
+    public static Config DispatcherConfiguration => ConfigurationFactory.ParseString(@"
                     id = PerfTest
                     executor = fork-join-executor
                     dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
@@ -40,22 +40,21 @@ namespace Akka.Tests.Performance.Dispatch
                     }
         ");
 
-        protected override MessageDispatcherConfigurator Configurator()
-        {
-            return new DispatcherConfigurator(DispatcherConfiguration, Prereqs);
-        }
-    }
-
-    public class ChannelDispatcherExecutorThroughputSpec : WarmDispatcherThroughputSpecBase
+    protected override MessageDispatcherConfigurator Configurator()
     {
-        public static Config DispatcherConfiguration => ConfigurationFactory.ParseString(@"
+        return new DispatcherConfigurator(DispatcherConfiguration, Prereqs);
+    }
+}
+
+public class ChannelDispatcherExecutorThroughputSpec : WarmDispatcherThroughputSpecBase
+{
+    public static Config DispatcherConfiguration => ConfigurationFactory.ParseString(@"
                     id = PerfTest
                     executor = channel-executor
         ");
 
-        protected override MessageDispatcherConfigurator Configurator()
-        {
-            return new DispatcherConfigurator(DispatcherConfiguration, Prereqs);
-        }
+    protected override MessageDispatcherConfigurator Configurator()
+    {
+        return new DispatcherConfigurator(DispatcherConfiguration, Prereqs);
     }
 }

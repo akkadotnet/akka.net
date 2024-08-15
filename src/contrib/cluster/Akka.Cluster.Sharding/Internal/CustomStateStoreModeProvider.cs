@@ -1,59 +1,58 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="CustomStateStoreModeProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="CustomStateStoreModeProvider.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
 using Akka.Event;
 
-namespace Akka.Cluster.Sharding.Internal
+namespace Akka.Cluster.Sharding.Internal;
+
+using ShardId = String;
+
+/// <summary>
+///     Only intended for testing, not an extension point.
+/// </summary>
+internal sealed class CustomStateStoreModeProvider : IRememberEntitiesProvider
 {
-    using ShardId = String;
+    private readonly IRememberEntitiesProvider _customStore;
+    private readonly ILoggingAdapter _log;
 
-    /// <summary>
-    /// Only intended for testing, not an extension point.
-    /// </summary>
-    internal sealed class CustomStateStoreModeProvider : IRememberEntitiesProvider
+    public CustomStateStoreModeProvider(
+        string typeName,
+        ActorSystem system,
+        ClusterShardingSettings settings)
     {
-        private readonly ILoggingAdapter _log;
-        private readonly IRememberEntitiesProvider _customStore;
+        _log = Logging.GetLogger(system, "CustomStateStoreModeProvider");
 
-        public CustomStateStoreModeProvider(
-                string typeName,
-                ActorSystem system,
-                ClusterShardingSettings settings)
+        _log.Warning("Using custom remember entities store for [{0}], not intended for production use.", typeName);
+
+        if (system.Settings.Config.HasPath("akka.cluster.sharding.remember-entities-custom-store"))
         {
-            _log = Logging.GetLogger(system, "CustomStateStoreModeProvider");
+            var customClassName =
+                system.Settings.Config.GetString("akka.cluster.sharding.remember-entities-custom-store");
+            var type = Type.GetType(customClassName, true);
+            _customStore = (IRememberEntitiesProvider)Activator.CreateInstance(type, settings, typeName);
 
-            _log.Warning("Using custom remember entities store for [{0}], not intended for production use.", typeName);
-
-            if (system.Settings.Config.HasPath("akka.cluster.sharding.remember-entities-custom-store"))
-            {
-                var customClassName = system.Settings.Config.GetString("akka.cluster.sharding.remember-entities-custom-store");
-                var type = Type.GetType(customClassName, true);
-                _customStore = (IRememberEntitiesProvider)Activator.CreateInstance(type, settings, typeName);
-
-                _log.Debug("Will use custom remember entities store provider [{0}]", _customStore);
-            }
-            else
-            {
-                _log.Error("Missing custom store class configuration for CustomStateStoreModeProvider");
-                throw new InvalidOperationException("Missing custom store class configuration");
-            }
-
+            _log.Debug("Will use custom remember entities store provider [{0}]", _customStore);
         }
-
-        public Props ShardStoreProps(ShardId shardId)
+        else
         {
-            return _customStore.ShardStoreProps(shardId);
+            _log.Error("Missing custom store class configuration for CustomStateStoreModeProvider");
+            throw new InvalidOperationException("Missing custom store class configuration");
         }
+    }
 
-        public Props CoordinatorStoreProps()
-        {
-            return _customStore.CoordinatorStoreProps();
-        }
+    public Props ShardStoreProps(ShardId shardId)
+    {
+        return _customStore.ShardStoreProps(shardId);
+    }
+
+    public Props CoordinatorStoreProps()
+    {
+        return _customStore.CoordinatorStoreProps();
     }
 }

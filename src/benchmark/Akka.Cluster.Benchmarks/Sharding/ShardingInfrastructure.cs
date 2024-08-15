@@ -1,218 +1,198 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ShardingInfrastructure.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ShardingInfrastructure.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
+
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Sharding;
 using Akka.Configuration;
 using Akka.Util.Internal;
 
-namespace Akka.Cluster.Benchmarks.Sharding
+namespace Akka.Cluster.Benchmarks.Sharding;
+
+public sealed class ShardedEntityActor : ReceiveActor
 {
-    public sealed class ShardedEntityActor : ReceiveActor
+    public ShardedEntityActor(string entityId)
     {
-        public sealed class Resolve
-        {
-            public static readonly Resolve Instance = new();
-            private Resolve(){}
-        }
+        Receive<Resolve>(_ => { Sender.Tell(new ResolveResp(entityId, Cluster.Get(Context.System).SelfAddress)); });
 
-        public sealed class ResolveResp
-        {
-            public ResolveResp(string entityId, Address addr)
-            {
-                EntityId = entityId;
-                Addr = addr;
-            }
+        ReceiveAny(o => Sender.Tell(o));
+    }
 
-            public string EntityId { get; }
-            
-            public Address Addr { get; }
-        }
-        
-        public ShardedEntityActor(string entityId)
+    public sealed class Resolve
+    {
+        public static readonly Resolve Instance = new();
+
+        private Resolve()
         {
-            Receive<Resolve>(_ =>
-            {
-                Sender.Tell(new ResolveResp(entityId, Cluster.Get(Context.System).SelfAddress));
-            });
-            
-            ReceiveAny(o => Sender.Tell(o));
         }
     }
 
-
-
-    public sealed class ShardedProxyEntityActor : ReceiveActor, IWithUnboundedStash
+    public sealed class ResolveResp
     {
-        private IActorRef _shardRegion;
-        private IActorRef _sender;
-
-        public ShardedProxyEntityActor(IActorRef shardRegion)
-        {
-            _shardRegion = shardRegion;
-            WaitRequest();
-        }
-
-        public void WaitRequest()
-        {
-           
-            Receive<SendShardedMessage>(e =>
-            {
-                _sender = Sender;
-                _shardRegion.Tell(e.Message);
-                Become(WaitResult);
-
-            });
-
-            ReceiveAny(x => {
-                Sender.Tell(x);
-                });
-
-            
-        }
-
-
-        public void WaitResult()
-        {
-            Receive<ShardedMessage>((msg) => {
-                _sender.Tell(msg);
-                Stash.UnstashAll();
-                Become(WaitRequest);
-            });
-
-            ReceiveAny(_ =>
-                Stash.Stash()
-            );
-
-
-        }
-
-        public IStash Stash { get; set; }
-
-    }
-
-
-
-    public sealed class BulkSendActor : ReceiveActor
-    {
-        public sealed class BeginSend
-        {
-            public BeginSend(ShardedMessage msg, IActorRef target, int batchSize)
-            {
-                Msg = msg;
-                Target = target;
-                BatchSize = batchSize;
-            }
-
-            public ShardedMessage Msg { get; }
-            
-            public IActorRef Target { get; }
-            
-            public int BatchSize { get; }
-        }
-        
-        private int _remaining;
-
-        private readonly TaskCompletionSource<bool> _tcs;
-
-        public BulkSendActor(TaskCompletionSource<bool> tcs, int remaining)
-        {
-            _tcs = tcs;
-            _remaining = remaining;
-
-            Receive<BeginSend>(b =>
-            {
-                for (var i = 0; i < b.BatchSize; i++)
-                {
-                    b.Target.Tell(b.Msg);
-                }
-            });
-
-            Receive<ShardedMessage>(s =>
-            {
-                if (--remaining > 0)
-                {
-                    Sender.Tell(s);
-                }
-                else
-                {
-                    Context.Stop(Self); // shut ourselves down
-                    _tcs.TrySetResult(true);
-                }
-            });
-        }
-    }
-    
-    public sealed class ShardedMessage
-    {
-        public ShardedMessage(string entityId, int message)
+        public ResolveResp(string entityId, Address addr)
         {
             EntityId = entityId;
-            Message = message;
-        }
-
-        public string EntityId { get; }
-            
-        public int Message { get; }
-    }
-
-
-
-    public sealed class SendShardedMessage
-    {
-        public SendShardedMessage(string entityId, ShardedMessage message)
-        {
-            EntityId = entityId;
-            Message = message;
+            Addr = addr;
         }
 
         public string EntityId { get; }
 
-        public ShardedMessage Message { get; }
+        public Address Addr { get; }
+    }
+}
+
+public sealed class ShardedProxyEntityActor : ReceiveActor, IWithUnboundedStash
+{
+    private IActorRef _sender;
+    private readonly IActorRef _shardRegion;
+
+    public ShardedProxyEntityActor(IActorRef shardRegion)
+    {
+        _shardRegion = shardRegion;
+        WaitRequest();
+    }
+
+    public IStash Stash { get; set; }
+
+    public void WaitRequest()
+    {
+        Receive<SendShardedMessage>(e =>
+        {
+            _sender = Sender;
+            _shardRegion.Tell(e.Message);
+            Become(WaitResult);
+        });
+
+        ReceiveAny(x => { Sender.Tell(x); });
     }
 
 
+    public void WaitResult()
+    {
+        Receive<ShardedMessage>(msg =>
+        {
+            _sender.Tell(msg);
+            Stash.UnstashAll();
+            Become(WaitRequest);
+        });
+
+        ReceiveAny(_ =>
+            Stash.Stash()
+        );
+    }
+}
+
+public sealed class BulkSendActor : ReceiveActor
+{
+    private readonly TaskCompletionSource<bool> _tcs;
+
+    private int _remaining;
+
+    public BulkSendActor(TaskCompletionSource<bool> tcs, int remaining)
+    {
+        _tcs = tcs;
+        _remaining = remaining;
+
+        Receive<BeginSend>(b =>
+        {
+            for (var i = 0; i < b.BatchSize; i++) b.Target.Tell(b.Msg);
+        });
+
+        Receive<ShardedMessage>(s =>
+        {
+            if (--remaining > 0)
+            {
+                Sender.Tell(s);
+            }
+            else
+            {
+                Context.Stop(Self); // shut ourselves down
+                _tcs.TrySetResult(true);
+            }
+        });
+    }
+
+    public sealed class BeginSend
+    {
+        public BeginSend(ShardedMessage msg, IActorRef target, int batchSize)
+        {
+            Msg = msg;
+            Target = target;
+            BatchSize = batchSize;
+        }
+
+        public ShardedMessage Msg { get; }
+
+        public IActorRef Target { get; }
+
+        public int BatchSize { get; }
+    }
+}
+
+public sealed class ShardedMessage
+{
+    public ShardedMessage(string entityId, int message)
+    {
+        EntityId = entityId;
+        Message = message;
+    }
+
+    public string EntityId { get; }
+
+    public int Message { get; }
+}
+
+public sealed class SendShardedMessage
+{
+    public SendShardedMessage(string entityId, ShardedMessage message)
+    {
+        EntityId = entityId;
+        Message = message;
+    }
+
+    public string EntityId { get; }
+
+    public ShardedMessage Message { get; }
+}
+
+/// <summary>
+///     Use a default <see cref="IMessageExtractor" /> even though it takes extra work to setup the benchmark
+/// </summary>
+public sealed class ShardMessageExtractor : HashCodeMessageExtractor
+{
     /// <summary>
-    /// Use a default <see cref="IMessageExtractor"/> even though it takes extra work to setup the benchmark
+    ///     We only ever run with a maximum of two nodes, so ~10 shards per node
     /// </summary>
-    public sealed class ShardMessageExtractor : HashCodeMessageExtractor
+    public ShardMessageExtractor(int shardCount = 20) : base(shardCount)
     {
-        /// <summary>
-        /// We only ever run with a maximum of two nodes, so ~10 shards per node
-        /// </summary>
-        public ShardMessageExtractor(int shardCount = 20) : base(shardCount)
-        {
-        }
-
-        public override string EntityId(object message)
-        {
-            if(message is ShardedMessage sharded)
-            {
-                return sharded.EntityId;
-            }
-
-            return null;
-        }
     }
 
-    public static class ShardingHelper
+    public override string EntityId(object message)
     {
-        public static AtomicCounter DbId = new(0);
+        if (message is ShardedMessage sharded) return sharded.EntityId;
 
-        internal static string BoolToToggle(bool val)
-        {
-            return val ? "on" : "off";
-        }
-        
-        public static Config CreatePersistenceConfig(bool rememberEntities = false)
-        {
-            var connectionString =
-                "Filename=file:memdb-journal-" + DbId.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared";
-            var config = $@"
+        return null;
+    }
+}
+
+public static class ShardingHelper
+{
+    public static AtomicCounter DbId = new(0);
+
+    internal static string BoolToToggle(bool val)
+    {
+        return val ? "on" : "off";
+    }
+
+    public static Config CreatePersistenceConfig(bool rememberEntities = false)
+    {
+        var connectionString =
+            "Filename=file:memdb-journal-" + DbId.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared";
+        var config = $@"
                 akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0
                 akka.cluster.sharding.state-store-mode=persistence
@@ -232,28 +212,27 @@ namespace Akka.Cluster.Benchmarks.Sharding
                     }}
                 }}";
 
-            return config;
-        }
+        return config;
+    }
 
-        public static Config CreateDDataConfig(bool rememberEntities = false)
-        {
-            var config = $@"
+    public static Config CreateDDataConfig(bool rememberEntities = false)
+    {
+        var config = $@"
                 akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0
                 akka.cluster.sharding.state-store-mode=ddata
                 akka.cluster.sharding.remember-entities = {BoolToToggle(rememberEntities)}";
 
-            return config;
-        }
+        return config;
+    }
 
-        public static IActorRef StartShardRegion(ActorSystem system, string entityName = "entities")
-        {
-            var sharding = ClusterSharding.Get(system);
-            return sharding.Start(
-                typeName: entityName, 
-                entityPropsFactory: id => Props.Create(() => new ShardedEntityActor(id)), 
-                settings: ClusterShardingSettings.Create(system),
-                messageExtractor: new ShardMessageExtractor());
-        }
+    public static IActorRef StartShardRegion(ActorSystem system, string entityName = "entities")
+    {
+        var sharding = ClusterSharding.Get(system);
+        return sharding.Start(
+            entityName,
+            id => Props.Create(() => new ShardedEntityActor(id)),
+            ClusterShardingSettings.Create(system),
+            new ShardMessageExtractor());
     }
 }

@@ -1,14 +1,12 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="DotNettyBatchWriterSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="DotNettyBatchWriterSpecs.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Remote.Transport.DotNetty;
@@ -21,48 +19,21 @@ using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Remote.Tests.Transport
+namespace Akka.Remote.Tests.Transport;
+
+public class DotNettyBatchWriterSpecs : AkkaSpec
 {
-    public class DotNettyBatchWriterSpecs : AkkaSpec
+    public DotNettyBatchWriterSpecs(ITestOutputHelper helper) : base(helper)
     {
-        public class FlushLogger : ChannelHandlerAdapter
-        {
-            public ITestOutputHelper Helper;
+        Flush = new FlushLogger(helper);
+    }
 
-            private TaskCompletionSource<Done> _tcs = new();
+    public FlushLogger Flush { get; }
 
-            public Task Activated => _tcs.Task;
-
-            public FlushLogger(ITestOutputHelper helper)
-            {
-                Helper = helper;
-            }
-
-            public override void ChannelActive(IChannelHandlerContext context)
-            {
-                _tcs.TrySetResult(Done.Instance);
-                base.ChannelActive(context);
-            }
-
-            public override void Flush(IChannelHandlerContext context)
-            {
-                Helper.WriteLine($"[{DateTime.UtcNow}] flushed");
-
-                base.Flush(context);
-            }
-        }
-
-        public FlushLogger Flush { get; }
-
-        public DotNettyBatchWriterSpecs(ITestOutputHelper helper) : base(helper)
-        {
-            Flush = new FlushLogger(helper);
-        }
-
-        [Fact]
-        public void Bugfix4434_should_overwrite_default_BatchWriterSettings()
-        {
-            Config c = @"
+    [Fact]
+    public void Bugfix4434_should_overwrite_default_BatchWriterSettings()
+    {
+        Config c = @"
                 akka.remote.dot-netty.tcp{
                     batching{
                         enabled = false
@@ -70,78 +41,35 @@ namespace Akka.Remote.Tests.Transport
                     }
                 }
             ";
-            var s = DotNettyTransportSettings.Create(c.GetConfig("akka.remote.dot-netty.tcp"));
+        var s = DotNettyTransportSettings.Create(c.GetConfig("akka.remote.dot-netty.tcp"));
 
-            s.BatchWriterSettings.EnableBatching.Should().BeFalse();
-            s.BatchWriterSettings.MaxExplicitFlushes.Should().NotBe(BatchWriterSettings.DefaultMaxPendingWrites);
-        }
+        s.BatchWriterSettings.EnableBatching.Should().BeFalse();
+        s.BatchWriterSettings.MaxExplicitFlushes.Should().NotBe(BatchWriterSettings.DefaultMaxPendingWrites);
+    }
 
-        /// <summary>
-        /// Stay below the write / count and write / byte threshold. Rely on the timer.
-        /// </summary>
-        [Fact]
-        public async Task BatchWriter_should_succeed_with_timer()
+    /// <summary>
+    ///     Stay below the write / count and write / byte threshold. Rely on the timer.
+    /// </summary>
+    [Fact]
+    public async Task BatchWriter_should_succeed_with_timer()
+    {
+        var writer = new FlushConsolidationHandler();
+        var ch = new EmbeddedChannel(Flush, writer);
+
+        await Flush.Activated;
+
+        /*
+         * Run multiple iterations to ensure that the batching mechanism doesn't become stale
+         */
+        foreach (var n in Enumerable.Repeat(0, 3))
         {
-            var writer = new FlushConsolidationHandler();
-            var ch = new EmbeddedChannel(Flush, writer);
-
-            await Flush.Activated;
-
-            /*
-             * Run multiple iterations to ensure that the batching mechanism doesn't become stale
-             */
-            foreach (var n in Enumerable.Repeat(0, 3))
-            {
-                var ints = Enumerable.Range(0, 4).ToArray();
-                foreach (var i in ints)
-                {
-                    _ = ch.WriteAndFlushAsync(Unpooled.Buffer(1).WriteInt(i));
-                }
-
-                // force write tasks to run
-                ch.RunPendingTasks();
-
-                ch.OutboundMessages.Count.Should().Be(ints.Length);
-
-                await AwaitAssertAsync(() =>
-                {
-                    ch.RunPendingTasks(); // force scheduled task to run
-                    ch.OutboundMessages.Count.Should().Be(ints.Length);
-                }, interval: 100.Milliseconds());
-
-                // reset the outbound queue
-                ch.OutboundMessages.Clear();
-            }
-        }
-
-        /// <summary>
-        /// Stay below the write / count and write / byte threshold. Rely on the timer.
-        /// </summary>
-        [Fact]
-        public async Task BatchWriter_should_flush_messages_during_shutdown()
-        {
-            var writer = new FlushConsolidationHandler();
-            var ch = new EmbeddedChannel(Flush, writer);
-
-            await Flush.Activated;
-
-            /*
-             * Run multiple iterations to ensure that the batching mechanism doesn't become stale
-             */
-
-            var ints = Enumerable.Range(0, 10).ToArray();
-            foreach (var i in ints)
-            {
-                _ = ch.WriteAndFlushAsync(Unpooled.Buffer(1).WriteInt(i));
-            }
+            var ints = Enumerable.Range(0, 4).ToArray();
+            foreach (var i in ints) _ = ch.WriteAndFlushAsync(Unpooled.Buffer(1).WriteInt(i));
 
             // force write tasks to run
             ch.RunPendingTasks();
 
             ch.OutboundMessages.Count.Should().Be(ints.Length);
-
-            // close channels
-            _ = ch.CloseAsync();
 
             await AwaitAssertAsync(() =>
             {
@@ -149,7 +77,67 @@ namespace Akka.Remote.Tests.Transport
                 ch.OutboundMessages.Count.Should().Be(ints.Length);
             }, interval: 100.Milliseconds());
 
+            // reset the outbound queue
+            ch.OutboundMessages.Clear();
+        }
+    }
 
+    /// <summary>
+    ///     Stay below the write / count and write / byte threshold. Rely on the timer.
+    /// </summary>
+    [Fact]
+    public async Task BatchWriter_should_flush_messages_during_shutdown()
+    {
+        var writer = new FlushConsolidationHandler();
+        var ch = new EmbeddedChannel(Flush, writer);
+
+        await Flush.Activated;
+
+        /*
+         * Run multiple iterations to ensure that the batching mechanism doesn't become stale
+         */
+
+        var ints = Enumerable.Range(0, 10).ToArray();
+        foreach (var i in ints) _ = ch.WriteAndFlushAsync(Unpooled.Buffer(1).WriteInt(i));
+
+        // force write tasks to run
+        ch.RunPendingTasks();
+
+        ch.OutboundMessages.Count.Should().Be(ints.Length);
+
+        // close channels
+        _ = ch.CloseAsync();
+
+        await AwaitAssertAsync(() =>
+        {
+            ch.RunPendingTasks(); // force scheduled task to run
+            ch.OutboundMessages.Count.Should().Be(ints.Length);
+        }, interval: 100.Milliseconds());
+    }
+
+    public class FlushLogger : ChannelHandlerAdapter
+    {
+        private readonly TaskCompletionSource<Done> _tcs = new();
+        public ITestOutputHelper Helper;
+
+        public FlushLogger(ITestOutputHelper helper)
+        {
+            Helper = helper;
+        }
+
+        public Task Activated => _tcs.Task;
+
+        public override void ChannelActive(IChannelHandlerContext context)
+        {
+            _tcs.TrySetResult(Done.Instance);
+            base.ChannelActive(context);
+        }
+
+        public override void Flush(IChannelHandlerContext context)
+        {
+            Helper.WriteLine($"[{DateTime.UtcNow}] flushed");
+
+            base.Flush(context);
         }
     }
 }

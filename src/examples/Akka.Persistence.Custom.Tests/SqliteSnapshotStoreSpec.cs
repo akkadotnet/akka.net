@@ -1,30 +1,33 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SqliteSnapshotStoreSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SqliteSnapshotStoreSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Configuration;
 using Akka.Persistence.TCK.Snapshot;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Custom.Tests
+namespace Akka.Persistence.Custom.Tests;
+
+public class SqliteSnapshotStoreSpec : SnapshotStoreSpec
 {
-    public class SqliteSnapshotStoreSpec : SnapshotStoreSpec
+    public SqliteSnapshotStoreSpec(ITestOutputHelper output)
+        : base(CreateSpecConfig("Filename=file:memdb-snapshot-" + Guid.NewGuid() + ".db"), "SqliteSnapshotStoreSpec",
+            output)
     {
-        public SqliteSnapshotStoreSpec(ITestOutputHelper output)
-            : base(CreateSpecConfig("Filename=file:memdb-snapshot-" + Guid.NewGuid() + ".db"), "SqliteSnapshotStoreSpec", output)
-        {
-            SqlitePersistence.Get(Sys);
+        SqlitePersistence.Get(Sys);
 
-            Initialize();
-        }
+        Initialize();
+    }
 
-        private static Config CreateSpecConfig(string connectionString)
-        {
-            return ConfigurationFactory.ParseString(@"
+    protected override bool SupportsSerialization => true;
+
+    private static Config CreateSpecConfig(string connectionString)
+    {
+        return ConfigurationFactory.ParseString(@"
                 akka.persistence {
                     publish-plugin-commands = on
                     snapshot-store {
@@ -37,7 +40,5 @@ namespace Akka.Persistence.Custom.Tests
                         }
                     }
                 }");
-        }
-
-        protected override bool SupportsSerialization => true;
-    }}
+    }
+}

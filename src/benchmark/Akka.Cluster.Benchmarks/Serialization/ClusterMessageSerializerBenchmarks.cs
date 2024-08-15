@@ -19,9 +19,6 @@ namespace Akka.Cluster.Benchmarks.Serialization;
 [Config(typeof(MicroBenchmarkConfig))]
 public class ClusterMessageSerializerBenchmarks
 {
-    private ExtendedActorSystem _system;
-    private ClusterMessageSerializer _clusterMessageSerializer;
-
     private static readonly Member A1 = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552),
         MemberStatus.Joining, appVersion: AppVersion.Create("1.0.0"));
 
@@ -37,6 +34,47 @@ public class ClusterMessageSerializerBenchmarks
     private static readonly Member E1 = TestMember.Create(new Address("akka.tcp", "sys", "e", 2552), MemberStatus.Down,
         ImmutableHashSet.Create("r3"));
 
+    private static readonly ClusterHeartbeatSender.Heartbeat Heartbeat = new(A1.UniqueAddress.Address, 10, 3);
+
+    private static readonly ClusterHeartbeatSender.HeartbeatRsp HeartbeatRsp = new(B1.UniqueAddress, 10, 3);
+
+    private static byte[] _serializedHeartbeat = Array.Empty<byte>();
+    private static string _heartbeatManifest = string.Empty;
+
+    private static byte[] _serializedHeartbeatRsp = Array.Empty<byte>();
+    private static string _heartbeatRspManifest = string.Empty;
+
+    private static readonly GossipEnvelope GossipEnvelope = new(A1.UniqueAddress, C1.UniqueAddress,
+        new Gossip(ImmutableSortedSet.Create(A1, B1, C1, D1)).Increment(new VectorClock.Node("node1"))
+            .Increment(new VectorClock.Node("node2"))
+            .Seen(A1.UniqueAddress)
+            .Seen(B1.UniqueAddress));
+
+    private static readonly Gossip Gossip2 = GossipEnvelope.Gossip
+        .Increment(new VectorClock.Node("node3"))
+        .Increment(new VectorClock.Node("node4"))
+        .Seen(A1.UniqueAddress).Seen(C1.UniqueAddress);
+
+    private static readonly Reachability Reachability = Reachability.Empty
+        .Unreachable(A1.UniqueAddress, E1.UniqueAddress).Unreachable(B1.UniqueAddress, E1.UniqueAddress);
+
+    private static readonly Gossip Gossip3 = Gossip2.Copy(ImmutableSortedSet.Create(A1, B1, C1, D1, E1),
+        Gossip2.Overview.Copy(reachability: Reachability));
+
+    private static readonly GossipStatus GossipStatus = new(A1.UniqueAddress, Gossip3.Version);
+    private static readonly InternalClusterAction.Welcome Welcome = new(A1.UniqueAddress, Gossip3);
+
+    private static byte[] _serializedGossipEnvelope = Array.Empty<byte>();
+    private static string _gossipEnvelopeManifest = string.Empty;
+
+    private static byte[] _serializedGossipStatus = Array.Empty<byte>();
+    private static string _gossipStatusManifest = string.Empty;
+
+    private static byte[] _serializedWelcome = Array.Empty<byte>();
+    private static string _welcomeManifest = string.Empty;
+    private ClusterMessageSerializer _clusterMessageSerializer;
+    private ExtendedActorSystem _system;
+
     [GlobalSetup]
     public void Setup()
     {
@@ -44,26 +82,19 @@ public class ClusterMessageSerializerBenchmarks
         _clusterMessageSerializer ??= new ClusterMessageSerializer(_system);
     }
 
-    private static readonly ClusterHeartbeatSender.Heartbeat Heartbeat = new(A1.UniqueAddress.Address, 10, 3);
-
-    private static readonly ClusterHeartbeatSender.HeartbeatRsp HeartbeatRsp = new(B1.UniqueAddress, 10, 3);
-
     [Benchmark]
     public byte[] Serialize_Heartbeat()
     {
         return _clusterMessageSerializer.ToBinary(Heartbeat);
     }
 
-    private static byte[] _serializedHeartbeat = Array.Empty<byte>();
-    private static string _heartbeatManifest = string.Empty;
-    
     [GlobalSetup(Target = nameof(Deserialize_Heartbeat))]
     public void SetupSerializedHeartbeat()
     {
         Setup();
-        if(_serializedHeartbeat.Length == 0)
+        if (_serializedHeartbeat.Length == 0)
             _serializedHeartbeat = _clusterMessageSerializer.ToBinary(Heartbeat);
-        if(string.IsNullOrEmpty(_heartbeatManifest))
+        if (string.IsNullOrEmpty(_heartbeatManifest))
             _heartbeatManifest = _clusterMessageSerializer.Manifest(Heartbeat);
     }
 
@@ -79,111 +110,82 @@ public class ClusterMessageSerializerBenchmarks
         return _clusterMessageSerializer.ToBinary(HeartbeatRsp);
     }
 
-    private static byte[] _serializedHeartbeatRsp = Array.Empty<byte>();
-    private static string _heartbeatRspManifest = string.Empty;
-    
     [GlobalSetup(Target = nameof(Deserialize_HeartbeatRsp))]
     public void SetupSerializedHeartbeatRsp()
     {
         Setup();
-        if(_serializedHeartbeatRsp.Length == 0)
+        if (_serializedHeartbeatRsp.Length == 0)
             _serializedHeartbeatRsp = _clusterMessageSerializer.ToBinary(HeartbeatRsp);
-        if(string.IsNullOrEmpty(_heartbeatRspManifest))
+        if (string.IsNullOrEmpty(_heartbeatRspManifest))
             _heartbeatRspManifest = _clusterMessageSerializer.Manifest(HeartbeatRsp);
     }
-    
+
     [Benchmark]
     public object Deserialize_HeartbeatRsp()
     {
         return _clusterMessageSerializer.FromBinary(_serializedHeartbeatRsp, _heartbeatRspManifest);
     }
 
-    private static readonly GossipEnvelope GossipEnvelope = new(A1.UniqueAddress, C1.UniqueAddress,
-        new Gossip(ImmutableSortedSet.Create(A1, B1, C1, D1)).Increment(new VectorClock.Node("node1"))
-            .Increment(new VectorClock.Node("node2"))
-            .Seen(A1.UniqueAddress)
-            .Seen(B1.UniqueAddress));
-    private static readonly Gossip Gossip2 = GossipEnvelope.Gossip
-        .Increment(new VectorClock.Node("node3"))
-        .Increment(new VectorClock.Node("node4"))
-        .Seen(A1.UniqueAddress).Seen(C1.UniqueAddress);
-    private static readonly Reachability Reachability = Reachability.Empty.Unreachable(A1.UniqueAddress, E1.UniqueAddress).Unreachable(B1.UniqueAddress, E1.UniqueAddress);
-
-    private static readonly Gossip Gossip3 = Gossip2.Copy(ImmutableSortedSet.Create(A1, B1, C1, D1, E1),
-        overview: Gossip2.Overview.Copy(reachability: Reachability));
-    
-    private static readonly GossipStatus GossipStatus = new(A1.UniqueAddress, Gossip3.Version);
-    private static readonly InternalClusterAction.Welcome Welcome = new(A1.UniqueAddress, Gossip3);
-    
     [Benchmark]
     public byte[] Serialize_GossipEnvelope()
     {
         return _clusterMessageSerializer.ToBinary(GossipEnvelope);
     }
-    
-    private static byte[] _serializedGossipEnvelope = Array.Empty<byte>();
-    private static string _gossipEnvelopeManifest = string.Empty;
-    
+
     [GlobalSetup(Target = nameof(Deserialize_GossipEnvelope))]
     public void SetupSerializedGossipEnvelope()
     {
         Setup();
-        if(_serializedGossipEnvelope.Length == 0)
+        if (_serializedGossipEnvelope.Length == 0)
             _serializedGossipEnvelope = _clusterMessageSerializer.ToBinary(GossipEnvelope);
-        if(string.IsNullOrEmpty(_gossipEnvelopeManifest))
+        if (string.IsNullOrEmpty(_gossipEnvelopeManifest))
             _gossipEnvelopeManifest = _clusterMessageSerializer.Manifest(GossipEnvelope);
     }
-    
+
     [Benchmark]
     public object Deserialize_GossipEnvelope()
     {
         return _clusterMessageSerializer.FromBinary(_serializedGossipEnvelope, _gossipEnvelopeManifest);
     }
-    
+
     [Benchmark]
     public byte[] Serialize_GossipStatus()
     {
         return _clusterMessageSerializer.ToBinary(GossipStatus);
     }
-    
-    private static byte[] _serializedGossipStatus = Array.Empty<byte>();
-    private static string _gossipStatusManifest = string.Empty;
-    
+
     [GlobalSetup(Target = nameof(Deserialize_GossipStatus))]
     public void SetupSerializedGossipStatus()
     {
         Setup();
-        if(_serializedGossipStatus.Length == 0)
+        if (_serializedGossipStatus.Length == 0)
             _serializedGossipStatus = _clusterMessageSerializer.ToBinary(GossipStatus);
-        if(string.IsNullOrEmpty(_gossipStatusManifest))
+        if (string.IsNullOrEmpty(_gossipStatusManifest))
             _gossipStatusManifest = _clusterMessageSerializer.Manifest(GossipStatus);
     }
-    
+
     [Benchmark]
     public object Deserialize_GossipStatus()
     {
         return _clusterMessageSerializer.FromBinary(_serializedGossipStatus, _gossipStatusManifest);
     }
-    
+
     [Benchmark]
     public byte[] Serialize_Welcome()
     {
         return _clusterMessageSerializer.ToBinary(Welcome);
     }
-    
-    private static byte[] _serializedWelcome = Array.Empty<byte>();
-    private static string _welcomeManifest = string.Empty;
-    
+
     [GlobalSetup(Target = nameof(Deserialize_Welcome))]
     public void SetupSerializedWelcome()
     {
         Setup();
-        if(_serializedWelcome.Length == 0)
+        if (_serializedWelcome.Length == 0)
             _serializedWelcome = _clusterMessageSerializer.ToBinary(Welcome);
-        if(string.IsNullOrEmpty(_welcomeManifest))
+        if (string.IsNullOrEmpty(_welcomeManifest))
             _welcomeManifest = _clusterMessageSerializer.Manifest(Welcome);
     }
-    
+
     [Benchmark]
     public object Deserialize_Welcome()
     {

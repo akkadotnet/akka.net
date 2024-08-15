@@ -1,51 +1,50 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="MessageExtractor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="MessageExtractor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Cluster.Sharding;
 
-namespace ClusterSharding.Node
-{
-    public sealed class ShardEnvelope
-    {
-        public readonly string EntityId;
-        public readonly object Payload;
+namespace ClusterSharding.Node;
 
-        public ShardEnvelope(string entityId, object payload)
-        {
-            EntityId = entityId;
-            Payload = payload;
-        }
+public sealed class ShardEnvelope
+{
+    public readonly string EntityId;
+    public readonly object Payload;
+
+    public ShardEnvelope(string entityId, object payload)
+    {
+        EntityId = entityId;
+        Payload = payload;
+    }
+}
+
+public sealed class MessageExtractor : HashCodeMessageExtractor
+{
+    public MessageExtractor(int maxNumberOfShards) : base(maxNumberOfShards)
+    {
     }
 
-    public sealed class MessageExtractor : HashCodeMessageExtractor
+    public override string EntityId(object message)
     {
-        public MessageExtractor(int maxNumberOfShards) : base(maxNumberOfShards)
+        switch (message)
         {
+            case ShardRegion.StartEntity start: return start.EntityId;
+            case ShardEnvelope e: return e.EntityId;
         }
 
-        public override string EntityId(object message)
-        {
-            switch (message)
-            {
-                case ShardRegion.StartEntity start: return start.EntityId;
-                case ShardEnvelope e: return e.EntityId;
-            }
+        return null;
+    }
 
-            return null;
-        }
-
-        public override object EntityMessage(object message)
+    public override object EntityMessage(object message)
+    {
+        switch (message)
         {
-            switch (message)
-            {
-                case ShardEnvelope e: return e.Payload;
-                default:
-                    return message;
-            }
+            case ShardEnvelope e: return e.Payload;
+            default:
+                return message;
         }
     }
 }

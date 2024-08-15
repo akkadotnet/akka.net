@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------
-// <copyright file="FastLazySpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+//  <copyright file="FastLazySpecs.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
@@ -39,7 +39,7 @@ public class FastLazySpecs
         for (var c = 0; c < 100000; c++) // try this 100000 times
         {
             var values = new ConcurrentBag<int>();
-            var fal = new FastLazy<int>(() => new Random().Next(1, Int32.MaxValue));
+            var fal = new FastLazy<int>(() => new Random().Next(1, int.MaxValue));
             var result = Parallel.For(0, 1000, _ => values.Add(fal.Value)); // 1000 concurrent operations
             SpinWait.SpinUntil(() => result.IsCompleted);
             var value = values.First();
@@ -51,12 +51,12 @@ public class FastLazySpecs
     [Fact]
     public void FastLazy_only_single_value_creation_attempt()
     {
-        int attempts = 0;
-        Func<int> slowValueFactory = () =>
+        var attempts = 0;
+        var slowValueFactory = () =>
         {
             Interlocked.Increment(ref attempts);
             Thread.Sleep(100);
-            return new Random().Next(1, Int32.MaxValue);
+            return new Random().Next(1, int.MaxValue);
         };
 
         var values = new ConcurrentBag<int>();
@@ -88,8 +88,8 @@ public class FastLazySpecs
     [Fact]
     public void FastLazy_only_single_value_creation_attempt_AnyRef()
     {
-        int attempts = 0;
-        Func<string> slowValueFactory = () =>
+        var attempts = 0;
+        var slowValueFactory = () =>
         {
             Interlocked.Increment(ref attempts);
             Thread.Sleep(100);

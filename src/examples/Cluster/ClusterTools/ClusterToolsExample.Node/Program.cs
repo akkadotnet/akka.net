@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Program.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.IO;
@@ -22,7 +22,7 @@ public static class Program
         Console.Title = "Attached node";
         var config = await File.ReadAllTextAsync("akka.conf");
         using var system = ActorSystem.Create("singleton-cluster-system", config);
-        
+
         //RunClusterSingletonClient(system);
         RunDistributedPubSubClient(system);
         //RunClusterClient(system);
@@ -31,19 +31,19 @@ public static class Program
     }
 
     /// <summary>
-    /// Creates a proxy to communicate with cluster singleton initialized by the seed.
+    ///     Creates a proxy to communicate with cluster singleton initialized by the seed.
     /// </summary>
     private static void RunClusterSingletonClient(ActorSystem system)
     {
         var proxyRef = system.ActorOf(ClusterSingletonProxy.Props(
-                singletonManagerPath: "/user/manager",
-                settings: ClusterSingletonProxySettings.Create(system).WithRole("worker")),
-            name: "managerProxy");
+                "/user/manager",
+                ClusterSingletonProxySettings.Create(system).WithRole("worker")),
+            "managerProxy");
     }
 
     /// <summary>
-    /// Creates an <see cref="EchoReceiver"/> actor which subscribes to the distributed pub/sub topic.
-    /// This topic is filled with messages from the cluster seed job.
+    ///     Creates an <see cref="EchoReceiver" /> actor which subscribes to the distributed pub/sub topic.
+    ///     This topic is filled with messages from the cluster seed job.
     /// </summary>
     private static void RunDistributedPubSubClient(ActorSystem system)
     {
@@ -52,7 +52,7 @@ public static class Program
     }
 
     /// <summary>
-    /// Creates a cluster client, that allows to connect to cluster even though current actor system is not part of it.
+    ///     Creates a cluster client, that allows to connect to cluster even though current actor system is not part of it.
     /// </summary>
     private static void RunClusterClient(ActorSystem system)
     {

@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\xunitSettings.props" />
+  <Import Project="..\..\xunitSettings.props"/>
 
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
@@ -11,9 +11,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
-    <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
-    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+    <ProjectReference Include="..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj"/>
+    <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj"/>
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj"/>
 
     <None Include="Resources\akka-validcert.pfx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -37,15 +37,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-    <PackageReference Include="xunit" Version="$(XunitVersion)" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
-    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)"/>
+    <PackageReference Include="xunit" Version="$(XunitVersion)"/>
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)"/>
+    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)"/>
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
-    <PackageReference Include="FsCheck" Version="$(FsCheckVersion)" />
-    <PackageReference Include="FsCheck.Xunit" Version="$(FsCheckVersion)" />
+    <PackageReference Include="FsCheck" Version="$(FsCheckVersion)"/>
+    <PackageReference Include="FsCheck.Xunit" Version="$(FsCheckVersion)"/>
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">

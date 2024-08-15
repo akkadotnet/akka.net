@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="RemoteMetricsExtension.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="RemoteMetricsExtension.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
@@ -11,144 +11,136 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Routing;
 
-namespace Akka.Remote
+namespace Akka.Remote;
+
+/// <summary>
+///     INTERNAL API
+///     Extension that keeps track of remote metrics, such
+///     as max size of different message types.
+/// </summary>
+internal sealed class RemoteMetricsExtension : ExtensionIdProvider<IRemoteMetrics>
 {
     /// <summary>
-    ///     INTERNAL API
-    ///     Extension that keeps track of remote metrics, such
-    ///     as max size of different message types.
+    ///     TBD
     /// </summary>
-    internal sealed class RemoteMetricsExtension : ExtensionIdProvider<IRemoteMetrics>
+    /// <param name="system">TBD</param>
+    /// <returns>TBD</returns>
+    public override IRemoteMetrics CreateExtension(ExtendedActorSystem system)
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
-        public override IRemoteMetrics CreateExtension(ExtendedActorSystem system)
-        {
-            // TODO: Need to assert that config key exists. 
-            var useLogFrameSize = 
-                system.Settings.Config.GetString("akka.remote.log-frame-size-exceeding", string.Empty)
+        // TODO: Need to assert that config key exists. 
+        var useLogFrameSize =
+            system.Settings.Config.GetString("akka.remote.log-frame-size-exceeding", string.Empty)
                 .ToLowerInvariant();
-            if (useLogFrameSize.Equals("off") ||
-                useLogFrameSize.Equals("false") ||
-                useLogFrameSize.Equals("no"))
-            {
-                return new RemoteMetricsOff();
-            }
-            return new RemoteMetricsOn(system);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
-        public static IRemoteMetrics Create(ExtendedActorSystem system)
-        {
-            return system.WithExtension<IRemoteMetrics, RemoteMetricsExtension>();
-        }
+        if (useLogFrameSize.Equals("off") ||
+            useLogFrameSize.Equals("false") ||
+            useLogFrameSize.Equals("no"))
+            return new RemoteMetricsOff();
+        return new RemoteMetricsOn(system);
     }
 
     /// <summary>
-    ///     INTERNAL API
+    ///     TBD
     /// </summary>
-    internal sealed class RemoteMetricsOn : IRemoteMetrics
+    /// <param name="system">TBD</param>
+    /// <returns>TBD</returns>
+    public static IRemoteMetrics Create(ExtendedActorSystem system)
     {
-        private readonly ILoggingAdapter _log;
-        private readonly long? _logFrameSizeExceeding;
-        private readonly ConcurrentDictionary<Type, long> _maxPayloadBytes = new();
+        return system.WithExtension<IRemoteMetrics, RemoteMetricsExtension>();
+    }
+}
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        public RemoteMetricsOn(ExtendedActorSystem system)
-        {
-            // TODO: Need to assert that config key exists
-            _logFrameSizeExceeding = system.Settings.Config.GetByteSize("akka.remote.log-frame-size-exceeding", null);
-            _log = Logging.GetLogger(system, this);
-        }
+/// <summary>
+///     INTERNAL API
+/// </summary>
+internal sealed class RemoteMetricsOn : IRemoteMetrics
+{
+    private readonly ILoggingAdapter _log;
+    private readonly long? _logFrameSizeExceeding;
+    private readonly ConcurrentDictionary<Type, long> _maxPayloadBytes = new();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="payloadBytes">TBD</param>
-        public void LogPayloadBytes(object msg, long payloadBytes)
-        {
-            if (payloadBytes >= _logFrameSizeExceeding)
-            {
-                Type type;
-                if (msg is ActorSelectionMessage message)
-                {
-                    type = message.Message.GetType();
-                }
-                else if (msg is RouterEnvelope envelope)
-                {
-                    type = envelope.Message.GetType();
-                }
-                else
-                {
-                    type = msg.GetType();
-                }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="system">TBD</param>
+    public RemoteMetricsOn(ExtendedActorSystem system)
+    {
+        // TODO: Need to assert that config key exists
+        _logFrameSizeExceeding = system.Settings.Config.GetByteSize("akka.remote.log-frame-size-exceeding", null);
+        _log = Logging.GetLogger(system, this);
+    }
 
-                // 10% threshold until next log
-                var newMax = Convert.ToInt64(payloadBytes*1.1);
-                Check(type, payloadBytes, newMax);
-            }
-        }
-        private void Check(Type type, long payloadBytes, long newMax)
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="msg">TBD</param>
+    /// <param name="payloadBytes">TBD</param>
+    public void LogPayloadBytes(object msg, long payloadBytes)
+    {
+        if (payloadBytes >= _logFrameSizeExceeding)
         {
-            if (_maxPayloadBytes.TryGetValue(type, out long max))
-            {
-                if (payloadBytes > max)
-                {
-                    if (_maxPayloadBytes.TryUpdate(type, newMax, max))
-                        _log.Info("New maximum payload size for [{0}] is [{1}] bytes", type.FullName, payloadBytes);
-                    else
-                        Check(type, payloadBytes, newMax);
-                }
-            }
+            Type type;
+            if (msg is ActorSelectionMessage message)
+                type = message.Message.GetType();
+            else if (msg is RouterEnvelope envelope)
+                type = envelope.Message.GetType();
             else
+                type = msg.GetType();
+
+            // 10% threshold until next log
+            var newMax = Convert.ToInt64(payloadBytes * 1.1);
+            Check(type, payloadBytes, newMax);
+        }
+    }
+
+    private void Check(Type type, long payloadBytes, long newMax)
+    {
+        if (_maxPayloadBytes.TryGetValue(type, out var max))
+        {
+            if (payloadBytes > max)
             {
-                if (_maxPayloadBytes.TryAdd(type, newMax))
-                    _log.Info("Payload size for [{0}] is [{1}] bytes", type.FullName, payloadBytes);
+                if (_maxPayloadBytes.TryUpdate(type, newMax, max))
+                    _log.Info("New maximum payload size for [{0}] is [{1}] bytes", type.FullName, payloadBytes);
                 else
                     Check(type, payloadBytes, newMax);
             }
         }
-    }
-
-    /// <summary>
-    ///     INTERNAL API
-    /// </summary>
-    internal sealed class RemoteMetricsOff : IRemoteMetrics
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="payloadBytes">TBD</param>
-        public void LogPayloadBytes(object msg, long payloadBytes)
+        else
         {
-            //do nothing
+            if (_maxPayloadBytes.TryAdd(type, newMax))
+                _log.Info("Payload size for [{0}] is [{1}] bytes", type.FullName, payloadBytes);
+            else
+                Check(type, payloadBytes, newMax);
         }
     }
+}
 
+/// <summary>
+///     INTERNAL API
+/// </summary>
+internal sealed class RemoteMetricsOff : IRemoteMetrics
+{
     /// <summary>
-    ///     INTERNAL API
+    ///     TBD
     /// </summary>
-    internal interface IRemoteMetrics : IExtension
+    /// <param name="msg">TBD</param>
+    /// <param name="payloadBytes">TBD</param>
+    public void LogPayloadBytes(object msg, long payloadBytes)
     {
-        /// <summary>
-        ///     Logging of the size of different message types.
-        ///     Maximum detected size per message type is logged once, with
-        ///     and increase threshold of 10%.
-        /// </summary>
-        /// <param name="msg">TBD</param>
-        /// <param name="payloadBytes">TBD</param>
-        void LogPayloadBytes(object msg, long payloadBytes);
+        //do nothing
     }
+}
+
+/// <summary>
+///     INTERNAL API
+/// </summary>
+internal interface IRemoteMetrics : IExtension
+{
+    /// <summary>
+    ///     Logging of the size of different message types.
+    ///     Maximum detected size per message type is logged once, with
+    ///     and increase threshold of 10%.
+    /// </summary>
+    /// <param name="msg">TBD</param>
+    /// <param name="payloadBytes">TBD</param>
+    void LogPayloadBytes(object msg, long payloadBytes);
 }

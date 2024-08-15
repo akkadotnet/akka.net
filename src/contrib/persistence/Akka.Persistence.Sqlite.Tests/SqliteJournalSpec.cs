@@ -1,35 +1,38 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SqliteJournalSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SqliteJournalSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Configuration;
 using Akka.Persistence.TCK.Journal;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Sqlite.Tests
+namespace Akka.Persistence.Sqlite.Tests;
+
+public class SqliteJournalSpec : JournalSpec
 {
-    public class SqliteJournalSpec : JournalSpec
+    private static readonly AtomicCounter counter = new(0);
+
+    public SqliteJournalSpec(ITestOutputHelper output)
+        : base(
+            CreateSpecConfig(
+                "Filename=file:memdb-journal-" + counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"),
+            "SqliteJournalSpec", output)
     {
-        private static AtomicCounter counter = new(0);
+        SqlitePersistence.Get(Sys);
 
-        public SqliteJournalSpec(ITestOutputHelper output)
-            : base(CreateSpecConfig("Filename=file:memdb-journal-" + counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"), "SqliteJournalSpec", output)
-        {
-            SqlitePersistence.Get(Sys);
+        Initialize();
+    }
 
-            Initialize();
-        }
+    // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
+    protected override bool SupportsSerialization => false;
 
-        // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
-        protected override bool SupportsSerialization => false;
-
-        private static Config CreateSpecConfig(string connectionString)
-        {
-            return ConfigurationFactory.ParseString(@"
+    private static Config CreateSpecConfig(string connectionString)
+    {
+        return ConfigurationFactory.ParseString(@"
                 akka.persistence {
                     publish-plugin-commands = on
                     journal {
@@ -44,6 +47,5 @@ namespace Akka.Persistence.Sqlite.Tests
                         }
                     }
                 }");
-        }
     }
 }

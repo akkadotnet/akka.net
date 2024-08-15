@@ -1,73 +1,78 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TerminatedChildrenContainer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="TerminatedChildrenContainer.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Akka.Actor.Internal
+namespace Akka.Actor.Internal;
+
+/// <summary>
+///     This is the empty container which is installed after the last child has
+///     terminated while stopping; it is necessary to distinguish from the normal
+///     empty state while calling handleChildTerminated() for the last time.
+/// </summary>
+public class TerminatedChildrenContainer : EmptyChildrenContainer
 {
-    /// <summary>
-    /// This is the empty container which is installed after the last child has
-    /// terminated while stopping; it is necessary to distinguish from the normal
-    /// empty state while calling handleChildTerminated() for the last time.
-    /// </summary>
-    public class TerminatedChildrenContainer : EmptyChildrenContainer
+    private TerminatedChildrenContainer()
     {
-        private TerminatedChildrenContainer()
-        {
-            //Intentionally left blank
-        }
+        //Intentionally left blank
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public new static IChildrenContainer Instance { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; }
-            = new TerminatedChildrenContainer();
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public new static IChildrenContainer Instance
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get;
+    }
+        = new TerminatedChildrenContainer();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="stats">TBD</param>
-        /// <returns>TBD</returns>
-        public override IChildrenContainer Add(string name, ChildRestartStats stats)
-        {
-            return this;
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override bool IsTerminating => true;
 
-        /// <summary>
-        /// N/A
-        /// </summary>
-        /// <param name="name">N/A</param>
-        /// <returns>N/A</returns>
-        /// <exception cref="InvalidOperationException">This exception is automatically thrown since the name belongs to an actor that is already terminated.</exception>
-        public override IChildrenContainer Reserve(string name)
-        {
-            throw new InvalidOperationException($"Cannot reserve actor name '{name}': already terminated");
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override bool IsNormal => false;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override bool IsTerminating { get { return true; } }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="name">TBD</param>
+    /// <param name="stats">TBD</param>
+    /// <returns>TBD</returns>
+    public override IChildrenContainer Add(string name, ChildRestartStats stats)
+    {
+        return this;
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override bool IsNormal { get { return false; } }
+    /// <summary>
+    ///     N/A
+    /// </summary>
+    /// <param name="name">N/A</param>
+    /// <returns>N/A</returns>
+    /// <exception cref="InvalidOperationException">
+    ///     This exception is automatically thrown since the name belongs to an actor
+    ///     that is already terminated.
+    /// </exception>
+    public override IChildrenContainer Reserve(string name)
+    {
+        throw new InvalidOperationException($"Cannot reserve actor name '{name}': already terminated");
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return "Terminated";
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public override string ToString()
+    {
+        return "Terminated";
     }
 }
-

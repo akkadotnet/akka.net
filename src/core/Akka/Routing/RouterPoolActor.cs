@@ -1,86 +1,81 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="RouterPoolActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="RouterPoolActor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Linq;
 using Akka.Actor;
 using Akka.Util;
 
-namespace Akka.Routing
+namespace Akka.Routing;
+
+/// <summary>
+///     INTERNAL API
+///     Actor implementation for <see cref="Pool" /> routers.
+/// </summary>
+internal class RouterPoolActor : RouterActor
 {
+    private readonly SupervisorStrategy _supervisorStrategy;
+
     /// <summary>
-    /// INTERNAL API
-    /// 
-    /// Actor implementation for <see cref="Pool"/> routers.
+    ///     TBD
     /// </summary>
-    internal class RouterPoolActor : RouterActor
+    protected Pool Pool;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="RouterPoolActor" /> class.
+    /// </summary>
+    /// <param name="supervisorStrategy">The supervisor strategy.</param>
+    /// <exception cref="ActorInitializationException">TBD</exception>
+    public RouterPoolActor(SupervisorStrategy supervisorStrategy)
     {
-        private readonly SupervisorStrategy _supervisorStrategy;
+        _supervisorStrategy = supervisorStrategy;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected Pool Pool;
+        if (Cell.RouterConfig is Pool pool)
+            Pool = pool;
+        else
+            throw new ActorInitializationException(
+                $"RouterPoolActor can only be used with Pool, not {Cell.RouterConfig.GetType()}");
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RouterPoolActor"/> class.
-        /// </summary>
-        /// <param name="supervisorStrategy">The supervisor strategy.</param>
-        /// <exception cref="ActorInitializationException">TBD</exception>
-        public RouterPoolActor(SupervisorStrategy supervisorStrategy)
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    protected override SupervisorStrategy SupervisorStrategy()
+    {
+        return _supervisorStrategy;
+    }
+
+    /// <summary>
+    ///     Called when [receive].
+    /// </summary>
+    /// <param name="message">The message.</param>
+    protected override void OnReceive(object message)
+    {
+        if (message is AdjustPoolSize poolSize)
         {
-            _supervisorStrategy = supervisorStrategy;
-
-            if (Cell.RouterConfig is Pool pool)
+            if (poolSize.Change > 0)
             {
-                Pool = pool;
+                var newRoutees = Vector.Fill<Routee>(poolSize.Change)(() => Pool.NewRoutee(Cell.RouteeProps, Context));
+                Cell.AddRoutees(newRoutees);
             }
-            else
+            else if (poolSize.Change < 0)
             {
-                throw new ActorInitializationException($"RouterPoolActor can only be used with Pool, not {Cell.RouterConfig.GetType()}");
+                var currentRoutees = Cell.Router.Routees.ToArray();
+
+                var abandon = currentRoutees
+                    .Skip(currentRoutees.Length + poolSize.Change)
+                    .ToList();
+
+                Cell.RemoveRoutees(abandon, true);
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        protected override SupervisorStrategy SupervisorStrategy()
+        else
         {
-            return _supervisorStrategy;
-        }
-
-        /// <summary>
-        /// Called when [receive].
-        /// </summary>
-        /// <param name="message">The message.</param>
-        protected override void OnReceive(object message)
-        {
-            if (message is AdjustPoolSize poolSize)
-            {
-                if (poolSize.Change > 0)
-                {
-                    var newRoutees = Vector.Fill<Routee>(poolSize.Change)(() => Pool.NewRoutee(Cell.RouteeProps, Context));
-                    Cell.AddRoutees(newRoutees);
-                }
-                else if (poolSize.Change < 0)
-                {
-                    var currentRoutees = Cell.Router.Routees.ToArray();
-
-                    var abandon = currentRoutees
-                        .Skip(currentRoutees.Length + poolSize.Change)
-                        .ToList();
-
-                    Cell.RemoveRoutees(abandon, true);
-                }
-            }
-            else
-            {
-                base.OnReceive(message);
-            }
+            base.OnReceive(message);
         }
     }
 }

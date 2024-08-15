@@ -1,17 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <Description>Akka.NET streams support for ADO.NET Persistence middleware.</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
-        <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;reactive;streams</PackageTags>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    </PropertyGroup>
+  <PropertyGroup>
+    <Description>Akka.NET streams support for ADO.NET Persistence middleware.</Description>
+    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags);persistence;eventsource;sql;reactive;streams</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <EmbeddedResource Include="reference.conf" />
-        <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
-        <ProjectReference Include="..\..\..\core\Akka.Persistence.Query\Akka.Persistence.Query.csproj" />
-        <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="reference.conf"/>
+    <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj"/>
+    <ProjectReference Include="..\..\..\core\Akka.Persistence.Query\Akka.Persistence.Query.csproj"/>
+    <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj"/>
+  </ItemGroup>
 
 </Project>

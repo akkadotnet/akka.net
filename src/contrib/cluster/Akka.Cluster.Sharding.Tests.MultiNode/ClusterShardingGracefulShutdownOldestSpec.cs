@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ClusterShardingGracefulShutdownOldestSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ClusterShardingGracefulShutdownOldestSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
@@ -13,286 +13,309 @@ using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 
-namespace Akka.Cluster.Sharding.Tests
-{
-    public class ClusterShardingGracefulShutdownOldestSpecConfig : MultiNodeClusterShardingConfig
-    {
-        public RoleName First { get; }
-        public RoleName Second { get; }
+namespace Akka.Cluster.Sharding.Tests;
 
-        public ClusterShardingGracefulShutdownOldestSpecConfig(StateStoreMode mode)
-            : base(mode: mode, loglevel: "DEBUG", additionalConfig: @"
+public class ClusterShardingGracefulShutdownOldestSpecConfig : MultiNodeClusterShardingConfig
+{
+    public ClusterShardingGracefulShutdownOldestSpecConfig(StateStoreMode mode)
+        : base(mode, loglevel: "DEBUG", additionalConfig: @"
             # don't leak ddata state across runs
             akka.cluster.sharding.distributed-data.durable.keys = []
             ")
-        {
-            First = Role("first");
-            Second = Role("second");
-        }
+    {
+        First = Role("first");
+        Second = Role("second");
     }
 
-    public class PersistentClusterShardingGracefulShutdownOldestSpecConfig : ClusterShardingGracefulShutdownOldestSpecConfig
+    public RoleName First { get; }
+    public RoleName Second { get; }
+}
+
+public class PersistentClusterShardingGracefulShutdownOldestSpecConfig : ClusterShardingGracefulShutdownOldestSpecConfig
+{
+    public PersistentClusterShardingGracefulShutdownOldestSpecConfig()
+        : base(StateStoreMode.Persistence)
     {
-        public PersistentClusterShardingGracefulShutdownOldestSpecConfig()
-            : base(StateStoreMode.Persistence)
-        {
-        }
+    }
+}
+
+public class DDataClusterShardingGracefulShutdownOldestSpecConfig : ClusterShardingGracefulShutdownOldestSpecConfig
+{
+    public DDataClusterShardingGracefulShutdownOldestSpecConfig()
+        : base(StateStoreMode.DData)
+    {
+    }
+}
+
+public class PersistentClusterShardingGracefulShutdownOldestSpec : ClusterShardingGracefulShutdownOldestSpec
+{
+    public PersistentClusterShardingGracefulShutdownOldestSpec()
+        : base(new PersistentClusterShardingGracefulShutdownOldestSpecConfig(),
+            typeof(PersistentClusterShardingGracefulShutdownOldestSpec))
+    {
+    }
+}
+
+public class DDataClusterShardingGracefulShutdownOldestSpec : ClusterShardingGracefulShutdownOldestSpec
+{
+    public DDataClusterShardingGracefulShutdownOldestSpec()
+        : base(new DDataClusterShardingGracefulShutdownOldestSpecConfig(),
+            typeof(DDataClusterShardingGracefulShutdownOldestSpec))
+    {
+    }
+}
+
+public abstract class
+    ClusterShardingGracefulShutdownOldestSpec : MultiNodeClusterShardingSpec<
+    ClusterShardingGracefulShutdownOldestSpecConfig>
+{
+    [MultiNodeFact]
+    public void ClusterShardingGracefulShutdownOldestSpecs()
+    {
+        Cluster_sharding_must_start_some_shards_in_both_regions();
+        Cluster_sharding_must_gracefully_shutdown_the_oldest_region();
     }
 
-    public class DDataClusterShardingGracefulShutdownOldestSpecConfig : ClusterShardingGracefulShutdownOldestSpecConfig
+    private void Cluster_sharding_must_start_some_shards_in_both_regions()
     {
-        public DDataClusterShardingGracefulShutdownOldestSpecConfig()
-            : base(StateStoreMode.DData)
+        Within(TimeSpan.FromSeconds(30), () =>
         {
-        }
+            StartPersistenceIfNeeded(Config.First, Config.First, Config.Second);
+
+            Join(Config.First, Config.First, TypeName);
+            Join(Config.Second, Config.First, TypeName);
+
+            AwaitAssert(() =>
+            {
+                var probe = CreateTestProbe();
+                var regionAddresses = Enumerable.Range(1, 100).Select(n =>
+                {
+                    _region.Value.Tell(n, probe.Ref);
+                    probe.ExpectMsg(n, TimeSpan.FromSeconds(1));
+                    return probe.LastSender.Path.Address;
+                }).ToImmutableHashSet();
+
+                regionAddresses.Count.Should().Be(2);
+            });
+            EnterBarrier("after-2");
+        });
     }
 
-    public class PersistentClusterShardingGracefulShutdownOldestSpec : ClusterShardingGracefulShutdownOldestSpec
+    private void Cluster_sharding_must_gracefully_shutdown_the_oldest_region()
     {
-        public PersistentClusterShardingGracefulShutdownOldestSpec()
-            : base(new PersistentClusterShardingGracefulShutdownOldestSpecConfig(), typeof(PersistentClusterShardingGracefulShutdownOldestSpec))
+        Within(TimeSpan.FromSeconds(30), () =>
         {
-        }
-    }
-
-    public class DDataClusterShardingGracefulShutdownOldestSpec : ClusterShardingGracefulShutdownOldestSpec
-    {
-        public DDataClusterShardingGracefulShutdownOldestSpec()
-            : base(new DDataClusterShardingGracefulShutdownOldestSpecConfig(), typeof(DDataClusterShardingGracefulShutdownOldestSpec))
-        {
-        }
-    }
-
-    public abstract class ClusterShardingGracefulShutdownOldestSpec : MultiNodeClusterShardingSpec<ClusterShardingGracefulShutdownOldestSpecConfig>
-    {
-        #region setup
-
-        public class TerminationOrderActor : ActorBase
-        {
-            public class RegionTerminated
-            {
-                public static RegionTerminated Instance = new();
-
-                private RegionTerminated()
-                {
-                }
-            }
-
-            public class CoordinatorTerminated
-            {
-                public static CoordinatorTerminated Instance = new();
-
-                private CoordinatorTerminated()
-                {
-                }
-            }
-
-            public static Props Props(IActorRef probe, IActorRef coordinator, IActorRef region)
-            {
-                return Actor.Props.Create(() => new TerminationOrderActor(probe, coordinator, region));
-            }
-
-            private readonly IActorRef _probe;
-            private readonly IActorRef _coordinator;
-            private readonly IActorRef _region;
-
-            public TerminationOrderActor(IActorRef probe, IActorRef coordinator, IActorRef region)
-            {
-                _probe = probe;
-                _coordinator = coordinator;
-                _region = region;
-
-                Context.Watch(coordinator);
-                Context.Watch(region);
-            }
-
-            protected override bool Receive(object message)
-            {
-                switch (message)
-                {
-                    case Terminated t when t.ActorRef.Equals(_coordinator):
-                        _probe.Tell(CoordinatorTerminated.Instance);
-                        return true;
-
-                    case Terminated t when t.ActorRef.Equals(_region):
-                        _probe.Tell(RegionTerminated.Instance);
-                        return true;
-                }
-                return false;
-            }
-        }
-
-        // slow stop previously made it more likely that the coordinator would stop before the local region
-        public class SlowStopShardedEntity : ActorBase, IWithTimers
-        {
-            #region StopMessage
-            public class Stop
-            {
-                public static Stop Instance = new();
-
-                private Stop() { }
-            }
-            #endregion
-
-            public class ActualStop
-            {
-                public static ActualStop Instance = new();
-
-                private ActualStop()
-                {
-                }
-            }
-
-            public ITimerScheduler Timers { get; set; }
-
-            #region DelayedStop
-            protected override bool Receive(object message)
-            {
-                switch (message)
-                {
-                    case int id:
-                        Sender.Tell(id);
-                        return true;
-                    case Stop _:
-                        Timers.StartSingleTimer(ActualStop.Instance, ActualStop.Instance, TimeSpan.FromMilliseconds(50));
-                        return true;
-                    case ActualStop _:
-                        Context.Stop(Self);
-                        return true;
-                }
-                return false;
-            }
-            #endregion
-        }
-
-        private sealed class MessageExtractor: IMessageExtractor
-        {
-            public string EntityId(object message)
-                => message switch
-                {
-                    int id => id.ToString(),
-                    _ => null
-                };
-
-            public object EntityMessage(object message)
-                => message;
-
-            public string ShardId(object message)
-                => message switch
-                {
-                    int id => id.ToString(),
-                    _ => null
-                };
-
-            public string ShardId(string entityId, object messageHint = null)
-                => entityId;
-        }
-
-        private const string TypeName = "Entity";
-        private readonly Lazy<IActorRef> _region;
-
-        protected ClusterShardingGracefulShutdownOldestSpec(ClusterShardingGracefulShutdownOldestSpecConfig config, Type type)
-            : base(config, type)
-        {
-            _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion(TypeName));
-        }
-
-        private void Join(RoleName from, RoleName to, string typeName)
-        {
-            base.Join(from, to);
             RunOn(() =>
             {
-                #region ClusterStart
-                ClusterSharding.Get(system: Sys).Start(
-                    typeName: typeName,
-                    entityProps: Props.Create(() => new SlowStopShardedEntity()),
-                    settings: Settings.Value,
-                    messageExtractor: new MessageExtractor(),
-                    allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0),
-                    handOffStopMessage: SlowStopShardedEntity.Stop.Instance); // This is the custom handoff message instance
-                #endregion
-            }, from);
-            EnterBarrier($"{from}-started");
+                IActorRef coordinator = null;
+                AwaitAssert(() =>
+                {
+                    coordinator = Sys
+                        .ActorSelection($"/system/sharding/{TypeName}Coordinator/singleton/coordinator")
+                        .ResolveOne(RemainingOrDefault).Result;
+                });
+                var terminationProbe = CreateTestProbe();
+                Sys.ActorOf(TerminationOrderActor.Props(terminationProbe.Ref, coordinator, _region.Value));
+
+                // trigger graceful shutdown
+                Cluster.Leave(GetAddress(Config.First));
+
+                // region first
+                terminationProbe.ExpectMsg<TerminationOrderActor.RegionTerminated>();
+                terminationProbe.ExpectMsg<TerminationOrderActor.CoordinatorTerminated>();
+            }, Config.First);
+
+            EnterBarrier("terminated");
+
+            RunOn(() =>
+            {
+                AwaitAssert(() =>
+                {
+                    var p = CreateTestProbe();
+
+
+                    var responses = Enumerable.Range(1, 100).Select(n =>
+                    {
+                        _region.Value.Tell(n, p.Ref);
+                        return p.ExpectMsg(n, TimeSpan.FromSeconds(1));
+                    }).ToImmutableHashSet();
+
+                    responses.Count.Should().Be(100);
+                });
+            }, Config.Second);
+            EnterBarrier("done-o");
+        });
+    }
+
+    #region setup
+
+    public class TerminationOrderActor : ActorBase
+    {
+        private readonly IActorRef _coordinator;
+
+        private readonly IActorRef _probe;
+        private readonly IActorRef _region;
+
+        public TerminationOrderActor(IActorRef probe, IActorRef coordinator, IActorRef region)
+        {
+            _probe = probe;
+            _coordinator = coordinator;
+            _region = region;
+
+            Context.Watch(coordinator);
+            Context.Watch(region);
+        }
+
+        public static Props Props(IActorRef probe, IActorRef coordinator, IActorRef region)
+        {
+            return Actor.Props.Create(() => new TerminationOrderActor(probe, coordinator, region));
+        }
+
+        protected override bool Receive(object message)
+        {
+            switch (message)
+            {
+                case Terminated t when t.ActorRef.Equals(_coordinator):
+                    _probe.Tell(CoordinatorTerminated.Instance);
+                    return true;
+
+                case Terminated t when t.ActorRef.Equals(_region):
+                    _probe.Tell(RegionTerminated.Instance);
+                    return true;
+            }
+
+            return false;
+        }
+
+        public class RegionTerminated
+        {
+            public static RegionTerminated Instance = new();
+
+            private RegionTerminated()
+            {
+            }
+        }
+
+        public class CoordinatorTerminated
+        {
+            public static CoordinatorTerminated Instance = new();
+
+            private CoordinatorTerminated()
+            {
+            }
+        }
+    }
+
+    // slow stop previously made it more likely that the coordinator would stop before the local region
+    public class SlowStopShardedEntity : ActorBase, IWithTimers
+    {
+        public ITimerScheduler Timers { get; set; }
+
+        #region DelayedStop
+
+        protected override bool Receive(object message)
+        {
+            switch (message)
+            {
+                case int id:
+                    Sender.Tell(id);
+                    return true;
+                case Stop _:
+                    Timers.StartSingleTimer(ActualStop.Instance, ActualStop.Instance, TimeSpan.FromMilliseconds(50));
+                    return true;
+                case ActualStop _:
+                    Context.Stop(Self);
+                    return true;
+            }
+
+            return false;
         }
 
         #endregion
 
-        [MultiNodeFact]
-        public void ClusterShardingGracefulShutdownOldestSpecs()
+        #region StopMessage
+
+        public class Stop
         {
-            Cluster_sharding_must_start_some_shards_in_both_regions();
-            Cluster_sharding_must_gracefully_shutdown_the_oldest_region();
+            public static Stop Instance = new();
+
+            private Stop()
+            {
+            }
         }
 
-        private void Cluster_sharding_must_start_some_shards_in_both_regions()
+        #endregion
+
+        public class ActualStop
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            public static ActualStop Instance = new();
+
+            private ActualStop()
             {
-                StartPersistenceIfNeeded(startOn: Config.First, Config.First, Config.Second);
-
-                Join(Config.First, Config.First, TypeName);
-                Join(Config.Second, Config.First, TypeName);
-
-                AwaitAssert(() =>
-                {
-                    var probe = CreateTestProbe();
-                    var regionAddresses = Enumerable.Range(1, 100).Select(n =>
-                    {
-                        _region.Value.Tell(n, probe.Ref);
-                        probe.ExpectMsg(n, TimeSpan.FromSeconds(1));
-                        return probe.LastSender.Path.Address;
-                    }).ToImmutableHashSet();
-
-                    regionAddresses.Count.Should().Be(2);
-                });
-                EnterBarrier("after-2");
-            });
-        }
-
-        private void Cluster_sharding_must_gracefully_shutdown_the_oldest_region()
-        {
-            Within(TimeSpan.FromSeconds(30), () =>
-            {
-                RunOn(() =>
-                {
-                    IActorRef coordinator = null;
-                    AwaitAssert(() =>
-                    {
-                        coordinator = Sys
-                          .ActorSelection($"/system/sharding/{TypeName}Coordinator/singleton/coordinator")
-                          .ResolveOne(RemainingOrDefault).Result;
-                    });
-                    var terminationProbe = CreateTestProbe();
-                    Sys.ActorOf(TerminationOrderActor.Props(terminationProbe.Ref, coordinator, _region.Value));
-
-                    // trigger graceful shutdown
-                    Cluster.Leave(GetAddress(Config.First));
-
-                    // region first
-                    terminationProbe.ExpectMsg<TerminationOrderActor.RegionTerminated>();
-                    terminationProbe.ExpectMsg<TerminationOrderActor.CoordinatorTerminated>();
-                }, Config.First);
-
-                EnterBarrier("terminated");
-
-                RunOn(() =>
-                {
-                    AwaitAssert(() =>
-                    {
-                        var p = CreateTestProbe();
-
-
-                        var responses = Enumerable.Range(1, 100).Select(n =>
-                        {
-                            _region.Value.Tell(n, p.Ref);
-                            return p.ExpectMsg(n, TimeSpan.FromSeconds(1));
-                        }).ToImmutableHashSet();
-
-                        responses.Count.Should().Be(100);
-                    });
-                }, Config.Second);
-                EnterBarrier("done-o");
-            });
+            }
         }
     }
+
+    private sealed class MessageExtractor : IMessageExtractor
+    {
+        public string EntityId(object message)
+        {
+            return message switch
+            {
+                int id => id.ToString(),
+                _ => null
+            };
+        }
+
+        public object EntityMessage(object message)
+        {
+            return message;
+        }
+
+        public string ShardId(object message)
+        {
+            return message switch
+            {
+                int id => id.ToString(),
+                _ => null
+            };
+        }
+
+        public string ShardId(string entityId, object messageHint = null)
+        {
+            return entityId;
+        }
+    }
+
+    private const string TypeName = "Entity";
+    private readonly Lazy<IActorRef> _region;
+
+    protected ClusterShardingGracefulShutdownOldestSpec(ClusterShardingGracefulShutdownOldestSpecConfig config,
+        Type type)
+        : base(config, type)
+    {
+        _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion(TypeName));
+    }
+
+    private void Join(RoleName from, RoleName to, string typeName)
+    {
+        base.Join(from, to);
+        RunOn(() =>
+        {
+            #region ClusterStart
+
+            ClusterSharding.Get(Sys).Start(
+                typeName,
+                Props.Create(() => new SlowStopShardedEntity()),
+                Settings.Value,
+                new MessageExtractor(),
+                ShardAllocationStrategy.LeastShardAllocationStrategy(2, 1.0),
+                SlowStopShardedEntity.Stop.Instance); // This is the custom handoff message instance
+
+            #endregion
+        }, from);
+        EnterBarrier($"{from}-started");
+    }
+
+    #endregion
 }

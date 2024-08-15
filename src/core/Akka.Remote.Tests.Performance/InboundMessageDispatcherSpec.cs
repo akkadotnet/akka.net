@@ -1,63 +1,29 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="InboundMessageDispatcherSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="InboundMessageDispatcherSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
-using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 using Akka.Util.Internal;
 using Google.Protobuf;
 using NBench;
+using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
-namespace Akka.Remote.Tests.Performance
+namespace Akka.Remote.Tests.Performance;
+
+/// <summary>
+///     Specs used to verify the performance of the <see cref="IInboundMessageDispatcher" />,
+///     one of the potential bottlenecks inside the remoting system
+/// </summary>
+public class InboundMessageDispatcherSpec
 {
-    /// <summary>
-    /// Specs used to verify the performance of the <see cref="IInboundMessageDispatcher"/>,
-    /// one of the potential bottlenecks inside the remoting system
-    /// </summary>
-    public class InboundMessageDispatcherSpec
-    {
-        private const string MessageDispatcherThroughputCounterName = "InboundMessageDispatch";
-        private SerializedMessage _message;
+    private const string MessageDispatcherThroughputCounterName = "InboundMessageDispatch";
+    private static readonly AtomicCounter Counter = new(0);
 
-        private Counter _inboundMessageDispatcherCounter;
-        private static readonly AtomicCounter Counter = new(0);
-
-        private ActorSystem _actorSystem;
-        private Address _systemAddress;
-        private IInboundMessageDispatcher _dispatcher;
-
-        private IInternalActorRef _targetActorRef;
-
-        /// <summary>
-        /// Not thread-safe, but called by a single thread in the benchmark
-        /// </summary>
-        private class BenchmarkActorRef : MinimalActorRef
-        {
-            private readonly Counter _counter;
-
-            public BenchmarkActorRef(Counter counter, IRemoteActorRefProvider provider)
-            {
-                _counter = counter;
-                Provider = provider;
-                Path = new RootActorPath(provider.DefaultAddress) / "user" / "tempRef";
-            }
-
-            protected override void TellInternal(object message, IActorRef sender)
-            {
-                _counter.Increment();
-            }
-
-            public override ActorPath Path { get; }
-
-            public override IActorRefProvider Provider { get; }
-        }
-
-        private static readonly Config RemoteHocon = ConfigurationFactory.ParseString(@"
+    private static readonly Config RemoteHocon = ConfigurationFactory.ParseString(@"
              akka {
               actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
 
@@ -80,29 +46,63 @@ namespace Akka.Remote.Tests.Performance
             }
         ");
 
-        [PerfSetup]
-        public void Setup(BenchmarkContext context)
+    private ActorSystem _actorSystem;
+    private IInboundMessageDispatcher _dispatcher;
+
+    private Counter _inboundMessageDispatcherCounter;
+    private SerializedMessage _message;
+    private Address _systemAddress;
+
+    private IInternalActorRef _targetActorRef;
+
+    [PerfSetup]
+    public void Setup(BenchmarkContext context)
+    {
+        _actorSystem = ActorSystem.Create("MessageDispatcher" + Counter.GetAndIncrement(), RemoteHocon);
+        _systemAddress = RARP.For(_actorSystem).Provider.DefaultAddress;
+        _inboundMessageDispatcherCounter = context.GetCounter(MessageDispatcherThroughputCounterName);
+        _message = new SerializedMessage { SerializerId = 0, Message = ByteString.CopyFromUtf8("foo") };
+        _dispatcher = new DefaultMessageDispatcher(_actorSystem.AsInstanceOf<ExtendedActorSystem>(),
+            RARP.For(_actorSystem).Provider, _actorSystem.Log);
+        _targetActorRef = new BenchmarkActorRef(_inboundMessageDispatcherCounter, RARP.For(_actorSystem).Provider);
+    }
+
+    [PerfBenchmark(Description = "Tests the performance of the Default", RunMode = RunMode.Throughput,
+        NumberOfIterations = 13, TestMode = TestMode.Measurement)]
+    [CounterMeasurement(MessageDispatcherThroughputCounterName)]
+    public void DispatchThroughput(BenchmarkContext context)
+    {
+        _dispatcher.Dispatch(_targetActorRef, _systemAddress, _message);
+    }
+
+    [PerfCleanup]
+    public void Cleanup()
+    {
+        _actorSystem.Terminate().Wait();
+        _actorSystem = null;
+    }
+
+    /// <summary>
+    ///     Not thread-safe, but called by a single thread in the benchmark
+    /// </summary>
+    private class BenchmarkActorRef : MinimalActorRef
+    {
+        private readonly Counter _counter;
+
+        public BenchmarkActorRef(Counter counter, IRemoteActorRefProvider provider)
         {
-            _actorSystem = ActorSystem.Create("MessageDispatcher" + Counter.GetAndIncrement(), RemoteHocon);
-            _systemAddress = RARP.For(_actorSystem).Provider.DefaultAddress;
-            _inboundMessageDispatcherCounter = context.GetCounter(MessageDispatcherThroughputCounterName);
-            _message = new SerializedMessage { SerializerId = 0, Message = ByteString.CopyFromUtf8("foo") };
-            _dispatcher = new DefaultMessageDispatcher(_actorSystem.AsInstanceOf<ExtendedActorSystem>(), RARP.For(_actorSystem).Provider, _actorSystem.Log);
-            _targetActorRef = new BenchmarkActorRef(_inboundMessageDispatcherCounter, RARP.For(_actorSystem).Provider);
+            _counter = counter;
+            Provider = provider;
+            Path = new RootActorPath(provider.DefaultAddress) / "user" / "tempRef";
         }
 
-        [PerfBenchmark(Description = "Tests the performance of the Default", RunMode = RunMode.Throughput, NumberOfIterations = 13, TestMode = TestMode.Measurement)]
-        [CounterMeasurement(MessageDispatcherThroughputCounterName)]
-        public void DispatchThroughput(BenchmarkContext context)
-        {
-            _dispatcher.Dispatch(_targetActorRef, _systemAddress, _message);
-        }
+        public override ActorPath Path { get; }
 
-        [PerfCleanup]
-        public void Cleanup()
+        public override IActorRefProvider Provider { get; }
+
+        protected override void TellInternal(object message, IActorRef sender)
         {
-            _actorSystem.Terminate().Wait();
-            _actorSystem = null;
+            _counter.Increment();
         }
     }
 }

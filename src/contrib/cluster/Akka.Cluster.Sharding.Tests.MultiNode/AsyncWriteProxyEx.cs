@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AsyncWriteProxyEx.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="AsyncWriteProxyEx.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -13,125 +13,131 @@ using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internal;
 using Akka.Persistence;
 using Akka.Persistence.Journal;
 
-namespace Akka.Cluster.Sharding.Tests
+namespace Akka.Cluster.Sharding.Tests;
+
+/// <summary>
+///     This exception is thrown when the replay inactivity exceeds a specified timeout.
+/// </summary>
+[Serializable]
+public class AsyncReplayTimeoutException : AkkaException
 {
     /// <summary>
-    /// This exception is thrown when the replay inactivity exceeds a specified timeout.
+    ///     Initializes a new instance of the <see cref="AsyncReplayTimeoutException" /> class.
     /// </summary>
-    [Serializable]
-    public class AsyncReplayTimeoutException : AkkaException
+    public AsyncReplayTimeoutException()
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
-        /// </summary>
-        public AsyncReplayTimeoutException()
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
-        /// </summary>
-        /// <param name="message">The message that describes the error.</param>
-        public AsyncReplayTimeoutException(string message)
-            : base(message)
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected AsyncReplayTimeoutException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
     }
 
     /// <summary>
-    /// TBD
+    ///     Initializes a new instance of the <see cref="AsyncReplayTimeoutException" /> class.
     /// </summary>
-    [Serializable]
-    public sealed class SetStore
+    /// <param name="message">The message that describes the error.</param>
+    public AsyncReplayTimeoutException(string message)
+        : base(message)
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="store">TBD</param>
-        /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="store"/> is undefined.
-        /// </exception>
-        public SetStore(IActorRef store)
-        {
-            if (store == null)
-                throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
-
-            Store = store;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly IActorRef Store;
     }
 
     /// <summary>
-    /// A journal that delegates actual storage to a target actor. For testing only.
+    ///     Initializes a new instance of the <see cref="AsyncReplayTimeoutException" /> class.
     /// </summary>
-    public abstract class AsyncWriteProxyEx : AsyncWriteJournal, IWithUnboundedStash
+    /// <param name="info">
+    ///     The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being
+    ///     thrown.
+    /// </param>
+    /// <param name="context">
+    ///     The <see cref="StreamingContext" /> that contains contextual information about the source or
+    ///     destination.
+    /// </param>
+    protected AsyncReplayTimeoutException(SerializationInfo info, StreamingContext context)
+        : base(info, context)
     {
-        private class InitTimeout
+    }
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+[Serializable]
+public sealed class SetStore
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public readonly IActorRef Store;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="store">TBD</param>
+    /// <exception cref="ArgumentNullException">
+    ///     This exception is thrown when the specified <paramref name="store" /> is undefined.
+    /// </exception>
+    public SetStore(IActorRef store)
+    {
+        if (store == null)
+            throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
+
+        Store = store;
+    }
+}
+
+/// <summary>
+///     A journal that delegates actual storage to a target actor. For testing only.
+/// </summary>
+public abstract class AsyncWriteProxyEx : AsyncWriteJournal, IWithUnboundedStash
+{
+    private bool _isInitialized;
+    private bool _isInitTimedOut;
+    private IActorRef _store;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected AsyncWriteProxyEx()
+    {
+        _isInitialized = false;
+        _isInitTimedOut = false;
+        _store = null;
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public abstract TimeSpan Timeout { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public IStash Stash { get; set; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override void AroundPreStart()
+    {
+        Context.System.Scheduler.ScheduleTellOnce(Timeout, Self, InitTimeout.Instance, Self);
+        base.AroundPreStart();
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="receive">TBD</param>
+    /// <param name="message">TBD</param>
+    /// <returns>TBD</returns>
+    protected internal override bool AroundReceive(Receive receive, object message)
+    {
+        if (_isInitialized)
         {
-            public static readonly InitTimeout Instance = new();
-            private InitTimeout() { }
+            if (message is not InitTimeout)
+                return base.AroundReceive(receive, message);
         }
-
-        private bool _isInitialized;
-        private bool _isInitTimedOut;
-        private IActorRef _store;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected AsyncWriteProxyEx()
+        else
         {
-            _isInitialized = false;
-            _isInitTimedOut = false;
-            _store = null;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public abstract TimeSpan Timeout { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override void AroundPreStart()
-        {
-            Context.System.Scheduler.ScheduleTellOnce(Timeout, Self, InitTimeout.Instance, Self);
-            base.AroundPreStart();
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
-        protected internal override bool AroundReceive(Receive receive, object message)
-        {
-            if (_isInitialized)
-            {
-                if (message is not InitTimeout)
-                    return base.AroundReceive(receive, message);
-            }
-            else switch (message)
+            switch (message)
             {
                 case SetStore msg:
                     _store = msg.Store;
@@ -145,204 +151,216 @@ namespace Akka.Cluster.Sharding.Tests
                 default:
                 {
                     if (_isInitTimedOut)
-                    {
                         return base.AroundReceive(receive, message);
-                    }
-                    else Stash.Stash();
+                    Stash.Stash();
 
                     break;
                 }
             }
-            return true;
         }
 
+        return true;
+    }
 
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="messages">TBD</param>
-        /// <exception cref="TimeoutException">
-        /// This exception is thrown when the store has not been initialized.
-        /// </exception>
-        /// <returns>TBD</returns>
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
-        {
-            var trueMsgs = messages.ToArray();
-            
-            if (_store == null)
-                return StoreNotInitialized<IImmutableList<Exception>>();
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="messages">TBD</param>
+    /// <exception cref="TimeoutException">
+    ///     This exception is thrown when the store has not been initialized.
+    /// </exception>
+    /// <returns>TBD</returns>
+    protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+    {
+        var trueMsgs = messages.ToArray();
 
-            return _store.Ask<object>(sender => new WriteMessages(trueMsgs, sender, 1), Timeout, CancellationToken.None)
-                .ContinueWith(r =>
-                {
-                    if (r.IsCanceled)
-                        return (IImmutableList<Exception>)trueMsgs.Select(_ => (Exception)new TimeoutException()).ToImmutableList();
-                    if (r.IsFaulted)
-                        return trueMsgs.Select(_ => (Exception)r.Exception).ToImmutableList();
+        if (_store == null)
+            return StoreNotInitialized<IImmutableList<Exception>>();
 
-                    return r.Result switch
-                    {
-                        WriteMessageSuccess wms => trueMsgs.Select(_ => (Exception)null).ToImmutableList(),
-                        WriteMessageFailure wmf => trueMsgs.Select(_ => wmf.Cause).ToImmutableList(),
-                        _ => null
-                    };
-                }, TaskContinuationOptions.ExecuteSynchronously);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <exception cref="TimeoutException">
-        /// This exception is thrown when the store has not been initialized.
-        /// </exception>
-        /// <returns>TBD</returns>
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
-        {
-            if (_store == null)
-                return StoreNotInitialized<object>();
-
-            var result = new TaskCompletionSource<object>();
-
-            _store.Ask<object>(sender => new DeleteMessagesTo(persistenceId, toSequenceNr, sender), Timeout, CancellationToken.None).ContinueWith(r =>
+        return _store.Ask<object>(sender => new WriteMessages(trueMsgs, sender, 1), Timeout, CancellationToken.None)
+            .ContinueWith(r =>
             {
+                if (r.IsCanceled)
+                    return (IImmutableList<Exception>)trueMsgs.Select(_ => (Exception)new TimeoutException())
+                        .ToImmutableList();
                 if (r.IsFaulted)
-                    result.TrySetException(r.Exception);
-                else if (r.IsCanceled)
-                    result.TrySetException(new TimeoutException());
-                else
-                    result.TrySetResult(true);
-            }, TaskContinuationOptions.ExecuteSynchronously);
+                    return trueMsgs.Select(_ => (Exception)r.Exception).ToImmutableList();
 
-            return result.Task;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="fromSequenceNr">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="recoveryCallback">TBD</param>
-        /// <exception cref="TimeoutException">
-        /// This exception is thrown when the store has not been initialized.
-        /// </exception>
-        /// <returns>TBD</returns>
-        public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)
-        {
-            if (_store == null)
-                return StoreNotInitialized<object>();
-
-            var replayCompletionPromise = new TaskCompletionSource<object>();
-            var mediator = context.ActorOf(Props.Create(() => new ReplayMediator(recoveryCallback, replayCompletionPromise, Timeout)).WithDeploy(Deploy.Local));
-
-            _store.Tell(new ReplayMessages(fromSequenceNr, toSequenceNr, max, persistenceId, mediator), mediator);
-
-            return replayCompletionPromise.Task;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="fromSequenceNr">TBD</param>
-        /// <exception cref="TimeoutException">
-        /// This exception is thrown when the store has not been initialized.
-        /// </exception>
-        /// <returns>TBD</returns>
-        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
-        {
-            if (_store == null)
-                return StoreNotInitialized<long>();
-
-            var result = new TaskCompletionSource<long>();
-
-            _store.Ask<object>(sender => new ReplayMessages(0, 0, 0, persistenceId, sender), Timeout, CancellationToken.None)
-                .ContinueWith(t =>
+                return r.Result switch
                 {
-                    if (t.IsFaulted)
-                        result.TrySetException(t.Exception);
-                    else if (t.IsCanceled)
-                        result.TrySetException(new TimeoutException());
-                    else if (t.Result is RecoverySuccess rs)
-                        result.TrySetResult(rs.HighestSequenceNr);
-                    else
-                        result.TrySetException(new InvalidOperationException());
-                }, TaskContinuationOptions.ExecuteSynchronously);
-            return result.Task;
-        }
-
-        private Task<T> StoreNotInitialized<T>()
-        {
-            var promise = new TaskCompletionSource<T>();
-            promise.SetException(new TimeoutException("Store not intialized."));
-            return promise.Task;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public IStash Stash { get; set; }
+                    WriteMessageSuccess wms => trueMsgs.Select(_ => (Exception)null).ToImmutableList(),
+                    WriteMessageFailure wmf => trueMsgs.Select(_ => wmf.Cause).ToImmutableList(),
+                    _ => null
+                };
+            }, TaskContinuationOptions.ExecuteSynchronously);
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    internal class ReplayMediator : ActorBase
+    /// <param name="persistenceId">TBD</param>
+    /// <param name="toSequenceNr">TBD</param>
+    /// <exception cref="TimeoutException">
+    ///     This exception is thrown when the store has not been initialized.
+    /// </exception>
+    /// <returns>TBD</returns>
+    protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
     {
-        private readonly Action<IPersistentRepresentation> _replayCallback;
-        private readonly TaskCompletionSource<object> _replayCompletionPromise;
-        private readonly TimeSpan _replayTimeout;
+        if (_store == null)
+            return StoreNotInitialized<object>();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="replayCallback">TBD</param>
-        /// <param name="replayCompletionPromise">TBD</param>
-        /// <param name="replayTimeout">TBD</param>
-        public ReplayMediator(Action<IPersistentRepresentation> replayCallback, TaskCompletionSource<object> replayCompletionPromise, TimeSpan replayTimeout)
+        var result = new TaskCompletionSource<object>();
+
+        _store.Ask<object>(sender => new DeleteMessagesTo(persistenceId, toSequenceNr, sender), Timeout,
+            CancellationToken.None).ContinueWith(r =>
         {
-            _replayCallback = replayCallback;
-            _replayCompletionPromise = replayCompletionPromise;
-            _replayTimeout = replayTimeout;
+            if (r.IsFaulted)
+                result.TrySetException(r.Exception);
+            else if (r.IsCanceled)
+                result.TrySetException(new TimeoutException());
+            else
+                result.TrySetResult(true);
+        }, TaskContinuationOptions.ExecuteSynchronously);
 
-            Context.SetReceiveTimeout(replayTimeout);
-        }
+        return result.Task;
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <exception cref="AsyncReplayTimeoutException">
-        /// This exception is thrown when the replay timed out due to inactivity.
-        /// </exception>
-        /// <returns>TBD</returns>
-        protected override bool Receive(object message)
-        {
-            switch (message)
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="context">TBD</param>
+    /// <param name="persistenceId">TBD</param>
+    /// <param name="fromSequenceNr">TBD</param>
+    /// <param name="toSequenceNr">TBD</param>
+    /// <param name="max">TBD</param>
+    /// <param name="recoveryCallback">TBD</param>
+    /// <exception cref="TimeoutException">
+    ///     This exception is thrown when the store has not been initialized.
+    /// </exception>
+    /// <returns>TBD</returns>
+    public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr,
+        long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback)
+    {
+        if (_store == null)
+            return StoreNotInitialized<object>();
+
+        var replayCompletionPromise = new TaskCompletionSource<object>();
+        var mediator = context.ActorOf(Props
+            .Create(() => new ReplayMediator(recoveryCallback, replayCompletionPromise, Timeout))
+            .WithDeploy(Deploy.Local));
+
+        _store.Tell(new ReplayMessages(fromSequenceNr, toSequenceNr, max, persistenceId, mediator), mediator);
+
+        return replayCompletionPromise.Task;
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="persistenceId">TBD</param>
+    /// <param name="fromSequenceNr">TBD</param>
+    /// <exception cref="TimeoutException">
+    ///     This exception is thrown when the store has not been initialized.
+    /// </exception>
+    /// <returns>TBD</returns>
+    public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+    {
+        if (_store == null)
+            return StoreNotInitialized<long>();
+
+        var result = new TaskCompletionSource<long>();
+
+        _store.Ask<object>(sender => new ReplayMessages(0, 0, 0, persistenceId, sender), Timeout,
+                CancellationToken.None)
+            .ContinueWith(t =>
             {
-                case ReplayedMessage rm:
-                    _replayCallback(rm.Persistent);
-                    return true;
-                case RecoverySuccess _:
-                    _replayCompletionPromise.SetResult(new object());
-                    Context.Stop(Self);
-                    return true;
-                case ReplayMessagesFailure failure:
-                    _replayCompletionPromise.SetException(failure.Cause);
-                    Context.Stop(Self);
-                    return true;
-                case ReceiveTimeout _:
-                    var timeoutException = new AsyncReplayTimeoutException($"Replay timed out after {_replayTimeout.TotalSeconds}s of inactivity");
-                    _replayCompletionPromise.SetException(timeoutException);
-                    Context.Stop(Self);
-                    return true;
-            }
-            return false;
+                if (t.IsFaulted)
+                    result.TrySetException(t.Exception);
+                else if (t.IsCanceled)
+                    result.TrySetException(new TimeoutException());
+                else if (t.Result is RecoverySuccess rs)
+                    result.TrySetResult(rs.HighestSequenceNr);
+                else
+                    result.TrySetException(new InvalidOperationException());
+            }, TaskContinuationOptions.ExecuteSynchronously);
+        return result.Task;
+    }
+
+    private Task<T> StoreNotInitialized<T>()
+    {
+        var promise = new TaskCompletionSource<T>();
+        promise.SetException(new TimeoutException("Store not intialized."));
+        return promise.Task;
+    }
+
+    private class InitTimeout
+    {
+        public static readonly InitTimeout Instance = new();
+
+        private InitTimeout()
+        {
         }
+    }
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+internal class ReplayMediator : ActorBase
+{
+    private readonly Action<IPersistentRepresentation> _replayCallback;
+    private readonly TaskCompletionSource<object> _replayCompletionPromise;
+    private readonly TimeSpan _replayTimeout;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="replayCallback">TBD</param>
+    /// <param name="replayCompletionPromise">TBD</param>
+    /// <param name="replayTimeout">TBD</param>
+    public ReplayMediator(Action<IPersistentRepresentation> replayCallback,
+        TaskCompletionSource<object> replayCompletionPromise, TimeSpan replayTimeout)
+    {
+        _replayCallback = replayCallback;
+        _replayCompletionPromise = replayCompletionPromise;
+        _replayTimeout = replayTimeout;
+
+        Context.SetReceiveTimeout(replayTimeout);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="message">TBD</param>
+    /// <exception cref="AsyncReplayTimeoutException">
+    ///     This exception is thrown when the replay timed out due to inactivity.
+    /// </exception>
+    /// <returns>TBD</returns>
+    protected override bool Receive(object message)
+    {
+        switch (message)
+        {
+            case ReplayedMessage rm:
+                _replayCallback(rm.Persistent);
+                return true;
+            case RecoverySuccess _:
+                _replayCompletionPromise.SetResult(new object());
+                Context.Stop(Self);
+                return true;
+            case ReplayMessagesFailure failure:
+                _replayCompletionPromise.SetException(failure.Cause);
+                Context.Stop(Self);
+                return true;
+            case ReceiveTimeout _:
+                var timeoutException =
+                    new AsyncReplayTimeoutException(
+                        $"Replay timed out after {_replayTimeout.TotalSeconds}s of inactivity");
+                _replayCompletionPromise.SetException(timeoutException);
+                Context.Stop(Self);
+                return true;
+        }
+
+        return false;
     }
 }

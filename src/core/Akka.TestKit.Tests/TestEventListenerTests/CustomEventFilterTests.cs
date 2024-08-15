@@ -1,64 +1,66 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="CustomEventFilterTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="CustomEventFilterTests.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
 using Akka.Event;
 using Xunit;
 
-namespace Akka.TestKit.Tests.TestEventListenerTests
+namespace Akka.TestKit.Tests.TestEventListenerTests;
+
+public abstract class CustomEventFilterTestsBase : EventFilterTestBase
 {
-    public abstract class CustomEventFilterTestsBase : EventFilterTestBase
+    protected CustomEventFilterTestsBase() : base("akka.loglevel=ERROR")
     {
-        protected CustomEventFilterTestsBase() : base("akka.loglevel=ERROR") { }
-
-        protected override void SendRawLogEventMessage(object message)
-        {
-            Sys.EventStream.Publish(new Error(null, "CustomEventFilterTests", GetType(), message));
-        }
-
-        protected abstract EventFilterFactory CreateTestingEventFilter();
-
-        [Fact]
-        public async Task Custom_filter_should_match()
-        {
-            var eventFilter = CreateTestingEventFilter();
-            await eventFilter.Custom(logEvent => logEvent is Error && (string) logEvent.Message == "whatever")
-                .ExpectOneAsync(() => {
-                    Log.Error("whatever");
-                    return Task.CompletedTask;
-                });
-        }
-
-        [Fact]
-        public async Task Custom_filter_should_match2()
-        {
-            var eventFilter = CreateTestingEventFilter();
-            await eventFilter.Custom<Error>(logEvent => (string)logEvent.Message == "whatever")
-                .ExpectOneAsync(() => {
-                    Log.Error("whatever");
-                    return Task.CompletedTask;
-                });
-        }
     }
 
-    public class CustomEventFilterTests : CustomEventFilterTestsBase
+    protected override void SendRawLogEventMessage(object message)
     {
-        protected override EventFilterFactory CreateTestingEventFilter()
-        {
-            return EventFilter;
-        }
+        Sys.EventStream.Publish(new Error(null, "CustomEventFilterTests", GetType(), message));
     }
 
-    public class CustomEventFilterCustomFilterTests : CustomEventFilterTestsBase
+    protected abstract EventFilterFactory CreateTestingEventFilter();
+
+    [Fact]
+    public async Task Custom_filter_should_match()
     {
-        protected override EventFilterFactory CreateTestingEventFilter()
-        {
-            return CreateEventFilter(Sys);
-        }
+        var eventFilter = CreateTestingEventFilter();
+        await eventFilter.Custom(logEvent => logEvent is Error && (string)logEvent.Message == "whatever")
+            .ExpectOneAsync(() =>
+            {
+                Log.Error("whatever");
+                return Task.CompletedTask;
+            });
+    }
+
+    [Fact]
+    public async Task Custom_filter_should_match2()
+    {
+        var eventFilter = CreateTestingEventFilter();
+        await eventFilter.Custom<Error>(logEvent => (string)logEvent.Message == "whatever")
+            .ExpectOneAsync(() =>
+            {
+                Log.Error("whatever");
+                return Task.CompletedTask;
+            });
     }
 }
 
+public class CustomEventFilterTests : CustomEventFilterTestsBase
+{
+    protected override EventFilterFactory CreateTestingEventFilter()
+    {
+        return EventFilter;
+    }
+}
+
+public class CustomEventFilterCustomFilterTests : CustomEventFilterTestsBase
+{
+    protected override EventFilterFactory CreateTestingEventFilter()
+    {
+        return CreateEventFilter(Sys);
+    }
+}

@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="App.config" />
+    <Content Include="App.config"/>
   </ItemGroup>
 
   <PropertyGroup>
@@ -16,11 +16,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\core\Akka\Akka.csproj" />
+    <ProjectReference Include="..\..\core\Akka\Akka.csproj"/>
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
-    <Reference Include="System.Management" />
+    <Reference Include="System.Management"/>
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">

@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="ReplicatedDataSerializerBackCompatSpec.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ReplicatedDataSerializerBackCompatSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Cluster.Sharding;
@@ -18,9 +18,9 @@ namespace Akka.DistributedData.Tests.Serialization;
 
 public class ReplicatedDataSerializerBackCompatSpec
 {
-    private readonly ReplicatedDataSerializer _serializer;
     private readonly UniqueAddress _address;
-    
+    private readonly ReplicatedDataSerializer _serializer;
+
     public ReplicatedDataSerializerBackCompatSpec()
     {
         var sys = ActorSystem.Create("test", @"
@@ -31,16 +31,19 @@ akka.cluster.sharding.distributed-data.backward-compatible-wire-format = true");
         sys.Terminate();
     }
 
-    [Fact(DisplayName = "DData replicated data serializer should serialize and deserialize correct backward compatible proto message")]
+    [Fact(DisplayName =
+        "DData replicated data serializer should serialize and deserialize correct backward compatible proto message")]
     public void SerializeTest()
     {
-        var lwwReg = new LWWRegister<ShardCoordinator.CoordinatorState>(_address, ShardCoordinator.CoordinatorState.Empty);
+        var lwwReg =
+            new LWWRegister<ShardCoordinator.CoordinatorState>(_address, ShardCoordinator.CoordinatorState.Empty);
         var bytes = _serializer.ToBinary(lwwReg);
         var proto = LWWRegister.Parser.ParseFrom(bytes);
-        
+
         // Serialized type name should be equal to the old v1.4 coordinator state FQCN
-        proto.TypeInfo.TypeName.Should().Be("Akka.Cluster.Sharding.PersistentShardCoordinator+State, Akka.Cluster.Sharding");
-        
+        proto.TypeInfo.TypeName.Should()
+            .Be("Akka.Cluster.Sharding.PersistentShardCoordinator+State, Akka.Cluster.Sharding");
+
         // Deserializing the same message should succeed
         Invoking(() => _serializer.FromBinary(bytes, _serializer.Manifest(lwwReg)))
             .Should().NotThrow()

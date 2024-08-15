@@ -1,160 +1,157 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AtLeastOnceDeliveryExampleActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="AtLeastOnceDeliveryExampleActor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
 using Akka.Persistence;
 
-namespace PersistenceExample
+namespace PersistenceExample;
+
+public class Message
 {
-    public class Message
+    public Message(string data)
     {
-        public Message(string data)
-        {
-            Data = data;
-        }
-
-        public string Data { get; }
+        Data = data;
     }
 
-    public class Confirmable
+    public string Data { get; }
+}
+
+public class Confirmable
+{
+    public Confirmable(long deliveryId, string data)
     {
-        public Confirmable(long deliveryId, string data)
-        {
-            DeliveryId = deliveryId;
-            Data = data;
-        }
-
-        public long DeliveryId { get; }
-
-        public string Data { get; }
-    }
-    
-    public class Confirmation
-    {
-        public Confirmation(long deliveryId)
-        {
-            DeliveryId = deliveryId;
-        }
-
-        public long DeliveryId { get; }
-    }
-    
-    [Serializable]
-    public class Snap
-    {
-        public Snap(AtLeastOnceDeliverySnapshot snapshot)
-        {
-            Snapshot = snapshot;
-        }
-
-        public AtLeastOnceDeliverySnapshot Snapshot { get; }
+        DeliveryId = deliveryId;
+        Data = data;
     }
 
-    public class DeliveryActor : UntypedActor
-    {
-        private bool _confirming = true;
+    public long DeliveryId { get; }
 
-        protected override void OnReceive(object message)
+    public string Data { get; }
+}
+
+public class Confirmation
+{
+    public Confirmation(long deliveryId)
+    {
+        DeliveryId = deliveryId;
+    }
+
+    public long DeliveryId { get; }
+}
+
+[Serializable]
+public class Snap
+{
+    public Snap(AtLeastOnceDeliverySnapshot snapshot)
+    {
+        Snapshot = snapshot;
+    }
+
+    public AtLeastOnceDeliverySnapshot Snapshot { get; }
+}
+
+public class DeliveryActor : UntypedActor
+{
+    private bool _confirming = true;
+
+    protected override void OnReceive(object message)
+    {
+        switch (message)
         {
-            switch (message)
-            {
-                case string and "start":
-                    _confirming = true;
-                    break;
-                
-                case string and "stop":
-                    _confirming = false;
-                    break;
-                
-                case Confirmable msg:
-                    if (_confirming)
+            case string and "start":
+                _confirming = true;
+                break;
+
+            case string and "stop":
+                _confirming = false;
+                break;
+
+            case Confirmable msg:
+                if (_confirming)
+                {
+                    Console.WriteLine("Confirming delivery of message id: {0} and data: {1}", msg.DeliveryId, msg.Data);
+                    Context.Sender.Tell(new Confirmation(msg.DeliveryId));
+                }
+                else
+                {
+                    Console.WriteLine("Ignoring message id: {0} and data: {1}", msg.DeliveryId, msg.Data);
+                }
+
+                break;
+        }
+    }
+}
+
+/// <summary>
+///     AtLeastOnceDelivery will repeat sending messages, unless confirmed by deliveryId
+///     By default, in-memory Journal is used, so this won't survive system restarts.
+/// </summary>
+public class AtLeastOnceDeliveryExampleActor : AtLeastOnceDeliveryActor
+{
+    public AtLeastOnceDeliveryExampleActor(ActorPath deliveryPath)
+    {
+        DeliveryPath = deliveryPath;
+    }
+
+    private ActorPath DeliveryPath { get; }
+
+    public override string PersistenceId => "at-least-once-1";
+
+    protected override bool ReceiveRecover(object message)
+    {
+        switch (message)
+        {
+            case Message msg:
+                var messageData = msg.Data;
+                Console.WriteLine("recovered {0}", messageData);
+                Deliver(DeliveryPath,
+                    id =>
                     {
-                        Console.WriteLine("Confirming delivery of message id: {0} and data: {1}", msg.DeliveryId, msg.Data);
-                        Context.Sender.Tell(new Confirmation(msg.DeliveryId));
-                    }
-                    else
-                    {
-                        Console.WriteLine("Ignoring message id: {0} and data: {1}", msg.DeliveryId, msg.Data);
-                    }
-                    break;
-            }
+                        Console.WriteLine("recovered delivery task: {0}, with deliveryId: {1}", messageData, id);
+                        return new Confirmable(id, messageData);
+                    });
+                return true;
+
+            case Confirmation confirm:
+                var deliveryId = confirm.DeliveryId;
+                Console.WriteLine("recovered confirmation of {0}", deliveryId);
+                ConfirmDelivery(deliveryId);
+                return true;
+
+            default:
+                return false;
         }
     }
-    
-    /// <summary>
-    /// AtLeastOnceDelivery will repeat sending messages, unless confirmed by deliveryId
-    /// 
-    /// By default, in-memory Journal is used, so this won't survive system restarts. 
-    /// </summary>
-    public class AtLeastOnceDeliveryExampleActor : AtLeastOnceDeliveryActor
+
+    protected override bool ReceiveCommand(object message)
     {
-        private ActorPath DeliveryPath { get; }
-
-        public AtLeastOnceDeliveryExampleActor(ActorPath deliveryPath)
+        switch (message)
         {
-            DeliveryPath = deliveryPath;
-        }
+            case string and "boom":
+                throw new Exception("Controlled devastation");
 
-        public override string PersistenceId
-        {
-            get { return "at-least-once-1"; }
-        }
-
-        protected override bool ReceiveRecover(object message)
-        {
-            switch (message)
-            {
-                case Message msg:
-                    var messageData =  msg.Data;
-                    Console.WriteLine("recovered {0}",messageData);
+            case Message msg:
+                Persist(msg, m =>
                     Deliver(DeliveryPath,
                         id =>
                         {
-                            Console.WriteLine("recovered delivery task: {0}, with deliveryId: {1}", messageData, id);
-                            return new Confirmable(id, messageData);
-                        });
-                    return true;
-                
-                case Confirmation confirm:
-                    var deliveryId = confirm.DeliveryId;
-                    Console.WriteLine("recovered confirmation of {0}", deliveryId);
-                    ConfirmDelivery(deliveryId);
-                    return true;
-                
-                default:
-                    return false;
-            }
-        }
+                            Console.WriteLine("sending: {0}, with deliveryId: {1}", m.Data, id);
+                            return new Confirmable(id, m.Data);
+                        })
+                );
+                return true;
 
-        protected override bool ReceiveCommand(object message)
-        {
-            switch (message)
-            {
-                case string and "boom":
-                    throw new Exception("Controlled devastation");
-                
-                case Message msg:
-                    Persist(msg, m =>
-                        Deliver(DeliveryPath,
-                            id => {
-                                Console.WriteLine("sending: {0}, with deliveryId: {1}", m.Data, id);
-                                return new Confirmable(id, m.Data);
-                            })
-                    );
-                    return true;
-                    
-                case Confirmation confirm:
-                    Persist(confirm, m => ConfirmDelivery(m.DeliveryId));
-                    return true;
-                
-                default:
-                    return false;
-            }
+            case Confirmation confirm:
+                Persist(confirm, m => ConfirmDelivery(m.DeliveryId));
+                return true;
+
+            default:
+                return false;
         }
     }
 }

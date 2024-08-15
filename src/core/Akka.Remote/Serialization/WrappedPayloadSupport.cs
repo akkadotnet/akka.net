@@ -1,55 +1,52 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="WrappedPayloadSupport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="WrappedPayloadSupport.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
+using Akka.Remote.Serialization.Proto.Msg;
 using Google.Protobuf;
 
-namespace Akka.Remote.Serialization
+namespace Akka.Remote.Serialization;
+
+internal sealed class WrappedPayloadSupport
 {
-    internal sealed class WrappedPayloadSupport
+    private readonly ExtendedActorSystem _system;
+
+    public WrappedPayloadSupport(ExtendedActorSystem system)
     {
-        private readonly ExtendedActorSystem _system;
+        _system = system;
+    }
 
-        public WrappedPayloadSupport(ExtendedActorSystem system)
-        {
-            _system = system;
-        }
+    public Payload PayloadToProto(object payload)
+    {
+        if (payload == null) // TODO: handle null messages
+            return new Payload();
 
-        public Proto.Msg.Payload PayloadToProto(object payload)
-        {
-            if (payload == null) // TODO: handle null messages
-                return new Proto.Msg.Payload();
+        var payloadProto = new Payload();
+        var serializer = _system.Serialization.FindSerializerFor(payload);
 
-            var payloadProto = new Proto.Msg.Payload();
-            var serializer = _system.Serialization.FindSerializerFor(payload);
+        payloadProto.Message = ByteString.CopyFrom(serializer.ToBinary(payload));
+        payloadProto.SerializerId = serializer.Identifier;
 
-            payloadProto.Message = ByteString.CopyFrom(serializer.ToBinary(payload));
-            payloadProto.SerializerId = serializer.Identifier;
+        // get manifest
+        var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, payload);
+        if (!string.IsNullOrEmpty(manifest)) payloadProto.MessageManifest = ByteString.CopyFromUtf8(manifest);
 
-            // get manifest
-            var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, payload);
-            if (!string.IsNullOrEmpty(manifest))
-            {
-                payloadProto.MessageManifest = ByteString.CopyFromUtf8(manifest);
-            }
+        return payloadProto;
+    }
 
-            return payloadProto;
-        }
+    public object PayloadFrom(Payload payload)
+    {
+        var manifest = !payload.MessageManifest.IsEmpty
+            ? payload.MessageManifest.ToStringUtf8()
+            : string.Empty;
 
-        public object PayloadFrom(Proto.Msg.Payload payload)
-        {
-            var manifest = !payload.MessageManifest.IsEmpty
-                ? payload.MessageManifest.ToStringUtf8()
-                : string.Empty;
-
-            return _system.Serialization.Deserialize(
-                payload.Message.ToByteArray(),
-                payload.SerializerId,
-                manifest);
-        }
+        return _system.Serialization.Deserialize(
+            payload.Message.ToByteArray(),
+            payload.SerializerId,
+            manifest);
     }
 }

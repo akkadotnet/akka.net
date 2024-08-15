@@ -1,67 +1,59 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="RootActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="RootActor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Diagnostics;
 using Akka.Actor;
 
-namespace SpawnBenchmark
+namespace SpawnBenchmark;
+
+public sealed class RootActor : UntypedActor
 {
-    public sealed class RootActor : UntypedActor
+    private static readonly Stopwatch Stopwatch = Stopwatch.StartNew();
+
+    public static Props Props { get; } = Props.Create<RootActor>();
+
+    protected override void OnReceive(object message)
     {
-        public class Run
+        if (message is Run run) StartRun(run.Number);
+    }
+
+    private void StartRun(int n)
+    {
+        Console.WriteLine($"Start run {n}");
+
+        var start = Stopwatch.ElapsedMilliseconds;
+        Context.ActorOf(SpawnActor.Props).Tell(new SpawnActor.Start(7, 0));
+        Context.Become(Waiting(n - 1, start));
+    }
+
+    private UntypedReceive Waiting(int n, long start)
+    {
+        return message =>
         {
-            public Run(int number)
+            if (message is long x)
             {
-                Number = number;
+                var diff = Stopwatch.ElapsedMilliseconds - start;
+                Console.WriteLine($"Run {n + 1} result: {x} in {diff} ms");
+                if (n == 0)
+                    Context.System.Terminate();
+                else
+                    StartRun(n);
             }
+        };
+    }
 
-            public int Number { get; }
-        }
-
-        private static readonly Stopwatch Stopwatch = Stopwatch.StartNew();
-
-        protected override void OnReceive(object message)
+    public class Run
+    {
+        public Run(int number)
         {
-            if (message is Run run)
-            {
-                StartRun(run.Number);
-            }
+            Number = number;
         }
 
-        private void StartRun(int n)
-        {
-            Console.WriteLine($"Start run {n}");
-
-            var start = Stopwatch.ElapsedMilliseconds;
-            Context.ActorOf(SpawnActor.Props).Tell(new SpawnActor.Start(7, 0));
-            Context.Become(Waiting(n - 1, start));
-        }
-
-        private UntypedReceive Waiting(int n, long start)
-        {
-            return message => 
-            {
-                if (message is long x)
-                {
-                    var diff = (Stopwatch.ElapsedMilliseconds - start);
-                    Console.WriteLine($"Run {n + 1} result: {x} in {diff} ms");
-                    if (n == 0)
-                    {
-                        Context.System.Terminate();
-                    }
-                    else
-                    {
-                        StartRun(n);
-                    }
-                }
-            };
-        }
-
-        public static Props Props { get; } = Props.Create<RootActor>();
+        public int Number { get; }
     }
 }

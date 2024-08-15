@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="CoordinatedShutdownShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="CoordinatedShutdownShardingSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Linq;
@@ -18,220 +18,221 @@ using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Cluster.Sharding.Tests
+namespace Akka.Cluster.Sharding.Tests;
+
+public class CoordinatedShutdownShardingSpec : AkkaSpec
 {
-    public class CoordinatedShutdownShardingSpec : AkkaSpec
+    private readonly TestProbe _probe1;
+    private readonly TestProbe _probe2;
+    private readonly TestProbe _probe3;
+
+    private readonly IActorRef _region1;
+    private readonly IActorRef _region2;
+    private readonly IActorRef _region3;
+    private readonly ActorSystem _sys1;
+    private readonly ActorSystem _sys2;
+    private readonly ActorSystem _sys3;
+
+    public CoordinatedShutdownShardingSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
     {
-        private readonly ActorSystem _sys1;
-        private readonly ActorSystem _sys2;
-        private readonly ActorSystem _sys3;
+        _sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+        _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+        _sys3 = Sys;
+        InitializeLogger(_sys1, "[Sys1]");
+        InitializeLogger(_sys2, "[Sys2]");
 
-        private readonly IActorRef _region1;
-        private readonly IActorRef _region2;
-        private readonly IActorRef _region3;
+        var props = Props.Create(() => new EchoActor());
+        _region1 = ClusterSharding.Get(_sys1).Start(
+            "type1",
+            props,
+            ClusterShardingSettings.Create(_sys1),
+            new MessageExtractor());
+        _region2 = ClusterSharding.Get(_sys2).Start(
+            "type1",
+            props,
+            ClusterShardingSettings.Create(_sys2),
+            new MessageExtractor());
+        _region3 = ClusterSharding.Get(_sys3).Start(
+            "type1",
+            props,
+            ClusterShardingSettings.Create(_sys3),
+            new MessageExtractor());
 
-        private readonly TestProbe _probe1;
-        private readonly TestProbe _probe2;
-        private readonly TestProbe _probe3;
+        _probe1 = CreateTestProbe(_sys1);
+        _probe2 = CreateTestProbe(_sys2);
+        _probe3 = CreateTestProbe(_sys3);
 
-        private class EchoActor : ReceiveActor
+        CoordinatedShutdown.Get(_sys1).AddTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "unbind", () =>
         {
-            public EchoActor()
-            {
-                ReceiveAny(_ => Sender.Tell(_));
-            }
-        }
+            _probe1.Ref.Tell("CS-unbind-1");
+            return Task.FromResult(Done.Instance);
+        });
 
-        private sealed class MessageExtractor: IMessageExtractor
+        CoordinatedShutdown.Get(_sys2).AddTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "unbind", () =>
         {
-            public string EntityId(object message)
-                => message.ToString();
+            _probe2.Ref.Tell("CS-unbind-2");
+            return Task.FromResult(Done.Instance);
+        });
 
-            public object EntityMessage(object message)
-                => message;
+        CoordinatedShutdown.Get(_sys3).AddTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "unbind", () =>
+        {
+            _probe3.Ref.Tell("CS-unbind-3");
+            return Task.FromResult(Done.Instance);
+        });
+    }
 
-            public string ShardId(object message)
-                => MurmurHash.StringHash(message.ToString()).ToString();
-
-            public string ShardId(string entityId, object messageHint = null)
-                => MurmurHash.StringHash(entityId).ToString();
-        }
-
-        private static Config SpecConfig =>
-            ConfigurationFactory.ParseString(@"
+    private static Config SpecConfig =>
+        ConfigurationFactory.ParseString(@"
                 akka.loglevel = DEBUG
                 akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0
                 akka.cluster.sharding.verbose-debug-logging = on")
-                .WithFallback(ClusterSingletonManager.DefaultConfig()
+            .WithFallback(ClusterSingletonManager.DefaultConfig()
                 .WithFallback(ClusterSharding.DefaultConfig()));
 
-        public CoordinatedShutdownShardingSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
+    protected override void AfterAll()
+    {
+        base.AfterAll();
+        Shutdown(_sys1);
+        Shutdown(_sys2);
+    }
+
+    /// <summary>
+    ///     Using region 2 as it is not shutdown in either test.
+    /// </summary>
+    private async Task PingEntities()
+    {
+        await AwaitAssertAsync(() =>
         {
-            _sys1 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
-            _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
-            _sys3 = Sys;
-            InitializeLogger(_sys1, "[Sys1]");
-            InitializeLogger(_sys2, "[Sys2]");
+            var p1 = CreateTestProbe(_sys2);
+            _region2.Tell(1, p1.Ref);
+            p1.ExpectMsg<int>(1.Seconds()).Should().Be(1);
+            var p2 = CreateTestProbe(_sys2);
+            _region2.Tell(2, p2.Ref);
+            p2.ExpectMsg<int>(1.Seconds()).Should().Be(2);
+            var p3 = CreateTestProbe(_sys2);
+            _region2.Tell(3, p3.Ref);
+            p3.ExpectMsg<int>(1.Seconds()).Should().Be(3);
+        }, TimeSpan.FromSeconds(60));
+    }
 
-            var props = Props.Create(() => new EchoActor());
-            _region1 = ClusterSharding.Get(_sys1).Start(
-                "type1",
-                props,
-                ClusterShardingSettings.Create(_sys1),
-                new MessageExtractor());
-            _region2 = ClusterSharding.Get(_sys2).Start(
-                "type1",
-                props,
-                ClusterShardingSettings.Create(_sys2),
-                new MessageExtractor());
-            _region3 = ClusterSharding.Get(_sys3).Start(
-                "type1",
-                props,
-                ClusterShardingSettings.Create(_sys3),
-                new MessageExtractor());
+    [Fact]
+    public async Task Sharding_and_CoordinatedShutdown_must_run_successfully()
+    {
+        await InitCluster();
+        await RunCoordinatedShutdownWhenLeaving();
+        await RunCoordinatedShutdownWhenDowning();
+    }
 
-            _probe1 = CreateTestProbe(_sys1);
-            _probe2 = CreateTestProbe(_sys2);
-            _probe3 = CreateTestProbe(_sys3);
+    private async Task InitCluster()
+    {
+        Cluster.Get(_sys1).Join(Cluster.Get(_sys1).SelfAddress); // coordinator will initially run on sys1
+        await AwaitAssertAsync(() => Cluster.Get(_sys1).SelfMember.Status.Should().Be(MemberStatus.Up));
 
-            CoordinatedShutdown.Get(_sys1).AddTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "unbind", () =>
-            {
-                _probe1.Ref.Tell("CS-unbind-1");
-                return Task.FromResult(Done.Instance);
-            });
-
-            CoordinatedShutdown.Get(_sys2).AddTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "unbind", () =>
-            {
-                _probe2.Ref.Tell("CS-unbind-2");
-                return Task.FromResult(Done.Instance);
-            });
-
-            CoordinatedShutdown.Get(_sys3).AddTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "unbind", () =>
-            {
-                _probe3.Ref.Tell("CS-unbind-3");
-                return Task.FromResult(Done.Instance);
-            });
-        }
-
-        protected override void AfterAll()
-        {
-            base.AfterAll();
-            Shutdown(_sys1);
-            Shutdown(_sys2);
-        }
-
-        /// <summary>
-        /// Using region 2 as it is not shutdown in either test.
-        /// </summary>
-        private async Task PingEntities()
+        Cluster.Get(_sys2).Join(Cluster.Get(_sys1).SelfAddress);
+        await WithinAsync(10.Seconds(), async () =>
         {
             await AwaitAssertAsync(() =>
             {
-                var p1 = CreateTestProbe(_sys2);
-                _region2.Tell(1, p1.Ref);
-                p1.ExpectMsg<int>(1.Seconds()).Should().Be(1);
-                var p2 = CreateTestProbe(_sys2);
-                _region2.Tell(2, p2.Ref);
-                p2.ExpectMsg<int>(1.Seconds()).Should().Be(2);
-                var p3 = CreateTestProbe(_sys2);
-                _region2.Tell(3, p3.Ref);
-                p3.ExpectMsg<int>(1.Seconds()).Should().Be(3);
-            }, TimeSpan.FromSeconds(60));
+                Cluster.Get(_sys1).State.Members.Count.Should().Be(2);
+                Cluster.Get(_sys1).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
+                Cluster.Get(_sys2).State.Members.Count.Should().Be(2);
+                Cluster.Get(_sys2).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
+            });
+        });
+
+        Cluster.Get(_sys3).Join(Cluster.Get(_sys1).SelfAddress);
+        await WithinAsync(10.Seconds(), async () =>
+        {
+            await AwaitAssertAsync(() =>
+            {
+                Cluster.Get(_sys1).State.Members.Count.Should().Be(3);
+                Cluster.Get(_sys1).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
+                Cluster.Get(_sys2).State.Members.Count.Should().Be(3);
+                Cluster.Get(_sys2).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
+                Cluster.Get(_sys3).State.Members.Count.Should().Be(3);
+                Cluster.Get(_sys3).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
+            });
+        });
+
+        await PingEntities();
+    }
+
+    private async Task RunCoordinatedShutdownWhenLeaving()
+    {
+        Cluster.Get(_sys3).Leave(Cluster.Get(_sys1).SelfAddress);
+        _probe1.ExpectMsg("CS-unbind-1", TimeSpan.FromSeconds(10));
+
+        await WithinAsync(20.Seconds(), async () =>
+        {
+            await AwaitAssertAsync(() =>
+            {
+                Cluster.Get(_sys2).State.Members.Count.Should().Be(2);
+                Cluster.Get(_sys3).State.Members.Count.Should().Be(2);
+            });
+        });
+
+        await WithinAsync(10.Seconds(), async () =>
+        {
+            await AwaitAssertAsync(() =>
+            {
+                Cluster.Get(_sys1).IsTerminated.Should().BeTrue();
+                _sys1.WhenTerminated.IsCompleted.Should().BeTrue();
+            });
+        });
+
+        await PingEntities();
+    }
+
+    private async Task RunCoordinatedShutdownWhenDowning()
+    {
+        // coordinator is on Sys2
+        Cluster.Get(_sys2).Down(Cluster.Get(_sys3).SelfAddress);
+        _probe3.ExpectMsg("CS-unbind-3", TimeSpan.FromSeconds(10));
+
+        await WithinAsync(20.Seconds(),
+            async () => { await AwaitAssertAsync(() => { Cluster.Get(_sys2).State.Members.Count.Should().Be(1); }); });
+
+        await WithinAsync(10.Seconds(), async () =>
+        {
+            await AwaitAssertAsync(() =>
+            {
+                Cluster.Get(_sys3).IsTerminated.Should().BeTrue();
+                _sys3.WhenTerminated.IsCompleted.Should().BeTrue();
+            });
+        });
+
+        await PingEntities();
+    }
+
+    private class EchoActor : ReceiveActor
+    {
+        public EchoActor()
+        {
+            ReceiveAny(_ => Sender.Tell(_));
+        }
+    }
+
+    private sealed class MessageExtractor : IMessageExtractor
+    {
+        public string EntityId(object message)
+        {
+            return message.ToString();
         }
 
-        [Fact]
-        public async Task Sharding_and_CoordinatedShutdown_must_run_successfully()
+        public object EntityMessage(object message)
         {
-            await InitCluster();
-            await RunCoordinatedShutdownWhenLeaving();
-            await RunCoordinatedShutdownWhenDowning();
+            return message;
         }
 
-        private async Task InitCluster()
+        public string ShardId(object message)
         {
-            Cluster.Get(_sys1).Join(Cluster.Get(_sys1).SelfAddress); // coordinator will initially run on sys1
-            await AwaitAssertAsync(() => Cluster.Get(_sys1).SelfMember.Status.Should().Be(MemberStatus.Up));
-
-            Cluster.Get(_sys2).Join(Cluster.Get(_sys1).SelfAddress);
-            await WithinAsync(10.Seconds(), async () =>
-             {
-                 await AwaitAssertAsync(() =>
-                 {
-                     Cluster.Get(_sys1).State.Members.Count.Should().Be(2);
-                     Cluster.Get(_sys1).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
-                     Cluster.Get(_sys2).State.Members.Count.Should().Be(2);
-                     Cluster.Get(_sys2).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
-                 });
-             });
-
-            Cluster.Get(_sys3).Join(Cluster.Get(_sys1).SelfAddress);
-            await WithinAsync(10.Seconds(), async () =>
-            {
-                await AwaitAssertAsync(() =>
-                {
-                    Cluster.Get(_sys1).State.Members.Count.Should().Be(3);
-                    Cluster.Get(_sys1).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
-                    Cluster.Get(_sys2).State.Members.Count.Should().Be(3);
-                    Cluster.Get(_sys2).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
-                    Cluster.Get(_sys3).State.Members.Count.Should().Be(3);
-                    Cluster.Get(_sys3).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue();
-                });
-            });
-
-            await PingEntities();
+            return MurmurHash.StringHash(message.ToString()).ToString();
         }
 
-        private async Task RunCoordinatedShutdownWhenLeaving()
+        public string ShardId(string entityId, object messageHint = null)
         {
-            Cluster.Get(_sys3).Leave(Cluster.Get(_sys1).SelfAddress);
-            _probe1.ExpectMsg("CS-unbind-1", TimeSpan.FromSeconds(10));
-
-            await WithinAsync(20.Seconds(), async () =>
-            {
-                await AwaitAssertAsync(() =>
-                {
-                    Cluster.Get(_sys2).State.Members.Count.Should().Be(2);
-                    Cluster.Get(_sys3).State.Members.Count.Should().Be(2);
-                });
-            });
-
-            await WithinAsync(10.Seconds(), async () =>
-            {
-                await AwaitAssertAsync(() =>
-                {
-                    Cluster.Get(_sys1).IsTerminated.Should().BeTrue();
-                    _sys1.WhenTerminated.IsCompleted.Should().BeTrue();
-                });
-            });
-
-            await PingEntities();
-        }
-
-        private async Task RunCoordinatedShutdownWhenDowning()
-        {
-            // coordinator is on Sys2
-            Cluster.Get(_sys2).Down(Cluster.Get(_sys3).SelfAddress);
-            _probe3.ExpectMsg("CS-unbind-3", TimeSpan.FromSeconds(10));
-
-            await WithinAsync(20.Seconds(), async () =>
-            {
-                await AwaitAssertAsync(() =>
-                {
-                    Cluster.Get(_sys2).State.Members.Count.Should().Be(1);
-                });
-            });
-
-            await WithinAsync(10.Seconds(), async () =>
-            {
-                await AwaitAssertAsync(() =>
-                {
-                    Cluster.Get(_sys3).IsTerminated.Should().BeTrue();
-                    _sys3.WhenTerminated.IsCompleted.Should().BeTrue();
-                });
-            });
-
-            await PingEntities();
+            return MurmurHash.StringHash(entityId).ToString();
         }
     }
 }

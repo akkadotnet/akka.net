@@ -1,21 +1,21 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="MultiValueDictionaryExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="MultiValueDictionaryExtensions.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Collections.Generic;
 
 namespace Akka.Persistence.Sql.Common.Journal
 {
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     internal static class MultiValueDictionaryExtensions
     {
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <typeparam name="TKey">TBD</typeparam>
         /// <typeparam name="TVal">TBD</typeparam>
@@ -35,7 +35,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <typeparam name="TKey">TBD</typeparam>
         /// <typeparam name="TVal">TBD</typeparam>
@@ -51,7 +51,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <typeparam name="TKey">TBD</typeparam>
         /// <typeparam name="TVal">TBD</typeparam>
@@ -60,10 +60,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         public static void RemoveItem<TKey, TVal>(this Dictionary<TKey, HashSet<TVal>> dictionary, TVal item)
         {
-            foreach (var entry in dictionary)
-            {
-                entry.Value.Remove(item);
-            }
+            foreach (var entry in dictionary) entry.Value.Remove(item);
         }
     }
 }

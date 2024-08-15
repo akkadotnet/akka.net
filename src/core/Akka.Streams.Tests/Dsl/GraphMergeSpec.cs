@@ -1,14 +1,13 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="GraphMergeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="GraphMergeSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -17,217 +16,220 @@ using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
+
 // ReSharper disable InvokeAsExtensionMethod
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class GraphMergeSpec : TwoStreamsSetup<int>
 {
-    public class GraphMergeSpec  : TwoStreamsSetup<int>
+    public GraphMergeSpec(ITestOutputHelper helper) : base(helper)
     {
-        public GraphMergeSpec(ITestOutputHelper helper) : base(helper)
+    }
+
+    protected override Fixture CreateFixture(GraphDsl.Builder<NotUsed> builder)
+    {
+        return new MergeFixture(builder);
+    }
+
+    [Fact]
+    public async Task A_Merge_must_work_in_the_happy_case()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
         {
-        }
-
-        protected override Fixture CreateFixture(GraphDsl.Builder<NotUsed> builder) => new MergeFixture(builder);
-
-        private sealed class MergeFixture : Fixture
-        {
-            public MergeFixture(GraphDsl.Builder<NotUsed> builder) : base(builder)
-            {
-                var merge = builder.Add(new Merge<int, int>(2));
-                Left = merge.In(0);
-                Right = merge.In(1);
-                Out = merge.Out;
-            }
-
-            public override Inlet<int> Left { get; }
-
-            public override Inlet<int> Right { get; }
-
-            public override Outlet<int> Out { get; }
-        }
-
-        [Fact]
-        public async Task A_Merge_must_work_in_the_happy_case()
-        {
-            await this.AssertAllStagesStoppedAsync(async() => {
-                // Different input sizes(4 and 6)
-                var source1 = Source.From(Enumerable.Range(0, 4));
-                var source2 = Source.From(Enumerable.Range(4, 6));
-                var source3 = Source.From(new List<int>());
-                var probe = this.CreateManualSubscriberProbe<int>();
-
-                RunnableGraph.FromGraph(GraphDsl.Create(b =>
-                {
-                    var m1 = b.Add(new Merge<int>(2));
-                    var m2 = b.Add(new Merge<int>(2));
-                    var sink = Sink.FromSubscriber(probe);
-
-                    b.From(source1).To(m1.In(0));
-                    b.From(m1.Out).Via(Flow.Create<int>().Select(x => x * 2)).To(m2.In(0));
-                    b.From(m2.Out).Via(Flow.Create<int>().Select(x => x / 2).Select(x => x + 1)).To(sink);
-                    b.From(source2).To(m1.In(1));
-                    b.From(source3).To(m2.In(1));
-
-                    return ClosedShape.Instance;
-                })).Run(Materializer);
-
-                var subscription = await probe.ExpectSubscriptionAsync();
-                var collected = new List<int>();
-                for (var i = 1; i <= 10; i++)
-                {
-                    subscription.Request(1);
-                    collected.Add(await probe.ExpectNextAsync());
-                }
-
-                collected.Where(i => i <= 4).ShouldOnlyContainInOrder(1, 2, 3, 4);
-                collected.Where(i => i >= 5).ShouldOnlyContainInOrder(5, 6, 7, 8, 9, 10);
-
-                collected.Should().BeEquivalentTo(Enumerable.Range(1, 10).ToArray());
-                await probe.ExpectCompleteAsync();
-            }, Materializer);
-        }
-
-        [Fact]
-        public void A_Merge_must_work_with_one_way_merge()
-        {
-            var task = Source.FromGraph(GraphDsl.Create(b =>
-            {
-                var merge = b.Add(new Merge<int>(1));
-                var source = b.Add(Source.From(Enumerable.Range(1, 3)));
-
-                b.From(source).To(merge.In(0));
-
-                return new SourceShape<int>(merge.Out);
-            })).RunAggregate(new List<int>(), (list, i) =>
-            {
-                list.Add(i);
-                return list;
-            }, Materializer);
-
-            task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 3));
-        }
-
-        [Fact]
-        public async Task A_Merge_must_work_with_n_way_merge()
-        {
-            var source1 = Source.Single(1);
-            var source2 = Source.Single(2);
-            var source3 = Source.Single(3);
-            var source4 = Source.Single(4);
-            var source5 = Source.Single(5);
-            var source6 = Source.Empty<int>();
-
+            // Different input sizes(4 and 6)
+            var source1 = Source.From(Enumerable.Range(0, 4));
+            var source2 = Source.From(Enumerable.Range(4, 6));
+            var source3 = Source.From(new List<int>());
             var probe = this.CreateManualSubscriberProbe<int>();
 
             RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
-                var merge = b.Add(new Merge<int>(6));
+                var m1 = b.Add(new Merge<int>(2));
+                var m2 = b.Add(new Merge<int>(2));
+                var sink = Sink.FromSubscriber(probe);
 
-                b.From(source1).To(merge.In(0));
-                b.From(source2).To(merge.In(1));
-                b.From(source3).To(merge.In(2));
-                b.From(source4).To(merge.In(3));
-                b.From(source5).To(merge.In(4));
-                b.From(source6).To(merge.In(5));
-                b.From(merge.Out).To(Sink.FromSubscriber(probe));
+                b.From(source1).To(m1.In(0));
+                b.From(m1.Out).Via(Flow.Create<int>().Select(x => x * 2)).To(m2.In(0));
+                b.From(m2.Out).Via(Flow.Create<int>().Select(x => x / 2).Select(x => x + 1)).To(sink);
+                b.From(source2).To(m1.In(1));
+                b.From(source3).To(m2.In(1));
 
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
             var subscription = await probe.ExpectSubscriptionAsync();
-
             var collected = new List<int>();
-            for (var i = 1; i <= 5; i++)
+            for (var i = 1; i <= 10; i++)
             {
                 subscription.Request(1);
                 collected.Add(await probe.ExpectNextAsync());
             }
 
-            collected.Should().BeEquivalentTo(Enumerable.Range(1, 5));
+            collected.Where(i => i <= 4).ShouldOnlyContainInOrder(1, 2, 3, 4);
+            collected.Where(i => i >= 5).ShouldOnlyContainInOrder(5, 6, 7, 8, 9, 10);
+
+            collected.Should().BeEquivalentTo(Enumerable.Range(1, 10).ToArray());
             await probe.ExpectCompleteAsync();
-        }
+        }, Materializer);
+    }
 
-        [Fact]
-        public async Task A_Merge_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
+    [Fact]
+    public void A_Merge_must_work_with_one_way_merge()
+    {
+        var task = Source.FromGraph(GraphDsl.Create(b =>
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
-                var subscriber1 = Setup(CompletedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-                var subscription1 = await subscriber1.ExpectSubscriptionAsync();
-                subscription1.Request(4);
-                await subscriber1.ExpectNext(1, 2, 3, 4).ExpectCompleteAsync();
+            var merge = b.Add(new Merge<int>(1));
+            var source = b.Add(Source.From(Enumerable.Range(1, 3)));
 
-                var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), CompletedPublisher<int>());
-                var subscription2 = await subscriber2.ExpectSubscriptionAsync();
-                subscription2.Request(4);
-                await subscriber2.ExpectNext(1, 2, 3, 4).ExpectCompleteAsync();
-            }, Materializer);
-        }
+            b.From(source).To(merge.In(0));
 
-        [Fact]
-        public async Task A_Merge_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
+            return new SourceShape<int>(merge.Out);
+        })).RunAggregate(new List<int>(), (list, i) =>
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
-                var subscriber1 = Setup(SoonToCompletePublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-                var subscription1 = await subscriber1.ExpectSubscriptionAsync();
-                subscription1.Request(4);
-                await subscriber1.ExpectNext(1, 2, 3, 4).ExpectCompleteAsync();
+            list.Add(i);
+            return list;
+        }, Materializer);
 
-                var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToCompletePublisher<int>());
-                var subscription2 = await subscriber2.ExpectSubscriptionAsync();
-                subscription2.Request(4);
-                await subscriber2.ExpectNext(1, 2, 3, 4).ExpectCompleteAsync();
-            }, Materializer);
-        }
+        task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+        task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 3));
+    }
 
-        [Fact(Skip = "This is nondeterministic, multiple scenarios can happen")]
-        public async Task A_Merge_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
+    [Fact]
+    public async Task A_Merge_must_work_with_n_way_merge()
+    {
+        var source1 = Source.Single(1);
+        var source2 = Source.Single(2);
+        var source3 = Source.Single(3);
+        var source4 = Source.Single(4);
+        var source5 = Source.Single(5);
+        var source6 = Source.Empty<int>();
+
+        var probe = this.CreateManualSubscriberProbe<int>();
+
+        RunnableGraph.FromGraph(GraphDsl.Create(b =>
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                return Task.CompletedTask;
-            }, Materializer);
-        }
+            var merge = b.Add(new Merge<int>(6));
 
-        [Fact(Skip = "This is nondeterministic, multiple scenarios can happen")]
-        public async Task A_Merge_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
+            b.From(source1).To(merge.In(0));
+            b.From(source2).To(merge.In(1));
+            b.From(source3).To(merge.In(2));
+            b.From(source4).To(merge.In(3));
+            b.From(source5).To(merge.In(4));
+            b.From(source6).To(merge.In(5));
+            b.From(merge.Out).To(Sink.FromSubscriber(probe));
+
+            return ClosedShape.Instance;
+        })).Run(Materializer);
+
+        var subscription = await probe.ExpectSubscriptionAsync();
+
+        var collected = new List<int>();
+        for (var i = 1; i <= 5; i++)
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                return Task.CompletedTask;
-            }, Materializer);
+            subscription.Request(1);
+            collected.Add(await probe.ExpectNextAsync());
         }
 
-        [Fact]
-        public async Task A_Merge_must_pass_along_early_cancellation()
+        collected.Should().BeEquivalentTo(Enumerable.Range(1, 5));
+        await probe.ExpectCompleteAsync();
+    }
+
+    [Fact]
+    public async Task A_Merge_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
-                var up1 = this.CreateManualPublisherProbe<int>();
-                var up2 = this.CreateManualPublisherProbe<int>();
-                var down = this.CreateManualSubscriberProbe<int>();
+            var subscriber1 = Setup(CompletedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
+            var subscription1 = await subscriber1.ExpectSubscriptionAsync();
+            subscription1.Request(4);
+            await subscriber1.ExpectNext(1, 2, 3, 4).ExpectCompleteAsync();
 
-                var src1 = Source.AsSubscriber<int>();
-                var src2 = Source.AsSubscriber<int>();
+            var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), CompletedPublisher<int>());
+            var subscription2 = await subscriber2.ExpectSubscriptionAsync();
+            subscription2.Request(4);
+            await subscriber2.ExpectNext(1, 2, 3, 4).ExpectCompleteAsync();
+        }, Materializer);
+    }
 
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(src1, src2, ValueTuple.Create, (b, s1, s2) =>
-                {
-                    var merge = b.Add(new Merge<int>(2));
-                    var sink = Sink.FromSubscriber(down)
-                        .MapMaterializedValue<(ISubscriber<int>, ISubscriber<int>)?>(_ => null);
+    [Fact]
+    public async Task A_Merge_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            var subscriber1 = Setup(SoonToCompletePublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
+            var subscription1 = await subscriber1.ExpectSubscriptionAsync();
+            subscription1.Request(4);
+            await subscriber1.ExpectNext(1, 2, 3, 4).ExpectCompleteAsync();
 
-                    b.From(s1.Outlet).To(merge.In(0));
-                    b.From(s2.Outlet).To(merge.In(1));
-                    b.From(merge.Out).To(sink);
-                    return ClosedShape.Instance;
-                })).Run(Materializer);
+            var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToCompletePublisher<int>());
+            var subscription2 = await subscriber2.ExpectSubscriptionAsync();
+            subscription2.Request(4);
+            await subscriber2.ExpectNext(1, 2, 3, 4).ExpectCompleteAsync();
+        }, Materializer);
+    }
 
-                var downstream = await down.ExpectSubscriptionAsync();
-                downstream.Cancel();
-                up1.Subscribe(t.Item1);
-                up2.Subscribe(t.Item2);
-                var upSub1 = await up1.ExpectSubscriptionAsync();
-                await upSub1.ExpectCancellationAsync();
-                var upSub2 = await up2.ExpectSubscriptionAsync();
-                await upSub2.ExpectCancellationAsync();
-            }, Materializer);
+    [Fact(Skip = "This is nondeterministic, multiple scenarios can happen")]
+    public async Task A_Merge_must_work_with_one_immediately_failed_and_one_nonempty_publisher()
+    {
+        await this.AssertAllStagesStoppedAsync(() => { return Task.CompletedTask; }, Materializer);
+    }
+
+    [Fact(Skip = "This is nondeterministic, multiple scenarios can happen")]
+    public async Task A_Merge_must_work_with_one_delayed_failed_and_one_nonempty_publisher()
+    {
+        await this.AssertAllStagesStoppedAsync(() => { return Task.CompletedTask; }, Materializer);
+    }
+
+    [Fact]
+    public async Task A_Merge_must_pass_along_early_cancellation()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            var up1 = this.CreateManualPublisherProbe<int>();
+            var up2 = this.CreateManualPublisherProbe<int>();
+            var down = this.CreateManualSubscriberProbe<int>();
+
+            var src1 = Source.AsSubscriber<int>();
+            var src2 = Source.AsSubscriber<int>();
+
+            var t = RunnableGraph.FromGraph(GraphDsl.Create(src1, src2, ValueTuple.Create, (b, s1, s2) =>
+            {
+                var merge = b.Add(new Merge<int>(2));
+                var sink = Sink.FromSubscriber(down)
+                    .MapMaterializedValue<(ISubscriber<int>, ISubscriber<int>)?>(_ => null);
+
+                b.From(s1.Outlet).To(merge.In(0));
+                b.From(s2.Outlet).To(merge.In(1));
+                b.From(merge.Out).To(sink);
+                return ClosedShape.Instance;
+            })).Run(Materializer);
+
+            var downstream = await down.ExpectSubscriptionAsync();
+            downstream.Cancel();
+            up1.Subscribe(t.Item1);
+            up2.Subscribe(t.Item2);
+            var upSub1 = await up1.ExpectSubscriptionAsync();
+            await upSub1.ExpectCancellationAsync();
+            var upSub2 = await up2.ExpectSubscriptionAsync();
+            await upSub2.ExpectCancellationAsync();
+        }, Materializer);
+    }
+
+    private sealed class MergeFixture : Fixture
+    {
+        public MergeFixture(GraphDsl.Builder<NotUsed> builder) : base(builder)
+        {
+            var merge = builder.Add(new Merge<int, int>(2));
+            Left = merge.In(0);
+            Right = merge.In(1);
+            Out = merge.Out;
         }
+
+        public override Inlet<int> Left { get; }
+
+        public override Inlet<int> Right { get; }
+
+        public override Outlet<int> Out { get; }
     }
 }

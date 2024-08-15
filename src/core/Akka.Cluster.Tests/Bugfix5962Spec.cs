@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Bugfix5962Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Bugfix5962Spec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
@@ -16,11 +16,11 @@ using Xunit.Abstractions;
 using static FluentAssertions.FluentActions;
 
 
-namespace Akka.Cluster.Tests
+namespace Akka.Cluster.Tests;
+
+public class Bugfix5962Spec : TestKit.Xunit2.TestKit
 {
-     public class Bugfix5962Spec : TestKit.Xunit2.TestKit
-    {
-        private static readonly Config Config = ConfigurationFactory.ParseString(@"
+    private static readonly Config Config = ConfigurationFactory.ParseString(@"
 akka {
     loglevel = INFO
     actor {
@@ -55,34 +55,31 @@ akka {
     }
 }");
 
-        private readonly Type _timerMsgType;
-        
-        public Bugfix5962Spec(ITestOutputHelper output): base(Config, nameof(Bugfix5962Spec), output)
-        {
-            _timerMsgType = Type.GetType("Akka.Actor.Scheduler.TimerScheduler+TimerMsg, Akka");
-        }
+    private readonly Type _timerMsgType;
 
-        [Fact]
-        public async Task SBR_Should_work_with_channel_executor()
-        {
-            var latch = new TestLatch(1);
-            var cluster = Cluster.Get(Sys);
-            cluster.RegisterOnMemberUp(() =>
-            {
-                latch.CountDown();
-            });
+    public Bugfix5962Spec(ITestOutputHelper output) : base(Config, nameof(Bugfix5962Spec), output)
+    {
+        _timerMsgType = Type.GetType("Akka.Actor.Scheduler.TimerScheduler+TimerMsg, Akka");
+    }
 
-            var selection = Sys.ActorSelection("akka://Bugfix5962Spec/system/cluster/core/daemon/downingProvider");
-            
-            await Awaiting(() => selection.ResolveOne(1.Seconds()))
-                .Should().NotThrowAsync("Downing provider should be alive. ActorSelection will throw an ActorNotFoundException if this fails");
-            
-            // There should be no TimerMsg being sent to dead letter, this signals that the downing provider is dead
-            await EventFilter.DeadLetter(_timerMsgType).ExpectAsync(0, async () =>
-            {
-                latch.Ready(1.Seconds());
-                await Task.Delay(2.Seconds());
-            });
-        }
+    [Fact]
+    public async Task SBR_Should_work_with_channel_executor()
+    {
+        var latch = new TestLatch(1);
+        var cluster = Cluster.Get(Sys);
+        cluster.RegisterOnMemberUp(() => { latch.CountDown(); });
+
+        var selection = Sys.ActorSelection("akka://Bugfix5962Spec/system/cluster/core/daemon/downingProvider");
+
+        await Awaiting(() => selection.ResolveOne(1.Seconds()))
+            .Should().NotThrowAsync(
+                "Downing provider should be alive. ActorSelection will throw an ActorNotFoundException if this fails");
+
+        // There should be no TimerMsg being sent to dead letter, this signals that the downing provider is dead
+        await EventFilter.DeadLetter(_timerMsgType).ExpectAsync(0, async () =>
+        {
+            latch.Ready(1.Seconds());
+            await Task.Delay(2.Seconds());
+        });
     }
 }

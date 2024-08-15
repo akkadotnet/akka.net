@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\xunitSettings.props" />
+  <Import Project="..\..\xunitSettings.props"/>
 
   <PropertyGroup>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
@@ -7,17 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-    <PackageReference Include="xunit" Version="$(XunitVersion)" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
-    <PackageReference Include="TeamCity.ServiceMessages" Version="3.0.13" />
-    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)"/>
+    <PackageReference Include="xunit" Version="$(XunitVersion)"/>
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)"/>
+    <PackageReference Include="TeamCity.ServiceMessages" Version="3.0.13"/>
+    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Akka.Persistence.TestKit\Akka.Persistence.TestKit.csproj" />
-    <ProjectReference Include="..\Akka.Persistence.TestKit.Xunit2\Akka.Persistence.TestKit.Xunit2.csproj" />
-    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+    <ProjectReference Include="..\Akka.Persistence.TestKit\Akka.Persistence.TestKit.csproj"/>
+    <ProjectReference Include="..\Akka.Persistence.TestKit.Xunit2\Akka.Persistence.TestKit.Xunit2.csproj"/>
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj"/>
   </ItemGroup>
 
 </Project>

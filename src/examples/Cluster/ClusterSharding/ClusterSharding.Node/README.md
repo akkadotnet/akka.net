@@ -1,6 +1,6 @@
 # Cluster Sharding Example
 
-This project is a cluster sharding example that uses distributed data backed persistence to persist 
+This project is a cluster sharding example that uses distributed data backed persistence to persist
 entity actor states.
 
 ## Build and Local Deployment

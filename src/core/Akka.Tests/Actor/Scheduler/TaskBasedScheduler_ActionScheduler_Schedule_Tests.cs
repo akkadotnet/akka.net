@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TaskBasedScheduler_ActionScheduler_Schedule_Tests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="TaskBasedScheduler_ActionScheduler_Schedule_Tests.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -13,290 +13,284 @@ using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
-using Xunit.Extensions;
 
-namespace Akka.Tests.Actor.Scheduler
+namespace Akka.Tests.Actor.Scheduler;
+
+// ReSharper disable once InconsistentNaming
+public class DefaultScheduler_ActionScheduler_Schedule_Tests : AkkaSpec
 {
-    // ReSharper disable once InconsistentNaming
-    public class DefaultScheduler_ActionScheduler_Schedule_Tests : AkkaSpec
+    [Theory]
+    [InlineData(10, 1000)]
+    public async Task ScheduleRepeatedly_in_milliseconds_Tests_and_verify_the_interval(int initialDelay, int interval)
     {
-        [Theory]
-        [InlineData(10, 1000)]
-        public async Task ScheduleRepeatedly_in_milliseconds_Tests_and_verify_the_interval(int initialDelay, int interval)
-        {
-            // Prepare, set up actions to be fired
-            IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
+        // Prepare, set up actions to be fired
+        IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
 
-            try
+        try
+        {
+            var cancelable = new Cancelable(Sys.Scheduler);
+            var receiver = ActorOf(dsl =>
             {
-                var cancelable = new Cancelable(Sys.Scheduler);
-                var receiver = ActorOf(dsl =>
+                //Receive three messages, and store the time when these were received
+                //after three messages stop the actor and send the times to TestActor
+                var messages = new List<DateTimeOffset>();
+                dsl.Receive<string>((_, context) =>
                 {
-                    //Receive three messages, and store the time when these were received
-                    //after three messages stop the actor and send the times to TestActor
-                    var messages = new List<DateTimeOffset>();
-                    dsl.Receive<string>((_, context) =>
+                    messages.Add(context.System.Scheduler.Now);
+                    if (messages.Count == 3)
                     {
-                        messages.Add(context.System.Scheduler.Now);
-                        if (messages.Count == 3)
-                        {
-                            TestActor.Tell(messages);
-                            cancelable.Cancel();
-                            context.Stop(context.Self);
-                        }
-                    });
+                        TestActor.Tell(messages);
+                        cancelable.Cancel();
+                        context.Stop(context.Self);
+                    }
                 });
-                scheduler.ScheduleRepeatedly(initialDelay, interval, () => receiver.Tell(""), cancelable);
+            });
+            scheduler.ScheduleRepeatedly(initialDelay, interval, () => receiver.Tell(""), cancelable);
 
-                //Expect to get a list from receiver after it has received three messages
-                var dateTimeOffsets = await ExpectMsgAsync<List<DateTimeOffset>>();
-                dateTimeOffsets.ShouldHaveCount(3);
-                Action<int, int> validate = (a, b) =>
-                {
-                    var valA = dateTimeOffsets[a];
-                    var valB = dateTimeOffsets[b];
-                    var diffBetweenMessages = Math.Abs((valB - valA).TotalMilliseconds);
-                    var diffInMs = Math.Abs(diffBetweenMessages - interval);
-                    var deviate = (diffInMs/interval);
-                    deviate.Should(val => val < 0.1,
-                        string.Format(
-                            "Expected the interval between message {1} and {2} to deviate maximum 10% from {0}. It was {3} ms between the messages. It deviated {4}%",
-                            interval, a + 1, b + 1, diffBetweenMessages, deviate*100));
-                };
-                validate(0, 1);
-                validate(1, 2);
-            }
-            finally
+            //Expect to get a list from receiver after it has received three messages
+            var dateTimeOffsets = await ExpectMsgAsync<List<DateTimeOffset>>();
+            dateTimeOffsets.ShouldHaveCount(3);
+            Action<int, int> validate = (a, b) =>
             {
-                scheduler.AsInstanceOf<IDisposable>().Dispose();
-            }
-
+                var valA = dateTimeOffsets[a];
+                var valB = dateTimeOffsets[b];
+                var diffBetweenMessages = Math.Abs((valB - valA).TotalMilliseconds);
+                var diffInMs = Math.Abs(diffBetweenMessages - interval);
+                var deviate = diffInMs / interval;
+                deviate.Should(val => val < 0.1,
+                    string.Format(
+                        "Expected the interval between message {1} and {2} to deviate maximum 10% from {0}. It was {3} ms between the messages. It deviated {4}%",
+                        interval, a + 1, b + 1, diffBetweenMessages, deviate * 100));
+            };
+            validate(0, 1);
+            validate(1, 2);
         }
-
-
-        [Theory]
-        [InlineData(50, 50)]
-        [InlineData(00, 50)]
-        public async Task ScheduleRepeatedly_in_milliseconds_Tests(int initialDelay, int interval)
+        finally
         {
-            // Prepare, set up actions to be fired
-            IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
-
-            try
-            {
-                testScheduler.ScheduleRepeatedly(initialDelay, interval, () => TestActor.Tell("Test"));
-
-                //Just check that we receives more than one message
-                await ExpectMsgAsync("Test");
-                await ExpectMsgAsync("Test");
-                await ExpectMsgAsync("Test");
-            }
-            finally
-            {
-                testScheduler.AsInstanceOf<IDisposable>().Dispose();
-            }
+            scheduler.AsInstanceOf<IDisposable>().Dispose();
         }
+    }
 
-        [Theory]
-        [InlineData(50, 50)]
-        [InlineData(00, 50)]
-        public async Task ScheduleRepeatedly_in_TimeSpan_Tests(int initialDelay, int interval)
+
+    [Theory]
+    [InlineData(50, 50)]
+    [InlineData(00, 50)]
+    public async Task ScheduleRepeatedly_in_milliseconds_Tests(int initialDelay, int interval)
+    {
+        // Prepare, set up actions to be fired
+        IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
+
+        try
         {
-            // Prepare, set up actions to be fired
-            IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
+            testScheduler.ScheduleRepeatedly(initialDelay, interval, () => TestActor.Tell("Test"));
 
-            try
-            {
-                testScheduler.ScheduleRepeatedly(TimeSpan.FromMilliseconds(initialDelay),
-                    TimeSpan.FromMilliseconds(interval), () => TestActor.Tell("Test"));
-
-                //Just check that we receives more than one message
-                await ExpectMsgAsync("Test");
-                await ExpectMsgAsync("Test");
-                await ExpectMsgAsync("Test");
-            }
-            finally
-            {
-                testScheduler.AsInstanceOf<IDisposable>().Dispose();
-            }
+            //Just check that we receives more than one message
+            await ExpectMsgAsync("Test");
+            await ExpectMsgAsync("Test");
+            await ExpectMsgAsync("Test");
         }
-
-
-        [Fact]
-        public async Task ScheduleOnceTests()
+        finally
         {
-            // Prepare, set up actions to be fired
-            IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
-
-            try
-            {
-                testScheduler.ScheduleOnce(50, () => TestActor.Tell("Test1"));
-                testScheduler.ScheduleOnce(100, () => TestActor.Tell("Test2"));
-
-                await ExpectMsgAsync("Test1");
-                await ExpectMsgAsync("Test2");
-
-                await ExpectNoMsgAsync(100);
-            }
-            finally
-            {
-                testScheduler.AsInstanceOf<IDisposable>().Dispose();
-            }
+            testScheduler.AsInstanceOf<IDisposable>().Dispose();
         }
+    }
 
+    [Theory]
+    [InlineData(50, 50)]
+    [InlineData(00, 50)]
+    public async Task ScheduleRepeatedly_in_TimeSpan_Tests(int initialDelay, int interval)
+    {
+        // Prepare, set up actions to be fired
+        IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
 
-
-        [Theory]
-        [InlineData(new int[] { 1, 1, 50, 50, 100, 100 })]
-        public async Task When_ScheduleOnce_many_at_the_same_time_Then_all_fires(int[] times)
+        try
         {
-            // Prepare, set up actions to be fired
-            IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
+            testScheduler.ScheduleRepeatedly(TimeSpan.FromMilliseconds(initialDelay),
+                TimeSpan.FromMilliseconds(interval), () => TestActor.Tell("Test"));
 
-            try
-            {
-                foreach (var time in times)
-                {
-                    var t = time;
-                    scheduler.ScheduleOnce(time, () => TestActor.Tell("Test" + t));
-                }
-
-                //Perform the test
-                await ExpectMsgAsync("Test1");
-                await ExpectMsgAsync("Test1");
-                await ExpectMsgAsync("Test50");
-                await ExpectMsgAsync("Test50");
-                await ExpectMsgAsync("Test100");
-                await ExpectMsgAsync("Test100");
-                await ExpectNoMsgAsync(50);
-            }
-            finally
-            {
-                scheduler.AsInstanceOf<IDisposable>().Dispose();
-            }
+            //Just check that we receives more than one message
+            await ExpectMsgAsync("Test");
+            await ExpectMsgAsync("Test");
+            await ExpectMsgAsync("Test");
         }
-
-
-
-        [Theory]
-        [InlineData(-1)]
-        [InlineData(-4711)]
-        public void When_ScheduleOnce_with_invalid_delay_Then_exception_is_thrown(int invalidTime)
+        finally
         {
-            IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
-            try
-            {
-                XAssert.Throws<ArgumentOutOfRangeException>(() =>
-                            testScheduler.ScheduleOnce(invalidTime, () => { })
-                );
-            }
-            finally
-            {
-                testScheduler.AsInstanceOf<IDisposable>().Dispose();
-            }
+            testScheduler.AsInstanceOf<IDisposable>().Dispose();
         }
+    }
 
-        [Theory]
-        [InlineData(-1)]
-        [InlineData(-4711)]
-        public void When_ScheduleRepeatedly_with_invalid_delay_Then_exception_is_thrown(int invalidTime)
+
+    [Fact]
+    public async Task ScheduleOnceTests()
+    {
+        // Prepare, set up actions to be fired
+        IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
+
+        try
         {
-            IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
+            testScheduler.ScheduleOnce(50, () => TestActor.Tell("Test1"));
+            testScheduler.ScheduleOnce(100, () => TestActor.Tell("Test2"));
 
-            try
-            {
-                XAssert.Throws<ArgumentOutOfRangeException>(() =>
-                            testScheduler.ScheduleRepeatedly(invalidTime, 100, () => { })
-                );
-            }
-            finally
-            {
-                testScheduler.AsInstanceOf<IDisposable>().Dispose();
-            }
+            await ExpectMsgAsync("Test1");
+            await ExpectMsgAsync("Test2");
+
+            await ExpectNoMsgAsync(100);
         }
-
-        [Theory]
-        [InlineData(0)]
-        [InlineData(-1)]
-        [InlineData(-4711)]
-        public void When_ScheduleRepeatedly_with_invalid_interval_Then_exception_is_thrown(int invalidInterval)
+        finally
         {
-            IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
-
-            try
-            {
-                XAssert.Throws<ArgumentOutOfRangeException>(() =>
-                            testScheduler.ScheduleRepeatedly(42, invalidInterval, () => { })
-                );
-            }
-            finally
-            {
-                testScheduler.AsInstanceOf<IDisposable>().Dispose();
-            }
+            testScheduler.AsInstanceOf<IDisposable>().Dispose();
         }
+    }
 
-        [Fact]
-        public void When_ScheduleOnce_with_0_delay_Then_action_is_executed_immediately()
+
+    [Theory]
+    [InlineData(new[] { 1, 1, 50, 50, 100, 100 })]
+    public async Task When_ScheduleOnce_many_at_the_same_time_Then_all_fires(int[] times)
+    {
+        // Prepare, set up actions to be fired
+        IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
+
+        try
         {
-            IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
-
-            try
+            foreach (var time in times)
             {
-                var manualResetEvent = new ManualResetEventSlim();
-                manualResetEvent.IsSet.ShouldBeFalse();
-                testScheduler.ScheduleOnce(0, () => manualResetEvent.Set());
+                var t = time;
+                scheduler.ScheduleOnce(time, () => TestActor.Tell("Test" + t));
+            }
 
-                manualResetEvent.Wait(500).ShouldBeTrue();
-            }
-            finally
-            {
-                testScheduler.AsInstanceOf<IDisposable>().Dispose();
-            }
+            //Perform the test
+            await ExpectMsgAsync("Test1");
+            await ExpectMsgAsync("Test1");
+            await ExpectMsgAsync("Test50");
+            await ExpectMsgAsync("Test50");
+            await ExpectMsgAsync("Test100");
+            await ExpectMsgAsync("Test100");
+            await ExpectNoMsgAsync(50);
         }
-
-        [Fact]
-        public void When_ScheduleRepeatedly_with_0_delay_Then_action_is_executed_immediately()
+        finally
         {
-            IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
-
-            try
-            {
-                var manualResetEvent = new ManualResetEventSlim();
-                manualResetEvent.IsSet.ShouldBeFalse();
-                testScheduler.ScheduleRepeatedly(0, 100, () => manualResetEvent.Set());
-
-                manualResetEvent.Wait(500).ShouldBeTrue();
-            }
-            finally
-            {
-                testScheduler.AsInstanceOf<IDisposable>().Dispose();
-            }
+            scheduler.AsInstanceOf<IDisposable>().Dispose();
         }
+    }
 
-        [Fact]
-        public async Task When_ScheduleRepeatedly_action_crashes_Then_no_more_calls_will_be_scheduled()
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(-4711)]
+    public void When_ScheduleOnce_with_invalid_delay_Then_exception_is_thrown(int invalidTime)
+    {
+        IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
+        try
         {
-            IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
+            XAssert.Throws<ArgumentOutOfRangeException>(() =>
+                testScheduler.ScheduleOnce(invalidTime, () => { })
+            );
+        }
+        finally
+        {
+            testScheduler.AsInstanceOf<IDisposable>().Dispose();
+        }
+    }
 
-            try
-            {
-                var timesCalled = 0;
-                testScheduler.ScheduleRepeatedly(0, 10, () =>
-                {
-                    Interlocked.Increment(ref timesCalled);
-                    throw new Exception("Crash");
-                });
-                await AwaitConditionAsync(() => Task.FromResult(timesCalled >= 1));
-                await Task.Delay(200); //Allow any scheduled actions to be fired. 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(-4711)]
+    public void When_ScheduleRepeatedly_with_invalid_delay_Then_exception_is_thrown(int invalidTime)
+    {
+        IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
 
-                //We expect only one of the scheduled actions to actually fire
-                timesCalled.ShouldBe(1);
-            }
-            finally
+        try
+        {
+            XAssert.Throws<ArgumentOutOfRangeException>(() =>
+                testScheduler.ScheduleRepeatedly(invalidTime, 100, () => { })
+            );
+        }
+        finally
+        {
+            testScheduler.AsInstanceOf<IDisposable>().Dispose();
+        }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(-4711)]
+    public void When_ScheduleRepeatedly_with_invalid_interval_Then_exception_is_thrown(int invalidInterval)
+    {
+        IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
+
+        try
+        {
+            XAssert.Throws<ArgumentOutOfRangeException>(() =>
+                testScheduler.ScheduleRepeatedly(42, invalidInterval, () => { })
+            );
+        }
+        finally
+        {
+            testScheduler.AsInstanceOf<IDisposable>().Dispose();
+        }
+    }
+
+    [Fact]
+    public void When_ScheduleOnce_with_0_delay_Then_action_is_executed_immediately()
+    {
+        IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
+
+        try
+        {
+            var manualResetEvent = new ManualResetEventSlim();
+            manualResetEvent.IsSet.ShouldBeFalse();
+            testScheduler.ScheduleOnce(0, () => manualResetEvent.Set());
+
+            manualResetEvent.Wait(500).ShouldBeTrue();
+        }
+        finally
+        {
+            testScheduler.AsInstanceOf<IDisposable>().Dispose();
+        }
+    }
+
+    [Fact]
+    public void When_ScheduleRepeatedly_with_0_delay_Then_action_is_executed_immediately()
+    {
+        IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
+
+        try
+        {
+            var manualResetEvent = new ManualResetEventSlim();
+            manualResetEvent.IsSet.ShouldBeFalse();
+            testScheduler.ScheduleRepeatedly(0, 100, () => manualResetEvent.Set());
+
+            manualResetEvent.Wait(500).ShouldBeTrue();
+        }
+        finally
+        {
+            testScheduler.AsInstanceOf<IDisposable>().Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task When_ScheduleRepeatedly_action_crashes_Then_no_more_calls_will_be_scheduled()
+    {
+        IActionScheduler testScheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
+
+        try
+        {
+            var timesCalled = 0;
+            testScheduler.ScheduleRepeatedly(0, 10, () =>
             {
-                testScheduler.AsInstanceOf<IDisposable>().Dispose();
-            }
+                Interlocked.Increment(ref timesCalled);
+                throw new Exception("Crash");
+            });
+            await AwaitConditionAsync(() => Task.FromResult(timesCalled >= 1));
+            await Task.Delay(200); //Allow any scheduled actions to be fired. 
+
+            //We expect only one of the scheduled actions to actually fire
+            timesCalled.ShouldBe(1);
+        }
+        finally
+        {
+            testScheduler.AsInstanceOf<IDisposable>().Dispose();
         }
     }
 }
-

@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="LocalActorRefProviderSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="LocalActorRefProviderSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Linq;
@@ -12,119 +12,124 @@ using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
-using Xunit;
 using Akka.TestKit.TestActors;
-using Akka.Tests.Util;
+using Xunit;
 
-namespace Akka.Tests.Actor
+namespace Akka.Tests.Actor;
+
+public class LocalActorRefProviderSpec : AkkaSpec
 {
-    public class LocalActorRefProviderSpec : AkkaSpec
+    [Fact]
+    public async Task A_LocalActorRefs_ActorCell_must_not_retain_its_original_Props_when_Terminated()
     {
-        [Fact]
-        public async Task A_LocalActorRefs_ActorCell_must_not_retain_its_original_Props_when_Terminated()
+        var parent = Sys.ActorOf(Props.Create(() => new ParentActor()));
+        parent.Tell("GetChild", TestActor);
+        var child = await ExpectMsgAsync<IActorRef>();
+        var childPropsBeforeTermination = ((LocalActorRef)child).Underlying.Props;
+        Assert.Equal(Props.Empty, childPropsBeforeTermination);
+        Watch(parent);
+        Sys.Stop(parent);
+        await ExpectTerminatedAsync(parent);
+        await AwaitAssertAsync(() =>
         {
-            var parent = Sys.ActorOf(Props.Create(() => new ParentActor()));
-            parent.Tell("GetChild", TestActor);
-            var child = await ExpectMsgAsync<IActorRef>();
-            var childPropsBeforeTermination = ((LocalActorRef)child).Underlying.Props;
-            Assert.Equal(Props.Empty, childPropsBeforeTermination);
-            Watch(parent);
-            Sys.Stop(parent);
-            await ExpectTerminatedAsync(parent);
-            await AwaitAssertAsync(() =>
-                {
-                    var childPropsAfterTermination = ((LocalActorRef)child).Underlying.Props;
-                    Assert.NotEqual(childPropsBeforeTermination, childPropsAfterTermination);
-                    Assert.Equal(ActorCell.TerminatedProps, childPropsAfterTermination);
-                });
+            var childPropsAfterTermination = ((LocalActorRef)child).Underlying.Props;
+            Assert.NotEqual(childPropsBeforeTermination, childPropsAfterTermination);
+            Assert.Equal(ActorCell.TerminatedProps, childPropsAfterTermination);
+        });
+    }
+
+    [Fact]
+    public async Task
+        An_ActorRefFactory_must_only_create_one_instance_of_an_actor_with_a_specific_address_in_a_concurrent_environment()
+    {
+        var impl = (ActorSystemImpl)Sys;
+        var provider = impl.Provider;
+
+        Assert.IsType<LocalActorRefProvider>(provider);
+
+        for (var i = 0; i < 100; i++)
+        {
+            var timeout = Dilated(TimeSpan.FromSeconds(5));
+            var address = "new-actor" + i;
+            var actors = Enumerable.Range(0, 4)
+                .Select(_ => Task.Run(() => Sys.ActorOf(Props.Create(() => new BlackHoleActor()), address))).ToArray();
+            // Use WhenAll with empty ContinueWith to swallow all exceptions, so we can inspect the tasks afterwards.
+            await Task.WhenAll(actors).ContinueWith(_ => { }).AwaitWithTimeout(timeout);
+            Assert.True(actors.Any(x => x.Status == TaskStatus.RanToCompletion && x.Result != null),
+                "Failed to create any Actors");
+            Assert.True(
+                actors.Any(x =>
+                    x.Status == TaskStatus.Faulted && x.Exception.InnerException is InvalidActorNameException),
+                "Succeeded in creating all Actors. Some should have failed.");
         }
+    }
 
-        [Fact]
-        public async Task An_ActorRefFactory_must_only_create_one_instance_of_an_actor_with_a_specific_address_in_a_concurrent_environment()
-        {
-            var impl = (ActorSystemImpl)Sys;
-            var provider = impl.Provider;
-
-            Assert.IsType<LocalActorRefProvider>(provider);
-
-            for (var i = 0; i < 100; i++)
+    [Fact]
+    public async Task
+        An_ActorRefFactory_must_only_create_one_instance_of_an_actor_from_within_the_same_message_invocation()
+    {
+        var supervisor = Sys.ActorOf(Props.Create<ActorWithDuplicateChild>());
+        await EventFilter.Exception<InvalidActorNameException>("Actor name \"duplicate\" is not unique!")
+            .ExpectOneAsync(() =>
             {
-                var timeout = Dilated(TimeSpan.FromSeconds(5));
-                var address = "new-actor" + i;
-                var actors = Enumerable.Range(0, 4)
-                    .Select(_ => Task.Run(() => Sys.ActorOf(Props.Create(() => new BlackHoleActor()), address))).ToArray();
-                // Use WhenAll with empty ContinueWith to swallow all exceptions, so we can inspect the tasks afterwards.
-                await Task.WhenAll(actors).ContinueWith(_ => { }).AwaitWithTimeout(timeout);
-                Assert.True(actors.Any(x => x.Status == TaskStatus.RanToCompletion && x.Result != null), "Failed to create any Actors");
-                Assert.True(actors.Any(x => x.Status == TaskStatus.Faulted && x.Exception.InnerException is InvalidActorNameException), "Succeeded in creating all Actors. Some should have failed.");
-            }
-        }
-
-        [Fact]
-        public async Task An_ActorRefFactory_must_only_create_one_instance_of_an_actor_from_within_the_same_message_invocation()
-        {
-            var supervisor = Sys.ActorOf(Props.Create<ActorWithDuplicateChild>());
-            await EventFilter.Exception<InvalidActorNameException>(message: "Actor name \"duplicate\" is not unique!").ExpectOneAsync(() => {
                 supervisor.Tell("");
                 return Task.CompletedTask;
             });
-        }
+    }
 
-        [Theory]
-        [InlineData("", "empty")]
-        [InlineData("$hello", "not start with `$`")]
-        [InlineData("a%", "Illegal actor name")]
-        [InlineData("%3","Illegal actor name")]
-        [InlineData("%xx","Illegal actor name")]
-        [InlineData("%0G","Illegal actor name")]
-        [InlineData("%gg","Illegal actor name")]
-        [InlineData("%","Illegal actor name")]
-        [InlineData("%1t","Illegal actor name")]
-        [InlineData("a?","Illegal actor name")]
-        [InlineData("üß","only contain ASCII")]
-        [InlineData("åäö", "Illegal actor name")]
-        public void An_ActorRefFactory_must_throw_suitable_exceptions_for_malformed_actor_names(string name, string expectedExceptionMessageSubstring)
-        {
-            var exception = Assert.Throws<InvalidActorNameException>(() =>
-                {
-                    Sys.ActorOf(Props.Empty, name);
-                });
-            Assert.Contains(expectedExceptionMessageSubstring, exception.Message, StringComparison.OrdinalIgnoreCase);
-        }
+    [Theory]
+    [InlineData("", "empty")]
+    [InlineData("$hello", "not start with `$`")]
+    [InlineData("a%", "Illegal actor name")]
+    [InlineData("%3", "Illegal actor name")]
+    [InlineData("%xx", "Illegal actor name")]
+    [InlineData("%0G", "Illegal actor name")]
+    [InlineData("%gg", "Illegal actor name")]
+    [InlineData("%", "Illegal actor name")]
+    [InlineData("%1t", "Illegal actor name")]
+    [InlineData("a?", "Illegal actor name")]
+    [InlineData("üß", "only contain ASCII")]
+    [InlineData("åäö", "Illegal actor name")]
+    public void An_ActorRefFactory_must_throw_suitable_exceptions_for_malformed_actor_names(string name,
+        string expectedExceptionMessageSubstring)
+    {
+        var exception = Assert.Throws<InvalidActorNameException>(() => { Sys.ActorOf(Props.Empty, name); });
+        Assert.Contains(expectedExceptionMessageSubstring, exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
 
-        private class ActorWithDuplicateChild : ActorBase
+    private class ActorWithDuplicateChild : ActorBase
+    {
+        protected override bool Receive(object message)
         {
-            protected override bool Receive(object message)
+            if (message as string == "")
             {
-                if (message as string == "")
-                {
-                    var a = Context.ActorOf(Props.Empty, "duplicate");
-                    var b = Context.ActorOf(Props.Empty, "duplicate");
-                    return true;
-                }
-                return false;
-            }
-        }
-
-        private class ParentActor : ActorBase
-        {
-            private readonly IActorRef childActorRef;
-
-            public ParentActor()
-            {
-                this.childActorRef = Context.ActorOf(Props.Empty);
+                var a = Context.ActorOf(Props.Empty, "duplicate");
+                var b = Context.ActorOf(Props.Empty, "duplicate");
+                return true;
             }
 
-            protected override bool Receive(object message)
+            return false;
+        }
+    }
+
+    private class ParentActor : ActorBase
+    {
+        private readonly IActorRef childActorRef;
+
+        public ParentActor()
+        {
+            childActorRef = Context.ActorOf(Props.Empty);
+        }
+
+        protected override bool Receive(object message)
+        {
+            if (message as string == "GetChild")
             {
-                if (message as string == "GetChild")
-                {
-                    Sender.Tell(this.childActorRef);
-                    return true;
-                }
-                return false;
+                Sender.Tell(childActorRef);
+                return true;
             }
+
+            return false;
         }
     }
 }
-

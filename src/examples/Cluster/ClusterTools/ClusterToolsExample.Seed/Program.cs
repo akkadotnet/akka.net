@@ -1,15 +1,14 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Program.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.IO;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Cluster;
 using Akka.Cluster.Tools.Client;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Tools.Singleton;
@@ -33,20 +32,20 @@ public static class Program
     }
 
     /// <summary>
-    /// Initializes cluster singleton of the <see cref="WorkerManager"/> actor.
+    ///     Initializes cluster singleton of the <see cref="WorkerManager" /> actor.
     /// </summary>
     /// <param name="system"></param>
     private static void RunClusterSingletonSeed(ActorSystem system)
     {
         var aref = system.ActorOf(ClusterSingletonManager.Props(
-                singletonProps: Props.Create(() => new WorkerManager()),
-                terminationMessage: PoisonPill.Instance,
-                settings: ClusterSingletonManagerSettings.Create(system)),
-            name: "manager");
+                Props.Create(() => new WorkerManager()),
+                PoisonPill.Instance,
+                ClusterSingletonManagerSettings.Create(system)),
+            "manager");
     }
 
     /// <summary>
-    /// Starts a job, which publishes <see cref="Echo"/> message to distributed cluster pub sub in 5 sec periods.
+    ///     Starts a job, which publishes <see cref="Echo" /> message to distributed cluster pub sub in 5 sec periods.
     /// </summary>
     private static void RunDistributedPubSubSeed(ActorSystem system)
     {
@@ -57,8 +56,8 @@ public static class Program
     }
 
     /// <summary>
-    /// Starts a job, which establishes cluster client receptionist for target <see cref="EchoReceiver"/> actor,
-    /// making it visible from outside of the cluster.
+    ///     Starts a job, which establishes cluster client receptionist for target <see cref="EchoReceiver" /> actor,
+    ///     making it visible from outside of the cluster.
     /// </summary>
     private static void RunClusterClientSeed(ActorSystem system)
     {

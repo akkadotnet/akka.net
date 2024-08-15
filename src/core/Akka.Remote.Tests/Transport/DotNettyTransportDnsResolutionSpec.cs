@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="DotNettyTransportDnsResolutionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="DotNettyTransportDnsResolutionSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 #if FSCHECK
 using System;
@@ -73,7 +73,8 @@ namespace Akka.Remote.Tests.Transport
             Arb.Register(typeof(EndpointGenerators));
         }
 
-        public Config BuildConfig(string hostname, int? port = null, string publichostname = null, bool useIpv6 = false, bool enforceIpFamily = false)
+        public Config BuildConfig(string hostname, int? port = null, string publichostname = null, bool useIpv6 =
+ false, bool enforceIpFamily = false)
         {
             return ConfigurationFactory.ParseString(@"akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""")
                 .WithFallback("akka.remote.dot-netty.tcp.hostname =\"" + hostname + "\"")
@@ -93,10 +94,13 @@ namespace Akka.Remote.Tests.Transport
             }
         }
 
-        private void Setup(string inboundHostname, string outboundHostname, string inboundPublicHostname = null, string outboundPublicHostname = null, bool useIpv6Dns = false, bool enforceIpFamily = false)
+        private void Setup(string inboundHostname, string outboundHostname, string inboundPublicHostname =
+ null, string outboundPublicHostname = null, bool useIpv6Dns = false, bool enforceIpFamily = false)
         {
-            _inbound = ActorSystem.Create("Sys1", BuildConfig(inboundHostname, 0, inboundPublicHostname, useIpv6Dns, enforceIpFamily));
-            _outbound = ActorSystem.Create("Sys2", BuildConfig(outboundHostname, 0, outboundPublicHostname, useIpv6Dns, enforceIpFamily));
+            _inbound =
+ ActorSystem.Create("Sys1", BuildConfig(inboundHostname, 0, inboundPublicHostname, useIpv6Dns, enforceIpFamily));
+            _outbound =
+ ActorSystem.Create("Sys2", BuildConfig(outboundHostname, 0, outboundPublicHostname, useIpv6Dns, enforceIpFamily));
 
             //InitializeLogger(_inbound);
             //InitializeLogger(_outbound);

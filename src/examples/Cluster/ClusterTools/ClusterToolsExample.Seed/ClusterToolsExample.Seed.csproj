@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
-    <ProjectReference Include="..\ClusterToolsExample.Shared\ClusterToolsExample.Shared.csproj" />
+    <ProjectReference Include="..\..\..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj"/>
+    <ProjectReference Include="..\ClusterToolsExample.Shared\ClusterToolsExample.Shared.csproj"/>
   </ItemGroup>
 
   <ItemGroup>

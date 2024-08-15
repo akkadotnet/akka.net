@@ -1,15 +1,15 @@
 ﻿// -----------------------------------------------------------------------
 //  <copyright file="ProducerControllerImpl.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Threading;
 using Akka.Actor;
 using Akka.Event;
 using Akka.IO;
@@ -296,9 +296,9 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             else
             {
                 var seqMsg = chunks.First();
-                StoreMessageSent(
-                    DurableProducerQueue.MessageSent<T>.FromMessageOrChunked(seqMsg.SeqNr, seqMsg.Message, seqMsg.Ack,
-                        DurableProducerQueue.NoQualifier, _timeProvider.Now.Ticks), 1);
+                StoreMessageSent(DurableProducerQueue.MessageSent<T>.FromMessageOrChunked(seqMsg.SeqNr, seqMsg.Message,
+                    seqMsg.Ack,
+                    DurableProducerQueue.NoQualifier, _timeProvider.Now.Ticks), 1);
 
                 CurrentState = CurrentState with
                 {
@@ -323,9 +323,9 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             else
             {
                 var seqMsg = chunks.First();
-                StoreMessageSent(
-                    DurableProducerQueue.MessageSent<T>.FromMessageOrChunked(seqMsg.SeqNr, seqMsg.Message, seqMsg.Ack,
-                        DurableProducerQueue.NoQualifier, _timeProvider.Now.Ticks), 1);
+                StoreMessageSent(DurableProducerQueue.MessageSent<T>.FromMessageOrChunked(seqMsg.SeqNr, seqMsg.Message,
+                    seqMsg.Ack,
+                    DurableProducerQueue.NoQualifier, _timeProvider.Now.Ticks), 1);
 
                 CurrentState = CurrentState with
                 {
@@ -687,9 +687,9 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             else
             {
                 var seqMsg = CurrentState.RemainingChunks.First();
-                StoreMessageSent(
-                    DurableProducerQueue.MessageSent<T>.FromMessageOrChunked(seqMsg.SeqNr, seqMsg.Message, seqMsg.Ack,
-                        DurableProducerQueue.NoQualifier, _timeProvider.Now.Ticks), 1);
+                StoreMessageSent(DurableProducerQueue.MessageSent<T>.FromMessageOrChunked(seqMsg.SeqNr, seqMsg.Message,
+                    seqMsg.Ack,
+                    DurableProducerQueue.NoQualifier, _timeProvider.Now.Ticks), 1);
                 CurrentState = CurrentState with { StoreMessageSentInProgress = seqMsg.SeqNr };
             }
         }
@@ -757,7 +757,10 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             for (var i = 0; i < chunkCount; i++)
             {
                 var isLast = i == chunkCount - 1;
-                var nextChunk = Math.Min(chunkSize, bytes.Length - i * chunkSize); // needs to be the next chunkSize or remaining bytes, whichever is smaller.
+                var nextChunk =
+                    Math.Min(chunkSize,
+                        bytes.Length -
+                        i * chunkSize); // needs to be the next chunkSize or remaining bytes, whichever is smaller.
                 var chunkedMessage = new ChunkedMessage(ByteString.FromBytes(bytes, i * chunkSize, nextChunk), first,
                     isLast, serializerId, manifest);
 
@@ -820,8 +823,8 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             else
             {
                 /* store all chunks again, because partially stored chunks are discarded by the DurableQueue
-                     * when it's restarted.
-                     */
+                 * when it's restarted.
+                 */
                 var unconfirmedReverse = CurrentState.Unconfirmed.Reverse().ToImmutableList();
                 var xs = unconfirmedReverse.TakeWhile(x => !x.IsFirstChunk).ToImmutableList();
                 if (unconfirmedReverse.Count == xs.Count)
@@ -844,8 +847,8 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
                     throw new IllegalStateException(
                         $"Wrong remainingChunks[{string.Join(",", newRemainingChunks)}]");
 
-                StoreMessageSent(
-                    DurableProducerQueue.MessageSent<T>.FromMessageOrChunked(firstChunk.SeqNr, firstChunk.Message,
+                StoreMessageSent(DurableProducerQueue.MessageSent<T>.FromMessageOrChunked(firstChunk.SeqNr,
+                        firstChunk.Message,
                         firstChunk.Ack, DurableProducerQueue.NoQualifier, _timeProvider.Now.Ticks),
                     f.Attempt + 1);
 

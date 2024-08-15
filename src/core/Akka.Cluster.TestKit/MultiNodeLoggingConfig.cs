@@ -1,34 +1,27 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="MultiNodeLoggingConfig.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="MultiNodeLoggingConfig.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.Cluster.Tests.MultiNode;
+
+/// <summary>
+///     Static <see cref="Config" /> provider that allows toggleable logging
+///     for <see cref="MultiNodeSpec" /> instances within the Akka.Cluster.Tests assembly
+/// </summary>
+public static class MultiNodeLoggingConfig
 {
-    /// <summary>
-    /// Static <see cref="Config"/> provider that allows toggleable logging
-    /// for <see cref="MultiNodeSpec"/> instances within the Akka.Cluster.Tests assembly
-    /// </summary>
-    public static class MultiNodeLoggingConfig
-    {
 // ReSharper disable once InconsistentNaming
-        private static readonly Config _loggingConfig =
-            ConfigurationFactory.ParseString(@"
+
+/// <summary>
+///     Used to specify which loggers to enable for the <see cref="MultiNodeClusterSpec" /> instances
+/// </summary>
+public static Config LoggingConfig { get; } = ConfigurationFactory.ParseString(@"
                 akka.loggers = [Akka.Event.DefaultLogger]");
-
-        /// <summary>
-        /// Used to specify which loggers to enable for the <see cref="MultiNodeClusterSpec"/> instances
-        /// </summary>
-        public static Config LoggingConfig
-        {
-            get { return _loggingConfig; }
-        }
-    }
 }
-

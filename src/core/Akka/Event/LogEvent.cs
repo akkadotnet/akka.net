@@ -1,101 +1,97 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="LogEvent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="LogEvent.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor;
 
-namespace Akka.Event
+namespace Akka.Event;
+
+/// <summary>
+///     INTERNAL API.
+///     Avoids redundant parsing of log levels and other frequently-used log items
+/// </summary>
+internal static class LogFormats
+{
+    public static readonly IReadOnlyDictionary<LogLevel, string> PrettyPrintedLogLevel;
+
+    static LogFormats()
+    {
+        var dict = new Dictionary<LogLevel, string>();
+        foreach (LogLevel i in Enum.GetValues(typeof(LogLevel)))
+            dict.Add(i, Enum.GetName(typeof(LogLevel), i).Replace("Level", "").ToUpperInvariant());
+        PrettyPrintedLogLevel = dict;
+    }
+
+    public static string PrettyNameFor(this LogLevel level)
+    {
+        return PrettyPrintedLogLevel[level];
+    }
+}
+
+/// <summary>
+///     This class represents a logging event in the system.
+/// </summary>
+public abstract class LogEvent : INoSerializationVerificationNeeded
 {
     /// <summary>
-    /// INTERNAL API.
-    /// 
-    /// Avoids redundant parsing of log levels and other frequently-used log items
+    ///     Initializes a new instance of the <see cref="LogEvent" /> class.
     /// </summary>
-    internal static class LogFormats
+    protected LogEvent()
     {
-        public static readonly IReadOnlyDictionary<LogLevel, string> PrettyPrintedLogLevel;
-
-        static LogFormats()
-        {
-            var dict = new Dictionary<LogLevel, string>();
-            foreach(LogLevel i in Enum.GetValues(typeof(LogLevel)))
-            {
-                dict.Add(i, Enum.GetName(typeof(LogLevel), i).Replace("Level", "").ToUpperInvariant());
-            }
-            PrettyPrintedLogLevel = dict;
-        }
-
-        public static string PrettyNameFor(this LogLevel level)
-        {
-            return PrettyPrintedLogLevel[level];
-        }
+        Timestamp = DateTime.UtcNow;
+        Thread = Thread.CurrentThread;
     }
 
     /// <summary>
-    /// This class represents a logging event in the system.
+    ///     The exception that caused the log event. Can be <c>null</c>
     /// </summary>
-    public abstract class LogEvent : INoSerializationVerificationNeeded
+    public Exception Cause { get; protected set; }
+
+    /// <summary>
+    ///     The timestamp that this event occurred.
+    /// </summary>
+    public DateTime Timestamp { get; }
+
+    /// <summary>
+    ///     The thread where this event occurred.
+    /// </summary>
+    public Thread Thread { get; }
+
+    /// <summary>
+    ///     The source that generated this event.
+    /// </summary>
+    public string LogSource { get; protected set; }
+
+    /// <summary>
+    ///     The type that generated this event.
+    /// </summary>
+    public Type LogClass { get; protected set; }
+
+    /// <summary>
+    ///     The message associated with this event.
+    /// </summary>
+    public object Message { get; protected set; }
+
+    /// <summary>
+    ///     Retrieves the <see cref="Akka.Event.LogLevel" /> used to classify this event.
+    /// </summary>
+    /// <returns>The <see cref="Akka.Event.LogLevel" /> used to classify this event.</returns>
+    public abstract LogLevel LogLevel();
+
+    /// <summary>
+    ///     Returns a <see cref="string" /> that represents this LogEvent.
+    /// </summary>
+    /// <returns>A <see cref="string" /> that represents this LogEvent.</returns>
+    public override string ToString()
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="LogEvent" /> class.
-        /// </summary>
-        protected LogEvent()
-        {
-            Timestamp = DateTime.UtcNow;
-            Thread = Thread.CurrentThread;
-        }
-
-        /// <summary>
-        /// The exception that caused the log event. Can be <c>null</c>
-        /// </summary>
-        public Exception Cause { get; protected set; }
-
-        /// <summary>
-        /// The timestamp that this event occurred.
-        /// </summary>
-        public DateTime Timestamp { get; private set; }
-
-        /// <summary>
-        /// The thread where this event occurred.
-        /// </summary>
-        public Thread Thread { get; private set; }
-
-        /// <summary>
-        /// The source that generated this event.
-        /// </summary>
-        public string LogSource { get; protected set; }
-
-        /// <summary>
-        /// The type that generated this event.
-        /// </summary>
-        public Type LogClass { get; protected set; }
-
-        /// <summary>
-        /// The message associated with this event.
-        /// </summary>
-        public object Message { get; protected set; }
-
-        /// <summary>
-        /// Retrieves the <see cref="Akka.Event.LogLevel" /> used to classify this event.
-        /// </summary>
-        /// <returns>The <see cref="Akka.Event.LogLevel" /> used to classify this event.</returns>
-        public abstract LogLevel LogLevel();
-
-        /// <summary>
-        /// Returns a <see cref="string" /> that represents this LogEvent.
-        /// </summary>
-        /// <returns>A <see cref="string" /> that represents this LogEvent.</returns>
-        public override string ToString()
-        {
-            return Cause == null
-                ? $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}] {Message}"
-                : $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}] {Message}{Environment.NewLine}Cause: {Cause}";
-        }
+        return Cause == null
+            ? $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}] {Message}"
+            : $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}] {Message}{Environment.NewLine}Cause: {Cause}";
     }
 }

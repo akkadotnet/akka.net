@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="RestartFlow.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="RestartFlow.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Event;
@@ -12,427 +12,496 @@ using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Util;
 
-namespace Akka.Streams.Dsl
+namespace Akka.Streams.Dsl;
+
+/// <summary>
+///     A RestartFlow wraps a <see cref="Flow" /> that gets restarted when it completes or fails.
+///     They are useful for graphs that need to run for longer than the <see cref="Flow" /> can necessarily guarantee it
+///     will, for
+///     example, for <see cref="Flow" /> streams that depend on a remote server that may crash or become partitioned. The
+///     RestartFlow ensures that the graph can continue running while the <see cref="Flow" /> restarts.
+/// </summary>
+public static class RestartFlow
 {
-  
     /// <summary>
-    /// A RestartFlow wraps a <see cref="Flow"/> that gets restarted when it completes or fails.
-    /// They are useful for graphs that need to run for longer than the <see cref="Flow"/> can necessarily guarantee it will, for
-    /// example, for <see cref="Flow"/> streams that depend on a remote server that may crash or become partitioned. The
-    /// RestartFlow ensures that the graph can continue running while the <see cref="Flow"/> restarts.
+    ///     Wrap the given <see cref="Flow" /> with a <see cref="Flow" /> that will restart it when it fails or complete using
+    ///     an exponential
+    ///     backoff.
+    ///     <para>
+    ///         This <see cref="Flow" /> will not cancel, complete or emit a failure, until the opposite end of it has been
+    ///         cancelled or
+    ///         completed.Any termination by the <see cref="Flow" /> before that time will be handled by restarting it. Any
+    ///         termination
+    ///         signals sent to this <see cref="Flow" /> however will terminate the wrapped <see cref="Flow" />, if it's
+    ///         running, and then the <see cref="Flow" />
+    ///         will be allowed to terminate without being restarted.
+    ///         The restart process is inherently lossy, since there is no coordination between cancelling and the sending of
+    ///         messages. A termination signal from either end of the wrapped <see cref="Flow" /> will cause the other end to
+    ///         be terminated,
+    ///         and any in transit messages will be lost. During backoff, this <see cref="Flow" /> will backpressure.
+    ///     </para>
+    ///     <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions" />.</para>
     /// </summary>
-    public static class RestartFlow
+    /// <param name="flowFactory">A factory for producing the <see cref="Flow" />] to wrap.</param>
+    /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
+    /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
+    /// <param name="randomFactor">
+    ///     After calculation of the exponential back-off an additional random delay based on this
+    ///     factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.
+    /// </param>
+    [Obsolete("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
+    public static Flow<TIn, TOut, NotUsed> WithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory,
+        TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor)
     {
-        /// <summary>
-        /// Wrap the given <see cref="Flow"/> with a <see cref="Flow"/> that will restart it when it fails or complete using an exponential
-        /// backoff.
-        /// <para>
-        /// This <see cref="Flow"/> will not cancel, complete or emit a failure, until the opposite end of it has been cancelled or
-        /// completed.Any termination by the <see cref="Flow"/> before that time will be handled by restarting it. Any termination
-        /// signals sent to this <see cref="Flow"/> however will terminate the wrapped <see cref="Flow"/>, if it's running, and then the <see cref="Flow"/>
-        /// will be allowed to terminate without being restarted.
-        /// The restart process is inherently lossy, since there is no coordination between cancelling and the sending of
-        /// messages. A termination signal from either end of the wrapped <see cref="Flow"/> will cause the other end to be terminated,
-        /// and any in transit messages will be lost. During backoff, this <see cref="Flow"/> will backpressure.
-        /// </para>
-        /// <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions"/>.</para>
-        /// </summary>
-        /// <param name="flowFactory">A factory for producing the <see cref="Flow"/>] to wrap.</param>
-        /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
-        /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
-        /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
-        [Obsolete("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
-        public static Flow<TIn, TOut, NotUsed> WithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor)
-        {
-            var settings = RestartSettings.Create(minBackoff, maxBackoff, randomFactor);
-            return WithBackoff(flowFactory, settings);
-        }
-
-        /// <summary>
-        /// Wrap the given <see cref="Flow"/> with a <see cref="Flow"/> that will restart it when it fails or complete using an exponential
-        /// backoff.
-        /// <para>
-        /// This <see cref="Flow"/> will not cancel, complete or emit a failure, until the opposite end of it has been cancelled or
-        /// completed.Any termination by the <see cref="Flow"/> before that time will be handled by restarting it. Any termination
-        /// signals sent to this <see cref="Flow"/> however will terminate the wrapped <see cref="Flow"/>, if it's running, and then the <see cref="Flow"/>
-        /// will be allowed to terminate without being restarted.
-        /// The restart process is inherently lossy, since there is no coordination between cancelling and the sending of
-        /// messages. A termination signal from either end of the wrapped <see cref="Flow"/> will cause the other end to be terminated,
-        /// and any in transit messages will be lost. During backoff, this <see cref="Flow"/> will backpressure.
-        /// </para>
-        /// <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions"/>.</para>
-        /// </summary>
-        /// <param name="flowFactory">A factory for producing the <see cref="Flow"/>] to wrap.</param>
-        /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
-        /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
-        /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
-        /// <param name="maxRestarts">The amount of restarts is capped to this amount within a time frame of minBackoff. Passing `0` will cause no restarts and a negative number will not cap the amount of restarts.</param>
-        [Obsolete("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
-        public static Flow<TIn, TOut, NotUsed> WithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, int maxRestarts)
-        {
-            var settings = RestartSettings.Create(minBackoff, maxBackoff, randomFactor).WithMaxRestarts(maxRestarts, minBackoff);
-            return WithBackoff(flowFactory, settings);
-        }
-
-        /// <summary>
-        /// Wrap the given <see cref="Flow"/> with a <see cref="Flow"/> that will restart it when it fails or complete using an exponential
-        /// backoff.
-        /// <para>
-        /// This <see cref="Flow"/> will not cancel, complete or emit a failure, until the opposite end of it has been cancelled or
-        /// completed.Any termination by the <see cref="Flow"/> before that time will be handled by restarting it. Any termination
-        /// signals sent to this <see cref="Flow"/> however will terminate the wrapped <see cref="Flow"/>, if it's running, and then the <see cref="Flow"/>
-        /// will be allowed to terminate without being restarted.
-        /// The restart process is inherently lossy, since there is no coordination between cancelling and the sending of
-        /// messages. A termination signal from either end of the wrapped <see cref="Flow"/> will cause the other end to be terminated,
-        /// and any in transit messages will be lost. During backoff, this <see cref="Flow"/> will backpressure.
-        /// </para>
-        /// <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions"/>.</para>
-        /// </summary>
-        /// <param name="flowFactory">A factory for producing the <see cref="Flow"/>] to wrap.</param>
-        /// <param name="settings"><see cref="RestartSettings" /> defining restart configuration</param>
-        public static Flow<TIn, TOut, NotUsed> WithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory, RestartSettings settings)
-            => Flow.FromGraph(new RestartWithBackoffFlow<TIn, TOut, TMat>(flowFactory, settings, onlyOnFailures: false));
-
-        /// <summary>
-        /// Wrap the given <see cref="Flow"/> with a <see cref="Flow"/> that will restart it when it fails using an exponential
-        /// backoff. Notice that this <see cref="Flow"/> will not restart on completion of the wrapped flow. 
-        /// <para>
-        /// This <see cref="Flow"/> will not emit any failure
-        /// The failures by the wrapped <see cref="Flow"/> will be handled by
-        /// restarting the wrapping <see cref="Flow"/> as long as maxRestarts is not reached.
-        /// Any termination signals sent to this <see cref="Flow"/> however will terminate the wrapped <see cref="Flow"/>, if it's
-        /// running, and then the <see cref="Flow"/> will be allowed to terminate without being restarted. 
-        /// The restart process is inherently lossy, since there is no coordination between cancelling and the sending of
-        /// messages. A termination signal from either end of the wrapped <see cref="Flow"/> will cause the other end to be terminated,
-        /// nd any in transit messages will be lost. During backoff, this <see cref="Flow"/> will backpressure. 
-        /// </para>
-        /// <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions"/>.</para>
-        /// </summary>
-        /// <param name="flowFactory">A factory for producing the <see cref="Flow"/>] to wrap.</param>
-        /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
-        /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
-        /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
-        [Obsolete("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
-        public static Flow<TIn, TOut, NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor)
-        {
-            var settings = RestartSettings.Create(minBackoff, maxBackoff, randomFactor);
-            return OnFailuresWithBackoff(flowFactory, settings);
-        }
-
-        /// <summary>
-        /// Wrap the given <see cref="Flow"/> with a <see cref="Flow"/> that will restart it when it fails using an exponential
-        /// backoff. Notice that this <see cref="Flow"/> will not restart on completion of the wrapped flow. 
-        /// <para>
-        /// This <see cref="Flow"/> will not emit any failure
-        /// The failures by the wrapped <see cref="Flow"/> will be handled by
-        /// restarting the wrapping <see cref="Flow"/> as long as maxRestarts is not reached.
-        /// Any termination signals sent to this <see cref="Flow"/> however will terminate the wrapped <see cref="Flow"/>, if it's
-        /// running, and then the <see cref="Flow"/> will be allowed to terminate without being restarted. 
-        /// The restart process is inherently lossy, since there is no coordination between cancelling and the sending of
-        /// messages. A termination signal from either end of the wrapped <see cref="Flow"/> will cause the other end to be terminated,
-        /// nd any in transit messages will be lost. During backoff, this <see cref="Flow"/> will backpressure. 
-        /// </para>
-        /// <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions"/>.</para>
-        /// </summary>
-        /// <param name="flowFactory">A factory for producing the <see cref="Flow"/>] to wrap.</param>
-        /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
-        /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
-        /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
-        /// <param name="maxRestarts">The amount of restarts is capped to this amount within a time frame of minBackoff. Passing `0` will cause no restarts and a negative number will not cap the amount of restarts.</param>
-        [Obsolete("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
-        public static Flow<TIn, TOut, NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, int maxRestarts)
-        {
-            var settings = RestartSettings.Create(minBackoff, maxBackoff, randomFactor).WithMaxRestarts(maxRestarts, minBackoff);
-            return OnFailuresWithBackoff(flowFactory, settings);
-        }
-
-        /// <summary>
-        /// Wrap the given <see cref="Flow"/> with a <see cref="Flow"/> that will restart it when it fails using an exponential
-        /// backoff. Notice that this <see cref="Flow"/> will not restart on completion of the wrapped flow. 
-        /// <para>
-        /// This <see cref="Flow"/> will not emit any failure
-        /// The failures by the wrapped <see cref="Flow"/> will be handled by
-        /// restarting the wrapping <see cref="Flow"/> as long as maxRestarts is not reached.
-        /// Any termination signals sent to this <see cref="Flow"/> however will terminate the wrapped <see cref="Flow"/>, if it's
-        /// running, and then the <see cref="Flow"/> will be allowed to terminate without being restarted. 
-        /// The restart process is inherently lossy, since there is no coordination between cancelling and the sending of
-        /// messages. A termination signal from either end of the wrapped <see cref="Flow"/> will cause the other end to be terminated,
-        /// nd any in transit messages will be lost. During backoff, this <see cref="Flow"/> will backpressure. 
-        /// </para>
-        /// <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions"/>.</para>
-        /// </summary>
-        /// <param name="flowFactory">A factory for producing the <see cref="Flow"/>] to wrap.</param>
-        /// <param name="settings"><see cref="RestartSettings" /> defining restart configuration</param>
-        public static Flow<TIn, TOut, NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory, RestartSettings settings)
-            => Flow.FromGraph(new RestartWithBackoffFlow<TIn, TOut, TMat>(flowFactory, settings, onlyOnFailures: true));
-    }
-
-    internal sealed class RestartWithBackoffFlow<TIn, TOut, TMat> : GraphStage<FlowShape<TIn, TOut>>
-    {
-        public Func<Flow<TIn, TOut, TMat>> FlowFactory { get; }
-        public RestartSettings Settings { get; }
-        public bool OnlyOnFailures { get; }
-        
-        public RestartWithBackoffFlow(
-            Func<Flow<TIn, TOut, TMat>> flowFactory,
-            RestartSettings settings,
-            bool onlyOnFailures)
-        {
-            FlowFactory = flowFactory;
-            Settings = settings;
-            OnlyOnFailures = onlyOnFailures;
-            Shape = new FlowShape<TIn, TOut>(In, Out);
-        }
-
-        public Inlet<TIn> In { get; } = new("RestartWithBackoffFlow.in");
-
-        public Outlet<TOut> Out { get; } = new("RestartWithBackoffFlow.out");
-
-        public override FlowShape<TIn, TOut> Shape { get; }
-
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes, "Flow");
-
-        private sealed class Logic : RestartWithBackoffLogic<FlowShape<TIn, TOut>, TIn, TOut>
-        {
-            private readonly RestartWithBackoffFlow<TIn, TOut, TMat> _stage;
-            private readonly Attributes _inheritedAttributes;
-            private Tuple<SubSourceOutlet<TIn>, SubSinkInlet<TOut>> _activeOutIn;
-            private TimeSpan _delay;
-            
-            public Logic(RestartWithBackoffFlow<TIn, TOut, TMat> stage, Attributes inheritedAttributes, string name)
-                : base(name, stage.Shape, stage.In, stage.Out, stage.Settings, stage.OnlyOnFailures)
-            {
-                _inheritedAttributes = inheritedAttributes;
-                _delay = _inheritedAttributes.GetAttribute(new RestartWithBackoffFlow.Delay(TimeSpan.FromMilliseconds(50))).Duration;
-                _stage = stage;
-                Backoff();
-            }
-
-            protected override void StartGraph()
-            {
-                var sourceOut = CreateSubOutlet(_stage.In);
-                var sinkIn = CreateSubInlet(_stage.Out);
-                
-                var graph = Source.FromGraph(sourceOut.Source)
-                    //temp fix becaues the proper fix would be to have a concept of cause of cancellation. See https://github.com/akka/akka/pull/23909
-                    //TODO register issue to track this
-                    .Via(DelayCancellation<TIn>(_delay))
-                    .Via(_stage.FlowFactory())
-                    .To(sinkIn.Sink);
-                SubFusingMaterializer.Materialize(graph, _inheritedAttributes);
-               
-                if (IsAvailable(_stage.Out))
-                    sinkIn.Pull();
-
-                _activeOutIn = Tuple.Create(sourceOut, sinkIn);
-            }
-             
-            protected override void Backoff()
-            {
-                SetHandler(_stage.In, () =>
-                {
-                    // do nothing
-                });
-                SetHandler(_stage.Out, () =>
-                {
-                    // do nothing
-                });
-                
-                // We need to ensure that the other end of the sub flow is also completed, so that we don't
-                // receive any callbacks from it.
-                if (_activeOutIn != null)
-                {
-                    var sourceOut = _activeOutIn.Item1;
-                    var sinkIn = _activeOutIn.Item2;
-                    if (!sourceOut.IsClosed)
-                        sourceOut.Complete();
-
-                    if (!sinkIn.IsClosed)
-                        sinkIn.Cancel();
-                    _activeOutIn = null;
-                }
-            }
-            
-            private Flow<T, T, NotUsed> DelayCancellation<T>(TimeSpan duration) => Flow.FromGraph(new DelayCancellationStage<T>(duration, null));
-        }
+        var settings = RestartSettings.Create(minBackoff, maxBackoff, randomFactor);
+        return WithBackoff(flowFactory, settings);
     }
 
     /// <summary>
-    /// Shared logic for all restart with backoff logics.
+    ///     Wrap the given <see cref="Flow" /> with a <see cref="Flow" /> that will restart it when it fails or complete using
+    ///     an exponential
+    ///     backoff.
+    ///     <para>
+    ///         This <see cref="Flow" /> will not cancel, complete or emit a failure, until the opposite end of it has been
+    ///         cancelled or
+    ///         completed.Any termination by the <see cref="Flow" /> before that time will be handled by restarting it. Any
+    ///         termination
+    ///         signals sent to this <see cref="Flow" /> however will terminate the wrapped <see cref="Flow" />, if it's
+    ///         running, and then the <see cref="Flow" />
+    ///         will be allowed to terminate without being restarted.
+    ///         The restart process is inherently lossy, since there is no coordination between cancelling and the sending of
+    ///         messages. A termination signal from either end of the wrapped <see cref="Flow" /> will cause the other end to
+    ///         be terminated,
+    ///         and any in transit messages will be lost. During backoff, this <see cref="Flow" /> will backpressure.
+    ///     </para>
+    ///     <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions" />.</para>
     /// </summary>
-    internal abstract class RestartWithBackoffLogic<TShape, TIn, TOut> : TimerGraphStageLogic where TShape : Shape
+    /// <param name="flowFactory">A factory for producing the <see cref="Flow" />] to wrap.</param>
+    /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
+    /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
+    /// <param name="randomFactor">
+    ///     After calculation of the exponential back-off an additional random delay based on this
+    ///     factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.
+    /// </param>
+    /// <param name="maxRestarts">
+    ///     The amount of restarts is capped to this amount within a time frame of minBackoff. Passing
+    ///     `0` will cause no restarts and a negative number will not cap the amount of restarts.
+    /// </param>
+    [Obsolete("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
+    public static Flow<TIn, TOut, NotUsed> WithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory,
+        TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor, int maxRestarts)
     {
-        private readonly string _name;
-        private readonly RestartSettings _settings;
-        private readonly bool _onlyOnFailures;
-        
-        protected Inlet<TIn> In { get; }
-        protected Outlet<TOut> Out { get; }
+        var settings = RestartSettings.Create(minBackoff, maxBackoff, randomFactor)
+            .WithMaxRestarts(maxRestarts, minBackoff);
+        return WithBackoff(flowFactory, settings);
+    }
 
-        private int _restartCount;
-        private Deadline _resetDeadline;
+    /// <summary>
+    ///     Wrap the given <see cref="Flow" /> with a <see cref="Flow" /> that will restart it when it fails or complete using
+    ///     an exponential
+    ///     backoff.
+    ///     <para>
+    ///         This <see cref="Flow" /> will not cancel, complete or emit a failure, until the opposite end of it has been
+    ///         cancelled or
+    ///         completed.Any termination by the <see cref="Flow" /> before that time will be handled by restarting it. Any
+    ///         termination
+    ///         signals sent to this <see cref="Flow" /> however will terminate the wrapped <see cref="Flow" />, if it's
+    ///         running, and then the <see cref="Flow" />
+    ///         will be allowed to terminate without being restarted.
+    ///         The restart process is inherently lossy, since there is no coordination between cancelling and the sending of
+    ///         messages. A termination signal from either end of the wrapped <see cref="Flow" /> will cause the other end to
+    ///         be terminated,
+    ///         and any in transit messages will be lost. During backoff, this <see cref="Flow" /> will backpressure.
+    ///     </para>
+    ///     <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions" />.</para>
+    /// </summary>
+    /// <param name="flowFactory">A factory for producing the <see cref="Flow" />] to wrap.</param>
+    /// <param name="settings"><see cref="RestartSettings" /> defining restart configuration</param>
+    public static Flow<TIn, TOut, NotUsed> WithBackoff<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory,
+        RestartSettings settings)
+    {
+        return Flow.FromGraph(new RestartWithBackoffFlow<TIn, TOut, TMat>(flowFactory, settings, false));
+    }
 
-        // This is effectively only used for flows, if either the main inlet or outlet of this stage finishes, then we
-        // don't want to restart the sub inlet when it finishes, we just finish normally.
-        private bool _finishing;
+    /// <summary>
+    ///     Wrap the given <see cref="Flow" /> with a <see cref="Flow" /> that will restart it when it fails using an
+    ///     exponential
+    ///     backoff. Notice that this <see cref="Flow" /> will not restart on completion of the wrapped flow.
+    ///     <para>
+    ///         This <see cref="Flow" /> will not emit any failure
+    ///         The failures by the wrapped <see cref="Flow" /> will be handled by
+    ///         restarting the wrapping <see cref="Flow" /> as long as maxRestarts is not reached.
+    ///         Any termination signals sent to this <see cref="Flow" /> however will terminate the wrapped <see cref="Flow" />
+    ///         , if it's
+    ///         running, and then the <see cref="Flow" /> will be allowed to terminate without being restarted.
+    ///         The restart process is inherently lossy, since there is no coordination between cancelling and the sending of
+    ///         messages. A termination signal from either end of the wrapped <see cref="Flow" /> will cause the other end to
+    ///         be terminated,
+    ///         nd any in transit messages will be lost. During backoff, this <see cref="Flow" /> will backpressure.
+    ///     </para>
+    ///     <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions" />.</para>
+    /// </summary>
+    /// <param name="flowFactory">A factory for producing the <see cref="Flow" />] to wrap.</param>
+    /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
+    /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
+    /// <param name="randomFactor">
+    ///     After calculation of the exponential back-off an additional random delay based on this
+    ///     factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.
+    /// </param>
+    [Obsolete("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
+    public static Flow<TIn, TOut, NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(
+        Func<Flow<TIn, TOut, TMat>> flowFactory, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor)
+    {
+        var settings = RestartSettings.Create(minBackoff, maxBackoff, randomFactor);
+        return OnFailuresWithBackoff(flowFactory, settings);
+    }
 
-        protected RestartWithBackoffLogic(
-            string name,
-            TShape shape,
-            Inlet<TIn> inlet,
-            Outlet<TOut> outlet,
-            RestartSettings settings,
-            bool onlyOnFailures) : base(shape)
+    /// <summary>
+    ///     Wrap the given <see cref="Flow" /> with a <see cref="Flow" /> that will restart it when it fails using an
+    ///     exponential
+    ///     backoff. Notice that this <see cref="Flow" /> will not restart on completion of the wrapped flow.
+    ///     <para>
+    ///         This <see cref="Flow" /> will not emit any failure
+    ///         The failures by the wrapped <see cref="Flow" /> will be handled by
+    ///         restarting the wrapping <see cref="Flow" /> as long as maxRestarts is not reached.
+    ///         Any termination signals sent to this <see cref="Flow" /> however will terminate the wrapped <see cref="Flow" />
+    ///         , if it's
+    ///         running, and then the <see cref="Flow" /> will be allowed to terminate without being restarted.
+    ///         The restart process is inherently lossy, since there is no coordination between cancelling and the sending of
+    ///         messages. A termination signal from either end of the wrapped <see cref="Flow" /> will cause the other end to
+    ///         be terminated,
+    ///         nd any in transit messages will be lost. During backoff, this <see cref="Flow" /> will backpressure.
+    ///     </para>
+    ///     <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions" />.</para>
+    /// </summary>
+    /// <param name="flowFactory">A factory for producing the <see cref="Flow" />] to wrap.</param>
+    /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
+    /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
+    /// <param name="randomFactor">
+    ///     After calculation of the exponential back-off an additional random delay based on this
+    ///     factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.
+    /// </param>
+    /// <param name="maxRestarts">
+    ///     The amount of restarts is capped to this amount within a time frame of minBackoff. Passing
+    ///     `0` will cause no restarts and a negative number will not cap the amount of restarts.
+    /// </param>
+    [Obsolete("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
+    public static Flow<TIn, TOut, NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(
+        Func<Flow<TIn, TOut, TMat>> flowFactory, TimeSpan minBackoff, TimeSpan maxBackoff, double randomFactor,
+        int maxRestarts)
+    {
+        var settings = RestartSettings.Create(minBackoff, maxBackoff, randomFactor)
+            .WithMaxRestarts(maxRestarts, minBackoff);
+        return OnFailuresWithBackoff(flowFactory, settings);
+    }
+
+    /// <summary>
+    ///     Wrap the given <see cref="Flow" /> with a <see cref="Flow" /> that will restart it when it fails using an
+    ///     exponential
+    ///     backoff. Notice that this <see cref="Flow" /> will not restart on completion of the wrapped flow.
+    ///     <para>
+    ///         This <see cref="Flow" /> will not emit any failure
+    ///         The failures by the wrapped <see cref="Flow" /> will be handled by
+    ///         restarting the wrapping <see cref="Flow" /> as long as maxRestarts is not reached.
+    ///         Any termination signals sent to this <see cref="Flow" /> however will terminate the wrapped <see cref="Flow" />
+    ///         , if it's
+    ///         running, and then the <see cref="Flow" /> will be allowed to terminate without being restarted.
+    ///         The restart process is inherently lossy, since there is no coordination between cancelling and the sending of
+    ///         messages. A termination signal from either end of the wrapped <see cref="Flow" /> will cause the other end to
+    ///         be terminated,
+    ///         nd any in transit messages will be lost. During backoff, this <see cref="Flow" /> will backpressure.
+    ///     </para>
+    ///     <para>This uses the same exponential backoff algorithm as <see cref="BackoffOptions" />.</para>
+    /// </summary>
+    /// <param name="flowFactory">A factory for producing the <see cref="Flow" />] to wrap.</param>
+    /// <param name="settings"><see cref="RestartSettings" /> defining restart configuration</param>
+    public static Flow<TIn, TOut, NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(
+        Func<Flow<TIn, TOut, TMat>> flowFactory, RestartSettings settings)
+    {
+        return Flow.FromGraph(new RestartWithBackoffFlow<TIn, TOut, TMat>(flowFactory, settings, true));
+    }
+}
+
+internal sealed class RestartWithBackoffFlow<TIn, TOut, TMat> : GraphStage<FlowShape<TIn, TOut>>
+{
+    public RestartWithBackoffFlow(
+        Func<Flow<TIn, TOut, TMat>> flowFactory,
+        RestartSettings settings,
+        bool onlyOnFailures)
+    {
+        FlowFactory = flowFactory;
+        Settings = settings;
+        OnlyOnFailures = onlyOnFailures;
+        Shape = new FlowShape<TIn, TOut>(In, Out);
+    }
+
+    public Func<Flow<TIn, TOut, TMat>> FlowFactory { get; }
+    public RestartSettings Settings { get; }
+    public bool OnlyOnFailures { get; }
+
+    public Inlet<TIn> In { get; } = new("RestartWithBackoffFlow.in");
+
+    public Outlet<TOut> Out { get; } = new("RestartWithBackoffFlow.out");
+
+    public override FlowShape<TIn, TOut> Shape { get; }
+
+    protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+    {
+        return new Logic(this, inheritedAttributes, "Flow");
+    }
+
+    private sealed class Logic : RestartWithBackoffLogic<FlowShape<TIn, TOut>, TIn, TOut>
+    {
+        private readonly Attributes _inheritedAttributes;
+        private readonly RestartWithBackoffFlow<TIn, TOut, TMat> _stage;
+        private Tuple<SubSourceOutlet<TIn>, SubSinkInlet<TOut>> _activeOutIn;
+        private readonly TimeSpan _delay;
+
+        public Logic(RestartWithBackoffFlow<TIn, TOut, TMat> stage, Attributes inheritedAttributes, string name)
+            : base(name, stage.Shape, stage.In, stage.Out, stage.Settings, stage.OnlyOnFailures)
         {
-            _name = name;
-            _settings = settings;
-            _onlyOnFailures = onlyOnFailures;
-
-            _resetDeadline = settings.MaxRestartsWithin.FromNow();
-
-            In = inlet;
-            Out = outlet;
-        }
-
-        protected abstract void StartGraph();
-
-        protected abstract void Backoff();
-
-        protected SubSinkInlet<TOut> CreateSubInlet(Outlet<TOut> outlet)
-        {
-            var sinkIn = new SubSinkInlet<TOut>(this, $"RestartWithBackoff{_name}.subIn");
-
-            sinkIn.SetHandler(new LambdaInHandler(
-                onPush: () => Push(Out, sinkIn.Grab()),
-                onUpstreamFinish: () =>
-                {
-                    if (_finishing || MaxRestartsReached() || _onlyOnFailures)
-                        Complete(Out);
-                    else
-                    {
-                        ScheduleRestartTimer();
-                    }
-                },
-                /*
-                 * upstream in this context is the wrapped stage
-                 */
-                onUpstreamFailure: ex =>
-                {
-                    if (_finishing || MaxRestartsReached())
-                        Fail(Out, ex);
-                    else
-                    {
-                        Log.Warning(ex, "Restarting graph due to failure.");
-                        ScheduleRestartTimer();
-                    }
-                }));
-
-            SetHandler(Out,
-                onPull: () => sinkIn.Pull(),
-                onDownstreamFinish: cause =>
-                {
-                    _finishing = true;
-                    sinkIn.Cancel(cause);
-                });
-
-            return sinkIn;
-        }
-
-        protected SubSourceOutlet<TIn> CreateSubOutlet(Inlet<TIn> inlet)
-        {
-            var sourceOut = new SubSourceOutlet<TIn>(this, $"RestartWithBackoff{_name}.subOut");
-            sourceOut.SetHandler(new LambdaOutHandler(
-                onPull: () =>
-                {
-                    if (IsAvailable(In))
-                        sourceOut.Push(Grab(In));
-                    else
-                    {
-                        if (!HasBeenPulled(In))
-                            Pull(In);
-                    }
-                },
-                onDownstreamFinish: cause =>
-                {
-                    if (_finishing || MaxRestartsReached() || _onlyOnFailures)
-                        Cancel(In, cause);
-                    else
-                    {
-                        ScheduleRestartTimer();
-                    }
-                }
-            ));
-
-            SetHandler(In,
-                onPush: () =>
-                {
-                    if (sourceOut.IsAvailable)
-                        sourceOut.Push(Grab(In));
-                },
-                onUpstreamFinish: () =>
-                {
-                    _finishing = true;
-                    sourceOut.Complete();
-                },
-                onUpstreamFailure: ex =>
-                {
-                    _finishing = true;
-                    sourceOut.Fail(ex);
-                });
-
-            return sourceOut;
-        }
-
-        internal bool MaxRestartsReached()
-        {
-            // Check if the last start attempt was more than the reset deadline
-            if (_resetDeadline.IsOverdue)
-            {
-                Log.Debug("Last restart attempt was more than {0} ago, resetting restart count", _settings.MaxRestartsWithin);
-                _restartCount = 0;
-            }
-            return _restartCount == _settings.MaxRestarts;
-        }
-
-        /// <summary>
-        /// Set a timer to restart after the calculated delay
-        /// </summary>
-        internal void ScheduleRestartTimer()
-        {
-            var restartDelay = BackoffSupervisor.CalculateDelay(_restartCount, _settings.MinBackoff, _settings.MaxBackoff, _settings.RandomFactor);
-            Log.Debug("Restarting graph in {0}", restartDelay);
-            ScheduleOnce("RestartTimer", restartDelay);
-            _restartCount += 1;
-            // And while we wait, we go into backoff mode
+            _inheritedAttributes = inheritedAttributes;
+            _delay = _inheritedAttributes.GetAttribute(new RestartWithBackoffFlow.Delay(TimeSpan.FromMilliseconds(50)))
+                .Duration;
+            _stage = stage;
             Backoff();
         }
 
-        /// <summary>
-        /// Invoked when the backoff timer ticks
-        /// </summary>
-        protected internal override void OnTimer(object timerKey)
+        protected override void StartGraph()
         {
-            StartGraph();
-            _resetDeadline = _settings.MaxRestartsWithin.FromNow();
+            var sourceOut = CreateSubOutlet(_stage.In);
+            var sinkIn = CreateSubInlet(_stage.Out);
+
+            var graph = Source.FromGraph(sourceOut.Source)
+                //temp fix becaues the proper fix would be to have a concept of cause of cancellation. See https://github.com/akka/akka/pull/23909
+                //TODO register issue to track this
+                .Via(DelayCancellation<TIn>(_delay))
+                .Via(_stage.FlowFactory())
+                .To(sinkIn.Sink);
+            SubFusingMaterializer.Materialize(graph, _inheritedAttributes);
+
+            if (IsAvailable(_stage.Out))
+                sinkIn.Pull();
+
+            _activeOutIn = Tuple.Create(sourceOut, sinkIn);
         }
 
-        /// <summary>
-        /// When the stage starts, start the source
-        /// </summary>
-        public override void PreStart() => StartGraph();
+        protected override void Backoff()
+        {
+            SetHandler(_stage.In, () =>
+            {
+                // do nothing
+            });
+            SetHandler(_stage.Out, () =>
+            {
+                // do nothing
+            });
+
+            // We need to ensure that the other end of the sub flow is also completed, so that we don't
+            // receive any callbacks from it.
+            if (_activeOutIn != null)
+            {
+                var sourceOut = _activeOutIn.Item1;
+                var sinkIn = _activeOutIn.Item2;
+                if (!sourceOut.IsClosed)
+                    sourceOut.Complete();
+
+                if (!sinkIn.IsClosed)
+                    sinkIn.Cancel();
+                _activeOutIn = null;
+            }
+        }
+
+        private Flow<T, T, NotUsed> DelayCancellation<T>(TimeSpan duration)
+        {
+            return Flow.FromGraph(new DelayCancellationStage<T>(duration));
+        }
     }
-    
-    public class RestartWithBackoffFlow {
+}
+
+/// <summary>
+///     Shared logic for all restart with backoff logics.
+/// </summary>
+internal abstract class RestartWithBackoffLogic<TShape, TIn, TOut> : TimerGraphStageLogic where TShape : Shape
+{
+    private readonly string _name;
+    private readonly bool _onlyOnFailures;
+    private readonly RestartSettings _settings;
+
+    // This is effectively only used for flows, if either the main inlet or outlet of this stage finishes, then we
+    // don't want to restart the sub inlet when it finishes, we just finish normally.
+    private bool _finishing;
+    private Deadline _resetDeadline;
+
+    private int _restartCount;
+
+    protected RestartWithBackoffLogic(
+        string name,
+        TShape shape,
+        Inlet<TIn> inlet,
+        Outlet<TOut> outlet,
+        RestartSettings settings,
+        bool onlyOnFailures) : base(shape)
+    {
+        _name = name;
+        _settings = settings;
+        _onlyOnFailures = onlyOnFailures;
+
+        _resetDeadline = settings.MaxRestartsWithin.FromNow();
+
+        In = inlet;
+        Out = outlet;
+    }
+
+    protected Inlet<TIn> In { get; }
+    protected Outlet<TOut> Out { get; }
+
+    protected abstract void StartGraph();
+
+    protected abstract void Backoff();
+
+    protected SubSinkInlet<TOut> CreateSubInlet(Outlet<TOut> outlet)
+    {
+        var sinkIn = new SubSinkInlet<TOut>(this, $"RestartWithBackoff{_name}.subIn");
+
+        sinkIn.SetHandler(new LambdaInHandler(
+            () => Push(Out, sinkIn.Grab()),
+            () =>
+            {
+                if (_finishing || MaxRestartsReached() || _onlyOnFailures)
+                    Complete(Out);
+                else
+                    ScheduleRestartTimer();
+            },
+            /*
+             * upstream in this context is the wrapped stage
+             */
+            ex =>
+            {
+                if (_finishing || MaxRestartsReached())
+                {
+                    Fail(Out, ex);
+                }
+                else
+                {
+                    Log.Warning(ex, "Restarting graph due to failure.");
+                    ScheduleRestartTimer();
+                }
+            }));
+
+        SetHandler(Out,
+            () => sinkIn.Pull(),
+            cause =>
+            {
+                _finishing = true;
+                sinkIn.Cancel(cause);
+            });
+
+        return sinkIn;
+    }
+
+    protected SubSourceOutlet<TIn> CreateSubOutlet(Inlet<TIn> inlet)
+    {
+        var sourceOut = new SubSourceOutlet<TIn>(this, $"RestartWithBackoff{_name}.subOut");
+        sourceOut.SetHandler(new LambdaOutHandler(
+            () =>
+            {
+                if (IsAvailable(In))
+                {
+                    sourceOut.Push(Grab(In));
+                }
+                else
+                {
+                    if (!HasBeenPulled(In))
+                        Pull(In);
+                }
+            },
+            cause =>
+            {
+                if (_finishing || MaxRestartsReached() || _onlyOnFailures)
+                    Cancel(In, cause);
+                else
+                    ScheduleRestartTimer();
+            }
+        ));
+
+        SetHandler(In,
+            () =>
+            {
+                if (sourceOut.IsAvailable)
+                    sourceOut.Push(Grab(In));
+            },
+            () =>
+            {
+                _finishing = true;
+                sourceOut.Complete();
+            },
+            ex =>
+            {
+                _finishing = true;
+                sourceOut.Fail(ex);
+            });
+
+        return sourceOut;
+    }
+
+    internal bool MaxRestartsReached()
+    {
+        // Check if the last start attempt was more than the reset deadline
+        if (_resetDeadline.IsOverdue)
+        {
+            Log.Debug("Last restart attempt was more than {0} ago, resetting restart count",
+                _settings.MaxRestartsWithin);
+            _restartCount = 0;
+        }
+
+        return _restartCount == _settings.MaxRestarts;
+    }
+
     /// <summary>
-    /// Temporary attribute that can override the time a [[RestartWithBackoffFlow]] waits
-    /// for a failure before cancelling.
-    /// See https://github.com/akka/akka/issues/24529
-    /// Should be removed if/when cancellation can include a cause.
+    ///     Set a timer to restart after the calculated delay
+    /// </summary>
+    internal void ScheduleRestartTimer()
+    {
+        var restartDelay = BackoffSupervisor.CalculateDelay(_restartCount, _settings.MinBackoff, _settings.MaxBackoff,
+            _settings.RandomFactor);
+        Log.Debug("Restarting graph in {0}", restartDelay);
+        ScheduleOnce("RestartTimer", restartDelay);
+        _restartCount += 1;
+        // And while we wait, we go into backoff mode
+        Backoff();
+    }
+
+    /// <summary>
+    ///     Invoked when the backoff timer ticks
+    /// </summary>
+    protected internal override void OnTimer(object timerKey)
+    {
+        StartGraph();
+        _resetDeadline = _settings.MaxRestartsWithin.FromNow();
+    }
+
+    /// <summary>
+    ///     When the stage starts, start the source
+    /// </summary>
+    public override void PreStart()
+    {
+        StartGraph();
+    }
+}
+
+public class RestartWithBackoffFlow
+{
+    /// <summary>
+    ///     Temporary attribute that can override the time a [[RestartWithBackoffFlow]] waits
+    ///     for a failure before cancelling.
+    ///     See https://github.com/akka/akka/issues/24529
+    ///     Should be removed if/when cancellation can include a cause.
     /// </summary>
     public class Delay : Attributes.IAttribute, IEquatable<Delay>
     {
         /// <summary>
-        /// Delay duration
+        ///     Delay duration
         /// </summary>
         public readonly TimeSpan Duration;
 
@@ -440,87 +509,110 @@ namespace Akka.Streams.Dsl
         {
             Duration = duration;
         }
-            
-        
-        public bool Equals(Delay other) => !ReferenceEquals(other, null) && Equals(Duration, other.Duration);
 
-       
-        public override bool Equals(object obj) => obj is Delay delay && Equals(delay);
 
-       
-        public override int GetHashCode() => Duration.GetHashCode();
-
-       
-        public override string ToString() => $"Duration({Duration})";
-    }
-    }
-
-    /// <summary>
-    /// Returns a flow that is almost identical but delays propagation of cancellation from downstream to upstream.
-    /// Once the down stream is finished calls to onPush are ignored
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    internal sealed class DelayCancellationStage<T> : SimpleLinearGraphStage<T>
-    {
-        private readonly TimeSpan _delay;
-
-        public DelayCancellationStage(TimeSpan delay, string name = null) : base(name)
+        public bool Equals(Delay other)
         {
-            _delay = delay;
+            return !ReferenceEquals(other, null) && Equals(Duration, other.Duration);
         }
-        
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
-        
-        private sealed class Logic : TimerGraphStageLogic
+
+
+        public override bool Equals(object obj)
         {
-            private readonly DelayCancellationStage<T> _stage;
-            private Option<Exception> _cause = Option<Exception>.None;
+            return obj is Delay delay && Equals(delay);
+        }
 
-            public Logic(DelayCancellationStage<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
-            {
-                _stage = stage;
-                
-                SetHandler(stage.Inlet, onPush: () => Push(stage.Outlet, Grab(stage.Inlet)));
 
-                SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet), onDownstreamFinish: OnDownStreamFinished );
-            }
-            
-            /// <summary>
-            /// We should really. port the Cause parameter functionality for the OnDownStreamFinished delegate
-            /// </summary>
-            private void OnDownStreamFinished(Exception cause)
-            {
-                _cause = cause;
-                ScheduleOnce("CompleteState", _stage._delay);
-                SetHandler(_stage.Inlet, onPush:DoNothing);
-            }
+        public override int GetHashCode()
+        {
+            return Duration.GetHashCode();
+        }
 
-            protected internal override void OnTimer(object timerKey)
-            {
-                Log.Debug($"Stage was cancelled after delay of {_stage._delay}");
-                if(_cause.HasValue)
-                    CancelStage(_cause.Value);
-                else
-                    throw new IllegalStateException("Timer hitting without first getting a cancel cannot happen");
-            }
+
+        public override string ToString()
+        {
+            return $"Duration({Duration})";
         }
     }
-    
-    internal sealed class Deadline
+}
+
+/// <summary>
+///     Returns a flow that is almost identical but delays propagation of cancellation from downstream to upstream.
+///     Once the down stream is finished calls to onPush are ignored
+/// </summary>
+/// <typeparam name="T"></typeparam>
+internal sealed class DelayCancellationStage<T> : SimpleLinearGraphStage<T>
+{
+    private readonly TimeSpan _delay;
+
+    public DelayCancellationStage(TimeSpan delay, string name = null) : base(name)
     {
-        public Deadline(TimeSpan time) => Time = time;
-
-        public TimeSpan Time { get; }
-
-        public bool IsOverdue => Time.Ticks - DateTime.UtcNow.Ticks < 0;
-
-        public static Deadline Now => new(new TimeSpan(DateTime.UtcNow.Ticks));
-
-        public static Deadline operator +(Deadline deadline, TimeSpan duration) => new(deadline.Time.Add(duration));
+        _delay = delay;
     }
 
-    internal static class DeadlineExtensions
+    protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
     {
-        public static Deadline FromNow(this TimeSpan timespan) => Deadline.Now + timespan;
+        return new Logic(this, inheritedAttributes);
+    }
+
+    private sealed class Logic : TimerGraphStageLogic
+    {
+        private readonly DelayCancellationStage<T> _stage;
+        private Option<Exception> _cause = Option<Exception>.None;
+
+        public Logic(DelayCancellationStage<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
+        {
+            _stage = stage;
+
+            SetHandler(stage.Inlet, () => Push(stage.Outlet, Grab(stage.Inlet)));
+
+            SetHandler(stage.Outlet, () => Pull(stage.Inlet), OnDownStreamFinished);
+        }
+
+        /// <summary>
+        ///     We should really. port the Cause parameter functionality for the OnDownStreamFinished delegate
+        /// </summary>
+        private void OnDownStreamFinished(Exception cause)
+        {
+            _cause = cause;
+            ScheduleOnce("CompleteState", _stage._delay);
+            SetHandler(_stage.Inlet, DoNothing);
+        }
+
+        protected internal override void OnTimer(object timerKey)
+        {
+            Log.Debug($"Stage was cancelled after delay of {_stage._delay}");
+            if (_cause.HasValue)
+                CancelStage(_cause.Value);
+            else
+                throw new IllegalStateException("Timer hitting without first getting a cancel cannot happen");
+        }
+    }
+}
+
+internal sealed class Deadline
+{
+    public Deadline(TimeSpan time)
+    {
+        Time = time;
+    }
+
+    public TimeSpan Time { get; }
+
+    public bool IsOverdue => Time.Ticks - DateTime.UtcNow.Ticks < 0;
+
+    public static Deadline Now => new(new TimeSpan(DateTime.UtcNow.Ticks));
+
+    public static Deadline operator +(Deadline deadline, TimeSpan duration)
+    {
+        return new Deadline(deadline.Time.Add(duration));
+    }
+}
+
+internal static class DeadlineExtensions
+{
+    public static Deadline FromNow(this TimeSpan timespan)
+    {
+        return Deadline.Now + timespan;
     }
 }

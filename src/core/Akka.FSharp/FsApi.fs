@@ -351,7 +351,6 @@ module Logging =
 
 module Linq = 
     open System.Linq.Expressions
-    open Microsoft.FSharp.Linq
     
     let (|Lambda|_|) (e : Expression) = 
         match e with

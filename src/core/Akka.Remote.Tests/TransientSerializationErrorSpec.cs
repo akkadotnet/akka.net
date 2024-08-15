@@ -1,150 +1,38 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TransientSerializationErrorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="TransientSerializationErrorSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
-using Akka.Actor;
-using Akka.Configuration;
-using Akka.TestKit;
-using Xunit;
-using Akka.Serialization;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Configuration;
+using Akka.Serialization;
+using Akka.TestKit;
+using Xunit;
 
-namespace Akka.Remote.Tests
+namespace Akka.Remote.Tests;
+
+public abstract class AbstractTransientSerializationErrorSpec : AkkaSpec
 {
+    private readonly ActorSystem _system2;
+    private readonly Address _system2Address;
 
-    public abstract class AbstractTransientSerializationErrorSpec : AkkaSpec
+    protected AbstractTransientSerializationErrorSpec(Config config)
+        : base(config.WithFallback(ConfigurationFactory.ParseString(GetConfig())))
     {
-        internal class ManifestNotSerializable
-        {
-            public static readonly ManifestNotSerializable Instance = new();
+        var port = ((ExtendedActorSystem)Sys).Provider.DefaultAddress.Port;
 
-            private ManifestNotSerializable() { }
-        }
+        _system2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+        _system2Address = ((ExtendedActorSystem)_system2).Provider.DefaultAddress;
+    }
 
-        internal class ManifestIllegal
-        {
-            public static readonly ManifestIllegal Instance = new();
-
-            private ManifestIllegal() { }
-        }
-
-        internal class ToBinaryNotSerializable
-        {
-            public static readonly ToBinaryNotSerializable Instance = new();
-
-            private ToBinaryNotSerializable() { }
-        }
-
-        internal class ToBinaryIllegal
-        {
-            public static readonly ToBinaryIllegal Instance = new();
-
-            private ToBinaryIllegal() { }
-        }
-
-        internal class NotDeserializable
-        {
-            public static readonly NotDeserializable Instance = new();
-
-            private NotDeserializable() { }
-        }
-
-        internal class IllegalOnDeserialize
-        {
-            public static readonly IllegalOnDeserialize Instance = new();
-
-            private IllegalOnDeserialize() { }
-        }
-
-        internal class TestSerializer : SerializerWithStringManifest
-        {
-            public override int Identifier => 666;
-
-            public TestSerializer(ExtendedActorSystem system)
-                : base(system)
-            {
-            }
-
-            public override string Manifest(object o)
-            {
-                switch (o)
-                {
-                    case ManifestNotSerializable _:
-                        throw new SerializationException();
-                    case ManifestIllegal _:
-                        throw new ArgumentException();
-                    case ToBinaryNotSerializable _:
-                        return "TBNS";
-                    case ToBinaryIllegal _:
-                        return "TI";
-                    case NotDeserializable _:
-                        return "ND";
-                    case IllegalOnDeserialize _:
-                        return "IOD";
-                }
-                throw new InvalidOperationException();
-            }
-
-            public override object FromBinary(byte[] bytes, string manifest)
-            {
-                switch (manifest)
-                {
-                    case "ND":
-                        throw new SerializationException();
-                    case "IOD":
-                        throw new ArgumentException();
-                }
-                throw new InvalidOperationException();
-            }
-
-            public override byte[] ToBinary(object obj)
-            {
-                switch (obj)
-                {
-                    case ToBinaryNotSerializable _:
-                        throw new SerializationException();
-                    case ToBinaryIllegal _:
-                        throw new ArgumentException();
-                    default:
-                        return Array.Empty<byte>();
-                }
-            }
-        }
-
-        private class EchoActor : ActorBase
-        {
-            public static Props Props()
-            {
-                return Actor.Props.Create(() => new EchoActor());
-            }
-
-            protected override bool Receive(object message)
-            {
-                Sender.Tell(message);
-                return true;
-            }
-        }
-
-        private readonly ActorSystem _system2;
-        private readonly Address _system2Address;
-
-        protected AbstractTransientSerializationErrorSpec(Config config)
-            : base(config.WithFallback(ConfigurationFactory.ParseString(GetConfig())))
-        {
-            var port = ((ExtendedActorSystem)Sys).Provider.DefaultAddress.Port;
-
-            _system2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
-            _system2Address = ((ExtendedActorSystem)_system2).Provider.DefaultAddress;
-        }
-
-        private static string GetConfig()
-        {
-            return @"
+    private static string GetConfig()
+    {
+        return @"
             akka {
                 loglevel = info
                 actor {
@@ -166,52 +54,173 @@ namespace Akka.Remote.Tests
                 }
             }
             ";
-        }
+    }
 
-        protected override void AfterAll()
-        {
-            base.AfterAll();
-            Shutdown(_system2);
-        }
-
-
-        [Fact]
-        public async Task The_transport_must_stay_alive_after_a_transient_exception_from_the_serializer()
-        {
-            _system2.ActorOf(EchoActor.Props(), "echo");
-
-            var selection = Sys.ActorSelection(new RootActorPath(_system2Address) / "user" / "echo");
-
-            selection.Tell("ping", this.TestActor);
-            await ExpectMsgAsync("ping");
-
-            // none of these should tear down the connection
-            selection.Tell(ManifestIllegal.Instance, this.TestActor);
-            selection.Tell(ManifestNotSerializable.Instance, this.TestActor);
-            selection.Tell(ToBinaryIllegal.Instance, this.TestActor);
-            selection.Tell(ToBinaryNotSerializable.Instance, this.TestActor);
-            selection.Tell(NotDeserializable.Instance, this.TestActor);
-            selection.Tell(IllegalOnDeserialize.Instance, this.TestActor);
-
-            // make sure we still have a connection
-            selection.Tell("ping", this.TestActor);
-            await ExpectMsgAsync("ping");
-        }
+    protected override void AfterAll()
+    {
+        base.AfterAll();
+        Shutdown(_system2);
     }
 
 
-
-    public class TransientSerializationErrorSpec : AbstractTransientSerializationErrorSpec
+    [Fact]
+    public async Task The_transport_must_stay_alive_after_a_transient_exception_from_the_serializer()
     {
-        public TransientSerializationErrorSpec()
-            : base(ConfigurationFactory.ParseString(@"
+        _system2.ActorOf(EchoActor.Props(), "echo");
+
+        var selection = Sys.ActorSelection(new RootActorPath(_system2Address) / "user" / "echo");
+
+        selection.Tell("ping", TestActor);
+        await ExpectMsgAsync("ping");
+
+        // none of these should tear down the connection
+        selection.Tell(ManifestIllegal.Instance, TestActor);
+        selection.Tell(ManifestNotSerializable.Instance, TestActor);
+        selection.Tell(ToBinaryIllegal.Instance, TestActor);
+        selection.Tell(ToBinaryNotSerializable.Instance, TestActor);
+        selection.Tell(NotDeserializable.Instance, TestActor);
+        selection.Tell(IllegalOnDeserialize.Instance, TestActor);
+
+        // make sure we still have a connection
+        selection.Tell("ping", TestActor);
+        await ExpectMsgAsync("ping");
+    }
+
+    internal class ManifestNotSerializable
+    {
+        public static readonly ManifestNotSerializable Instance = new();
+
+        private ManifestNotSerializable()
+        {
+        }
+    }
+
+    internal class ManifestIllegal
+    {
+        public static readonly ManifestIllegal Instance = new();
+
+        private ManifestIllegal()
+        {
+        }
+    }
+
+    internal class ToBinaryNotSerializable
+    {
+        public static readonly ToBinaryNotSerializable Instance = new();
+
+        private ToBinaryNotSerializable()
+        {
+        }
+    }
+
+    internal class ToBinaryIllegal
+    {
+        public static readonly ToBinaryIllegal Instance = new();
+
+        private ToBinaryIllegal()
+        {
+        }
+    }
+
+    internal class NotDeserializable
+    {
+        public static readonly NotDeserializable Instance = new();
+
+        private NotDeserializable()
+        {
+        }
+    }
+
+    internal class IllegalOnDeserialize
+    {
+        public static readonly IllegalOnDeserialize Instance = new();
+
+        private IllegalOnDeserialize()
+        {
+        }
+    }
+
+    internal class TestSerializer : SerializerWithStringManifest
+    {
+        public TestSerializer(ExtendedActorSystem system)
+            : base(system)
+        {
+        }
+
+        public override int Identifier => 666;
+
+        public override string Manifest(object o)
+        {
+            switch (o)
+            {
+                case ManifestNotSerializable _:
+                    throw new SerializationException();
+                case ManifestIllegal _:
+                    throw new ArgumentException();
+                case ToBinaryNotSerializable _:
+                    return "TBNS";
+                case ToBinaryIllegal _:
+                    return "TI";
+                case NotDeserializable _:
+                    return "ND";
+                case IllegalOnDeserialize _:
+                    return "IOD";
+            }
+
+            throw new InvalidOperationException();
+        }
+
+        public override object FromBinary(byte[] bytes, string manifest)
+        {
+            switch (manifest)
+            {
+                case "ND":
+                    throw new SerializationException();
+                case "IOD":
+                    throw new ArgumentException();
+            }
+
+            throw new InvalidOperationException();
+        }
+
+        public override byte[] ToBinary(object obj)
+        {
+            switch (obj)
+            {
+                case ToBinaryNotSerializable _:
+                    throw new SerializationException();
+                case ToBinaryIllegal _:
+                    throw new ArgumentException();
+                default:
+                    return Array.Empty<byte>();
+            }
+        }
+    }
+
+    private class EchoActor : ActorBase
+    {
+        public static Props Props()
+        {
+            return Actor.Props.Create(() => new EchoActor());
+        }
+
+        protected override bool Receive(object message)
+        {
+            Sender.Tell(message);
+            return true;
+        }
+    }
+}
+
+public class TransientSerializationErrorSpec : AbstractTransientSerializationErrorSpec
+{
+    public TransientSerializationErrorSpec()
+        : base(ConfigurationFactory.ParseString(@"
                 akka.remote.dot-netty.tcp {
                     hostname = localhost
                     port = 0
                 }
                 "))
-        {
-        }
+    {
     }
 }
-

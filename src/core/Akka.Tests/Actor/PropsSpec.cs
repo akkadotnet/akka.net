@@ -1,117 +1,112 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="PropsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="PropsSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using Akka.Actor;
-using Akka.TestKit;
 using System;
 using System.Linq;
+using Akka.Actor;
+using Akka.TestKit;
 using Xunit;
 
-namespace Akka.Tests.Actor
+namespace Akka.Tests.Actor;
+
+public class PropsSpec : AkkaSpec
 {
-    public class PropsSpec : AkkaSpec
+    [Fact]
+    public void Props_must_create_actor_from_type()
     {
-        [Fact]
-        public void Props_must_create_actor_from_type()
+        var props = Props.Create<PropsTestActor>();
+        var actor = new TestActorRef<PropsTestActor>(Sys, props);
+        Assert.IsType<PropsTestActor>(actor.UnderlyingActor);
+    }
+
+    [Fact]
+    public void Props_must_create_actor_by_expression()
+    {
+        var props = Props.Create(() => new PropsTestActor());
+        var actor = Sys.ActorOf(props);
+        Assert.NotNull(actor);
+    }
+
+    [Fact]
+    public void Props_must_create_actor_by_producer()
+    {
+        var latchProducer = new TestLatch();
+        var latchActor = new TestLatch();
+        var props = Props.CreateBy(new TestProducer(latchProducer, latchActor));
+        var actor = Sys.ActorOf(props);
+        latchActor.Ready(TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void Props_created_without_strategy_must_have_it_null()
+    {
+        var props = Props.Create(() => new PropsTestActor());
+        Assert.Null(props.SupervisorStrategy);
+    }
+
+    [Fact]
+    public void Props_created_with_strategy_must_have_it_set()
+    {
+        var strategy = new OneForOneStrategy(_ => Directive.Stop);
+        var props = Props.Create(() => new PropsTestActor(), strategy);
+
+        Assert.Equal(strategy, props.SupervisorStrategy);
+    }
+
+    [Fact]
+    public void Props_created_with_null_type_must_throw()
+    {
+        Type missingType = null;
+        var args = Array.Empty<object>();
+        var argsEnumerable = Enumerable.Empty<object>();
+        var defaultStrategy = SupervisorStrategy.DefaultStrategy;
+        var defaultDeploy = Deploy.Local;
+
+        Props p = null;
+
+        Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, args));
+        Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType));
+        Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, defaultStrategy, argsEnumerable));
+        Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, defaultStrategy, args));
+        Assert.Throws<ArgumentNullException>("type", () => p = new Props(defaultDeploy, missingType, argsEnumerable));
+        Assert.Throws<ArgumentNullException>("type", () => p = Props.Create(missingType, args));
+    }
+
+    private class TestProducer : IIndirectActorProducer
+    {
+        private readonly TestLatch latchActor;
+
+        public TestProducer(TestLatch lp, TestLatch la)
         {
-            var props = Props.Create<PropsTestActor>();
-            TestActorRef<PropsTestActor> actor = new TestActorRef<PropsTestActor>(Sys, props);
-            Assert.IsType<PropsTestActor>(actor.UnderlyingActor);
+            latchActor = la;
+            lp.Reset();
+            lp.CountDown();
         }
 
-        [Fact]
-        public void Props_must_create_actor_by_expression()
+        public ActorBase Produce()
         {
-            var props = Props.Create(() => new PropsTestActor());
-            IActorRef actor = Sys.ActorOf(props);
-            Assert.NotNull(actor);
+            latchActor.CountDown();
+            return new PropsTestActor();
         }
 
-        [Fact]
-        public void Props_must_create_actor_by_producer()
+        public Type ActorType => typeof(PropsTestActor);
+
+
+        public void Release(ActorBase actor)
         {
-            TestLatch latchProducer = new TestLatch();
-            TestLatch latchActor = new TestLatch();
-            var props = Props.CreateBy(new TestProducer(latchProducer, latchActor));
-            IActorRef actor = Sys.ActorOf(props);
-            latchActor.Ready(TimeSpan.FromSeconds(1));
+            actor = null;
         }
+    }
 
-        [Fact]
-        public void Props_created_without_strategy_must_have_it_null()
+    private class PropsTestActor : ActorBase
+    {
+        protected override bool Receive(object message)
         {
-            var props = Props.Create(() => new PropsTestActor());
-            Assert.Null(props.SupervisorStrategy);
-        }
-
-        [Fact]
-        public void Props_created_with_strategy_must_have_it_set()
-        {
-            var strategy = new OneForOneStrategy(_ => Directive.Stop);
-            var props = Props.Create(() => new PropsTestActor(), strategy);
-
-            Assert.Equal(strategy, props.SupervisorStrategy);
-        }
-
-        [Fact]
-        public void Props_created_with_null_type_must_throw()
-        {
-            Type missingType = null;
-            object[] args = Array.Empty<object>();
-            var argsEnumerable = Enumerable.Empty<object>();
-            var defaultStrategy = SupervisorStrategy.DefaultStrategy;
-            var defaultDeploy = Deploy.Local;
-
-            Props p = null;
-
-            Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, args));
-            Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType));
-            Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, defaultStrategy, argsEnumerable));
-            Assert.Throws<ArgumentNullException>("type", () => p = new Props(missingType, defaultStrategy, args));
-            Assert.Throws<ArgumentNullException>("type", () => p = new Props(defaultDeploy, missingType, argsEnumerable));
-            Assert.Throws<ArgumentNullException>("type", () => p = Props.Create(missingType, args));
-        }
-        
-        private class TestProducer : IIndirectActorProducer
-        {
-            TestLatch latchActor;
-
-            public TestProducer(TestLatch lp, TestLatch la)
-            {
-                latchActor = la;
-                lp.Reset();
-                lp.CountDown();
-            }
-
-            public ActorBase Produce()
-            {
-                latchActor.CountDown();
-                return new PropsTestActor();
-            }
-
-            public Type ActorType
-            {
-                get { return typeof(PropsTestActor); }
-            }
-
-
-            public void Release(ActorBase actor)
-            {
-                actor = null;
-            }
-        }
-
-        private class PropsTestActor : ActorBase
-        {
-            protected override bool Receive(object message)
-            {
-                return true;
-            }
+            return true;
         }
     }
 }
-

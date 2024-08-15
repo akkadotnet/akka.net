@@ -1,36 +1,35 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ITimeProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ITimeProvider.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 
-namespace Akka.Actor
+namespace Akka.Actor;
+
+/// <summary>
+///     Time provider used by the scheduler to obtain the current time.
+/// </summary>
+/// <remarks>
+///     Intended to be customizable to we can virtualize time for testing purposes.
+///     In the future we will drop this in favor of the time provider built into .NET 8 and later.
+/// </remarks>
+public interface ITimeProvider
 {
     /// <summary>
-    /// Time provider used by the scheduler to obtain the current time.
+    ///     Gets the scheduler's notion of current time.
     /// </summary>
-    /// <remarks>
-    /// Intended to be customizable to we can virtualize time for testing purposes.
-    ///
-    /// In the future we will drop this in favor of the time provider built into .NET 8 and later.
-    /// </remarks>
-    public interface ITimeProvider
-    {
-        /// <summary>
-        /// Gets the scheduler's notion of current time.
-        /// </summary>
-        DateTimeOffset Now { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        TimeSpan MonotonicClock { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        TimeSpan HighResMonotonicClock { get; }
-    }
-}
+    DateTimeOffset Now { get; }
 
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    TimeSpan MonotonicClock { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    TimeSpan HighResMonotonicClock { get; }
+}

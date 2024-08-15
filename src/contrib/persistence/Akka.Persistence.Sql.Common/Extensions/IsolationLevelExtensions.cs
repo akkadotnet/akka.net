@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="HoconExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="IsolationLevelExtensions.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Data;
 using System.Runtime.CompilerServices;
@@ -15,15 +15,19 @@ namespace Akka.Persistence.Sql.Common.Extensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IsolationLevel GetIsolationLevel(this Config config, string key)
-            => config.GetString(key).ToIsolationLevel();
-        
+        {
+            return config.GetString(key).ToIsolationLevel();
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static IsolationLevel ToIsolationLevel(this string level)
-            => level switch
+        {
+            return level switch
             {
                 null => IsolationLevel.Unspecified,
                 "chaos" => // IsolationLevel.Chaos,
-                    throw new ConfigurationException($"{nameof(IsolationLevel)}.{IsolationLevel.Chaos} is not supported."),
+                    throw new ConfigurationException(
+                        $"{nameof(IsolationLevel)}.{IsolationLevel.Chaos} is not supported."),
                 "read-committed" => IsolationLevel.ReadCommitted,
                 "read-uncommitted" => IsolationLevel.ReadUncommitted,
                 "repeatable-read" => IsolationLevel.RepeatableRead,
@@ -33,6 +37,6 @@ namespace Akka.Persistence.Sql.Common.Extensions
                 _ => throw new ConfigurationException(
                     "Unknown isolation-level value. Should be one of: read-committed | read-uncommitted | repeatable-read | serializable | snapshot | unspecified")
             };
-        
+        }
     }
 }

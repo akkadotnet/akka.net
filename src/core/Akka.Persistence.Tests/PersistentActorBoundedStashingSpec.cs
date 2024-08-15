@@ -1,14 +1,13 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="PersistentActorBoundedStashingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="PersistentActorBoundedStashingSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-namespace Akka.Persistence.Tests
+namespace Akka.Persistence.Tests;
+
+public class PersistentActorBoundedStashingSpec
 {
-    public class PersistentActorBoundedStashingSpec
-    {
-         // TODO after bounded stash support is added
-    }
+    // TODO after bounded stash support is added
 }

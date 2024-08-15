@@ -1,102 +1,102 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="CounterActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="CounterActor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
+using System;
+using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Event;
+using Akka.TestKit;
+using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.TestKit.Tests
+namespace Akka.Persistence.TestKit.Tests;
+
+public class CounterActor : UntypedPersistentActor
 {
-    using System;
-    using System.Threading.Tasks;
-    using Actor;
-    using Akka.TestKit;
-    using Xunit;
+    private readonly ILoggingAdapter _log = Context.GetLogger();
 
-    public class CounterActor : UntypedPersistentActor
+    private int _value;
+
+    public CounterActor(string id)
     {
-        private readonly ILoggingAdapter _log = Context.GetLogger();
-        
-        public CounterActor(string id)
+        PersistenceId = id;
+    }
+
+    public override string PersistenceId { get; }
+
+    protected override void OnCommand(object message)
+    {
+        _log.Info("Received command {0}", message);
+
+        switch (message as string)
         {
-            PersistenceId = id;
-        }
+            case "inc":
+                _value++;
+                Persist(message, _ => { });
+                break;
 
-        private int _value = 0;
+            case "dec":
+                _value++;
+                Persist(message, _ => { });
+                break;
 
-        public override string PersistenceId { get; }
+            case "read":
+                Sender.Tell(_value, Self);
+                break;
 
-        protected override void OnCommand(object message)
-        {
-            _log.Info("Received command {0}", message);
-            
-            switch (message as string)
-            {
-                case "inc":
-                    _value++;
-                    Persist(message, _ => { });
-                    break;
-
-                case "dec":
-                    _value++;
-                    Persist(message, _ => { });
-                    break;
-
-                case "read":
-                    Sender.Tell(_value, Self);
-                    break;
-
-                default:
-                    return;
-            }
-        }
-
-        protected override void OnRecover(object message)
-        {
-            _log.Info("Received recover {0}", message);
-            
-            switch (message as string)
-            {
-                case "inc":
-                    _value++;
-                    break;
-
-                case "dec":
-                    _value++;
-                    break;
-        
-                default:
-                    return;
-            }
+            default:
+                return;
         }
     }
 
-    public class CounterActorTests : PersistenceTestKit
+    protected override void OnRecover(object message)
     {
-        public CounterActorTests(ITestOutputHelper output) : base(output:output){}
-        
-        [Fact]
-        public Task CounterActor_internal_state_will_be_lost_if_underlying_persistence_store_is_not_available()
+        _log.Info("Received recover {0}", message);
+
+        switch (message as string)
         {
-            return WithJournalWrite(write => write.Fail(), async () => 
-            {
-                var counterProps = Props.Create(() => new CounterActor("test"));
-                var actor = ActorOf(counterProps, "counter");
-                
-                Watch(actor);
-                actor.Tell("inc", TestActor);
-                await ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(3));
+            case "inc":
+                _value++;
+                break;
 
-                // need to restart actor
-                actor = ActorOf(counterProps, "counter1");
-                actor.Tell("read", TestActor);
+            case "dec":
+                _value++;
+                break;
 
-                var value = await ExpectMsgAsync<int>(TimeSpan.FromSeconds(3));
-                value.ShouldBe(0);
-            });
+            default:
+                return;
         }
+    }
+}
+
+public class CounterActorTests : PersistenceTestKit
+{
+    public CounterActorTests(ITestOutputHelper output) : base(output: output)
+    {
+    }
+
+    [Fact]
+    public Task CounterActor_internal_state_will_be_lost_if_underlying_persistence_store_is_not_available()
+    {
+        return WithJournalWrite(write => write.Fail(), async () =>
+        {
+            var counterProps = Props.Create(() => new CounterActor("test"));
+            var actor = ActorOf(counterProps, "counter");
+
+            Watch(actor);
+            actor.Tell("inc", TestActor);
+            await ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(3));
+
+            // need to restart actor
+            actor = ActorOf(counterProps, "counter1");
+            actor.Tell("read", TestActor);
+
+            var value = await ExpectMsgAsync<int>(TimeSpan.FromSeconds(3));
+            value.ShouldBe(0);
+        });
     }
 }

@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AkkaLoggingHandler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="AkkaLoggingHandler.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Net;
@@ -15,213 +15,197 @@ using DotNetty.Buffers;
 using DotNetty.Transport.Channels;
 using ILoggingAdapter = Akka.Event.ILoggingAdapter;
 
-namespace Akka.Remote.Transport.DotNetty
+namespace Akka.Remote.Transport.DotNetty;
+
+/// <summary>
+///     INTERNAL API
+///     Used for adding additional debug logging to the DotNetty transport
+/// </summary>
+internal sealed class AkkaLoggingHandler : ChannelHandlerAdapter
 {
+    private readonly ILoggingAdapter _log;
 
-    /// <summary>
-    /// INTERNAL API
-    /// 
-    /// Used for adding additional debug logging to the DotNetty transport
-    /// </summary>
-    internal sealed class AkkaLoggingHandler : ChannelHandlerAdapter
+    public AkkaLoggingHandler(ILoggingAdapter log)
     {
-        private readonly ILoggingAdapter _log;
-        
-        public AkkaLoggingHandler(ILoggingAdapter log)
-        {
-            this._log = log;
-        }
+        _log = log;
+    }
 
-        public override void ChannelRegistered(IChannelHandlerContext ctx)
-        {
-            _log.Debug("Channel {0} registered", ctx.Channel);
-            ctx.FireChannelRegistered();
-        }
+    public override void ChannelRegistered(IChannelHandlerContext ctx)
+    {
+        _log.Debug("Channel {0} registered", ctx.Channel);
+        ctx.FireChannelRegistered();
+    }
 
-        public override void ChannelUnregistered(IChannelHandlerContext ctx)
-        {
-            _log.Debug("Channel {0} unregistered", ctx.Channel);
-            ctx.FireChannelUnregistered();
-        }
+    public override void ChannelUnregistered(IChannelHandlerContext ctx)
+    {
+        _log.Debug("Channel {0} unregistered", ctx.Channel);
+        ctx.FireChannelUnregistered();
+    }
 
-        public override void ChannelActive(IChannelHandlerContext ctx)
-        {
-            _log.Debug("Channel {0} active", ctx.Channel);
-            ctx.FireChannelActive();
-        }
+    public override void ChannelActive(IChannelHandlerContext ctx)
+    {
+        _log.Debug("Channel {0} active", ctx.Channel);
+        ctx.FireChannelActive();
+    }
 
-        public override void ChannelInactive(IChannelHandlerContext ctx)
-        {
-            _log.Debug("Channel {0} inactive", ctx.Channel);
-            ctx.FireChannelInactive();
-        }
+    public override void ChannelInactive(IChannelHandlerContext ctx)
+    {
+        _log.Debug("Channel {0} inactive", ctx.Channel);
+        ctx.FireChannelInactive();
+    }
 
-        public override void ExceptionCaught(IChannelHandlerContext ctx, Exception cause)
-        {
-            _log.Error(cause, "Channel {0} caught exception", ctx.Channel);
-            ctx.FireExceptionCaught(cause);
-        }
+    public override void ExceptionCaught(IChannelHandlerContext ctx, Exception cause)
+    {
+        _log.Error(cause, "Channel {0} caught exception", ctx.Channel);
+        ctx.FireExceptionCaught(cause);
+    }
 
-        public override void UserEventTriggered(IChannelHandlerContext ctx, object evt)
-        {
-            _log.Debug("Channel {0} triggered user event [{1}]", ctx.Channel, evt);
-            ctx.FireUserEventTriggered(evt);
-        }
+    public override void UserEventTriggered(IChannelHandlerContext ctx, object evt)
+    {
+        _log.Debug("Channel {0} triggered user event [{1}]", ctx.Channel, evt);
+        ctx.FireUserEventTriggered(evt);
+    }
 
-        public override Task BindAsync(IChannelHandlerContext ctx, EndPoint localAddress)
-        {
-            _log.Info("Channel {0} bind to address {1}", ctx.Channel, localAddress);
-            return ctx.BindAsync(localAddress);
-        }
+    public override Task BindAsync(IChannelHandlerContext ctx, EndPoint localAddress)
+    {
+        _log.Info("Channel {0} bind to address {1}", ctx.Channel, localAddress);
+        return ctx.BindAsync(localAddress);
+    }
 
-        public override Task ConnectAsync(IChannelHandlerContext ctx, EndPoint remoteAddress, EndPoint localAddress)
-        {
-            _log.Info("Channel {0} connect (remote: {1}, local: {2})", ctx.Channel, remoteAddress, localAddress);
-            return ctx.ConnectAsync(remoteAddress, localAddress);
-        }
+    public override Task ConnectAsync(IChannelHandlerContext ctx, EndPoint remoteAddress, EndPoint localAddress)
+    {
+        _log.Info("Channel {0} connect (remote: {1}, local: {2})", ctx.Channel, remoteAddress, localAddress);
+        return ctx.ConnectAsync(remoteAddress, localAddress);
+    }
 
-        public override Task DisconnectAsync(IChannelHandlerContext ctx)
-        {
-            _log.Info("Channel {0} disconnect", ctx.Channel);
-            return ctx.DisconnectAsync();
-        }
+    public override Task DisconnectAsync(IChannelHandlerContext ctx)
+    {
+        _log.Info("Channel {0} disconnect", ctx.Channel);
+        return ctx.DisconnectAsync();
+    }
 
-        public override Task CloseAsync(IChannelHandlerContext ctx)
-        {
-            _log.Info("Channel {0} close", ctx.Channel);
-            return ctx.CloseAsync();
-        }
+    public override Task CloseAsync(IChannelHandlerContext ctx)
+    {
+        _log.Info("Channel {0} close", ctx.Channel);
+        return ctx.CloseAsync();
+    }
 
-        public override Task DeregisterAsync(IChannelHandlerContext ctx)
-        {
-            _log.Debug("Channel {0} deregister", ctx.Channel);
-            return ctx.DeregisterAsync();
-        }
+    public override Task DeregisterAsync(IChannelHandlerContext ctx)
+    {
+        _log.Debug("Channel {0} deregister", ctx.Channel);
+        return ctx.DeregisterAsync();
+    }
 
-        public override void ChannelRead(IChannelHandlerContext ctx, object message)
-        {
-            if (_log.IsDebugEnabled)
-            {
-                
-                // have to force a .ToString() here otherwise the reference count on the buffer might be illegal
-                _log.Debug("Channel {0} received a message ({1}) of type [{2}]", ctx.Channel, message?.ToString(), message == null ? "NULL" : message.GetType().TypeQualifiedName());
-            }
-            ctx.FireChannelRead(message);
-        }
+    public override void ChannelRead(IChannelHandlerContext ctx, object message)
+    {
+        if (_log.IsDebugEnabled)
+            // have to force a .ToString() here otherwise the reference count on the buffer might be illegal
+            _log.Debug("Channel {0} received a message ({1}) of type [{2}]", ctx.Channel, message?.ToString(),
+                message == null ? "NULL" : message.GetType().TypeQualifiedName());
+        ctx.FireChannelRead(message);
+    }
 
-        public override Task WriteAsync(IChannelHandlerContext ctx, object message)
-        {
-            if (_log.IsDebugEnabled)
-            {
-                // have to force a .ToString() here otherwise the reference count on the buffer might be illegal
-                _log.Debug("Channel {0} writing a message ({1}) of type [{2}]", ctx.Channel, message?.ToString(), message == null ? "NULL" : message.GetType().TypeQualifiedName());
-            }
-            return ctx.WriteAsync(message);
-        }
+    public override Task WriteAsync(IChannelHandlerContext ctx, object message)
+    {
+        if (_log.IsDebugEnabled)
+            // have to force a .ToString() here otherwise the reference count on the buffer might be illegal
+            _log.Debug("Channel {0} writing a message ({1}) of type [{2}]", ctx.Channel, message?.ToString(),
+                message == null ? "NULL" : message.GetType().TypeQualifiedName());
+        return ctx.WriteAsync(message);
+    }
 
-        public override void Flush(IChannelHandlerContext ctx)
-        {
-            _log.Debug("Channel {0} flushing", ctx.Channel);
-            ctx.Flush();
-        }
-        
-        private string Format(IChannelHandlerContext ctx, string eventName)
-        {
-            string chStr = ctx.Channel.ToString();
-            return new StringBuilder(chStr.Length + 1 + eventName.Length)
-                .Append(chStr)
-                .Append(' ')
-                .Append(eventName)
-                .ToString();
-        }
-        
-        private string Format(IChannelHandlerContext ctx, string eventName, object arg)
-        {
-            if (arg is IByteBuffer buffer)
-            {
-                return this.FormatByteBuffer(ctx, eventName, buffer);
-            }
-            else if (arg is IByteBufferHolder holder)
-            {
-                return this.FormatByteBufferHolder(ctx, eventName, holder);
-            }
-            else
-            {
-                return this.FormatSimple(ctx, eventName, arg);
-            }
-        }
-        
-        private string Format(IChannelHandlerContext ctx, string eventName, object firstArg, object secondArg)
-        {
-            if (secondArg == null)
-            {
-                return this.FormatSimple(ctx, eventName, firstArg);
-            }
-            string chStr = ctx.Channel.ToString();
-            string arg1Str = firstArg.ToString();
-            string arg2Str = secondArg.ToString();
+    public override void Flush(IChannelHandlerContext ctx)
+    {
+        _log.Debug("Channel {0} flushing", ctx.Channel);
+        ctx.Flush();
+    }
 
-            var buf = new StringBuilder(
-                chStr.Length + 1 + eventName.Length + 2 + arg1Str.Length + 2 + arg2Str.Length);
-            buf.Append(chStr).Append(' ').Append(eventName).Append(": ")
-                .Append(arg1Str).Append(", ").Append(arg2Str);
+    private string Format(IChannelHandlerContext ctx, string eventName)
+    {
+        var chStr = ctx.Channel.ToString();
+        return new StringBuilder(chStr.Length + 1 + eventName.Length)
+            .Append(chStr)
+            .Append(' ')
+            .Append(eventName)
+            .ToString();
+    }
+
+    private string Format(IChannelHandlerContext ctx, string eventName, object arg)
+    {
+        if (arg is IByteBuffer buffer)
+            return FormatByteBuffer(ctx, eventName, buffer);
+        if (arg is IByteBufferHolder holder)
+            return FormatByteBufferHolder(ctx, eventName, holder);
+        return FormatSimple(ctx, eventName, arg);
+    }
+
+    private string Format(IChannelHandlerContext ctx, string eventName, object firstArg, object secondArg)
+    {
+        if (secondArg == null) return FormatSimple(ctx, eventName, firstArg);
+        var chStr = ctx.Channel.ToString();
+        var arg1Str = firstArg.ToString();
+        var arg2Str = secondArg.ToString();
+
+        var buf = new StringBuilder(
+            chStr.Length + 1 + eventName.Length + 2 + arg1Str.Length + 2 + arg2Str.Length);
+        buf.Append(chStr).Append(' ').Append(eventName).Append(": ")
+            .Append(arg1Str).Append(", ").Append(arg2Str);
+        return buf.ToString();
+    }
+
+    private string FormatByteBuffer(IChannelHandlerContext ctx, string eventName, IByteBuffer msg)
+    {
+        var chStr = ctx.Channel.ToString();
+        var length = msg.ReadableBytes;
+        if (length == 0)
+        {
+            var buf = new StringBuilder(chStr.Length + 1 + eventName.Length + 4);
+            buf.Append(chStr).Append(' ').Append(eventName).Append(": 0B");
             return buf.ToString();
         }
-        
-        string FormatByteBuffer(IChannelHandlerContext ctx, string eventName, IByteBuffer msg)
+        else
         {
-            string chStr = ctx.Channel.ToString();
-            int length = msg.ReadableBytes;
-            if (length == 0)
-            {
-                var buf = new StringBuilder(chStr.Length + 1 + eventName.Length + 4);
-                buf.Append(chStr).Append(' ').Append(eventName).Append(": 0B");
-                return buf.ToString();
-            }
-            else
-            {
-                int rows = length / 16 + (length % 15 == 0 ? 0 : 1) + 4;
-                var buf = new StringBuilder(chStr.Length + 1 + eventName.Length + 2 + 10 + 1 + 2 + rows * 80);
+            var rows = length / 16 + (length % 15 == 0 ? 0 : 1) + 4;
+            var buf = new StringBuilder(chStr.Length + 1 + eventName.Length + 2 + 10 + 1 + 2 + rows * 80);
 
-                buf.Append(chStr).Append(' ').Append(eventName).Append(": ").Append(length).Append('B').Append('\n');
-                ByteBufferUtil.AppendPrettyHexDump(buf, msg);
+            buf.Append(chStr).Append(' ').Append(eventName).Append(": ").Append(length).Append('B').Append('\n');
+            ByteBufferUtil.AppendPrettyHexDump(buf, msg);
 
-                return buf.ToString();
-            }
+            return buf.ToString();
         }
-        
-        string FormatByteBufferHolder(IChannelHandlerContext ctx, string eventName, IByteBufferHolder msg)
+    }
+
+    private string FormatByteBufferHolder(IChannelHandlerContext ctx, string eventName, IByteBufferHolder msg)
+    {
+        var chStr = ctx.Channel.ToString();
+        var msgStr = msg.ToString();
+        var content = msg.Content;
+        var length = content.ReadableBytes;
+        if (length == 0)
         {
-            string chStr = ctx.Channel.ToString();
-            string msgStr = msg.ToString();
-            IByteBuffer content = msg.Content;
-            int length = content.ReadableBytes;
-            if (length == 0)
-            {
-                var buf = new StringBuilder(chStr.Length + 1 + eventName.Length + 2 + msgStr.Length + 4);
-                buf.Append(chStr).Append(' ').Append(eventName).Append(", ").Append(msgStr).Append(", 0B");
-                return buf.ToString();
-            }
-            else
-            {
-                int rows = length / 16 + (length % 15 == 0 ? 0 : 1) + 4;
-                var buf = new StringBuilder(
-                    chStr.Length + 1 + eventName.Length + 2 + msgStr.Length + 2 + 10 + 1 + 2 + rows * 80);
-
-                buf.Append(chStr).Append(' ').Append(eventName).Append(": ")
-                    .Append(msgStr).Append(", ").Append(length).Append('B').Append('\n');
-                ByteBufferUtil.AppendPrettyHexDump(buf, content);
-
-                return buf.ToString();
-            }
+            var buf = new StringBuilder(chStr.Length + 1 + eventName.Length + 2 + msgStr.Length + 4);
+            buf.Append(chStr).Append(' ').Append(eventName).Append(", ").Append(msgStr).Append(", 0B");
+            return buf.ToString();
         }
-        
-        string FormatSimple(IChannelHandlerContext ctx, string eventName, object msg)
+        else
         {
-            string chStr = ctx.Channel.ToString();
-            string msgStr = msg.ToString();
-            var buf = new StringBuilder(chStr.Length + 1 + eventName.Length + 2 + msgStr.Length);
-            return buf.Append(chStr).Append(' ').Append(eventName).Append(": ").Append(msgStr).ToString();
+            var rows = length / 16 + (length % 15 == 0 ? 0 : 1) + 4;
+            var buf = new StringBuilder(
+                chStr.Length + 1 + eventName.Length + 2 + msgStr.Length + 2 + 10 + 1 + 2 + rows * 80);
+
+            buf.Append(chStr).Append(' ').Append(eventName).Append(": ")
+                .Append(msgStr).Append(", ").Append(length).Append('B').Append('\n');
+            ByteBufferUtil.AppendPrettyHexDump(buf, content);
+
+            return buf.ToString();
         }
+    }
+
+    private string FormatSimple(IChannelHandlerContext ctx, string eventName, object msg)
+    {
+        var chStr = ctx.Channel.ToString();
+        var msgStr = msg.ToString();
+        var buf = new StringBuilder(chStr.Length + 1 + eventName.Length + 2 + msgStr.Length);
+        return buf.Append(chStr).Append(' ').Append(eventName).Append(": ").Append(msgStr).ToString();
     }
 }

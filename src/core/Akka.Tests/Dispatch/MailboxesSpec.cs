@@ -1,160 +1,152 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="MailboxesSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="MailboxesSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
-using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
-using Akka.Tests.Actor;
-using Akka.Util.Internal;
-using FluentAssertions;
 using FluentAssertions.Extensions;
-using FsCheck;
-using FsCheck.Xunit;
 using Xunit;
 using Config = Akka.Configuration.Config;
 
-namespace Akka.Tests.Dispatch
+namespace Akka.Tests.Dispatch;
+
+public class TestPriorityMailbox : UnboundedPriorityMailbox
 {
-    public class TestPriorityMailbox : UnboundedPriorityMailbox
+    public TestPriorityMailbox(Settings settings, Config config) : base(settings, config)
     {
-        protected override int PriorityGenerator(object message)
-        {
-            if (message is string)
-                return 1;
-            if (message is bool)
-                return 2;
-            if (message is int)
-                return 3;
-            if (message is double)
-                return 4;
-
-            return 5;
-        }
-
-        public TestPriorityMailbox(Settings settings, Config config) : base(settings, config)
-        {
-        }
     }
 
-    public class TestStablePriorityMailbox : UnboundedStablePriorityMailbox
+    protected override int PriorityGenerator(object message)
     {
-        protected override int PriorityGenerator(object message)
-        {
-            if (message is string)
-                return 1;
-            if (message is bool)
-                return 2;
-            if (message is int)
-                return 3;
-            if (message is double)
-                return 4;
+        if (message is string)
+            return 1;
+        if (message is bool)
+            return 2;
+        if (message is int)
+            return 3;
+        if (message is double)
+            return 4;
 
-            return 5;
-        }
+        return 5;
+    }
+}
 
-        public TestStablePriorityMailbox(Settings settings, Config config) : base(settings, config)
-        {
-        }
+public class TestStablePriorityMailbox : UnboundedStablePriorityMailbox
+{
+    public TestStablePriorityMailbox(Settings settings, Config config) : base(settings, config)
+    {
     }
 
-    public class IntPriorityMailbox : UnboundedPriorityMailbox
+    protected override int PriorityGenerator(object message)
     {
-        protected override int PriorityGenerator(object message)
-        {
-            return message as int? ?? Int32.MaxValue;
-        }
+        if (message is string)
+            return 1;
+        if (message is bool)
+            return 2;
+        if (message is int)
+            return 3;
+        if (message is double)
+            return 4;
 
-        public IntPriorityMailbox(Settings settings, Config config) : base(settings, config)
-        {
-        }
+        return 5;
+    }
+}
+
+public class IntPriorityMailbox : UnboundedPriorityMailbox
+{
+    public IntPriorityMailbox(Settings settings, Config config) : base(settings, config)
+    {
     }
 
-    public class StashingActor : ReceiveActor, IWithUnboundedStash
+    protected override int PriorityGenerator(object message)
     {
-        private readonly TestKitBase _testkit;
-        private readonly bool _echoBackToSenderAsWell;
-        public IStash Stash { get; set; }
+        return message as int? ?? int.MaxValue;
+    }
+}
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="testkit">TBD</param>
-        /// <param name="echoBackToSenderAsWell">TBD</param>
-        public StashingActor(TestKitBase testkit, bool echoBackToSenderAsWell = true)
-        {
-            _testkit = testkit;
-            _echoBackToSenderAsWell = echoBackToSenderAsWell;
-            StashAll();
-        }
+public class StashingActor : ReceiveActor, IWithUnboundedStash
+{
+    private readonly bool _echoBackToSenderAsWell;
+    private readonly TestKitBase _testkit;
 
-        private void StashAll()
-        {
-            Receive<Start>(_ =>
-            {
-                Become(Process);
-                Stash.UnstashAll();
-            });
-            ReceiveAny(_ =>
-            {
-                Stash.Stash();
-            });
-        }
-
-        private void Process()
-        {
-            ReceiveAny(msg =>
-            {
-                var sender = Sender;
-                var testActor = _testkit.TestActor;
-                if (_echoBackToSenderAsWell && testActor != sender)
-                    sender.Forward(msg);
-                testActor.Tell(msg, Sender);
-            });
-        }
-
-        /// <summary>
-        /// Returns a <see cref="Props"/> object that can be used to create an <see cref="EchoActor"/>.
-        /// The  <see cref="EchoActor"/> echoes whatever is sent to it, to the
-        /// TestKit's <see cref="TestKitBase.TestActor"/>.
-        /// By default it also echoes back to the sender, unless the sender is the <see cref="TestKitBase.TestActor"/>
-        /// (in this case the <see cref="TestKitBase.TestActor"/> will only receive one message) or unless 
-        /// <paramref name="echoBackToSenderAsWell"/> has been set to <c>false</c>.
-        /// </summary>
-        /// <param name="testkit">TBD</param>
-        /// <param name="echoBackToSenderAsWell">TBD</param>
-        /// <returns>TBD</returns>
-        public static Props Props(TestKitBase testkit, bool echoBackToSenderAsWell = true)
-        {
-            return Akka.Actor.Props.Create(() => new StashingActor(testkit, echoBackToSenderAsWell));
-        }
-
-        public class Start { }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="testkit">TBD</param>
+    /// <param name="echoBackToSenderAsWell">TBD</param>
+    public StashingActor(TestKitBase testkit, bool echoBackToSenderAsWell = true)
+    {
+        _testkit = testkit;
+        _echoBackToSenderAsWell = echoBackToSenderAsWell;
+        StashAll();
     }
 
-    public class MailboxesSpec : AkkaSpec
-    {
-        public MailboxesSpec() : base(GetConfig())
-        {            
-        }
+    public IStash Stash { get; set; }
 
-        private static string GetConfig()
+    private void StashAll()
+    {
+        Receive<Start>(_ =>
         {
-               return @"
+            Become(Process);
+            Stash.UnstashAll();
+        });
+        ReceiveAny(_ => { Stash.Stash(); });
+    }
+
+    private void Process()
+    {
+        ReceiveAny(msg =>
+        {
+            var sender = Sender;
+            var testActor = _testkit.TestActor;
+            if (_echoBackToSenderAsWell && testActor != sender)
+                sender.Forward(msg);
+            testActor.Tell(msg, Sender);
+        });
+    }
+
+    /// <summary>
+    ///     Returns a <see cref="Props" /> object that can be used to create an <see cref="EchoActor" />.
+    ///     The  <see cref="EchoActor" /> echoes whatever is sent to it, to the
+    ///     TestKit's <see cref="TestKitBase.TestActor" />.
+    ///     By default it also echoes back to the sender, unless the sender is the <see cref="TestKitBase.TestActor" />
+    ///     (in this case the <see cref="TestKitBase.TestActor" /> will only receive one message) or unless
+    ///     <paramref name="echoBackToSenderAsWell" /> has been set to <c>false</c>.
+    /// </summary>
+    /// <param name="testkit">TBD</param>
+    /// <param name="echoBackToSenderAsWell">TBD</param>
+    /// <returns>TBD</returns>
+    public static Props Props(TestKitBase testkit, bool echoBackToSenderAsWell = true)
+    {
+        return Akka.Actor.Props.Create(() => new StashingActor(testkit, echoBackToSenderAsWell));
+    }
+
+    public class Start
+    {
+    }
+}
+
+public class MailboxesSpec : AkkaSpec
+{
+    public MailboxesSpec() : base(GetConfig())
+    {
+    }
+
+    private static string GetConfig()
+    {
+        return @"
 akka.actor.default-dispatcher.throughput = 100  #ensure we process 100 messages per mailbox run
 string-prio-mailbox {
-    mailbox-type : """ + typeof(TestPriorityMailbox).AssemblyQualifiedName  + @"""
+    mailbox-type : """ + typeof(TestPriorityMailbox).AssemblyQualifiedName + @"""
 }
 
 int-prio-mailbox {
@@ -164,7 +156,7 @@ stable-prio-mailbox{
     mailbox-type : """ + typeof(TestStablePriorityMailbox).AssemblyQualifiedName + @"""
 }
 ";
-        }
+    }
 
 #if FSCHECK
         [Property]
@@ -195,109 +187,141 @@ stable-prio-mailbox{
         }
 #endif
 
-        [Fact]
-        public async Task Can_use_unbounded_priority_mailbox()
+    [Fact]
+    public async Task Can_use_unbounded_priority_mailbox()
+    {
+        var actor = (IInternalActorRef)Sys.ActorOf(EchoActor.Props(this).WithMailbox("string-prio-mailbox"), "echo");
+
+        //pause mailbox until all messages have been told
+        actor.SendSystemMessage(new Suspend());
+
+        // wait until we can confirm that the mailbox is suspended before we begin sending messages
+        await AwaitConditionAsync(() =>
+            Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell &&
+                            actorCell.Mailbox.IsSuspended()));
+
+        actor.Tell(true);
+        for (var i = 0; i < 30; i++) actor.Tell(1);
+        actor.Tell("a");
+        actor.Tell(2.0);
+        for (var i = 0; i < 30; i++) actor.Tell(1);
+        actor.SendSystemMessage(new Resume(null));
+
+        //resume mailbox, this prevents the mailbox from running to early
+        //priority mailbox is best effort only
+
+        await ExpectMsgAsync("a");
+        await ExpectMsgAsync(true);
+        for (var i = 0; i < 60; i++) await ExpectMsgAsync(1);
+        await ExpectMsgAsync(2.0);
+
+        await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
+    }
+
+    [Fact]
+    public async Task Can_use_unbounded_stable_priority_mailbox()
+    {
+        var actor = (IInternalActorRef)Sys.ActorOf(EchoActor.Props(this).WithMailbox("stable-prio-mailbox"), "echo");
+
+        //pause mailbox until all messages have been told
+        actor.SendSystemMessage(new Suspend());
+
+        // wait until we can confirm that the mailbox is suspended before we begin sending messages
+        await AwaitConditionAsync(() =>
+            Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell &&
+                            actorCell.Mailbox.IsSuspended()));
+
+        actor.Tell(true);
+        for (var i = 0; i < 30; i++) actor.Tell(i);
+        actor.Tell("a");
+        actor.Tell(2.0);
+        for (var i = 0; i < 30; i++) actor.Tell(i + 30);
+        actor.SendSystemMessage(new Resume(null));
+
+        //resume mailbox, this prevents the mailbox from running to early
+        //priority mailbox is best effort only
+
+        await ExpectMsgAsync("a");
+        await ExpectMsgAsync(true);
+        for (var i = 0; i < 60; i++) await ExpectMsgAsync(i);
+        await ExpectMsgAsync(2.0);
+
+        await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
+    }
+
+    [Fact]
+    public async Task Priority_mailbox_keeps_ordering_with_many_priority_values()
+    {
+        var actor = (IInternalActorRef)Sys.ActorOf(EchoActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
+
+        //pause mailbox until all messages have been told
+        actor.SendSystemMessage(new Suspend());
+
+        await AwaitConditionAsync(() =>
+            Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell &&
+                            actorCell.Mailbox.IsSuspended()));
+        // creates 50 messages with values spanning from Int32.MinValue to Int32.MaxValue
+        var values = new int[50];
+        var increment = (int)(uint.MaxValue / values.Length);
+
+        for (var i = 0; i < values.Length; i++)
+            values[i] = int.MinValue + increment * i;
+
+        // tell the actor in reverse order
+        foreach (var value in values.Reverse())
         {
-            var actor = (IInternalActorRef)Sys.ActorOf(EchoActor.Props(this).WithMailbox("string-prio-mailbox"), "echo");
-
-            //pause mailbox until all messages have been told
-            actor.SendSystemMessage(new Suspend());
-
-            // wait until we can confirm that the mailbox is suspended before we begin sending messages
-            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
-
-            actor.Tell(true);
-            for (var i = 0; i < 30; i++)
-            {
-                actor.Tell(1);    
-            }
-            actor.Tell("a");
-            actor.Tell(2.0);
-            for (var i = 0; i < 30; i++)
-            {
-                actor.Tell(1);
-            }
-            actor.SendSystemMessage(new Resume(null));
-
-            //resume mailbox, this prevents the mailbox from running to early
-            //priority mailbox is best effort only
-            
-            await ExpectMsgAsync("a");
-            await ExpectMsgAsync(true);
-            for (var i = 0; i < 60; i++)
-            {
-                await ExpectMsgAsync(1);
-            }
-            await ExpectMsgAsync(2.0);
-
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
+            actor.Tell(value);
+            actor.Tell(value);
+            actor.Tell(value);
         }
 
-        [Fact]
-        public async Task Can_use_unbounded_stable_priority_mailbox()
+        //resume mailbox, this prevents the mailbox from running to early
+        actor.SendSystemMessage(new Resume(null));
+
+        // expect the messages in the correct order
+        foreach (var value in values)
         {
-            var actor = (IInternalActorRef)Sys.ActorOf(EchoActor.Props(this).WithMailbox("stable-prio-mailbox"), "echo");
-
-            //pause mailbox until all messages have been told
-            actor.SendSystemMessage(new Suspend());
-
-            // wait until we can confirm that the mailbox is suspended before we begin sending messages
-            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
-
-            actor.Tell(true);
-            for (var i = 0; i < 30; i++)
-            {
-                actor.Tell(i);
-            }
-            actor.Tell("a");
-            actor.Tell(2.0);
-            for (var i = 0; i < 30; i++)
-            {
-                actor.Tell(i + 30);
-            }
-            actor.SendSystemMessage(new Resume(null));
-
-            //resume mailbox, this prevents the mailbox from running to early
-            //priority mailbox is best effort only
-
-            await ExpectMsgAsync("a");
-            await ExpectMsgAsync(true);
-            for (var i = 0; i < 60; i++)
-            {
-                await ExpectMsgAsync(i);
-            }
-            await ExpectMsgAsync(2.0);
-
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
+            await ExpectMsgAsync(value);
+            await ExpectMsgAsync(value);
+            await ExpectMsgAsync(value);
         }
 
-        [Fact]
-        public async Task Priority_mailbox_keeps_ordering_with_many_priority_values()
+        await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
+    }
+
+    [Fact]
+    public async Task Unbounded_Priority_Mailbox_Supports_Unbounded_Stashing()
+    {
+        var actor = (IInternalActorRef)Sys.ActorOf(StashingActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
+
+        //pause mailbox until all messages have been told
+        actor.SendSystemMessage(new Suspend());
+
+        await AwaitConditionAsync(() =>
+            Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell &&
+                            actorCell.Mailbox.IsSuspended()));
+
+        var values = new int[10];
+        var increment = (int)(uint.MaxValue / values.Length);
+
+        for (var i = 0; i < values.Length; i++)
+            values[i] = int.MinValue + increment * i;
+
+        // tell the actor in reverse order
+        foreach (var value in values.Reverse())
         {
-            var actor = (IInternalActorRef)Sys.ActorOf(EchoActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
+            actor.Tell(value);
+            actor.Tell(value);
+            actor.Tell(value);
+        }
 
-            //pause mailbox until all messages have been told
-            actor.SendSystemMessage(new Suspend());
+        actor.Tell(new StashingActor.Start());
 
-            await AwaitConditionAsync(()=> Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
-            // creates 50 messages with values spanning from Int32.MinValue to Int32.MaxValue
-            var values = new int[50];
-            var increment = (int)(UInt32.MaxValue / values.Length);
+        //resume mailbox, this prevents the mailbox from running to early
+        actor.SendSystemMessage(new Resume(null));
 
-            for (var i = 0; i < values.Length; i++)
-                values[i] = Int32.MinValue + increment * i;
-
-            // tell the actor in reverse order
-            foreach (var value in values.Reverse())
-            {
-                actor.Tell(value);
-                actor.Tell(value);
-                actor.Tell(value);
-            }
-
-            //resume mailbox, this prevents the mailbox from running to early
-            actor.SendSystemMessage(new Resume(null));
-
+        await WithinAsync(5.Seconds(), async () =>
+        {
             // expect the messages in the correct order
             foreach (var value in values)
             {
@@ -305,95 +329,54 @@ stable-prio-mailbox{
                 await ExpectMsgAsync(value);
                 await ExpectMsgAsync(value);
             }
+        });
 
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
+        await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
+    }
+
+    [Fact]
+    public async Task Unbounded_Stable_Priority_Mailbox_Supports_Unbounded_Stashing()
+    {
+        var actor = (IInternalActorRef)Sys.ActorOf(StashingActor.Props(this).WithMailbox("stable-prio-mailbox"),
+            "echo");
+
+        //pause mailbox until all messages have been told
+        actor.SendSystemMessage(new Suspend());
+
+        await AwaitConditionAsync(() =>
+            Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell &&
+                            actorCell.Mailbox.IsSuspended()));
+
+        var values = new int[10];
+        var increment = (int)(uint.MaxValue / values.Length);
+
+        for (var i = 0; i < values.Length; i++)
+            values[i] = int.MinValue + increment * i;
+
+        // tell the actor in order
+        foreach (var value in values)
+        {
+            actor.Tell(value);
+            actor.Tell(value);
+            actor.Tell(value);
         }
 
-        [Fact]
-        public async Task Unbounded_Priority_Mailbox_Supports_Unbounded_Stashing()
+        actor.Tell(new StashingActor.Start());
+
+        //resume mailbox, this prevents the mailbox from running to early
+        actor.SendSystemMessage(new Resume(null));
+
+        await WithinAsync(5.Seconds(), async () =>
         {
-            var actor = (IInternalActorRef)Sys.ActorOf(StashingActor.Props(this).WithMailbox("int-prio-mailbox"), "echo");
-
-            //pause mailbox until all messages have been told
-            actor.SendSystemMessage(new Suspend());
-
-            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
-
-            var values = new int[10];
-            var increment = (int)(UInt32.MaxValue / values.Length);
-
-            for (var i = 0; i < values.Length; i++)
-                values[i] = Int32.MinValue + increment * i;
-
-            // tell the actor in reverse order
-            foreach (var value in values.Reverse())
-            {
-                actor.Tell(value);
-                actor.Tell(value);
-                actor.Tell(value);
-            }
-
-            actor.Tell(new StashingActor.Start());
-
-            //resume mailbox, this prevents the mailbox from running to early
-            actor.SendSystemMessage(new Resume(null));
-
-            await WithinAsync(5.Seconds(), async() =>
-            {
-                // expect the messages in the correct order
-                foreach (var value in values)
-                {
-                    await ExpectMsgAsync(value);
-                    await ExpectMsgAsync(value);
-                    await ExpectMsgAsync(value);
-                }
-            }); 
-
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
-        }
-
-        [Fact]
-        public async Task Unbounded_Stable_Priority_Mailbox_Supports_Unbounded_Stashing()
-        {
-            var actor = (IInternalActorRef)Sys.ActorOf(StashingActor.Props(this).WithMailbox("stable-prio-mailbox"), "echo");
-
-            //pause mailbox until all messages have been told
-            actor.SendSystemMessage(new Suspend());
-
-            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
-
-            var values = new int[10];
-            var increment = (int)(UInt32.MaxValue / values.Length);
-
-            for (var i = 0; i < values.Length; i++)
-                values[i] = Int32.MinValue + increment * i;
-
-            // tell the actor in order
+            // expect the messages in the original order
             foreach (var value in values)
             {
-                actor.Tell(value);
-                actor.Tell(value);
-                actor.Tell(value);
+                await ExpectMsgAsync(value);
+                await ExpectMsgAsync(value);
+                await ExpectMsgAsync(value);
             }
+        });
 
-            actor.Tell(new StashingActor.Start());
-
-            //resume mailbox, this prevents the mailbox from running to early
-            actor.SendSystemMessage(new Resume(null));
-
-            await WithinAsync(5.Seconds(), async() =>
-            {
-                // expect the messages in the original order
-                foreach (var value in values)
-                {
-                    await ExpectMsgAsync(value);
-                    await ExpectMsgAsync(value);
-                    await ExpectMsgAsync(value);
-                }
-            });
-
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
-        }
+        await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
     }
 }
-

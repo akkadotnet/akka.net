@@ -1,94 +1,92 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="IteratorAdapter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="IteratorAdapter.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 
-namespace Akka.Streams.Util
+namespace Akka.Streams.Util;
+
+/// <summary>
+///     Interface matching Java's iterator semantics.
+///     Should only be needed in rare circumstances, where knowing whether there are
+///     more elements without consuming them makes the code easier to write.
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+internal interface IIterator<out T>
 {
     /// <summary>
-    /// Interface matching Java's iterator semantics.
-    /// Should only be needed in rare circumstances, where knowing whether there are
-    /// more elements without consuming them makes the code easier to write.
+    ///     TBD
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    internal interface IIterator<out T>
+    /// <returns>TBD</returns>
+    bool HasNext();
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    T Next();
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+internal sealed class IteratorAdapter<T> : IIterator<T>
+{
+    private readonly IEnumerator<T> _enumerator;
+    private Exception _exception;
+    private bool? _hasNext;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="enumerator">TBD</param>
+    public IteratorAdapter(IEnumerator<T> enumerator)
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        bool HasNext();
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        T Next();
+        _enumerator = enumerator;
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    internal sealed class IteratorAdapter<T> : IIterator<T>
+    /// <returns>TBD</returns>
+    public bool HasNext()
     {
-        private readonly IEnumerator<T> _enumerator;
-        private bool? _hasNext;
-        private Exception _exception;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="enumerator">TBD</param>
-        public IteratorAdapter(IEnumerator<T> enumerator)
-        {
-            _enumerator = enumerator;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public bool HasNext()
-        {
-            if (_hasNext == null)
+        if (_hasNext == null)
+            try
             {
-                try
-                {
-                    _hasNext = _enumerator.MoveNext();
-                    _exception = null;
-                }
-                catch (Exception e)
-                {
-                    // capture exception and throw it when Next() is called
-                    _exception = e;
-                    _hasNext = true;
-                }
+                _hasNext = _enumerator.MoveNext();
+                _exception = null;
+            }
+            catch (Exception e)
+            {
+                // capture exception and throw it when Next() is called
+                _exception = e;
+                _hasNext = true;
             }
 
-            return _hasNext.Value;
-        }
+        return _hasNext.Value;
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <exception cref="InvalidOperationException">TBD</exception>
-        /// <returns>TBD</returns>
-        public T Next()
-        {
-            if (!HasNext())
-                throw new InvalidOperationException();
-            if (_exception != null)
-                throw new AggregateException(_exception);
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <exception cref="InvalidOperationException">TBD</exception>
+    /// <returns>TBD</returns>
+    public T Next()
+    {
+        if (!HasNext())
+            throw new InvalidOperationException();
+        if (_exception != null)
+            throw new AggregateException(_exception);
 
-            _hasNext = null;
-            _exception = null;
+        _hasNext = null;
+        _exception = null;
 
-            return _enumerator.Current;
-        }
+        return _enumerator.Current;
     }
 }

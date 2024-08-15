@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
+    <ProjectReference Include="..\..\..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj"/>
   </ItemGroup>
 
 </Project>

@@ -1,103 +1,129 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="EnumeratorEnumerable.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="EnumeratorEnumerable.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Akka.Streams.Util
+namespace Akka.Streams.Util;
+
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+public class EnumeratorEnumerable<T> : IEnumerable<T>
 {
+    private readonly Func<IEnumerator<T>> _enumeratorFactory;
+
     /// <summary>
-    /// TBD
+    ///     Initializes a new instance of the <see cref="EnumeratorEnumerable{T}" /> class.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    public class EnumeratorEnumerable<T> : IEnumerable<T>
+    /// <param name="enumeratorFactory">
+    ///     The method used to create an <see cref="IEnumerator{T}" /> to iterate over this
+    ///     enumerable.
+    /// </param>
+    public EnumeratorEnumerable(Func<IEnumerator<T>> enumeratorFactory)
     {
-        private readonly Func<IEnumerator<T>> _enumeratorFactory;
+        _enumeratorFactory = enumeratorFactory;
+    }
+
+
+    public IEnumerator<T> GetEnumerator()
+    {
+        return _enumeratorFactory();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+public class ContinuallyEnumerable<T> : IEnumerable<T>
+{
+    private readonly ContinuallyEnumerator _continuallyEnumerator;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ContinuallyEnumerable{T}" /> class.
+    /// </summary>
+    /// <param name="enumeratorFactory">
+    ///     The method used to create an <see cref="IEnumerator{T}" /> to iterate over this
+    ///     enumerable.
+    /// </param>
+    public ContinuallyEnumerable(Func<IEnumerator<T>> enumeratorFactory)
+    {
+        _continuallyEnumerator = new ContinuallyEnumerator(enumeratorFactory);
+    }
+
+
+    public IEnumerator<T> GetEnumerator()
+    {
+        return _continuallyEnumerator;
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public sealed class ContinuallyEnumerator : IEnumerator<T>
+    {
+        private IEnumerator<T> _current;
+        private Func<IEnumerator<T>> _enumeratorFactory;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="EnumeratorEnumerable{T}"/> class.
+        ///     Initializes a new instance of the <see cref="ContinuallyEnumerable{T}.ContinuallyEnumerator" /> class.
         /// </summary>
-        /// <param name="enumeratorFactory">The method used to create an <see cref="IEnumerator{T}"/> to iterate over this enumerable.</param>
-        public EnumeratorEnumerable(Func<IEnumerator<T>> enumeratorFactory)
+        /// <param name="enumeratorFactory">
+        ///     The method used to create an <see cref="IEnumerator{T}" /> to iterate over an
+        ///     enumerable.
+        /// </param>
+        public ContinuallyEnumerator(Func<IEnumerator<T>> enumeratorFactory)
         {
             _enumeratorFactory = enumeratorFactory;
         }
 
-        
-        public IEnumerator<T> GetEnumerator() => _enumeratorFactory();
 
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-    }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    public class ContinuallyEnumerable<T> : IEnumerable<T>
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public sealed class ContinuallyEnumerator : IEnumerator<T>
+        public void Dispose()
         {
-            Func<IEnumerator<T>> _enumeratorFactory;
-            private IEnumerator<T> _current;
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="ContinuallyEnumerable{T}.ContinuallyEnumerator" /> class.
-            /// </summary>
-            /// <param name="enumeratorFactory">The method used to create an <see cref="IEnumerator{T}"/> to iterate over an enumerable.</param>
-            public ContinuallyEnumerator(Func<IEnumerator<T>> enumeratorFactory)
-            {
-                _enumeratorFactory = enumeratorFactory;
-            }
-
-           
-            public void Dispose() => _enumeratorFactory = null;
-
-            /// <exception cref="ArgumentException">
-            /// This exception is thrown when the enumerator has passed the end of an enumerable.
-            /// </exception>
-            public bool MoveNext()
-            {
-                if (_current == null || !_current.MoveNext())
-                {
-                    _current = _enumeratorFactory();
-                    if(!_current.MoveNext())
-                        throw new ArgumentException("empty iterator");
-                }
-
-                return true;
-            }
-
-           
-            public void Reset() => _current = _enumeratorFactory();
-
-           
-            public T Current => _current.Current;
-
-            object IEnumerator.Current => Current;
+            _enumeratorFactory = null;
         }
 
-        private readonly ContinuallyEnumerator _continuallyEnumerator;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ContinuallyEnumerable{T}" /> class.
-        /// </summary>
-        /// <param name="enumeratorFactory">The method used to create an <see cref="IEnumerator{T}"/> to iterate over this enumerable.</param>
-        public ContinuallyEnumerable(Func<IEnumerator<T>> enumeratorFactory)
+        /// <exception cref="ArgumentException">
+        ///     This exception is thrown when the enumerator has passed the end of an enumerable.
+        /// </exception>
+        public bool MoveNext()
         {
-            _continuallyEnumerator = new ContinuallyEnumerator(enumeratorFactory);
+            if (_current == null || !_current.MoveNext())
+            {
+                _current = _enumeratorFactory();
+                if (!_current.MoveNext())
+                    throw new ArgumentException("empty iterator");
+            }
+
+            return true;
         }
 
-       
-        public IEnumerator<T> GetEnumerator() => _continuallyEnumerator;
 
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        public void Reset()
+        {
+            _current = _enumeratorFactory();
+        }
+
+
+        public T Current => _current.Current;
+
+        object IEnumerator.Current => Current;
     }
 }

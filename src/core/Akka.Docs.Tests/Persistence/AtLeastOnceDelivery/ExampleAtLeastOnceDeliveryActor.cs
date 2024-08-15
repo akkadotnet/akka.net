@@ -1,75 +1,71 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ExampleAtLeastOnceDeliveryActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ExampleAtLeastOnceDeliveryActor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Persistence;
 
-namespace DocsExamples.Persistence.AtLeastOnceDelivery
+namespace DocsExamples.Persistence.AtLeastOnceDelivery;
+
+public class ExampleAtLeastOnceDeliveryActor : AtLeastOnceDeliveryActor
 {
-    public class ExampleAtLeastOnceDeliveryActor : AtLeastOnceDeliveryActor
+    private readonly ActorSelection _destination;
+
+    public ExampleAtLeastOnceDeliveryActor(ActorSelection destination)
     {
-        private ActorSelection _destination;
-
-        public ExampleAtLeastOnceDeliveryActor(ActorSelection destination)
-        {
-            _destination = destination;
-        }
-
-        protected override bool ReceiveCommand(object message)
-        {
-            switch (message)
-            {
-                case string s:
-                    Persist(new MsgSent(s), UpdateState);
-                    return true;
-                case Confirm confirm:
-                    Persist(new MsgConfirmed(confirm.DeliveryId), UpdateState);
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        protected override bool ReceiveRecover(object message)
-        {
-            switch (message)
-            {
-                case IEvent evt:
-                    UpdateState(evt);
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        private void UpdateState(IEvent evt)
-        {
-            switch (evt)
-            {
-                case MsgSent msgSent:
-                    Deliver(_destination, deliveryId => new Msg(deliveryId, msgSent.Message));
-                    break;
-                case MsgConfirmed msgConfirmed:
-                    ConfirmDelivery(msgConfirmed.DeliveryId);
-                    break;
-            }
-        }
-
-        public override string PersistenceId { get; } = "persistence-id";
+        _destination = destination;
     }
 
-    public class ExampleDestinationAtLeastOnceDeliveryActor : UntypedActor
+    public override string PersistenceId { get; } = "persistence-id";
+
+    protected override bool ReceiveCommand(object message)
     {
-        protected override void OnReceive(object message)
+        switch (message)
         {
-            if (message is Msg msg)
-            {
-                Sender.Tell(new Confirm(msg.DeliveryId), Self);
-            }
+            case string s:
+                Persist(new MsgSent(s), UpdateState);
+                return true;
+            case Confirm confirm:
+                Persist(new MsgConfirmed(confirm.DeliveryId), UpdateState);
+                return true;
+            default:
+                return false;
         }
+    }
+
+    protected override bool ReceiveRecover(object message)
+    {
+        switch (message)
+        {
+            case IEvent evt:
+                UpdateState(evt);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void UpdateState(IEvent evt)
+    {
+        switch (evt)
+        {
+            case MsgSent msgSent:
+                Deliver(_destination, deliveryId => new Msg(deliveryId, msgSent.Message));
+                break;
+            case MsgConfirmed msgConfirmed:
+                ConfirmDelivery(msgConfirmed.DeliveryId);
+                break;
+        }
+    }
+}
+
+public class ExampleDestinationAtLeastOnceDeliveryActor : UntypedActor
+{
+    protected override void OnReceive(object message)
+    {
+        if (message is Msg msg) Sender.Tell(new Confirm(msg.DeliveryId), Self);
     }
 }

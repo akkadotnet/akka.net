@@ -1,65 +1,61 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="StringBuilderExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="StringBuilderExtensions.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Akka.Util.Internal
+namespace Akka.Util.Internal;
+
+internal static class StringBuilderExtensions
 {
-    internal static class StringBuilderExtensions
+    public static StringBuilder AppendJoin<T>(this StringBuilder sb, string separator, IEnumerable<T> values)
     {
-        public static StringBuilder AppendJoin<T>(this StringBuilder sb, string separator, IEnumerable<T> values)
-        {
-            return AppendJoin(sb, separator, values, null);
-        }
+        return AppendJoin(sb, separator, values, null);
+    }
 
-        public static StringBuilder AppendJoin<T>(this StringBuilder sb, string separator, IEnumerable<T> values, Action<StringBuilder, T, int> valueAppender)
-        {
-            if (values == null) return sb;
-            if (separator == null) separator = "";
-            if (valueAppender == null) valueAppender = DefaultAppendValue;
+    public static StringBuilder AppendJoin<T>(this StringBuilder sb, string separator, IEnumerable<T> values,
+        Action<StringBuilder, T, int> valueAppender)
+    {
+        if (values == null) return sb;
+        if (separator == null) separator = "";
+        if (valueAppender == null) valueAppender = DefaultAppendValue;
 
-            using (var enumerator = values.GetEnumerator())
+        using (var enumerator = values.GetEnumerator())
+        {
+            var index = 0;
+            if (!enumerator.MoveNext())
+                return sb;
+
+            // ReSharper disable CompareNonConstrainedGenericWithNull
+            var current = enumerator.Current;
+            if (current != null)
+                // ReSharper restore CompareNonConstrainedGenericWithNull
+                valueAppender(sb, current, index);
+
+            while (enumerator.MoveNext())
             {
-                var index = 0;
-                if (!enumerator.MoveNext())
-                    return sb;
-
+                index++;
+                sb.Append(separator);
                 // ReSharper disable CompareNonConstrainedGenericWithNull
-                var current = enumerator.Current;
+                current = enumerator.Current;
                 if (current != null)
                     // ReSharper restore CompareNonConstrainedGenericWithNull
-                {
                     valueAppender(sb, current, index);
-                }
-
-                while (enumerator.MoveNext())
-                {
-                    index++;
-                    sb.Append(separator);
-                    // ReSharper disable CompareNonConstrainedGenericWithNull
-                    current = enumerator.Current;
-                    if (current != null)
-                        // ReSharper restore CompareNonConstrainedGenericWithNull
-                    {
-                        valueAppender(sb, current, index);
-                    }
-                }
             }
-            return sb;
         }
 
-        private static void DefaultAppendValue<T>(StringBuilder sb, T value, int index)
-        {
-            var s = value.ToString();
-            if (s != null)
-                sb.Append(value);
-        }
+        return sb;
+    }
+
+    private static void DefaultAppendValue<T>(StringBuilder sb, T value, int index)
+    {
+        var s = value.ToString();
+        if (s != null)
+            sb.Append(value);
     }
 }
-

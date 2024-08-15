@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="FlowDispatcherSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="FlowDispatcherSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Linq;
 using System.Threading;
@@ -15,51 +15,50 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class FlowDispatcherSpec : AkkaSpec
 {
-    public class FlowDispatcherSpec : AkkaSpec
+    private readonly ActorMaterializerSettings _defaultSettings;
+
+    public FlowDispatcherSpec(ITestOutputHelper helper) : base("my-dispatcher = akka.test.stream-dispatcher", helper)
     {
-        private readonly ActorMaterializerSettings _defaultSettings;
+        _defaultSettings = ActorMaterializerSettings.Create(Sys);
+    }
 
-        public FlowDispatcherSpec(ITestOutputHelper helper) : base("my-dispatcher = akka.test.stream-dispatcher", helper)
+    [Fact(Skip = "Need to rebase with dev first")]
+    public void Flow_with_dispatcher_setting_must_use_the_default_dispatcher()
+    {
+        var materializer = ActorMaterializer.Create(Sys, _defaultSettings);
+
+        var probe = CreateTestProbe();
+        Source.From(Enumerable.Range(1, 3)).MapMaterializedValue(i =>
         {
-            _defaultSettings = ActorMaterializerSettings.Create(Sys);
-        }
+            probe.Ref.Tell(Thread.CurrentThread.Name);
+            return i;
+        }).To(Sink.Ignore<int>()).Run(materializer);
 
-        [Fact(Skip = "Need to rebase with dev first")]
-        public void Flow_with_dispatcher_setting_must_use_the_default_dispatcher()
+        probe.ReceiveN(3).Where(s => s is string).Cast<string>().ForEach(s =>
         {
-            var materializer = ActorMaterializer.Create(Sys, _defaultSettings);
+            s.Should().StartWith(Sys.Name + "-akka.test.stream-dispatcher");
+        });
+    }
 
-            var probe = CreateTestProbe();
-            Source.From(Enumerable.Range(1, 3)).MapMaterializedValue(i =>
-            {
-                probe.Ref.Tell(Thread.CurrentThread.Name);
-                return i;
-            }).To(Sink.Ignore<int>()).Run(materializer);
+    [Fact(Skip = "Need to rebase with dev first")]
+    public void Flow_with_dispatcher_setting_must_use_custom_dispatcher()
+    {
+        var materializer = ActorMaterializer.Create(Sys, _defaultSettings.WithDispatcher("my-dispatcher"));
 
-            probe.ReceiveN(3).Where(s=>s is string).Cast<string>().ForEach(s =>
-            {
-                s.Should().StartWith(Sys.Name + "-akka.test.stream-dispatcher");
-            });
-        }
-
-        [Fact(Skip = "Need to rebase with dev first")]
-        public void Flow_with_dispatcher_setting_must_use_custom_dispatcher()
+        var probe = CreateTestProbe();
+        Source.From(Enumerable.Range(1, 3)).MapMaterializedValue(i =>
         {
-            var materializer = ActorMaterializer.Create(Sys, _defaultSettings.WithDispatcher("my-dispatcher"));
+            probe.Ref.Tell(Thread.CurrentThread.Name);
+            return i;
+        }).To(Sink.Ignore<int>()).Run(materializer);
 
-            var probe = CreateTestProbe();
-            Source.From(Enumerable.Range(1, 3)).MapMaterializedValue(i =>
-            {
-                probe.Ref.Tell(Thread.CurrentThread.Name);
-                return i;
-            }).To(Sink.Ignore<int>()).Run(materializer);
-
-            probe.ReceiveN(3).Where(s => s is string).Cast<string>().ForEach(s =>
-            {
-                s.Should().StartWith(Sys.Name + "-my-dispatcher");
-            });
-        }
+        probe.ReceiveN(3).Where(s => s is string).Cast<string>().ForEach(s =>
+        {
+            s.Should().StartWith(Sys.Name + "-my-dispatcher");
+        });
     }
 }

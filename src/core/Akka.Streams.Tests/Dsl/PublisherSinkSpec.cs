@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="PublisherSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="PublisherSinkSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Linq;
@@ -16,79 +16,78 @@ using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class PublisherSinkSpec : AkkaSpec
 {
-    public class PublisherSinkSpec : AkkaSpec
+    public PublisherSinkSpec(ITestOutputHelper helper) : base(helper)
     {
-        private ActorMaterializer Materializer { get; }
+        var settings = ActorMaterializerSettings.Create(Sys);
+        Materializer = ActorMaterializer.Create(Sys, settings);
+    }
 
-        public PublisherSinkSpec(ITestOutputHelper helper) : base(helper)
+    private ActorMaterializer Materializer { get; }
+
+    [Fact]
+    public async Task A_PublisherSink_must_be_unique_when_created_twice()
+    {
+        await this.AssertAllStagesStoppedAsync(() =>
         {
-            var settings = ActorMaterializerSettings.Create(Sys);
-            Materializer = ActorMaterializer.Create(Sys, settings);
-        }
+            var t =
+                RunnableGraph.FromGraph(
+                    GraphDsl.Create(Sink.AsPublisher<int>(false),
+                        Sink.AsPublisher<int>(false), Keep.Both,
+                        (b, p1, p2) =>
+                        {
+                            var broadcast = b.Add(new Broadcast<int>(2));
+                            var source =
+                                Source.From(Enumerable.Range(0, 6))
+                                    .MapMaterializedValue(_ => default((IPublisher<int>, IPublisher<int>)));
+                            b.From(source).To(broadcast.In);
+                            b.From(broadcast.Out(0)).Via(Flow.Create<int>().Select(i => i * 2)).To(p1.Inlet);
+                            b.From(broadcast.Out(1)).To(p2.Inlet);
+                            return ClosedShape.Instance;
+                        })).Run(Materializer);
 
-        [Fact]
-        public async Task A_PublisherSink_must_be_unique_when_created_twice()
-        {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var t =                                                                             
-                RunnableGraph.FromGraph(                                                                                 
-                    GraphDsl.Create(Sink.AsPublisher<int>(false),                                                                                     
-                    Sink.AsPublisher<int>(false), Keep.Both,                                                                                     
-                    (b, p1, p2) =>                                                                                     
-                    {                                                                                         
-                        var broadcast = b.Add(new Broadcast<int>(2));                                                                                         
-                        var source =                                                                                             
-                        Source.From(Enumerable.Range(0, 6))                                                                                                 
-                        .MapMaterializedValue(_ => default((IPublisher<int>, IPublisher<int>)));                                                                                         
-                        b.From(source).To(broadcast.In);                                                                                         
-                        b.From(broadcast.Out(0)).Via(Flow.Create<int>().Select(i => i * 2)).To(p1.Inlet);                                                                                         
-                        b.From(broadcast.Out(1)).To(p2.Inlet);                                                                                         
-                        return ClosedShape.Instance;                                                                                     
-                    })).Run(Materializer);
+            var pub1 = t.Item1;
+            var pub2 = t.Item2;
 
-                var pub1 = t.Item1;
-                var pub2 = t.Item2;
+            var f1 = Source.FromPublisher(pub1).Select(x => x).RunAggregate(0, (sum, i) => sum + i, Materializer);
+            var f2 = Source.FromPublisher(pub2).Select(x => x).RunAggregate(0, (sum, i) => sum + i, Materializer);
 
-                var f1 = Source.FromPublisher(pub1).Select(x => x).RunAggregate(0, (sum, i) => sum + i, Materializer);
-                var f2 = Source.FromPublisher(pub2).Select(x => x).RunAggregate(0, (sum, i) => sum + i, Materializer);
+            f1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            f2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
 
-                f1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                f2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            f1.Result.Should().Be(30);
+            f2.Result.Should().Be(15);
+            return Task.CompletedTask;
+        }, Materializer);
+    }
 
-                f1.Result.Should().Be(30);
-                f2.Result.Should().Be(15);
-                return Task.CompletedTask;
-            }, Materializer);
-        }
+    [Fact]
+    public void A_PublisherSink_must_work_with_SubscriberSource()
+    {
+        var t = Source.AsSubscriber<int>().ToMaterialized(Sink.AsPublisher<int>(false), Keep.Both).Run(Materializer);
+        var sub = t.Item1;
+        var pub = t.Item2;
 
-        [Fact]
-        public void A_PublisherSink_must_work_with_SubscriberSource()
-        {
-            var t = Source.AsSubscriber<int>().ToMaterialized(Sink.AsPublisher<int>(false), Keep.Both).Run(Materializer);
-            var sub = t.Item1;
-            var pub = t.Item2;
+        Source.From(Enumerable.Range(1, 100)).To(Sink.FromSubscriber(sub)).Run(Materializer);
 
-            Source.From(Enumerable.Range(1, 100)).To(Sink.FromSubscriber(sub)).Run(Materializer);
+        var task = Source.FromPublisher(pub).Limit(1000).RunWith(Sink.Seq<int>(), Materializer);
+        task.Wait(TimeSpan.FromSeconds(3));
+        task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
+    }
 
-            var task = Source.FromPublisher(pub).Limit(1000).RunWith(Sink.Seq<int>(), Materializer);
-            task.Wait(TimeSpan.FromSeconds(3));
-            task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
-
-        }
-
-        [Fact]
-        public void A_PublisherSink_must_be_able_to_use_Publisher_in_materialized_value_transformation()
-        {
-            var f = Source.From(Enumerable.Range(1, 3))
-                .RunWith(
-                    Sink.AsPublisher<int>(false)
-                        .MapMaterializedValue(
-                            p => Source.FromPublisher(p).RunAggregate(0, (sum, i) => sum + i, Materializer)),
-                    Materializer);
-            f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            f.Result.Should().Be(6);
-        }
+    [Fact]
+    public void A_PublisherSink_must_be_able_to_use_Publisher_in_materialized_value_transformation()
+    {
+        var f = Source.From(Enumerable.Range(1, 3))
+            .RunWith(
+                Sink.AsPublisher<int>(false)
+                    .MapMaterializedValue(
+                        p => Source.FromPublisher(p).RunAggregate(0, (sum, i) => sum + i, Materializer)),
+                Materializer);
+        f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+        f.Result.Should().Be(6);
     }
 }

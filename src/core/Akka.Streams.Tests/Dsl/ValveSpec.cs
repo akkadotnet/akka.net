@@ -1,370 +1,368 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ValveSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ValveSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using FluentAssertions;
-using Xunit;
 using Akka.TestKit.Extensions;
+using FluentAssertions;
 using FluentAssertions.Extensions;
+using Xunit;
 using static FluentAssertions.FluentActions;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class ValveSpec : Akka.TestKit.Xunit2.TestKit
 {
-    public class ValveSpec : Akka.TestKit.Xunit2.TestKit
+    [Fact]
+    public async Task Closed_Valve_should_emit_only_3_elements_into_a_sequence_when_the_valve_is_switched_to_open()
     {
-        [Fact]
-        public async Task Closed_Valve_should_emit_only_3_elements_into_a_sequence_when_the_valve_is_switched_to_open()
-        {
-            var t = Source.From(Enumerable.Range(1, 3))
-                .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
-                .ToMaterialized(Sink.Seq<int>(), Keep.Both)
-                .Run(Sys.Materializer());
+        var t = Source.From(Enumerable.Range(1, 3))
+            .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
+            .ToMaterialized(Sink.Seq<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-            var switchTask = t.Item1;
-            var seq = t.Item2;
+        var switchTask = t.Item1;
+        var seq = t.Item2;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
-            await Task.Delay(100);
-            var flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete = await flip.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeTrue();
-        }
+        var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+        await Task.Delay(100);
+        var flip = valveSwitch.Flip(SwitchMode.Open);
+        var complete = await flip.ShouldCompleteWithin(3.Seconds());
+        complete.Should().BeTrue();
+    }
 
-        [Fact]
-        public async Task Closed_Valve_should_emit_only_5_elements_when_the_valve_is_switched_to_open()
-        {
-            // <OpenValve>
-            var (switchTask, probe) = Source.From(Enumerable.Range(1, 5))
-                .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
-                .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
-                .Run(Sys.Materializer());
-            
-            IValveSwitch valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
-            probe.Request(2);
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+    [Fact]
+    public async Task Closed_Valve_should_emit_only_5_elements_when_the_valve_is_switched_to_open()
+    {
+        // <OpenValve>
+        var (switchTask, probe) = Source.From(Enumerable.Range(1, 5))
+            .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
+            .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-            Task<bool> flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete = await flip.ShouldCompleteWithin(3.Seconds());
-            // valve is now open
-            complete.Should().BeTrue();
-            // </OpenValve>
+        var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+        probe.Request(2);
+        probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-            probe.ExpectNext(1, 2);
+        var flip = valveSwitch.Flip(SwitchMode.Open);
+        var complete = await flip.ShouldCompleteWithin(3.Seconds());
+        // valve is now open
+        complete.Should().BeTrue();
+        // </OpenValve>
 
-            probe.Request(3);
-            probe.ExpectNext(3, 4, 5);
+        probe.ExpectNext(1, 2);
 
-            probe.ExpectComplete();
-        }
+        probe.Request(3);
+        probe.ExpectNext(3, 4, 5);
 
-        [Fact]
-        public async Task Closed_Valve_should_emit_only_3_elements_when_the_valve_is_switch_to_open_close_open()
-        {
-            var t = this.SourceProbe<int>()
-                .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Both)
-                .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
-                .Run(Sys.Materializer());
+        probe.ExpectComplete();
+    }
 
-            var sourceProbe = t.Item1.Item1;
-            var switchTask = t.Item1.Item2;
-            var sinkProbe = t.Item2;
+    [Fact]
+    public async Task Closed_Valve_should_emit_only_3_elements_when_the_valve_is_switch_to_open_close_open()
+    {
+        var t = this.SourceProbe<int>()
+            .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Both)
+            .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+        var sourceProbe = t.Item1.Item1;
+        var switchTask = t.Item1.Item2;
+        var sinkProbe = t.Item2;
 
-            sinkProbe.Request(1);
-            var flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete = await flip.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeTrue();
+        var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
 
-            sourceProbe.SendNext(1);
+        sinkProbe.Request(1);
+        var flip = valveSwitch.Flip(SwitchMode.Open);
+        var complete = await flip.ShouldCompleteWithin(3.Seconds());
+        complete.Should().BeTrue();
 
-            sinkProbe.ExpectNext().Should().Be(1);
+        sourceProbe.SendNext(1);
 
-            flip = valveSwitch.Flip(SwitchMode.Close);
-            var complete1 = await flip.ShouldCompleteWithin(3.Seconds());
-            complete1.Should().BeTrue();
+        sinkProbe.ExpectNext().Should().Be(1);
 
-            sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+        flip = valveSwitch.Flip(SwitchMode.Close);
+        var complete1 = await flip.ShouldCompleteWithin(3.Seconds());
+        complete1.Should().BeTrue();
 
-            flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete2 = await flip.ShouldCompleteWithin(3.Seconds());
-            complete2.Should().BeTrue();   
+        sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-            sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+        flip = valveSwitch.Flip(SwitchMode.Open);
+        var complete2 = await flip.ShouldCompleteWithin(3.Seconds());
+        complete2.Should().BeTrue();
 
-            sinkProbe.Request(1);
-            sinkProbe.Request(1);
-            sourceProbe.SendNext(2);
-            sourceProbe.SendNext(3);
-            sourceProbe.SendComplete();
+        sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-            sinkProbe.ExpectNext( 2, 3);
+        sinkProbe.Request(1);
+        sinkProbe.Request(1);
+        sourceProbe.SendNext(2);
+        sourceProbe.SendNext(3);
+        sourceProbe.SendComplete();
 
-            sinkProbe.ExpectComplete();
-        }
+        sinkProbe.ExpectNext(2, 3);
 
-        [Fact]
-        public async Task Closed_Valve_should_return_false_when_the_valve_is_already_closed()
-        {
-            var t = Source.From(Enumerable.Range(1, 5))
-                .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
-                .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
-                .Run(Sys.Materializer());
+        sinkProbe.ExpectComplete();
+    }
 
-            var switchTask = t.Item1;
-            var probe = t.Item2;
+    [Fact]
+    public async Task Closed_Valve_should_return_false_when_the_valve_is_already_closed()
+    {
+        var t = Source.From(Enumerable.Range(1, 5))
+            .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
+            .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+        var switchTask = t.Item1;
+        var probe = t.Item2;
 
-            var complete = await valveSwitch.Flip(SwitchMode.Close).ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeFalse();
+        var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
 
-            var complete1 = await valveSwitch.Flip(SwitchMode.Close).ShouldCompleteWithin(3.Seconds());
-            complete1.Should().BeFalse();
-        }
+        var complete = await valveSwitch.Flip(SwitchMode.Close).ShouldCompleteWithin(3.Seconds());
+        complete.Should().BeFalse();
 
-        [Fact]
-        public async Task Closed_Valve_should_emit_nothing_when_the_source_is_empty()
-        {
-            var t = Source.Empty<int>()
-                .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
-                .ToMaterialized(Sink.Seq<int>(), Keep.Both)
-                .Run(Sys.Materializer());
+        var complete1 = await valveSwitch.Flip(SwitchMode.Close).ShouldCompleteWithin(3.Seconds());
+        complete1.Should().BeFalse();
+    }
 
-            var seq = t.Item2;
+    [Fact]
+    public async Task Closed_Valve_should_emit_nothing_when_the_source_is_empty()
+    {
+        var t = Source.Empty<int>()
+            .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
+            .ToMaterialized(Sink.Seq<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-            var complete = await seq.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEmpty();
-        }
+        var seq = t.Item2;
 
-        [Fact]
-        public async Task Closed_Valve_should_emit_nothing_when_the_source_is_failing()
-        {
-            var ex = new Exception();
-            var t = Source.Failed<int>(ex)
-                .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
-                .ToMaterialized(Sink.Seq<int>(), Keep.Both)
-                .Run(Sys.Materializer());
+        var complete = await seq.ShouldCompleteWithin(3.Seconds());
+        complete.Should().BeEmpty();
+    }
 
-            var seq = t.Item2;
+    [Fact]
+    public async Task Closed_Valve_should_emit_nothing_when_the_source_is_failing()
+    {
+        var ex = new Exception();
+        var t = Source.Failed<int>(ex)
+            .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
+            .ToMaterialized(Sink.Seq<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-            var resultException = await Awaiting(async () => await seq)
+        var seq = t.Item2;
+
+        var resultException = await Awaiting(async () => await seq)
             .Should().ThrowAsync<Exception>()
             .ShouldCompleteWithin(3.Seconds());
 
-            resultException.And.Should().Be(ex);
+        resultException.And.Should().Be(ex);
+    }
+
+    [Fact]
+    public async Task Closed_Valve_should_not_pull_elements_again_when_opened_and_closed_and_re_opened()
+    {
+        var t = this.SourceProbe<int>()
+            .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Both)
+            .ToMaterialized(Sink.First<int>(), (l, r) => (l.Item1, l.Item2, r))
+            .Run(Sys.Materializer());
+
+        var probe = t.Item1;
+        var switchTask = t.Item2;
+        var resultTask = t.Item3;
+
+        var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+
+        async Task<int> result()
+        {
+            await valveSwitch.Flip(SwitchMode.Open);
+            await valveSwitch.Flip(SwitchMode.Close);
+            await valveSwitch.Flip(SwitchMode.Open);
+            probe.SendNext(1);
+            probe.SendComplete();
+
+            return await resultTask;
         }
 
-        [Fact]
-        public async Task Closed_Valve_should_not_pull_elements_again_when_opened_and_closed_and_re_opened()
-        {
-            var t = this.SourceProbe<int>()
-                .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Both)
-                .ToMaterialized(Sink.First<int>(), (l, r) => (l.Item1, l.Item2, r))
-                .Run(Sys.Materializer());
+        var complete = await result().ShouldCompleteWithin(3.Seconds());
+        complete.Should().Be(1);
+    }
 
-            var probe = t.Item1;
-            var switchTask = t.Item2;
-            var resultTask = t.Item3;
+    [Fact]
+    public async Task Closed_Valve_should_be_in_closed_state()
+    {
+        var t = Source.From(Enumerable.Range(1, 3))
+            .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
+            .ToMaterialized(Sink.Seq<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+        var switchTask = t.Item1;
+        var seq = t.Item2;
 
-            async Task<int> result()
-            {
-                await valveSwitch.Flip(SwitchMode.Open);
-                await valveSwitch.Flip(SwitchMode.Close);
-                await valveSwitch.Flip(SwitchMode.Open);
-                probe.SendNext(1);
-                probe.SendComplete();
+        var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+        var mode = await valveSwitch.GetMode().ShouldCompleteWithin(3.Seconds());
+        mode.Should().Be(SwitchMode.Close);
+    }
 
-                return await resultTask;
-            }
+    [Fact]
+    public async Task Open_Valve_should_emit_5_elements_after_it_has_been_close_open()
+    {
+        var t = this.SourceProbe<int>()
+            .ViaMaterialized(new Valve<int>(), Keep.Both)
+            .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-            var complete = await result().ShouldCompleteWithin(3.Seconds());
-            complete.Should().Be(1);
-        }
+        var sourceProbe = t.Item1.Item1;
+        var switchTask = t.Item1.Item2;
+        var sinkProbe = t.Item2;
 
-        [Fact]
-        public async Task Closed_Valve_should_be_in_closed_state()
-        {
-            var t = Source.From(Enumerable.Range(1, 3))
-                .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Right)
-                .ToMaterialized(Sink.Seq<int>(), Keep.Both)
-                .Run(Sys.Materializer());
+        var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
 
-            var switchTask = t.Item1;
-            var seq = t.Item2;
+        sinkProbe.Request(1);
+        var flip = valveSwitch.Flip(SwitchMode.Close);
+        var complete = await flip.ShouldCompleteWithin(3.Seconds());
+        complete.Should().BeTrue();
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
-            var mode = await valveSwitch.GetMode().ShouldCompleteWithin(3.Seconds());
-            mode.Should().Be(SwitchMode.Close);
-        }
+        sourceProbe.SendNext(1);
+        sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-        [Fact]
-        public async Task Open_Valve_should_emit_5_elements_after_it_has_been_close_open()
-        {
-            var t = this.SourceProbe<int>()
-                .ViaMaterialized(new Valve<int>(), Keep.Both)
-                .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
-                .Run(Sys.Materializer());
+        flip = valveSwitch.Flip(SwitchMode.Open);
+        var complete1 = await flip.ShouldCompleteWithin(3.Seconds());
+        complete1.Should().BeTrue();
 
-            var sourceProbe = t.Item1.Item1;
-            var switchTask = t.Item1.Item2;
-            var sinkProbe = t.Item2;
+        sinkProbe.ExpectNext().Should().Be(1);
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+        flip = valveSwitch.Flip(SwitchMode.Close);
+        var complete2 = await flip.ShouldCompleteWithin(3.Seconds());
+        complete2.Should().BeTrue();
 
-            sinkProbe.Request(1);
-            var flip = valveSwitch.Flip(SwitchMode.Close);
-            var complete = await flip.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeTrue();
+        flip = valveSwitch.Flip(SwitchMode.Open);
+        var complete3 = await flip.ShouldCompleteWithin(3.Seconds());
+        complete3.Should().BeTrue();
 
-            sourceProbe.SendNext(1);
-            sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+        sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-            flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete1 = await flip.ShouldCompleteWithin(3.Seconds());
-            complete1.Should().BeTrue();
+        sinkProbe.Request(1);
+        sinkProbe.Request(1);
+        sourceProbe.SendNext(2);
+        sourceProbe.SendNext(3);
+        sourceProbe.SendComplete();
 
-            sinkProbe.ExpectNext().Should().Be(1);
+        sinkProbe.ExpectNext(2, 3);
 
-            flip = valveSwitch.Flip(SwitchMode.Close);
-            var complete2 = await flip.ShouldCompleteWithin(3.Seconds());
-            complete2.Should().BeTrue();
+        sinkProbe.ExpectComplete();
+    }
 
-            flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete3 = await flip.ShouldCompleteWithin(3.Seconds());
-            complete3.Should().BeTrue();
+    [Fact]
+    public async Task Open_Valve_should_return_false_when_the_valve_is_already_opened()
+    {
+        var t = Source.From(Enumerable.Range(1, 5))
+            .ViaMaterialized(new Valve<int>(), Keep.Right)
+            .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-            sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+        var switchTask = t.Item1;
 
-            sinkProbe.Request(1);
-            sinkProbe.Request(1);
-            sourceProbe.SendNext(2);
-            sourceProbe.SendNext(3);
-            sourceProbe.SendComplete();
+        var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
 
-            sinkProbe.ExpectNext( 2, 3);
+        var complete = await valveSwitch.Flip(SwitchMode.Open).ShouldCompleteWithin(3.Seconds());
+        complete.Should().BeFalse();
 
-            sinkProbe.ExpectComplete();
-        }
+        var complete1 = await valveSwitch.Flip(SwitchMode.Open).ShouldCompleteWithin(3.Seconds());
+        complete1.Should().BeFalse();
+    }
 
-        [Fact]
-        public async Task Open_Valve_should_return_false_when_the_valve_is_already_opened()
-        {
-            var t = Source.From(Enumerable.Range(1, 5))
-                .ViaMaterialized(new Valve<int>(), Keep.Right)
-                .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
-                .Run(Sys.Materializer());
+    [Fact]
+    public async Task Open_Valve_should_emit_only_3_elements_into_a_sequence()
+    {
+        var t = Source.From(Enumerable.Range(1, 3))
+            .ViaMaterialized(new Valve<int>(), Keep.Right)
+            .ToMaterialized(Sink.Seq<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-            var switchTask = t.Item1;
+        var seq = t.Item2;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+        var complete = await seq.ShouldCompleteWithin(TimeSpan.FromMilliseconds(200));
+        complete.Should().ContainInOrder(1, 2, 3);
+    }
 
-            var complete = await valveSwitch.Flip(SwitchMode.Open).ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeFalse();
+    [Fact]
+    public async Task Open_Valve_should_emit_nothing_when_the_source_is_empty()
+    {
+        var t = Source.Empty<int>()
+            .ViaMaterialized(new Valve<int>(), Keep.Right)
+            .ToMaterialized(Sink.Seq<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-            var complete1 = await valveSwitch.Flip(SwitchMode.Open).ShouldCompleteWithin(3.Seconds());
-            complete1.Should().BeFalse();
-        }
+        var seq = t.Item2;
 
-        [Fact]
-        public async Task Open_Valve_should_emit_only_3_elements_into_a_sequence()
-        {
-            var t = Source.From(Enumerable.Range(1, 3))
-                .ViaMaterialized(new Valve<int>(), Keep.Right)
-                .ToMaterialized(Sink.Seq<int>(), Keep.Both)
-                .Run(Sys.Materializer());
+        var complete = await seq.ShouldCompleteWithin(3.Seconds());
+        complete.Should().BeEmpty();
+    }
 
-            var seq = t.Item2;
+    [Fact]
+    public async Task Open_Valve_should_emit_nothing_when_the_source_is_failing()
+    {
+        var ex = new Exception();
 
-            var complete = await seq.ShouldCompleteWithin(TimeSpan.FromMilliseconds(200));
-            complete.Should().ContainInOrder(1, 2, 3);
-        }
+        var t = Source.Failed<int>(ex)
+            .ViaMaterialized(new Valve<int>(), Keep.Right)
+            .ToMaterialized(Sink.Seq<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-        [Fact]
-        public async Task Open_Valve_should_emit_nothing_when_the_source_is_empty()
-        {
-            var t = Source.Empty<int>()
-                .ViaMaterialized(new Valve<int>(), Keep.Right)
-                .ToMaterialized(Sink.Seq<int>(), Keep.Both)
-                .Run(Sys.Materializer());
+        var seq = t.Item2;
 
-            var seq = t.Item2;
-
-            var complete = await seq.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEmpty();
-        }
-
-        [Fact]
-        public async Task Open_Valve_should_emit_nothing_when_the_source_is_failing()
-        {
-            var ex = new Exception();
-
-            var t = Source.Failed<int>(ex)
-                .ViaMaterialized(new Valve<int>(), Keep.Right)
-                .ToMaterialized(Sink.Seq<int>(), Keep.Both)
-                .Run(Sys.Materializer());
-
-            var seq = t.Item2;
-
-            var resultException = await Awaiting(async () => await seq)
+        var resultException = await Awaiting(async () => await seq)
             .Should().ThrowAsync<Exception>()
             .ShouldCompleteWithin(3.Seconds());
 
-            resultException.And.Should().Be(ex);
-        }
+        resultException.And.Should().Be(ex);
+    }
 
-        [Fact]
-        public async Task Open_Valve_should_not_pull_elements_again_when_closed_and_re_opened()
+    [Fact]
+    public async Task Open_Valve_should_not_pull_elements_again_when_closed_and_re_opened()
+    {
+        var t = this.SourceProbe<int>()
+            .ViaMaterialized(new Valve<int>(), Keep.Both)
+            .ToMaterialized(Sink.First<int>(), (l, r) => (l.Item1, l.Item2, r))
+            .Run(Sys.Materializer());
+
+        var probe = t.Item1;
+        var switchTask = t.Item2;
+        var resultTask = t.Item3;
+
+        var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+
+        async Task<int> result()
         {
-            var t = this.SourceProbe<int>()
-                .ViaMaterialized(new Valve<int>(), Keep.Both)
-                .ToMaterialized(Sink.First<int>(), (l, r) => (l.Item1, l.Item2, r))
-                .Run(Sys.Materializer());
+            await valveSwitch.Flip(SwitchMode.Close);
+            await valveSwitch.Flip(SwitchMode.Open);
+            probe.SendNext(1);
+            probe.SendComplete();
 
-            var probe = t.Item1;
-            var switchTask = t.Item2;
-            var resultTask = t.Item3;
-
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
-
-            async Task<int> result()
-            {
-                await valveSwitch.Flip(SwitchMode.Close);
-                await valveSwitch.Flip(SwitchMode.Open);
-                probe.SendNext(1);
-                probe.SendComplete();
-
-                return await resultTask;
-            }
-
-            var complete = await result().ShouldCompleteWithin(3.Seconds());
-            complete.Should().Be(1);
+            return await resultTask;
         }
 
-        [Fact]
-        public async Task Open_Valve_should_be_in_open_state()
-        {
-            var t = Source.From(Enumerable.Range(1, 5))
-                .ViaMaterialized(new Valve<int>(), Keep.Right)
-                .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
-                .Run(Sys.Materializer());
+        var complete = await result().ShouldCompleteWithin(3.Seconds());
+        complete.Should().Be(1);
+    }
 
-            var switchTask = t.Item1;
+    [Fact]
+    public async Task Open_Valve_should_be_in_open_state()
+    {
+        var t = Source.From(Enumerable.Range(1, 5))
+            .ViaMaterialized(new Valve<int>(), Keep.Right)
+            .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
-            var complete = await valveSwitch.GetMode().ShouldCompleteWithin(3.Seconds());
-            complete.Should().Be(SwitchMode.Open);
-        }
+        var switchTask = t.Item1;
+
+        var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+        var complete = await valveSwitch.GetMode().ShouldCompleteWithin(3.Seconds());
+        complete.Should().Be(SwitchMode.Open);
     }
 }

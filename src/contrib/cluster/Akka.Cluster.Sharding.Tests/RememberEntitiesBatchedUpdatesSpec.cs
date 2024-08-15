@@ -1,9 +1,10 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="RememberEntitiesBatchedUpdatesSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="RememberEntitiesBatchedUpdatesSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using System.Linq;
@@ -16,114 +17,17 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Cluster.Sharding.Tests
+namespace Akka.Cluster.Sharding.Tests;
+
+public class RememberEntitiesBatchedUpdatesSpec : AkkaSpec
 {
-    public class RememberEntitiesBatchedUpdatesSpec : AkkaSpec
+    public RememberEntitiesBatchedUpdatesSpec(ITestOutputHelper helper) : base(GetConfig(), helper)
     {
-        private class EntityEnvelope
-        {
-            public EntityEnvelope(int id, object msg)
-            {
-                Id = id;
-                Msg = msg;
-            }
+    }
 
-            public int Id { get; }
-            public object Msg { get; }
-        }
-
-        private class EntityActor : ActorBase
-        {
-            private readonly IActorRef _probe;
-
-            public class Started
-            {
-                public Started(int id)
-                {
-                    Id = id;
-                }
-
-                public int Id { get; }
-
-                #region Equals
-
-                /// <inheritdoc/>
-                public override bool Equals(object? obj)
-                {
-                    return Equals(obj as Started);
-                }
-
-                public bool Equals(Started? other)
-                {
-                    if (ReferenceEquals(other, null)) return false;
-                    if (ReferenceEquals(other, this)) return true;
-
-                    return Id.Equals(other.Id);
-                }
-
-                /// <inheritdoc/>
-                public override int GetHashCode()
-                {
-                    return Id.GetHashCode();
-                }
-
-                #endregion
-            }
-
-            public class Stopped
-            {
-                public Stopped(int id)
-                {
-                    Id = id;
-                }
-
-                public int Id { get; }
-            }
-
-            public static Props Props(IActorRef probe)
-            {
-                return Actor.Props.Create(() => new EntityActor(probe));
-
-            }
-            private readonly ILoggingAdapter _log = Context.GetLogger();
-
-            public EntityActor(IActorRef probe)
-            {
-                probe.Tell(new Started(int.Parse(Self.Path.Name)));
-                this._probe = probe;
-            }
-
-
-            protected override bool Receive(object message)
-            {
-                switch (message)
-                {
-                    case "stop":
-                        _log.Debug("Got stop message, stopping");
-                        Context.Stop(Self);
-                        return true;
-                    case "graceful-stop":
-                        _log.Debug("Got a graceful stop, requesting passivation");
-                        Context.Parent.Tell(new Passivate("stop"));
-                        return true;
-                    case "start":
-                        _log.Debug("Got a start");
-                        return true;
-                    case "ping":
-                        return true;
-                }
-                return false;
-            }
-
-            protected override void PostStop()
-            {
-                _probe.Tell(new Stopped(int.Parse(Self.Path.Name)));
-            }
-        }
-
-        public static Config GetConfig()
-        {
-            return ConfigurationFactory.ParseString(@"
+    public static Config GetConfig()
+    {
+        return ConfigurationFactory.ParseString(@"
                 akka.loglevel=DEBUG
                 akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0
@@ -134,91 +38,178 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.cluster.sharding.distributed-data.durable.keys = []
                 akka.cluster.sharding.verbose-debug-logging = on
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
+            .WithFallback(ClusterSharding.DefaultConfig())
+            .WithFallback(DistributedData.DistributedData.DefaultConfig())
+            .WithFallback(ClusterSingletonManager.DefaultConfig());
+    }
 
-                .WithFallback(Sharding.ClusterSharding.DefaultConfig())
-                .WithFallback(DistributedData.DistributedData.DefaultConfig())
-                .WithFallback(ClusterSingletonManager.DefaultConfig());
+    protected override void AtStartup()
+    {
+        // Form a one node cluster
+        var cluster = Cluster.Get(Sys);
+        cluster.Join(cluster.SelfAddress);
+        AwaitAssert(() => { cluster.ReadView.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(1); });
+    }
+
+    [Fact]
+    public void Batching_of_starts_and_stops_must_work()
+    {
+        var probe = CreateTestProbe();
+        var sharding = ClusterSharding.Get(Sys).Start(
+            "batching",
+            EntityActor.Props(probe.Ref),
+            ClusterShardingSettings.Create(Sys),
+            new MyMessageExtractor());
+
+        // make sure that sharding is up and running
+        sharding.Tell(new EntityEnvelope(0, "ping"), probe.Ref);
+        probe.ExpectMsg(new EntityActor.Started(0));
+
+        // start 20, should write first and batch the rest
+        for (var i = 1; i <= 20; i++) sharding.Tell(new EntityEnvelope(i, "start"));
+        probe.ReceiveN(20);
+
+        // start 20 more, and stop the previous ones that are already running,
+        // should create a mixed batch of start + stops
+        for (var i = 21; i <= 40; i++)
+        {
+            sharding.Tell(new EntityEnvelope(i, "start"));
+            sharding.Tell(new EntityEnvelope(i - 20, "graceful-stop"));
         }
 
-        public RememberEntitiesBatchedUpdatesSpec(ITestOutputHelper helper) : base(GetConfig(), helper)
+        probe.ReceiveN(40);
+        // stop the last 20, should batch stops only
+        for (var i = 21; i <= 40; i++) sharding.Tell(new EntityEnvelope(i, "graceful-stop"));
+        probe.ReceiveN(20);
+    }
+
+    private class EntityEnvelope
+    {
+        public EntityEnvelope(int id, object msg)
         {
+            Id = id;
+            Msg = msg;
         }
 
-        protected override void AtStartup()
+        public int Id { get; }
+        public object Msg { get; }
+    }
+
+    private class EntityActor : ActorBase
+    {
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly IActorRef _probe;
+
+        public EntityActor(IActorRef probe)
         {
-            // Form a one node cluster
-            var cluster = Cluster.Get(Sys);
-            cluster.Join(cluster.SelfAddress);
-            AwaitAssert(() =>
-            {
-                cluster.ReadView.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(1);
-            });
+            probe.Tell(new Started(int.Parse(Self.Path.Name)));
+            _probe = probe;
         }
 
-        [Fact]
-        public void Batching_of_starts_and_stops_must_work()
+        public static Props Props(IActorRef probe)
         {
-            var probe = CreateTestProbe();
-            var sharding = ClusterSharding.Get(Sys).Start(
-                "batching",
-                EntityActor.Props(probe.Ref),
-                ClusterShardingSettings.Create(Sys),
-                new MyMessageExtractor());
-
-            // make sure that sharding is up and running
-            sharding.Tell(new EntityEnvelope(0, "ping"), probe.Ref);
-            probe.ExpectMsg(new EntityActor.Started(0));
-
-            // start 20, should write first and batch the rest
-            for (int i = 1; i <= 20; i++)
-            {
-                sharding.Tell(new EntityEnvelope(i, "start"));
-            }
-            probe.ReceiveN(20);
-
-            // start 20 more, and stop the previous ones that are already running,
-            // should create a mixed batch of start + stops
-            for (int i = 21; i <= 40; i++)
-            {
-                sharding.Tell(new EntityEnvelope(i, "start"));
-                sharding.Tell(new EntityEnvelope(i - 20, "graceful-stop"));
-            }
-            probe.ReceiveN(40);
-            // stop the last 20, should batch stops only
-            for (int i = 21; i <= 40; i++)
-            {
-                sharding.Tell(new EntityEnvelope(i, "graceful-stop"));
-            }
-            probe.ReceiveN(20);
+            return Actor.Props.Create(() => new EntityActor(probe));
         }
 
-        private class MyMessageExtractor : IMessageExtractor
+
+        protected override bool Receive(object message)
         {
-            public string? EntityId(object message)
+            switch (message)
             {
-                if (message is EntityEnvelope e)
-                    return e.Id.ToString();
-
-                return null;
+                case "stop":
+                    _log.Debug("Got stop message, stopping");
+                    Context.Stop(Self);
+                    return true;
+                case "graceful-stop":
+                    _log.Debug("Got a graceful stop, requesting passivation");
+                    Context.Parent.Tell(new Passivate("stop"));
+                    return true;
+                case "start":
+                    _log.Debug("Got a start");
+                    return true;
+                case "ping":
+                    return true;
             }
 
-            public object? EntityMessage(object message)
-            {
-                if (message is EntityEnvelope e)
-                    return e.Msg;
+            return false;
+        }
 
-                return null;
+        protected override void PostStop()
+        {
+            _probe.Tell(new Stopped(int.Parse(Self.Path.Name)));
+        }
+
+        public class Started
+        {
+            public Started(int id)
+            {
+                Id = id;
             }
 
-            public string ShardId(object message)
+            public int Id { get; }
+
+            #region Equals
+
+            /// <inheritdoc />
+            public override bool Equals(object? obj)
             {
-                throw new NotImplementedException();
+                return Equals(obj as Started);
             }
 
-            public string ShardId(string entityId, object? messageHint = null)
+            public bool Equals(Started? other)
             {
-                return "1";
+                if (ReferenceEquals(other, null)) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return Id.Equals(other.Id);
             }
+
+            /// <inheritdoc />
+            public override int GetHashCode()
+            {
+                return Id.GetHashCode();
+            }
+
+            #endregion
+        }
+
+        public class Stopped
+        {
+            public Stopped(int id)
+            {
+                Id = id;
+            }
+
+            public int Id { get; }
+        }
+    }
+
+    private class MyMessageExtractor : IMessageExtractor
+    {
+        public string? EntityId(object message)
+        {
+            if (message is EntityEnvelope e)
+                return e.Id.ToString();
+
+            return null;
+        }
+
+        public object? EntityMessage(object message)
+        {
+            if (message is EntityEnvelope e)
+                return e.Msg;
+
+            return null;
+        }
+
+        public string ShardId(object message)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string ShardId(string entityId, object? messageHint = null)
+        {
+            return "1";
         }
     }
 }

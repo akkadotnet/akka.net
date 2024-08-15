@@ -1,31 +1,26 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ClusterRouterAsk1343BugFixSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ClusterRouterAsk1343BugFixSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Cluster.Routing;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Xunit;
 
-namespace Akka.Cluster.Tests.Routing
+namespace Akka.Cluster.Tests.Routing;
+
+/// <summary>
+///     Spec to get to the bottom of https://github.com/akkadotnet/akka.net/issues/1343
+/// </summary>
+public class ClusterRouterAsk1343BugFixSpec : AkkaSpec
 {
-    /// <summary>
-    /// Spec to get to the bottom of https://github.com/akkadotnet/akka.net/issues/1343
-    /// </summary>
-    public class ClusterRouterAsk1343BugFixSpec : AkkaSpec
-    {
-        public ClusterRouterAsk1343BugFixSpec()
-            : base(@"
+    public ClusterRouterAsk1343BugFixSpec()
+        : base(@"
     akka{
         actor{
             ask-timeout = 0.5s # use a default ask timeout
@@ -65,38 +60,37 @@ namespace Akka.Cluster.Tests.Routing
         
         remote.dot-netty.tcp.port = 0
     }")
-        {
-        }
+    {
+    }
 
 
-        [Fact]
-        public async Task Should_Ask_Clustered_Pool_Router_and_forward_ask_to_routee()
-        {
-            var router = Sys.ActorOf(EchoActor.Props(this, true).WithRouter(FromConfig.Instance), "router1");
-            Assert.IsType<RoutedActorRef>(router);
+    [Fact]
+    public async Task Should_Ask_Clustered_Pool_Router_and_forward_ask_to_routee()
+    {
+        var router = Sys.ActorOf(EchoActor.Props(this).WithRouter(FromConfig.Instance), "router1");
+        Assert.IsType<RoutedActorRef>(router);
 
-            var result = await router.Ask<string>("foo");
-            (await ExpectMsgAsync<string>()).ShouldBe(result);
-        }
+        var result = await router.Ask<string>("foo");
+        (await ExpectMsgAsync<string>()).ShouldBe(result);
+    }
 
-        [Fact]
-        public async Task Should_Ask_Clustered_Group_Router_and_forward_ask_to_routee()
-        {
-            var echo = Sys.ActorOf(EchoActor.Props(this, true), "echo");
-            var router = Sys.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "router2");
-            Assert.IsType<RoutedActorRef>(router);
+    [Fact]
+    public async Task Should_Ask_Clustered_Group_Router_and_forward_ask_to_routee()
+    {
+        var echo = Sys.ActorOf(EchoActor.Props(this), "echo");
+        var router = Sys.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "router2");
+        Assert.IsType<RoutedActorRef>(router);
 
-            var result = await router.Ask<string>("foo");
-            (await ExpectMsgAsync<string>()).ShouldBe(result);
-        }
+        var result = await router.Ask<string>("foo");
+        (await ExpectMsgAsync<string>()).ShouldBe(result);
+    }
 
-        [Fact]
-        public async Task Should_Ask_Clustered_Group_Router_and_with_no_routees_and_timeout()
-        {
-            var router = Sys.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "router3");
-            Assert.IsType<RoutedActorRef>(router);
+    [Fact]
+    public async Task Should_Ask_Clustered_Group_Router_and_with_no_routees_and_timeout()
+    {
+        var router = Sys.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "router3");
+        Assert.IsType<RoutedActorRef>(router);
 
-            await Assert.ThrowsAsync<AskTimeoutException>(async () => await router.Ask<int>("foo"));
-        }
+        await Assert.ThrowsAsync<AskTimeoutException>(async () => await router.Ask<int>("foo"));
     }
 }

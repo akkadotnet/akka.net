@@ -1,179 +1,180 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SimpleDnsCacheSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SimpleDnsCacheSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.IO;
 using Akka.TestKit;
 using Xunit;
+using Dns = System.Net.Dns;
 
-namespace Akka.Tests.IO
+namespace Akka.Tests.IO;
+
+public class SimpleDnsCacheSpec
 {
-
-    public class SimpleDnsCacheSpec
+    [Fact]
+    public async Task Cache_should_not_reply_with_expired_but_not_yet_swept_out_entries()
     {
-        private class SimpleDnsCacheTestDouble : SimpleDnsCache
+        var localClock = new AtomicReference<long>(0);
+        var cache = new SimpleDnsCacheTestDouble(localClock);
+        var hostEntry = await Dns.GetHostEntryAsync("127.0.0.1");
+        var cacheEntry = Akka.IO.Dns.Resolved.Create("test.local", hostEntry.AddressList);
+        cache.Put(cacheEntry, 5000);
+
+        cache.Cached("test.local").ShouldBe(cacheEntry);
+        localClock.CompareAndSet(0, 4999);
+        cache.Cached("test.local").ShouldBe(cacheEntry);
+        localClock.CompareAndSet(4999, 5000);
+        cache.Cached("test.local").ShouldBe(null);
+    }
+
+    [Fact]
+    public async Task Cache_should_sweep_out_expired_entries_on_cleanup()
+    {
+        var localClock = new AtomicReference<long>(0);
+        var cache = new SimpleDnsCacheTestDouble(localClock);
+        var hostEntry = await Dns.GetHostEntryAsync("127.0.0.1");
+        var cacheEntry = Akka.IO.Dns.Resolved.Create("test.local", hostEntry.AddressList);
+        cache.Put(cacheEntry, 5000);
+
+        cache.Cached("test.local").ShouldBe(cacheEntry);
+        localClock.CompareAndSet(0, 5000);
+        cache.Cached("test.local").ShouldBe(null);
+        localClock.CompareAndSet(5000, 0);
+        cache.Cached("test.local").ShouldBe(cacheEntry);
+        localClock.CompareAndSet(0, 5000);
+        cache.CleanUp();
+        cache.Cached("test.local").ShouldBe(null);
+        localClock.CompareAndSet(5000, 0);
+        cache.Cached("test.local").ShouldBe(null);
+    }
+
+    [Fact]
+    public async Task Cache_should_be_updated_with_the_latest_resolved()
+    {
+        var localClock = new AtomicReference<long>(0);
+        var cache = new SimpleDnsCacheTestDouble(localClock);
+        var hostEntry = await Dns.GetHostEntryAsync("127.0.0.1");
+        var cacheEntryOne = Akka.IO.Dns.Resolved.Create("test.local", hostEntry.AddressList);
+        var cacheEntryTwo = Akka.IO.Dns.Resolved.Create("test.local", hostEntry.AddressList);
+        long ttl = 500;
+        cache.Put(cacheEntryOne, ttl);
+        cache.Cached("test.local").ShouldBe(cacheEntryOne);
+        cache.Put(cacheEntryTwo, ttl);
+        cache.Cached("test.local").ShouldBe(cacheEntryTwo);
+    }
+
+    private class SimpleDnsCacheTestDouble : SimpleDnsCache
+    {
+        private readonly AtomicReference<long> _clock;
+
+        public SimpleDnsCacheTestDouble(AtomicReference<long> clock)
         {
-            private readonly AtomicReference<long> _clock;
+            _clock = clock;
+        }
 
-            public SimpleDnsCacheTestDouble(AtomicReference<long> clock)
+        protected override long Clock()
+        {
+            return _clock.Value;
+        }
+    }
+
+
+    //This version was replaced with a new version which is restricted to reference types, 
+    //therefore we use the old version here.
+    private class AtomicReference<T>
+    {
+        // ReSharper disable once InconsistentNaming
+        protected T atomicValue;
+
+        /// <summary>
+        ///     Sets the initial value of this <see cref="AtomicReference{T}" /> to <paramref name="originalValue" />.
+        /// </summary>
+        public AtomicReference(T originalValue)
+        {
+            atomicValue = originalValue;
+        }
+
+        /// <summary>
+        ///     Default constructor
+        /// </summary>
+        public AtomicReference()
+        {
+            atomicValue = default;
+        }
+
+        /// <summary>
+        ///     The current value of this <see cref="AtomicReference{T}" />
+        /// </summary>
+        public T Value
+        {
+            get
             {
-                _clock = clock;
+                Interlocked.MemoryBarrier();
+                return atomicValue;
             }
-
-            protected override long Clock()
+            set
             {
-                return _clock.Value;
+                Interlocked.MemoryBarrier();
+                atomicValue = value;
+                Interlocked.MemoryBarrier();
             }
         }
 
-        [Fact]
-        public async Task Cache_should_not_reply_with_expired_but_not_yet_swept_out_entries()
+        /// <summary>
+        ///     If <see cref="Value" /> equals <paramref name="expected" />, then set the Value to
+        ///     <paramref name="newValue" />.
+        /// </summary>
+        /// <returns><c>true</c> if <paramref name="newValue" /> was set</returns>
+        public bool CompareAndSet(T expected, T newValue)
         {
-            var localClock = new AtomicReference<long>(0);
-            var cache = new SimpleDnsCacheTestDouble(localClock);
-            var hostEntry = await System.Net.Dns.GetHostEntryAsync("127.0.0.1");
-            var cacheEntry = Dns.Resolved.Create("test.local", hostEntry.AddressList);
-            cache.Put(cacheEntry, 5000);
-
-            cache.Cached("test.local").ShouldBe(cacheEntry);
-            localClock.CompareAndSet(0, 4999);
-            cache.Cached("test.local").ShouldBe(cacheEntry);
-            localClock.CompareAndSet(4999, 5000);
-            cache.Cached("test.local").ShouldBe(null);
-
-        }
-
-        [Fact]
-        public async Task Cache_should_sweep_out_expired_entries_on_cleanup()
-        {
-            var localClock = new AtomicReference<long>(0);
-            var cache = new SimpleDnsCacheTestDouble(localClock);
-            var hostEntry = await System.Net.Dns.GetHostEntryAsync("127.0.0.1");
-            var cacheEntry = Dns.Resolved.Create("test.local", hostEntry.AddressList);
-            cache.Put(cacheEntry, 5000);
-
-            cache.Cached("test.local").ShouldBe(cacheEntry);
-            localClock.CompareAndSet(0, 5000);
-            cache.Cached("test.local").ShouldBe(null);
-            localClock.CompareAndSet(5000, 0);
-            cache.Cached("test.local").ShouldBe(cacheEntry);
-            localClock.CompareAndSet(0, 5000);
-            cache.CleanUp();
-            cache.Cached("test.local").ShouldBe(null);
-            localClock.CompareAndSet(5000, 0);
-            cache.Cached("test.local").ShouldBe(null);
-           
-        }
-
-        [Fact]
-        public async Task Cache_should_be_updated_with_the_latest_resolved()
-        {
-            var localClock = new AtomicReference<long>(0);
-            var cache = new SimpleDnsCacheTestDouble(localClock);
-            var hostEntry = await System.Net.Dns.GetHostEntryAsync("127.0.0.1");
-            var cacheEntryOne = Dns.Resolved.Create("test.local", hostEntry.AddressList);
-            var cacheEntryTwo = Dns.Resolved.Create("test.local", hostEntry.AddressList);
-            long ttl = 500;
-            cache.Put(cacheEntryOne, ttl);
-            cache.Cached("test.local").ShouldBe(cacheEntryOne);
-            cache.Put(cacheEntryTwo, ttl);
-            cache.Cached("test.local").ShouldBe(cacheEntryTwo);
-        }
-
-
-        //This version was replaced with a new version which is restricted to reference types, 
-        //therefore we use the old version here.
-        private class AtomicReference<T>
-        {
-            /// <summary>
-            /// Sets the initial value of this <see cref="AtomicReference{T}"/> to <paramref name="originalValue"/>.
-            /// </summary>
-            public AtomicReference(T originalValue)
+            //special handling for null values
+            if (Value == null)
             {
-                atomicValue = originalValue;
-            }
-
-            /// <summary>
-            /// Default constructor
-            /// </summary>
-            public AtomicReference()
-            {
-                atomicValue = default(T);
-            }
-
-            // ReSharper disable once InconsistentNaming
-            protected T atomicValue;
-
-            /// <summary>
-            /// The current value of this <see cref="AtomicReference{T}"/>
-            /// </summary>
-            public T Value
-            {
-                get
-                {
-                    Interlocked.MemoryBarrier();
-                    return atomicValue;
-                }
-                set
-                {
-                    Interlocked.MemoryBarrier();
-                    atomicValue = value;
-                    Interlocked.MemoryBarrier();
-                }
-            }
-
-            /// <summary>
-            /// If <see cref="Value"/> equals <paramref name="expected"/>, then set the Value to
-            /// <paramref name="newValue"/>.
-            /// </summary>
-            /// <returns><c>true</c> if <paramref name="newValue"/> was set</returns>
-            public bool CompareAndSet(T expected, T newValue)
-            {
-                //special handling for null values
-                if (Value == null)
-                {
-                    if (expected == null)
-                    {
-                        Value = newValue;
-                        return true;
-                    }
-                    return false;
-                }
-
-                if (Value.Equals(expected))
+                if (expected == null)
                 {
                     Value = newValue;
                     return true;
                 }
+
                 return false;
             }
 
-            #region Conversion operators
-
-            /// <summary>
-            /// Implicit conversion operator = automatically casts the <see cref="AtomicReference{T}"/> to an instance of <typeparamref name="T"/>.
-            /// </summary>
-            public static implicit operator T(AtomicReference<T> aRef)
+            if (Value.Equals(expected))
             {
-                return aRef.Value;
+                Value = newValue;
+                return true;
             }
 
-            /// <summary>
-            /// Implicit conversion operator = allows us to cast any type directly into a <see cref="AtomicReference{T}"/> instance.
-            /// </summary>
-            /// <param name="newValue"></param>
-            /// <returns></returns>
-            public static implicit operator AtomicReference<T>(T newValue)
-            {
-                return new AtomicReference<T>(newValue);
-            }
-
-            #endregion
+            return false;
         }
+
+        #region Conversion operators
+
+        /// <summary>
+        ///     Implicit conversion operator = automatically casts the <see cref="AtomicReference{T}" /> to an instance of
+        ///     <typeparamref name="T" />.
+        /// </summary>
+        public static implicit operator T(AtomicReference<T> aRef)
+        {
+            return aRef.Value;
+        }
+
+        /// <summary>
+        ///     Implicit conversion operator = allows us to cast any type directly into a <see cref="AtomicReference{T}" />
+        ///     instance.
+        /// </summary>
+        /// <param name="newValue"></param>
+        /// <returns></returns>
+        public static implicit operator AtomicReference<T>(T newValue)
+        {
+            return new AtomicReference<T>(newValue);
+        }
+
+        #endregion
     }
 }

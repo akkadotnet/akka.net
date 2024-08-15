@@ -1,17 +1,17 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Program.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 #region publisher
+
 // See https://aka.ms/new-console-template for more information
 using Akka.Actor;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Configuration;
 using SamplePublisher;
-
 
 var config = ConfigurationFactory.ParseString(@"
 akka {
@@ -36,4 +36,5 @@ var publisher = actorSystem.ActorOf(Props.Create<Publisher>(), "publisher");
 publisher.Tell("Hello from Akka-Verse");
 
 actorSystem.WhenTerminated.Wait();
+
 #endregion

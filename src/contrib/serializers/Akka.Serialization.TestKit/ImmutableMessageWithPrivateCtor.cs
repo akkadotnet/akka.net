@@ -1,48 +1,47 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ImmutableMessageWithPrivateCtor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ImmutableMessageWithPrivateCtor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 
-namespace Akka.Tests.Serialization
+namespace Akka.Tests.Serialization;
+
+public class ImmutableMessageWithPrivateCtor
 {
-    public class ImmutableMessageWithPrivateCtor
+    protected ImmutableMessageWithPrivateCtor()
     {
-        public string Foo { get; private set; }
-        public string Bar { get; private set; }
+    }
 
-        protected ImmutableMessageWithPrivateCtor()
-        {
-        }
+    public ImmutableMessageWithPrivateCtor(Tuple<string, string> nonConventionalArg)
+    {
+        Foo = nonConventionalArg.Item1;
+        Bar = nonConventionalArg.Item2;
+    }
 
-        protected bool Equals(ImmutableMessageWithPrivateCtor other)
-        {
-            return String.Equals(Bar, other.Bar) && String.Equals(Foo, other.Foo);
-        }
+    public string Foo { get; }
+    public string Bar { get; }
 
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
-            return Equals((ImmutableMessageWithPrivateCtor)obj);
-        }
+    protected bool Equals(ImmutableMessageWithPrivateCtor other)
+    {
+        return string.Equals(Bar, other.Bar) && string.Equals(Foo, other.Foo);
+    }
 
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return ((Bar != null ? Bar.GetHashCode() : 0) * 397) ^ (Foo != null ? Foo.GetHashCode() : 0);
-            }
-        }
+    public override bool Equals(object obj)
+    {
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals((ImmutableMessageWithPrivateCtor)obj);
+    }
 
-        public ImmutableMessageWithPrivateCtor(Tuple<string, string> nonConventionalArg)
+    public override int GetHashCode()
+    {
+        unchecked
         {
-            Foo = nonConventionalArg.Item1;
-            Bar = nonConventionalArg.Item2;
+            return ((Bar != null ? Bar.GetHashCode() : 0) * 397) ^ (Foo != null ? Foo.GetHashCode() : 0);
         }
     }
 }

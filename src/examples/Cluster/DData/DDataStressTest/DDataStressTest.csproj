@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\contrib\cluster\Akka.DistributedData\Akka.DistributedData.csproj" />
+    <ProjectReference Include="..\..\..\..\contrib\cluster\Akka.DistributedData\Akka.DistributedData.csproj"/>
   </ItemGroup>
 
 </Project>

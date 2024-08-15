@@ -1,28 +1,30 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="InMemoryAllEventsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="InMemoryAllEventsSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Configuration;
 using Akka.Persistence.TCK.Query;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Query.InMemory.Tests
+namespace Akka.Persistence.Query.InMemory.Tests;
+
+public class InMemoryAllEventsSpec : AllEventsSpec
 {
-    public class InMemoryAllEventsSpec : AllEventsSpec
+    public InMemoryAllEventsSpec(ITestOutputHelper output) : base(Config(), nameof(InMemoryAllEventsSpec), output)
     {
-        private static Config Config() => ConfigurationFactory.ParseString(@"
+        ReadJournal = Sys.ReadJournalFor<InMemoryReadJournal>(InMemoryReadJournal.Identifier);
+    }
+
+    private static Config Config()
+    {
+        return ConfigurationFactory.ParseString(@"
             akka.loglevel = INFO
             akka.persistence.query.journal.inmem.refresh-interval = 1s
             akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
             akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""")
             .WithFallback(InMemoryReadJournal.DefaultConfiguration());
-
-        public InMemoryAllEventsSpec(ITestOutputHelper output) : base(Config(), nameof(InMemoryAllEventsSpec), output)
-        {
-            ReadJournal = Sys.ReadJournalFor<InMemoryReadJournal>(InMemoryReadJournal.Identifier);
-        }
     }
 }

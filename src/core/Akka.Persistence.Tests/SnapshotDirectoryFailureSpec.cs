@@ -1,86 +1,90 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SnapshotDirectoryFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SnapshotDirectoryFailureSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.IO;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Xunit;
 
-namespace Akka.Persistence.Tests
+namespace Akka.Persistence.Tests;
+
+public class SnapshotDirectoryFailureSpec : PersistenceSpec
 {
-    public class SnapshotDirectoryFailureSpec : PersistenceSpec
+    private const string InUseSnapshotPath = "target/inUseSnapshotPath";
+
+    private readonly FileInfo _file = new(InUseSnapshotPath);
+
+    public SnapshotDirectoryFailureSpec() : base(Configuration("SnapshotDirectoryFailureSpec",
+        extraConfig: "akka.persistence.snapshot-store.local.dir = \"" + InUseSnapshotPath + "\""))
     {
-        private const string InUseSnapshotPath = "target/inUseSnapshotPath";
+    }
 
-        internal class TestPersistentActor : PersistentActor
+    protected override void AtStartup()
+    {
+        base.AtStartup();
+        try // try to create the directory first.d
         {
-            private readonly string _name;
-            private readonly IActorRef _probe;
-
-            public TestPersistentActor(string name, IActorRef probe)
-            {
-                _name = name;
-                _probe = probe;
-            }
-
-            public override string PersistenceId { get { return _name; } }
-
-            protected override bool ReceiveRecover(object message)
-            {
-                if (message is SnapshotOffer)
-                    _probe.Tell(message);
-                else return false;
-                return true;
-            }
-
-            protected override bool ReceiveCommand(object message)
-            {
-                if (message is string)
-                    SaveSnapshot(message);
-                else if (message is SaveSnapshotSuccess success)
-                    _probe.Tell(success.Metadata.SequenceNr);
-                else
-                    _probe.Tell(message);
-                return true;
-            }
+            _file.Directory.Create();
         }
-
-        private readonly FileInfo _file = new(InUseSnapshotPath);
-
-        public SnapshotDirectoryFailureSpec() : base(Configuration("SnapshotDirectoryFailureSpec",
-            extraConfig: "akka.persistence.snapshot-store.local.dir = \"" + InUseSnapshotPath + "\""))
+        catch
         {
         }
 
-        protected override void AtStartup()
+        using (_file.Create())
         {
-            base.AtStartup();
-            try // try to create the directory first.d
-            {
-                _file.Directory.Create();
-            }
-            catch { }
-            using (_file.Create()) {}
+        }
+    }
+
+    protected override void AfterTermination()
+    {
+        _file.Delete();
+        base.AfterTermination();
+    }
+
+    [Fact]
+    public void LocalSnapshotStore_configured_with_a_failing_directory_name_should_throw_an_exception_at_startup()
+    {
+        EventFilter.Exception(typeof(ActorInitializationException)).ExpectOne(() =>
+        {
+            var pref = Sys.ActorOf(Props.Create(() =>
+                new TestPersistentActor("SnapshotDirectoryFailureSpec-1", TestActor)));
+            pref.Tell("blahonga");
+        });
+    }
+
+    internal class TestPersistentActor : PersistentActor
+    {
+        private readonly string _name;
+        private readonly IActorRef _probe;
+
+        public TestPersistentActor(string name, IActorRef probe)
+        {
+            _name = name;
+            _probe = probe;
         }
 
-        protected override void AfterTermination()
+        public override string PersistenceId => _name;
+
+        protected override bool ReceiveRecover(object message)
         {
-            _file.Delete();
-            base.AfterTermination();
+            if (message is SnapshotOffer)
+                _probe.Tell(message);
+            else return false;
+            return true;
         }
 
-        [Fact]
-        public void LocalSnapshotStore_configured_with_a_failing_directory_name_should_throw_an_exception_at_startup()
+        protected override bool ReceiveCommand(object message)
         {
-            EventFilter.Exception(typeof (ActorInitializationException)).ExpectOne(() =>
-            {
-                var pref = Sys.ActorOf(Props.Create(() => new TestPersistentActor("SnapshotDirectoryFailureSpec-1", TestActor)));
-                pref.Tell("blahonga");
-            });
+            if (message is string)
+                SaveSnapshot(message);
+            else if (message is SaveSnapshotSuccess success)
+                _probe.Tell(success.Metadata.SequenceNr);
+            else
+                _probe.Tell(message);
+            return true;
         }
     }
 }

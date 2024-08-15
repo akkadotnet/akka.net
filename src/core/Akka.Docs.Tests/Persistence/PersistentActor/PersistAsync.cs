@@ -1,55 +1,56 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="PersistAsync.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="PersistAsync.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Persistence;
 
-namespace DocsExamples.Persistence.PersistentActor
+namespace DocsExamples.Persistence.PersistentActor;
+
+public static class PersistAsync
 {
-    public static class PersistAsync
+    public static void MainApp()
     {
-        #region PersistAsync
-        public class MyPersistentActor : UntypedPersistentActor
+        var system = ActorSystem.Create("PersistAsync");
+        var persistentActor = system.ActorOf<MyPersistentActor>();
+
+        // usage
+        persistentActor.Tell("a");
+        persistentActor.Tell("b");
+
+        // possible order of received messages:
+        // a
+        // b
+        // evt-a-1
+        // evt-a-2
+        // evt-b-1
+        // evt-b-2
+    }
+
+    #region PersistAsync
+
+    public class MyPersistentActor : UntypedPersistentActor
+    {
+        public override string PersistenceId => "my-stable-persistence-id";
+
+        protected override void OnRecover(object message)
         {
-            public override string PersistenceId => "my-stable-persistence-id";
-
-            protected override void OnRecover(object message)
-            {
-                // handle recovery here
-            }
-
-            protected override void OnCommand(object message)
-            {
-                if (message is string c)
-                {
-                    Sender.Tell(c);
-                    PersistAsync($"evt-{c}-1", e => Sender.Tell(e));
-                    PersistAsync($"evt-{c}-2", e => Sender.Tell(e));
-                }
-            }
+            // handle recovery here
         }
-        #endregion
 
-        public static void MainApp()
+        protected override void OnCommand(object message)
         {
-            var system = ActorSystem.Create("PersistAsync");
-            var persistentActor = system.ActorOf<MyPersistentActor>();
-
-            // usage
-            persistentActor.Tell("a");
-            persistentActor.Tell("b");
-
-            // possible order of received messages:
-            // a
-            // b
-            // evt-a-1
-            // evt-a-2
-            // evt-b-1
-            // evt-b-2
+            if (message is string c)
+            {
+                Sender.Tell(c);
+                PersistAsync($"evt-{c}-1", e => Sender.Tell(e));
+                PersistAsync($"evt-{c}-2", e => Sender.Tell(e));
+            }
         }
     }
+
+    #endregion
 }

@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SteppingMemoryJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SteppingMemoryJournal.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
@@ -15,152 +15,143 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Journal;
 
-namespace Akka.Persistence.Tests.Journal
+namespace Akka.Persistence.Tests.Journal;
+
+/// <summary>
+///     An in memory journal that will not complete any Persists or PersistAsyncs until it gets tokens
+///     to trigger those steps. Allows for tests that need to deterministically trigger the callbacks
+///     intermixed with receiving messages.
+///     Configure your actor system using <see cref="SteppingMemoryJournal.Config(string)" /> and then access
+///     it using <see cref="SteppingMemoryJournal.GetRef(string)" /> send it <see cref="Token" />s to
+///     allow one journal operation to complete.
+/// </summary>
+public sealed class SteppingMemoryJournal : MemoryJournal
 {
-    /// <summary>
-    /// An in memory journal that will not complete any Persists or PersistAsyncs until it gets tokens
-    /// to trigger those steps. Allows for tests that need to deterministically trigger the callbacks
-    /// intermixed with receiving messages.
-    /// 
-    /// Configure your actor system using <see cref="SteppingMemoryJournal.Config(string)"/> and then access
-    /// it using <see cref="SteppingMemoryJournal.GetRef(string)"/> send it <see cref="Token"/>s to
-    /// allow one journal operation to complete.
-    /// </summary>
-    public sealed class SteppingMemoryJournal : MemoryJournal
+    private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
+
+    // keep it in a thread safe global so that tests can get their hand on the actor ref and send Steps to it
+    private static readonly ConcurrentDictionary<string, IActorRef> _current = new();
+    private readonly string _instanceId;
+    private readonly Queue<Func<Task>> _queuedOps = new();
+    private readonly Queue<IActorRef> _queuedTokenRecipients = new();
+
+
+    public SteppingMemoryJournal()
     {
-        /// <summary>
-        /// Allow the journal to do one operation
-        /// </summary>
-        internal class Token
-        {
-            public static readonly Token Instance = new();
-            private Token() { }
-        }
+        _instanceId = Context.System.Settings.Config.GetString("akka.persistence.journal.stepping-inmem.instance-id");
+    }
 
-        internal class TokenConsumed
-        {
-            public static readonly TokenConsumed Instance = new();
-            private TokenConsumed() { }
-        }
+    public static void Step(IActorRef journal)
+    {
+        journal.Ask(Token.Instance, TimeSpan.FromSeconds(3)).Wait();
+    }
 
-        private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
-        // keep it in a thread safe global so that tests can get their hand on the actor ref and send Steps to it
-        private static readonly ConcurrentDictionary<string, IActorRef> _current = new();
-        private readonly string _instanceId;
-        private readonly Queue<Func<Task>> _queuedOps = new();
-        private readonly Queue<IActorRef> _queuedTokenRecipients = new();
-
-
-        public SteppingMemoryJournal()
-        {
-            _instanceId = Context.System.Settings.Config.GetString("akka.persistence.journal.stepping-inmem.instance-id", null);
-        }
-
-        public static void Step(IActorRef journal)
-        {
-            journal.Ask(Token.Instance, TimeSpan.FromSeconds(3)).Wait();
-        }
-
-        public static Config Config(string instanceId)
-        {
-            return ConfigurationFactory.ParseString(@"
-akka.persistence.journal.stepping-inmem.class="""+ typeof(SteppingMemoryJournal).FullName + @", Akka.Persistence.Tests""
+    public static Config Config(string instanceId)
+    {
+        return ConfigurationFactory.ParseString(@"
+akka.persistence.journal.stepping-inmem.class=""" + typeof(SteppingMemoryJournal).FullName +
+                                                @", Akka.Persistence.Tests""
 akka.persistence.journal.plugin = ""akka.persistence.journal.stepping-inmem""
 akka.persistence.journal.stepping-inmem.plugin-dispatcher = ""akka.actor.default-dispatcher""
 akka.persistence.journal.stepping-inmem.instance-id = """ + instanceId + @"""");
-        }
+    }
 
-        /// <summary>
-        /// Get the actor ref to the journal for a given instance id, throws exception if not found.
-        /// </summary>
-        public static IActorRef GetRef(string instanceId)
-        {
-            return _current[instanceId];
-        }
+    /// <summary>
+    ///     Get the actor ref to the journal for a given instance id, throws exception if not found.
+    /// </summary>
+    public static IActorRef GetRef(string instanceId)
+    {
+        return _current[instanceId];
+    }
 
-        protected override bool ReceivePluginInternal(object message)
+    protected override bool ReceivePluginInternal(object message)
+    {
+        if (base.ReceivePluginInternal(message))
+            return true;
+        if (message is Token)
         {
-            if (base.ReceivePluginInternal(message))
-                return true;
-            if (message is Token)
+            if (_queuedOps.Count == 0)
             {
-                if (_queuedOps.Count == 0)
-                    _queuedTokenRecipients.Enqueue(Sender);
-                else
-                {
-                    var op = _queuedOps.Dequeue();
-                    var tokenConsumer = Sender;
-                    op().ContinueWith(_ => tokenConsumer.Tell(TokenConsumed.Instance), _continuationOptions).Wait();
-                }
-                return true;
+                _queuedTokenRecipients.Enqueue(Sender);
             }
-            return false;
-        }
-
-        protected override void PreStart()
-        {
-            _current.AddOrUpdate(_instanceId, _ => Self, (_, _) => Self);
-            base.PreStart();
-        }
-
-        protected override void PostStop()
-        {
-            base.PostStop();
-            IActorRef foo;
-            _current.TryRemove(_instanceId, out foo);
-        }
-
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
-        {
-            var tasks = messages.Select(message =>
+            else
             {
-                return
-                    WrapAndDoOrEnqueue(
-                        () =>
-                            base.WriteMessagesAsync(new[] {message})
-                                .ContinueWith(t => t.Result != null ? t.Result.FirstOrDefault() : null,
-                                    _continuationOptions | TaskContinuationOptions.OnlyOnRanToCompletion));
-            });
+                var op = _queuedOps.Dequeue();
+                var tokenConsumer = Sender;
+                op().ContinueWith(_ => tokenConsumer.Tell(TokenConsumed.Instance), _continuationOptions).Wait();
+            }
 
-            return Task.WhenAll(tasks)
-                .ContinueWith(t => (IImmutableList<Exception>)t.Result.ToImmutableList(),
-                    _continuationOptions | TaskContinuationOptions.OnlyOnRanToCompletion);
+            return true;
         }
 
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+        return false;
+    }
+
+    protected override void PreStart()
+    {
+        _current.AddOrUpdate(_instanceId, _ => Self, (_, _) => Self);
+        base.PreStart();
+    }
+
+    protected override void PostStop()
+    {
+        base.PostStop();
+        IActorRef foo;
+        _current.TryRemove(_instanceId, out foo);
+    }
+
+    protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+    {
+        var tasks = messages.Select(message =>
         {
             return
                 WrapAndDoOrEnqueue(
                     () =>
-                        base.DeleteMessagesToAsync(persistenceId, toSequenceNr)
-                            .ContinueWith(_ => new object(),
+                        base.WriteMessagesAsync(new[] { message })
+                            .ContinueWith(t => t.Result != null ? t.Result.FirstOrDefault() : null,
                                 _continuationOptions | TaskContinuationOptions.OnlyOnRanToCompletion));
-        }
+        });
 
-        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
-        {
-            return WrapAndDoOrEnqueue(() => base.ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr));
-        }
+        return Task.WhenAll(tasks)
+            .ContinueWith(t => (IImmutableList<Exception>)t.Result.ToImmutableList(),
+                _continuationOptions | TaskContinuationOptions.OnlyOnRanToCompletion);
+    }
 
-        public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
-            Action<IPersistentRepresentation> recoveryCallback)
-        {
-            return
-                WrapAndDoOrEnqueue(
-                    () =>
-                        base.ReplayMessagesAsync(context, persistenceId, fromSequenceNr, toSequenceNr, max,
+    protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+    {
+        return
+            WrapAndDoOrEnqueue(
+                () =>
+                    base.DeleteMessagesToAsync(persistenceId, toSequenceNr)
+                        .ContinueWith(_ => new object(),
+                            _continuationOptions | TaskContinuationOptions.OnlyOnRanToCompletion));
+    }
+
+    public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+    {
+        return WrapAndDoOrEnqueue(() => base.ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr));
+    }
+
+    public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr,
+        long toSequenceNr, long max,
+        Action<IPersistentRepresentation> recoveryCallback)
+    {
+        return
+            WrapAndDoOrEnqueue(
+                () =>
+                    base.ReplayMessagesAsync(context, persistenceId, fromSequenceNr, toSequenceNr, max,
                             recoveryCallback)
-                            .ContinueWith(_ => new object(),
-                                _continuationOptions | TaskContinuationOptions.OnlyOnRanToCompletion));
-        }
+                        .ContinueWith(_ => new object(),
+                            _continuationOptions | TaskContinuationOptions.OnlyOnRanToCompletion));
+    }
 
-        private Task<T> WrapAndDoOrEnqueue<T>(Func<Task<T>> f)
+    private Task<T> WrapAndDoOrEnqueue<T>(Func<Task<T>> f)
+    {
+        var promise = new TaskCompletionSource<T>();
+        var task = promise.Task;
+        DoOrEnqueue(() =>
         {
-            var promise = new TaskCompletionSource<T>();
-            var task = promise.Task;
-            DoOrEnqueue(() =>
-            {
-                f()
+            f()
                 .ContinueWith(t =>
                 {
                     if (t.IsFaulted)
@@ -170,21 +161,43 @@ akka.persistence.journal.stepping-inmem.instance-id = """ + instanceId + @"""");
                     else
                         promise.SetResult(t.Result);
                 }, _continuationOptions);
-                return task;
-            });
             return task;
-        }
+        });
+        return task;
+    }
 
-        private void DoOrEnqueue(Func<Task> op)
+    private void DoOrEnqueue(Func<Task> op)
+    {
+        if (_queuedTokenRecipients.Count > 0)
         {
-            if (_queuedTokenRecipients.Count > 0)
-            {
-                var completed = op();
-                var tokenRecipient = _queuedTokenRecipients.Dequeue();
-                completed.ContinueWith(_ => tokenRecipient.Tell(TokenConsumed.Instance), _continuationOptions).Wait();
-            }
-            else
-                _queuedOps.Enqueue(op);
+            var completed = op();
+            var tokenRecipient = _queuedTokenRecipients.Dequeue();
+            completed.ContinueWith(_ => tokenRecipient.Tell(TokenConsumed.Instance), _continuationOptions).Wait();
+        }
+        else
+        {
+            _queuedOps.Enqueue(op);
+        }
+    }
+
+    /// <summary>
+    ///     Allow the journal to do one operation
+    /// </summary>
+    internal class Token
+    {
+        public static readonly Token Instance = new();
+
+        private Token()
+        {
+        }
+    }
+
+    internal class TokenConsumed
+    {
+        public static readonly TokenConsumed Instance = new();
+
+        private TokenConsumed()
+        {
         }
     }
 }

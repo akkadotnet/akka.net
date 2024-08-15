@@ -1,32 +1,37 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="BatchingSqliteJournalSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="BatchingSqliteJournalSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Configuration;
 using Akka.Persistence.TCK.Journal;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Sqlite.Tests.Batching
+namespace Akka.Persistence.Sqlite.Tests.Batching;
+
+public class BatchingSqliteJournalSpec : JournalSpec
 {
-    public class BatchingSqliteJournalSpec : JournalSpec
+    private static readonly AtomicCounter counter = new(0);
+
+    public BatchingSqliteJournalSpec(ITestOutputHelper output)
+        : base(
+            CreateSpecConfig($"Datasource=memdb-journal-batch-{counter.IncrementAndGet()}.db;Mode=Memory;Cache=Shared"),
+            "BatchingSqliteJournalSpec", output)
     {
-        private static AtomicCounter counter = new(0);
+        SqlitePersistence.Get(Sys);
 
-        public BatchingSqliteJournalSpec(ITestOutputHelper output)
-            : base(CreateSpecConfig($"Datasource=memdb-journal-batch-{counter.IncrementAndGet()}.db;Mode=Memory;Cache=Shared"), "BatchingSqliteJournalSpec", output)
-        {
-            SqlitePersistence.Get(Sys);
+        Initialize();
+    }
 
-            Initialize();
-        }
+    // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
+    protected override bool SupportsSerialization => false;
 
-        private static Config CreateSpecConfig(string connectionString)
-        {
-            return ConfigurationFactory.ParseString(@"
+    private static Config CreateSpecConfig(string connectionString)
+    {
+        return ConfigurationFactory.ParseString(@"
                 akka.persistence {
                     publish-plugin-commands = on
                     journal {
@@ -41,9 +46,5 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
                         }
                     }
                 }");
-        }
-
-        // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
-        protected override bool SupportsSerialization => false;
     }
 }

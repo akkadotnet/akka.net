@@ -1,33 +1,32 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Vector.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Vector.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Akka.Util
+namespace Akka.Util;
+
+/// <summary>
+///     TBD
+/// </summary>
+public static class Vector
 {
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    public static class Vector
+    /// <typeparam name="T">TBD</typeparam>
+    /// <param name="number">TBD</param>
+    /// <returns>TBD</returns>
+    public static Func<Func<T>, IList<T>> Fill<T>(int number)
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="number">TBD</param>
-        /// <returns>TBD</returns>
-        public static Func<Func<T>, IList<T>> Fill<T>(int number)
-        {
-            return func => Enumerable
-                .Range(1, number)
-                .Select(_ => func())
-                .ToList();
-        } 
+        return func => Enumerable
+            .Range(1, number)
+            .Select(_ => func())
+            .ToList();
     }
 }

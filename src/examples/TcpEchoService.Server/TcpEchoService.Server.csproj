@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
-    
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>$(NetTestVersion)</TargetFramework>
-        <IsPackable>false</IsPackable>
-    </PropertyGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\..\core\Akka\Akka.csproj" />
-    </ItemGroup>
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\core\Akka\Akka.csproj"/>
+  </ItemGroup>
 
 </Project>

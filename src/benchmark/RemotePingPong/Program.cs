@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Program.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -15,35 +15,58 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Util.Internal;
 
-namespace RemotePingPong
+namespace RemotePingPong;
+
+public static class Messages
 {
-    public static class Messages
+    public class Msg
     {
-        public class Msg { public override string ToString() { return "msg"; } }
-        public class Run { public override string ToString() { return "run"; } }
-        public class Started { public override string ToString() { return "started"; } }
+        public override string ToString()
+        {
+            return "msg";
+        }
     }
 
-    internal class Program
+    public class Run
     {
-        public static uint CpuSpeed()
+        public override string ToString()
         {
+            return "run";
+        }
+    }
+
+    public class Started
+    {
+        public override string ToString()
+        {
+            return "started";
+        }
+    }
+}
+
+internal class Program
+{
+    private const long repeat = 100000L;
+
+    private static bool _firstRun = true;
+
+    public static uint CpuSpeed()
+    {
 #if THREADS
             var mo = new System.Management.ManagementObject("Win32_Processor.DeviceID='CPU0'");
             var sp = (uint)(mo["CurrentClockSpeed"]);
             mo.Dispose();
             return sp;
 #else
-            return 0;
-            
-#endif
-        }
+        return 0;
 
-        public static Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port)
-        {
-            var baseConfig = ConfigurationFactory.ParseString(@"
+#endif
+    }
+
+    public static Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port)
+    {
+        var baseConfig = ConfigurationFactory.ParseString(@"
             akka {
               actor.provider = remote
               loglevel = ERROR
@@ -61,238 +84,237 @@ namespace RemotePingPong
               }
             }");
 
-            var bindingConfig =
-                ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.hostname = """ + ipOrHostname + @"""")
-                    .WithFallback(ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port = " + port));
+        var bindingConfig =
+            ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.hostname = """ + ipOrHostname + @"""")
+                .WithFallback(ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port = " + port));
 
-            return bindingConfig.WithFallback(baseConfig);
-        }
+        return bindingConfig.WithFallback(baseConfig);
+    }
 
-        private static async Task Main(params string[] args)
+    private static async Task Main(params string[] args)
+    {
+        try
         {
-            try
-            {
-                Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
-            }
-            catch (Exception ex)
-            {
-                await Console.Error.WriteLineAsync($"Attempted to elevate process priority, but failed due to {ex.Message} - carrying on at normal process priority.");
-            }
-            if (args.Length == 0 || !uint.TryParse(args[0], out var timesToRun))
-            {
-                timesToRun = 1u;
-            }
-
-            await Start(timesToRun);
+            Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
         }
-
-        private static bool _firstRun = true;
-
-        private static void PrintSysInfo(){
-            var processorCount = Environment.ProcessorCount;
-            if (processorCount == 0)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Failed to read processor count..");
-                return;
-            }
-
-            Console.WriteLine("OSVersion:                         {0}", Environment.OSVersion);
-            Console.WriteLine("ProcessorCount:                    {0}", processorCount);
-            Console.WriteLine("ClockSpeed:                        {0} MHZ", CpuSpeed());
-            Console.WriteLine("Actor Count:                       {0}", processorCount * 2);
-            Console.WriteLine("Messages sent/received per client: {0}  ({0:0e0})", repeat*2);
-            Console.WriteLine("Is Server GC:                      {0}", GCSettings.IsServerGC);
-            Console.WriteLine("Thread count:                      {0}", Process.GetCurrentProcess().Threads.Count);
-            Console.WriteLine();
-
-            //Print tables
-            Console.WriteLine("Num clients, Total [msg], Msgs/sec, Total [ms], Start Threads, End Threads");
-
-            _firstRun = false;
-        }
-
-        const long repeat = 100000L;
-
-        private static async Task Start(uint timesToRun)
-        {         
-            for (var i = 0; i < timesToRun; i++)
-            {
-                var redCount = 0;
-                var bestThroughput = 0L;
-                foreach (var throughput in GetClientSettings())
-                {
-                    var result1 = await Benchmark(throughput, repeat, bestThroughput, redCount);
-                    bestThroughput = result1.Item2;
-                    redCount = result1.Item3;
-                }
-            }
-
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.WriteLine("Done..");
-        }
-
-        public static IEnumerable<int> GetClientSettings()
+        catch (Exception ex)
         {
-            yield return 1;
-            yield return 5;
-            yield return 10;
-            yield return 15;
-            yield return 20;
-            yield return 25;
-            yield return 30;
+            await Console.Error.WriteLineAsync(
+                $"Attempted to elevate process priority, but failed due to {ex.Message} - carrying on at normal process priority.");
         }
 
-        private static long GetTotalMessagesReceived(int numberOfClients, long numberOfRepeats)
+        if (args.Length == 0 || !uint.TryParse(args[0], out var timesToRun)) timesToRun = 1u;
+
+        await Start(timesToRun);
+    }
+
+    private static void PrintSysInfo()
+    {
+        var processorCount = Environment.ProcessorCount;
+        if (processorCount == 0)
         {
-            return numberOfClients * numberOfRepeats * 2;
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("Failed to read processor count..");
+            return;
         }
 
-        private static async Task<(bool, long, int)> Benchmark(int numberOfClients, long numberOfRepeats, long bestThroughput, int redCount)
+        Console.WriteLine("OSVersion:                         {0}", Environment.OSVersion);
+        Console.WriteLine("ProcessorCount:                    {0}", processorCount);
+        Console.WriteLine("ClockSpeed:                        {0} MHZ", CpuSpeed());
+        Console.WriteLine("Actor Count:                       {0}", processorCount * 2);
+        Console.WriteLine("Messages sent/received per client: {0}  ({0:0e0})", repeat * 2);
+        Console.WriteLine("Is Server GC:                      {0}", GCSettings.IsServerGC);
+        Console.WriteLine("Thread count:                      {0}", Process.GetCurrentProcess().Threads.Count);
+        Console.WriteLine();
+
+        //Print tables
+        Console.WriteLine("Num clients, Total [msg], Msgs/sec, Total [ms], Start Threads, End Threads");
+
+        _firstRun = false;
+    }
+
+    private static async Task Start(uint timesToRun)
+    {
+        for (var i = 0; i < timesToRun; i++)
         {
-            var totalMessagesReceived = GetTotalMessagesReceived(numberOfClients, numberOfRepeats);
-            var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0));
-
-            var system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 0));
-
-            List<Task<long>> tasks = new List<Task<long>>();
-            List<IActorRef> receivers = new List<IActorRef>();
-
-            var canStart = system1.ActorOf(Props.Create(() => new AllStartedActor()), "canStart");
-
-            var system1Address = ((ExtendedActorSystem)system1).Provider.DefaultAddress;
-            var system2Address = ((ExtendedActorSystem)system2).Provider.DefaultAddress;
-
-            var echoProps = Props.Create(() => new EchoActor()).WithDeploy(new Deploy(new RemoteScope(system2Address)));
-
-            for (var i = 0; i < numberOfClients; i++)
+            var redCount = 0;
+            var bestThroughput = 0L;
+            foreach (var throughput in GetClientSettings())
             {
-                var echo = system1.ActorOf(echoProps, "echo" + i);
-                var ts = new TaskCompletionSource<long>();
-                tasks.Add(ts.Task);
-                var receiver =
-                    system1.ActorOf(
-                        Props.Create(() => new BenchmarkActor(numberOfRepeats, ts, echo)),
-                        "benchmark" + i);
-
-                receivers.Add(receiver);
-
-                canStart.Tell(echo);
-                canStart.Tell(receiver);
+                var result1 = await Benchmark(throughput, repeat, bestThroughput, redCount);
+                bestThroughput = result1.Item2;
+                redCount = result1.Item3;
             }
+        }
 
-            var rsp = await canStart.Ask(new AllStartedActor.AllStarted(), TimeSpan.FromSeconds(10));
-            var testReady = (bool)rsp;
-            if (!testReady)
+        Console.ForegroundColor = ConsoleColor.Gray;
+        Console.WriteLine("Done..");
+    }
+
+    public static IEnumerable<int> GetClientSettings()
+    {
+        yield return 1;
+        yield return 5;
+        yield return 10;
+        yield return 15;
+        yield return 20;
+        yield return 25;
+        yield return 30;
+    }
+
+    private static long GetTotalMessagesReceived(int numberOfClients, long numberOfRepeats)
+    {
+        return numberOfClients * numberOfRepeats * 2;
+    }
+
+    private static async Task<(bool, long, int)> Benchmark(int numberOfClients, long numberOfRepeats,
+        long bestThroughput, int redCount)
+    {
+        var totalMessagesReceived = GetTotalMessagesReceived(numberOfClients, numberOfRepeats);
+        var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0));
+
+        var system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 0));
+
+        var tasks = new List<Task<long>>();
+        var receivers = new List<IActorRef>();
+
+        var canStart = system1.ActorOf(Props.Create(() => new AllStartedActor()), "canStart");
+
+        var system1Address = ((ExtendedActorSystem)system1).Provider.DefaultAddress;
+        var system2Address = ((ExtendedActorSystem)system2).Provider.DefaultAddress;
+
+        var echoProps = Props.Create(() => new EchoActor()).WithDeploy(new Deploy(new RemoteScope(system2Address)));
+
+        for (var i = 0; i < numberOfClients; i++)
+        {
+            var echo = system1.ActorOf(echoProps, "echo" + i);
+            var ts = new TaskCompletionSource<long>();
+            tasks.Add(ts.Task);
+            var receiver =
+                system1.ActorOf(
+                    Props.Create(() => new BenchmarkActor(numberOfRepeats, ts, echo)),
+                    "benchmark" + i);
+
+            receivers.Add(receiver);
+
+            canStart.Tell(echo);
+            canStart.Tell(receiver);
+        }
+
+        var rsp = await canStart.Ask(new AllStartedActor.AllStarted(), TimeSpan.FromSeconds(10));
+        var testReady = (bool)rsp;
+        if (!testReady)
+            throw new Exception(
+                "Received report that 1 or more remote actor is unable to begin the test. Aborting run.");
+
+        // now that the dispatchers in both ActorSystems are started, we want to measure thread count and other system
+        // metrics here - but only the very first benchmark
+        if (_firstRun) PrintSysInfo();
+
+        var startThreads = Process.GetCurrentProcess().Threads.Count;
+
+        var sw = Stopwatch.StartNew();
+        receivers.ForEach(c =>
+        {
+            for (var i = 0; i < 50; i++) // prime the pump so EndpointWriters can take advantage of their batching model
+                c.Tell("hit");
+        });
+        var waiting = Task.WhenAll(tasks);
+        await Task.WhenAll(waiting);
+        sw.Stop();
+
+        var endThreads = Process.GetCurrentProcess().Threads.Count;
+
+        // force clean termination
+        await Task.WhenAll(system1.Terminate(), system2.Terminate());
+
+        var elapsedMilliseconds = sw.ElapsedMilliseconds;
+        var throughput = elapsedMilliseconds == 0
+            ? -1
+            : (long)Math.Ceiling((double)totalMessagesReceived / elapsedMilliseconds * 1000);
+        var foregroundColor = Console.ForegroundColor;
+        if (throughput >= bestThroughput)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            bestThroughput = throughput;
+            redCount = 0;
+        }
+        else
+        {
+            redCount++;
+            Console.ForegroundColor = ConsoleColor.Red;
+        }
+
+        Console.ForegroundColor = foregroundColor;
+        Console.WriteLine("{0,10},{1,8},{2,10},{3,11}, {4,13}, {5,15}", numberOfClients, totalMessagesReceived,
+            throughput, sw.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture), startThreads,
+            endThreads);
+        return (redCount <= 3, bestThroughput, redCount);
+    }
+
+    private class AllStartedActor : UntypedActor
+    {
+        private readonly HashSet<IActorRef> _actors = new();
+        private int _correlationId;
+
+        protected override void OnReceive(object message)
+        {
+            switch (message)
             {
-                throw new Exception("Received report that 1 or more remote actor is unable to begin the test. Aborting run.");
+                case IActorRef a:
+                    _actors.Add(a);
+                    break;
+                case AllStarted a:
+                    var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    var s = Sender;
+                    var count = _actors.Count;
+                    var c = _correlationId++;
+                    var t = Task.WhenAll(_actors.Select(
+                        x => x.Ask<ActorIdentity>(new Identify(c), cts.Token)));
+                    t.ContinueWith(
+                        tr => { return tr.Result.Length == count && tr.Result.All(x => x.MessageId.Equals(c)); },
+                        TaskContinuationOptions.OnlyOnRanToCompletion).PipeTo(s);
+                    break;
             }
+        }
 
-            // now that the dispatchers in both ActorSystems are started, we want to measure thread count and other system
-            // metrics here - but only the very first benchmark
-            if(_firstRun){
-                PrintSysInfo();
-            }
+        public class AllStarted
+        {
+        }
+    }
 
-            var startThreads = Process.GetCurrentProcess().Threads.Count;
+    private class EchoActor : UntypedActor
+    {
+        protected override void OnReceive(object message)
+        {
+            Sender.Tell(message);
+        }
+    }
 
-            var sw = Stopwatch.StartNew();
-            receivers.ForEach(c =>
+    private class BenchmarkActor : UntypedActor
+    {
+        private readonly TaskCompletionSource<long> _completion;
+        private readonly IActorRef _echo;
+        private readonly long _maxExpectedMessages;
+        private long _currentMessages;
+
+        public BenchmarkActor(long maxExpectedMessages, TaskCompletionSource<long> completion, IActorRef echo)
+        {
+            _maxExpectedMessages = maxExpectedMessages;
+            _completion = completion;
+            _echo = echo;
+        }
+
+        protected override void OnReceive(object message)
+        {
+            if (_currentMessages < _maxExpectedMessages)
             {
-                for (var i = 0; i < 50; i++) // prime the pump so EndpointWriters can take advantage of their batching model
-                    c.Tell("hit");
-            });
-            var waiting = Task.WhenAll(tasks);
-            await Task.WhenAll(waiting);
-            sw.Stop();
-            
-            var endThreads = Process.GetCurrentProcess().Threads.Count;
-
-            // force clean termination
-            await Task.WhenAll(new[] { system1.Terminate(), system2.Terminate() });
-
-            var elapsedMilliseconds = sw.ElapsedMilliseconds;
-            long throughput = elapsedMilliseconds == 0 ? -1 : (long)Math.Ceiling((double)totalMessagesReceived / elapsedMilliseconds * 1000);
-            var foregroundColor = Console.ForegroundColor;
-            if (throughput >= bestThroughput)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                bestThroughput = throughput;
-                redCount = 0;
+                _currentMessages++;
+                _echo.Tell(message);
             }
             else
             {
-                redCount++;
-                Console.ForegroundColor = ConsoleColor.Red;
-            }
-
-            Console.ForegroundColor = foregroundColor;
-            Console.WriteLine("{0,10},{1,8},{2,10},{3,11}, {4,13}, {5,15}", numberOfClients, totalMessagesReceived, throughput, sw.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture), startThreads, endThreads);
-            return (redCount <= 3, bestThroughput, redCount);
-        }
-
-        private class AllStartedActor : UntypedActor
-        {
-            public class AllStarted { }
-
-            private readonly HashSet<IActorRef> _actors = new();
-            private int _correlationId = 0;
-
-            protected override void OnReceive(object message)
-            {
-                switch (message)
-                {
-                    case IActorRef a:
-                        _actors.Add(a);
-                        break;
-                    case AllStarted a:
-                        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                        var s = Sender;
-                        var count = _actors.Count;
-                        var c = _correlationId++;
-                        var t = Task.WhenAll(_actors.Select(
-                            x => x.Ask<ActorIdentity>(new Identify(c), cts.Token)));
-                        t.ContinueWith(tr =>
-                        {
-                            return tr.Result.Length == count && tr.Result.All(x => x.MessageId.Equals(c));
-                        }, TaskContinuationOptions.OnlyOnRanToCompletion).PipeTo(s);
-                        break;
-                }
-            }
-        }
-
-        private class EchoActor : UntypedActor
-        {
-            protected override void OnReceive(object message)
-            {
-                Sender.Tell(message);
-            }
-        }
-
-        private class BenchmarkActor : UntypedActor
-        {
-            private readonly long _maxExpectedMessages;
-            private readonly IActorRef _echo;
-            private long _currentMessages = 0;
-            private readonly TaskCompletionSource<long> _completion;
-
-            public BenchmarkActor(long maxExpectedMessages, TaskCompletionSource<long> completion, IActorRef echo)
-            {
-                _maxExpectedMessages = maxExpectedMessages;
-                _completion = completion;
-                _echo = echo;
-            }
-            protected override void OnReceive(object message)
-            {
-                if (_currentMessages < _maxExpectedMessages)
-                {
-                    _currentMessages++;
-                    _echo.Tell(message);
-                }
-                else
-                {
-                    _completion.TrySetResult(_maxExpectedMessages);
-                }
+                _completion.TrySetResult(_maxExpectedMessages);
             }
         }
     }

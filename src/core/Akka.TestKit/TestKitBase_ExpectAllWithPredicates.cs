@@ -1,3 +1,10 @@
+// -----------------------------------------------------------------------
+//  <copyright file="TestKitBase_ExpectAllWithPredicates.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,10 +38,7 @@ public abstract partial class TestKitBase
         var enumerable = InternalExpectMsgAllOfMatchingPredicatesAsync(new TimeSpan(0, 0, 60), predicates,
                 cancellationToken: cancellationToken)
             .WithCancellation(cancellationToken);
-        await foreach (var item in enumerable)
-        {
-            yield return item;
-        }
+        await foreach (var item in enumerable) yield return item;
     }
 
     public IReadOnlyCollection<object> ExpectMsgAllOfMatchingPredicates(TimeSpan max, params PredicateInfo[] predicates)
@@ -58,10 +62,7 @@ public abstract partial class TestKitBase
     {
         max.EnsureIsPositiveFinite("max");
         var enumerable = InternalExpectMsgAllOfAsync(Dilated(max), predicates, cancellationToken: cancellationToken);
-        await foreach (var item in enumerable)
-        {
-            yield return item;
-        }
+        await foreach (var item in enumerable) yield return item;
     }
 
     private async IAsyncEnumerable<object> InternalExpectMsgAllOfMatchingPredicatesAsync(
@@ -84,9 +85,7 @@ public abstract partial class TestKitBase
             if (foundPredicateInfo == null)
                 unexpectedMessages.Add(msg);
             else
-            {
                 predicateInfoList.Remove(foundPredicateInfo);
-            }
 
             yield return msg;
         }
@@ -98,14 +97,14 @@ public abstract partial class TestKitBase
 
 public class PredicateInfo
 {
-    public Type Type { get; }
-    public Delegate PredicateT { get; }
-
     private PredicateInfo(Delegate predicateT, Type type)
     {
         Type = type;
         PredicateT = predicateT;
     }
+
+    public Type Type { get; }
+    public Delegate PredicateT { get; }
 
     public static PredicateInfo Create<T>(Predicate<T> predicateT)
     {
@@ -117,8 +116,6 @@ public class PredicateInfo
         return $"{GetType().FullName}<{Type.FullName}>";
     }
 }
-
-
 
 public static class PredicateInfoFactory
 {
@@ -132,16 +129,10 @@ public static class PredicateInfoFactory
         var error = "";
 
         var method = predicateT.Method;
-        if (method.ReturnType != typeof(bool))
-        {
-            error = "Return type of this Delegate is not a boolean. ";
-        }
+        if (method.ReturnType != typeof(bool)) error = "Return type of this Delegate is not a boolean. ";
 
         var parameters = method.GetParameters();
-        if (parameters.Length != 1)
-        {
-            error += "Delegate does not take exactly one parameter.";
-        }
+        if (parameters.Length != 1) error += "Delegate does not take exactly one parameter.";
 
         if (error.Length != 0)
             throw new ArgumentException(error);

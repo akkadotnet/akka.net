@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ConfigServicesParserSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ConfigServicesParserSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Collections.Immutable;
 using Akka.Configuration;
@@ -11,11 +11,11 @@ using Akka.Discovery.Config;
 using FluentAssertions;
 using Xunit;
 
-namespace Akka.Discovery.Tests.Config
+namespace Akka.Discovery.Tests.Config;
+
+public class ConfigServicesParserSpec
 {
-    public class ConfigServicesParserSpec
-    {
-        private static Configuration.Config Config => ConfigurationFactory.ParseString(@"
+    private static Configuration.Config Config => ConfigurationFactory.ParseString(@"
             services {
                 service1 {
                     endpoints = [
@@ -28,23 +28,18 @@ namespace Akka.Discovery.Tests.Config
                 }
             }");
 
-        [Fact]
-        public void Config_parsing_must_parse_services()
-        {
-            var config = Config.GetConfig("services");
-            var result = ConfigServicesParser.Parse(config);
+    [Fact]
+    public void Config_parsing_must_parse_services()
+    {
+        var config = Config.GetConfig("services");
+        var result = ConfigServicesParser.Parse(config);
 
-            result["service1"].Should().Be(new ServiceDiscovery.Resolved(
-                "service1",
-                new[]
-                {
-                    new ServiceDiscovery.ResolvedTarget("cat", 1233),
-                    new ServiceDiscovery.ResolvedTarget("dog")
-                }));
-            
-            result["service2"].Should().Be(new ServiceDiscovery.Resolved(
-                "service2", 
-                ImmutableList<ServiceDiscovery.ResolvedTarget>.Empty));            
-        }
+        result["service1"].Should().Be(new ServiceDiscovery.Resolved(
+            "service1",
+            new[] { new ServiceDiscovery.ResolvedTarget("cat", 1233), new ServiceDiscovery.ResolvedTarget("dog") }));
+
+        result["service2"].Should().Be(new ServiceDiscovery.Resolved(
+            "service2",
+            ImmutableList<ServiceDiscovery.ResolvedTarget>.Empty));
     }
 }

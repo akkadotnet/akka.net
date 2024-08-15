@@ -1,42 +1,40 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="CallingThreadExecutor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="CallingThreadExecutor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Configuration;
 using Akka.Dispatch;
 
-namespace Akka.Tests.Performance.Dispatch
+namespace Akka.Tests.Performance.Dispatch;
+
+public class CallingThreadExecutor : ExecutorService
 {
-    public class CallingThreadExecutor : ExecutorService
+    public CallingThreadExecutor(string id) : base(id)
     {
-        public CallingThreadExecutor(string id) : base(id)
-        {
-        }
-
-        public override void Execute(IRunnable run)
-        {
-            run.Run();
-        }
-
-        public override void Shutdown()
-        {
-            
-        }
     }
 
-    public class CallingThreadExecutorConfigurator : ExecutorServiceConfigurator
+    public override void Execute(IRunnable run)
     {
-        public CallingThreadExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
-        {
-        }
+        run.Run();
+    }
 
-        public override ExecutorService Produce(string id)
-        {
-            return new CallingThreadExecutor(id);
-        }
+    public override void Shutdown()
+    {
     }
 }
 
+public class CallingThreadExecutorConfigurator : ExecutorServiceConfigurator
+{
+    public CallingThreadExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config,
+        prerequisites)
+    {
+    }
+
+    public override ExecutorService Produce(string id)
+    {
+        return new CallingThreadExecutor(id);
+    }
+}

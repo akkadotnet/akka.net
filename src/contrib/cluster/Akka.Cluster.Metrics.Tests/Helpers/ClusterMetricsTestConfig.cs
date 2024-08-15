@@ -1,26 +1,26 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ClusterMetricsTestConfig.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ClusterMetricsTestConfig.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-namespace Akka.Cluster.Metrics.Tests.Helpers
+namespace Akka.Cluster.Metrics.Tests.Helpers;
+
+/// <summary>
+///     Metrics test configurations.
+/// </summary>
+public class ClusterMetricsTestConfig
 {
     /// <summary>
-    /// Metrics test configurations.
+    ///     Default decay factor for tests
     /// </summary>
-    public class ClusterMetricsTestConfig
-    {
-        /// <summary>
-        /// Default decay factor for tests
-        /// </summary>
-        public const double DefaultDecayFactor = 2.0 / (1 + 10);
-        
-        /// <summary>
-        /// Test in cluster, with manual collection activation, collector mock, fast.
-        /// </summary>
-        public const string ClusterConfiguration = @"
+    public const double DefaultDecayFactor = 2.0 / (1 + 10);
+
+    /// <summary>
+    ///     Test in cluster, with manual collection activation, collector mock, fast.
+    /// </summary>
+    public const string ClusterConfiguration = @"
             akka.cluster.metrics {
                   periodic-tasks-initial-delay = 100ms
                   collector {
@@ -33,11 +33,11 @@ namespace Akka.Cluster.Metrics.Tests.Helpers
             }
             akka.actor.provider = ""cluster""
         ";
-        
-        /// <summary>
-        /// Test w/o cluster, with collection enabled.
-        /// </summary>
-        public const string DefaultEnabled = @"
+
+    /// <summary>
+    ///     Test w/o cluster, with collection enabled.
+    /// </summary>
+    public const string DefaultEnabled = @"
             akka.cluster.metrics {
               collector {
                 enabled = on
@@ -47,5 +47,4 @@ namespace Akka.Cluster.Metrics.Tests.Helpers
             }
             akka.actor.provider = remote
         ";
-    }
 }

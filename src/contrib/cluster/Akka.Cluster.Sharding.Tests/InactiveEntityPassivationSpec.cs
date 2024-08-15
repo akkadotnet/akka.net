@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="InactiveEntityPassivationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="InactiveEntityPassivationSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Globalization;
@@ -13,107 +13,25 @@ using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
-using Akka.Util;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Cluster.Sharding.Tests
+namespace Akka.Cluster.Sharding.Tests;
+
+public abstract class AbstractInactiveEntityPassivationSpec : AkkaSpec
 {
-    public abstract class AbstractInactiveEntityPassivationSpec : AkkaSpec
+    protected readonly TimeSpan smallTolerance = TimeSpan.FromMilliseconds(300);
+
+    protected ClusterShardingSettings settings;
+
+    public AbstractInactiveEntityPassivationSpec(Config config, ITestOutputHelper helper)
+        : base(config.WithFallback(SpecConfig), helper)
     {
-        #region Protocol
+    }
 
-        internal class Passivate
-        {
-            public static readonly Passivate Instance = new();
-            private Passivate() { }
-        }
-
-        internal class Entity : UntypedActor
-        {
-            private readonly string _id = Context.Self.Path.Name;
-
-            public IActorRef Probe { get; }
-
-            public static Props Props(IActorRef probe) =>
-                Actor.Props.Create(() => new Entity(probe));
-
-            public Entity(IActorRef probe)
-            {
-                Probe = probe;
-            }
-
-            protected override void OnReceive(object message)
-            {
-                switch (message)
-                {
-                    case Passivate _:
-                        Context.Stop(Self);
-                        break;
-                    default:
-                        Probe.Tell(new GotIt(_id, message, DateTime.Now.Ticks));
-                        break;
-                }
-            }
-
-            public class GotIt
-            {
-                public string Id { get; }
-                public object Msg { get; }
-                public long When { get; }
-
-                public GotIt(string id, object msg, long when)
-                {
-                    Id = id;
-                    Msg = msg;
-                    When = when;
-                }
-
-                public override int GetHashCode()
-                {
-                    return Id.GetHashCode();
-                }
-
-                public override bool Equals(object obj)
-                {
-                    if (obj is GotIt other)
-                        return Id == other.Id;
-                    return false;
-                }
-            }
-        }
-
-        #endregion
-
-        protected ClusterShardingSettings settings;
-        protected readonly TimeSpan smallTolerance = TimeSpan.FromMilliseconds(300);
-
-        private sealed class MessageExtractor: IMessageExtractor
-        {
-            public string EntityId(object message)
-                => message switch
-                {
-                    int msg => msg.ToString(),
-                    _ => null
-                };
-
-            public object EntityMessage(object message)
-                => message;
-
-            public string ShardId(object message)
-                => message switch
-                {
-                    int msg => (msg % 10).ToString(),
-                    _ => null
-                };
-
-            public string ShardId(string entityId, object messageHint = null)
-                => (int.Parse(entityId) % 10).ToString(CultureInfo.InvariantCulture);
-        }
-
-        private static Config SpecConfig =>
-            ConfigurationFactory.ParseString(@"
+    private static Config SpecConfig =>
+        ConfigurationFactory.ParseString(@"
                 akka.loglevel = DEBUG
                 akka.actor.provider = cluster
                 akka.cluster.sharding.passivate-idle-entity-after = 3s
@@ -122,99 +40,187 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.remote.dot-netty.tcp.port = 0
                 akka.cluster.sharding.verbose-debug-logging = on
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
-                .WithFallback(ClusterSharding.DefaultConfig())
-                .WithFallback(ClusterSingletonManager.DefaultConfig());
+            .WithFallback(ClusterSharding.DefaultConfig())
+            .WithFallback(ClusterSingletonManager.DefaultConfig());
 
-        public AbstractInactiveEntityPassivationSpec(Config config, ITestOutputHelper helper)
-            : base(config.WithFallback(SpecConfig), helper)
-        {
-        }
+    protected IActorRef Start(TestProbe probe)
+    {
+        settings = ClusterShardingSettings.Create(Sys);
+        // single node cluster
+        Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
 
-        protected IActorRef Start(TestProbe probe)
-        {
-            settings = ClusterShardingSettings.Create(Sys);
-            // single node cluster
-            Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
-
-            return ClusterSharding.Get(Sys).Start(
-                "myType",
-                Entity.Props(probe.Ref),
-                settings,
-                new MessageExtractor(),
-                ClusterSharding.Get(Sys).DefaultShardAllocationStrategy(settings),
-                Passivate.Instance);
-        }
-
-        protected async Task<TimeSpan> TimeUntilPassivate(IActorRef region, TestProbe probe)
-        {
-            region.Tell(1);
-            region.Tell(2);
-
-            var responses = new[] {
-                probe.ExpectMsg<Entity.GotIt>(),
-                probe.ExpectMsg<Entity.GotIt>()
-            };
-            responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
-
-            var timeOneSawMessage = responses.Single(r => r.Id == "1").When;
-
-            await Task.Delay(1000);
-            region.Tell(2);
-            probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
-            await Task.Delay(1000);
-            region.Tell(2);
-            probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
-
-            var timeSinceOneSawAMessage = DateTime.Now.Ticks - timeOneSawMessage;
-            var time = settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) + smallTolerance;
-            return time < smallTolerance ? smallTolerance : time;
-        }
+        return ClusterSharding.Get(Sys).Start(
+            "myType",
+            Entity.Props(probe.Ref),
+            settings,
+            new MessageExtractor(),
+            ClusterSharding.Get(Sys).DefaultShardAllocationStrategy(settings),
+            Passivate.Instance);
     }
 
-    public class InactiveEntityPassivationSpec : AbstractInactiveEntityPassivationSpec
+    protected async Task<TimeSpan> TimeUntilPassivate(IActorRef region, TestProbe probe)
     {
-        public InactiveEntityPassivationSpec(ITestOutputHelper helper)
-            : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = 3s"), helper)
+        region.Tell(1);
+        region.Tell(2);
+
+        var responses = new[] { probe.ExpectMsg<Entity.GotIt>(), probe.ExpectMsg<Entity.GotIt>() };
+        responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
+
+        var timeOneSawMessage = responses.Single(r => r.Id == "1").When;
+
+        await Task.Delay(1000);
+        region.Tell(2);
+        probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
+        await Task.Delay(1000);
+        region.Tell(2);
+        probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
+
+        var timeSinceOneSawAMessage = DateTime.Now.Ticks - timeOneSawMessage;
+        var time = settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) + smallTolerance;
+        return time < smallTolerance ? smallTolerance : time;
+    }
+
+    private sealed class MessageExtractor : IMessageExtractor
+    {
+        public string EntityId(object message)
         {
-        }
-
-        [Fact]
-        public async Task Passivation_of_inactive_entities_must_passivate_entities_when_they_have_not_seen_messages_for_the_configured_duration()
-        {
-            var probe = CreateTestProbe();
-            var region = Start(probe);
-
-            // make sure "1" hasn't seen a message in 3 seconds and passivates
-            var time = await TimeUntilPassivate(region, probe);
-            probe.ExpectNoMsg(time);
-
-            // but it can be re activated
-            region.Tell(1);
-            region.Tell(2);
-
-            var responses = new[]
+            return message switch
             {
-                    probe.ExpectMsg<Entity.GotIt>(),
-                    probe.ExpectMsg<Entity.GotIt>()
-                };
-            responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
+                int msg => msg.ToString(),
+                _ => null
+            };
+        }
+
+        public object EntityMessage(object message)
+        {
+            return message;
+        }
+
+        public string ShardId(object message)
+        {
+            return message switch
+            {
+                int msg => (msg % 10).ToString(),
+                _ => null
+            };
+        }
+
+        public string ShardId(string entityId, object messageHint = null)
+        {
+            return (int.Parse(entityId) % 10).ToString(CultureInfo.InvariantCulture);
         }
     }
 
-    public class DisabledInactiveEntityPassivationSpec : AbstractInactiveEntityPassivationSpec
+    #region Protocol
+
+    internal class Passivate
     {
-        public DisabledInactiveEntityPassivationSpec(ITestOutputHelper helper)
-            : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = off"), helper)
+        public static readonly Passivate Instance = new();
+
+        private Passivate()
         {
+        }
+    }
+
+    internal class Entity : UntypedActor
+    {
+        private readonly string _id = Context.Self.Path.Name;
+
+        public Entity(IActorRef probe)
+        {
+            Probe = probe;
         }
 
-        [Fact]
-        public async Task Passivation_of_inactive_entities_must_not_passivate_when_passivation_is_disabled()
+        public IActorRef Probe { get; }
+
+        public static Props Props(IActorRef probe)
         {
-            var probe = CreateTestProbe();
-            var region = Start(probe);
-            var time = await TimeUntilPassivate(region, probe);
-            await probe.ExpectNoMsgAsync(time);
+            return Actor.Props.Create(() => new Entity(probe));
         }
+
+        protected override void OnReceive(object message)
+        {
+            switch (message)
+            {
+                case Passivate _:
+                    Context.Stop(Self);
+                    break;
+                default:
+                    Probe.Tell(new GotIt(_id, message, DateTime.Now.Ticks));
+                    break;
+            }
+        }
+
+        public class GotIt
+        {
+            public GotIt(string id, object msg, long when)
+            {
+                Id = id;
+                Msg = msg;
+                When = when;
+            }
+
+            public string Id { get; }
+            public object Msg { get; }
+            public long When { get; }
+
+            public override int GetHashCode()
+            {
+                return Id.GetHashCode();
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj is GotIt other)
+                    return Id == other.Id;
+                return false;
+            }
+        }
+    }
+
+    #endregion
+}
+
+public class InactiveEntityPassivationSpec : AbstractInactiveEntityPassivationSpec
+{
+    public InactiveEntityPassivationSpec(ITestOutputHelper helper)
+        : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = 3s"), helper)
+    {
+    }
+
+    [Fact]
+    public async Task
+        Passivation_of_inactive_entities_must_passivate_entities_when_they_have_not_seen_messages_for_the_configured_duration()
+    {
+        var probe = CreateTestProbe();
+        var region = Start(probe);
+
+        // make sure "1" hasn't seen a message in 3 seconds and passivates
+        var time = await TimeUntilPassivate(region, probe);
+        probe.ExpectNoMsg(time);
+
+        // but it can be re activated
+        region.Tell(1);
+        region.Tell(2);
+
+        var responses = new[] { probe.ExpectMsg<Entity.GotIt>(), probe.ExpectMsg<Entity.GotIt>() };
+        responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
+    }
+}
+
+public class DisabledInactiveEntityPassivationSpec : AbstractInactiveEntityPassivationSpec
+{
+    public DisabledInactiveEntityPassivationSpec(ITestOutputHelper helper)
+        : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = off"), helper)
+    {
+    }
+
+    [Fact]
+    public async Task Passivation_of_inactive_entities_must_not_passivate_when_passivation_is_disabled()
+    {
+        var probe = CreateTestProbe();
+        var region = Start(probe);
+        var time = await TimeUntilPassivate(region, probe);
+        await probe.ExpectNoMsgAsync(time);
     }
 }

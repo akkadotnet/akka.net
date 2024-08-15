@@ -1,10 +1,11 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SnapshotStoreSerializationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SnapshotStoreSerializationSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Text;
 using Akka.Actor;
@@ -12,17 +13,15 @@ using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Serialization;
+using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
-using Akka.Util.Internal;
-using FluentAssertions;
 
-#nullable enable
-namespace Akka.Persistence.TCK.Serialization
+namespace Akka.Persistence.TCK.Serialization;
+
+public abstract class SnapshotStoreSerializationSpec : PluginSpec
 {
-    public abstract class SnapshotStoreSerializationSpec : PluginSpec
-    {
-        private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
+    private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
 akka.actor {
     serializers {
         my-snapshot = ""Akka.Persistence.TCK.Serialization.Test+MySnapshotSerializer, Akka.Persistence.TCK""
@@ -33,185 +32,196 @@ akka.actor {
         ""Akka.Persistence.TCK.Serialization.Test+MySnapshot2, Akka.Persistence.TCK"" = my-snapshot2
     }
 }");
-        
-        private static ActorSystemSetup WithConfig(Config? config = null)
+
+    protected SnapshotStoreSerializationSpec(Config config, string actorSystem, ITestOutputHelper output)
+        : this(WithConfig(config), actorSystem, output)
+    {
+    }
+
+    protected SnapshotStoreSerializationSpec(ActorSystemSetup setup, string actorSystem, ITestOutputHelper output)
+        : base(FromActorSystemSetup(setup), actorSystem, output)
+    {
+    }
+
+    protected IActorRef SnapshotStore => Extension.SnapshotStoreFor(null);
+
+    private static ActorSystemSetup WithConfig(Config? config = null)
+    {
+        return ActorSystemSetup.Empty
+            .And(BootstrapSetup.Create().WithConfig(BaseConfig.WithFallback(FromConfig(config))));
+    }
+
+    protected static ActorSystemSetup FromActorSystemSetup(ActorSystemSetup setup)
+    {
+        var bootstrapOption = setup.Get<BootstrapSetup>();
+        var bootstrap = bootstrapOption.HasValue ? bootstrapOption.Value : BootstrapSetup.Create();
+        var config = bootstrap.Config.HasValue
+            ? FromConfig(BaseConfig.WithFallback(bootstrap.Config.Value))
+            : FromConfig(BaseConfig);
+        return setup.And(bootstrap.WithConfig(config));
+    }
+
+    [Fact]
+    public virtual void SnapshotStore_should_serialize_Payload()
+    {
+        var probe = CreateTestProbe();
+
+        var snapshot = new Test.MySnapshot("a");
+
+        var metadata = new SnapshotMetadata(Pid, 1, Sys.Scheduler.Now.DateTime);
+        SnapshotStore.Tell(new SaveSnapshot(metadata, snapshot), probe.Ref);
+        probe.ExpectMsg<SaveSnapshotSuccess>();
+
+        SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
+        probe.ExpectMsg<LoadSnapshotResult>(s => s.Snapshot.Snapshot is Test.MySnapshot
+                                                 && s.Snapshot.Snapshot.AsInstanceOf<Test.MySnapshot>().Data
+                                                     .Equals(".a."));
+    }
+
+    [Fact]
+    public virtual void SnapshotStore_should_serialize_Payload_with_string_manifest()
+    {
+        var probe = CreateTestProbe();
+
+        var snapshot = new Test.MySnapshot2("a");
+
+        var metadata = new SnapshotMetadata(Pid, 1, Sys.Scheduler.Now.DateTime);
+        SnapshotStore.Tell(new SaveSnapshot(metadata, snapshot), probe.Ref);
+        probe.ExpectMsg<SaveSnapshotSuccess>();
+
+        SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
+        probe.ExpectMsg<LoadSnapshotResult>(s => s.Snapshot.Snapshot is Test.MySnapshot2
+                                                 && s.Snapshot.Snapshot.AsInstanceOf<Test.MySnapshot2>().Data
+                                                     .Equals(".a."));
+    }
+
+    [Fact]
+    public virtual void SnapshotStore_should_serialize_AtLeastOnceDeliverySnapshot()
+    {
+        var probe = CreateTestProbe();
+
+        var unconfirmed = new UnconfirmedDelivery[]
         {
-            return ActorSystemSetup.Empty
-                .And(BootstrapSetup.Create().WithConfig(BaseConfig.WithFallback(FromConfig(config))));
+            new(1, TestActor.Path, "a"), new(2, TestActor.Path, "b"), new(3, TestActor.Path, 42)
+        };
+        var atLeastOnceDeliverySnapshot = new AtLeastOnceDeliverySnapshot(17, unconfirmed);
+
+        var metadata = new SnapshotMetadata(Pid, 2, Sys.Scheduler.Now.DateTime);
+        SnapshotStore.Tell(new SaveSnapshot(metadata, atLeastOnceDeliverySnapshot), probe.Ref);
+        probe.ExpectMsg<SaveSnapshotSuccess>();
+
+        SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
+        probe.ExpectMsg<LoadSnapshotResult>(s => s.Snapshot.Snapshot.Equals(atLeastOnceDeliverySnapshot));
+    }
+
+    [Fact]
+    public virtual void SnapshotStore_should_serialize_AtLeastOnceDeliverySnapshot_with_empty_unconfirmed()
+    {
+        var probe = CreateTestProbe();
+
+        var unconfirmed = Array.Empty<UnconfirmedDelivery>();
+        var atLeastOnceDeliverySnapshot = new AtLeastOnceDeliverySnapshot(13, unconfirmed);
+
+        var metadata = new SnapshotMetadata(Pid, 2, Sys.Scheduler.Now.DateTime);
+        SnapshotStore.Tell(new SaveSnapshot(metadata, atLeastOnceDeliverySnapshot), probe.Ref);
+        probe.ExpectMsg<SaveSnapshotSuccess>();
+
+        SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
+        probe.ExpectMsg<LoadSnapshotResult>(s => s.Snapshot.Snapshot.Equals(atLeastOnceDeliverySnapshot));
+    }
+
+    [Fact]
+    public virtual void SnapshotStore_should_serialize_PersistentFSMSnapshot()
+    {
+        var probe = CreateTestProbe();
+
+        var persistentFSMSnapshot =
+            new PersistentFSM.PersistentFSMSnapshot<string>("mystate", "mydata", TimeSpan.FromDays(4));
+
+        var metadata = new SnapshotMetadata(Pid, 2, Sys.Scheduler.Now.DateTime);
+        SnapshotStore.Tell(new SaveSnapshot(metadata, persistentFSMSnapshot), probe.Ref);
+        probe.ExpectMsg<SaveSnapshotSuccess>();
+
+        SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
+        probe.ExpectMsg<LoadSnapshotResult>(s => s.Snapshot.Snapshot.Equals(persistentFSMSnapshot));
+    }
+}
+
+internal static class Test
+{
+    public class MySnapshot
+    {
+        public MySnapshot(string data)
+        {
+            Data = data;
         }
-        
-        protected static ActorSystemSetup FromActorSystemSetup(ActorSystemSetup setup)
+
+        public string Data { get; }
+    }
+
+    public class MySnapshot2
+    {
+        public MySnapshot2(string data)
         {
-            var bootstrapOption = setup.Get<BootstrapSetup>();
-            var bootstrap = bootstrapOption.HasValue ? bootstrapOption.Value : BootstrapSetup.Create();
-            var config = bootstrap.Config.HasValue
-                ? FromConfig(BaseConfig.WithFallback(bootstrap.Config.Value))
-                : FromConfig(BaseConfig);
-            return setup.And(bootstrap.WithConfig(config));
-        }
-        
-        protected SnapshotStoreSerializationSpec(Config config, string actorSystem, ITestOutputHelper output) 
-            : this(WithConfig(config), actorSystem, output)
-        {
-        }
-        
-        protected SnapshotStoreSerializationSpec(ActorSystemSetup setup, string actorSystem, ITestOutputHelper output)
-            :base(FromActorSystemSetup(setup), actorSystem, output)
-        {
+            Data = data;
         }
 
-        protected IActorRef SnapshotStore => Extension.SnapshotStoreFor(null);
+        public string Data { get; }
+    }
 
-        [Fact]
-        public virtual void SnapshotStore_should_serialize_Payload()
+    public class MySnapshotSerializer : Serializer
+    {
+        public MySnapshotSerializer(ExtendedActorSystem system) : base(system)
         {
-            var probe = CreateTestProbe();
-
-            var snapshot = new Test.MySnapshot("a");
-
-            var metadata = new SnapshotMetadata(Pid, 1, Sys.Scheduler.Now.DateTime);
-            SnapshotStore.Tell(new SaveSnapshot(metadata, snapshot), probe.Ref);
-            probe.ExpectMsg<SaveSnapshotSuccess>();
-
-            SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
-            probe.ExpectMsg<LoadSnapshotResult>(s => s.Snapshot.Snapshot is Test.MySnapshot
-                && s.Snapshot.Snapshot.AsInstanceOf<Test.MySnapshot>().Data.Equals(".a."));
         }
 
-        [Fact]
-        public virtual void SnapshotStore_should_serialize_Payload_with_string_manifest()
+        public override int Identifier => 77124;
+        public override bool IncludeManifest => true;
+
+        public override byte[] ToBinary(object obj)
         {
-            var probe = CreateTestProbe();
-
-            var snapshot = new Test.MySnapshot2("a");
-
-            var metadata = new SnapshotMetadata(Pid, 1, Sys.Scheduler.Now.DateTime);
-            SnapshotStore.Tell(new SaveSnapshot(metadata, snapshot), probe.Ref);
-            probe.ExpectMsg<SaveSnapshotSuccess>();
-
-            SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
-            probe.ExpectMsg<LoadSnapshotResult>(s => s.Snapshot.Snapshot is Test.MySnapshot2
-                && s.Snapshot.Snapshot.AsInstanceOf<Test.MySnapshot2>().Data.Equals(".a."));
+            if (obj is MySnapshot snapshot) return Encoding.UTF8.GetBytes($".{snapshot.Data}");
+            throw new ArgumentException(
+                $"Can't serialize object of type [{obj.GetType()}] in [{nameof(MySnapshotSerializer2)}]");
         }
 
-        [Fact]
-        public virtual void SnapshotStore_should_serialize_AtLeastOnceDeliverySnapshot()
+        public override object FromBinary(byte[] bytes, Type type)
         {
-            var probe = CreateTestProbe();
-
-            var unconfirmed = new UnconfirmedDelivery[]
-            {
-                new(1, TestActor.Path, "a"),
-                new(2, TestActor.Path, "b"),
-                new(3, TestActor.Path, 42)
-            };
-            var atLeastOnceDeliverySnapshot = new AtLeastOnceDeliverySnapshot(17, unconfirmed);
-
-            var metadata = new SnapshotMetadata(Pid, 2, Sys.Scheduler.Now.DateTime);
-            SnapshotStore.Tell(new SaveSnapshot(metadata, atLeastOnceDeliverySnapshot), probe.Ref);
-            probe.ExpectMsg<SaveSnapshotSuccess>();
-
-            SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
-            probe.ExpectMsg<LoadSnapshotResult>(s => s.Snapshot.Snapshot.Equals(atLeastOnceDeliverySnapshot));
-        }
-
-        [Fact]
-        public virtual void SnapshotStore_should_serialize_AtLeastOnceDeliverySnapshot_with_empty_unconfirmed()
-        {
-            var probe = CreateTestProbe();
-
-            var unconfirmed = Array.Empty<UnconfirmedDelivery>();
-            var atLeastOnceDeliverySnapshot = new AtLeastOnceDeliverySnapshot(13, unconfirmed);
-
-            var metadata = new SnapshotMetadata(Pid, 2, Sys.Scheduler.Now.DateTime);
-            SnapshotStore.Tell(new SaveSnapshot(metadata, atLeastOnceDeliverySnapshot), probe.Ref);
-            probe.ExpectMsg<SaveSnapshotSuccess>();
-
-            SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
-            probe.ExpectMsg<LoadSnapshotResult>(s => s.Snapshot.Snapshot.Equals(atLeastOnceDeliverySnapshot));
-        }
-
-        [Fact]
-        public virtual void SnapshotStore_should_serialize_PersistentFSMSnapshot()
-        {
-            var probe = CreateTestProbe();
-
-            var persistentFSMSnapshot = new PersistentFSM.PersistentFSMSnapshot<string>("mystate", "mydata", TimeSpan.FromDays(4));
-
-            var metadata = new SnapshotMetadata(Pid, 2, Sys.Scheduler.Now.DateTime);
-            SnapshotStore.Tell(new SaveSnapshot(metadata, persistentFSMSnapshot), probe.Ref);
-            probe.ExpectMsg<SaveSnapshotSuccess>();
-
-            SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), probe.Ref);
-            probe.ExpectMsg<LoadSnapshotResult>(s => s.Snapshot.Snapshot.Equals(persistentFSMSnapshot));
+            if (type == typeof(MySnapshot)) return new MySnapshot($"{Encoding.UTF8.GetString(bytes)}.");
+            throw new ArgumentException(
+                $"Unimplemented deserialization of message with manifest [{type}] in serializer {nameof(MySnapshotSerializer)}");
         }
     }
 
-    internal static class Test
+    public class MySnapshotSerializer2 : SerializerWithStringManifest
     {
-        public class MySnapshot
-        {
-            public MySnapshot(string data)
-            {
-                Data = data;
-            }
+        private const string ContactsManifest = "A";
 
-            public string Data { get; }
+        public MySnapshotSerializer2(ExtendedActorSystem system) : base(system)
+        {
         }
 
-        public class MySnapshot2
-        {
-            public MySnapshot2(string data)
-            {
-                Data = data;
-            }
+        public override int Identifier => 77126;
 
-            public string Data { get; }
+        public override byte[] ToBinary(object obj)
+        {
+            if (obj is MySnapshot2 snapshot) return Encoding.UTF8.GetBytes($".{snapshot.Data}");
+            throw new ArgumentException(
+                $"Can't serialize object of type [{obj.GetType()}] in [{nameof(MySnapshotSerializer2)}]");
         }
 
-        public class MySnapshotSerializer : Serializer
+        public override string Manifest(object obj)
         {
-            public MySnapshotSerializer(ExtendedActorSystem system) : base(system) { }
-            public override int Identifier => 77124;
-            public override bool IncludeManifest => true;
-
-            public override byte[] ToBinary(object obj)
-            {
-                if (obj is MySnapshot snapshot) return Encoding.UTF8.GetBytes($".{snapshot.Data}");
-                throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{nameof(MySnapshotSerializer2)}]");
-            }
-
-            public override object FromBinary(byte[] bytes, Type type)
-            {
-                if (type == typeof(MySnapshot)) return new MySnapshot($"{Encoding.UTF8.GetString(bytes)}.");
-                throw new ArgumentException($"Unimplemented deserialization of message with manifest [{type}] in serializer {nameof(MySnapshotSerializer)}");
-            }
+            if (obj is MySnapshot2) return ContactsManifest;
+            throw new ArgumentException(
+                $"Can't serialize object of type [{obj.GetType()}] in [{nameof(MySnapshotSerializer2)}]");
         }
 
-        public class MySnapshotSerializer2 : SerializerWithStringManifest
+        public override object FromBinary(byte[] bytes, string manifest)
         {
-            private const string ContactsManifest = "A";
-
-            public MySnapshotSerializer2(ExtendedActorSystem system) : base(system) { }
-            public override int Identifier => 77126;
-
-            public override byte[] ToBinary(object obj)
-            {
-                if (obj is MySnapshot2 snapshot) return Encoding.UTF8.GetBytes($".{snapshot.Data}");
-                throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{nameof(MySnapshotSerializer2)}]");
-            }
-
-            public override string Manifest(object obj)
-            {
-                if (obj is MySnapshot2) return ContactsManifest;
-                throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{nameof(MySnapshotSerializer2)}]");
-            }
-
-            public override object FromBinary(byte[] bytes, string manifest)
-            {
-                if (manifest == ContactsManifest) return new MySnapshot2(Encoding.UTF8.GetString(bytes) + ".");
-                throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in serializer {nameof(MySnapshotSerializer2)}");
-            }
+            if (manifest == ContactsManifest) return new MySnapshot2(Encoding.UTF8.GetString(bytes) + ".");
+            throw new ArgumentException(
+                $"Unimplemented deserialization of message with manifest [{manifest}] in serializer {nameof(MySnapshotSerializer2)}");
         }
     }
 }

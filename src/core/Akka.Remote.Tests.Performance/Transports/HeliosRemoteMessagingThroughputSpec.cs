@@ -1,19 +1,19 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="HeliosRemoteMessagingThroughputSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="HeliosRemoteMessagingThroughputSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Configuration;
 
-namespace Akka.Remote.Tests.Performance.Transports
+namespace Akka.Remote.Tests.Performance.Transports;
+
+public class HeliosRemoteMessagingThroughputSpec : RemoteMessagingThroughputSpecBase
 {
-    public class HeliosRemoteMessagingThroughputSpec : RemoteMessagingThroughputSpecBase
+    public override Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port)
     {
-        public override Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port)
-        {
-            var baseConfig = ConfigurationFactory.ParseString(@"
+        var baseConfig = ConfigurationFactory.ParseString(@"
                 akka {
               actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
 
@@ -57,11 +57,10 @@ namespace Akka.Remote.Tests.Performance.Transports
               }
             ");
 
-            var bindingConfig =
-                ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.hostname = """ + ipOrHostname + @"""")
+        var bindingConfig =
+            ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.hostname = """ + ipOrHostname + @"""")
                 .WithFallback(ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port = " + port));
 
-            return bindingConfig.WithFallback(baseConfig);
-        }
+        return bindingConfig.WithFallback(baseConfig);
     }
 }

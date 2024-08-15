@@ -1,38 +1,36 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ISurrogate.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ISurrogate.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 
-namespace Akka.Util
+namespace Akka.Util;
+
+/// <summary>
+///     TBD
+/// </summary>
+public interface ISurrogate
 {
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    public interface ISurrogate
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
-        ISurrogated FromSurrogate(ActorSystem system);
-    }
-
-    /// <summary>
-    /// Used for surrogate serialization.
-    /// </summary>
-    public interface ISurrogated
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
-        ISurrogate ToSurrogate(ActorSystem system);
-    }
+    /// <param name="system">TBD</param>
+    /// <returns>TBD</returns>
+    ISurrogated FromSurrogate(ActorSystem system);
 }
 
+/// <summary>
+///     Used for surrogate serialization.
+/// </summary>
+public interface ISurrogated
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="system">TBD</param>
+    /// <returns>TBD</returns>
+    ISurrogate ToSurrogate(ActorSystem system);
+}

@@ -8,12 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
-    <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
+    <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj"/>
+    <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="reference.conf" />
+    <EmbeddedResource Include="reference.conf"/>
   </ItemGroup>
 
 </Project>

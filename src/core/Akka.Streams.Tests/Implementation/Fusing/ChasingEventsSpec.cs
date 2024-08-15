@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ChasingEventsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ChasingEventsSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Linq;
 using Akka.Streams.Dsl;
@@ -13,173 +13,187 @@ using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.Tests.Implementation.Fusing
+namespace Akka.Streams.Tests.Implementation.Fusing;
+
+public class ChasingEventsSpec : AkkaSpec
 {
-    public class ChasingEventsSpec : AkkaSpec
+    public ChasingEventsSpec(ITestOutputHelper output = null) : base(output)
     {
-        public ChasingEventsSpec(ITestOutputHelper output = null) : base(output)
+        Materializer = Sys.Materializer(ActorMaterializerSettings.Create(Sys).WithFuzzingMode(false));
+    }
+
+    public ActorMaterializer Materializer { get; }
+
+
+    [Fact]
+    public void Event_chasing_must_propagate_cancel_if_enqueued_immediately_after_pull()
+    {
+        var upstream = this.CreatePublisherProbe<int>();
+
+        Source.FromPublisher(upstream)
+            .Via(new CancelInChasePull())
+            .RunWith(Sink.Ignore<int>(), Materializer);
+
+        upstream.SendNext(0);
+        upstream.ExpectCancellation();
+    }
+
+    [Fact]
+    public void Event_chasing_must_propagate_complete_if_enqueued_immediately_after_push()
+    {
+        var downstream = this.CreateSubscriberProbe<int>();
+
+        Source.From(Enumerable.Range(1, 10))
+            .Via(new CompleteInChasePush())
+            .RunWith(Sink.FromSubscriber(downstream), Materializer);
+
+        downstream.RequestNext(1);
+        downstream.ExpectComplete();
+    }
+
+    [Fact]
+    public void Event_chasing_must_propagate_failure_if_enqueued_immediately_after_push()
+    {
+        var downstream = this.CreateSubscriberProbe<int>();
+
+        Source.From(Enumerable.Range(1, 10))
+            .Via(new FailureInChasedPush())
+            .RunWith(Sink.FromSubscriber(downstream), Materializer);
+
+        downstream.RequestNext(1);
+        downstream.ExpectError();
+    }
+
+    private sealed class CancelInChasePull : GraphStage<FlowShape<int, int>>
+    {
+        public CancelInChasePull()
         {
-            Materializer = Sys.Materializer(ActorMaterializerSettings.Create(Sys).WithFuzzingMode(false));
+            Shape = new FlowShape<int, int>(In, Out);
         }
 
-        public ActorMaterializer Materializer { get; }
+        public Inlet<int> In { get; } = new("Propagate.in");
 
+        public Outlet<int> Out { get; } = new("Propagate.out");
 
-        [Fact]
-        public void Event_chasing_must_propagate_cancel_if_enqueued_immediately_after_pull()
+        public override FlowShape<int, int> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            var upstream = this.CreatePublisherProbe<int>();
-
-            Source.FromPublisher(upstream)
-                .Via(new CancelInChasePull())
-                .RunWith(Sink.Ignore<int>(), Materializer);
-
-            upstream.SendNext(0);
-            upstream.ExpectCancellation();
+            return new Logic(this);
         }
 
-        [Fact]
-        public void Event_chasing_must_propagate_complete_if_enqueued_immediately_after_push()
+        private sealed class Logic : GraphStageLogic
         {
-            var downstream = this.CreateSubscriberProbe<int>();
-
-            Source.From(Enumerable.Range(1, 10))
-                .Via(new CompleteInChasePush())
-                .RunWith(Sink.FromSubscriber(downstream), Materializer);
-
-            downstream.RequestNext(1);
-            downstream.ExpectComplete();
-        }
-        
-        [Fact]
-        public void Event_chasing_must_propagate_failure_if_enqueued_immediately_after_push()
-        {
-            var downstream = this.CreateSubscriberProbe<int>();
-
-            Source.From(Enumerable.Range(1, 10))
-                .Via(new FailureInChasedPush())
-                .RunWith(Sink.FromSubscriber(downstream), Materializer);
-
-            downstream.RequestNext(1);
-            downstream.ExpectError();
-        }
-
-        private sealed class CancelInChasePull : GraphStage<FlowShape<int, int>>
-        {
-            private sealed class Logic : GraphStageLogic
+            public Logic(CancelInChasePull stage) : base(stage.Shape)
             {
-                public Logic(CancelInChasePull stage) : base(stage.Shape)
+                var first = true;
+
+                SetHandler(stage.In, () => Push(stage.Out, Grab(stage.In)));
+                SetHandler(stage.Out, () =>
                 {
-                    var first = true;
-
-                    SetHandler(stage.In, onPush: () => Push(stage.Out, Grab(stage.In)));
-                    SetHandler(stage.Out, onPull: () =>
-                    {
-                        Pull(stage.In);
-                        if(!first)
-                            Cancel(stage.In);
-                        first = false;
-                    });
-                }
+                    Pull(stage.In);
+                    if (!first)
+                        Cancel(stage.In);
+                    first = false;
+                });
             }
+        }
+    }
 
-            public CancelInChasePull()
-            {
-                Shape = new FlowShape<int, int>(In, Out);
-            }
-
-            public Inlet<int> In { get; } = new("Propagate.in");
-
-            public Outlet<int> Out { get; } = new("Propagate.out");
-
-            public override FlowShape<int, int> Shape { get; }
-
-            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+    private sealed class CompleteInChasePush : GraphStage<FlowShape<int, int>>
+    {
+        public CompleteInChasePush()
+        {
+            Shape = new FlowShape<int, int>(In, Out);
         }
 
-        private sealed class CompleteInChasePush : GraphStage<FlowShape<int, int>>
+        public Inlet<int> In { get; } = new("Propagate.in");
+
+        public Outlet<int> Out { get; } = new("Propagate.out");
+
+        public override FlowShape<int, int> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            private sealed class Logic : GraphStageLogic
-            {
-                public Logic(CompleteInChasePush stage) : base(stage.Shape)
-                {
-                    SetHandler(stage.In, onPush: () =>
-                    {
-                        Push(stage.Out, Grab(stage.In));
-                        Complete(stage.Out);
-                    });
-                    SetHandler(stage.Out, onPull: () => Pull(stage.In));
-                }
-            }
-
-            public CompleteInChasePush()
-            {
-                Shape = new FlowShape<int, int>(In, Out);
-            }
-
-            public Inlet<int> In { get; } = new("Propagate.in");
-
-            public Outlet<int> Out { get; } = new("Propagate.out");
-
-            public override FlowShape<int, int> Shape { get; }
-
-            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+            return new Logic(this);
         }
 
-        private sealed class FailureInChasedPush : GraphStage<FlowShape<int, int>>
+        private sealed class Logic : GraphStageLogic
         {
-            private sealed class Logic : GraphStageLogic
+            public Logic(CompleteInChasePush stage) : base(stage.Shape)
             {
-                public Logic(FailureInChasedPush stage) : base(stage.Shape)
+                SetHandler(stage.In, () =>
                 {
-                    SetHandler(stage.In, onPush: () =>
-                    {
-                        Push(stage.Out, Grab(stage.In));
-                        Fail(stage.Out, new TestException("test failure"));
-                    });
-                    SetHandler(stage.Out, onPull: () => Pull(stage.In));
-                }
+                    Push(stage.Out, Grab(stage.In));
+                    Complete(stage.Out);
+                });
+                SetHandler(stage.Out, () => Pull(stage.In));
             }
+        }
+    }
 
-            public FailureInChasedPush()
-            {
-                Shape = new FlowShape<int, int>(In, Out);
-            }
-
-            public Inlet<int> In { get; } = new("Propagate.in");
-
-            public Outlet<int> Out { get; } = new("Propagate.out");
-
-            public override FlowShape<int, int> Shape { get; }
-
-            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+    private sealed class FailureInChasedPush : GraphStage<FlowShape<int, int>>
+    {
+        public FailureInChasedPush()
+        {
+            Shape = new FlowShape<int, int>(In, Out);
         }
 
-        private sealed class ChasableSink : GraphStage<SinkShape<int>>
+        public Inlet<int> In { get; } = new("Propagate.in");
+
+        public Outlet<int> Out { get; } = new("Propagate.out");
+
+        public override FlowShape<int, int> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
         {
-            private sealed class Logic : GraphStageLogic
-            {
-                private readonly ChasableSink _stage;
+            return new Logic(this);
+        }
 
-                public Logic(ChasableSink stage) : base(stage.Shape)
+        private sealed class Logic : GraphStageLogic
+        {
+            public Logic(FailureInChasedPush stage) : base(stage.Shape)
+            {
+                SetHandler(stage.In, () =>
                 {
-                    _stage = stage;
-                    SetHandler(stage.In, onPush: ()=> Pull(stage.In));
-                }
-
-                public override void PreStart() => Pull(_stage.In);
+                    Push(stage.Out, Grab(stage.In));
+                    Fail(stage.Out, new TestException("test failure"));
+                });
+                SetHandler(stage.Out, () => Pull(stage.In));
             }
+        }
+    }
 
-            public ChasableSink()
+    private sealed class ChasableSink : GraphStage<SinkShape<int>>
+    {
+        public ChasableSink()
+        {
+            Shape = new SinkShape<int>(In);
+        }
+
+        public Inlet<int> In { get; } = new("Chaseable.in");
+
+        public override SinkShape<int> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        {
+            return new Logic(this);
+        }
+
+        private sealed class Logic : GraphStageLogic
+        {
+            private readonly ChasableSink _stage;
+
+            public Logic(ChasableSink stage) : base(stage.Shape)
             {
-                Shape = new SinkShape<int>(In);
+                _stage = stage;
+                SetHandler(stage.In, () => Pull(stage.In));
             }
 
-            public Inlet<int> In { get; } = new("Chaseable.in");
-
-            public override SinkShape<int> Shape { get; }
-
-            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+            public override void PreStart()
+            {
+                Pull(_stage.In);
+            }
         }
     }
 }

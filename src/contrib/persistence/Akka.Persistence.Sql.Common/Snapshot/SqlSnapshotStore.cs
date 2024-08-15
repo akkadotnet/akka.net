@@ -1,11 +1,12 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SqlSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SqlSnapshotStore.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
+using System.Configuration;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,37 +14,27 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Snapshot;
-using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Persistence.Sql.Common.Snapshot
 {
     /// <summary>
-    /// Abstract snapshot store implementation, customized to work with SQL-based persistence providers.
+    ///     Abstract snapshot store implementation, customized to work with SQL-based persistence providers.
     /// </summary>
     public abstract class SqlSnapshotStore : SnapshotStore, IWithUnboundedStash
     {
-        #region messages
-        
-        private sealed class Initialized
-        {
-            public static readonly Initialized Instance = new Initialized();
-            private Initialized() { }
-        }
-            
-        #endregion
+        private readonly ExtendedActorSystem _actorSystem;
 
         /// <summary>
-        /// List of cancellation tokens for all pending asynchronous database operations.
+        ///     List of cancellation tokens for all pending asynchronous database operations.
         /// </summary>
         private readonly CancellationTokenSource _pendingRequestsCancellation;
 
         protected readonly SnapshotStoreSettings Settings;
-
-        private readonly ExtendedActorSystem _actorSystem;
+        private ILoggingAdapter _log;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SqlSnapshotStore"/> class.
+        ///     Initializes a new instance of the <see cref="SqlSnapshotStore" /> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the snapshot store.</param>
         protected SqlSnapshotStore(Config config)
@@ -54,30 +45,29 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         protected ILoggingAdapter Log => _log ?? (_log ?? Context.GetLogger());
-        private ILoggingAdapter _log;
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        public IStash Stash { get; set; }
-
-        /// <summary>
-        /// Query executor used to convert snapshot store related operations into corresponding SQL queries.
+        ///     Query executor used to convert snapshot store related operations into corresponding SQL queries.
         /// </summary>
         public abstract ISnapshotQueryExecutor QueryExecutor { get; }
 
         /// <summary>
-        /// Returns a new instance of database connection.
+        ///     TBD
+        /// </summary>
+        public IStash Stash { get; set; }
+
+        /// <summary>
+        ///     Returns a new instance of database connection.
         /// </summary>
         /// <param name="connectionString">TBD</param>
         /// <returns>TBD</returns>
         protected abstract DbConnection CreateDbConnection(string connectionString);
 
         /// <summary>
-        /// Returns a new instance of database connection.
+        ///     Returns a new instance of database connection.
         /// </summary>
         /// <returns>TBD</returns>
         public DbConnection CreateDbConnection()
@@ -86,7 +76,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         protected override void PreStart()
         {
@@ -99,7 +89,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         protected override void PostStop()
         {
@@ -114,7 +104,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             try
             {
                 using (var connection = CreateDbConnection())
-                using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                using (var nestedCancellationTokenSource =
+                       CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
                 {
                     await connection.OpenAsync(nestedCancellationTokenSource.Token);
                     await QueryExecutor.CreateTableAsync(connection, nestedCancellationTokenSource.Token);
@@ -129,7 +120,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
 
         private bool WaitingForInitialization(object message)
         {
-            switch(message)
+            switch (message)
             {
                 case Initialized _:
                     UnbecomeStacked();
@@ -146,7 +137,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <returns>TBD</returns>
         protected virtual string GetConnectionString()
@@ -154,31 +145,34 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             var connectionString = Settings.ConnectionString;
 
             if (string.IsNullOrEmpty(connectionString))
-            {
-                connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[Settings.ConnectionStringName].ConnectionString;
-            }
+                connectionString = ConfigurationManager.ConnectionStrings[Settings.ConnectionStringName]
+                    .ConnectionString;
 
             return connectionString;
         }
 
         /// <summary>
-        /// Asynchronously loads snapshot with the highest sequence number for a persistent actor/view matching specified criteria.
+        ///     Asynchronously loads snapshot with the highest sequence number for a persistent actor/view matching specified
+        ///     criteria.
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="criteria">TBD</param>
         /// <returns>TBD</returns>
-        protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId,
+            SnapshotSelectionCriteria criteria)
         {
             using (var connection = CreateDbConnection())
-            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+            using (var nestedCancellationTokenSource =
+                   CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(nestedCancellationTokenSource.Token);
-                return await QueryExecutor.SelectSnapshotAsync(connection, nestedCancellationTokenSource.Token, persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
+                return await QueryExecutor.SelectSnapshotAsync(connection, nestedCancellationTokenSource.Token,
+                    persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
             }
         }
 
         /// <summary>
-        /// Asynchronously stores a snapshot with metadata as record in SQL table.
+        ///     Asynchronously stores a snapshot with metadata as record in SQL table.
         /// </summary>
         /// <param name="metadata">TBD</param>
         /// <param name="snapshot">TBD</param>
@@ -186,7 +180,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
             using (var connection = CreateDbConnection())
-            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+            using (var nestedCancellationTokenSource =
+                   CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(nestedCancellationTokenSource.Token);
                 await QueryExecutor.InsertAsync(connection, nestedCancellationTokenSource.Token, snapshot, metadata);
@@ -194,23 +189,25 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="metadata">TBD</param>
         /// <returns>TBD</returns>
         protected override async Task DeleteAsync(SnapshotMetadata metadata)
         {
             using (var connection = CreateDbConnection())
-            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))    
+            using (var nestedCancellationTokenSource =
+                   CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(nestedCancellationTokenSource.Token);
-                DateTime? timestamp = metadata.Timestamp != DateTime.MinValue ? metadata.Timestamp : default(DateTime?);
-                await QueryExecutor.DeleteAsync(connection, nestedCancellationTokenSource.Token, metadata.PersistenceId, metadata.SequenceNr, timestamp);
+                var timestamp = metadata.Timestamp != DateTime.MinValue ? metadata.Timestamp : default(DateTime?);
+                await QueryExecutor.DeleteAsync(connection, nestedCancellationTokenSource.Token, metadata.PersistenceId,
+                    metadata.SequenceNr, timestamp);
             }
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="criteria">TBD</param>
@@ -218,11 +215,26 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             using (var connection = CreateDbConnection())
-            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+            using (var nestedCancellationTokenSource =
+                   CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(nestedCancellationTokenSource.Token);
-                await QueryExecutor.DeleteBatchAsync(connection, nestedCancellationTokenSource.Token, persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
+                await QueryExecutor.DeleteBatchAsync(connection, nestedCancellationTokenSource.Token, persistenceId,
+                    criteria.MaxSequenceNr, criteria.MaxTimeStamp);
             }
         }
+
+        #region messages
+
+        private sealed class Initialized
+        {
+            public static readonly Initialized Instance = new Initialized();
+
+            private Initialized()
+            {
+            }
+        }
+
+        #endregion
     }
 }

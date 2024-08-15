@@ -1,11 +1,9 @@
-open System.Runtime.ExceptionServices
 
 #I @"tools/FAKE/tools"
 #r "FakeLib.dll"
 
 open System
 open System.IO
-open System.Text
 
 
 open Fake

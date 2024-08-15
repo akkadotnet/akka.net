@@ -6,8 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\core\Akka.Remote\Akka.Remote.csproj" />
-    <ProjectReference Include="..\ChatMessages\ChatMessages.csproj" />
+    <ProjectReference Include="..\..\..\core\Akka.Remote\Akka.Remote.csproj"/>
+    <ProjectReference Include="..\ChatMessages\ChatMessages.csproj"/>
   </ItemGroup>
 
 </Project>

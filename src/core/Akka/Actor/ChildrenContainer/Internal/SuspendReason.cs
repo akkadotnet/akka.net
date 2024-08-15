@@ -1,86 +1,89 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SuspendReason.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SuspendReason.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 
-namespace Akka.Actor.Internal
+namespace Akka.Actor.Internal;
+
+/// <summary>
+///     TBD
+///     <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+/// </summary>
+public abstract class SuspendReason
 {
     /// <summary>
-    /// TBD
-    /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+    ///     TBD
+    ///     <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public abstract class SuspendReason
+    // ReSharper disable once InconsistentNaming
+    public interface IWaitingForChildren
+    {
+        //Intentionally left blank
+    }
+
+    /// <summary>
+    ///     TBD
+    ///     <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+    /// </summary>
+    public class Creation : SuspendReason, IWaitingForChildren
+    {
+        //Intentionally left blank
+    }
+
+    /// <summary>
+    ///     TBD
+    ///     <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+    /// </summary>
+    public class Recreation : SuspendReason, IWaitingForChildren
     {
         /// <summary>
-        /// TBD
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+        ///     TBD
         /// </summary>
-        // ReSharper disable once InconsistentNaming
-        public interface IWaitingForChildren
+        /// <param name="cause">TBD</param>
+        public Recreation(Exception cause)
         {
-            //Intentionally left blank
+            Cause = cause;
         }
 
         /// <summary>
-        /// TBD
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+        ///     TBD
         /// </summary>
-        public class Creation : SuspendReason, IWaitingForChildren
+        public Exception Cause { get; }
+    }
+
+    /// <summary>
+    ///     TBD
+    ///     <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+    /// </summary>
+    public class Termination : SuspendReason
+    {
+        private Termination()
         {
-            //Intentionally left blank
         }
 
         /// <summary>
-        /// TBD
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+        ///     TBD
         /// </summary>
-        public class Recreation : SuspendReason, IWaitingForChildren
+        public static Termination Instance { get; } = new();
+    }
+
+    /// <summary>
+    ///     TBD
+    ///     <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+    /// </summary>
+    public class UserRequest : SuspendReason
+    {
+        private UserRequest()
         {
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="cause">TBD</param>
-            public Recreation(Exception cause)
-            {
-                Cause = cause;
-            }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public Exception Cause { get; }
         }
 
         /// <summary>
-        /// TBD
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+        ///     TBD
         /// </summary>
-        public class Termination : SuspendReason
-        {
-            private Termination() { }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static Termination Instance { get; } = new();
-        }
-
-        /// <summary>
-        /// TBD
-        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
-        /// </summary>
-        public class UserRequest : SuspendReason
-        {
-            private UserRequest() { }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static UserRequest Instance { get; } = new();
-        }
+        public static UserRequest Instance { get; } = new();
     }
 }
-

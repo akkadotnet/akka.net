@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="GraphStages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="GraphStages.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Diagnostics.CodeAnalysis;
@@ -17,1056 +17,1194 @@ using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Util;
 
-namespace Akka.Streams.Implementation.Fusing
+namespace Akka.Streams.Implementation.Fusing;
+
+/// <summary>
+///     TBD
+/// </summary>
+public static class GraphStages
 {
     /// <summary>
-    /// TBD
-    /// </summary>
-    public static class GraphStages
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <returns>TBD</returns>
-        public static SimpleLinearGraphStage<T> Identity<T>() => Implementation.Fusing.Identity<T>.Instance;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <returns>TBD</returns>
-        internal static GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Done>> TerminationWatcher<T>()
-            => Implementation.Fusing.TerminationWatcher<T>.Instance;
-
-        /// <summary>
-        /// Fusing graphs that have cycles involving FanIn stages might lead to deadlocks if
-        /// demand is not carefully managed.
-        /// 
-        /// This means that FanIn stages need to early pull every relevant input on startup.
-        /// This can either be implemented inside the stage itself, or this method can be used,
-        /// which adds a detacher stage to every input.
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="stage">TBD</param>
-        /// <returns>TBD</returns>
-        internal static IGraph<UniformFanInShape<T, T>, NotUsed> WithDetachedInputs<T>(GraphStage<UniformFanInShape<T, T>> stage)
-        {
-            return GraphDsl.Create(builder =>
-            {
-                var concat = builder.Add(stage);
-                var detachers = concat.Ins.Select(inlet =>
-                {
-                    var detacher = builder.Add(new Detacher<T>());
-                    builder.From(detacher).To(inlet);
-                    return detacher.Inlet;
-                }).ToArray();
-                return new UniformFanInShape<T, T>(concat.Out, detachers);
-            });
-        }
-    }
-
-    /// <summary>
-    /// INTERNAL API
-    /// </summary>
-    [InternalApi]
-    public class GraphStageModule : AtomicModule
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly IGraphStageWithMaterializedValue<Shape, object> Stage;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <param name="attributes">TBD</param>
-        /// <param name="stage">TBD</param>
-        public GraphStageModule(Shape shape, Attributes attributes, IGraphStageWithMaterializedValue<Shape, object> stage)
-        {
-            Shape = shape;
-            Attributes = attributes;
-            Stage = stage;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override Shape Shape { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="shape">TBD</param>
-        /// <returns>TBD</returns>
-        public override IModule ReplaceShape(Shape shape) => new CopiedModule(shape, Attributes.None, this);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override IModule CarbonCopy() => ReplaceShape(Shape.DeepCopy());
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override Attributes Attributes { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
-        public override IModule WithAttributes(Attributes attributes) => new GraphStageModule(Shape, attributes, Stage);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString() => $"GraphStage({Stage}) [{GetHashCode()}%08x]";
-    }
-
-    /// <summary>
-    /// INTERNAL API
+    ///     TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    [InternalApi]
-    public abstract class SimpleLinearGraphStage<T> : GraphStage<FlowShape<T, T>>
+    /// <returns>TBD</returns>
+    public static SimpleLinearGraphStage<T> Identity<T>()
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Inlet<T> Inlet;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Outlet<T> Outlet;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected SimpleLinearGraphStage(string name = null)
-        {
-            name = name ?? GetType().Name;
-            Inlet = new Inlet<T>(name + ".in");
-            Outlet = new Outlet<T>(name + ".out");
-            Shape = new FlowShape<T, T>(Inlet, Outlet);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override FlowShape<T, T> Shape { get; }
+        return Implementation.Fusing.Identity<T>.Instance;
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class Identity<T> : SimpleLinearGraphStage<T>
+    /// <returns>TBD</returns>
+    internal static GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Done>> TerminationWatcher<T>()
     {
-        #region internal classes
-        private sealed class Logic : InAndOutGraphStageLogic
-        {
-            private readonly Identity<T> _stage;
-
-            public Logic(Identity<T> stage) : base(stage.Shape)
-            {
-                _stage = stage;
-                SetHandlers(stage.Inlet, stage.Outlet, this);
-            }
-
-            public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
-
-            public override void OnPull() => Pull(_stage.Inlet);
-        }
-        #endregion
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static readonly Identity<T> Instance = new();
-
-        private Identity()
-        {
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("identityOp");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+        return Implementation.Fusing.TerminationWatcher<T>.Instance;
     }
 
     /// <summary>
-    /// INTERNAL API
+    ///     Fusing graphs that have cycles involving FanIn stages might lead to deadlocks if
+    ///     demand is not carefully managed.
+    ///     This means that FanIn stages need to early pull every relevant input on startup.
+    ///     This can either be implemented inside the stage itself, or this method can be used,
+    ///     which adds a detacher stage to every input.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    [InternalApi]
-    public sealed class Detacher<T> : SimpleLinearGraphStage<T>
+    /// <param name="stage">TBD</param>
+    /// <returns>TBD</returns>
+    internal static IGraph<UniformFanInShape<T, T>, NotUsed> WithDetachedInputs<T>(
+        GraphStage<UniformFanInShape<T, T>> stage)
     {
-        #region internal classes
-        private sealed class Logic : InAndOutGraphStageLogic
+        return GraphDsl.Create(builder =>
         {
-            private readonly Detacher<T> _stage;
-
-            public Logic(Detacher<T> stage) : base(stage.Shape)
+            var concat = builder.Add(stage);
+            var detachers = concat.Ins.Select(inlet =>
             {
-                _stage = stage;
+                var detacher = builder.Add(new Detacher<T>());
+                builder.From(detacher).To(inlet);
+                return detacher.Inlet;
+            }).ToArray();
+            return new UniformFanInShape<T, T>(concat.Out, detachers);
+        });
+    }
+}
 
-                SetHandlers(stage.Inlet, stage.Outlet, this);
-            }
+/// <summary>
+///     INTERNAL API
+/// </summary>
+[InternalApi]
+public class GraphStageModule : AtomicModule
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public readonly IGraphStageWithMaterializedValue<Shape, object> Stage;
 
-            public override void PreStart() => TryPull(_stage.Inlet);
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="shape">TBD</param>
+    /// <param name="attributes">TBD</param>
+    /// <param name="stage">TBD</param>
+    public GraphStageModule(Shape shape, Attributes attributes, IGraphStageWithMaterializedValue<Shape, object> stage)
+    {
+        Shape = shape;
+        Attributes = attributes;
+        Stage = stage;
+    }
 
-            public override void OnPush()
-            {
-                var outlet = _stage.Outlet;
-                if (IsAvailable(outlet))
-                {
-                    var inlet = _stage.Inlet;
-                    Push(outlet, Grab(inlet));
-                    TryPull(inlet);
-                }
-            }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override Shape Shape { get; }
 
-            public override void OnUpstreamFinish()
-            {
-                if (!IsAvailable(_stage.Inlet))
-                    CompleteStage();
-            }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override Attributes Attributes { get; }
 
-            public override void OnPull()
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="shape">TBD</param>
+    /// <returns>TBD</returns>
+    public override IModule ReplaceShape(Shape shape)
+    {
+        return new CopiedModule(shape, Attributes.None, this);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public override IModule CarbonCopy()
+    {
+        return ReplaceShape(Shape.DeepCopy());
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="attributes">TBD</param>
+    /// <returns>TBD</returns>
+    public override IModule WithAttributes(Attributes attributes)
+    {
+        return new GraphStageModule(Shape, attributes, Stage);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public override string ToString()
+    {
+        return $"GraphStage({Stage}) [{GetHashCode()}%08x]";
+    }
+}
+
+/// <summary>
+///     INTERNAL API
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+[InternalApi]
+public abstract class SimpleLinearGraphStage<T> : GraphStage<FlowShape<T, T>>
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public readonly Inlet<T> Inlet;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public readonly Outlet<T> Outlet;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected SimpleLinearGraphStage(string name = null)
+    {
+        name = name ?? GetType().Name;
+        Inlet = new Inlet<T>(name + ".in");
+        Outlet = new Outlet<T>(name + ".out");
+        Shape = new FlowShape<T, T>(Inlet, Outlet);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override FlowShape<T, T> Shape { get; }
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+public sealed class Identity<T> : SimpleLinearGraphStage<T>
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public static readonly Identity<T> Instance = new();
+
+    private Identity()
+    {
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override Attributes InitialAttributes { get; } = Attributes.CreateName("identityOp");
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="inheritedAttributes">TBD</param>
+    /// <returns>TBD</returns>
+    protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+    {
+        return new Logic(this);
+    }
+
+    #region internal classes
+
+    private sealed class Logic : InAndOutGraphStageLogic
+    {
+        private readonly Identity<T> _stage;
+
+        public Logic(Identity<T> stage) : base(stage.Shape)
+        {
+            _stage = stage;
+            SetHandlers(stage.Inlet, stage.Outlet, this);
+        }
+
+        public override void OnPush()
+        {
+            Push(_stage.Outlet, Grab(_stage.Inlet));
+        }
+
+        public override void OnPull()
+        {
+            Pull(_stage.Inlet);
+        }
+    }
+
+    #endregion
+}
+
+/// <summary>
+///     INTERNAL API
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+[InternalApi]
+public sealed class Detacher<T> : SimpleLinearGraphStage<T>
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public Detacher() : base("Detacher")
+    {
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override Attributes InitialAttributes { get; } = Attributes.CreateName("Detacher");
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="inheritedAttributes">TBD</param>
+    /// <returns>TBD</returns>
+    protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+    {
+        return new Logic(this);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public override string ToString()
+    {
+        return "Detacher";
+    }
+
+    #region internal classes
+
+    private sealed class Logic : InAndOutGraphStageLogic
+    {
+        private readonly Detacher<T> _stage;
+
+        public Logic(Detacher<T> stage) : base(stage.Shape)
+        {
+            _stage = stage;
+
+            SetHandlers(stage.Inlet, stage.Outlet, this);
+        }
+
+        public override void PreStart()
+        {
+            TryPull(_stage.Inlet);
+        }
+
+        public override void OnPush()
+        {
+            var outlet = _stage.Outlet;
+            if (IsAvailable(outlet))
             {
                 var inlet = _stage.Inlet;
-                if (IsAvailable(inlet))
-                {
-                    var outlet = _stage.Outlet;
-                    Push(outlet, Grab(inlet));
-                    if (IsClosed(inlet))
-                        CompleteStage();
-                    else
-                        Pull(inlet);
-                }
+                Push(outlet, Grab(inlet));
+                TryPull(inlet);
             }
         }
-        #endregion
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Detacher() : base("Detacher")
+        public override void OnUpstreamFinish()
         {
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("Detacher");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString() => "Detacher";
-    }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    internal sealed class TerminationWatcher<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Done>>
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static readonly TerminationWatcher<T> Instance = new();
-
-        #region internal classes 
-
-        private sealed class Logic : InAndOutGraphStageLogic
-        {
-            private readonly TerminationWatcher<T> _stage;
-            private readonly TaskCompletionSource<Done> _finishPromise;
-            private bool _completedSignalled;
-
-            public Logic(TerminationWatcher<T> stage, TaskCompletionSource<Done> finishPromise) : base(stage.Shape)
-            {
-                _stage = stage;
-                _finishPromise = finishPromise;
-
-                SetHandler(stage._inlet, this);
-                SetHandler(stage._outlet, this);
-            }
-
-            public override void OnPush() => Push(_stage._outlet, Grab(_stage._inlet));
-
-            public override void OnUpstreamFinish()
-            {
-                _finishPromise.TrySetResult(Done.Instance);
-                _completedSignalled = true;
+            if (!IsAvailable(_stage.Inlet))
                 CompleteStage();
-            }
-
-            public override void OnUpstreamFailure(Exception e)
-            {
-                _finishPromise.TrySetException(e);
-                _completedSignalled = true;
-                FailStage(e);
-            }
-
-            public override void OnPull() => Pull(_stage._inlet);
-
-            public override void OnDownstreamFinish(Exception cause)
-            {
-                if (cause is SubscriptionWithCancelException.NonFailureCancellation)
-                    _finishPromise.TrySetResult(Done.Instance);
-                else
-                    _finishPromise.TrySetException(cause);
-                
-                _completedSignalled = true;
-                CancelStage(cause);
-            }
-
-            public override void PostStop()
-            {
-                if (!_completedSignalled)
-                    _finishPromise.TrySetException(new AbruptStageTerminationException(this));
-            }
         }
 
-        #endregion
-
-        private readonly Inlet<T> _inlet = new("TerminationWatcher.in");
-        private readonly Outlet<T> _outlet = new("TerminationWatcher.out");
-
-        private TerminationWatcher()
+        public override void OnPull()
         {
-            Shape = new FlowShape<T, T>(_inlet, _outlet);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override Attributes InitialAttributes { get; } = DefaultAttributes.TerminationWatcher;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override FlowShape<T, T> Shape { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
-        public override ILogicAndMaterializedValue<Task<Done>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
-        {
-            var finishPromise = new TaskCompletionSource<Done>();
-            return new LogicAndMaterializedValue<Task<Done>>(new Logic(this, finishPromise), finishPromise.Task);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString() => "TerminationWatcher";
-    }
-
-    // TODO: fix typo
-    /// <summary>
-    /// TBD
-    /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    internal sealed class FLowMonitorImpl<T> : AtomicReference<object>, IFlowMonitor
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public FLowMonitorImpl() : base(FlowMonitor.Initialized.Instance)
-        {
-
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public FlowMonitor.IStreamState State
-        {
-            get
+            var inlet = _stage.Inlet;
+            if (IsAvailable(inlet))
             {
-                var value = Value;
-                if (value is T value1)
-                    return new FlowMonitor.Received<T>(value1);
-
-                return value as FlowMonitor.IStreamState;
-            }
-        }
-    }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    internal sealed class MonitorFlow<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, IFlowMonitor>
-    {
-        #region Logic
-
-        private sealed class Logic : InAndOutGraphStageLogic
-        {
-            private readonly MonitorFlow<T> _stage;
-            private readonly FLowMonitorImpl<T> _monitor;
-
-            public Logic(MonitorFlow<T> stage, FLowMonitorImpl<T> monitor) : base(stage.Shape)
-            {
-                _stage = stage;
-                _monitor = monitor;
-
-                SetHandlers(stage.In, stage.Out, this);
-            }
-
-            public override void OnPush()
-            {
-                var message = Grab(_stage.In);
-                Push(_stage.Out, message);
-                _monitor.Value = message is FlowMonitor.IStreamState
-                    ? new FlowMonitor.Received<T>(message)
-                    : (object)message;
-            }
-
-            public override void OnUpstreamFinish()
-            {
-                CompleteStage();
-                _monitor.Value = FlowMonitor.Finished.Instance;
-            }
-
-            public override void OnUpstreamFailure(Exception e)
-            {
-                FailStage(e);
-                _monitor.Value = new FlowMonitor.Failed(e);
-            }
-
-            public override void OnPull() => Pull(_stage.In);
-
-            public override void OnDownstreamFinish(Exception cause)
-            {
-                InternalOnDownstreamFinish(cause);
-                _monitor.Value = FlowMonitor.Finished.Instance;
-            }
-
-            public override void PostStop()
-            {
-                if (!(_monitor.State is FlowMonitor.Finished) && !(_monitor.State is FlowMonitor.Failed))
-                    _monitor.Value = new FlowMonitor.Failed(new AbruptStageTerminationException(this));
-            }
-
-            public override string ToString() => "MonitorFlowLogic";
-        }
-
-        #endregion
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public MonitorFlow()
-        {
-            Shape = new FlowShape<T, T>(In, Out);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Inlet<T> In { get; } = new("MonitorFlow.in");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Outlet<T> Out { get; } = new("MonitorFlow.out");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override FlowShape<T, T> Shape { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
-        public override ILogicAndMaterializedValue<IFlowMonitor> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
-        {
-            var monitor = new FLowMonitorImpl<T>();
-            var logic = new Logic(this, monitor);
-            return new LogicAndMaterializedValue<IFlowMonitor>(logic, monitor);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString() => "MonitorFlow";
-    }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    public sealed class TickSource<T> : GraphStageWithMaterializedValue<SourceShape<T>, ICancelable>
-    {
-        #region internal classes
-
-        [SuppressMessage("ReSharper", "MethodSupportsCancellation")]
-        private sealed class Logic : TimerGraphStageLogic, ICancelable
-        {
-            private readonly TickSource<T> _stage;
-            private readonly AtomicBoolean _cancelled = new();
-
-            private readonly AtomicReference<Action<NotUsed>> _cancelCallback = new(null);
-
-            public Logic(TickSource<T> stage) : base(stage.Shape)
-            {
-                _stage = stage;
-
-                SetHandler(_stage.Out, EagerTerminateOutput);
-            }
-
-            public override void PreStart()
-            {
-                _cancelCallback.Value = GetAsyncCallback<NotUsed>(_ => CompleteStage());
-
-                if (_cancelled.Value)
+                var outlet = _stage.Outlet;
+                Push(outlet, Grab(inlet));
+                if (IsClosed(inlet))
                     CompleteStage();
                 else
-                    ScheduleRepeatedly("TickTimer", _stage._initialDelay, _stage._interval);
+                    Pull(inlet);
             }
-
-            protected internal override void OnTimer(object timerKey)
-            {
-                if (IsAvailable(_stage.Out) && !_cancelled.Value)
-                    Push(_stage.Out, _stage._tick);
-            }
-
-            public void Cancel()
-            {
-                if (!_cancelled.GetAndSet(true))
-                    _cancelCallback.Value?.Invoke(NotUsed.Instance);
-            }
-
-            public bool IsCancellationRequested => _cancelled.Value;
-
-            public CancellationToken Token { get; }
-
-            public void CancelAfter(TimeSpan delay) => Task.Delay(delay).ContinueWith(_ => Cancel());
-
-            public void CancelAfter(int millisecondsDelay) => Task.Delay(millisecondsDelay).ContinueWith(_ => Cancel());
-
-            public void Cancel(bool throwOnFirstException) => Cancel();
-
-            public override string ToString() => "TickSourceLogic";
         }
+    }
 
-        #endregion
+    #endregion
+}
 
-        private readonly TimeSpan _initialDelay;
-        private readonly TimeSpan _interval;
-        private readonly T _tick;
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+internal sealed class TerminationWatcher<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task<Done>>
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public static readonly TerminationWatcher<T> Instance = new();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="tick">TBD</param>
-        public TickSource(TimeSpan initialDelay, TimeSpan interval, T tick)
-        {
-            _initialDelay = initialDelay;
-            _interval = interval;
-            _tick = tick;
-            Shape = new SourceShape<T>(Out);
-        }
+    private readonly Inlet<T> _inlet = new("TerminationWatcher.in");
+    private readonly Outlet<T> _outlet = new("TerminationWatcher.out");
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override Attributes InitialAttributes { get; } = DefaultAttributes.TickSource;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Outlet<T> Out { get; } = new("TimerSource.out");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override SourceShape<T> Shape { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
-        public override ILogicAndMaterializedValue<ICancelable> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
-        {
-            var logic = new Logic(this);
-            return new LogicAndMaterializedValue<ICancelable>(logic, logic);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString() => $"TickSource({_initialDelay}, {_interval}, {_tick})";
+    private TerminationWatcher()
+    {
+        Shape = new FlowShape<T, T>(_inlet, _outlet);
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    public interface IMaterializedValueSource
+    protected override Attributes InitialAttributes { get; } = DefaultAttributes.TerminationWatcher;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override FlowShape<T, T> Shape { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="inheritedAttributes">TBD</param>
+    /// <returns>TBD</returns>
+    public override ILogicAndMaterializedValue<Task<Done>> CreateLogicAndMaterializedValue(
+        Attributes inheritedAttributes)
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        IModule Module { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        IMaterializedValueSource CopySource();
-        /// <summary>
-        /// TBD
-        /// </summary>
-        Outlet Outlet { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        StreamLayout.IMaterializedValueNode Computation { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="result">TBD</param>
-        void SetValue(object result);
+        var finishPromise = new TaskCompletionSource<Done>();
+        return new LogicAndMaterializedValue<Task<Done>>(new Logic(this, finishPromise), finishPromise.Task);
     }
 
     /// <summary>
-    /// INTERNAL API
-    /// 
-    /// This source is not reusable, it is only created internally.
+    ///     TBD
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    [InternalApi]
-    public sealed class MaterializedValueSource<T> : GraphStage<SourceShape<T>>, IMaterializedValueSource
+    /// <returns>TBD</returns>
+    public override string ToString()
     {
-        #region internal classes
+        return "TerminationWatcher";
+    }
 
-        private sealed class Logic : GraphStageLogic
+    #region internal classes
+
+    private sealed class Logic : InAndOutGraphStageLogic
+    {
+        private readonly TaskCompletionSource<Done> _finishPromise;
+        private readonly TerminationWatcher<T> _stage;
+        private bool _completedSignalled;
+
+        public Logic(TerminationWatcher<T> stage, TaskCompletionSource<Done> finishPromise) : base(stage.Shape)
         {
-            private readonly MaterializedValueSource<T> _source;
+            _stage = stage;
+            _finishPromise = finishPromise;
 
-            public Logic(MaterializedValueSource<T> source) : base(source.Shape)
-            {
-                _source = source;
-                SetHandler(source.Outlet, EagerTerminateOutput);
-            }
-
-            public override void PreStart()
-            {
-                var cb = GetAsyncCallback<T>(element => Emit(_source.Outlet, element, CompleteStage));
-                _source._promise.Task.ContinueWith(task => cb(task.Result), TaskContinuationOptions.ExecuteSynchronously);
-            }
+            SetHandler(stage._inlet, this);
+            SetHandler(stage._outlet, this);
         }
 
-        #endregion
-
-        private static readonly Attributes Name = Attributes.CreateName("matValueSource");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public StreamLayout.IMaterializedValueNode Computation { get; }
-
-        Outlet IMaterializedValueSource.Outlet => Outlet;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Outlet<T> Outlet;
-
-        private readonly TaskCompletionSource<T> _promise = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="computation">TBD</param>
-        /// <param name="outlet">TBD</param>
-        public MaterializedValueSource(StreamLayout.IMaterializedValueNode computation, Outlet<T> outlet)
+        public override void OnPush()
         {
-            Computation = computation;
-            Outlet = outlet;
-            Shape = new SourceShape<T>(Outlet);
+            Push(_stage._outlet, Grab(_stage._inlet));
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="computation">TBD</param>
-        public MaterializedValueSource(StreamLayout.IMaterializedValueNode computation) : this(computation, new Outlet<T>("matValue")) { }
+        public override void OnUpstreamFinish()
+        {
+            _finishPromise.TrySetResult(Done.Instance);
+            _completedSignalled = true;
+            CompleteStage();
+        }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override Attributes InitialAttributes => Name;
+        public override void OnUpstreamFailure(Exception e)
+        {
+            _finishPromise.TrySetException(e);
+            _completedSignalled = true;
+            FailStage(e);
+        }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override SourceShape<T> Shape { get; }
+        public override void OnPull()
+        {
+            Pull(_stage._inlet);
+        }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="value">TBD</param>
-        public void SetValue(T value) => _promise.SetResult(value);
+        public override void OnDownstreamFinish(Exception cause)
+        {
+            if (cause is SubscriptionWithCancelException.NonFailureCancellation)
+                _finishPromise.TrySetResult(Done.Instance);
+            else
+                _finishPromise.TrySetException(cause);
 
-        void IMaterializedValueSource.SetValue(object result) => SetValue((T)result);
+            _completedSignalled = true;
+            CancelStage(cause);
+        }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public MaterializedValueSource<T> CopySource() => new(Computation, Outlet);
+        public override void PostStop()
+        {
+            if (!_completedSignalled)
+                _finishPromise.TrySetException(new AbruptStageTerminationException(this));
+        }
+    }
 
-        IMaterializedValueSource IMaterializedValueSource.CopySource() => CopySource();
+    #endregion
+}
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString() => $"MaterializedValueSource({Computation})";
+// TODO: fix typo
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+internal sealed class FLowMonitorImpl<T> : AtomicReference<object>, IFlowMonitor
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public FLowMonitorImpl() : base(FlowMonitor.Initialized.Instance)
+    {
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    public sealed class SingleSource<T> : GraphStage<SourceShape<T>>
+    public FlowMonitor.IStreamState State
     {
-        #region Internal classes
-        private sealed class Logic : OutGraphStageLogic
+        get
         {
-            private readonly SingleSource<T> _stage;
+            var value = Value;
+            if (value is T value1)
+                return new FlowMonitor.Received<T>(value1);
 
-            public Logic(SingleSource<T> stage) : base(stage.Shape)
-            {
-                _stage = stage;
+            return value as FlowMonitor.IStreamState;
+        }
+    }
+}
 
-                SetHandler(stage.Outlet, this);
-            }
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+internal sealed class MonitorFlow<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, IFlowMonitor>
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public MonitorFlow()
+    {
+        Shape = new FlowShape<T, T>(In, Out);
+    }
 
-            public override void OnPull()
-            {
-                Push(_stage.Outlet, _stage._element);
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public Inlet<T> In { get; } = new("MonitorFlow.in");
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public Outlet<T> Out { get; } = new("MonitorFlow.out");
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override FlowShape<T, T> Shape { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="inheritedAttributes">TBD</param>
+    /// <returns>TBD</returns>
+    public override ILogicAndMaterializedValue<IFlowMonitor> CreateLogicAndMaterializedValue(
+        Attributes inheritedAttributes)
+    {
+        var monitor = new FLowMonitorImpl<T>();
+        var logic = new Logic(this, monitor);
+        return new LogicAndMaterializedValue<IFlowMonitor>(logic, monitor);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public override string ToString()
+    {
+        return "MonitorFlow";
+    }
+
+    #region Logic
+
+    private sealed class Logic : InAndOutGraphStageLogic
+    {
+        private readonly FLowMonitorImpl<T> _monitor;
+        private readonly MonitorFlow<T> _stage;
+
+        public Logic(MonitorFlow<T> stage, FLowMonitorImpl<T> monitor) : base(stage.Shape)
+        {
+            _stage = stage;
+            _monitor = monitor;
+
+            SetHandlers(stage.In, stage.Out, this);
+        }
+
+        public override void OnPush()
+        {
+            var message = Grab(_stage.In);
+            Push(_stage.Out, message);
+            _monitor.Value = message is FlowMonitor.IStreamState
+                ? new FlowMonitor.Received<T>(message)
+                : message;
+        }
+
+        public override void OnUpstreamFinish()
+        {
+            CompleteStage();
+            _monitor.Value = FlowMonitor.Finished.Instance;
+        }
+
+        public override void OnUpstreamFailure(Exception e)
+        {
+            FailStage(e);
+            _monitor.Value = new FlowMonitor.Failed(e);
+        }
+
+        public override void OnPull()
+        {
+            Pull(_stage.In);
+        }
+
+        public override void OnDownstreamFinish(Exception cause)
+        {
+            InternalOnDownstreamFinish(cause);
+            _monitor.Value = FlowMonitor.Finished.Instance;
+        }
+
+        public override void PostStop()
+        {
+            if (!(_monitor.State is FlowMonitor.Finished) && !(_monitor.State is FlowMonitor.Failed))
+                _monitor.Value = new FlowMonitor.Failed(new AbruptStageTerminationException(this));
+        }
+
+        public override string ToString()
+        {
+            return "MonitorFlowLogic";
+        }
+    }
+
+    #endregion
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+public sealed class TickSource<T> : GraphStageWithMaterializedValue<SourceShape<T>, ICancelable>
+{
+    private readonly TimeSpan _initialDelay;
+    private readonly TimeSpan _interval;
+    private readonly T _tick;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="initialDelay">TBD</param>
+    /// <param name="interval">TBD</param>
+    /// <param name="tick">TBD</param>
+    public TickSource(TimeSpan initialDelay, TimeSpan interval, T tick)
+    {
+        _initialDelay = initialDelay;
+        _interval = interval;
+        _tick = tick;
+        Shape = new SourceShape<T>(Out);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override Attributes InitialAttributes { get; } = DefaultAttributes.TickSource;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public Outlet<T> Out { get; } = new("TimerSource.out");
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override SourceShape<T> Shape { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="inheritedAttributes">TBD</param>
+    /// <returns>TBD</returns>
+    public override ILogicAndMaterializedValue<ICancelable> CreateLogicAndMaterializedValue(
+        Attributes inheritedAttributes)
+    {
+        var logic = new Logic(this);
+        return new LogicAndMaterializedValue<ICancelable>(logic, logic);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public override string ToString()
+    {
+        return $"TickSource({_initialDelay}, {_interval}, {_tick})";
+    }
+
+    #region internal classes
+
+    [SuppressMessage("ReSharper", "MethodSupportsCancellation")]
+    private sealed class Logic : TimerGraphStageLogic, ICancelable
+    {
+        private readonly AtomicReference<Action<NotUsed>> _cancelCallback = new(null);
+        private readonly AtomicBoolean _cancelled = new();
+        private readonly TickSource<T> _stage;
+
+        public Logic(TickSource<T> stage) : base(stage.Shape)
+        {
+            _stage = stage;
+
+            SetHandler(_stage.Out, EagerTerminateOutput);
+        }
+
+        public void Cancel()
+        {
+            if (!_cancelled.GetAndSet(true))
+                _cancelCallback.Value?.Invoke(NotUsed.Instance);
+        }
+
+        public bool IsCancellationRequested => _cancelled.Value;
+
+        public CancellationToken Token { get; }
+
+        public void CancelAfter(TimeSpan delay)
+        {
+            Task.Delay(delay).ContinueWith(_ => Cancel());
+        }
+
+        public void CancelAfter(int millisecondsDelay)
+        {
+            Task.Delay(millisecondsDelay).ContinueWith(_ => Cancel());
+        }
+
+        public void Cancel(bool throwOnFirstException)
+        {
+            Cancel();
+        }
+
+        public override void PreStart()
+        {
+            _cancelCallback.Value = GetAsyncCallback<NotUsed>(_ => CompleteStage());
+
+            if (_cancelled.Value)
                 CompleteStage();
-            }
+            else
+                ScheduleRepeatedly("TickTimer", _stage._initialDelay, _stage._interval);
         }
-        #endregion
 
-        private readonly T _element;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Outlet<T> Outlet = new("single.out");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="element">TBD</param>
-        public SingleSource(T element)
+        protected internal override void OnTimer(object timerKey)
         {
-            ReactiveStreamsCompliance.RequireNonNullElement(element);
-            _element = element;
-            Shape = new SourceShape<T>(Outlet);
+            if (IsAvailable(_stage.Out) && !_cancelled.Value)
+                Push(_stage.Out, _stage._tick);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override SourceShape<T> Shape { get; }
+        public override string ToString()
+        {
+            return "TickSourceLogic";
+        }
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+    #endregion
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+public interface IMaterializedValueSource
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    IModule Module { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    Outlet Outlet { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    StreamLayout.IMaterializedValueNode Computation { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    IMaterializedValueSource CopySource();
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="result">TBD</param>
+    void SetValue(object result);
+}
+
+/// <summary>
+///     INTERNAL API
+///     This source is not reusable, it is only created internally.
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+[InternalApi]
+public sealed class MaterializedValueSource<T> : GraphStage<SourceShape<T>>, IMaterializedValueSource
+{
+    private static readonly Attributes Name = Attributes.CreateName("matValueSource");
+
+    private readonly TaskCompletionSource<T> _promise = new();
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public readonly Outlet<T> Outlet;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="computation">TBD</param>
+    /// <param name="outlet">TBD</param>
+    public MaterializedValueSource(StreamLayout.IMaterializedValueNode computation, Outlet<T> outlet)
+    {
+        Computation = computation;
+        Outlet = outlet;
+        Shape = new SourceShape<T>(Outlet);
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    /// <typeparam name="M">TBD</typeparam>
-    public sealed class TaskFlattenSource<T, M> : GraphStageWithMaterializedValue<SourceShape<T>, Task<M>>
+    /// <param name="computation">TBD</param>
+    public MaterializedValueSource(StreamLayout.IMaterializedValueNode computation) : this(computation,
+        new Outlet<T>("matValue"))
     {
-        #region Internal classes
+    }
 
-        private sealed class Logic : InAndOutGraphStageLogic
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override Attributes InitialAttributes => Name;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override SourceShape<T> Shape { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public StreamLayout.IMaterializedValueNode Computation { get; }
+
+    Outlet IMaterializedValueSource.Outlet => Outlet;
+
+    void IMaterializedValueSource.SetValue(object result)
+    {
+        SetValue((T)result);
+    }
+
+    IMaterializedValueSource IMaterializedValueSource.CopySource()
+    {
+        return CopySource();
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="value">TBD</param>
+    public void SetValue(T value)
+    {
+        _promise.SetResult(value);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public MaterializedValueSource<T> CopySource()
+    {
+        return new MaterializedValueSource<T>(Computation, Outlet);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="inheritedAttributes">TBD</param>
+    /// <returns>TBD</returns>
+    protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+    {
+        return new Logic(this);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public override string ToString()
+    {
+        return $"MaterializedValueSource({Computation})";
+    }
+
+    #region internal classes
+
+    private sealed class Logic : GraphStageLogic
+    {
+        private readonly MaterializedValueSource<T> _source;
+
+        public Logic(MaterializedValueSource<T> source) : base(source.Shape)
         {
-            private readonly TaskFlattenSource<T, M> _stage;
-            private readonly TaskCompletionSource<M> _materialized;
-            private readonly SubSinkInlet<T> _sinkIn;
+            _source = source;
+            SetHandler(source.Outlet, EagerTerminateOutput);
+        }
 
-            public Logic(TaskFlattenSource<T, M> stage, TaskCompletionSource<M> materialized)
-                : base(stage.Shape)
-            {
-                _stage = stage;
-                _materialized = materialized;
-                _sinkIn = new SubSinkInlet<T>(this, "TaskFlattenSource.in");
+        public override void PreStart()
+        {
+            var cb = GetAsyncCallback<T>(element => Emit(_source.Outlet, element, CompleteStage));
+            _source._promise.Task.ContinueWith(task => cb(task.Result), TaskContinuationOptions.ExecuteSynchronously);
+        }
+    }
 
-                // initial handler (until task completes)
-                SetHandler(stage.Outlet, new LambdaOutHandler(
-                    onPull: () => { },
-                    onDownstreamFinish: cause =>
-                    {
-                        if (!_materialized.Task.IsCompleted)
-                        {
-                            // we used to try to materialize the "inner" source here just to get
-                            // the materialized value, but that is not safe and may cause the graph shell
-                            // to leak/stay alive after the stage completes
-                            _materialized.TrySetException(new StreamDetachedException("Stream cancelled before Source Task completed", cause));
-                        }
-                        InternalOnDownstreamFinish(cause);
-                    }));
-            }
+    #endregion
+}
 
-            public override void PreStart()
-            {
-                if (_stage._taskSource.IsCompleted)
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+public sealed class SingleSource<T> : GraphStage<SourceShape<T>>
+{
+    private readonly T _element;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public readonly Outlet<T> Outlet = new("single.out");
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="element">TBD</param>
+    public SingleSource(T element)
+    {
+        ReactiveStreamsCompliance.RequireNonNullElement(element);
+        _element = element;
+        Shape = new SourceShape<T>(Outlet);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override SourceShape<T> Shape { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="inheritedAttributes">TBD</param>
+    /// <returns>TBD</returns>
+    protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+    {
+        return new Logic(this);
+    }
+
+    #region Internal classes
+
+    private sealed class Logic : OutGraphStageLogic
+    {
+        private readonly SingleSource<T> _stage;
+
+        public Logic(SingleSource<T> stage) : base(stage.Shape)
+        {
+            _stage = stage;
+
+            SetHandler(stage.Outlet, this);
+        }
+
+        public override void OnPull()
+        {
+            Push(_stage.Outlet, _stage._element);
+            CompleteStage();
+        }
+    }
+
+    #endregion
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+/// <typeparam name="M">TBD</typeparam>
+public sealed class TaskFlattenSource<T, M> : GraphStageWithMaterializedValue<SourceShape<T>, Task<M>>
+{
+    private readonly Task<Source<T, M>> _taskSource;
+
+    public readonly Outlet<T> Outlet = new("TaskFlattenSource.out");
+
+    public TaskFlattenSource(Task<Source<T, M>> taskSource)
+    {
+        ReactiveStreamsCompliance.RequireNonNullElement(taskSource);
+        _taskSource = taskSource;
+        Shape = new SourceShape<T>(Outlet);
+    }
+
+    public override SourceShape<T> Shape { get; }
+
+    protected override Attributes InitialAttributes => DefaultAttributes.TaskFlattenSource;
+
+    public override ILogicAndMaterializedValue<Task<M>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+    {
+        var materialized = new TaskCompletionSource<M>();
+        return new LogicAndMaterializedValue<Task<M>>(new Logic(this, materialized), materialized.Task);
+    }
+
+    public override string ToString()
+    {
+        return "TaskFlattenSource";
+    }
+
+    #region Internal classes
+
+    private sealed class Logic : InAndOutGraphStageLogic
+    {
+        private readonly TaskCompletionSource<M> _materialized;
+        private readonly SubSinkInlet<T> _sinkIn;
+        private readonly TaskFlattenSource<T, M> _stage;
+
+        public Logic(TaskFlattenSource<T, M> stage, TaskCompletionSource<M> materialized)
+            : base(stage.Shape)
+        {
+            _stage = stage;
+            _materialized = materialized;
+            _sinkIn = new SubSinkInlet<T>(this, "TaskFlattenSource.in");
+
+            // initial handler (until task completes)
+            SetHandler(stage.Outlet, new LambdaOutHandler(
+                () => { },
+                cause =>
                 {
-                    OnTaskSourceCompleted(_stage._taskSource);
-                }
+                    if (!_materialized.Task.IsCompleted)
+                        // we used to try to materialize the "inner" source here just to get
+                        // the materialized value, but that is not safe and may cause the graph shell
+                        // to leak/stay alive after the stage completes
+                        _materialized.TrySetException(
+                            new StreamDetachedException("Stream cancelled before Source Task completed", cause));
+                    InternalOnDownstreamFinish(cause);
+                }));
+        }
+
+        public override void PreStart()
+        {
+            if (_stage._taskSource.IsCompleted)
+            {
+                OnTaskSourceCompleted(_stage._taskSource);
+            }
+            else
+            {
+                var cb = GetAsyncCallback<Task<Source<T, M>>>(OnTaskSourceCompleted);
+                _stage._taskSource.ContinueWith(t => cb(t), TaskContinuationOptions.ExecuteSynchronously);
+            }
+        }
+
+        public override void PostStop()
+        {
+            if (!_sinkIn.IsClosed) _sinkIn.Cancel();
+        }
+
+        public override void OnPull()
+        {
+            _sinkIn.Pull();
+        }
+
+        public override void OnPush()
+        {
+            Push(_stage.Outlet, _sinkIn.Grab());
+        }
+
+        public override void OnUpstreamFinish()
+        {
+            CompleteStage();
+        }
+
+        private void OnTaskSourceCompleted(Task<Source<T, M>> t)
+        {
+            try
+            {
+                var runnable = Source.FromGraph(t.Result).ToMaterialized(_sinkIn.Sink, Keep.Left);
+                var materializedValue =
+                    Interpreter.SubFusingMaterializer.Materialize(runnable, _stage.InitialAttributes);
+                _materialized.TrySetResult(materializedValue);
+
+                SetHandler(_stage.Outlet, this);
+                _sinkIn.SetHandler(this);
+
+                if (IsAvailable(_stage.Outlet))
+                    _sinkIn.Pull();
+            }
+            catch (Exception ex)
+            {
+                _sinkIn.Cancel();
+                _materialized.TrySetException(ex);
+                FailStage(ex);
+            }
+        }
+
+        private Exception Flatten(AggregateException exception)
+        {
+            return exception.InnerExceptions.Count == 1 ? exception.InnerExceptions[0] : exception;
+        }
+    }
+
+    #endregion
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="T">TBD</typeparam>
+public sealed class TaskSource<T> : GraphStage<SourceShape<T>>
+{
+    private readonly Task<T> _task;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public readonly Outlet<T> Outlet = new("TaskSource.out");
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="task">TBD</param>
+    public TaskSource(Task<T> task)
+    {
+        ReactiveStreamsCompliance.RequireNonNullElement(task);
+        _task = task;
+        Shape = new SourceShape<T>(Outlet);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override SourceShape<T> Shape { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="inheritedAttributes">TBD</param>
+    /// <returns>TBD</returns>
+    protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+    {
+        return new Logic(this);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public override string ToString()
+    {
+        return "TaskSource";
+    }
+
+    #region Internal classes
+
+    private sealed class Logic : OutGraphStageLogic
+    {
+        private readonly TaskSource<T> _stage;
+
+        public Logic(TaskSource<T> stage) : base(stage.Shape)
+        {
+            _stage = stage;
+            SetHandler(stage.Outlet, this);
+        }
+
+        public override void OnPull()
+        {
+            var callback = GetAsyncCallback<Task<T>>(t =>
+            {
+                if (!t.IsCanceled && !t.IsFaulted)
+                    Emit(_stage.Outlet, t.Result, CompleteStage);
                 else
-                {
-                    var cb = GetAsyncCallback<Task<Source<T, M>>>(OnTaskSourceCompleted);
-                    _stage._taskSource.ContinueWith(t => cb(t), TaskContinuationOptions.ExecuteSynchronously);
-                }
-            }
-
-            public override void PostStop()
-            {
-                if (!_sinkIn.IsClosed) _sinkIn.Cancel();
-            }
-
-            public override void OnPull() => _sinkIn.Pull();
-
-            public override void OnPush() => Push(_stage.Outlet, _sinkIn.Grab());
-
-            public override void OnUpstreamFinish() => CompleteStage();
-
-            private void OnTaskSourceCompleted(Task<Source<T, M>> t)
-            {
-                try
-                {
-                    var runnable = Source.FromGraph(t.Result).ToMaterialized(_sinkIn.Sink, Keep.Left);
-                    var materializedValue = Interpreter.SubFusingMaterializer.Materialize(runnable, _stage.InitialAttributes);
-                    _materialized.TrySetResult(materializedValue);
-
-                    SetHandler(_stage.Outlet, this);
-                    _sinkIn.SetHandler(this);
-
-                    if (IsAvailable(_stage.Outlet))
-                        _sinkIn.Pull();
-                }
-                catch (Exception ex)
-                {
-                    _sinkIn.Cancel();
-                    _materialized.TrySetException(ex);
-                    FailStage(ex);
-                }
-            }
-
-            private Exception Flatten(AggregateException exception) =>
-                exception.InnerExceptions.Count == 1 ? exception.InnerExceptions[0] : exception;
+                    FailStage(t.IsFaulted
+                        ? Flatten(t.Exception)
+                        : new TaskCanceledException("Task was cancelled."));
+            });
+            _stage._task.ContinueWith(t => callback(t), TaskContinuationOptions.ExecuteSynchronously);
+            SetHandler(_stage.Outlet, EagerTerminateOutput); // After first pull we won't produce anything more
         }
 
-        #endregion
-
-        private readonly Task<Source<T, M>> _taskSource;
-
-        public readonly Outlet<T> Outlet = new("TaskFlattenSource.out");
-
-        public TaskFlattenSource(Task<Source<T, M>> taskSource)
+        private Exception Flatten(AggregateException exception)
         {
-            ReactiveStreamsCompliance.RequireNonNullElement(taskSource);
-            _taskSource = taskSource;
-            Shape = new SourceShape<T>(Outlet);
+            return exception.InnerExceptions.Count == 1 ? exception.InnerExceptions[0] : exception;
         }
-
-        public override SourceShape<T> Shape { get; }
-
-        protected override Attributes InitialAttributes => DefaultAttributes.TaskFlattenSource;
-
-        public override ILogicAndMaterializedValue<Task<M>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
-        {
-            var materialized = new TaskCompletionSource<M>();
-            return new LogicAndMaterializedValue<Task<M>>(new Logic(this, materialized), materialized.Task);
-        }
-
-        public override string ToString() => "TaskFlattenSource";
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    public sealed class TaskSource<T> : GraphStage<SourceShape<T>>
+    #endregion
+}
+
+/// <summary>
+///     INTERNAL API
+///     Discards all received elements.
+/// </summary>
+[InternalApi]
+public sealed class IgnoreSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<Done>>
+{
+    public IgnoreSink()
     {
-        #region Internal classes
-        private sealed class Logic : OutGraphStageLogic
-        {
-            private readonly TaskSource<T> _stage;
-
-            public Logic(TaskSource<T> stage) : base(stage.Shape)
-            {
-                _stage = stage;
-                SetHandler(stage.Outlet, this);
-            }
-
-            public override void OnPull()
-            {
-                var callback = GetAsyncCallback<Task<T>>(t =>
-                {
-                    if (!t.IsCanceled && !t.IsFaulted)
-                        Emit(_stage.Outlet, t.Result, CompleteStage);
-                    else
-                        FailStage(t.IsFaulted
-                            ? Flatten(t.Exception)
-                            : new TaskCanceledException("Task was cancelled."));
-                });
-                _stage._task.ContinueWith(t => callback(t), TaskContinuationOptions.ExecuteSynchronously);
-                SetHandler(_stage.Outlet, EagerTerminateOutput); // After first pull we won't produce anything more
-            }
-
-            private Exception Flatten(AggregateException exception)
-                => exception.InnerExceptions.Count == 1 ? exception.InnerExceptions[0] : exception;
-        }
-        #endregion
-
-        private readonly Task<T> _task;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Outlet<T> Outlet = new("TaskSource.out");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="task">TBD</param>
-        public TaskSource(Task<T> task)
-        {
-            ReactiveStreamsCompliance.RequireNonNullElement(task);
-            _task = task;
-            Shape = new SourceShape<T>(Outlet);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override SourceShape<T> Shape { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString() => "TaskSource";
+        Shape = new SinkShape<T>(Inlet);
     }
 
-    /// <summary>
-    /// INTERNAL API
-    /// 
-    /// Discards all received elements.
-    /// </summary>
-    [InternalApi]
-    public sealed class IgnoreSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, Task<Done>>
+    protected override Attributes InitialAttributes { get; } = DefaultAttributes.IgnoreSink;
+
+    public Inlet<T> Inlet { get; } = new("Ignore.in");
+
+    public override SinkShape<T> Shape { get; }
+
+    public override ILogicAndMaterializedValue<Task<Done>> CreateLogicAndMaterializedValue(
+        Attributes inheritedAttributes)
     {
-        #region Internal classes
-
-        private sealed class Logic : InGraphStageLogic
-        {
-            private readonly IgnoreSink<T> _stage;
-            private readonly TaskCompletionSource<Done> _completion;
-
-            public Logic(IgnoreSink<T> stage, TaskCompletionSource<Done> completion) : base(stage.Shape)
-            {
-                _stage = stage;
-                _completion = completion;
-
-                SetHandler(stage.Inlet, this);
-            }
-
-            public override void PreStart() => Pull(_stage.Inlet);
-
-            public override void OnPush() => Pull(_stage.Inlet);
-
-            public override void OnUpstreamFinish()
-            {
-                base.OnUpstreamFinish();
-                _completion.TrySetResult(Done.Instance);
-            }
-
-            public override void OnUpstreamFailure(Exception e)
-            {
-                base.OnUpstreamFailure(e);
-                _completion.TrySetException(e);
-            }
-        }
-
-        #endregion
-
-        public IgnoreSink() => Shape = new SinkShape<T>(Inlet);
-
-        protected override Attributes InitialAttributes { get; } = DefaultAttributes.IgnoreSink;
-
-        public Inlet<T> Inlet { get; } = new("Ignore.in");
-
-        public override SinkShape<T> Shape { get; }
-
-        public override ILogicAndMaterializedValue<Task<Done>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
-        {
-            var completion = new TaskCompletionSource<Done>();
-            var logic = new Logic(this, completion);
-            return new LogicAndMaterializedValue<Task<Done>>(logic, completion.Task);
-        }
-
-        public override string ToString() => "IgnoreSink";
+        var completion = new TaskCompletionSource<Done>();
+        var logic = new Logic(this, completion);
+        return new LogicAndMaterializedValue<Task<Done>>(logic, completion.Task);
     }
-};
+
+    public override string ToString()
+    {
+        return "IgnoreSink";
+    }
+
+    #region Internal classes
+
+    private sealed class Logic : InGraphStageLogic
+    {
+        private readonly TaskCompletionSource<Done> _completion;
+        private readonly IgnoreSink<T> _stage;
+
+        public Logic(IgnoreSink<T> stage, TaskCompletionSource<Done> completion) : base(stage.Shape)
+        {
+            _stage = stage;
+            _completion = completion;
+
+            SetHandler(stage.Inlet, this);
+        }
+
+        public override void PreStart()
+        {
+            Pull(_stage.Inlet);
+        }
+
+        public override void OnPush()
+        {
+            Pull(_stage.Inlet);
+        }
+
+        public override void OnUpstreamFinish()
+        {
+            base.OnUpstreamFinish();
+            _completion.TrySetResult(Done.Instance);
+        }
+
+        public override void OnUpstreamFailure(Exception e)
+        {
+            base.OnUpstreamFailure(e);
+            _completion.TrySetException(e);
+        }
+    }
+
+    #endregion
+}

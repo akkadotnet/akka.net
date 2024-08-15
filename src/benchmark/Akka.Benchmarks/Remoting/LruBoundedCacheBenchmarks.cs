@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="LruBoundedCacheBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="LruBoundedCacheBenchmarks.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,97 +12,94 @@ using Akka.Actor.Dsl;
 using Akka.Benchmarks.Configurations;
 using Akka.Configuration;
 using Akka.Remote.Serialization;
-using Akka.Util;
 using BenchmarkDotNet.Attributes;
 
-namespace Akka.Benchmarks.Remoting
+namespace Akka.Benchmarks.Remoting;
+
+[Config(typeof(MicroBenchmarkConfig))]
+[SimpleJob(invocationCount: 10_000_000)]
+public class LruBoundedCacheBenchmarks
 {
-    [Config(typeof(MicroBenchmarkConfig))]
-    [SimpleJob( invocationCount: 10_000_000)]
-    public class LruBoundedCacheBenchmarks
-    {
-        private ActorSystem _sys1;
-        private Config _config = @"akka.actor.provider = remote
+    private Address _addr1;
+    private string _addr1String;
+    private AddressThreadLocalCache _addressCache;
+    private IActorRef _cacheHitActorRef;
+
+    private string _cacheHitPath;
+    private int _cacheHitPathCount;
+    private IActorRef _cacheMissActorRef;
+
+    private string _cacheMissPath;
+
+    private readonly Config _config = @"akka.actor.provider = remote
                                      akka.remote.dot-netty.tcp.port = 0";
 
-        private ActorRefResolveThreadLocalCache _resolveCache;
-        private ActorPathThreadLocalCache _pathCache;
-        private AddressThreadLocalCache _addressCache;
+    private ActorPathThreadLocalCache _pathCache;
 
-        private string _cacheMissPath;
-        private IActorRef _cacheMissActorRef;
+    private ActorRefResolveThreadLocalCache _resolveCache;
+    private ActorSystem _sys1;
 
-        private string _cacheHitPath;
-        private int _cacheHitPathCount = 0;
-        private IActorRef _cacheHitActorRef;
+    [GlobalSetup]
+    public async Task Setup()
+    {
+        _sys1 = ActorSystem.Create("BenchSys", _config);
+        _resolveCache = ActorRefResolveThreadLocalCache.For(_sys1);
+        _pathCache = ActorPathThreadLocalCache.For(_sys1);
+        _addressCache = AddressThreadLocalCache.For(_sys1);
 
-        private Address _addr1;
-        private string _addr1String;
+        var es = (ExtendedActorSystem)_sys1;
+        _addr1 = es.Provider.DefaultAddress;
+        _addr1String = _addr1.ToString();
 
-        [GlobalSetup]
-        public async Task Setup()
-        {
-            _sys1 = ActorSystem.Create("BenchSys", _config);
-            _resolveCache = ActorRefResolveThreadLocalCache.For(_sys1);
-            _pathCache = ActorPathThreadLocalCache.For(_sys1);
-            _addressCache = AddressThreadLocalCache.For(_sys1);
+        var name = "target" + ++_cacheHitPathCount;
+        _cacheHitActorRef =
+            _sys1.ActorOf(act => { act.ReceiveAny((_, context) => context.Sender.Tell(context.Sender)); }, name);
 
-            var es = (ExtendedActorSystem)_sys1;
-            _addr1 = es.Provider.DefaultAddress;
-            _addr1String = _addr1.ToString();
+        _cacheMissActorRef = await _cacheHitActorRef.Ask<IActorRef>("hit", CancellationToken.None);
 
-            var name = "target" + ++_cacheHitPathCount;
-            _cacheHitActorRef = _sys1.ActorOf(act =>
-            {
-                act.ReceiveAny((_, context) => context.Sender.Tell(context.Sender));
-            }, name);
+        _cacheHitPath = _cacheHitActorRef.Path.ToString();
+        _cacheMissPath = _cacheMissActorRef.Path.ToString();
+    }
 
-            _cacheMissActorRef = await _cacheHitActorRef.Ask<IActorRef>("hit", CancellationToken.None);
+    [IterationSetup]
+    public void IterationSetup()
+    {
+        _cacheMissPath = $"/user/f/{_cacheHitPathCount++}";
+    }
 
-            _cacheHitPath = _cacheHitActorRef.Path.ToString();
-            _cacheMissPath = _cacheMissActorRef.Path.ToString();
-        }
+    [Benchmark]
+    public void ActorRefResolveMissBenchmark()
+    {
+        _resolveCache.Cache.GetOrCompute("/user/ignore");
+    }
 
-        [IterationSetup]
-        public void IterationSetup()
-        {
-            _cacheMissPath = $"/user/f/{_cacheHitPathCount++}";
-        }
+    [Benchmark]
+    public void ActorRefResolveHitBenchmark()
+    {
+        _resolveCache.Cache.GetOrCompute(_cacheHitPath);
+    }
 
-        [Benchmark]
-        public void ActorRefResolveMissBenchmark()
-        {
-            _resolveCache.Cache.GetOrCompute("/user/ignore");
-        }
-        
-        [Benchmark]
-        public void ActorRefResolveHitBenchmark()
-        {
-            _resolveCache.Cache.GetOrCompute(_cacheHitPath);
-        }
+    [Benchmark]
+    public void AddressHitBenchmark()
+    {
+        _addressCache.Cache.GetOrCompute(_addr1String);
+    }
 
-        [Benchmark]
-        public void AddressHitBenchmark()
-        {
-            _addressCache.Cache.GetOrCompute(_addr1String);
-        }
-        
-        [Benchmark]
-        public void ActorPathCacheHitBenchmark()
-        {
-            _pathCache.Cache.GetOrCompute(_cacheHitPath);
-        }
-        
-        [Benchmark]
-        public void ActorPathCacheMissBenchmark()
-        {
-            _pathCache.Cache.GetOrCompute(_cacheMissPath);
-        }
-        
-        [GlobalCleanup]
-        public async Task Cleanup()
-        {
-            await _sys1.Terminate();
-        }
+    [Benchmark]
+    public void ActorPathCacheHitBenchmark()
+    {
+        _pathCache.Cache.GetOrCompute(_cacheHitPath);
+    }
+
+    [Benchmark]
+    public void ActorPathCacheMissBenchmark()
+    {
+        _pathCache.Cache.GetOrCompute(_cacheMissPath);
+    }
+
+    [GlobalCleanup]
+    public async Task Cleanup()
+    {
+        await _sys1.Terminate();
     }
 }

@@ -1,49 +1,49 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ClusterMetricMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ClusterMetricMessages.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
+using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
 
-namespace Akka.Cluster.Metrics.Serialization
+namespace Akka.Cluster.Metrics.Serialization;
+
+/// <summary>
+///     INTERNAL API.
+///     Remote cluster metrics extension messages.
+///     Published to cluster members with metrics extension.
+/// </summary>
+[InternalApi]
+public interface IClusterMetricMessage
+{
+}
+
+/// <summary>
+///     INTERNAL API.
+///     Envelope adding a sender address to the cluster metrics gossip.
+/// </summary>
+[InternalApi]
+public sealed class MetricsGossipEnvelope : IClusterMetricMessage, IDeadLetterSuppression
 {
     /// <summary>
-    /// INTERNAL API.
-    ///
-    /// Remote cluster metrics extension messages.
-    /// Published to cluster members with metrics extension.
+    ///     Creates new instance of <see cref="MetricsGossipEnvelope" />
     /// </summary>
-    [InternalApi]
-    public interface IClusterMetricMessage { }
+    public MetricsGossipEnvelope(Address fromAddress, MetricsGossip gossip, bool reply)
+    {
+        FromAddress = fromAddress;
+        Gossip = gossip;
+        Reply = reply;
+    }
 
     /// <summary>
-    /// INTERNAL API.
-    ///
-    /// Envelope adding a sender address to the cluster metrics gossip.
+    ///     Akka's actor address
     /// </summary>
-    [InternalApi]
-    public sealed class MetricsGossipEnvelope : IClusterMetricMessage, IDeadLetterSuppression
-    {
-        /// <summary>
-        /// Akka's actor address
-        /// </summary>
-        public Actor.Address FromAddress { get; }
+    public Address FromAddress { get; }
 
-        public MetricsGossip Gossip { get; }
-        
-        public bool Reply { get; }
-        
-        /// <summary>
-        /// Creates new instance of <see cref="MetricsGossipEnvelope"/>
-        /// </summary>
-        public MetricsGossipEnvelope(Actor.Address fromAddress, MetricsGossip gossip, bool reply)
-        {
-            FromAddress = fromAddress;
-            Gossip = gossip;
-            Reply = reply;
-        }
-    }
+    public MetricsGossip Gossip { get; }
+
+    public bool Reply { get; }
 }

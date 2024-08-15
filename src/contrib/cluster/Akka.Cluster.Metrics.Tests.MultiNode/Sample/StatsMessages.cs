@@ -1,44 +1,43 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="StatsMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="StatsMessages.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 
-namespace Akka.Cluster.Metrics.Tests.MultiNode
+namespace Akka.Cluster.Metrics.Tests.MultiNode;
+
+[Serializable]
+public sealed class StatsJob
 {
-    [Serializable]
-    public sealed class StatsJob
+    public StatsJob(string text)
     {
-        public StatsJob(string text)
-        {
-            Text = text;
-        }
-
-        public string Text { get; }
+        Text = text;
     }
 
-    [Serializable]
-    public sealed class StatsResult
-    {
-        public StatsResult(double meanWordLength)
-        {
-            MeanWordLength = meanWordLength;
-        }
+    public string Text { get; }
+}
 
-        public double MeanWordLength { get; }
+[Serializable]
+public sealed class StatsResult
+{
+    public StatsResult(double meanWordLength)
+    {
+        MeanWordLength = meanWordLength;
     }
 
-    [Serializable]
-    public sealed class JobFailed
-    {
-        public JobFailed(string reason)
-        {
-            Reason = reason;
-        }
+    public double MeanWordLength { get; }
+}
 
-        public string Reason { get; }
+[Serializable]
+public sealed class JobFailed
+{
+    public JobFailed(string reason)
+    {
+        Reason = reason;
     }
+
+    public string Reason { get; }
 }

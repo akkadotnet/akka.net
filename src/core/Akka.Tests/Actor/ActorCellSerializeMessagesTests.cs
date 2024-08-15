@@ -7,42 +7,14 @@
 
 using Akka.Actor;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using FluentAssertions;
 
 namespace Akka.Tests.Actor;
 
-public class ActorCellSerializeMessagesTests: AkkaSpec
+public class ActorCellSerializeMessagesTests : AkkaSpec
 {
-    private class InnerMessage
-    {
-        public InnerMessage(string payload)
-        {
-            Payload = payload;
-        }
-
-        public string Payload { get; }
-    }
-    
-    private class MessageWrapper: IWrappedMessage
-    {
-        public MessageWrapper(object message)
-        {
-            Message = message;
-        }
-
-        public object Message { get; }
-    }
-    
-    private class EchoActor: ReceiveActor
-    {
-        public EchoActor()
-        {
-            ReceiveAny(msg => Sender.Tell(msg));
-        }
-    }
-    
     public ActorCellSerializeMessagesTests(ITestOutputHelper output) : base("akka.actor.serialize-messages=on", output)
     {
     }
@@ -54,5 +26,33 @@ public class ActorCellSerializeMessagesTests: AkkaSpec
         actor.Tell(new MessageWrapper(new InnerMessage("payload")));
         var receivedMsg = ExpectMsg<MessageWrapper>();
         receivedMsg.Message.Should().BeOfType<InnerMessage>().Which.Payload.Should().Be("payload");
+    }
+
+    private class InnerMessage
+    {
+        public InnerMessage(string payload)
+        {
+            Payload = payload;
+        }
+
+        public string Payload { get; }
+    }
+
+    private class MessageWrapper : IWrappedMessage
+    {
+        public MessageWrapper(object message)
+        {
+            Message = message;
+        }
+
+        public object Message { get; }
+    }
+
+    private class EchoActor : ReceiveActor
+    {
+        public EchoActor()
+        {
+            ReceiveAny(msg => Sender.Tell(msg));
+        }
     }
 }

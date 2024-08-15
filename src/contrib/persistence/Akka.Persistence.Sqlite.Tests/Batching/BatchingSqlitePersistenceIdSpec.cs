@@ -1,25 +1,28 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="BatchingSqlitePersistenceIdSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="BatchingSqlitePersistenceIdSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Configuration;
 using Akka.Persistence.Query;
 using Akka.Persistence.Query.Sql;
 using Akka.Persistence.TCK.Query;
-using Akka.Util.Internal;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Sqlite.Tests.Batching
-{
-    public class BatchingSqlitePersistenceIdSpec : PersistenceIdsSpec
-    {
-        public static string ConnectionString(string type) => $"Filename=file:memdb-persistenceids-{type}-{Guid.NewGuid()}.db;Mode=Memory;Cache=Shared";
+namespace Akka.Persistence.Sqlite.Tests.Batching;
 
-        public static Config Config => ConfigurationFactory.ParseString($@"
+public class BatchingSqlitePersistenceIdSpec : PersistenceIdsSpec
+{
+    public BatchingSqlitePersistenceIdSpec(ITestOutputHelper output) : base(Config,
+        nameof(BatchingSqlitePersistenceIdSpec), output)
+    {
+        ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
+    }
+
+    public static Config Config => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
             akka.actor{{
                 serializers{{
@@ -55,12 +58,10 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
                 }}
             }}
             akka.test.single-expect-default = 10s")
-            .WithFallback(SqlReadJournal.DefaultConfiguration());
-            
+        .WithFallback(SqlReadJournal.DefaultConfiguration());
 
-        public BatchingSqlitePersistenceIdSpec(ITestOutputHelper output) : base(Config, nameof(BatchingSqlitePersistenceIdSpec), output)
-        {
-            ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
-        }
+    public static string ConnectionString(string type)
+    {
+        return $"Filename=file:memdb-persistenceids-{type}-{Guid.NewGuid()}.db;Mode=Memory;Cache=Shared";
     }
 }

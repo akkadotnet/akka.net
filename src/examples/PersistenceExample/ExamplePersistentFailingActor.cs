@@ -1,53 +1,50 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ExamplePersistentFailingActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ExamplePersistentFailingActor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Persistence;
 
-namespace PersistenceExample
+namespace PersistenceExample;
+
+public class ExamplePersistentFailingActor : PersistentActor
 {
-    public class ExamplePersistentFailingActor : PersistentActor
+    public ExamplePersistentFailingActor()
     {
-        public ExamplePersistentFailingActor()
-        {
-            Received = new LinkedList<string>();
-        }
+        Received = new LinkedList<string>();
+    }
 
-        public override string PersistenceId { get { return "sample-id-2"; } }
-        public LinkedList<string> Received { get; }
+    public override string PersistenceId => "sample-id-2";
+    public LinkedList<string> Received { get; }
 
-        protected override bool ReceiveRecover(object message)
+    protected override bool ReceiveRecover(object message)
+    {
+        if (!(message is string str))
+            return false;
+
+        Received.AddFirst(str);
+        return true;
+    }
+
+    protected override bool ReceiveCommand(object message)
+    {
+        switch (message)
         {
-            if (!(message is string str)) 
+            case string and "print":
+                Console.WriteLine("Received: " + string.Join(";, ", Received.Reverse()));
+                return true;
+            case string and "boom":
+                throw new Exception("controlled demolition");
+            case string str:
+                Persist(str, s => Received.AddFirst(s));
+                return true;
+            default:
                 return false;
-            
-            Received.AddFirst(str);
-            return true;
-
-        }
-
-        protected override bool ReceiveCommand(object message)
-        {
-            switch (message)
-            {
-                case string and "print":
-                    Console.WriteLine("Received: " + string.Join(";, ", Enumerable.Reverse(Received)));
-                    return true;
-                case string and "boom":
-                    throw new Exception("controlled demolition");
-                case string str:
-                    Persist(str, s => Received.AddFirst(s));
-                    return true;
-                default:
-                    return false;
-            }
         }
     }
 }
-

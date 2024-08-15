@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Program.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -16,56 +16,58 @@ using Akka.Cluster.Routing;
 using Akka.Configuration;
 using Samples.Cluster.Metrics.Common;
 
-namespace Samples.Cluster.AdaptiveGroup
+namespace Samples.Cluster.AdaptiveGroup;
+
+internal class Program
 {
-    class Program
+    private static async Task Main(string[] args)
     {
-        static async Task Main(string[] args)
+        var config = ConfigurationFactory.ParseString(await File.ReadAllTextAsync("Application.conf"));
+
+        var system = ActorSystem.Create("ClusterSystem", config);
+
+        var cluster = Akka.Cluster.Cluster.Get(system);
+        cluster.RegisterOnMemberUp(() =>
         {
-            var config = ConfigurationFactory.ParseString(await File.ReadAllTextAsync("Application.conf"));
+            // Comment out the region below to turn on config-based router creation
 
-            var system = ActorSystem.Create("ClusterSystem", config);
+            #region Programatic router creation
 
-            var cluster = Akka.Cluster.Cluster.Get(system);
-            cluster.RegisterOnMemberUp(() =>
+            var paths = new List<string>
             {
-                // Comment out the region below to turn on config-based router creation
-                #region Programatic router creation
-                var paths = new List<string>
-                {
-                    "/user/factorialBackend-1",
-                    "/user/factorialBackend-2",
-                    "/user/factorialBackend-3",
-                    "/user/factorialBackend-4",
-                    "/user/factorialBackend-5",
-                    "/user/factorialBackend-6"
-                };
+                "/user/factorialBackend-1",
+                "/user/factorialBackend-2",
+                "/user/factorialBackend-3",
+                "/user/factorialBackend-4",
+                "/user/factorialBackend-5",
+                "/user/factorialBackend-6"
+            };
 
-                system.ActorOf(
-                    new ClusterRouterGroup(
-                            local: new AdaptiveLoadBalancingGroup(MixMetricsSelector.Instance),
-                            settings: new ClusterRouterGroupSettings(
-                                10,
-                                ImmutableHashSet.Create(paths.ToArray()),
-                                allowLocalRoutees: true,
-                                useRole: "backend"))
-                        .Props(), "factorialBackendRouter");
-                #endregion
+            system.ActorOf(
+                new ClusterRouterGroup(
+                        new AdaptiveLoadBalancingGroup(MixMetricsSelector.Instance),
+                        new ClusterRouterGroupSettings(
+                            10,
+                            ImmutableHashSet.Create(paths.ToArray()),
+                            true,
+                            "backend"))
+                    .Props(), "factorialBackendRouter");
 
-                // Uncomment the line below to turn on config-based router creation
-                // system.ActorOf(FromConfig.Instance.Props(), name: "factorialBackendRouter");
+            #endregion
 
-                system.ActorOf(Props.Create<FactorialBackend>(), "factorialBackend-1");
-                system.ActorOf(Props.Create<FactorialBackend>(), "factorialBackend-2");
-                system.ActorOf(Props.Create<FactorialBackend>(), "factorialBackend-3");
-                system.ActorOf(Props.Create<FactorialBackend>(), "factorialBackend-4");
-                system.ActorOf(Props.Create<FactorialBackend>(), "factorialBackend-5");
-                system.ActorOf(Props.Create<FactorialBackend>(), "factorialBackend-6");
-            });
+            // Uncomment the line below to turn on config-based router creation
+            // system.ActorOf(FromConfig.Instance.Props(), name: "factorialBackendRouter");
 
-            Console.ReadKey();
+            system.ActorOf(Props.Create<FactorialBackend>(), "factorialBackend-1");
+            system.ActorOf(Props.Create<FactorialBackend>(), "factorialBackend-2");
+            system.ActorOf(Props.Create<FactorialBackend>(), "factorialBackend-3");
+            system.ActorOf(Props.Create<FactorialBackend>(), "factorialBackend-4");
+            system.ActorOf(Props.Create<FactorialBackend>(), "factorialBackend-5");
+            system.ActorOf(Props.Create<FactorialBackend>(), "factorialBackend-6");
+        });
 
-            await system.Terminate();
-        }
+        Console.ReadKey();
+
+        await system.Terminate();
     }
 }

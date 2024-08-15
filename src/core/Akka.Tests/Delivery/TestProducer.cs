@@ -1,9 +1,10 @@
 ﻿// -----------------------------------------------------------------------
 //  <copyright file="TestProducer.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using Akka.Actor;
@@ -13,39 +14,32 @@ using Akka.Event;
 namespace Akka.Tests.Delivery;
 
 /// <summary>
-/// INTERNAL API.
+///     INTERNAL API.
 /// </summary>
 public sealed class TestProducer : ReceiveActor, IWithTimers
 {
     public static readonly TimeSpan DefaultProducerDelay = TimeSpan.FromMilliseconds(20);
-
-    public sealed class Tick
-    {
-        public static readonly Tick Instance = new();
-
-        private Tick()
-        {
-        }
-    }
-
-    public int CurrentSequenceNr { get; private set; }
-    public TimeSpan Delay { get; }
-    public ITimerScheduler Timers { get; set; } = null!;
-    private readonly IActorRef _producerController;
     private readonly ILoggingAdapter _log = Context.GetLogger();
+    private readonly IActorRef _producerController;
 
     public TestProducer(TimeSpan delay, IActorRef producerController)
     {
         Delay = delay;
         _producerController = producerController;
         if (Delay == TimeSpan.Zero)
+        {
             ActiveNoDelay();
+        }
         else
         {
             Timers.StartPeriodicTimer("tick", Tick.Instance, Delay);
             Idle();
         }
     }
+
+    public int CurrentSequenceNr { get; private set; }
+    public TimeSpan Delay { get; }
+    public ITimerScheduler Timers { get; set; } = null!;
 
     protected override void PreStart()
     {
@@ -91,5 +85,14 @@ public sealed class TestProducer : ReceiveActor, IWithTimers
         var msg = $"msg-{n}";
         _log.Info("Sent [{0}]", n);
         sendTo.Tell(new TestConsumer.Job(msg));
+    }
+
+    public sealed class Tick
+    {
+        public static readonly Tick Instance = new();
+
+        private Tick()
+        {
+        }
     }
 }

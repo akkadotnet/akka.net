@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="InvalidSettingsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="InvalidSettingsSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Configuration;
 using Akka.TestKit;
@@ -11,16 +11,15 @@ using FluentAssertions;
 using Xunit;
 using static FluentAssertions.FluentActions;
 
-namespace Akka.Cluster.Sharding.Tests
+namespace Akka.Cluster.Sharding.Tests;
+
+public class InvalidSettingsSpec : AkkaSpec
 {
-    public class InvalidSettingsSpec: AkkaSpec
+    [Fact(DisplayName = "ClusterSharding started with invalid actor provider should raise a user friendly exception")]
+    public void InvalidActorProviderTest()
     {
-        [Fact(DisplayName = "ClusterSharding started with invalid actor provider should raise a user friendly exception")]
-        public void InvalidActorProviderTest()
-        {
-            Invoking(() => ClusterSharding.Get(Sys)) // throws here
-                .Should().ThrowExactly<ConfigurationException>()
-                .WithMessage("*Did you forgot*");
-        }
+        Invoking(() => ClusterSharding.Get(Sys)) // throws here
+            .Should().ThrowExactly<ConfigurationException>()
+            .WithMessage("*Did you forgot*");
     }
 }

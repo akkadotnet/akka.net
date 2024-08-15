@@ -1,136 +1,138 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TestSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="TestSnapshotStore.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-namespace Akka.Persistence.TestKit
+using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Persistence.Snapshot;
+
+namespace Akka.Persistence.TestKit;
+
+/// <summary>
+///     In-memory persistence snapshot store implementation which behavior could be controlled by interceptors.
+/// </summary>
+public class TestSnapshotStore : MemorySnapshotStore
 {
-    using System.Threading.Tasks;
-    using Actor;
-    using Snapshot;
+    private ISnapshotStoreInterceptor _deleteInterceptor = SnapshotStoreInterceptors.Noop.Instance;
+    private ISnapshotStoreInterceptor _loadInterceptor = SnapshotStoreInterceptors.Noop.Instance;
+    private ISnapshotStoreInterceptor _saveInterceptor = SnapshotStoreInterceptors.Noop.Instance;
+
+    protected override bool ReceivePluginInternal(object message)
+    {
+        switch (message)
+        {
+            case UseSaveInterceptor use:
+                _saveInterceptor = use.Interceptor;
+                Sender.Tell(Ack.Instance);
+                return true;
+
+            case UseLoadInterceptor use:
+                _loadInterceptor = use.Interceptor;
+                Sender.Tell(Ack.Instance);
+                return true;
+
+            case UseDeleteInterceptor use:
+                _deleteInterceptor = use.Interceptor;
+                Sender.Tell(Ack.Instance);
+                return true;
+
+            default:
+                return base.ReceivePluginInternal(message);
+        }
+    }
+
+    protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+    {
+        await _saveInterceptor.InterceptAsync(metadata.PersistenceId, ToSelectionCriteria(metadata));
+        await base.SaveAsync(metadata, snapshot);
+    }
+
+    protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+    {
+        await _loadInterceptor.InterceptAsync(persistenceId, criteria);
+        return await base.LoadAsync(persistenceId, criteria);
+    }
+
+    protected override async Task DeleteAsync(SnapshotMetadata metadata)
+    {
+        await _deleteInterceptor.InterceptAsync(metadata.PersistenceId, ToSelectionCriteria(metadata));
+        await base.DeleteAsync(metadata);
+    }
+
+    protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+    {
+        await _deleteInterceptor.InterceptAsync(persistenceId, criteria);
+        await base.DeleteAsync(persistenceId, criteria);
+    }
+
+    private static SnapshotSelectionCriteria ToSelectionCriteria(SnapshotMetadata metadata)
+    {
+        return new SnapshotSelectionCriteria(metadata.SequenceNr, metadata.Timestamp, metadata.SequenceNr,
+            metadata.Timestamp);
+    }
 
     /// <summary>
-    ///     In-memory persistence snapshot store implementation which behavior could be controlled by interceptors.
+    ///     Create proxy object from snapshot store actor reference which can alter behavior of snapshot store.
     /// </summary>
-    public class TestSnapshotStore : MemorySnapshotStore
+    /// <remarks>
+    ///     Snapshot store actor must be of <see cref="TestSnapshotStore" /> type.
+    /// </remarks>
+    /// <param name="actor">Journal actor reference.</param>
+    /// <returns>Proxy object to control <see cref="TestSnapshotStore" />.</returns>
+    public static ITestSnapshotStore FromRef(IActorRef actor)
     {
-        private ISnapshotStoreInterceptor _saveInterceptor = SnapshotStoreInterceptors.Noop.Instance;
-        private ISnapshotStoreInterceptor _loadInterceptor = SnapshotStoreInterceptors.Noop.Instance;
-        private ISnapshotStoreInterceptor _deleteInterceptor = SnapshotStoreInterceptors.Noop.Instance;
+        return new TestSnapshotStoreWrapper(actor);
+    }
 
-        protected override bool ReceivePluginInternal(object message)
+    public sealed class UseSaveInterceptor
+    {
+        public UseSaveInterceptor(ISnapshotStoreInterceptor interceptor)
         {
-            switch (message)
-            {
-                case UseSaveInterceptor use:
-                    _saveInterceptor = use.Interceptor;
-                    Sender.Tell(Ack.Instance);
-                    return true;
-
-                case UseLoadInterceptor use:
-                    _loadInterceptor = use.Interceptor;
-                    Sender.Tell(Ack.Instance);
-                    return true;
-
-                case UseDeleteInterceptor use:
-                    _deleteInterceptor = use.Interceptor;
-                    Sender.Tell(Ack.Instance);
-                    return true;
-
-                default:
-                    return base.ReceivePluginInternal(message);
-            }
+            Interceptor = interceptor;
         }
 
-        protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        public ISnapshotStoreInterceptor Interceptor { get; }
+    }
+
+    public sealed class UseLoadInterceptor
+    {
+        public UseLoadInterceptor(ISnapshotStoreInterceptor interceptor)
         {
-            await _saveInterceptor.InterceptAsync(metadata.PersistenceId, ToSelectionCriteria(metadata));
-            await base.SaveAsync(metadata, snapshot);
+            Interceptor = interceptor;
         }
 
-        protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        public ISnapshotStoreInterceptor Interceptor { get; }
+    }
+
+    public sealed class UseDeleteInterceptor
+    {
+        public UseDeleteInterceptor(ISnapshotStoreInterceptor interceptor)
         {
-            await _loadInterceptor.InterceptAsync(persistenceId, criteria);
-            return await base.LoadAsync(persistenceId, criteria);
+            Interceptor = interceptor;
         }
 
-        protected override async Task DeleteAsync(SnapshotMetadata metadata)
+        public ISnapshotStoreInterceptor Interceptor { get; }
+    }
+
+    public sealed class Ack
+    {
+        public static readonly Ack Instance = new();
+    }
+
+    internal class TestSnapshotStoreWrapper : ITestSnapshotStore
+    {
+        private readonly IActorRef _actor;
+
+        public TestSnapshotStoreWrapper(IActorRef actor)
         {
-            await _deleteInterceptor.InterceptAsync(metadata.PersistenceId, ToSelectionCriteria(metadata));
-            await base.DeleteAsync(metadata);
+            _actor = actor;
         }
 
-        protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
-        {
-            await _deleteInterceptor.InterceptAsync(persistenceId, criteria);
-            await base.DeleteAsync(persistenceId, criteria);
-        }
-
-        static SnapshotSelectionCriteria ToSelectionCriteria(SnapshotMetadata metadata)
-            => new(metadata.SequenceNr, metadata.Timestamp, metadata.SequenceNr, metadata.Timestamp);
-
-        /// <summary>
-        ///     Create proxy object from snapshot store actor reference which can alter behavior of snapshot store.
-        /// </summary>
-        /// <remarks>
-        ///     Snapshot store actor must be of <see cref="TestSnapshotStore"/> type.
-        /// </remarks>
-        /// <param name="actor">Journal actor reference.</param>
-        /// <returns>Proxy object to control <see cref="TestSnapshotStore"/>.</returns>
-        public static ITestSnapshotStore FromRef(IActorRef actor)
-        {
-            return new TestSnapshotStoreWrapper(actor);
-        }
-
-        public sealed class UseSaveInterceptor
-        {
-            public UseSaveInterceptor(ISnapshotStoreInterceptor interceptor)
-            {
-                Interceptor = interceptor;
-            }
-
-            public ISnapshotStoreInterceptor Interceptor { get; }
-        }
-
-        public sealed class UseLoadInterceptor
-        {
-            public UseLoadInterceptor(ISnapshotStoreInterceptor interceptor)
-            {
-                Interceptor = interceptor;
-            }
-
-            public ISnapshotStoreInterceptor Interceptor { get; }
-        }
-
-        public sealed class UseDeleteInterceptor
-        {
-            public UseDeleteInterceptor(ISnapshotStoreInterceptor interceptor)
-            {
-                Interceptor = interceptor;
-            }
-
-            public ISnapshotStoreInterceptor Interceptor { get; }
-        }
-
-        public sealed class Ack
-        {
-            public static readonly Ack Instance = new();
-        }
-
-        internal class TestSnapshotStoreWrapper : ITestSnapshotStore
-        {
-            public TestSnapshotStoreWrapper(IActorRef actor)
-            {
-                _actor = actor;
-            }
-
-            private readonly IActorRef _actor;
-
-            public SnapshotStoreSaveBehavior OnSave => new(new SnapshotStoreSaveBehaviorSetter(_actor));
-            public SnapshotStoreLoadBehavior OnLoad => new(new SnapshotStoreLoadBehaviorSetter(_actor));
-            public SnapshotStoreDeleteBehavior OnDelete => new(new SnapshotStoreDeleteBehaviorSetter(_actor));
-        }
+        public SnapshotStoreSaveBehavior OnSave => new(new SnapshotStoreSaveBehaviorSetter(_actor));
+        public SnapshotStoreLoadBehavior OnLoad => new(new SnapshotStoreLoadBehaviorSetter(_actor));
+        public SnapshotStoreDeleteBehavior OnDelete => new(new SnapshotStoreDeleteBehaviorSetter(_actor));
     }
 }

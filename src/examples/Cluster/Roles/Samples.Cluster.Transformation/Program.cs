@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Program.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Configuration;
@@ -12,57 +12,56 @@ using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Util.Internal;
 
-namespace Samples.Cluster.Transformation
+namespace Samples.Cluster.Transformation;
+
+internal class Program
 {
-    class Program
+    private static Config _clusterConfig;
+
+    private static void Main(string[] args)
     {
-        private static Config _clusterConfig;
+        var section = (AkkaConfigurationSection)ConfigurationManager.GetSection("akka");
+        _clusterConfig = section.AkkaConfig;
+        LaunchBackend(new[] { "2551" });
+        LaunchBackend(new[] { "2552" });
+        LaunchBackend(Array.Empty<string>());
+        LaunchFrontend(Array.Empty<string>());
+        LaunchFrontend(Array.Empty<string>());
+        //starting 2 frontend nodes and 3 backend nodes
+        Console.WriteLine("Press any key to exit.");
+        Console.ReadLine();
+    }
 
-        static void Main(string[] args)
-        {
-            var section = (AkkaConfigurationSection)ConfigurationManager.GetSection("akka");
-            _clusterConfig = section.AkkaConfig;
-            LaunchBackend(new []{ "2551" });
-            LaunchBackend(new[] { "2552" });
-            LaunchBackend(Array.Empty<string>());
-            LaunchFrontend(Array.Empty<string>());
-            LaunchFrontend(Array.Empty<string>());
-            //starting 2 frontend nodes and 3 backend nodes
-            Console.WriteLine("Press any key to exit.");
-            Console.ReadLine();
-        }
+    private static void LaunchBackend(string[] args)
+    {
+        var port = args.Length > 0 ? args[0] : "0";
+        var config =
+            ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + port)
+                .WithFallback(ConfigurationFactory.ParseString("akka.cluster.roles = [backend]"))
+                .WithFallback(_clusterConfig);
 
-        static void LaunchBackend(string[] args)
-        {
-            var port = args.Length > 0 ? args[0] : "0";
-            var config =
-                    ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + port)
-                    .WithFallback(ConfigurationFactory.ParseString("akka.cluster.roles = [backend]"))
-                        .WithFallback(_clusterConfig);
+        var system = ActorSystem.Create("ClusterSystem", config);
+        system.ActorOf(Props.Create<TransformationBackend>(), "backend");
+    }
 
-            var system = ActorSystem.Create("ClusterSystem", config);
-            system.ActorOf(Props.Create<TransformationBackend>(), "backend");
-        }
+    private static void LaunchFrontend(string[] args)
+    {
+        var port = args.Length > 0 ? args[0] : "0";
+        var config =
+            ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + port)
+                .WithFallback(ConfigurationFactory.ParseString("akka.cluster.roles = [frontend]"))
+                .WithFallback(_clusterConfig);
 
-        static void LaunchFrontend(string[] args)
-        {
-            var port = args.Length > 0 ? args[0] : "0";
-            var config =
-                    ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port=" + port)
-                    .WithFallback(ConfigurationFactory.ParseString("akka.cluster.roles = [frontend]"))
-                        .WithFallback(_clusterConfig);
+        var system = ActorSystem.Create("ClusterSystem", config);
 
-            var system = ActorSystem.Create("ClusterSystem", config);
-
-            var frontend = system.ActorOf(Props.Create<TransformationFrontend>(), "frontend");
-            var interval = TimeSpan.FromSeconds(2);
-            var timeout = TimeSpan.FromSeconds(5);
-            var counter = new AtomicCounter();
-            system.Scheduler.Advanced.ScheduleRepeatedly(interval, interval, 
-                () => frontend.Ask(new TransformationMessages.TransformationJob("hello-" + counter.GetAndIncrement()), timeout)
-                    .ContinueWith(
-                        r => Console.WriteLine(r.Result)));
-        }
+        var frontend = system.ActorOf(Props.Create<TransformationFrontend>(), "frontend");
+        var interval = TimeSpan.FromSeconds(2);
+        var timeout = TimeSpan.FromSeconds(5);
+        var counter = new AtomicCounter();
+        system.Scheduler.Advanced.ScheduleRepeatedly(interval, interval,
+            () => frontend.Ask(new TransformationMessages.TransformationJob("hello-" + counter.GetAndIncrement()),
+                    timeout)
+                .ContinueWith(
+                    r => Console.WriteLine(r.Result)));
     }
 }
-

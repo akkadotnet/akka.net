@@ -1,56 +1,53 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Snapshots.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Snapshots.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Persistence;
 
-namespace DocsExamples.Persistence.PersistentActor
+namespace DocsExamples.Persistence.PersistentActor;
+
+#region Snapshots
+
+public static class Snapshots
 {
-    #region Snapshots
-    public static class Snapshots
+    public class MyPersistentActor : UntypedPersistentActor
     {
-        public class MyPersistentActor : UntypedPersistentActor
+        private const int SnapShotInterval = 1000;
+        private readonly object state = new();
+        public override string PersistenceId => "my-stable-persistence-id";
+
+        protected override void OnRecover(object message)
         {
-            public override string PersistenceId => "my-stable-persistence-id";
-            private const int SnapShotInterval = 1000;
-            private object state = new();
+            // handle recovery here
+        }
 
-            protected override void OnRecover(object message)
+        protected override void OnCommand(object message)
+        {
+            if (message is SaveSnapshotSuccess s)
             {
-                // handle recovery here
+                // ...
             }
-
-            protected override void OnCommand(object message)
+            else if (message is SaveSnapshotFailure f)
             {
-                if (message is SaveSnapshotSuccess s)
-                {
-                    // ...
-                }
-                else if (message is SaveSnapshotFailure f)
-                {
-                    // ...
-                }
-                else if (message is string cmd)
-                {
-                    Persist($"evt-{cmd}", e =>
-                    {
-                        UpdateState(e);
-                        if (LastSequenceNr % SnapShotInterval == 0 && LastSequenceNr != 0)
-                        {
-                            SaveSnapshot(state);
-                        }
-                    });
-                }
+                // ...
             }
-
-            private void UpdateState(string e)
+            else if (message is string cmd)
             {
-
+                Persist($"evt-{cmd}", e =>
+                {
+                    UpdateState(e);
+                    if (LastSequenceNr % SnapShotInterval == 0 && LastSequenceNr != 0) SaveSnapshot(state);
+                });
             }
         }
+
+        private void UpdateState(string e)
+        {
+        }
     }
-    #endregion
 }
+
+#endregion

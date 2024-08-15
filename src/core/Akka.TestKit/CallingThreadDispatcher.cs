@@ -1,75 +1,73 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="CallingThreadDispatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="CallingThreadDispatcher.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System;
 using Akka.Configuration;
 using Akka.Dispatch;
 
-namespace Akka.TestKit
+namespace Akka.TestKit;
+
+/// <summary>
+///     INTERNAL API
+/// </summary>
+public class CallingThreadDispatcherConfigurator : MessageDispatcherConfigurator
 {
     /// <summary>
-    /// INTERNAL API
+    ///     TBD
     /// </summary>
-    public class CallingThreadDispatcherConfigurator : MessageDispatcherConfigurator
+    /// <param name="config">TBD</param>
+    /// <param name="prerequisites">TBD</param>
+    public CallingThreadDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config,
+        prerequisites)
     {
-        /// <summary>
-        /// TBD 
-        /// </summary>
-        /// <param name="config">TBD</param>
-        /// <param name="prerequisites">TBD</param>
-        public CallingThreadDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
-        {
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override MessageDispatcher Dispatcher()
-        {
-            return new CallingThreadDispatcher(this);
-        }
     }
 
     /// <summary>
-    /// INTERNAL API
-    ///
-    /// Used to run an actor on the foreground thread.
+    ///     TBD
     /// </summary>
-    public class CallingThreadDispatcher : MessageDispatcher
+    /// <returns>TBD</returns>
+    public override MessageDispatcher Dispatcher()
     {
-        /// <summary>
-        /// TBD 
-        /// </summary>
-        public static string Id = "akka.test.calling-thread-dispatcher";
+        return new CallingThreadDispatcher(this);
+    }
+}
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="configurator">TBD</param>
-        public CallingThreadDispatcher(MessageDispatcherConfigurator configurator) : base(configurator)
-        {
-        }
+/// <summary>
+///     INTERNAL API
+///     Used to run an actor on the foreground thread.
+/// </summary>
+public class CallingThreadDispatcher : MessageDispatcher
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public static string Id = "akka.test.calling-thread-dispatcher";
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="run">TBD</param>
-        protected override void ExecuteTask(IRunnable run)
-        {
-            run.Run();
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="configurator">TBD</param>
+    public CallingThreadDispatcher(MessageDispatcherConfigurator configurator) : base(configurator)
+    {
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override void Shutdown()
-        {
-            // do nothing
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="run">TBD</param>
+    protected override void ExecuteTask(IRunnable run)
+    {
+        run.Run();
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override void Shutdown()
+    {
+        // do nothing
     }
 }

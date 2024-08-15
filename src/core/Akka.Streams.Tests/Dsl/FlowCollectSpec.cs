@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="FlowCollectSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="FlowCollectSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -16,107 +16,110 @@ using Xunit;
 using Xunit.Abstractions;
 using static Akka.Streams.Tests.Dsl.TestConfig;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class FlowCollectSpec : ScriptedTest
 {
-    public class FlowCollectSpec : ScriptedTest
+    public FlowCollectSpec(ITestOutputHelper helper) : base(helper)
     {
-        private Random Random { get; } = new(12345);
-        private ActorMaterializer Materializer { get; }
+        var settings = ActorMaterializerSettings.Create(Sys);
+        Materializer = ActorMaterializer.Create(Sys, settings);
+    }
 
-        public FlowCollectSpec(ITestOutputHelper helper) : base(helper)
-        {
-            var settings = ActorMaterializerSettings.Create(Sys);
-            Materializer = ActorMaterializer.Create(Sys, settings);
-        }
+    private Random Random { get; } = new(12345);
+    private ActorMaterializer Materializer { get; }
 
-        // No need to use AssertAllStagesStoppedAsync, it is encapsulated in RunScriptAsync
-        [Fact]
-        public async Task An_old_behaviour_Collect_must_collect()
+    // No need to use AssertAllStagesStoppedAsync, it is encapsulated in RunScriptAsync
+    [Fact]
+    public async Task An_old_behaviour_Collect_must_collect()
+    {
+        var script = Script.Create(RandomTestRange(Sys).Select(_ =>
         {
-            var script = Script.Create(RandomTestRange(Sys).Select(_ =>
-            {
-                var x = Random.Next(0, 10000);
-                return ((ICollection<int>)new[] { x },
-                    (x & 1) == 0 ? (ICollection<string>)new[] { (x * x).ToString() } : new string[] { });
-            }).ToArray());
-            
-            foreach (var _ in RandomTestRange(Sys))
-            {
-                await RunScriptAsync(script, Materializer.Settings,
-                    // This is intentional, testing backward compatibility with old obsolete method
+            var x = Random.Next(0, 10000);
+            return ((ICollection<int>)new[] { x },
+                (x & 1) == 0 ? (ICollection<string>)new[] { (x * x).ToString() } : new string[] { });
+        }).ToArray());
+
+        foreach (var _ in RandomTestRange(Sys))
+        {
+            await RunScriptAsync(script, Materializer.Settings,
+                // This is intentional, testing backward compatibility with old obsolete method
 #pragma warning disable CS0618
-                    flow => flow.Collect(x => x % 2 == 0 ? (x * x).ToString() : null)); 
+                flow => flow.Collect(x => x % 2 == 0 ? (x * x).ToString() : null));
 #pragma warning restore CS0618
-            }
         }
+    }
 
-        // No need to use AssertAllStagesStoppedAsync, it is encapsulated in RunScriptAsync
-        [Fact]
-        public async Task A_Collect_must_collect()
+    // No need to use AssertAllStagesStoppedAsync, it is encapsulated in RunScriptAsync
+    [Fact]
+    public async Task A_Collect_must_collect()
+    {
+        var script = Script.Create(RandomTestRange(Sys).Select(_ =>
         {
-            var script = Script.Create(RandomTestRange(Sys).Select(_ =>
-            {
-                var x = Random.Next(0, 10000);
-                return ((ICollection<int>)new[] { x },
-                    (x & 1) == 0 ? (ICollection<string>)new[] { (x*x).ToString() } : new string[] {});
-            }).ToArray());
+            var x = Random.Next(0, 10000);
+            return ((ICollection<int>)new[] { x },
+                (x & 1) == 0 ? (ICollection<string>)new[] { (x * x).ToString() } : new string[] { });
+        }).ToArray());
 
-            foreach (var _ in RandomTestRange(Sys))
+        foreach (var _ in RandomTestRange(Sys))
+            await RunScriptAsync(script, Materializer.Settings,
+                flow => flow.Collect(x => x % 2 == 0, x => (x * x).ToString()));
+    }
+
+    [Fact]
+    public async Task An_old_behaviour_Collect_must_restart_when_Collect_throws()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            int ThrowOnTwo(int x)
             {
-                await RunScriptAsync(script, Materializer.Settings,
-                    flow => flow.Collect(x => x % 2 == 0, x => (x * x).ToString()));
+                return x == 2 ? throw new TestException("") : x;
             }
-        }
 
-        [Fact]
-        public async Task An_old_behaviour_Collect_must_restart_when_Collect_throws()
-        {
-            await this.AssertAllStagesStoppedAsync(async () =>
-            {
-                int ThrowOnTwo(int x) => x == 2 ? throw new TestException("") : x;
-
-                var probe =
-                    Source.From(Enumerable.Range(1, 3))
-                        // This is intentional, testing backward compatibility with old obsolete method 
+            var probe =
+                Source.From(Enumerable.Range(1, 3))
+                    // This is intentional, testing backward compatibility with old obsolete method 
 #pragma warning disable CS0618
-                        .Collect(ThrowOnTwo)
+                    .Collect(ThrowOnTwo)
 #pragma warning restore CS0618
-                        .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
-                        .RunWith(this.SinkProbe<int>(), Materializer);
+                    .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
+                    .RunWith(this.SinkProbe<int>(), Materializer);
 
-                await probe.AsyncBuilder()
-                    .Request(1)
-                    .ExpectNext(1)
-                    .Request(1)
-                    .ExpectNext(3)
-                    .Request(1)
-                    .ExpectComplete()
-                    .ExecuteAsync();
-            }, Materializer);
-        }
+            await probe.AsyncBuilder()
+                .Request(1)
+                .ExpectNext(1)
+                .Request(1)
+                .ExpectNext(3)
+                .Request(1)
+                .ExpectComplete()
+                .ExecuteAsync();
+        }, Materializer);
+    }
 
-        [Fact]
-        public async Task A_Collect_must_restart_when_Collect_throws()
+    [Fact]
+    public async Task A_Collect_must_restart_when_Collect_throws()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
         {
-            await this.AssertAllStagesStoppedAsync(async () =>
+            bool ThrowOnTwo(int x)
             {
-                bool ThrowOnTwo(int x) => x == 2 ? throw new TestException("") : true;
+                return x == 2 ? throw new TestException("") : true;
+            }
 
-                var probe =
-                    Source.From(Enumerable.Range(1, 3))
-                        .Collect(ThrowOnTwo, x => x)
-                        .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
-                        .RunWith(this.SinkProbe<int>(), Materializer);
+            var probe =
+                Source.From(Enumerable.Range(1, 3))
+                    .Collect(ThrowOnTwo, x => x)
+                    .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
+                    .RunWith(this.SinkProbe<int>(), Materializer);
 
-                await probe.AsyncBuilder()
-                    .Request(1)
-                    .ExpectNext(1)
-                    .Request(1)
-                    .ExpectNext(3)
-                    .Request(1)
-                    .ExpectComplete()
-                    .ExecuteAsync();
-            }, Materializer);
-        }
+            await probe.AsyncBuilder()
+                .Request(1)
+                .ExpectNext(1)
+                .Request(1)
+                .ExpectNext(3)
+                .Request(1)
+                .ExpectComplete()
+                .ExecuteAsync();
+        }, Materializer);
     }
 }

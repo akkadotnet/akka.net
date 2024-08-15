@@ -7,11 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="App.config" />
+    <Content Include="App.config"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\core\Akka\Akka.csproj" />
+    <ProjectReference Include="..\..\core\Akka\Akka.csproj"/>
   </ItemGroup>
 
 </Project>

@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="QueryExecutor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="QueryExecutor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Data;
@@ -17,38 +17,38 @@ using Akka.Util;
 namespace Akka.Persistence.Sql.Common.Snapshot
 {
     /// <summary>
-    /// Flattened and serialized snapshot object used as intermediate representation
-    /// before saving snapshot with metadata inside SQL Server database.
+    ///     Flattened and serialized snapshot object used as intermediate representation
+    ///     before saving snapshot with metadata inside SQL Server database.
     /// </summary>
     public class SnapshotEntry
     {
         /// <summary>
-        /// Persistence identifier of persistent actor, current snapshot relates to.
-        /// </summary>
-        public readonly string PersistenceId;
-
-        /// <summary>
-        /// Sequence number used to identify snapshot in it's persistent actor scope.
-        /// </summary>
-        public readonly long SequenceNr;
-
-        /// <summary>
-        /// Timestamp used to specify date, when the snapshot has been made.
-        /// </summary>
-        public readonly DateTime Timestamp;
-
-        /// <summary>
-        /// Stringified fully qualified CLR type name of the serialized object.
+        ///     Stringified fully qualified CLR type name of the serialized object.
         /// </summary>
         public readonly string Manifest;
 
         /// <summary>
-        /// Serialized object data.
+        ///     Serialized object data.
         /// </summary>
         public readonly object Payload;
 
         /// <summary>
-        /// TBD
+        ///     Persistence identifier of persistent actor, current snapshot relates to.
+        /// </summary>
+        public readonly string PersistenceId;
+
+        /// <summary>
+        ///     Sequence number used to identify snapshot in it's persistent actor scope.
+        /// </summary>
+        public readonly long SequenceNr;
+
+        /// <summary>
+        ///     Timestamp used to specify date, when the snapshot has been made.
+        /// </summary>
+        public readonly DateTime Timestamp;
+
+        /// <summary>
+        ///     TBD
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="sequenceNr">TBD</param>
@@ -66,71 +66,63 @@ namespace Akka.Persistence.Sql.Common.Snapshot
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     public class QueryConfiguration
     {
         /// <summary>
-        /// TBD
+        ///     The default serializer used when not type override matching is found
         /// </summary>
-        public readonly string SchemaName;
+        [Obsolete("This property should never be used for writes, use the default `System.Object` serializer instead")]
+        public readonly string DefaultSerializer;
+
         /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly string SnapshotTableName;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly string PersistenceIdColumnName;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly string SequenceNrColumnName;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly string PayloadColumnName;
-        /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         public readonly string ManifestColumnName;
+
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
-        public readonly string TimestampColumnName;
+        public readonly string PayloadColumnName;
+
         /// <summary>
-        /// TBD
+        ///     TBD
+        /// </summary>
+        public readonly string PersistenceIdColumnName;
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        public readonly string SchemaName;
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        public readonly string SequenceNrColumnName;
+
+        /// <summary>
+        ///     TBD
         /// </summary>
         public readonly string SerializerIdColumnName;
 
         /// <summary>
-        /// TBD
+        ///     TBD
+        /// </summary>
+        public readonly string SnapshotTableName;
+
+        /// <summary>
+        ///     TBD
         /// </summary>
         public readonly TimeSpan Timeout;
 
         /// <summary>
-        /// The default serializer used when not type override matching is found
+        ///     TBD
         /// </summary>
-        [Obsolete(message: "This property should never be used for writes, use the default `System.Object` serializer instead")]
-        public readonly string DefaultSerializer;
+        public readonly string TimestampColumnName;
 
         /// <summary>
-        /// Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.
-        /// </summary>
-        public bool UseSequentialAccess { get; }
-
-        /// <summary>
-        /// Isolation level of transactions used during write query execution.
-        /// </summary>
-        public IsolationLevel WriteIsolationLevel { get; }
-        
-        /// <summary>
-        /// Isolation level of transactions used during read query execution.
-        /// </summary>
-        public IsolationLevel ReadIsolationLevel { get; }
-
-        /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="schemaName">TBD</param>
         /// <param name="snapshotTableName">TBD</param>
@@ -142,7 +134,10 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="serializerIdColumnName">TBD</param>
         /// <param name="timeout">TBD</param>
         /// <param name="defaultSerializer">The default serializer used when not type override matching is found</param>
-        /// <param name="useSequentialAccess">Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.</param>
+        /// <param name="useSequentialAccess">
+        ///     Uses the CommandBehavior.SequentialAccess when creating the command, providing a
+        ///     performance improvement for reading large BLOBS.
+        /// </param>
         [Obsolete("Use the constructor that takes read and write isolation level argument (since v1.5.2)")]
         public QueryConfiguration(
             string schemaName,
@@ -157,24 +152,24 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             string defaultSerializer,
             bool useSequentialAccess)
             : this(
-                schemaName: schemaName,
-                snapshotTableName: snapshotTableName,
-                persistenceIdColumnName: persistenceIdColumnName,
-                sequenceNrColumnName: sequenceNrColumnName,
-                payloadColumnName: payloadColumnName,
-                manifestColumnName: manifestColumnName,
-                timestampColumnName: timestampColumnName,
-                serializerIdColumnName: serializerIdColumnName,
-                timeout: timeout,
-                defaultSerializer: defaultSerializer,
-                useSequentialAccess: useSequentialAccess,
-                readIsolationLevel: null,
-                writeIsolationLevel: null)
+                schemaName,
+                snapshotTableName,
+                persistenceIdColumnName,
+                sequenceNrColumnName,
+                payloadColumnName,
+                manifestColumnName,
+                timestampColumnName,
+                serializerIdColumnName,
+                timeout,
+                defaultSerializer,
+                useSequentialAccess,
+                null,
+                null)
         {
         }
-            
+
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="schemaName">TBD</param>
         /// <param name="snapshotTableName">TBD</param>
@@ -186,7 +181,10 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="serializerIdColumnName">TBD</param>
         /// <param name="timeout">TBD</param>
         /// <param name="defaultSerializer">The default serializer used when not type override matching is found</param>
-        /// <param name="useSequentialAccess">Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for reading large BLOBS.</param>
+        /// <param name="useSequentialAccess">
+        ///     Uses the CommandBehavior.SequentialAccess when creating the command, providing a
+        ///     performance improvement for reading large BLOBS.
+        /// </param>
         /// <param name="readIsolationLevel">Isolation level of transactions used during read query execution.</param>
         /// <param name="writeIsolationLevel">Isolation level of transactions used during write query execution.</param>
         public QueryConfiguration(
@@ -222,24 +220,42 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        ///     Uses the CommandBehavior.SequentialAccess when creating the command, providing a performance improvement for
+        ///     reading large BLOBS.
         /// </summary>
-        public string FullSnapshotTableName => string.IsNullOrEmpty(SchemaName) ? SnapshotTableName : SchemaName + "." + SnapshotTableName;
+        public bool UseSequentialAccess { get; }
+
+        /// <summary>
+        ///     Isolation level of transactions used during write query execution.
+        /// </summary>
+        public IsolationLevel WriteIsolationLevel { get; }
+
+        /// <summary>
+        ///     Isolation level of transactions used during read query execution.
+        /// </summary>
+        public IsolationLevel ReadIsolationLevel { get; }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        public string FullSnapshotTableName => string.IsNullOrEmpty(SchemaName)
+            ? SnapshotTableName
+            : SchemaName + "." + SnapshotTableName;
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     public interface ISnapshotQueryExecutor
     {
         /// <summary>
-        /// Configuration settings for the current query executor.
+        ///     Configuration settings for the current query executor.
         /// </summary>
         QueryConfiguration Configuration { get; }
 
         /// <summary>
-        /// Deletes a single snapshot identified by it's persistent actor's <paramref name="persistenceId"/>,
-        /// <paramref name="sequenceNr"/> and <paramref name="timestamp"/>.
+        ///     Deletes a single snapshot identified by it's persistent actor's <paramref name="persistenceId" />,
+        ///     <paramref name="sequenceNr" /> and <paramref name="timestamp" />.
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
@@ -247,11 +263,12 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="sequenceNr">TBD</param>
         /// <param name="timestamp">TBD</param>
         /// <returns>TBD</returns>
-        Task DeleteAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long sequenceNr, DateTime? timestamp);
+        Task DeleteAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId,
+            long sequenceNr, DateTime? timestamp);
 
         /// <summary>
-        /// Deletes all snapshot matching persistent actor's <paramref name="persistenceId"/> as well as
-        /// upper (inclusive) bounds of the both <paramref name="maxSequenceNr"/> and <paramref name="maxTimestamp"/>.
+        ///     Deletes all snapshot matching persistent actor's <paramref name="persistenceId" /> as well as
+        ///     upper (inclusive) bounds of the both <paramref name="maxSequenceNr" /> and <paramref name="maxTimestamp" />.
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
@@ -259,22 +276,25 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="maxSequenceNr">TBD</param>
         /// <param name="maxTimestamp">TBD</param>
         /// <returns>TBD</returns>
-        Task DeleteBatchAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long maxSequenceNr, DateTime maxTimestamp);
+        Task DeleteBatchAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId,
+            long maxSequenceNr, DateTime maxTimestamp);
 
         /// <summary>
-        /// Inserts a single snapshot represented by provided <see cref="SnapshotEntry"/> instance.
+        ///     Inserts a single snapshot represented by provided <see cref="SnapshotEntry" /> instance.
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
         /// <param name="snapshot">TBD</param>
         /// <param name="metadata">TBD</param>
         /// <returns>TBD</returns>
-        Task InsertAsync(DbConnection connection, CancellationToken cancellationToken, object snapshot, SnapshotMetadata metadata);
+        Task InsertAsync(DbConnection connection, CancellationToken cancellationToken, object snapshot,
+            SnapshotMetadata metadata);
 
         /// <summary>
-        /// Selects a single snapshot identified by persistent actor's <paramref name="persistenceId"/>,
-        /// matching upper (inclusive) bounds of both <paramref name="maxSequenceNr"/> and <paramref name="maxTimestamp"/>.
-        /// In case, when more than one snapshot matches specified criteria, one with the highest sequence number will be selected.
+        ///     Selects a single snapshot identified by persistent actor's <paramref name="persistenceId" />,
+        ///     matching upper (inclusive) bounds of both <paramref name="maxSequenceNr" /> and <paramref name="maxTimestamp" />.
+        ///     In case, when more than one snapshot matches specified criteria, one with the highest sequence number will be
+        ///     selected.
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
@@ -282,10 +302,11 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// <param name="maxSequenceNr">TBD</param>
         /// <param name="maxTimestamp">TBD</param>
         /// <returns>TBD</returns>
-        Task<SelectedSnapshot> SelectSnapshotAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId, long maxSequenceNr, DateTime maxTimestamp);
+        Task<SelectedSnapshot> SelectSnapshotAsync(DbConnection connection, CancellationToken cancellationToken,
+            string persistenceId, long maxSequenceNr, DateTime maxTimestamp);
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
@@ -294,52 +315,22 @@ namespace Akka.Persistence.Sql.Common.Snapshot
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     public abstract class AbstractQueryExecutor : ISnapshotQueryExecutor
     {
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         protected Akka.Serialization.Serialization Serialization;
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        protected virtual string SelectSnapshotSql { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected virtual string DeleteSnapshotSql { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected virtual string DeleteSnapshotRangeSql { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected virtual string InsertSnapshotSql { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected abstract string CreateSnapshotTableSql { get; }
-
-        /// <summary>
-        /// Isolation level of transactions used during write query execution.
-        /// </summary>
-        public IsolationLevel WriteIsolationLevel { get; }
-        
-        /// <summary>
-        /// Isolation level of transactions used during read query execution.
-        /// </summary>
-        public IsolationLevel ReadIsolationLevel { get; }
-        
-        /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="configuration">TBD</param>
         /// <param name="serialization">TBD</param>
-        protected AbstractQueryExecutor(QueryConfiguration configuration, Akka.Serialization.Serialization serialization)
+        protected AbstractQueryExecutor(QueryConfiguration configuration,
+            Akka.Serialization.Serialization serialization)
         {
             Configuration = configuration;
             Serialization = serialization;
@@ -382,70 +373,47 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
+        /// </summary>
+        protected virtual string SelectSnapshotSql { get; }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        protected virtual string DeleteSnapshotSql { get; }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        protected virtual string DeleteSnapshotRangeSql { get; }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        protected virtual string InsertSnapshotSql { get; }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        protected abstract string CreateSnapshotTableSql { get; }
+
+        /// <summary>
+        ///     Isolation level of transactions used during write query execution.
+        /// </summary>
+        public IsolationLevel WriteIsolationLevel { get; }
+
+        /// <summary>
+        ///     Isolation level of transactions used during read query execution.
+        /// </summary>
+        public IsolationLevel ReadIsolationLevel { get; }
+
+        /// <summary>
+        ///     TBD
         /// </summary>
         public QueryConfiguration Configuration { get; }
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="timestamp">TBD</param>
-        /// <param name="command">TBD</param>
-        protected virtual void SetTimestampParameter(DateTime timestamp, DbCommand command) => AddParameter(command, "@Timestamp", DbType.DateTime2, timestamp);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="sequenceNr">TBD</param>
-        /// <param name="command">TBD</param>
-        protected virtual void SetSequenceNrParameter(long sequenceNr, DbCommand command) => AddParameter(command, "@SequenceNr", DbType.Int64, sequenceNr);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="command">TBD</param>
-        protected virtual void SetPersistenceIdParameter(string persistenceId, DbCommand command) => AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="snapshot">TBD</param>
-        /// <param name="command">TBD</param>
-        protected virtual void SetPayloadParameter(object snapshot, DbCommand command)
-        {
-            var snapshotType = snapshot.GetType();
-            var serializer = Serialization.FindSerializerForType(snapshotType);
-            // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
-            var binary = Akka.Serialization.Serialization.WithTransport(Serialization.System, () => serializer.ToBinary(snapshot));
-            AddParameter(command, "@Payload", DbType.Binary, binary);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="snapshot">TBD</param>
-        /// <param name="command">TBD</param>
-        protected virtual void SetManifestParameters(object snapshot, DbCommand command)
-        {
-            var snapshotType = snapshot.GetType();
-            var serializer = Serialization.FindSerializerForType(snapshotType);
-
-            string manifest = "";
-            if (serializer is SerializerWithStringManifest stringManifest)
-            {
-                manifest = stringManifest.Manifest(snapshot);
-            }
-            else
-            {
-                if (serializer.IncludeManifest)
-                {
-                    manifest = snapshotType.TypeQualifiedName();
-                }
-            }
-            AddParameter(command, "@Manifest", DbType.String, manifest);
-            AddParameter(command, "@SerializerId", DbType.Int32, serializer.Identifier);
-        }
-
-        /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
@@ -466,23 +434,20 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                     ? DeleteSnapshotSql + $" AND {Configuration.TimestampColumnName} <= @Timestamp"
                     : DeleteSnapshotSql;
 
-                using var command = GetCommand(connection, sql); 
+                using var command = GetCommand(connection, sql);
                 command.Transaction = tx;
 
                 SetPersistenceIdParameter(persistenceId, command);
                 SetSequenceNrParameter(sequenceNr, command);
 
-                if (timestamp.HasValue)
-                {
-                    SetTimestampParameter(timestamp.Value, command);
-                }
+                if (timestamp.HasValue) SetTimestampParameter(timestamp.Value, command);
 
                 await command.ExecuteNonQueryAsync(token);
             });
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
@@ -511,7 +476,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
@@ -540,7 +505,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
@@ -564,21 +529,19 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 SetSequenceNrParameter(maxSequenceNr, command);
                 SetTimestampParameter(maxTimestamp, command);
 
-                var commandBehavior = Configuration.UseSequentialAccess 
-                    ? CommandBehavior.SequentialAccess : CommandBehavior.Default;
+                var commandBehavior = Configuration.UseSequentialAccess
+                    ? CommandBehavior.SequentialAccess
+                    : CommandBehavior.Default;
 
                 using var reader = await command.ExecuteReaderAsync(commandBehavior, token);
-                if (await reader.ReadAsync(token))
-                {
-                    return ReadSnapshot(reader);
-                }
+                if (await reader.ReadAsync(token)) return ReadSnapshot(reader);
 
                 return null;
             });
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
@@ -595,7 +558,77 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
+        /// </summary>
+        /// <param name="timestamp">TBD</param>
+        /// <param name="command">TBD</param>
+        protected virtual void SetTimestampParameter(DateTime timestamp, DbCommand command)
+        {
+            AddParameter(command, "@Timestamp", DbType.DateTime2, timestamp);
+        }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        /// <param name="sequenceNr">TBD</param>
+        /// <param name="command">TBD</param>
+        protected virtual void SetSequenceNrParameter(long sequenceNr, DbCommand command)
+        {
+            AddParameter(command, "@SequenceNr", DbType.Int64, sequenceNr);
+        }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        /// <param name="persistenceId">TBD</param>
+        /// <param name="command">TBD</param>
+        protected virtual void SetPersistenceIdParameter(string persistenceId, DbCommand command)
+        {
+            AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
+        }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        /// <param name="snapshot">TBD</param>
+        /// <param name="command">TBD</param>
+        protected virtual void SetPayloadParameter(object snapshot, DbCommand command)
+        {
+            var snapshotType = snapshot.GetType();
+            var serializer = Serialization.FindSerializerForType(snapshotType);
+            // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
+            var binary =
+                Akka.Serialization.Serialization.WithTransport(Serialization.System,
+                    () => serializer.ToBinary(snapshot));
+            AddParameter(command, "@Payload", DbType.Binary, binary);
+        }
+
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        /// <param name="snapshot">TBD</param>
+        /// <param name="command">TBD</param>
+        protected virtual void SetManifestParameters(object snapshot, DbCommand command)
+        {
+            var snapshotType = snapshot.GetType();
+            var serializer = Serialization.FindSerializerForType(snapshotType);
+
+            var manifest = "";
+            if (serializer is SerializerWithStringManifest stringManifest)
+            {
+                manifest = stringManifest.Manifest(snapshot);
+            }
+            else
+            {
+                if (serializer.IncludeManifest) manifest = snapshotType.TypeQualifiedName();
+            }
+
+            AddParameter(command, "@Manifest", DbType.String, manifest);
+            AddParameter(command, "@SerializerId", DbType.Int32, serializer.Identifier);
+        }
+
+        /// <summary>
+        ///     TBD
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="sql">TBD</param>
@@ -609,7 +642,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="command">TBD</param>
         /// <param name="parameterName">TBD</param>
@@ -629,21 +662,23 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         /// <summary>
-        /// Override this to customize <see cref="DbParameter"/> creation used for building database queries
+        ///     Override this to customize <see cref="DbParameter" /> creation used for building database queries
         /// </summary>
-        /// <param name="command"><see cref="DbCommand"/> used to define a parameter in.</param>
+        /// <param name="command"><see cref="DbCommand" /> used to define a parameter in.</param>
         /// <param name="param">Parameter to customize</param>
-        protected virtual void PreAddParameterToCommand(DbCommand command, DbParameter param) { }
+        protected virtual void PreAddParameterToCommand(DbCommand command, DbParameter param)
+        {
+        }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <returns>TBD</returns>
         protected abstract DbCommand CreateCommand(DbConnection connection);
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="reader">TBD</param>
         /// <returns>TBD</returns>
@@ -660,7 +695,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         }
 
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
         /// <param name="reader">TBD</param>
         /// <returns>TBD</returns>
@@ -675,7 +710,8 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                 var type = Type.GetType(manifest, true);
                 // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
                 var serializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
-                obj = Akka.Serialization.Serialization.WithTransport(Serialization.System, () => serializer.FromBinary(binary, type));
+                obj = Akka.Serialization.Serialization.WithTransport(Serialization.System,
+                    () => serializer.FromBinary(binary, type));
             }
             else
             {

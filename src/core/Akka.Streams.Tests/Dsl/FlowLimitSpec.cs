@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="FlowLimitSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="FlowLimitSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Collections.Generic;
 using System.Linq;
@@ -13,85 +13,85 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class FlowLimitSpec : AkkaSpec
 {
-    public class FlowLimitSpec : AkkaSpec
+    public FlowLimitSpec(ITestOutputHelper helper) : base(helper)
     {
-        private ActorMaterializer Materializer { get; }
+        var settings = ActorMaterializerSettings.Create(Sys);
+        Materializer = ActorMaterializer.Create(Sys, settings);
+    }
 
-        public FlowLimitSpec(ITestOutputHelper helper) : base(helper)
-        {
-            var settings = ActorMaterializerSettings.Create(Sys);
-            Materializer = ActorMaterializer.Create(Sys, settings);
-        }
+    private ActorMaterializer Materializer { get; }
 
-        [Fact]
-        public void A_Limit_must_produce_empty_sequence_when_source_is_empty_and_n_is_equal_to_zero()
-        {
-            var input = Enumerable.Empty<int>().ToList();
-            var n = input.Count;
-            var future = Source.Empty<int>()
-                .Limit(n)
-                .Grouped(1000)
-                .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(), Materializer);
+    [Fact]
+    public void A_Limit_must_produce_empty_sequence_when_source_is_empty_and_n_is_equal_to_zero()
+    {
+        var input = Enumerable.Empty<int>().ToList();
+        var n = input.Count;
+        var future = Source.Empty<int>()
+            .Limit(n)
+            .Grouped(1000)
+            .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(), Materializer);
 
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeNull();
-        }
+        future.Wait(RemainingOrDefault).Should().BeTrue();
+        future.Result.Should().BeNull();
+    }
 
-        [Fact]
-        public void A_Limit_must_produce_output_that_is_identical_to_the_input_when_n_is_equal_to_input_length()
-        {
-            var input = Enumerable.Range(1, 6).ToList();
-            var n = input.Count;
-            var future = Source.From(input)
-                .Limit(n)
-                .Grouped(1000)
-                .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+    [Fact]
+    public void A_Limit_must_produce_output_that_is_identical_to_the_input_when_n_is_equal_to_input_length()
+    {
+        var input = Enumerable.Range(1, 6).ToList();
+        var n = input.Count;
+        var future = Source.From(input)
+            .Limit(n)
+            .Grouped(1000)
+            .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(input);
-        }
+        future.Wait(RemainingOrDefault).Should().BeTrue();
+        future.Result.Should().BeEquivalentTo(input);
+    }
 
-        [Fact]
-        public void A_Limit_must_produce_output_that_is_identical_to_the_input_when_n_greater_than_input_length()
-        {
-            var input = Enumerable.Range(1, 6).ToList();
-            var n = input.Count + 2; // n > input.Count
-            var future = Source.From(input)
-                .Limit(n)
-                .Grouped(1000)
-                .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+    [Fact]
+    public void A_Limit_must_produce_output_that_is_identical_to_the_input_when_n_greater_than_input_length()
+    {
+        var input = Enumerable.Range(1, 6).ToList();
+        var n = input.Count + 2; // n > input.Count
+        var future = Source.From(input)
+            .Limit(n)
+            .Grouped(1000)
+            .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(input);
-        }
+        future.Wait(RemainingOrDefault).Should().BeTrue();
+        future.Result.Should().BeEquivalentTo(input);
+    }
 
-        [Fact]
-        public void A_Limit_must_produce_n_messages_before_throwing_a_StreamLimitReachedException_when_n_lower_than_input_size()
-        {
-            //TODO: check if it actually produces n messages
-            var input = Enumerable.Range(1, 6).ToList();
-            var n = input.Count - 2; // n < input.Count
-            var future = Source.From(input)
-                .Limit(n)
-                .Grouped(1000)
-                .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+    [Fact]
+    public void
+        A_Limit_must_produce_n_messages_before_throwing_a_StreamLimitReachedException_when_n_lower_than_input_size()
+    {
+        //TODO: check if it actually produces n messages
+        var input = Enumerable.Range(1, 6).ToList();
+        var n = input.Count - 2; // n < input.Count
+        var future = Source.From(input)
+            .Limit(n)
+            .Grouped(1000)
+            .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Invoking(f => f.Wait(RemainingOrDefault)).Should().Throw<StreamLimitReachedException>();
-        }
+        future.Invoking(f => f.Wait(RemainingOrDefault)).Should().Throw<StreamLimitReachedException>();
+    }
 
-        [Fact]
-        public void A_Limit_must_throw_a_StreamLimitReachedException_when_n_lower_than_0()
-        {
-            var input = Enumerable.Range(1, 6).ToList();
-            var n = -1; // n < input.Count
-            var future = Source.From(input)
-                .Limit(n)
-                .Grouped(1000)
-                .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+    [Fact]
+    public void A_Limit_must_throw_a_StreamLimitReachedException_when_n_lower_than_0()
+    {
+        var input = Enumerable.Range(1, 6).ToList();
+        var n = -1; // n < input.Count
+        var future = Source.From(input)
+            .Limit(n)
+            .Grouped(1000)
+            .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Invoking(f => f.Wait(RemainingOrDefault)).Should().Throw<StreamLimitReachedException>();
-        }
+        future.Invoking(f => f.Wait(RemainingOrDefault)).Should().Throw<StreamLimitReachedException>();
     }
 }

@@ -1,18 +1,18 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ThreadPoolDispatcherRemoteMessagingThroughputSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ThreadPoolDispatcherRemoteMessagingThroughputSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Configuration;
 using Akka.Remote.Tests.Performance.Transports;
 
-namespace Akka.Remote.Tests.Performance
+namespace Akka.Remote.Tests.Performance;
+
+public class ThreadPoolDispatcherRemoteMessagingThroughputSpec : TestTransportRemoteMessagingThroughputSpec
 {
-    public class ThreadPoolDispatcherRemoteMessagingThroughputSpec : TestTransportRemoteMessagingThroughputSpec
-    {
-        public static Config ThreadPoolDispatcherConfig => ConfigurationFactory.ParseString(@"
+    public static Config ThreadPoolDispatcherConfig => ConfigurationFactory.ParseString(@"
             akka.remote.default-remote-dispatcher {
               type = Dispatcher
             }
@@ -22,9 +22,9 @@ namespace Akka.Remote.Tests.Performance
             }
         ");
 
-        public override Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port)
-        {
-            return ThreadPoolDispatcherConfig.WithFallback(base.CreateActorSystemConfig(actorSystemName, ipOrHostname, port));
-        }
+    public override Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port)
+    {
+        return ThreadPoolDispatcherConfig.WithFallback(
+            base.CreateActorSystemConfig(actorSystemName, ipOrHostname, port));
     }
 }

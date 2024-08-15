@@ -1,74 +1,77 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="NestedPersistsAsync.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="NestedPersistsAsync.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Persistence;
 
-namespace DocsExamples.Persistence.PersistentActor
+namespace DocsExamples.Persistence.PersistentActor;
+
+public static class NestedPersistsAsync
 {
-    public static class NestedPersistsAsync
+    public static void MainApp()
     {
-        #region NestedPersistsAsync1
-        public class MyPersistentActor : UntypedPersistentActor
-        {
-            public override string PersistenceId => "my-stable-persistence-id";
+        var system = ActorSystem.Create("NestedPersistsAsync");
+        var persistentActor = system.ActorOf<MyPersistentActor>();
 
-            protected override void OnRecover(object message)
-            {
-                // handle recovery here
-            }
+        #region NestedPersistsAsync2
 
-            protected override void OnCommand(object message)
-            {
-                if (message is string c)
-                {
-                    Sender.Tell(c);
+        persistentActor.Tell("a");
+        persistentActor.Tell("b");
 
-                    PersistAsync($"{message}-1-outer", outer1 =>
-                    {
-                        Sender.Tell(outer1, Self);
-                        PersistAsync($"{c}-1-inner", inner1 => Sender.Tell(inner1));
-                    });
+        // order of received messages:
+        // a
+        // b
+        // a-outer-1
+        // a-outer-2
+        // b-outer-1
+        // b-outer-2
+        // a-inner-1
+        // a-inner-2
+        // b-inner-1
+        // b-inner-2
 
-                    PersistAsync($"{message}-2-outer", outer2 =>
-                    {
-                        Sender.Tell(outer2, Self);
-                        PersistAsync($"{c}-2-inner", inner2 => Sender.Tell(inner2));
-                    });
-                }
-            }
-        }
+        // which can be seen as the following causal relationship:
+        // a -> a-outer-1 -> a-outer-2 -> a-inner-1 -> a-inner-2
+        // b -> b-outer-1 -> b-outer-2 -> b-inner-1 -> b-inner-2
+
         #endregion
+    }
 
-        public static void MainApp()
+    #region NestedPersistsAsync1
+
+    public class MyPersistentActor : UntypedPersistentActor
+    {
+        public override string PersistenceId => "my-stable-persistence-id";
+
+        protected override void OnRecover(object message)
         {
-            var system = ActorSystem.Create("NestedPersistsAsync");
-            var persistentActor = system.ActorOf<MyPersistentActor>();
+            // handle recovery here
+        }
 
-            #region NestedPersistsAsync2
-            persistentActor.Tell("a");
-            persistentActor.Tell("b");
+        protected override void OnCommand(object message)
+        {
+            if (message is string c)
+            {
+                Sender.Tell(c);
 
-            // order of received messages:
-            // a
-            // b
-            // a-outer-1
-            // a-outer-2
-            // b-outer-1
-            // b-outer-2
-            // a-inner-1
-            // a-inner-2
-            // b-inner-1
-            // b-inner-2
+                PersistAsync($"{message}-1-outer", outer1 =>
+                {
+                    Sender.Tell(outer1, Self);
+                    PersistAsync($"{c}-1-inner", inner1 => Sender.Tell(inner1));
+                });
 
-            // which can be seen as the following causal relationship:
-            // a -> a-outer-1 -> a-outer-2 -> a-inner-1 -> a-inner-2
-            // b -> b-outer-1 -> b-outer-2 -> b-inner-1 -> b-inner-2
-            #endregion
+                PersistAsync($"{message}-2-outer", outer2 =>
+                {
+                    Sender.Tell(outer2, Self);
+                    PersistAsync($"{c}-2-inner", inner2 => Sender.Tell(inner2));
+                });
+            }
         }
     }
+
+    #endregion
 }

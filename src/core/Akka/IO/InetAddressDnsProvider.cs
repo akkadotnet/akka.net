@@ -1,32 +1,31 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="InetAddressDnsProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="InetAddressDnsProvider.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 
-namespace Akka.IO
+namespace Akka.IO;
+
+/// <summary>
+///     TBD
+/// </summary>
+public class InetAddressDnsProvider : IDnsProvider
 {
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    public class InetAddressDnsProvider : IDnsProvider
-    {
-        private readonly DnsBase _cache = new SimpleDnsCache();
+    public DnsBase Cache { get; } = new SimpleDnsCache();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public DnsBase Cache { get { return _cache; }}
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Type ActorClass { get { return typeof (InetAddressDnsResolver); } }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Type ManagerClass { get { return typeof (SimpleDnsManager); } }
-    }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public Type ActorClass => typeof(InetAddressDnsResolver);
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public Type ManagerClass => typeof(SimpleDnsManager);
 }

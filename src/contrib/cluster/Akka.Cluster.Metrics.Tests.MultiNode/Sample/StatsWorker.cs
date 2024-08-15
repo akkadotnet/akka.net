@@ -1,36 +1,35 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="StatsWorker.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="StatsWorker.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Collections.Immutable;
 using Akka.Actor;
 
-namespace Akka.Cluster.Metrics.Tests.MultiNode
-{
-    public class StatsWorker : ReceiveActor
-    {
-        private IImmutableDictionary<string, int> _cache = ImmutableDictionary<string, int>.Empty;
+namespace Akka.Cluster.Metrics.Tests.MultiNode;
 
-        public StatsWorker()
+public class StatsWorker : ReceiveActor
+{
+    private IImmutableDictionary<string, int> _cache = ImmutableDictionary<string, int>.Empty;
+
+    public StatsWorker()
+    {
+        Receive<string>(word =>
         {
-            Receive<string>(word =>
+            int length;
+            if (_cache.TryGetValue(word, out var cachedLength))
             {
-                int length;
-                if (_cache.TryGetValue(word, out var cachedLength))
-                {
-                    length = cachedLength;
-                }
-                else
-                {
-                    length = word.Length;
-                    _cache = _cache.Add(word, length);
-                }
-                
-                Sender.Tell(length);
-            });
-        }
+                length = cachedLength;
+            }
+            else
+            {
+                length = word.Length;
+                _cache = _cache.Add(word, length);
+            }
+
+            Sender.Tell(length);
+        });
     }
 }

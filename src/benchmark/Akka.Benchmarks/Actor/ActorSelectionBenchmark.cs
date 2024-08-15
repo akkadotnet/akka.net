@@ -1,69 +1,64 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ActorSelectionBenchmark.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ActorSelectionBenchmark.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Net.NetworkInformation;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Engines;
 
-namespace Akka.Benchmarks.Actor
+namespace Akka.Benchmarks.Actor;
+
+[Config(typeof(MicroBenchmarkConfig))] // need memory diagnosis
+public class ActorSelectionBenchmark
 {
-    [Config(typeof(MicroBenchmarkConfig))] // need memory diagnosis
-    public class ActorSelectionBenchmark
+    // cached selection for measuring .Tell / .Ask performance
+    private ActorSelection _actorSelection;
+    private IActorRef _echo;
+    private ActorSystem _system;
+    private TimeSpan _timeout;
+
+    [Params(10000)]
+    public int Iterations { get; set; }
+
+    [GlobalSetup]
+    public void Setup()
     {
-        [Params(10000)]
-        public int Iterations { get; set; }
-        private TimeSpan _timeout;
-        private ActorSystem _system;
-        private IActorRef _echo;
+        _timeout = TimeSpan.FromMinutes(1);
+        _system = ActorSystem.Create("system");
+        _echo = _system.ActorOf(Props.Create(() => new EchoActor()), "echo");
+        _actorSelection = _system.ActorSelection("/user/echo");
+    }
 
-        // cached selection for measuring .Tell / .Ask performance
-        private ActorSelection _actorSelection;
+    [Benchmark]
+    public async Task RequestResponseActorSelection()
+    {
+        for (var i = 0; i < Iterations; i++)
+            await _actorSelection.Ask("foo", _timeout);
+    }
 
-        [GlobalSetup]
-        public void Setup()
+    [Benchmark]
+    public void CreateActorSelection()
+    {
+        for (var i = 0; i < Iterations; i++)
+            _system.ActorSelection("/user/echo");
+    }
+
+    [GlobalCleanup]
+    public void Cleanup()
+    {
+        _system.Terminate().Wait();
+    }
+
+    public class EchoActor : UntypedActor
+    {
+        protected override void OnReceive(object message)
         {
-            _timeout = TimeSpan.FromMinutes(1);
-            _system = ActorSystem.Create("system");
-            _echo = _system.ActorOf(Props.Create(() => new EchoActor()), "echo");
-            _actorSelection = _system.ActorSelection("/user/echo");
-        }
-
-        [Benchmark]
-        public async Task RequestResponseActorSelection()
-        {
-            for(var i = 0; i < Iterations; i++)
-                await _actorSelection.Ask("foo", _timeout);
-        }
-
-        [Benchmark]
-        public void CreateActorSelection()
-        {
-            for (var i = 0; i < Iterations; i++)
-                _system.ActorSelection("/user/echo");
-        }
-
-        [GlobalCleanup]
-        public void Cleanup()
-        {
-          _system.Terminate().Wait();
-        }
-
-        public class EchoActor : UntypedActor
-        {
-            protected override void OnReceive(object message)
-            {
-                Sender.Tell(message);
-            }
+            Sender.Tell(message);
         }
     }
 }

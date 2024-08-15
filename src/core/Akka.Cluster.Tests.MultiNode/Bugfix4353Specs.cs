@@ -1,60 +1,52 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Bugfix4353Specs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Bugfix4353Specs.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.Threading;
-
-using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
-using Akka.TestKit;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.Cluster.Tests.MultiNode;
+
+public class Bugfix4353Spec : MultiNodeClusterSpec
 {
-    public class Bugfix4353Spec : MultiNodeClusterSpec
+    protected RoleName First;
+    protected RoleName Second;
+    protected RoleName Third;
+
+    public Bugfix4353Spec() : this(new Bugfix4353SpecsConfig())
     {
-        protected RoleName First;
-        protected RoleName Second;
-        protected RoleName Third;
-
-        public Bugfix4353Spec() : this(new Bugfix4353SpecsConfig())
-        {
-        }
-
-        protected Bugfix4353Spec(Bugfix4353SpecsConfig config) : base(config, typeof(Bugfix4353Spec))
-        {
-            First = config.First;
-            Second = config.Second;
-            Third = config.Third;
-        }
-
-        [MultiNodeFact]
-        public void Bugfix4353Spec_Cluster_of_3_must_reach_convergence()
-        {
-            AwaitClusterUp(First, Second, Third);
-            EnterBarrier("after-1");
-        }
     }
 
-    public class Bugfix4353SpecsConfig : MultiNodeConfig
+    protected Bugfix4353Spec(Bugfix4353SpecsConfig config) : base(config, typeof(Bugfix4353Spec))
     {
-        private static readonly string[] Hocons =
-        {
-@"akka : {
+        First = config.First;
+        Second = config.Second;
+        Third = config.Third;
+    }
+
+    [MultiNodeFact]
+    public void Bugfix4353Spec_Cluster_of_3_must_reach_convergence()
+    {
+        AwaitClusterUp(First, Second, Third);
+        EnterBarrier("after-1");
+    }
+}
+
+public class Bugfix4353SpecsConfig : MultiNodeConfig
+{
+    private static readonly string[] Hocons =
+    {
+        @"akka : {
   actor : {
     provider : cluster 
   }
 }",
-
-@"akka : {
+        @"akka : {
   stdout-loglevel : INFO
   loglevel : INFO 
   log-config-on-start : on 
@@ -69,8 +61,7 @@ namespace Akka.Cluster.Tests.MultiNode
     } 
   } 
 }",
-
-@"akka : {
+        @"akka : {
   remote : {
     dot-netty : {
       tcp : {
@@ -83,8 +74,7 @@ namespace Akka.Cluster.Tests.MultiNode
     } 
   } 
 }",
-
-@"akka : {
+        @"akka : {
   cluster : {
     log-info : on
     seed-nodes : [
@@ -96,59 +86,56 @@ namespace Akka.Cluster.Tests.MultiNode
     role : { } 
   } 
 }"
-        };
+    };
 
-        public static Config Config
-        {
-            get
+    public readonly RoleName First;
+    public readonly RoleName Second;
+    public readonly RoleName Third;
+
+    public Bugfix4353SpecsConfig()
+    {
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
+
+        CommonConfig = MultiNodeClusterSpec.ClusterConfig(false);
+
+        NodeConfig(
+            new[] { First },
+            new[]
             {
-                var config = ConfigurationFactory.Empty;
-
-                foreach (var hocon in Hocons)
-                {
-                    config = config.WithFallback(ConfigurationFactory.ParseString(hocon));
-                }
-                return config;
-            }
-        }
-
-        public readonly RoleName First;
-        public readonly RoleName Second;
-        public readonly RoleName Third;
-
-        public Bugfix4353SpecsConfig()
-        {
-
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
-
-            CommonConfig = MultiNodeClusterSpec.ClusterConfig(false);
-
-            NodeConfig(
-                new[] { First },
-                new[] {
-                    ConfigurationFactory
+                ConfigurationFactory
                     .ParseString("akka.remote.dot-netty.tcp.port : 5001")
                     .WithFallback(Config)
-                });
+            });
 
-            NodeConfig(
-                new[] { Second },
-                new[] {
-                    ConfigurationFactory
+        NodeConfig(
+            new[] { Second },
+            new[]
+            {
+                ConfigurationFactory
                     .ParseString("akka.remote.dot-netty.tcp.port : 5002")
                     .WithFallback(Config)
-                });
+            });
 
-            NodeConfig(
-                new[] { Third },
-                new[] {
-                    ConfigurationFactory
+        NodeConfig(
+            new[] { Third },
+            new[]
+            {
+                ConfigurationFactory
                     .ParseString("akka.remote.dot-netty.tcp.port : 5003")
                     .WithFallback(Config)
-                });
+            });
+    }
 
+    public static Config Config
+    {
+        get
+        {
+            var config = ConfigurationFactory.Empty;
+
+            foreach (var hocon in Hocons) config = config.WithFallback(ConfigurationFactory.ParseString(hocon));
+            return config;
         }
     }
 }

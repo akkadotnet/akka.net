@@ -1,41 +1,40 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Iterator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Iterator.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Akka.Util.Internal.Collections
+namespace Akka.Util.Internal.Collections;
+
+internal struct Iterator<T>
 {
-    internal struct Iterator<T>
+    private readonly IList<T> _enumerator;
+    private int _index;
+
+    public Iterator(IEnumerable<T> enumerator)
     {
-        private readonly IList<T> _enumerator;
-        private int _index;
+        _index = 0;
+        _enumerator = enumerator.ToList();
+    }
 
-        public Iterator(IEnumerable<T> enumerator)
-        {
-            _index = 0;
-            _enumerator = enumerator.ToList();
-        }
+    public T Next()
+    {
+        return _index != _enumerator.Count
+            ? _enumerator[_index++]
+            : default;
+    }
 
-        public T Next()
-        {
-            return _index != _enumerator.Count 
-                ? _enumerator[_index++] 
-                : default;
-        }
+    public bool IsEmpty()
+    {
+        return _index == _enumerator.Count;
+    }
 
-        public bool IsEmpty()
-        {
-            return _index == _enumerator.Count;
-        }
-
-        public IEnumerable<T> ToVector()
-        {
-            return _enumerator.Skip(_index);
-        }
+    public IEnumerable<T> ToVector()
+    {
+        return _enumerator.Skip(_index);
     }
 }

@@ -1,57 +1,46 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="FsmActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="FsmActor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 
-namespace Akka.TestKit.Tests.TestActorRefTests
+namespace Akka.TestKit.Tests.TestActorRefTests;
+
+public enum TestFsmState
 {
-    public enum TestFsmState
-    {
-        First,
-        Last
-    }
+    First,
+    Last
+}
 
-    public class FsmActor : FSM<TestFsmState, string>
-    {
-        private readonly IActorRef _replyActor;
+public class FsmActor : FSM<TestFsmState, string>
+{
+    private readonly IActorRef _replyActor;
 
-        public FsmActor(IActorRef replyActor)
+    public FsmActor(IActorRef replyActor)
+    {
+        _replyActor = replyActor;
+
+        When(TestFsmState.First, e =>
         {
-            _replyActor = replyActor;
+            if (e.FsmEvent.Equals("check"))
+                _replyActor.Tell("first");
+            else if (e.FsmEvent.Equals("next")) return GoTo(TestFsmState.Last);
 
-            When(TestFsmState.First, e =>
-            {
-                if (e.FsmEvent.Equals("check"))
-                {
-                    _replyActor.Tell("first");
-                }
-                else if (e.FsmEvent.Equals("next"))
-                {
-                    return GoTo(TestFsmState.Last);
-                }
+            return Stay();
+        });
 
-                return Stay();
-            });
+        When(TestFsmState.Last, e =>
+        {
+            if (e.FsmEvent.Equals("check"))
+                _replyActor.Tell("last");
+            else if (e.FsmEvent.Equals("next")) return GoTo(TestFsmState.First);
 
-            When(TestFsmState.Last, e =>
-            {
-                if (e.FsmEvent.Equals("check"))
-                {
-                    _replyActor.Tell("last");
-                }
-                else if (e.FsmEvent.Equals("next"))
-                {
-                    return GoTo(TestFsmState.First);
-                }
+            return Stay();
+        });
 
-                return Stay();
-            });
-
-            StartWith(TestFsmState.First, "foo");
-        }
+        StartWith(TestFsmState.First, "foo");
     }
 }

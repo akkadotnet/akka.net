@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ClusterShardingLeavingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ClusterShardingLeavingSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -13,279 +13,287 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
-using Akka.Util;
 using FluentAssertions;
 
-namespace Akka.Cluster.Sharding.Tests
-{
-    public class ClusterShardingLeavingSpecConfig : MultiNodeClusterShardingConfig
-    {
-        public RoleName First { get; }
-        public RoleName Second { get; }
-        public RoleName Third { get; }
-        public RoleName Fourth { get; }
-        public RoleName Fifth { get; }
+namespace Akka.Cluster.Sharding.Tests;
 
-        public ClusterShardingLeavingSpecConfig(StateStoreMode mode)
-            : base(mode: mode, loglevel: "DEBUG", additionalConfig: @"
+public class ClusterShardingLeavingSpecConfig : MultiNodeClusterShardingConfig
+{
+    public ClusterShardingLeavingSpecConfig(StateStoreMode mode)
+        : base(mode, loglevel: "DEBUG", additionalConfig: @"
             akka.cluster.sharding.verbose-debug-logging = on
             akka.cluster.sharding.rebalance-interval = 1s # make rebalancing more likely to happen to test for https://github.com/akka/akka/issues/29093
             akka.cluster.sharding.distributed-data.majority-min-cap = 1
             akka.cluster.sharding.coordinator-state.write-majority-plus = 1
             akka.cluster.sharding.coordinator-state.read-majority-plus = 1
             ")
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
-            Fourth = Role("fourth");
-            Fifth = Role("fifth");
-        }
+    {
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
+        Fourth = Role("fourth");
+        Fifth = Role("fifth");
     }
 
-    public class PersistentClusterShardingLeavingSpecConfig : ClusterShardingLeavingSpecConfig
+    public RoleName First { get; }
+    public RoleName Second { get; }
+    public RoleName Third { get; }
+    public RoleName Fourth { get; }
+    public RoleName Fifth { get; }
+}
+
+public class PersistentClusterShardingLeavingSpecConfig : ClusterShardingLeavingSpecConfig
+{
+    public PersistentClusterShardingLeavingSpecConfig()
+        : base(StateStoreMode.Persistence)
     {
-        public PersistentClusterShardingLeavingSpecConfig()
-            : base(StateStoreMode.Persistence)
-        {
-        }
+    }
+}
+
+public class DDataClusterShardingLeavingSpecConfig : ClusterShardingLeavingSpecConfig
+{
+    public DDataClusterShardingLeavingSpecConfig()
+        : base(StateStoreMode.DData)
+    {
+    }
+}
+
+public class PersistentClusterShardingLeavingSpec : ClusterShardingLeavingSpec
+{
+    public PersistentClusterShardingLeavingSpec()
+        : base(new PersistentClusterShardingLeavingSpecConfig(), typeof(PersistentClusterShardingLeavingSpec))
+    {
+    }
+}
+
+public class DDataClusterShardingLeavingSpec : ClusterShardingLeavingSpec
+{
+    public DDataClusterShardingLeavingSpec()
+        : base(new DDataClusterShardingLeavingSpecConfig(), typeof(DDataClusterShardingLeavingSpec))
+    {
+    }
+}
+
+public abstract class ClusterShardingLeavingSpec : MultiNodeClusterShardingSpec<ClusterShardingLeavingSpecConfig>
+{
+    [MultiNodeFact]
+    public void ClusterSharding_with_leaving_member_specs()
+    {
+        Cluster_sharding_with_leaving_member_must_join_cluster();
+        Cluster_sharding_with_leaving_member_must_initialize_shards();
+        Cluster_sharding_with_leaving_member_must_recover_after_leaving_coordinator_node();
     }
 
-    public class DDataClusterShardingLeavingSpecConfig : ClusterShardingLeavingSpecConfig
+    private void Cluster_sharding_with_leaving_member_must_join_cluster()
     {
-        public DDataClusterShardingLeavingSpecConfig()
-            : base(StateStoreMode.DData)
+        Within(TimeSpan.FromSeconds(20), () =>
         {
-        }
-    }
+            StartPersistenceIfNeeded(Config.First, Roles.ToArray());
 
-    public class PersistentClusterShardingLeavingSpec : ClusterShardingLeavingSpec
-    {
-        public PersistentClusterShardingLeavingSpec()
-            : base(new PersistentClusterShardingLeavingSpecConfig(), typeof(PersistentClusterShardingLeavingSpec))
-        {
-        }
-    }
+            Join(Config.First, Config.First, StartSharding);
+            Join(Config.Second, Config.First, StartSharding, false);
+            Join(Config.Third, Config.First, StartSharding, false);
+            Join(Config.Fourth, Config.First, StartSharding, false);
+            Join(Config.Fifth, Config.First, StartSharding, false);
 
-    public class DDataClusterShardingLeavingSpec : ClusterShardingLeavingSpec
-    {
-        public DDataClusterShardingLeavingSpec()
-            : base(new DDataClusterShardingLeavingSpecConfig(), typeof(DDataClusterShardingLeavingSpec))
-        {
-        }
-    }
-
-    public abstract class ClusterShardingLeavingSpec : MultiNodeClusterShardingSpec<ClusterShardingLeavingSpecConfig>
-    {
-        #region setup
-
-        [Serializable]
-        internal sealed class Ping
-        {
-            public readonly string Id;
-
-            public Ping(string id)
+            // all Up, everywhere before continuing
+            AwaitAssert(() =>
             {
-                Id = id;
-            }
-        }
+                Cluster.State.Members.Count.Should().Be(Roles.Count);
+                Cluster.State.Members.Should().OnlyContain(m => m.Status == MemberStatus.Up);
+            });
 
-        [Serializable]
-        internal sealed class GetLocations
-        {
-            public static readonly GetLocations Instance = new();
-
-            private GetLocations()
+            RunOn(() =>
             {
-            }
-        }
-
-        [Serializable]
-        internal sealed class Locations
-        {
-            public readonly IImmutableDictionary<string, IActorRef> LocationMap;
-            public Locations(IImmutableDictionary<string, IActorRef> locationMap)
-            {
-                LocationMap = locationMap;
-            }
-        }
-
-        internal class Entity : ReceiveActor
-        {
-            public Entity()
-            {
-                Receive<Ping>(_ => Sender.Tell(Self));
-            }
-        }
-
-        internal class ShardLocations : ReceiveActor
-        {
-            private Locations _locations = null;
-
-            public ShardLocations()
-            {
-                Receive<GetLocations>(_ => Sender.Tell(_locations));
-                Receive<Locations>(l => _locations = l);
-            }
-        }
-
-        private sealed class MessageExtractor: IMessageExtractor
-        {
-            public string EntityId(object message)
-                => message switch
-                {
-                    Ping p => p.Id,
-                    _ => null
-                };
-
-            public object EntityMessage(object message)
-                => message;
-
-            public string ShardId(object message)
-                => message switch
-                {
-                    Ping p => p.Id[0].ToString(),
-                    _ => null
-                };
-
-            public string ShardId(string entityId, object messageHint = null)
-                => entityId[0].ToString();
-        }
-
-        private readonly Lazy<IActorRef> _region;
-
-        protected ClusterShardingLeavingSpec(ClusterShardingLeavingSpecConfig config, Type type)
-            : base(config, type)
-        {
-            _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
-        }
-
-        private void StartSharding()
-        {
-            StartSharding(
-                Sys,
-                typeName: "Entity",
-                entityProps: Props.Create(() => new Entity()),
-                messageExtractor: new MessageExtractor());
-        }
-
-        #endregion
-
-        [MultiNodeFact]
-        public void ClusterSharding_with_leaving_member_specs()
-        {
-            Cluster_sharding_with_leaving_member_must_join_cluster();
-            Cluster_sharding_with_leaving_member_must_initialize_shards();
-            Cluster_sharding_with_leaving_member_must_recover_after_leaving_coordinator_node();
-        }
-
-        private void Cluster_sharding_with_leaving_member_must_join_cluster()
-        {
-            Within(TimeSpan.FromSeconds(20), () =>
-            {
-                StartPersistenceIfNeeded(startOn: Config.First, Roles.ToArray());
-
-                Join(Config.First, Config.First, onJoinedRunOnFrom: StartSharding);
-                Join(Config.Second, Config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
-                Join(Config.Third, Config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
-                Join(Config.Fourth, Config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
-                Join(Config.Fifth, Config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
-
-                // all Up, everywhere before continuing
+                // wait for all regions registered
                 AwaitAssert(() =>
                 {
-                    Cluster.State.Members.Count.Should().Be(Roles.Count);
-                    Cluster.State.Members.Should().OnlyContain(m => m.Status == MemberStatus.Up);
+                    _region.Value.Tell(GetCurrentRegions.Instance);
+                    ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(5);
                 });
-
-                RunOn(() =>
-                {
-                    // wait for all regions registered
-                    AwaitAssert(() =>
-                    {
-                        _region.Value.Tell(GetCurrentRegions.Instance);
-                        ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(5);
-                    });
-                }, Config.First);
-
-                EnterBarrier("after-2");
-            });
-        }
-
-        private void Cluster_sharding_with_leaving_member_must_initialize_shards()
-        {
-            RunOn(() =>
-            {
-                var shardLocations = Sys.ActorOf(Props.Create<ShardLocations>(), "shardLocations");
-                var locations = Enumerable.Range(1, 10).Select(n =>
-                {
-                    var id = n.ToString();
-                    _region.Value.Tell(new Ping(id));
-                    return new KeyValuePair<string, IActorRef>(id, ExpectMsg<IActorRef>());
-                }).ToImmutableDictionary();
-
-                shardLocations.Tell(new Locations(locations));
-                Sys.Log.Debug("Original locations: {0}", string.Join(",", locations.Select(x => $"{x.Key}->{x.Value}")));
             }, Config.First);
-            EnterBarrier("after-3");
-        }
 
-        private void Cluster_sharding_with_leaving_member_must_recover_after_leaving_coordinator_node()
+            EnterBarrier("after-2");
+        });
+    }
+
+    private void Cluster_sharding_with_leaving_member_must_initialize_shards()
+    {
+        RunOn(() =>
         {
-            Sys.ActorSelection(Node(Config.First) / "user" / "shardLocations").Tell(GetLocations.Instance);
-            var originalLocations = ExpectMsg<Locations>().LocationMap;
-
-            var numberOfNodesLeaving = 2;
-            var leavingRoles = Roles.Take(numberOfNodesLeaving).ToArray();
-            var leavingNodes = leavingRoles.Select(r => GetAddress(r)).ToImmutableHashSet();
-            var remainingRoles = Roles.Skip(numberOfNodesLeaving).ToArray();
-
-            RunOn(() =>
+            var shardLocations = Sys.ActorOf(Props.Create<ShardLocations>(), "shardLocations");
+            var locations = Enumerable.Range(1, 10).Select(n =>
             {
-                foreach (var a in leavingNodes)
-                    Cluster.Leave(a);
-            }, Roles.Last());
+                var id = n.ToString();
+                _region.Value.Tell(new Ping(id));
+                return new KeyValuePair<string, IActorRef>(id, ExpectMsg<IActorRef>());
+            }).ToImmutableDictionary();
 
-            RunOn(() =>
-            {
-                var region = _region.Value;
-                Watch(region);
-                ExpectTerminated(region, TimeSpan.FromSeconds(15));
-            }, Config.First);
-            EnterBarrier("stopped");
-            
-            // more stress by not having the barrier here
+            shardLocations.Tell(new Locations(locations));
+            Sys.Log.Debug("Original locations: {0}", string.Join(",", locations.Select(x => $"{x.Key}->{x.Value}")));
+        }, Config.First);
+        EnterBarrier("after-3");
+    }
 
-            RunOn(() =>
+    private void Cluster_sharding_with_leaving_member_must_recover_after_leaving_coordinator_node()
+    {
+        Sys.ActorSelection(Node(Config.First) / "user" / "shardLocations").Tell(GetLocations.Instance);
+        var originalLocations = ExpectMsg<Locations>().LocationMap;
+
+        var numberOfNodesLeaving = 2;
+        var leavingRoles = Roles.Take(numberOfNodesLeaving).ToArray();
+        var leavingNodes = leavingRoles.Select(r => GetAddress(r)).ToImmutableHashSet();
+        var remainingRoles = Roles.Skip(numberOfNodesLeaving).ToArray();
+
+        RunOn(() =>
+        {
+            foreach (var a in leavingNodes)
+                Cluster.Leave(a);
+        }, Roles.Last());
+
+        RunOn(() =>
+        {
+            var region = _region.Value;
+            Watch(region);
+            ExpectTerminated(region, TimeSpan.FromSeconds(15));
+        }, Config.First);
+        EnterBarrier("stopped");
+
+        // more stress by not having the barrier here
+
+        RunOn(() =>
+        {
+            Within(TimeSpan.FromSeconds(15), () =>
             {
-                Within(TimeSpan.FromSeconds(15), () =>
+                AwaitAssert(() =>
                 {
-                    AwaitAssert(() =>
+                    //var region = _region.Value;
+                    var probe = CreateTestProbe();
+                    foreach (var kv in originalLocations)
                     {
-                        //var region = _region.Value;
-                        var probe = CreateTestProbe();
-                        foreach (var kv in originalLocations)
+                        var id = kv.Key;
+                        var r = kv.Value;
+
+                        _region.Value.Tell(new Ping(id), probe.Ref);
+
+                        if (leavingNodes.Contains(r.Path.Address))
                         {
-                            var id = kv.Key;
-                            var r = kv.Value;
-
-                            _region.Value.Tell(new Ping(id), probe.Ref);
-
-                            if (leavingNodes.Contains(r.Path.Address))
-                            {
-                                var newRef = probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(1));
-                                // have to log before we assert
-                                Sys.Log.Debug("Moved [{0}] from [{1}] to [{2}]", id, r, newRef);
-                                newRef.Should().NotBe(r);
-
-                            }
-                            else
-                                probe.ExpectMsg(r, TimeSpan.FromSeconds(1)); // should not move
+                            var newRef = probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(1));
+                            // have to log before we assert
+                            Sys.Log.Debug("Moved [{0}] from [{1}] to [{2}]", id, r, newRef);
+                            newRef.Should().NotBe(r);
                         }
-                    });
+                        else
+                        {
+                            probe.ExpectMsg(r, TimeSpan.FromSeconds(1)); // should not move
+                        }
+                    }
                 });
-            }, remainingRoles);
-            EnterBarrier("after-4");
+            });
+        }, remainingRoles);
+        EnterBarrier("after-4");
+    }
+
+    #region setup
+
+    [Serializable]
+    internal sealed class Ping
+    {
+        public readonly string Id;
+
+        public Ping(string id)
+        {
+            Id = id;
         }
     }
+
+    [Serializable]
+    internal sealed class GetLocations
+    {
+        public static readonly GetLocations Instance = new();
+
+        private GetLocations()
+        {
+        }
+    }
+
+    [Serializable]
+    internal sealed class Locations
+    {
+        public readonly IImmutableDictionary<string, IActorRef> LocationMap;
+
+        public Locations(IImmutableDictionary<string, IActorRef> locationMap)
+        {
+            LocationMap = locationMap;
+        }
+    }
+
+    internal class Entity : ReceiveActor
+    {
+        public Entity()
+        {
+            Receive<Ping>(_ => Sender.Tell(Self));
+        }
+    }
+
+    internal class ShardLocations : ReceiveActor
+    {
+        private Locations _locations;
+
+        public ShardLocations()
+        {
+            Receive<GetLocations>(_ => Sender.Tell(_locations));
+            Receive<Locations>(l => _locations = l);
+        }
+    }
+
+    private sealed class MessageExtractor : IMessageExtractor
+    {
+        public string EntityId(object message)
+        {
+            return message switch
+            {
+                Ping p => p.Id,
+                _ => null
+            };
+        }
+
+        public object EntityMessage(object message)
+        {
+            return message;
+        }
+
+        public string ShardId(object message)
+        {
+            return message switch
+            {
+                Ping p => p.Id[0].ToString(),
+                _ => null
+            };
+        }
+
+        public string ShardId(string entityId, object messageHint = null)
+        {
+            return entityId[0].ToString();
+        }
+    }
+
+    private readonly Lazy<IActorRef> _region;
+
+    protected ClusterShardingLeavingSpec(ClusterShardingLeavingSpecConfig config, Type type)
+        : base(config, type)
+    {
+        _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
+    }
+
+    private void StartSharding()
+    {
+        StartSharding(
+            Sys,
+            "Entity",
+            entityProps: Props.Create(() => new Entity()),
+            messageExtractor: new MessageExtractor());
+    }
+
+    #endregion
 }

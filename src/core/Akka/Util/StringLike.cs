@@ -1,70 +1,67 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="StringLike.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="StringLike.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
+using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Akka.Util
+namespace Akka.Util;
+
+/// <summary>
+///     TBD
+/// </summary>
+public static class WildcardMatch
 {
-    using System.Text;
+    #region Public Methods
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    public static class WildcardMatch
+    /// <param name="text">TBD</param>
+    /// <param name="pattern">TBD</param>
+    /// <param name="caseSensitive">TBD</param>
+    /// <returns>TBD</returns>
+    public static bool Like(this string text, string pattern, bool caseSensitive = false)
     {
-        #region Public Methods
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="text">TBD</param>
-        /// <param name="pattern">TBD</param>
-        /// <param name="caseSensitive">TBD</param>
-        /// <returns>TBD</returns>
-        public static bool Like(this string text, string pattern, bool caseSensitive = false)
+        var sb = new StringBuilder("^");
+        for (var index = 0; index < pattern.Length; index++)
         {
-            var sb = new StringBuilder("^");
-            for (int index = 0; index < pattern.Length; index++)
+            var c = pattern[index];
+            switch (c)
             {
-                var c = pattern[index];
-                switch (c)
-                {
-                    case '.':
-                        sb.Append(@"\.");
-                        break;
-                    case '?':
-                        sb.Append('.');
-                        break;
-                    case '*':
-                        sb.Append(".*?");
-                        break;
-                    case '\\':
-                        sb.Append(@"\\");
-                        break;
-                    case '$':
-                        sb.Append(@"\$");
-                        break;
-                    case '^':
-                        sb.Append(@"\^");
-                        break;
-                    case ' ':
-                        sb.Append(@"\s");
-                        break;
-                    default:
-                        sb.Append(c);
-                        break;
-                }
+                case '.':
+                    sb.Append(@"\.");
+                    break;
+                case '?':
+                    sb.Append('.');
+                    break;
+                case '*':
+                    sb.Append(".*?");
+                    break;
+                case '\\':
+                    sb.Append(@"\\");
+                    break;
+                case '$':
+                    sb.Append(@"\$");
+                    break;
+                case '^':
+                    sb.Append(@"\^");
+                    break;
+                case ' ':
+                    sb.Append(@"\s");
+                    break;
+                default:
+                    sb.Append(c);
+                    break;
             }
-
-            pattern = sb.Append('$').ToString();
-            return new Regex(pattern, caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase).IsMatch(text);
         }
 
-        #endregion
+        pattern = sb.Append('$').ToString();
+        return new Regex(pattern, caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase).IsMatch(text);
     }
-}
 
+    #endregion
+}

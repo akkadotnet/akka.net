@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------
-// <copyright file="DeliveryDocSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+//  <copyright file="DeliveryDocSpecs.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -39,21 +39,21 @@ public class DeliveryDocSpecs : TestKit
     public async Task ProducerController_and_ConsumerController_should_send_messages()
     {
         // <ProducerRegistration>
-        IActorRef producer = Sys.ActorOf(Props.Create(() => new ProducerActor()), "producer");
-        IActorRef producerController = Sys.ActorOf(ProducerController.Create<ICustomerProtocol>(Sys,
-            producerId: "producerController",
-            durableProducerQueue: Option<Props>.None));
+        var producer = Sys.ActorOf(Props.Create(() => new ProducerActor()), "producer");
+        var producerController = Sys.ActorOf(ProducerController.Create<ICustomerProtocol>(Sys,
+            "producerController",
+            Option<Props>.None));
         producerController.Tell(new ProducerController.Start<ICustomerProtocol>(producer));
         // </ProducerRegistration>
 
 
         // <ConsumerRegistration>
-        TestProbe endProbe = CreateTestProbe();
+        var endProbe = CreateTestProbe();
 
         // stop after 3 messages
-        IActorRef consumer = Sys.ActorOf(
+        var consumer = Sys.ActorOf(
             Props.Create(() => new CustomerActor("customer1", endProbe, 3)), "consumer1");
-        IActorRef consumerController =
+        var consumerController =
             Sys.ActorOf(ConsumerController.Create<ICustomerProtocol>(Sys, Option<IActorRef>.None),
                 "consumerController");
 
@@ -69,26 +69,26 @@ public class DeliveryDocSpecs : TestKit
     public async Task ProducerController_and_ConsumerController_should_send_messages_with_Chunking()
     {
         // <ChunkedProducerRegistration>
-        IActorRef producer = Sys.ActorOf(Props.Create(() => new ProducerActor()), "producer");
+        var producer = Sys.ActorOf(Props.Create(() => new ProducerActor()), "producer");
 
-        ProducerController.Settings settings = ProducerController.Settings.Create(Sys) with
+        var settings = ProducerController.Settings.Create(Sys) with
         {
             ChunkLargeMessagesBytes = 10 // chunk messages into 10b segments
         };
-        IActorRef producerController = Sys.ActorOf(ProducerController.Create<ICustomerProtocol>(Sys,
-            producerId: "producerController",
-            durableProducerQueue: Option<Props>.None,
-            settings: settings));
+        var producerController = Sys.ActorOf(ProducerController.Create<ICustomerProtocol>(Sys,
+            "producerController",
+            Option<Props>.None,
+            settings));
         producerController.Tell(new ProducerController.Start<ICustomerProtocol>(producer));
         // </ChunkedProducerRegistration>
 
 
-        TestProbe endProbe = CreateTestProbe();
+        var endProbe = CreateTestProbe();
 
         // stop after 3 messages
-        IActorRef consumer = Sys.ActorOf(
+        var consumer = Sys.ActorOf(
             Props.Create(() => new CustomerActor("customer1", endProbe, 3)), "consumer1");
-        IActorRef consumerController =
+        var consumerController =
             Sys.ActorOf(ConsumerController.Create<ICustomerProtocol>(Sys, Option<IActorRef>.None),
                 "consumerController");
 
@@ -103,46 +103,46 @@ public class DeliveryDocSpecs : TestKit
     public async Task ProducerController_and_ConsumerController_should_send_messages_with_EventSourcedProducerQueue()
     {
         // <DurableQueueProducer>
-        TestProbe producerProbe = CreateTestProbe();
+        var producerProbe = CreateTestProbe();
 
-        Props eventSourcedProducerQueue =
-            EventSourcedProducerQueue.Create<ICustomerProtocol>(persistentId: "durableQueue-1", Sys);
-        IActorRef producerController = Sys.ActorOf(ProducerController.Create<ICustomerProtocol>(Sys,
-            producerId: "producerController",
-            durableProducerQueue: eventSourcedProducerQueue));
+        var eventSourcedProducerQueue =
+            EventSourcedProducerQueue.Create<ICustomerProtocol>("durableQueue-1", Sys);
+        var producerController = Sys.ActorOf(ProducerController.Create<ICustomerProtocol>(Sys,
+            "producerController",
+            eventSourcedProducerQueue));
         producerController.Tell(new ProducerController.Start<ICustomerProtocol>(producerProbe.Ref));
         // </DurableQueueProducer>
 
 
-        TestProbe endProbe = CreateTestProbe();
+        var endProbe = CreateTestProbe();
 
         // stop after 3 messages
-        IActorRef consumer = Sys.ActorOf(
+        var consumer = Sys.ActorOf(
             Props.Create(() => new CustomerActor("customer1", endProbe, 3)), "consumer1");
-        IActorRef consumerController =
+        var consumerController =
             Sys.ActorOf(ConsumerController.Create<ICustomerProtocol>(Sys, Option<IActorRef>.None),
                 "consumerController");
 
         consumerController.Tell(new ConsumerController.Start<ICustomerProtocol>(consumer));
         consumerController.Tell(
             new ConsumerController.RegisterToProducerController<ICustomerProtocol>(producerController));
-        
+
         // <ConfirmableMessages>
-        ProducerController.RequestNext<ICustomerProtocol> request1 = (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<ICustomerProtocol>>());
-        
+        var request1 = await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<ICustomerProtocol>>();
+
         // confirm that message was stored in durable queue (so we know it will be redelivered if needed)
-        long seqNo1 = await request1.AskNextTo(new PurchaseItem("Burger"));
+        var seqNo1 = await request1.AskNextTo(new PurchaseItem("Burger"));
         // </ConfirmableMessages>
-        
-        ProducerController.RequestNext<ICustomerProtocol> request2 = (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<ICustomerProtocol>>());
-        
+
+        var request2 = await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<ICustomerProtocol>>();
+
         // confirm that message was stored in durable queue (so we know it will be redelivered if needed)
-        long seqNo2 = await request2.AskNextTo(new PurchaseItem("Burger"));
-        
-        ProducerController.RequestNext<ICustomerProtocol> request3 = (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<ICustomerProtocol>>());
-        
+        var seqNo2 = await request2.AskNextTo(new PurchaseItem("Burger"));
+
+        var request3 = await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<ICustomerProtocol>>();
+
         // confirm that message was stored in durable queue (so we know it will be redelivered if needed)
-        long seqNo3 = await request1.AskNextTo(new PurchaseItem("Burger"));
+        var seqNo3 = await request1.AskNextTo(new PurchaseItem("Burger"));
 
         await endProbe.ExpectMsgAsync<List<string>>(TimeSpan.FromSeconds(10));
     }
@@ -158,11 +158,11 @@ public class DeliveryDocSpecs : TestKit
     // <Consumer>
     public sealed class CustomerActor : UntypedActor
     {
-        private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly string _customerId;
-        private readonly List<string> _purchasedItems = new();
-        private TestProbe _endProbe;
         private readonly int _endMessages;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly List<string> _purchasedItems = new();
+        private readonly TestProbe _endProbe;
 
         public CustomerActor(string customerId, TestProbe endProbe, int endMessages)
         {
@@ -201,21 +201,14 @@ public class DeliveryDocSpecs : TestKit
     // <Producer>
     public sealed class ProducerActor : UntypedActor, IWithTimers, IWithStash
     {
-        private readonly ILoggingAdapter _log = Context.GetLogger();
-
         private static readonly IReadOnlyList<string> Items = new[]
         {
             "cheeseburger", "hamburger", "pizza", "cola", "fries", "ice cream"
         };
 
-        private class Tick
-        {
-            private Tick()
-            {
-            }
-
-            public static Tick Instance { get; } = new();
-        }
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+        public IStash Stash { get; set; }
+        public ITimerScheduler Timers { get; set; }
 
         protected override void PreStart()
         {
@@ -271,9 +264,19 @@ public class DeliveryDocSpecs : TestKit
             };
         }
 
-        private string GetRandomItem() => Items[ThreadLocalRandom.Current.Next(Items.Count)];
-        public ITimerScheduler Timers { get; set; }
-        public IStash Stash { get; set; }
+        private string GetRandomItem()
+        {
+            return Items[ThreadLocalRandom.Current.Next(Items.Count)];
+        }
+
+        private class Tick
+        {
+            private Tick()
+            {
+            }
+
+            public static Tick Instance { get; } = new();
+        }
     }
     // </Producer>
 }

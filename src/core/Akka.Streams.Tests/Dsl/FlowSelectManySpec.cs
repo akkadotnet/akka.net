@@ -1,12 +1,11 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="FlowSelectManySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="FlowSelectManySpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,82 +16,79 @@ using Akka.Util;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class FlowSelectManySpec : ScriptedTest
 {
-    public class FlowSelectManySpec : ScriptedTest
+    public FlowSelectManySpec(ITestOutputHelper output) : base(output)
     {
-        public ActorMaterializer Materializer { get; }
+        Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
+        Materializer = Sys.Materializer();
+    }
 
-        public ActorMaterializerSettings Settings { get; }
+    public ActorMaterializer Materializer { get; }
 
-        public FlowSelectManySpec(ITestOutputHelper output) : base(output)
+    public ActorMaterializerSettings Settings { get; }
+
+    [Fact]
+    public async Task SelectMany_should_map_and_concat()
+    {
+        var script = Script.Create(
+            (new[] { 0 }, Array.Empty<int>()),
+            (new[] { 1 }, new[] { 1 }),
+            (new[] { 2 }, new[] { 2, 2 }),
+            (new[] { 3 }, new[] { 3, 3, 3 }),
+            (new[] { 2 }, new[] { 2, 2 }),
+            (new[] { 1 }, new[] { 1 }));
+
+        var random = ThreadLocalRandom.Current.Next(1, 10);
+        for (var i = 0; i < random; i++)
+            await RunScriptAsync(script, Settings, a => a.SelectMany(x => Enumerable.Range(1, x).Select(_ => x)));
+    }
+
+    [Fact]
+    public void SelectMany_should_map_and_concat_grouping_with_slow_downstream()
+    {
+        var subscriber = this.CreateManualSubscriberProbe<int>();
+        var input = new[]
         {
-            Settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(initialSize: 2, maxSize: 16);
-            Materializer = Sys.Materializer();
-        }
+            new[] { 1, 2, 3, 4, 5 }, new[] { 6, 7, 8, 9, 10 }, new[] { 11, 12, 13, 14, 15 },
+            new[] { 16, 17, 18, 19, 20 }
+        };
 
-        [Fact]
-        public async Task SelectMany_should_map_and_concat()
-        {
-            var script = Script.Create(
-                (new[] { 0 }, Array.Empty<int>()),
-                (new[] { 1 }, new[] { 1 }),
-                (new[] { 2 }, new[] { 2, 2 }),
-                (new[] { 3 }, new[] { 3, 3, 3 }),
-                (new[] { 2 }, new[] { 2, 2 }),
-                (new[] { 1 }, new[] { 1 }));
-
-            var random = ThreadLocalRandom.Current.Next(1, 10);
-            for (int i = 0; i < random; i++)
-                await RunScriptAsync(script, Settings, a => a.SelectMany(x => Enumerable.Range(1, x).Select(_ => x)));
-        }
-
-        [Fact]
-        public void SelectMany_should_map_and_concat_grouping_with_slow_downstream()
-        {
-            var subscriber = this.CreateManualSubscriberProbe<int>();
-            var input = new[]
+        Source
+            .From(input)
+            .SelectMany(x => x)
+            .Select(x =>
             {
-                new[] {1, 2, 3, 4, 5},
-                new[] {6, 7, 8, 9, 10},
-                new[] {11, 12, 13, 14, 15},
-                new[] {16, 17, 18, 19, 20},
-            };
+                Thread.Sleep(10);
+                return x;
+            })
+            .RunWith(Sink.FromSubscriber(subscriber), Materializer);
 
-            Source
-                .From(input)
-                .SelectMany(x => x)
-                .Select(x =>
-                {
-                    Thread.Sleep(10);
-                    return x;
-                })
-                .RunWith(Sink.FromSubscriber(subscriber), Materializer);
+        var subscription = subscriber.ExpectSubscription();
+        subscription.Request(100);
+        for (var i = 1; i <= 20; i++)
+            subscriber.ExpectNext(i);
 
-            var subscription = subscriber.ExpectSubscription();
-            subscription.Request(100);
-            for (int i = 1; i <= 20; i++)
-                subscriber.ExpectNext(i);
+        subscriber.ExpectComplete();
+    }
 
-            subscriber.ExpectComplete();
-        }
+    [Fact]
+    public void SelectMany_should_be_able_to_resume()
+    {
+        var exception = new Exception("TEST");
 
-        [Fact]
-        public void SelectMany_should_be_able_to_resume()
-        {
-            var exception = new Exception("TEST");
-
-            Source
-                .From(Enumerable.Range(1, 5))
-                .SelectMany(x =>
-                {
-                    if (x == 3) throw exception;
-                    else return new[] {x};
-                })
-                .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                .RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(4).ExpectNext( 1, 2, 4, 5)
-                .ExpectComplete();
-        }
+        Source
+            .From(Enumerable.Range(1, 5))
+            .SelectMany(x =>
+            {
+                if (x == 3) throw exception;
+                return new[] { x };
+            })
+            .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
+            .RunWith(this.SinkProbe<int>(), Materializer)
+            .Request(4).ExpectNext(1, 2, 4, 5)
+            .ExpectComplete();
     }
 }

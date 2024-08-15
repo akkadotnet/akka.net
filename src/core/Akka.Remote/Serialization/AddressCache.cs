@@ -1,63 +1,58 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AddressCache.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="AddressCache.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System;
 using System.Threading;
 using Akka.Actor;
 
-namespace Akka.Remote.Serialization
+namespace Akka.Remote.Serialization;
+
+/// <summary>
+///     INTERNAL API
+/// </summary>
+internal sealed class AddressThreadLocalCache : ExtensionIdProvider<AddressThreadLocalCache>, IExtension
 {
-    /// <summary>
-    /// INTERNAL API
-    /// </summary>
-    internal sealed class AddressThreadLocalCache : ExtensionIdProvider<AddressThreadLocalCache>, IExtension
+    private readonly ThreadLocal<AddressCache> _current;
+
+    public AddressThreadLocalCache()
     {
-        public AddressThreadLocalCache()
-        {
-            _current = new ThreadLocal<AddressCache>(() => new AddressCache());
-        }
-
-        public override AddressThreadLocalCache CreateExtension(ExtendedActorSystem system)
-        {
-            return new AddressThreadLocalCache();
-        }
-
-        private readonly ThreadLocal<AddressCache> _current;
-
-        public AddressCache Cache => _current.Value;
-
-        public static AddressThreadLocalCache For(ActorSystem system)
-        {
-            return system.WithExtension<AddressThreadLocalCache, AddressThreadLocalCache>();
-        }
+        _current = new ThreadLocal<AddressCache>(() => new AddressCache());
     }
 
-    /// <summary>
-    /// INTERNAL API
-    /// </summary>
-    internal sealed class AddressCache : LruBoundedCache<string, Address>
+    public AddressCache Cache => _current.Value;
+
+    public override AddressThreadLocalCache CreateExtension(ExtendedActorSystem system)
     {
-        public AddressCache(int capacity = 1024, int evictAgeThreshold = 600) 
-            : base(capacity, evictAgeThreshold, FastHashComparer.Default)
-        {
-        }
+        return new AddressThreadLocalCache();
+    }
 
-        protected override Address Compute(string k)
-        {
-            if (ActorPath.TryParseAddress(k, out var addr))
-            {
-                return addr;
-            }
-            return Address.AllSystems;
-        }
+    public static AddressThreadLocalCache For(ActorSystem system)
+    {
+        return system.WithExtension<AddressThreadLocalCache, AddressThreadLocalCache>();
+    }
+}
 
-        protected override bool IsCacheable(Address v)
-        {
-            return v != Address.AllSystems;
-        }
+/// <summary>
+///     INTERNAL API
+/// </summary>
+internal sealed class AddressCache : LruBoundedCache<string, Address>
+{
+    public AddressCache(int capacity = 1024, int evictAgeThreshold = 600)
+        : base(capacity, evictAgeThreshold, FastHashComparer.Default)
+    {
+    }
+
+    protected override Address Compute(string k)
+    {
+        if (ActorPath.TryParseAddress(k, out var addr)) return addr;
+        return Address.AllSystems;
+    }
+
+    protected override bool IsCacheable(Address v)
+    {
+        return v != Address.AllSystems;
     }
 }

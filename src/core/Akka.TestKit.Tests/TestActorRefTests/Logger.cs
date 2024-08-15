@@ -1,30 +1,30 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Logger.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Logger.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Event;
 
-namespace Akka.TestKit.Tests.TestActorRefTests
+namespace Akka.TestKit.Tests.TestActorRefTests;
+
+public class Logger : ActorBase
 {
-    public class Logger : ActorBase
+    private int _count;
+    private string _msg;
+
+    protected override bool Receive(object message)
     {
-        private int _count;
-        private string _msg;
-        protected override bool Receive(object message)
+        var warning = message as Warning;
+        if (warning != null && warning.Message is string warningMessage)
         {
-            var warning = message as Warning;
-            if(warning != null && warning.Message is string warningMessage)
-            {
-                _count++;
-                _msg = warningMessage;
-                return true;
-            }
-            return false;
+            _count++;
+            _msg = warningMessage;
+            return true;
         }
+
+        return false;
     }
 }
-

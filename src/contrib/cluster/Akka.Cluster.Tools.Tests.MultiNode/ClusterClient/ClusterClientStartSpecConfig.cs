@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ClusterClientStartSpecConfig.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ClusterClientStartSpecConfig.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Collections.Immutable;
 using System.Linq;
@@ -14,25 +14,19 @@ using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
-using FluentAssertions;
 using FluentAssertions.Extensions;
 
-namespace Akka.Cluster.Tools.Tests.MultiNode.Client
+namespace Akka.Cluster.Tools.Tests.MultiNode.Client;
+
+public class ClusterClientStartSpecConfig : MultiNodeConfig
 {
-    
-    public class ClusterClientStartSpecConfig : MultiNodeConfig
+    public ClusterClientStartSpecConfig()
     {
-        public RoleName Client { get; }
-        public RoleName First { get; }
-        public RoleName Second { get; }
+        Client = Role("client");
+        First = Role("first");
+        Second = Role("second");
 
-        public ClusterClientStartSpecConfig()
-        {
-            Client = Role("client");
-            First = Role("first");
-            Second = Role("second");
-
-            CommonConfig = ConfigurationFactory.ParseString(@"
+        CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
@@ -44,95 +38,96 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                 }
                 akka.test.filter-leeway = 10s
             ")
-                .WithFallback(ClusterClientReceptionist.DefaultConfig())
-                .WithFallback(DistributedPubSub.DefaultConfig());
+            .WithFallback(ClusterClientReceptionist.DefaultConfig())
+            .WithFallback(DistributedPubSub.DefaultConfig());
+    }
+
+    public RoleName Client { get; }
+    public RoleName First { get; }
+    public RoleName Second { get; }
+
+    public class Service : ReceiveActor
+    {
+        public Service()
+        {
+            ReceiveAny(msg => Sender.Tell(msg));
+        }
+    }
+
+    public class ClusterClientStartSpec : MultiNodeClusterSpec
+    {
+        private readonly ClusterClientStartSpecConfig _config;
+
+        public ClusterClientStartSpec() : this(new ClusterClientStartSpecConfig())
+        {
         }
 
-        public class Service : ReceiveActor
+        protected ClusterClientStartSpec(ClusterClientStartSpecConfig config) : base(config,
+            typeof(ClusterClientStartSpec))
         {
-            public Service()
-            {
-                ReceiveAny(msg => Sender.Tell(msg));
-            }
+            _config = config;
         }
 
-        public class ClusterClientStartSpec : MultiNodeClusterSpec
+        protected override int InitialParticipantsValueFactory => 3;
+
+        private ImmutableHashSet<ActorPath> InitialContacts =>
+            //return new List<ActorPath>().ToImmutableHashSet();
+            ImmutableHashSet
+                .Create(_config.First, _config.Second)
+                .Select(r => Node(r) / "system" / "receptionist")
+                .ToImmutableHashSet();
+
+        [MultiNodeFact(Skip =
+            "Disable due to known issues with this spec which are currently under investigation by ArjenSmitss")]
+        public void ClusterClientStartSpecs()
         {
-            private readonly ClusterClientStartSpecConfig _config;
+            Start_Cluster();
+            ClusterClient_can_start_with_zero_buffer();
+        }
 
-            public ClusterClientStartSpec() : this(new ClusterClientStartSpecConfig())
+        public void Start_Cluster()
+        {
+            Within(30.Seconds(), () =>
             {
-            }
+                AwaitClusterUp(_config.First, _config.Second);
 
-            protected ClusterClientStartSpec(ClusterClientStartSpecConfig config) : base(config, typeof(ClusterClientStartSpec))
-            {
-                _config = config;
-            }
-
-            protected override int InitialParticipantsValueFactory => 3;
-
-            private ImmutableHashSet<ActorPath> InitialContacts
-            {
-                get
+                //start our test service
+                RunOn(() =>
                 {
-                    //return new List<ActorPath>().ToImmutableHashSet();
-                    return ImmutableHashSet
-                        .Create(_config.First, _config.Second)
-                        .Select(r => Node(r) / "system" / "receptionist")
-                        .ToImmutableHashSet();
-                }
-            }
+                    var service = Sys.ActorOf(Props.Create(() => new ClusterClientStopSpecConfig.Service()),
+                        "testService");
 
-            [MultiNodeFact(Skip = "Disable due to known issues with this spec which are currently under investigation by ArjenSmitss")]
-            public void ClusterClientStartSpecs()
-            {
-                Start_Cluster();
-                ClusterClient_can_start_with_zero_buffer();
-            }
+                    //here we explicitly do _not_ register the service with the cluster receptionist to force the clusterclient in buffer mode
+                    //ClusterClientReceptionist.Get(Sys).RegisterService(service);
+                }, _config.First, _config.Second);
 
-            public void Start_Cluster()
+                EnterBarrier("receptionist-started");
+            });
+        }
+
+        public void ClusterClient_can_start_with_zero_buffer()
+        {
+            Within(30.Seconds(), () =>
             {
-                Within(30.Seconds(), () =>
+                //start the cluster client 
+                RunOn(() =>
                 {
-                    AwaitClusterUp(_config.First, _config.Second);
-                    
-                    //start our test service
-                    RunOn(() =>
-                    {
-                        var service = Sys.ActorOf(Props.Create(() => new ClusterClientStopSpecConfig.Service()), "testService");
+                    var c = Sys.ActorOf(
+                        ClusterClient.Props(ClusterClientSettings.Create(Sys).WithBufferSize(0)
+                            .WithInitialContacts(InitialContacts)), "client1");
+                    //check for the debug log message that the cluster client will output in case of an 0 buffersize
+                    EventFilter.Debug(start: "Receptionist not available and buffering is disabled, dropping message")
+                        .ExpectOne(
+                            () => { c.Tell(new ClusterClient.Send("/user/testService", "hello")); });
 
-                        //here we explicitly do _not_ register the service with the cluster receptionist to force the clusterclient in buffer mode
-                        //ClusterClientReceptionist.Get(Sys).RegisterService(service);
-                    }, _config.First, _config.Second);
+                    //ExpectMsg<string>(3.Seconds()).Should().Be("hello");
 
-                    EnterBarrier("receptionist-started");
-                });
-            }
 
-            public void ClusterClient_can_start_with_zero_buffer()
-            {
-                Within(30.Seconds(), () =>
-                {
-                    //start the cluster client 
-                    RunOn(() =>
-                    {
-                        var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithBufferSize(0).WithInitialContacts(InitialContacts)), "client1");
-                        //check for the debug log message that the cluster client will output in case of an 0 buffersize
-                        EventFilter.Debug(start: "Receptionist not available and buffering is disabled, dropping message").ExpectOne(
-                            () =>
-                            {
-                                c.Tell(new ClusterClient.Send("/user/testService", "hello"));
-                            });
+                    ExpectTerminated(c, 10.Seconds());
+                }, _config.Client);
 
-                        //ExpectMsg<string>(3.Seconds()).Should().Be("hello");
-                        
-                       
-                        ExpectTerminated(c, 10.Seconds());
-                    }, _config.Client);
-
-                    EnterBarrier("end-of-test");
-                });
-            }
+                EnterBarrier("end-of-test");
+            });
         }
     }
 }

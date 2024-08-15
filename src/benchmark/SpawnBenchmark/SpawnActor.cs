@@ -1,63 +1,60 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SpawnActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SpawnActor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 
-namespace SpawnBenchmark
+namespace SpawnBenchmark;
+
+public sealed class SpawnActor : UntypedActor
 {
-    public sealed class SpawnActor : UntypedActor
+    private long _count;
+
+    private int _todo = 10;
+
+    public static Props Props { get; } = Props.Create<SpawnActor>();
+
+    protected override void OnReceive(object message)
     {
-        public class Start
+        if (message is Start start)
         {
-            public Start(int level, long number)
+            if (start.Level == 1)
             {
-                Level = level;
-                Number = number;
+                Context.Parent.Tell(start.Number);
+                Context.Stop(Self);
             }
-
-            public int Level { get; }
-
-            public long Number { get; }
-        }
-
-        private int _todo = 10;
-        private long _count = 0L;
-
-        protected override void OnReceive(object message)
-        {
-            if (message is Start start)
+            else
             {
-                if (start.Level == 1)
-                {
-                    Context.Parent.Tell(start.Number);
-                    Context.Stop(Self);
-                }
-                else
-                {
-                    var startNumber = start.Number * 10;
+                var startNumber = start.Number * 10;
 
-                    for (int i = 0; i <= 9; i++)
-                    {
-                        Context.ActorOf(Props).Tell(new Start(start.Level - 1, startNumber + i));
-                    }
-                }
-            }
-            else if (message is long l)
-            {
-                _todo -= 1;
-                _count += l;
-                if (_todo == 0)
-                {
-                    Context.Parent.Tell(_count);
-                    Context.Stop(Self);
-                }
+                for (var i = 0; i <= 9; i++) Context.ActorOf(Props).Tell(new Start(start.Level - 1, startNumber + i));
             }
         }
+        else if (message is long l)
+        {
+            _todo -= 1;
+            _count += l;
+            if (_todo == 0)
+            {
+                Context.Parent.Tell(_count);
+                Context.Stop(Self);
+            }
+        }
+    }
 
-        public static Props Props { get; } = Props.Create<SpawnActor>();
+    public class Start
+    {
+        public Start(int level, long number)
+        {
+            Level = level;
+            Number = number;
+        }
+
+        public int Level { get; }
+
+        public long Number { get; }
     }
 }

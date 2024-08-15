@@ -14,6 +14,31 @@ namespace Akka.TestKit.Tests;
 
 public class Bugfix7145Spec : AkkaSpec
 {
+    [Fact]
+    public async Task Should_not_deadlock_when_using_ReceiveAsync()
+    {
+        var actor = Sys.ActorOf(Props.Create(() => new BuggyActor()));
+        var probe = CreateTestProbe();
+        actor.Tell("hello", probe);
+        var response1 = await probe.ExpectMsgAsync<string>();
+        var response2 = await probe.ExpectMsgAsync<string>();
+        response1.Should().Be("hello1");
+        response2.Should().Be("hello2");
+    }
+
+    // generate a test case where we set ConfigureAwait(false) on the ExpectMsgAsync calls inside the test method
+    [Fact]
+    public async Task Should_not_deadlock_when_using_ReceiveAsync_with_ConfigureAwait_false()
+    {
+        var actor = Sys.ActorOf(Props.Create(() => new BuggyActor()));
+        var probe = CreateTestProbe();
+        actor.Tell("hello", probe);
+        var response1 = await probe.ExpectMsgAsync<string>().ConfigureAwait(false);
+        var response2 = await probe.ExpectMsgAsync<string>().ConfigureAwait(false);
+        response1.Should().Be("hello1");
+        response2.Should().Be("hello2");
+    }
+
     // generate a test actor that will receive a message inside a ReceiveAsync - it should then await briefly on a Task.Delay inside that ReceiveAsync and then send two different messages back to the Sender
     private class BuggyActor : ReceiveActor
     {
@@ -26,30 +51,5 @@ public class Bugfix7145Spec : AkkaSpec
                 Sender.Tell(s + "2");
             });
         }
-    }
-    
-    [Fact]
-    public async Task Should_not_deadlock_when_using_ReceiveAsync()
-    {
-        var actor = Sys.ActorOf(Props.Create(() => new BuggyActor()));
-        var probe = CreateTestProbe();
-        actor.Tell("hello", probe);
-        var response1 = await probe.ExpectMsgAsync<string>();
-        var response2 = await probe.ExpectMsgAsync<string>();
-        response1.Should().Be("hello1");
-        response2.Should().Be("hello2");
-    }
-    
-    // generate a test case where we set ConfigureAwait(false) on the ExpectMsgAsync calls inside the test method
-    [Fact]
-    public async Task Should_not_deadlock_when_using_ReceiveAsync_with_ConfigureAwait_false()
-    {
-        var actor = Sys.ActorOf(Props.Create(() => new BuggyActor()));
-        var probe = CreateTestProbe();
-        actor.Tell("hello", probe);
-        var response1 = await probe.ExpectMsgAsync<string>().ConfigureAwait(false);
-        var response2 = await probe.ExpectMsgAsync<string>().ConfigureAwait(false);
-        response1.Should().Be("hello1");
-        response2.Should().Be("hello2");
     }
 }

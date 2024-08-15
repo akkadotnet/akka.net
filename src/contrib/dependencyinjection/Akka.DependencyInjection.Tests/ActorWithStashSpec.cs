@@ -1,8 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ActorWithStashSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ActorWithStashSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.TestKit;
@@ -13,12 +14,12 @@ using Xunit.Abstractions;
 
 namespace Akka.DependencyInjection.Tests;
 
-public class ActorWithStashSpec: AkkaSpec, IClassFixture<AkkaDiFixture>
+public class ActorWithStashSpec : AkkaSpec, IClassFixture<AkkaDiFixture>
 {
-    public ActorWithStashSpec(AkkaDiFixture fixture, ITestOutputHelper output) 
+    public ActorWithStashSpec(AkkaDiFixture fixture, ITestOutputHelper output)
         : base(
             DependencyResolverSetup.Create(fixture.Provider)
-                .And(BootstrapSetup.Create().WithConfig(TestKitBase.DefaultConfig)), 
+                .And(BootstrapSetup.Create().WithConfig(TestKitBase.DefaultConfig)),
             output)
     {
     }
@@ -27,87 +28,91 @@ public class ActorWithStashSpec: AkkaSpec, IClassFixture<AkkaDiFixture>
     public void WithStashActorTest()
     {
         var stashActor = GetActorOf<WithStashActor>(Sys);
-        
+
         stashActor.Tell(GetName.Instance, TestActor);
         ExpectNoMsg(0.3.Seconds());
         stashActor.Tell(GetName.Instance, TestActor);
         ExpectNoMsg(0.3.Seconds());
-        
+
         stashActor.Tell(StartProcessing.Instance, TestActor);
         ExpectMsg<string>().Should().StartWith("s");
         ExpectMsg<string>().Should().StartWith("s");
         ExpectNoMsg(0.3.Seconds());
     }
-    
+
     [Fact(DisplayName = "DependencyInjection should create actor with IWithUnboundedStash interface")]
     public void WithUnboundedStashActorTest()
     {
         var stashActor = GetActorOf<WithUnboundedStashActor>(Sys);
-        
+
         stashActor.Tell(GetName.Instance, TestActor);
         ExpectNoMsg(0.3.Seconds());
         stashActor.Tell(GetName.Instance, TestActor);
         ExpectNoMsg(0.3.Seconds());
-        
+
         stashActor.Tell(StartProcessing.Instance, TestActor);
         ExpectMsg<string>().Should().StartWith("s");
         ExpectMsg<string>().Should().StartWith("s");
         ExpectNoMsg(0.3.Seconds());
     }
-    
+
     [Fact(DisplayName = "DependencyInjection should create child actor with IWithStash interface")]
     public void WithStashChildActorTest()
     {
         var parentActor = Sys.ActorOf(Props.Create(() => new ParentActor<WithStashActor>()));
-        
+
         parentActor.Tell(GetName.Instance, TestActor);
         ExpectNoMsg(0.3.Seconds());
         parentActor.Tell(GetName.Instance, TestActor);
         ExpectNoMsg(0.3.Seconds());
-        
+
         parentActor.Tell(StartProcessing.Instance, TestActor);
         ExpectMsg<string>().Should().StartWith("s");
         ExpectMsg<string>().Should().StartWith("s");
         ExpectNoMsg(0.3.Seconds());
     }
-    
+
     [Fact(DisplayName = "DependencyInjection should create child actor with IWithUnboundedStash interface")]
     public void WithUnboundedStashChildActorTest()
     {
         var parentActor = Sys.ActorOf(Props.Create(() => new ParentActor<WithUnboundedStashActor>()));
-        
+
         parentActor.Tell(GetName.Instance, TestActor);
         ExpectNoMsg(0.3.Seconds());
         parentActor.Tell(GetName.Instance, TestActor);
         ExpectNoMsg(0.3.Seconds());
-        
+
         parentActor.Tell(StartProcessing.Instance, TestActor);
         ExpectMsg<string>().Should().StartWith("s");
         ExpectMsg<string>().Should().StartWith("s");
         ExpectNoMsg(0.3.Seconds());
     }
-    
-    private static IActorRef GetActorOf<T>(ActorSystem actorSystem) where T: ActorBase
-        => actorSystem.ActorOf(DependencyResolver.For(actorSystem).Props<T>());
-    
-    private static IActorRef GetActorOf<T>(IActorContext actorContext, ActorSystem actorSystem) where T: ActorBase
-        => actorContext.ActorOf(DependencyResolver.For(actorSystem).Props<T>());
-    
-    private sealed class WithStashActor: StashingActor, IWithStash
+
+    private static IActorRef GetActorOf<T>(ActorSystem actorSystem) where T : ActorBase
+    {
+        return actorSystem.ActorOf(DependencyResolver.For(actorSystem).Props<T>());
+    }
+
+    private static IActorRef GetActorOf<T>(IActorContext actorContext, ActorSystem actorSystem) where T : ActorBase
+    {
+        return actorContext.ActorOf(DependencyResolver.For(actorSystem).Props<T>());
+    }
+
+    private sealed class WithStashActor : StashingActor, IWithStash
     {
         public WithStashActor(AkkaDiFixture.IScopedDependency scoped) : base(scoped)
         {
         }
     }
-    
-    private sealed class WithUnboundedStashActor: StashingActor, IWithUnboundedStash
+
+    private sealed class WithUnboundedStashActor : StashingActor, IWithUnboundedStash
     {
         public WithUnboundedStashActor(AkkaDiFixture.IScopedDependency scoped) : base(scoped)
         {
         }
     }
-    
-    private sealed class ParentActor<T>: ReceiveActor where T: StashingActor
+
+    private sealed class ParentActor<T> : ReceiveActor where T : StashingActor
     {
         public ParentActor()
         {
@@ -115,7 +120,7 @@ public class ActorWithStashSpec: AkkaSpec, IClassFixture<AkkaDiFixture>
             ReceiveAny(msg => child.Forward(msg));
         }
     }
-    
+
     private abstract class StashingActor : ReceiveActor
     {
         private readonly AkkaDiFixture.IScopedDependency _scoped;
@@ -126,6 +131,8 @@ public class ActorWithStashSpec: AkkaSpec, IClassFixture<AkkaDiFixture>
             Become(Stashing);
         }
 
+        public IStash Stash { get; set; }
+
         private bool Stashing(object message)
         {
             if (message is StartProcessing)
@@ -134,7 +141,7 @@ public class ActorWithStashSpec: AkkaSpec, IClassFixture<AkkaDiFixture>
                 Stash.UnstashAll();
                 return true;
             }
-            
+
             Stash.Stash();
             return true;
         }
@@ -149,19 +156,23 @@ public class ActorWithStashSpec: AkkaSpec, IClassFixture<AkkaDiFixture>
 
             return false;
         }
-        
-        public IStash Stash { get; set; }
     }
-    
+
     private sealed class GetName
     {
         public static readonly GetName Instance = new();
-        private GetName() { }
+
+        private GetName()
+        {
+        }
     }
-    
+
     private sealed class StartProcessing
     {
         public static readonly StartProcessing Instance = new();
-        private StartProcessing() { }
+
+        private StartProcessing()
+        {
+        }
     }
 }

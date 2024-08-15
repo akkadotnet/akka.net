@@ -1,60 +1,56 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ClusterSingletonConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ClusterSingletonConfigSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-
-
-using System;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
 
-namespace Akka.Cluster.Tools.Tests.Singleton
+namespace Akka.Cluster.Tools.Tests.Singleton;
+
+// <ClusterSingletonConfigSpec>
+public class ClusterSingletonConfigSpec : TestKit.Xunit2.TestKit
 {
-    // <ClusterSingletonConfigSpec>
-    public class ClusterSingletonConfigSpec : TestKit.Xunit2.TestKit
+    public ClusterSingletonConfigSpec() : base(GetConfig())
     {
-        public ClusterSingletonConfigSpec() : base(GetConfig())
-        {
-        }
+    }
 
-        public static Config GetConfig()
-        {
-            return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
+    public static Config GetConfig()
+    {
+        return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
                                                       akka.remote.dot-netty.tcp.port = 0");
-        }
-        // </ClusterSingletonConfigSpec>
-        [Fact]
-        public void ClusterSingletonManagerSettings_must_have_default_config()
-        {
-            var clusterSingletonManagerSettings = ClusterSingletonManagerSettings.Create(Sys);
+    }
 
-            clusterSingletonManagerSettings.ShouldNotBe(null);
-            clusterSingletonManagerSettings.SingletonName.ShouldBe("singleton");
-            clusterSingletonManagerSettings.Role.ShouldBe(null);
-            clusterSingletonManagerSettings.HandOverRetryInterval.TotalSeconds.ShouldBe(1);
-            clusterSingletonManagerSettings.RemovalMargin.TotalSeconds.ShouldBe(20); // now 20 due to default SBR settings
+    // </ClusterSingletonConfigSpec>
+    [Fact]
+    public void ClusterSingletonManagerSettings_must_have_default_config()
+    {
+        var clusterSingletonManagerSettings = ClusterSingletonManagerSettings.Create(Sys);
 
-            var config = Sys.Settings.Config.GetConfig("akka.cluster.singleton");
-            Assert.False(config.IsNullOrEmpty());
-            config.GetInt("min-number-of-hand-over-retries", 0).ShouldBe(15);
-        }
+        clusterSingletonManagerSettings.ShouldNotBe(null);
+        clusterSingletonManagerSettings.SingletonName.ShouldBe("singleton");
+        clusterSingletonManagerSettings.Role.ShouldBe(null);
+        clusterSingletonManagerSettings.HandOverRetryInterval.TotalSeconds.ShouldBe(1);
+        clusterSingletonManagerSettings.RemovalMargin.TotalSeconds.ShouldBe(20); // now 20 due to default SBR settings
 
-        [Fact]
-        public void ClusterSingletonProxySettings_must_have_default_config()
-        {
-            var clusterSingletonProxySettings = ClusterSingletonProxySettings.Create(Sys);
+        var config = Sys.Settings.Config.GetConfig("akka.cluster.singleton");
+        Assert.False(config.IsNullOrEmpty());
+        config.GetInt("min-number-of-hand-over-retries").ShouldBe(15);
+    }
 
-            clusterSingletonProxySettings.ShouldNotBe(null);
-            clusterSingletonProxySettings.SingletonName.ShouldBe("singleton");
-            clusterSingletonProxySettings.Role.ShouldBe(null);
-            clusterSingletonProxySettings.SingletonIdentificationInterval.TotalSeconds.ShouldBe(1);
-            clusterSingletonProxySettings.BufferSize.ShouldBe(1000);
-        }
+    [Fact]
+    public void ClusterSingletonProxySettings_must_have_default_config()
+    {
+        var clusterSingletonProxySettings = ClusterSingletonProxySettings.Create(Sys);
+
+        clusterSingletonProxySettings.ShouldNotBe(null);
+        clusterSingletonProxySettings.SingletonName.ShouldBe("singleton");
+        clusterSingletonProxySettings.Role.ShouldBe(null);
+        clusterSingletonProxySettings.SingletonIdentificationInterval.TotalSeconds.ShouldBe(1);
+        clusterSingletonProxySettings.BufferSize.ShouldBe(1000);
     }
 }
-

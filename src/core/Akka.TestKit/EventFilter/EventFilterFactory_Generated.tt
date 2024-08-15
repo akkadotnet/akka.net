@@ -1,8 +1,5 @@
 ﻿<#@ template debug="false" hostspecific="false" language="C#" #>
 <#@ assembly name="System.Core" #>
-<#@ import namespace="System.Linq" #>
-<#@ import namespace="System.Text" #>
-<#@ import namespace="System.Collections.Generic" #>
 <#@ output extension=".cs" #>
 //-----------------------------------------------------------------------
 // <copyright file="EventFilterFactory_Generated.cs" company="Akka.NET Project">
@@ -30,17 +27,16 @@ namespace Akka.TestKit
     public partial class EventFilterFactory
     {
       <#
-      Generate("Error");
-      Generate("Warning");
-      Generate("Info");
-      Generate("Debug");
-      #>
+    Generate("Error");
+    Generate("Warning");
+    Generate("Info");
+    Generate("Debug");
+#>
     }
 }
 <#+
-
-private void Generate(string name)
-{
+    private void Generate(string name)
+    {
 #>
 
         // --- <#= name #> ------------------------------------------------------------------------------------------------
@@ -98,5 +94,5 @@ private void Generate(string name)
         }
 
 <#+
-}
+    }
 #>

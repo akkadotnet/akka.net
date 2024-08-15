@@ -1,9 +1,9 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright file="ReliableDeliverySerializerSpecs.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ReliableDeliverySerializerSpecs.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -17,9 +17,9 @@ using Akka.Event;
 using Akka.IO;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
-using Xunit.Abstractions;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests.Serialization;
 
@@ -32,7 +32,7 @@ public class ReliableDeliverySerializerSpecs : AkkaSpec
         RealActorRef = Sys.ActorOf(BlackHoleActor.Props, "blackhole");
     }
 
-    ReliableDeliverySerializer Serializer { get; }
+    private ReliableDeliverySerializer Serializer { get; }
 
     public static long Timestamp { get; } = DateTime.UtcNow.Ticks;
 
@@ -91,7 +91,7 @@ public class ReliableDeliverySerializerSpecs : AkkaSpec
                     .Add("q3", (12L, Timestamp))
                     .Add("q4", (14L, Timestamp)),
                 ImmutableList<DurableProducerQueue.MessageSent<string>>.Empty.Add(
-                    new DurableProducerQueue.MessageSent<string>(15L, "msg15", true, "q4", Timestamp))
+                        new DurableProducerQueue.MessageSent<string>(15L, "msg15", true, "q4", Timestamp))
                     .Add(
                         new DurableProducerQueue.MessageSent<string>(16L, "msg16", true, "q4", Timestamp)))
         };
@@ -103,17 +103,21 @@ public class ReliableDeliverySerializerSpecs : AkkaSpec
         yield return new object[]
         {
             "SequencedMessage-chunked-1",
-            ConsumerController.SequencedMessage<string>.FromChunkedMessage("prod-1", 1L, new ChunkedMessage(ByteString.FromString("abc"), true, true, 20, ""), true, true, ActorRefs.Nobody)
+            ConsumerController.SequencedMessage<string>.FromChunkedMessage("prod-1", 1L,
+                new ChunkedMessage(ByteString.FromString("abc"), true, true, 20, ""), true, true, ActorRefs.Nobody)
         };
         yield return new object[]
         {
             "SequencedMessage-chunked-2",
-            ConsumerController.SequencedMessage<string>.FromChunkedMessage("prod-1", 1L, new ChunkedMessage(ByteString.FromBytes(new byte[]{ 1,2,3 }), true, false, 123456, "A"), false, false, ActorRefs.Nobody)
+            ConsumerController.SequencedMessage<string>.FromChunkedMessage("prod-1", 1L,
+                new ChunkedMessage(ByteString.FromBytes(new byte[] { 1, 2, 3 }), true, false, 123456, "A"), false,
+                false, ActorRefs.Nobody)
         };
         yield return new object[]
         {
             "DurableProducerQueue.MessageSent-chunked",
-            DurableProducerQueue.MessageSent<string>.FromChunked(3L, new ChunkedMessage(ByteString.FromString("abc"), true, true, 20, ""), false, "", Timestamp)
+            DurableProducerQueue.MessageSent<string>.FromChunked(3L,
+                new ChunkedMessage(ByteString.FromString("abc"), true, true, 20, ""), false, "", Timestamp)
         };
     }
 
@@ -132,7 +136,7 @@ public class ReliableDeliverySerializerSpecs : AkkaSpec
         else if (msg is ProducerController.RegisterConsumer<(int, double)> registerConsumer)
         {
             // need to update the IActorRef
-            registerConsumer = new ProducerController.RegisterConsumer<(int, double)>(ConsumerController: RealActorRef);
+            registerConsumer = new ProducerController.RegisterConsumer<(int, double)>(RealActorRef);
             VerifySerialization(registerConsumer);
         }
         else

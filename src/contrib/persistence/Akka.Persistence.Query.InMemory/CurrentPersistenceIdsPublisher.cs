@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="CurrentPersistenceIdsPublisher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="CurrentPersistenceIdsPublisher.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
@@ -11,250 +11,247 @@ using Akka.Event;
 using Akka.Persistence.Journal;
 using Akka.Streams.Actors;
 
-namespace Akka.Persistence.Query.InMemory
+namespace Akka.Persistence.Query.InMemory;
+
+internal sealed class CurrentPersistenceIdsPublisher : ActorPublisher<string>, IWithUnboundedStash
 {
-    internal sealed class CurrentPersistenceIdsPublisher : ActorPublisher<string>, IWithUnboundedStash
+    private readonly DeliveryBuffer<string> _buffer;
+
+    private readonly IActorRef _journalRef;
+    private readonly ILoggingAdapter _log;
+
+    public CurrentPersistenceIdsPublisher(string writeJournalPluginId)
     {
-        public static Props Props(string writeJournalPluginId)
+        _buffer = new DeliveryBuffer<string>(OnNext);
+        _journalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
+        _log = Context.GetLogger();
+    }
+
+    public IStash Stash { get; set; }
+
+    public static Props Props(string writeJournalPluginId)
+    {
+        return Actor.Props.Create(() => new CurrentPersistenceIdsPublisher(writeJournalPluginId));
+    }
+
+    protected override bool Receive(object message)
+    {
+        switch (message)
         {
-            return Actor.Props.Create(() => new CurrentPersistenceIdsPublisher(writeJournalPluginId));
-        }
+            case Request _:
+                Become(Initializing);
+                _journalRef
+                    .Ask<MemoryJournal.CurrentPersistenceIds>(new MemoryJournal.SelectCurrentPersistenceIds(0, Self))
+                    .PipeTo(Self);
+                return true;
 
-        private readonly IActorRef _journalRef;
+            case Cancel _:
+                Context.Stop(Self);
+                return true;
 
-        private readonly DeliveryBuffer<string> _buffer;
-        private readonly ILoggingAdapter _log;
-
-        public IStash Stash { get; set; }
-
-        public CurrentPersistenceIdsPublisher(string writeJournalPluginId)
-        {
-            _buffer = new DeliveryBuffer<string>(OnNext);
-            _journalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
-            _log = Context.GetLogger();
-        }
-
-        protected override bool Receive(object message)
-        {
-            switch (message)
-            {
-                case Request _:
-                    Become(Initializing);
-                    _journalRef
-                        .Ask<MemoryJournal.CurrentPersistenceIds>(new MemoryJournal.SelectCurrentPersistenceIds(0, Self))
-                        .PipeTo(Self);
-                    return true;
-                
-                case Cancel _:
-                    Context.Stop(Self);
-                    return true;
-                
-                default:
-                    return false;
-            }
-        }
-
-        private bool Initializing(object message)
-        {
-            switch (message)
-            {
-                case MemoryJournal.CurrentPersistenceIds current:
-                    _buffer.AddRange(current.AllPersistenceIds);
-                    _buffer.DeliverBuffer(TotalDemand);
-
-                    if (_buffer.IsEmpty)
-                    {
-                        OnCompleteThenStop();
-                        return true;
-                    }
-
-                    Become(Active);
-                    Stash.UnstashAll();
-                    return true;
-                
-                case Cancel _:
-                    Context.Stop(Self);
-                    return true;
-                
-                case Status.Failure msg:
-                    if (msg.Cause is AskTimeoutException e)
-                    {
-                        _log.Info(e, "Current persistence id query timed out, retrying");
-                    }
-                    else
-                    {
-                        _log.Info(msg.Cause, "Current persistence id query failed, retrying");
-                    }
-                    
-                    _journalRef
-                        .Ask<MemoryJournal.CurrentPersistenceIds>(new MemoryJournal.SelectCurrentPersistenceIds(0, Self))
-                        .PipeTo(Self);
-                    return true;
-                    
-                default:
-                    Stash.Stash();
-                    return true;
-            }
-        }
-
-        private bool Active(object message)
-        {
-            switch (message)
-            {
-                case MemoryJournal.CurrentPersistenceIds _:
-                    // Ignore duplicate CurrentPersistenceIds response
-                    return true;
-                
-                case Request _:
-                    _buffer.DeliverBuffer(TotalDemand);
-                    if (_buffer.IsEmpty)
-                        OnCompleteThenStop();
-                    return true;
-                
-                case Cancel _:
-                    Context.Stop(Self);
-                    return true;
-                
-                default:
-                    return false;
-            }
+            default:
+                return false;
         }
     }
-    
-    internal sealed class LivePersistenceIdsPublisher : ActorPublisher<string>, IWithUnboundedStash
+
+    private bool Initializing(object message)
     {
-        private sealed class Continue
+        switch (message)
         {
-            public static readonly Continue Instance = new();
+            case MemoryJournal.CurrentPersistenceIds current:
+                _buffer.AddRange(current.AllPersistenceIds);
+                _buffer.DeliverBuffer(TotalDemand);
 
-            private Continue() { }
+                if (_buffer.IsEmpty)
+                {
+                    OnCompleteThenStop();
+                    return true;
+                }
+
+                Become(Active);
+                Stash.UnstashAll();
+                return true;
+
+            case Cancel _:
+                Context.Stop(Self);
+                return true;
+
+            case Status.Failure msg:
+                if (msg.Cause is AskTimeoutException e)
+                    _log.Info(e, "Current persistence id query timed out, retrying");
+                else
+                    _log.Info(msg.Cause, "Current persistence id query failed, retrying");
+
+                _journalRef
+                    .Ask<MemoryJournal.CurrentPersistenceIds>(new MemoryJournal.SelectCurrentPersistenceIds(0, Self))
+                    .PipeTo(Self);
+                return true;
+
+            default:
+                Stash.Stash();
+                return true;
         }
+    }
 
-        public static Props Props(TimeSpan refreshInterval, string writeJournalPluginId)
+    private bool Active(object message)
+    {
+        switch (message)
         {
-            return Actor.Props.Create(() => new LivePersistenceIdsPublisher(refreshInterval, writeJournalPluginId));
+            case MemoryJournal.CurrentPersistenceIds _:
+                // Ignore duplicate CurrentPersistenceIds response
+                return true;
+
+            case Request _:
+                _buffer.DeliverBuffer(TotalDemand);
+                if (_buffer.IsEmpty)
+                    OnCompleteThenStop();
+                return true;
+
+            case Cancel _:
+                Context.Stop(Self);
+                return true;
+
+            default:
+                return false;
         }
+    }
+}
 
-        private int _lastOrderingOffset;
-        private readonly ICancelable _tickCancelable;
-        private readonly IActorRef _journalRef;
-        private readonly DeliveryBuffer<string> _buffer;
-        private readonly ILoggingAdapter _log;
+internal sealed class LivePersistenceIdsPublisher : ActorPublisher<string>, IWithUnboundedStash
+{
+    private readonly DeliveryBuffer<string> _buffer;
+    private readonly IActorRef _journalRef;
+    private readonly ILoggingAdapter _log;
+    private readonly ICancelable _tickCancelable;
 
-        public IStash Stash { get; set; }
+    private int _lastOrderingOffset;
 
-        public LivePersistenceIdsPublisher(TimeSpan refreshInterval, string writeJournalPluginId)
+    public LivePersistenceIdsPublisher(TimeSpan refreshInterval, string writeJournalPluginId)
+    {
+        _log = Context.GetLogger();
+        _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
+            refreshInterval,
+            refreshInterval,
+            Self,
+            Continue.Instance,
+            Self);
+        _buffer = new DeliveryBuffer<string>(OnNext);
+        _journalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
+    }
+
+    public IStash Stash { get; set; }
+
+    public static Props Props(TimeSpan refreshInterval, string writeJournalPluginId)
+    {
+        return Actor.Props.Create(() => new LivePersistenceIdsPublisher(refreshInterval, writeJournalPluginId));
+    }
+
+    protected override void PostStop()
+    {
+        _tickCancelable.Cancel();
+        base.PostStop();
+    }
+
+    protected override bool Receive(object message)
+    {
+        switch (message)
         {
-            _log = Context.GetLogger();
-            _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
-                refreshInterval, 
-                refreshInterval, 
-                Self, 
-                Continue.Instance, 
-                Self);
-            _buffer = new DeliveryBuffer<string>(OnNext);
-            _journalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
+            case Request _:
+                Become(Waiting);
+                _journalRef
+                    .Ask<MemoryJournal.CurrentPersistenceIds>(
+                        new MemoryJournal.SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
+                    .PipeTo(Self);
+                return true;
+
+            case Continue _:
+                return true;
+
+            case Cancel _:
+                Context.Stop(Self);
+                return true;
+
+            default:
+                return false;
         }
+    }
 
-        protected override void PostStop()
+    private bool Waiting(object message)
+    {
+        switch (message)
         {
-            _tickCancelable.Cancel();
-            base.PostStop();
+            case MemoryJournal.CurrentPersistenceIds current:
+                _lastOrderingOffset = current.HighestOrderingNumber;
+                _buffer.AddRange(current.AllPersistenceIds);
+                _buffer.DeliverBuffer(TotalDemand);
+
+                Become(Active);
+                Stash.UnstashAll();
+                return true;
+
+            case Continue _:
+                return true;
+
+            case Cancel _:
+                Context.Stop(Self);
+                return true;
+
+            case Status.Failure msg:
+                if (msg.Cause is AskTimeoutException e)
+                    _log.Info(e, $"Current persistence id query timed out, retrying. Offset: {_lastOrderingOffset}");
+                else
+                    _log.Info(msg.Cause,
+                        $"Current persistence id query failed, retrying. Offset: {_lastOrderingOffset}");
+
+                Become(Active);
+                Stash.UnstashAll();
+                return true;
+
+            default:
+                Stash.Stash();
+                return true;
         }
+    }
 
-        protected override bool Receive(object message)
+    private bool Active(object message)
+    {
+        switch (message)
         {
-            switch (message)
-            {
-                case Request _:
-                    Become(Waiting);
-                    _journalRef
-                        .Ask<MemoryJournal.CurrentPersistenceIds>(new MemoryJournal.SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
-                        .PipeTo(Self);
-                    return true;
-                
-                case Continue _:
-                    return true;
-                
-                case Cancel _:
-                    Context.Stop(Self);
-                    return true;
-                
-                default:
-                    return false;
-            }
+            case MemoryJournal.CurrentPersistenceIds _:
+                // Ignore duplicate CurrentPersistenceIds response
+                return true;
+
+            case Request _:
+                _buffer.DeliverBuffer(TotalDemand);
+                return true;
+
+            case Continue _:
+                Become(Waiting);
+                _journalRef
+                    .Ask<MemoryJournal.CurrentPersistenceIds>(
+                        new MemoryJournal.SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
+                    .PipeTo(Self);
+                return true;
+
+            case Cancel _:
+                Context.Stop(Self);
+                return true;
+
+            case Status.Failure msg:
+                _log.Info(msg.Cause, "Unexpected failure received");
+                return true;
+
+            default:
+                return false;
         }
+    }
 
-        private bool Waiting(object message)
+    private sealed class Continue
+    {
+        public static readonly Continue Instance = new();
+
+        private Continue()
         {
-            switch (message)
-            {
-                case MemoryJournal.CurrentPersistenceIds current:
-                    _lastOrderingOffset = current.HighestOrderingNumber;
-                    _buffer.AddRange(current.AllPersistenceIds);
-                    _buffer.DeliverBuffer(TotalDemand);
-
-                    Become(Active);
-                    Stash.UnstashAll();
-                    return true;
-                
-                case Continue _:
-                    return true;
-                
-                case Cancel _:
-                    Context.Stop(Self);
-                    return true;
-                
-                case Status.Failure msg:
-                    if (msg.Cause is AskTimeoutException e)
-                    {
-                        _log.Info(e, $"Current persistence id query timed out, retrying. Offset: {_lastOrderingOffset}");
-                    }
-                    else
-                    {
-                        _log.Info(msg.Cause, $"Current persistence id query failed, retrying. Offset: {_lastOrderingOffset}");
-                    }
-                    
-                    Become(Active);
-                    Stash.UnstashAll();
-                    return true;
-                    
-                default:
-                    Stash.Stash();
-                    return true;
-            }
-        }
-
-        private bool Active(object message)
-        {
-            switch (message)
-            {
-                case MemoryJournal.CurrentPersistenceIds _:
-                    // Ignore duplicate CurrentPersistenceIds response
-                    return true;
-                
-                case Request _:
-                    _buffer.DeliverBuffer(TotalDemand);
-                    return true;
-                
-                case Continue _:
-                    Become(Waiting);
-                    _journalRef
-                        .Ask<MemoryJournal.CurrentPersistenceIds>(new MemoryJournal.SelectCurrentPersistenceIds(_lastOrderingOffset, Self))
-                        .PipeTo(Self);
-                    return true;
-                
-                case Cancel _:
-                    Context.Stop(Self);
-                    return true;
-                
-                case Status.Failure msg:
-                    _log.Info(msg.Cause, "Unexpected failure received");
-                    return true;
-                
-                default:
-                    return false;
-            }
         }
     }
 }

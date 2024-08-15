@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="CircuitBreakerState.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="CircuitBreakerState.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Diagnostics;
@@ -12,296 +12,306 @@ using System.Threading.Tasks;
 using Akka.Util;
 using Akka.Util.Internal;
 
-namespace Akka.Pattern
+namespace Akka.Pattern;
+
+/// <summary>
+///     Concrete implementation of Open state
+/// </summary>
+internal class Open : AtomicState
 {
+    private readonly CircuitBreaker _breaker;
+
     /// <summary>
-    /// Concrete implementation of Open state
+    ///     TBD
     /// </summary>
-    internal class Open : AtomicState
+    /// <param name="breaker">TBD</param>
+    public Open(CircuitBreaker breaker)
+        : base(breaker.CallTimeout, 0)
     {
-        private readonly CircuitBreaker _breaker;
+        _breaker = breaker;
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="breaker">TBD</param>
-        public Open(CircuitBreaker breaker)
-            : base(breaker.CallTimeout, 0)
-        {
-            _breaker = breaker;
-        }
-        
-        /// <summary>
-        /// Calculate remaining duration until reset to inform the caller in case a backoff algorithm is useful
-        /// </summary>
-        /// <returns>Duration to when the breaker will attempt a reset by transitioning to half-open</returns>
-        private TimeSpan RemainingDuration()
-        {
-            var fromOpened = DateTime.UtcNow.Ticks - Current;
-            var diff = _breaker.CurrentResetTimeout.Ticks - fromOpened;
-            return diff <= 0L ? TimeSpan.Zero : TimeSpan.FromTicks(diff);
-        }
+    /// <summary>
+    ///     Calculate remaining duration until reset to inform the caller in case a backoff algorithm is useful
+    /// </summary>
+    /// <returns>Duration to when the breaker will attempt a reset by transitioning to half-open</returns>
+    private TimeSpan RemainingDuration()
+    {
+        var fromOpened = DateTime.UtcNow.Ticks - Current;
+        var diff = _breaker.CurrentResetTimeout.Ticks - fromOpened;
+        return diff <= 0L ? TimeSpan.Zero : TimeSpan.FromTicks(diff);
+    }
 
-        /// <summary>
-        /// Fail-fast on any invocation
-        /// </summary>
-        /// <typeparam name="T">N/A</typeparam>
-        /// <param name="body">Implementation of the call that needs protected</param>
-        /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override Task<T> Invoke<T>(Func<Task<T>> body) => 
-            Task.FromException<T>(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
+    /// <summary>
+    ///     Fail-fast on any invocation
+    /// </summary>
+    /// <typeparam name="T">N/A</typeparam>
+    /// <param name="body">Implementation of the call that needs protected</param>
+    /// <returns><see cref="Task" /> containing result of protected call</returns>
+    public override Task<T> Invoke<T>(Func<Task<T>> body)
+    {
+        return Task.FromException<T>(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
+    }
 
-        public override Task
-            InvokeState<TState>(TState state, Func<TState, Task> body) =>
-            Task.FromException(
-                new OpenCircuitException(_breaker.LastCaughtException,
-                    RemainingDuration()));
-
-        public override Task<T> InvokeState<T, TState>(TState state,
-            Func<TState, Task<T>> body) => Task.FromException<T>(
+    public override Task
+        InvokeState<TState>(TState state, Func<TState, Task> body)
+    {
+        return Task.FromException(
             new OpenCircuitException(_breaker.LastCaughtException,
                 RemainingDuration()));
+    }
 
-        /// <summary>
-        /// Fail-fast on any invocation
-        /// </summary>
-        /// <param name="body">Implementation of the call that needs protected</param>
-        /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override Task Invoke(Func<Task> body) => 
-            Task.FromException(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
-
-        /// <summary>
-        /// No-op for open, calls are never executed so cannot succeed or fail
-        /// </summary>
-        protected internal override void CallFails(Exception cause)
-        {
-            // This is a no-op, but CallFails() can be called from CircuitBreaker
-            // (The function summary is a lie)
-            Debug.WriteLine($"Ignoring calls to [CallFails()] because {nameof(CircuitBreaker)} is in open state. Exception cause was: {cause}");
-        }
-
-        /// <summary>
-        /// No-op for open, calls are never executed so cannot succeed or fail
-        /// </summary>
-        protected internal override void CallSucceeds()
-        {
-            // This is a no-op, but CallSucceeds() can be called from CircuitBreaker
-            // (The function summary is a lie)
-            Debug.WriteLine($"Ignoring calls to [CallSucceeds()] because {nameof(CircuitBreaker)} is in open state.");
-        }
-
-        /// <summary>
-        /// On entering this state, schedule an attempted reset via <see cref="Actor.IScheduler"/> and store the entry time to
-        /// calculate remaining time before attempted reset.
-        /// </summary>
-        protected override void EnterInternal()
-        {
-            GetAndSet(DateTime.UtcNow.Ticks);
-            _breaker.Scheduler.Advanced.ScheduleOnce(_breaker.CurrentResetTimeout, () => _breaker.AttemptReset());
-
-            var rnd = 1.0 + ThreadLocalRandom.Current.NextDouble() * _breaker.RandomFactor;
-            var nextResetTimeout = TimeSpan.FromTicks(_breaker.CurrentResetTimeout.Ticks * (long)_breaker.ExponentialBackoffFactor * (long)rnd);
-            if (nextResetTimeout < _breaker.MaxResetTimeout)
-            {
-                _breaker.SwapStateResetTimeout(_breaker.CurrentResetTimeout, nextResetTimeout);
-            }
-        }
-
-        /// <summary>
-        /// Override for more descriptive toString
-        /// </summary>
-        public override string ToString() => "Open";
+    public override Task<T> InvokeState<T, TState>(TState state,
+        Func<TState, Task<T>> body)
+    {
+        return Task.FromException<T>(
+            new OpenCircuitException(_breaker.LastCaughtException,
+                RemainingDuration()));
     }
 
     /// <summary>
-    /// Concrete implementation of half-open state
+    ///     Fail-fast on any invocation
     /// </summary>
-    internal class HalfOpen : AtomicState
+    /// <param name="body">Implementation of the call that needs protected</param>
+    /// <returns><see cref="Task" /> containing result of protected call</returns>
+    public override Task Invoke(Func<Task> body)
     {
-        private readonly CircuitBreaker _breaker;
-        private readonly AtomicBoolean _lock;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="breaker">TBD</param>
-        public HalfOpen(CircuitBreaker breaker)
-            : base(breaker.CallTimeout, 0)
-        {
-            _breaker = breaker;
-            _lock = new AtomicBoolean();
-        }
-
-        private void CheckState()
-        {
-            if (!_lock.CompareAndSet(true, false))
-            {
-                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
-            }
-        }
-
-        /// <summary>
-        /// Allows a single call through, during which all other callers fail-fast. If the call fails, the breaker reopens.
-        /// If the call succeeds, the breaker closes.
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="body">Implementation of the call that needs protected</param>
-        /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override Task<T> Invoke<T>(Func<Task<T>> body)
-        {
-            CheckState();
-            return CallThrough(body);
-        }
-        
-        public override Task<T> InvokeState<T,TState>(TState state, Func<TState, Task<T>> body)
-        {
-            CheckState();
-            return CallThrough(state,body);
-        }
-
-        /// <summary>
-        /// Allows a single call through, during which all other callers fail-fast. If the call fails, the breaker reopens.
-        /// If the call succeeds, the breaker closes.
-        /// </summary>
-        /// <param name="body">Implementation of the call that needs protected</param>
-        /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task Invoke(Func<Task> body)
-        {
-            CheckState();
-            await CallThrough(body);
-        }
-
-        public override async Task InvokeState<TState>(TState state,
-            Func<TState, Task> body)
-        {
-            CheckState();
-            await CallThrough(state,body);
-        }
-
-        /// <summary>
-        /// Reopen breaker on failed call.
-        /// </summary>
-        protected internal override void CallFails(Exception cause)
-        {
-            _breaker.OnFail(cause);
-            _breaker.TripBreaker(this);
-        }
-
-        /// <summary>
-        /// Reset breaker on successful call.
-        /// </summary>
-        protected internal override void CallSucceeds()
-        {
-            _breaker.OnSuccess();
-            _breaker.ResetBreaker();
-        }
-
-        /// <summary>
-        /// On entry, guard should be reset for that first call to get in
-        /// </summary>
-        protected override void EnterInternal()
-        {
-            _lock.Value = true;
-        }
-
-        /// <summary>
-        /// Override for more descriptive toString
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return string.Format(CultureInfo.InvariantCulture, "Half-Open currently testing call for success = {0}", (_lock.Value == true));
-        }
+        return Task.FromException(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
     }
 
     /// <summary>
-    /// Concrete implementation of Closed state
+    ///     No-op for open, calls are never executed so cannot succeed or fail
     /// </summary>
-    internal class Closed : AtomicState
+    protected internal override void CallFails(Exception cause)
     {
-        private readonly CircuitBreaker _breaker;
+        // This is a no-op, but CallFails() can be called from CircuitBreaker
+        // (The function summary is a lie)
+        Debug.WriteLine(
+            $"Ignoring calls to [CallFails()] because {nameof(CircuitBreaker)} is in open state. Exception cause was: {cause}");
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="breaker">TBD</param>
-        public Closed(CircuitBreaker breaker)
-            : base(breaker.CallTimeout, 0)
-        {
-            _breaker = breaker;
-        }
+    /// <summary>
+    ///     No-op for open, calls are never executed so cannot succeed or fail
+    /// </summary>
+    protected internal override void CallSucceeds()
+    {
+        // This is a no-op, but CallSucceeds() can be called from CircuitBreaker
+        // (The function summary is a lie)
+        Debug.WriteLine($"Ignoring calls to [CallSucceeds()] because {nameof(CircuitBreaker)} is in open state.");
+    }
 
-        /// <summary>
-        /// Implementation of invoke, which simply attempts the call
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="body">Implementation of the call that needs protected</param>
-        /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override Task<T> Invoke<T>(Func<Task<T>> body)
-        {
-            return CallThrough(body);
-        }
+    /// <summary>
+    ///     On entering this state, schedule an attempted reset via <see cref="Actor.IScheduler" /> and store the entry time to
+    ///     calculate remaining time before attempted reset.
+    /// </summary>
+    protected override void EnterInternal()
+    {
+        GetAndSet(DateTime.UtcNow.Ticks);
+        _breaker.Scheduler.Advanced.ScheduleOnce(_breaker.CurrentResetTimeout, () => _breaker.AttemptReset());
 
-        public override Task<T> InvokeState<T, TState>(TState state, Func<TState, Task<T>> body)
-        {
-            return CallThrough(state, body);
-        }
+        var rnd = 1.0 + ThreadLocalRandom.Current.NextDouble() * _breaker.RandomFactor;
+        var nextResetTimeout =
+            TimeSpan.FromTicks(_breaker.CurrentResetTimeout.Ticks * (long)_breaker.ExponentialBackoffFactor *
+                               (long)rnd);
+        if (nextResetTimeout < _breaker.MaxResetTimeout)
+            _breaker.SwapStateResetTimeout(_breaker.CurrentResetTimeout, nextResetTimeout);
+    }
 
-        /// <summary>
-        /// Implementation of invoke, which simply attempts the call
-        /// </summary>
-        /// <param name="body">Implementation of the call that needs protected</param>
-        /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override Task Invoke(Func<Task> body)
-        {
-            return CallThrough(body);
-        }
+    /// <summary>
+    ///     Override for more descriptive toString
+    /// </summary>
+    public override string ToString()
+    {
+        return "Open";
+    }
+}
 
-        public override Task InvokeState<TState>(TState state, Func<TState, Task> body)
-        {
-            return CallThrough(state, body);
-        }
+/// <summary>
+///     Concrete implementation of half-open state
+/// </summary>
+internal class HalfOpen : AtomicState
+{
+    private readonly CircuitBreaker _breaker;
+    private readonly AtomicBoolean _lock;
 
-        /// <summary>
-        /// On failed call, the failure count is incremented.  The count is checked against the configured maxFailures, and
-        /// the breaker is tripped if we have reached maxFailures.
-        /// </summary>
-        protected internal override void CallFails(Exception cause)
-        {
-            _breaker.OnFail(cause);
-            if (IncrementAndGet() == _breaker.MaxFailures)
-            {
-                _breaker.TripBreaker(this);
-            }
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="breaker">TBD</param>
+    public HalfOpen(CircuitBreaker breaker)
+        : base(breaker.CallTimeout, 0)
+    {
+        _breaker = breaker;
+        _lock = new AtomicBoolean();
+    }
 
-        /// <summary>
-        /// On successful call, the failure count is reset to 0
-        /// </summary>
-        protected internal override void CallSucceeds()
-        {
-            _breaker.OnSuccess();
-            Reset();
-        }
+    private void CheckState()
+    {
+        if (!_lock.CompareAndSet(true, false))
+            throw new OpenCircuitException(
+                "Circuit breaker is half open, only one call is allowed; this call is failing fast.",
+                _breaker.LastCaughtException, TimeSpan.Zero);
+    }
 
-        /// <summary>
-        /// On entry of this state, failure count is reset.
-        /// </summary>
-        protected override void EnterInternal()
-        {
-            Reset();
-            _breaker.SwapStateResetTimeout(_breaker.CurrentResetTimeout, _breaker.ResetTimeout);
-        }
+    /// <summary>
+    ///     Allows a single call through, during which all other callers fail-fast. If the call fails, the breaker reopens.
+    ///     If the call succeeds, the breaker closes.
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <param name="body">Implementation of the call that needs protected</param>
+    /// <returns><see cref="Task" /> containing result of protected call</returns>
+    public override Task<T> Invoke<T>(Func<Task<T>> body)
+    {
+        CheckState();
+        return CallThrough(body);
+    }
 
-        /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="System.String" /> that represents this instance.
-        /// </returns>
-        public override string ToString()
-        {
-            return $"Closed with failure count = {Current}";
-        }
+    public override Task<T> InvokeState<T, TState>(TState state, Func<TState, Task<T>> body)
+    {
+        CheckState();
+        return CallThrough(state, body);
+    }
+
+    /// <summary>
+    ///     Allows a single call through, during which all other callers fail-fast. If the call fails, the breaker reopens.
+    ///     If the call succeeds, the breaker closes.
+    /// </summary>
+    /// <param name="body">Implementation of the call that needs protected</param>
+    /// <returns><see cref="Task" /> containing result of protected call</returns>
+    public override async Task Invoke(Func<Task> body)
+    {
+        CheckState();
+        await CallThrough(body);
+    }
+
+    public override async Task InvokeState<TState>(TState state,
+        Func<TState, Task> body)
+    {
+        CheckState();
+        await CallThrough(state, body);
+    }
+
+    /// <summary>
+    ///     Reopen breaker on failed call.
+    /// </summary>
+    protected internal override void CallFails(Exception cause)
+    {
+        _breaker.OnFail(cause);
+        _breaker.TripBreaker(this);
+    }
+
+    /// <summary>
+    ///     Reset breaker on successful call.
+    /// </summary>
+    protected internal override void CallSucceeds()
+    {
+        _breaker.OnSuccess();
+        _breaker.ResetBreaker();
+    }
+
+    /// <summary>
+    ///     On entry, guard should be reset for that first call to get in
+    /// </summary>
+    protected override void EnterInternal()
+    {
+        _lock.Value = true;
+    }
+
+    /// <summary>
+    ///     Override for more descriptive toString
+    /// </summary>
+    /// <returns>TBD</returns>
+    public override string ToString()
+    {
+        return string.Format(CultureInfo.InvariantCulture, "Half-Open currently testing call for success = {0}",
+            _lock.Value);
+    }
+}
+
+/// <summary>
+///     Concrete implementation of Closed state
+/// </summary>
+internal class Closed : AtomicState
+{
+    private readonly CircuitBreaker _breaker;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="breaker">TBD</param>
+    public Closed(CircuitBreaker breaker)
+        : base(breaker.CallTimeout, 0)
+    {
+        _breaker = breaker;
+    }
+
+    /// <summary>
+    ///     Implementation of invoke, which simply attempts the call
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    /// <param name="body">Implementation of the call that needs protected</param>
+    /// <returns><see cref="Task" /> containing result of protected call</returns>
+    public override Task<T> Invoke<T>(Func<Task<T>> body)
+    {
+        return CallThrough(body);
+    }
+
+    public override Task<T> InvokeState<T, TState>(TState state, Func<TState, Task<T>> body)
+    {
+        return CallThrough(state, body);
+    }
+
+    /// <summary>
+    ///     Implementation of invoke, which simply attempts the call
+    /// </summary>
+    /// <param name="body">Implementation of the call that needs protected</param>
+    /// <returns><see cref="Task" /> containing result of protected call</returns>
+    public override Task Invoke(Func<Task> body)
+    {
+        return CallThrough(body);
+    }
+
+    public override Task InvokeState<TState>(TState state, Func<TState, Task> body)
+    {
+        return CallThrough(state, body);
+    }
+
+    /// <summary>
+    ///     On failed call, the failure count is incremented.  The count is checked against the configured maxFailures, and
+    ///     the breaker is tripped if we have reached maxFailures.
+    /// </summary>
+    protected internal override void CallFails(Exception cause)
+    {
+        _breaker.OnFail(cause);
+        if (IncrementAndGet() == _breaker.MaxFailures) _breaker.TripBreaker(this);
+    }
+
+    /// <summary>
+    ///     On successful call, the failure count is reset to 0
+    /// </summary>
+    protected internal override void CallSucceeds()
+    {
+        _breaker.OnSuccess();
+        Reset();
+    }
+
+    /// <summary>
+    ///     On entry of this state, failure count is reset.
+    /// </summary>
+    protected override void EnterInternal()
+    {
+        Reset();
+        _breaker.SwapStateResetTimeout(_breaker.CurrentResetTimeout, _breaker.ResetTimeout);
+    }
+
+    /// <summary>
+    ///     Returns a <see cref="System.String" /> that represents this instance.
+    /// </summary>
+    /// <returns>
+    ///     A <see cref="System.String" /> that represents this instance.
+    /// </returns>
+    public override string ToString()
+    {
+        return $"Closed with failure count = {Current}";
     }
 }

@@ -1,46 +1,42 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Argument.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Argument.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-namespace Akka.Tools.MatchHandler
+namespace Akka.Tools.MatchHandler;
+
+/// <summary>
+///     TBD
+/// </summary>
+internal class Argument
 {
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    internal class Argument
+    /// <param name="predicateAndHandler">TBD</param>
+    /// <param name="value">TBD</param>
+    /// <param name="valueIsActionOrFunc">TBD</param>
+    public Argument(PredicateAndHandler predicateAndHandler, object value, bool valueIsActionOrFunc)
     {
-        private readonly PredicateAndHandler _predicateAndHandler;
-        private readonly object _value;
-        private readonly bool _valueIsActionOrFunc;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="predicateAndHandler">TBD</param>
-        /// <param name="value">TBD</param>
-        /// <param name="valueIsActionOrFunc">TBD</param>
-        public Argument(PredicateAndHandler predicateAndHandler, object value, bool valueIsActionOrFunc)
-        {
-            _predicateAndHandler = predicateAndHandler;
-            _value = value;
-            _valueIsActionOrFunc = valueIsActionOrFunc;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public PredicateAndHandler PredicateAndHandler{get { return _predicateAndHandler; }}
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public object Value{get { return _value; }}
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public bool ValueIsActionOrFunc{get { return _valueIsActionOrFunc; }}
+        PredicateAndHandler = predicateAndHandler;
+        Value = value;
+        ValueIsActionOrFunc = valueIsActionOrFunc;
     }
-}
 
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public PredicateAndHandler PredicateAndHandler { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public object Value { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public bool ValueIsActionOrFunc { get; }
+}

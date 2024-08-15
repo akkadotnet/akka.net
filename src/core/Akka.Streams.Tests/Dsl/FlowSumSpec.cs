@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="FlowSumSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="FlowSumSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -12,207 +12,220 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
-using Akka.TestKit.Extensions;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
-using FluentAssertions.Extensions;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+//JVMN : FlowReduceSpec
+public class FlowSumSpec : AkkaSpec
 {
-    //JVMN : FlowReduceSpec
-    public class FlowSumSpec : AkkaSpec
+    public FlowSumSpec(ITestOutputHelper helper) : base(helper)
     {
-        private ActorMaterializer Materializer { get; }
+        Materializer = ActorMaterializer.Create(Sys);
+    }
 
-        public FlowSumSpec(ITestOutputHelper helper):base(helper)
+    private ActorMaterializer Materializer { get; }
+
+    private static IEnumerable<int> Input => Enumerable.Range(1, 100);
+    private static int Expected => Input.Sum();
+    private static Source<int, NotUsed> InputSource => Source.From(Input).Where(_ => true).Select(x => x);
+
+    private static Source<int, NotUsed> SumSource
+        => InputSource.Sum((i, i1) => i + i1).Where(_ => true).Select(x => x);
+
+    private static Flow<int, int, NotUsed> SumFlow
+        => Flow.Create<int>().Where(_ => true).Select(x => x).Sum((i, i1) => i + i1).Where(_ => true).Select(x => x);
+
+    private static Sink<int, Task<int>> SumSink => Sink.Sum<int>((i, i1) => i + i1);
+
+    [Fact]
+    public async Task A_Sum_must_work_when_using_Source_RunSum()
+    {
+        await this.AssertAllStagesStoppedAsync(() =>
         {
-            Materializer = ActorMaterializer.Create(Sys);
-        }
+            var t = InputSource.RunSum((i, i1) => i + i1, Materializer);
+            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            t.Result.Should().Be(Expected);
+            return Task.CompletedTask;
+        }, Materializer);
+    }
 
-        private static IEnumerable<int> Input => Enumerable.Range(1, 100);
-        private static int Expected => Input.Sum();
-        private static Source<int, NotUsed> InputSource => Source.From(Input).Where(_ => true).Select(x => x);
-
-        private static Source<int, NotUsed> SumSource
-            => InputSource.Sum((i, i1) => i + i1).Where(_ => true).Select(x => x);
-
-        private static Flow<int, int, NotUsed> SumFlow
-            => Flow.Create<int>().Where(_ => true).Select(x => x).Sum((i, i1) => i + i1).Where(_ => true).Select(x => x);
-
-        private static Sink<int, Task<int>> SumSink => Sink.Sum<int>((i, i1) => i + i1);
-
-        [Fact]
-        public async Task A_Sum_must_work_when_using_Source_RunSum()
+    [Fact]
+    public async Task A_Sum_must_work_when_using_Source_Sum()
+    {
+        await this.AssertAllStagesStoppedAsync(() =>
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var t = InputSource.RunSum((i, i1) => i + i1, Materializer);
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().Be(Expected);
-                return Task.CompletedTask;
-            }, Materializer);
-        }
+            var t = SumSource.RunWith(Sink.First<int>(), Materializer);
+            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            t.Result.Should().Be(Expected);
+            return Task.CompletedTask;
+        }, Materializer);
+    }
 
-        [Fact]
-        public async Task A_Sum_must_work_when_using_Source_Sum()
+    [Fact]
+    public async Task A_Sum_must_work_when_using_Sink_Sum()
+    {
+        await this.AssertAllStagesStoppedAsync(() =>
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var t = SumSource.RunWith(Sink.First<int>(), Materializer);
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().Be(Expected);
-                return Task.CompletedTask;
-            }, Materializer);
-        }
-        [Fact]
-        public async Task A_Sum_must_work_when_using_Sink_Sum()
+            var t = InputSource.RunWith(SumSink, Materializer);
+            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            t.Result.Should().Be(Expected);
+            return Task.CompletedTask;
+        }, Materializer);
+    }
+
+    [Fact]
+    public async Task A_Sum_must_work_when_using_Flow_Sum()
+    {
+        await this.AssertAllStagesStoppedAsync(() =>
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var t = InputSource.RunWith(SumSink, Materializer);
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().Be(Expected);
-                return Task.CompletedTask;
-            }, Materializer);
-        }
+            var t = InputSource.Via(SumFlow).RunWith(Sink.First<int>(), Materializer);
+            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            t.Result.Should().Be(Expected);
+            return Task.CompletedTask;
+        }, Materializer);
+    }
 
-        [Fact]
-        public async Task A_Sum_must_work_when_using_Flow_Sum()
+    [Fact]
+    public async Task A_Sum_must_work_when_using_Source_Sum_and_Flow_Sum_and_Sink_Sum()
+    {
+        await this.AssertAllStagesStoppedAsync(() =>
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var t = InputSource.Via(SumFlow).RunWith(Sink.First<int>(), Materializer);
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().Be(Expected);
-                return Task.CompletedTask;
-            }, Materializer);
-        }
+            var t = SumSource.Via(SumFlow).RunWith(SumSink, Materializer);
+            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            t.Result.Should().Be(Expected);
+            return Task.CompletedTask;
+        }, Materializer);
+    }
 
-        [Fact]
-        public async Task A_Sum_must_work_when_using_Source_Sum_and_Flow_Sum_and_Sink_Sum()
+    [Fact]
+    public async Task A_Sum_must_propagate_an_error()
+    {
+        await this.AssertAllStagesStoppedAsync(() =>
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var t = SumSource.Via(SumFlow).RunWith(SumSink, Materializer);
-                t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                t.Result.Should().Be(Expected);
-                return Task.CompletedTask;
-            }, Materializer);
-        }
-
-        [Fact]
-        public async Task A_Sum_must_propagate_an_error()
-        {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var error = new TestException("test");
-                var task = InputSource.Select(x =>
-                {
-                    if (x > 50)
-                        throw error;
-                    return x;
-                }).RunSum((_, _) => 0, Materializer);
-
-                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<TestException>().WithMessage("test");
-                return Task.CompletedTask;
-            }, Materializer);
-        }
-
-        [Fact]
-        public async Task A_Sum_must_complete_task_with_failure_when_reduce_function_throws_and_the_supervisor_strategy_decides_to_stop()
-        {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var error = new TestException("test");
-                var task = InputSource.RunSum((x, y) =>
-                {
-                    if (x > 50)
-                        throw error;
-                    return x + y;
-                }, Materializer);
-
-                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<TestException>().WithMessage("test");
-                return Task.CompletedTask;
-            }, Materializer);
-        }
-
-        [Fact]
-        public async Task A_Sum_must_resume_with_the_accumulated_state_when_the_reduce_funtion_throws_and_the_supervisor_strategy_decides_to_resume()
-        {
-            await this.AssertAllStagesStoppedAsync(async() =>
+            var error = new TestException("test");
+            var task = InputSource.Select(x =>
             {
-                var error = new Exception("boom");
-                var sum = Sink.Sum((int x, int y) =>
-                {
-                    if (y == 50)
-                        throw error;
+                if (x > 50)
+                    throw error;
+                return x;
+            }).RunSum((_, _) => 0, Materializer);
 
-                    return x + y;
-                });
-                var task = InputSource.RunWith(
-                    sum.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider)),
-                    Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
-                complete.Should().Be(Expected - 50);
-            }, Materializer);
-        }
+            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<TestException>().WithMessage("test");
+            return Task.CompletedTask;
+        }, Materializer);
+    }
 
-        [Fact]
-        public async Task A_Aggregate_must_resume_and_reset_the_state_when_the_reduce_funtion_throws_and_the_supervisor_strategy_decides_to_restart()
+    [Fact]
+    public async Task
+        A_Sum_must_complete_task_with_failure_when_reduce_function_throws_and_the_supervisor_strategy_decides_to_stop()
+    {
+        await this.AssertAllStagesStoppedAsync(() =>
         {
-            await this.AssertAllStagesStoppedAsync(async() =>
+            var error = new TestException("test");
+            var task = InputSource.RunSum((x, y) =>
             {
-                var error = new Exception("boom");
-                var sum = Sink.Sum((int x, int y) =>
-                {
-                    if (y == 50)
-                        throw error;
-
-                    return x + y;
-                });
-                var task = InputSource.RunWith(
-                    sum.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider)),
-                    Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
-                complete.Should().Be(Enumerable.Range(51, 50).Sum());
+                if (x > 50)
+                    throw error;
+                return x + y;
             }, Materializer);
-        }
 
-        [Fact]
-        public async Task A_Sum_must_fail_on_Empty_stream_using_Source_RunSum()
-        {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var result = Source.Empty<int>().RunSum((i, i1) => i + i1, Materializer);
-                result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .Should().Throw<NoSuchElementException>()
-                    .And.Message.Should()
-                    .Contain("empty stream");
-                return Task.CompletedTask;
-            }, Materializer);
-        }
+            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<TestException>().WithMessage("test");
+            return Task.CompletedTask;
+        }, Materializer);
+    }
 
-        [Fact]
-        public async Task A_Sum_must_fail_on_Empty_stream_using_Flow_Sum()
+    [Fact]
+    public async Task
+        A_Sum_must_resume_with_the_accumulated_state_when_the_reduce_funtion_throws_and_the_supervisor_strategy_decides_to_resume()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var result = Source.Empty<int>()                                                                             
-                .Via(SumFlow)                                                                             
+            var error = new Exception("boom");
+            var sum = Sink.Sum((int x, int y) =>
+            {
+                if (y == 50)
+                    throw error;
+
+                return x + y;
+            });
+            var task = InputSource.RunWith(
+                sum.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider)),
+                Materializer);
+            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            complete.Should().Be(Expected - 50);
+        }, Materializer);
+    }
+
+    [Fact]
+    public async Task
+        A_Aggregate_must_resume_and_reset_the_state_when_the_reduce_funtion_throws_and_the_supervisor_strategy_decides_to_restart()
+    {
+        await this.AssertAllStagesStoppedAsync(async () =>
+        {
+            var error = new Exception("boom");
+            var sum = Sink.Sum((int x, int y) =>
+            {
+                if (y == 50)
+                    throw error;
+
+                return x + y;
+            });
+            var task = InputSource.RunWith(
+                sum.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider)),
+                Materializer);
+            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            complete.Should().Be(Enumerable.Range(51, 50).Sum());
+        }, Materializer);
+    }
+
+    [Fact]
+    public async Task A_Sum_must_fail_on_Empty_stream_using_Source_RunSum()
+    {
+        await this.AssertAllStagesStoppedAsync(() =>
+        {
+            var result = Source.Empty<int>().RunSum((i, i1) => i + i1, Materializer);
+            result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                .Should().Throw<NoSuchElementException>()
+                .And.Message.Should()
+                .Contain("empty stream");
+            return Task.CompletedTask;
+        }, Materializer);
+    }
+
+    [Fact]
+    public async Task A_Sum_must_fail_on_Empty_stream_using_Flow_Sum()
+    {
+        await this.AssertAllStagesStoppedAsync(() =>
+        {
+            var result = Source.Empty<int>()
+                .Via(SumFlow)
                 .RunWith(Sink.Aggregate<int, int>(0, (i, i1) => i + i1), Materializer);
-                result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .Should().Throw<NoSuchElementException>()
-                    .And.Message.Should()
-                    .Contain("empty stream");
-                return Task.CompletedTask;
-            }, Materializer);
-        }
+            result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                .Should().Throw<NoSuchElementException>()
+                .And.Message.Should()
+                .Contain("empty stream");
+            return Task.CompletedTask;
+        }, Materializer);
+    }
 
-        [Fact]
-        public async Task A_Sum_must_fail_on_Empty_stream_using_Sink_Sum()
+    [Fact]
+    public async Task A_Sum_must_fail_on_Empty_stream_using_Sink_Sum()
+    {
+        await this.AssertAllStagesStoppedAsync(() =>
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var result = Source.Empty<int>()                                                                             
+            var result = Source.Empty<int>()
                 .RunWith(SumSink, Materializer);
-                result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .Should().Throw<NoSuchElementException>()
-                    .And.Message.Should()
-                    .Contain("empty stream");
-                return Task.CompletedTask;
-            }, Materializer);
-        }
+            result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
+                .Should().Throw<NoSuchElementException>()
+                .And.Message.Should()
+                .Contain("empty stream");
+            return Task.CompletedTask;
+        }, Materializer);
     }
 }

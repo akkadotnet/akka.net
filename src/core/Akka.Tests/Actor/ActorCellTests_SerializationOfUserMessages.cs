@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ActorCellTests_SerializationOfUserMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ActorCellTests_SerializationOfUserMessages.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
@@ -12,72 +12,59 @@ using Akka.TestKit;
 using Akka.Tests.TestUtils;
 using Xunit;
 
-namespace Akka.Tests.Actor
+namespace Akka.Tests.Actor;
+
+public class WhenSerializeAllMessagesIsOff : AkkaSpec
 {
-    public class WhenSerializeAllMessagesIsOff : AkkaSpec
+    public WhenSerializeAllMessagesIsOff()
+        : base(@"akka.actor.serialize-messages = off")
     {
-        public class SomeUserMessage : Comparable
-        {
-            public string A { get; set; }
-            public int B { get; set; }
-            public Guid C { get; set; }
-        }
-
-        public WhenSerializeAllMessagesIsOff()
-            : base(@"akka.actor.serialize-messages = off")
-        {
-        }
-
-       [Fact]
-       public async Task Does_not_serializes_user_messages()
-       {
-            var message = new SomeUserMessage
-            {
-                A = "abc",
-                B = 123,
-                C = Guid.Empty
-            };
-            TestActor.Tell(message);
-
-            var result = await ExpectMsgAsync<SomeUserMessage>();
-
-            Assert.False(Sys.Settings.SerializeAllMessages);
-            Assert.Equal(message, result);
-            Assert.Same(message, result);
-        }
-
     }
 
-    public class WhenSerializeAllMessagesIsOn : AkkaSpec
+    [Fact]
+    public async Task Does_not_serializes_user_messages()
     {
-        public class SomeUserMessage : Comparable
-        {
-            public string A { get; set; }
-            public int B { get; set; }
-            public Guid C { get; set; }
-        }
+        var message = new SomeUserMessage { A = "abc", B = 123, C = Guid.Empty };
+        TestActor.Tell(message);
 
-        public WhenSerializeAllMessagesIsOn():base(@"akka.actor.serialize-messages = on")
-        {
-        }
-       
-        [Fact]
-        public async Task Do_serialize_user_messages()
-        {
-            var message = new SomeUserMessage
-            {
-                A = "abc",
-                B = 123,
-                C = Guid.Empty
-            };
-            TestActor.Tell(message);
+        var result = await ExpectMsgAsync<SomeUserMessage>();
 
-            var result = await ExpectMsgAsync<SomeUserMessage>();
+        Assert.False(Sys.Settings.SerializeAllMessages);
+        Assert.Equal(message, result);
+        Assert.Same(message, result);
+    }
 
-            Assert.True(Sys.Settings.SerializeAllMessages);
-            Assert.Equal(message, result);
-            Assert.NotSame(message, result);
-        }
+    public class SomeUserMessage : Comparable
+    {
+        public string A { get; set; }
+        public int B { get; set; }
+        public Guid C { get; set; }
     }
 }
 
+public class WhenSerializeAllMessagesIsOn : AkkaSpec
+{
+    public WhenSerializeAllMessagesIsOn() : base(@"akka.actor.serialize-messages = on")
+    {
+    }
+
+    [Fact]
+    public async Task Do_serialize_user_messages()
+    {
+        var message = new SomeUserMessage { A = "abc", B = 123, C = Guid.Empty };
+        TestActor.Tell(message);
+
+        var result = await ExpectMsgAsync<SomeUserMessage>();
+
+        Assert.True(Sys.Settings.SerializeAllMessages);
+        Assert.Equal(message, result);
+        Assert.NotSame(message, result);
+    }
+
+    public class SomeUserMessage : Comparable
+    {
+        public string A { get; set; }
+        public int B { get; set; }
+        public Guid C { get; set; }
+    }
+}

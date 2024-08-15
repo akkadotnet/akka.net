@@ -1,95 +1,84 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="LookupRemoteActorMultiNetSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="LookupRemoteActorMultiNetSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System;
 using Akka.Actor;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Xunit;
 
-namespace Akka.Remote.Tests.MultiNode
+namespace Akka.Remote.Tests.MultiNode;
+
+public class LookupRemoteActorMultiNetSpec : MultiNodeConfig
 {
-    public class LookupRemoteActorMultiNetSpec : MultiNodeConfig
+    public LookupRemoteActorMultiNetSpec()
     {
-        public RoleName Master { get; }
-        public RoleName Slave { get; }
+        Master = Role("master");
+        Slave = Role("slave");
 
-        public LookupRemoteActorMultiNetSpec()
-        {
-            Master = Role("master");
-            Slave = Role("slave");
-
-            CommonConfig = DebugConfig(false);
-        }
-
-        public class SomeActor : UntypedActor
-        {
-            protected override void OnReceive(object message)
-            {
-                if (message is Identify)
-                {
-                    Sender.Tell(Self);
-                }
-            }
-        }
+        CommonConfig = DebugConfig(false);
     }
 
-    public class LookupRemoteActorSpec : MultiNodeSpec
+    public RoleName Master { get; }
+    public RoleName Slave { get; }
+
+    public class SomeActor : UntypedActor
     {
-        private LookupRemoteActorMultiNetSpec _config;
-
-        public LookupRemoteActorSpec()
-            : this(new LookupRemoteActorMultiNetSpec())
+        protected override void OnReceive(object message)
         {
-
+            if (message is Identify) Sender.Tell(Self);
         }
-        protected LookupRemoteActorSpec(LookupRemoteActorMultiNetSpec config)
-            : base(config, typeof(LookupRemoteActorSpec))
-        {
-            _config = config;
-        }
+    }
+}
 
-        protected override int InitialParticipantsValueFactory
-        {
-            get
+public class LookupRemoteActorSpec : MultiNodeSpec
+{
+    private readonly LookupRemoteActorMultiNetSpec _config;
+
+    public LookupRemoteActorSpec()
+        : this(new LookupRemoteActorMultiNetSpec())
+    {
+    }
+
+    protected LookupRemoteActorSpec(LookupRemoteActorMultiNetSpec config)
+        : base(config, typeof(LookupRemoteActorSpec))
+    {
+        _config = config;
+    }
+
+    protected override int InitialParticipantsValueFactory => Roles.Count;
+
+    [MultiNodeFact]
+    public void LookupRemoteActorSpecs()
+    {
+        RunOn(
+            () => Sys.ActorOf<NewRemoteActorMultiNodeSpecConfig.SomeActor>("service-hello"),
+            _config.Master);
+
+        Remoting_must_lookup_remote_actor();
+    }
+
+    public void Remoting_must_lookup_remote_actor()
+    {
+        RunOn(
+            () =>
             {
-                return Roles.Count;
-            }
-        }
+                Sys.ActorSelection(Node(_config.Master) / "user" / "service-hello")
+                    .Tell(new Identify("id1"));
+                var hello = ExpectMsg<ActorIdentity>()
+                    .Subject;
 
-        [MultiNodeFact]
-        public void LookupRemoteActorSpecs()
-        {
-            RunOn(
-                () => Sys.ActorOf<NewRemoteActorMultiNodeSpecConfig.SomeActor>("service-hello"),
-                _config.Master);
+                Assert.IsType<RemoteActorRef>(hello);
 
-            Remoting_must_lookup_remote_actor();
-        }
+                var masterAddress = TestConductor.GetAddressFor(_config.Master).Result;
 
-        public void Remoting_must_lookup_remote_actor()
-        {
-            RunOn(
-                () =>
-                {
-                    Sys.ActorSelection(Node(_config.Master) / "user" / "service-hello")
-                       .Tell(new Identify("id1"));
-                    var hello = ExpectMsg<ActorIdentity>()
-                        .Subject;
+                Assert.StrictEqual(masterAddress, hello.Path.Address);
+            },
+            _config.Slave);
 
-                    Assert.IsType<RemoteActorRef>(hello);
-
-                    var masterAddress = TestConductor.GetAddressFor(_config.Master).Result;
-
-                    Assert.StrictEqual(masterAddress, hello.Path.Address);
-                },
-                _config.Slave);
-
-            EnterBarrier("done");
-        }
+        EnterBarrier("done");
     }
 }

@@ -1,26 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <Description>Distributed publish/subscribe, client and singleton support for Akka.NET cluster</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
-        <PackageTags>$(AkkaPackageTags);network;cluster</PackageTags>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <EmbeddedResource Include="Client\reference.conf;PublishSubscribe\reference.conf;Singleton\reference.conf"/>
-        <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj"/>
-        <ProjectReference Include="..\..\..\core\Akka.Coordination\Akka.Coordination.csproj"/>
-        <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <ProjectReference Include="..\..\..\core\Akka.Discovery\Akka.Discovery.csproj" />
-    </ItemGroup>
+  <PropertyGroup>
+    <Description>Distributed publish/subscribe, client and singleton support for Akka.NET cluster</Description>
+    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags);network;cluster</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
 
   <ItemGroup>
-    <Protobuf Access="internal" Include="../../../protobuf/DistributedPubSubMessages.proto" />
-    <Protobuf Access="internal" Include="../../../protobuf/ClusterClientMessages.proto" />
+    <EmbeddedResource Include="Client\reference.conf;PublishSubscribe\reference.conf;Singleton\reference.conf"/>
+    <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj"/>
+    <ProjectReference Include="..\..\..\core\Akka.Coordination\Akka.Coordination.csproj"/>
+    <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <ProjectReference Include="..\..\..\core\Akka.Discovery\Akka.Discovery.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Access="internal" Include="../../../protobuf/DistributedPubSubMessages.proto"/>
+    <Protobuf Access="internal" Include="../../../protobuf/ClusterClientMessages.proto"/>
 
 
   </ItemGroup>

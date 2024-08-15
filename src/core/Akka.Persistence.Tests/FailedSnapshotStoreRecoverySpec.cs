@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="FailedSnapshotStoreRecoverySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="FailedSnapshotStoreRecoverySpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
@@ -17,7 +17,7 @@ using Xunit.Abstractions;
 namespace Akka.Persistence.Tests;
 
 /// <summary>
-/// Scenario: actor that uses ONLY the SnapshotStore fails to recover - what happens?
+///     Scenario: actor that uses ONLY the SnapshotStore fails to recover - what happens?
 /// </summary>
 public class FailedSnapshotStoreRecoverySpec : PersistenceTestKit
 {
@@ -31,29 +31,72 @@ public class FailedSnapshotStoreRecoverySpec : PersistenceTestKit
         # need to set recovery timeout to 1s
         akka.persistence.journal-plugin-fallback.recovery-event-timeout = 1s
     ");
-    
-    public FailedSnapshotStoreRecoverySpec(ITestOutputHelper output) : base(Config, output:output){}
-    
+
+    public FailedSnapshotStoreRecoverySpec(ITestOutputHelper output) : base(Config, output: output)
+    {
+    }
+
+    [Theory(DisplayName = "PersistentActor using Snapshots only must fail if snapshots are irrecoverable")]
+    [InlineData(FailureMode.Explicit)]
+    [InlineData(FailureMode.Timeout)]
+    public async Task PersistentActor_using_Snapshots_only_must_fail_if_snapshots_irrecoverable(FailureMode mode)
+    {
+        // arrange
+        var probe = CreateTestProbe();
+        var actor = Sys.ActorOf(Props.Create(() => new PersistentActor("p1", probe.Ref)));
+        await probe.ExpectMsgAsync<RecoveryCompleted>();
+        actor.Tell(new Save("a"), probe);
+        await probe.ExpectMsgAsync("ack");
+        await probe.ExpectMsgAsync<SnapshotSaved>();
+        await actor.GracefulStop(RemainingOrDefault);
+
+        Task SelectBehavior(SnapshotStoreLoadBehavior behavior)
+        {
+            switch (mode)
+            {
+                case FailureMode.Timeout:
+                    return behavior.FailWithDelay(TimeSpan.FromMinutes(1));
+                case FailureMode.Explicit:
+                default:
+                    return behavior.Fail();
+            }
+        }
+
+        // act
+        await WithSnapshotLoad(SelectBehavior, async () =>
+        {
+            await WithinAsync(RemainingOrDefault, async () =>
+            {
+                var actor2 = Sys.ActorOf(Props.Create(() => new PersistentActor("p1", probe.Ref)));
+                Watch(actor2);
+                await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(150));
+                await ExpectTerminatedAsync(actor2);
+            });
+        });
+    }
+
     private record Save(string Data);
 
-    private record Fetch();
+    private record Fetch;
 
-    private record SnapshotSaved();
-    private record RecoveryCompleted();
-    
+    private record SnapshotSaved;
+
+    private record RecoveryCompleted;
+
     public sealed class PersistentActor : UntypedPersistentActor
     {
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly IActorRef _targetActor;
+
         public PersistentActor(string persistenceId, IActorRef targetActor)
         {
             PersistenceId = persistenceId;
             _targetActor = targetActor;
         }
 
-        private readonly ILoggingAdapter _log = Context.GetLogger();
-        private readonly IActorRef _targetActor;
-
         public override string PersistenceId { get; }
         public string CurrentData { get; set; } = "none";
+
         protected override void OnCommand(object message)
         {
             switch (message)
@@ -106,45 +149,5 @@ public class FailedSnapshotStoreRecoverySpec : PersistenceTestKit
             _log.Error(reason, "Recovery failed");
             base.OnRecoveryFailure(reason, message);
         }
-    }
-
-    [Theory(DisplayName = "PersistentActor using Snapshots only must fail if snapshots are irrecoverable")]
-    [InlineData(FailureMode.Explicit)]
-    [InlineData(FailureMode.Timeout)]
-    public async Task PersistentActor_using_Snapshots_only_must_fail_if_snapshots_irrecoverable(FailureMode mode)
-    {
-        // arrange
-        var probe = CreateTestProbe();
-        var actor = Sys.ActorOf(Props.Create(() => new PersistentActor("p1", probe.Ref)));
-        await probe.ExpectMsgAsync<RecoveryCompleted>();
-        actor.Tell(new Save("a"), probe);
-        await probe.ExpectMsgAsync("ack");
-        await probe.ExpectMsgAsync<SnapshotSaved>();
-        await actor.GracefulStop(RemainingOrDefault);
-
-        Task SelectBehavior(SnapshotStoreLoadBehavior behavior)
-        {
-            switch (mode)
-            {
-                case FailureMode.Timeout:
-                    return behavior.FailWithDelay(TimeSpan.FromMinutes(1));
-                case FailureMode.Explicit:
-                default:
-                    return behavior.Fail();
-            }
-        }
-
-        // act
-        await WithSnapshotLoad(SelectBehavior, async () =>
-        {
-            await WithinAsync(RemainingOrDefault, async () =>
-            {
-                var actor2 = Sys.ActorOf(Props.Create(() => new PersistentActor("p1", probe.Ref)));
-                Watch(actor2);
-                await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(150));
-                await ExpectTerminatedAsync(actor2);
-            });
-        });
-
     }
 }

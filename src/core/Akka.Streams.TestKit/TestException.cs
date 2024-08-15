@@ -1,34 +1,35 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TestException.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="TestException.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 
-namespace Akka.Streams.TestKit
+namespace Akka.Streams.TestKit;
+
+public class TestException : Exception
 {
-    public class TestException : Exception
+    public TestException(string message) : base(message)
     {
-        public TestException(string message) : base(message) { }
+    }
 
-        protected bool Equals(TestException other)
-        {
-            return Message.Equals(other.Message);
-        }
+    protected bool Equals(TestException other)
+    {
+        return Message.Equals(other.Message);
+    }
 
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
-            return Equals((TestException) obj);
-        }
+    public override bool Equals(object obj)
+    {
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals((TestException)obj);
+    }
 
-        public override int GetHashCode()
-        {
-            return Message.GetHashCode();
-        }
+    public override int GetHashCode()
+    {
+        return Message.GetHashCode();
     }
 }

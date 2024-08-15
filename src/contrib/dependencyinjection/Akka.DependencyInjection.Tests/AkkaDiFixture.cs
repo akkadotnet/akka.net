@@ -1,113 +1,111 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AkkaDiFixture.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="AkkaDiFixture.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
-namespace Akka.DependencyInjection.Tests
+namespace Akka.DependencyInjection.Tests;
+
+public class AkkaDiFixture : IDisposable
 {
-    public class AkkaDiFixture : IDisposable
+    public AkkaDiFixture()
     {
-        public interface IDependency : IDisposable
-        {
-            string Name { get; }
+        var services = new ServiceCollection();
+        services.AddSingleton<ISingletonDependency, Singleton>()
+            .AddScoped<IScopedDependency, Scoped>()
+            .AddTransient<ITransientDependency, Transient>();
 
-            bool Disposed { get; }
-        }
+        Provider = services.BuildServiceProvider();
+    }
 
-        public interface ITransientDependency : IDependency
-        {
-        }
+    public IServiceProvider Provider { get; private set; }
 
-        public class Transient : ITransientDependency
-        {
-            public Transient() : this("t" + Guid.NewGuid().ToString())
-            {
-            }
+    public void Dispose()
+    {
+        Provider = null;
+    }
 
-            public Transient(string name)
-            {
-                Name = name;
-            }
+    public interface IDependency : IDisposable
+    {
+        string Name { get; }
 
-            public string Name { get; }
+        bool Disposed { get; }
+    }
 
-            public bool Disposed { get; private set; }
+    public interface ITransientDependency : IDependency
+    {
+    }
 
-            public void Dispose()
-            {
-                Disposed = true;
-            }
-        }
-
-        public interface IScopedDependency : IDependency
+    public class Transient : ITransientDependency
+    {
+        public Transient() : this("t" + Guid.NewGuid())
         {
         }
 
-        public class Scoped : IScopedDependency
+        public Transient(string name)
         {
-            public Scoped() : this("s" + Guid.NewGuid().ToString())
-            {
-            }
-
-            public Scoped(string name)
-            {
-                Name = name;
-            }
-
-            public void Dispose()
-            {
-                Disposed = true;
-            }
-
-            public bool Disposed { get; private set; }
-            public string Name { get; }
+            Name = name;
         }
 
-        public interface ISingletonDependency : IDependency
-        {
-        }
+        public string Name { get; }
 
-        public class Singleton : ISingletonDependency
-        {
-            public Singleton() : this("singleton")
-            {
-            }
-
-            public Singleton(string name)
-            {
-                Name = name;
-            }
-
-            public void Dispose()
-            {
-                Disposed = true;
-            }
-
-            public bool Disposed { get; private set; }
-            public string Name { get; }
-        }
-
-        public AkkaDiFixture()
-        {
-            var services = new ServiceCollection();
-            services.AddSingleton<ISingletonDependency, Singleton>()
-                        .AddScoped<IScopedDependency, Scoped>()
-                        .AddTransient<ITransientDependency, Transient>();
-
-            Provider = services.BuildServiceProvider();
-        }
-        
-        public IServiceProvider Provider { get; private set; }
+        public bool Disposed { get; private set; }
 
         public void Dispose()
         {
-            Provider = null;
+            Disposed = true;
         }
+    }
+
+    public interface IScopedDependency : IDependency
+    {
+    }
+
+    public class Scoped : IScopedDependency
+    {
+        public Scoped() : this("s" + Guid.NewGuid())
+        {
+        }
+
+        public Scoped(string name)
+        {
+            Name = name;
+        }
+
+        public void Dispose()
+        {
+            Disposed = true;
+        }
+
+        public bool Disposed { get; private set; }
+        public string Name { get; }
+    }
+
+    public interface ISingletonDependency : IDependency
+    {
+    }
+
+    public class Singleton : ISingletonDependency
+    {
+        public Singleton() : this("singleton")
+        {
+        }
+
+        public Singleton(string name)
+        {
+            Name = name;
+        }
+
+        public void Dispose()
+        {
+            Disposed = true;
+        }
+
+        public bool Disposed { get; private set; }
+        public string Name { get; }
     }
 }

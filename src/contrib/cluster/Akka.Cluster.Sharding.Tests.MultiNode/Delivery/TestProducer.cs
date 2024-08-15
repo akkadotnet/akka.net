@@ -1,9 +1,10 @@
 ﻿// -----------------------------------------------------------------------
 //  <copyright file="TestProducer.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using Akka.Actor;
@@ -15,8 +16,8 @@ namespace Akka.Cluster.Sharding.Tests.MultiNode.Delivery;
 internal class TestShardingProducer : ReceiveActor, IWithTimers, IWithStash
 {
     private readonly ILoggingAdapter _log = Context.GetLogger();
-    private readonly IActorRef _producerController;
     private readonly IActorRef _probe;
+    private readonly IActorRef _producerController;
 
     public TestShardingProducer(IActorRef producerController, IActorRef probe)
     {
@@ -25,9 +26,10 @@ internal class TestShardingProducer : ReceiveActor, IWithTimers, IWithStash
         Idle();
     }
 
-    public ITimerScheduler Timers { get; set; } = null!;
-    public IStash Stash { get; set; } = null!;
     public IActorRef SendNext { get; set; } = ActorRefs.Nobody;
+    public IStash Stash { get; set; } = null!;
+
+    public ITimerScheduler Timers { get; set; } = null!;
 
     protected override void PreStart()
     {
@@ -39,9 +41,9 @@ internal class TestShardingProducer : ReceiveActor, IWithTimers, IWithStash
     private void Idle()
     {
         Receive<Tick>(_ => { }); // ignore
-        
+
         Receive<int>(_ => Stash.Stash());
-        
+
         Receive<ShardingProducerController.RequestNext<SlowStopConsumerEntity.Job>>(req =>
         {
             SendNext = req.SendNextTo;
@@ -53,10 +55,10 @@ internal class TestShardingProducer : ReceiveActor, IWithTimers, IWithStash
     {
         Receive<Tick>(_ =>
         {
-            if(!Stash.IsEmpty)
+            if (!Stash.IsEmpty)
                 Stash.Unstash();
         });
-        
+
         Receive<int>(n =>
         {
             _log.Info("Sending {0}", n);
@@ -73,7 +75,10 @@ internal class TestShardingProducer : ReceiveActor, IWithTimers, IWithStash
 
     public sealed class Tick
     {
-        private Tick() { }
         public static readonly Tick Instance = new();
+
+        private Tick()
+        {
+        }
     }
 }

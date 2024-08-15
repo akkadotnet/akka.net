@@ -1,89 +1,88 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="QueueOfferResult.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="QueueOfferResult.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 
-namespace Akka.Streams
+namespace Akka.Streams;
+
+/// <summary>
+///     Used as return type for async callbacks to streams
+/// </summary>
+public interface IQueueOfferResult
+{
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+public sealed class QueueOfferResult
 {
     /// <summary>
-    /// Used as return type for async callbacks to streams
+    ///     TBD
     /// </summary>
-    public interface IQueueOfferResult
+    public sealed class Enqueued : IQueueOfferResult
     {
+        /// <summary>
+        ///     TBD
+        /// </summary>
+        public static readonly Enqueued Instance = new();
+
+        private Enqueued()
+        {
+        }
     }
 
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    public sealed class QueueOfferResult
+    public sealed class Dropped : IQueueOfferResult
     {
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
-        public sealed class Enqueued : IQueueOfferResult
-        {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static readonly Enqueued Instance = new();
+        public static readonly Dropped Instance = new();
 
-            private Enqueued()
-            {
-            }
+        private Dropped()
+        {
+        }
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public sealed class Failure : IQueueOfferResult
+    {
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="Failure" /> class.
+        /// </summary>
+        /// <param name="cause">The cause of the failure</param>
+        public Failure(Exception cause)
+        {
+            Cause = cause;
         }
 
         /// <summary>
-        /// TBD
+        ///     The cause of the failure
         /// </summary>
-        public sealed class Dropped : IQueueOfferResult
-        {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static readonly Dropped Instance = new();
+        public Exception Cause { get; }
+    }
 
-            private Dropped()
-            {
-            }
-        }
-
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public sealed class QueueClosed : IQueueOfferResult
+    {
         /// <summary>
-        /// TBD
+        ///     TBD
         /// </summary>
-        public sealed class Failure : IQueueOfferResult
+        public static readonly QueueClosed Instance = new();
+
+        private QueueClosed()
         {
-            /// <summary>
-            /// The cause of the failure
-            /// </summary>
-            public Exception Cause { get; }
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="Failure"/> class.
-            /// </summary>
-            /// <param name="cause">The cause of the failure</param>
-            public Failure(Exception cause)
-            {
-                Cause = cause;
-            }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public sealed class QueueClosed : IQueueOfferResult
-        {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public static readonly QueueClosed Instance = new();
-
-            private QueueClosed()
-            {
-            }
         }
     }
 }

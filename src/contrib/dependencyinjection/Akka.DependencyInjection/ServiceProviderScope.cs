@@ -1,33 +1,34 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ServiceProviderScope.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ServiceProviderScope.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Akka.DependencyInjection
-{
-    public interface IResolverScope : IDisposable
-    {
-        IDependencyResolver Resolver { get; }
-    }
-    
-    public class ServiceProviderScope : IResolverScope
-    {
-        private readonly IServiceScope _scope;
-        public IDependencyResolver Resolver { get; }
-        public ServiceProviderScope(IServiceScope scope)
-        {
-            _scope = scope;
-            Resolver = new ServiceProviderDependencyResolver(scope.ServiceProvider);
-        }
+namespace Akka.DependencyInjection;
 
-        public void Dispose()
-        {
-            _scope?.Dispose();
-        }
+public interface IResolverScope : IDisposable
+{
+    IDependencyResolver Resolver { get; }
+}
+
+public class ServiceProviderScope : IResolverScope
+{
+    private readonly IServiceScope _scope;
+
+    public ServiceProviderScope(IServiceScope scope)
+    {
+        _scope = scope;
+        Resolver = new ServiceProviderDependencyResolver(scope.ServiceProvider);
+    }
+
+    public IDependencyResolver Resolver { get; }
+
+    public void Dispose()
+    {
+        _scope?.Dispose();
     }
 }

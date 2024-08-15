@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\..\xunitSettings.props" />
+  <Import Project="..\..\..\xunitSettings.props"/>
 
   <PropertyGroup>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
@@ -12,30 +12,30 @@
     <Compile Include="..\..\..\core\Akka.Tests\Delivery\TestProducer.cs">
       <Link>Delivery\TestProducer.cs</Link>
     </Compile>
-    <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\AsyncWriteProxyEx.cs" Link="AsyncWriteProxyEx.cs" />
-    <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\MemoryJournalShared.cs" Link="MemoryJournalShared.cs" />
-    <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\MemorySnapshotStoreShared.cs" Link="MemorySnapshotStoreShared.cs" />
-    <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\SnapshotStoreProxy.cs" Link="SnapshotStoreProxy.cs" />
-  </ItemGroup>
- 
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\core\Akka.Coordination.Tests\Akka.Coordination.Tests.csproj" />
-    <ProjectReference Include="..\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
-    <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
-    <ProjectReference Include="..\..\persistence\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />
-    <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+    <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\AsyncWriteProxyEx.cs" Link="AsyncWriteProxyEx.cs"/>
+    <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\MemoryJournalShared.cs" Link="MemoryJournalShared.cs"/>
+    <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\MemorySnapshotStoreShared.cs" Link="MemorySnapshotStoreShared.cs"/>
+    <Compile Include="..\Akka.Cluster.Sharding.Tests.MultiNode\SnapshotStoreProxy.cs" Link="SnapshotStoreProxy.cs"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-    <PackageReference Include="xunit" Version="$(XunitVersion)" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
-    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <ProjectReference Include="..\..\..\core\Akka.Coordination.Tests\Akka.Coordination.Tests.csproj"/>
+    <ProjectReference Include="..\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj"/>
+    <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj"/>
+    <ProjectReference Include="..\..\persistence\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj"/>
+    <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)"/>
+    <PackageReference Include="xunit" Version="$(XunitVersion)"/>
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)"/>
+    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)"/>
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Xml"/>
+    <Reference Include="System.Xml.Linq"/>
   </ItemGroup>
 
   <!-- use the xunit JSON settings file -->

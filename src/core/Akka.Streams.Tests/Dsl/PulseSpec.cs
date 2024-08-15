@@ -1,95 +1,94 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="PulseSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="PulseSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using FluentAssertions;
-using Xunit;
 using Akka.TestKit.Extensions;
-using System.Threading.Tasks;
+using FluentAssertions;
 using FluentAssertions.Extensions;
+using Xunit;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class PulseSpec : Akka.TestKit.Xunit2.TestKit
 {
-    public class PulseSpec : Akka.TestKit.Xunit2.TestKit
+    private readonly TimeSpan _pulseInterval = TimeSpan.FromMilliseconds(20);
+
+    [Fact]
+    public async Task Pulse_should_signal_demand_once_every_interval()
     {
-        private readonly TimeSpan _pulseInterval = TimeSpan.FromMilliseconds(20);
+        var t = this.SourceProbe<int>()
+            .Via(new Pulse<int>(Dilated(_pulseInterval)))
+            .ToMaterialized(Sink.Seq<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-        [Fact]
-        public async Task Pulse_should_signal_demand_once_every_interval()
-        {
-            var t = this.SourceProbe<int>()
-                .Via(new Pulse<int>(Dilated(_pulseInterval)))
-                .ToMaterialized(Sink.Seq<int>(), Keep.Both)
-                .Run(Sys.Materializer());
+        var probe = t.Item1;
+        var task = t.Item2;
 
-            var probe = t.Item1;
-            var task = t.Item2;
+        probe.SendNext(1);
+        probe.ExpectNoMsg(_pulseInterval);
+        probe.SendNext(2);
+        probe.ExpectNoMsg(_pulseInterval);
+        probe.SendComplete();
 
-            probe.SendNext(1);
-            probe.ExpectNoMsg(_pulseInterval);
-            probe.SendNext(2);
-            probe.ExpectNoMsg(_pulseInterval);
-            probe.SendComplete();
+        var complete = await task.ShouldCompleteWithin(3.Seconds());
+        complete.Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
+    }
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
-        }
+    [Fact]
+    public void Pulse_should_keep_backpressure_if_there_is_no_demand_from_downstream()
+    {
+        var elements = Enumerable.Range(1, 10);
+        var probe = Source.From(elements)
+            .Via(new Pulse<int>(Dilated(_pulseInterval)))
+            .RunWith(this.SinkProbe<int>(), Sys.Materializer());
 
-        [Fact]
-        public void Pulse_should_keep_backpressure_if_there_is_no_demand_from_downstream()
-        {
-            var elements = Enumerable.Range(1, 10);
-            var probe = Source.From(elements)
-                .Via(new Pulse<int>(Dilated(_pulseInterval)))
-                .RunWith(this.SinkProbe<int>(), Sys.Materializer());
+        probe.EnsureSubscription();
+        // lets waste some time without a demand and let pulse run its timer            
+        probe.ExpectNoMsg(TimeSpan.FromTicks(_pulseInterval.Ticks * 10));
 
-            probe.EnsureSubscription();
-            // lets waste some time without a demand and let pulse run its timer            
-            probe.ExpectNoMsg(TimeSpan.FromTicks(_pulseInterval.Ticks * 10));
+        probe.Request(elements.Count());
+        foreach (var e in elements)
+            probe.ExpectNext(e);
+    }
 
-            probe.Request(elements.Count());
-            foreach (var e in elements)
-                probe.ExpectNext(e);
-        }
+    [Fact]
+    public async Task Initially_opened_Pulse_should_emit_the_first_available_element()
+    {
+        var task = Source.Repeat(1)
+            .Via(new Pulse<int>(Dilated(_pulseInterval), true))
+            .InitialTimeout(Dilated(TimeSpan.FromMilliseconds(2)))
+            .RunWith(Sink.First<int>(), Sys.Materializer());
 
-        [Fact]
-        public async Task Initially_opened_Pulse_should_emit_the_first_available_element()
-        {
-            var task = Source.Repeat(1)
-                .Via(new Pulse<int>(Dilated(_pulseInterval), initiallyOpen: true))
-                .InitialTimeout(Dilated(TimeSpan.FromMilliseconds(2)))
-                .RunWith(Sink.First<int>(), Sys.Materializer());
+        var complete = await task.ShouldCompleteWithin(3.Seconds());
+        complete.Should().Be(1);
+    }
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
-            complete.Should().Be(1);
-        }
+    [Fact]
+    public async Task Initially_opened_Pulse_should_signal_demand_once_every_interval()
+    {
+        var t = this.SourceProbe<int>()
+            .Via(new Pulse<int>(Dilated(_pulseInterval), true))
+            .ToMaterialized(Sink.Seq<int>(), Keep.Both)
+            .Run(Sys.Materializer());
 
-        [Fact]
-        public async Task Initially_opened_Pulse_should_signal_demand_once_every_interval()
-        {
-            var t = this.SourceProbe<int>()
-                .Via(new Pulse<int>(Dilated(_pulseInterval), initiallyOpen: true))
-                .ToMaterialized(Sink.Seq<int>(), Keep.Both)
-                .Run(Sys.Materializer());
+        var probe = t.Item1;
+        var task = t.Item2;
 
-            var probe = t.Item1;
-            var task = t.Item2;
+        probe.SendNext(1);
+        probe.ExpectNoMsg(_pulseInterval);
+        probe.SendNext(2);
+        probe.ExpectNoMsg(_pulseInterval);
+        probe.SendComplete();
 
-            probe.SendNext(1);
-            probe.ExpectNoMsg(_pulseInterval);
-            probe.SendNext(2);
-            probe.ExpectNoMsg(_pulseInterval);
-            probe.SendComplete();
-
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
-            complete.Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
-        }
+        var complete = await task.ShouldCompleteWithin(3.Seconds());
+        complete.Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
     }
 }

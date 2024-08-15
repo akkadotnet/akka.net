@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
+    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj"/>
   </ItemGroup>
 
 </Project>

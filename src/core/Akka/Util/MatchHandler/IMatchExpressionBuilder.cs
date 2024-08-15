@@ -1,32 +1,30 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="IMatchExpressionBuilder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="IMatchExpressionBuilder.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Collections.Generic;
 
-namespace Akka.Tools.MatchHandler
+namespace Akka.Tools.MatchHandler;
+
+/// <summary>
+///     TBD
+/// </summary>
+internal interface IMatchExpressionBuilder
 {
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    internal interface IMatchExpressionBuilder
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="typeHandlers">TBD</param>
-        /// <returns>TBD</returns>
-        MatchExpressionBuilderResult BuildLambdaExpression(IReadOnlyList<TypeHandler> typeHandlers);
+    /// <param name="typeHandlers">TBD</param>
+    /// <returns>TBD</returns>
+    MatchExpressionBuilderResult BuildLambdaExpression(IReadOnlyList<TypeHandler> typeHandlers);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="arguments">TBD</param>
-        /// <returns>TBD</returns>
-        object[] CreateArgumentValuesArray(IReadOnlyList<Argument> arguments);
-    }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="arguments">TBD</param>
+    /// <returns>TBD</returns>
+    object[] CreateArgumentValuesArray(IReadOnlyList<Argument> arguments);
 }
-

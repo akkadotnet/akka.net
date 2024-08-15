@@ -8,24 +8,24 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Configuration\akka.conf" />
+    <EmbeddedResource Include="Configuration\akka.conf"/>
   </ItemGroup>
 
   <ItemGroup>
-      <PackageReference Include="Polyfill" Version="1.28.0" PrivateAssets="all" />
-      <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="$(MsExtVersion)" />
-      <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
-      <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
-      <PackageReference Include="System.Collections.Immutable" Version="$(MicrosoftLibVersion)" />
-      <PackageReference Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
-      <PackageReference Include="System.Configuration.ConfigurationManager" Version="$(ConfigurationManagerVersion)"/>
-      
+    <PackageReference Include="Polyfill" Version="1.28.0" PrivateAssets="all"/>
+    <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="$(MsExtVersion)"/>
+    <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)"/>
+    <PackageReference Include="System.Reflection.Emit" Version="4.7.0"/>
+    <PackageReference Include="System.Collections.Immutable" Version="$(MicrosoftLibVersion)"/>
+    <PackageReference Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)"/>
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="$(ConfigurationManagerVersion)"/>
+
   </ItemGroup>
-  
+
   <ItemGroup Label="PublicAnalyzers">
-    <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" />
+    <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)"/>
   </ItemGroup>
-  
+
   <ItemGroup>
     <None Update="Util\MatchHandler\PartialHandlerArgumentsCapture.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

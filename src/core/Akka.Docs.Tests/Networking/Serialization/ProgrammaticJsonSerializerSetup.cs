@@ -1,41 +1,37 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ProgrammaticJsonSerializerSetup.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ProgrammaticJsonSerializerSetup.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Serialization;
 using Newtonsoft.Json;
 
-namespace DocsExamples.Networking.Serialization
+namespace DocsExamples.Networking.Serialization;
+
+public class ProgrammaticJsonSerializerSetup
 {
-    public class ProgrammaticJsonSerializerSetup
+    public ProgrammaticJsonSerializerSetup()
     {
-        public ProgrammaticJsonSerializerSetup()
-        {
-            #region CustomJsonSetup
-            var jsonSerializerSetup = NewtonSoftJsonSerializerSetup.Create(
-                settings =>
-                {
-                    settings.NullValueHandling = NullValueHandling.Include;
-                    settings.PreserveReferencesHandling = PreserveReferencesHandling.None;
-                    settings.Formatting = Formatting.None;
-                });
+        #region CustomJsonSetup
 
-            var systemSetup = ActorSystemSetup.Create(jsonSerializerSetup);
+        var jsonSerializerSetup = NewtonSoftJsonSerializerSetup.Create(
+            settings =>
+            {
+                settings.NullValueHandling = NullValueHandling.Include;
+                settings.PreserveReferencesHandling = PreserveReferencesHandling.None;
+                settings.Formatting = Formatting.None;
+            });
 
-            var system = ActorSystem.Create("MySystem", systemSetup);
-            #endregion
+        var systemSetup = ActorSystemSetup.Create(jsonSerializerSetup);
 
-            system.Terminate().Wait();
-        }
+        var system = ActorSystem.Create("MySystem", systemSetup);
+
+        #endregion
+
+        system.Terminate().Wait();
     }
 }

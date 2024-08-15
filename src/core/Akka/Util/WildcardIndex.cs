@@ -1,87 +1,85 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="WildcardIndex.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="WildcardIndex.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
-namespace Akka.Util
+namespace Akka.Util;
+
+internal sealed class WildcardIndex<T> : IEquatable<WildcardIndex<T>> where T : class
 {
-    internal sealed class WildcardIndex<T> : IEquatable<WildcardIndex<T>> where T : class
+    private readonly WildcardTree<T> _doubleWildcardTree;
+    private readonly WildcardTree<T> _wildcardTree;
+
+    public WildcardIndex()
     {
-        private readonly WildcardTree<T> _wildcardTree;
-        private readonly WildcardTree<T> _doubleWildcardTree;
+        _wildcardTree = new WildcardTree<T>();
+        _doubleWildcardTree = new WildcardTree<T>();
+    }
 
-        public bool IsEmpty => _wildcardTree.IsEmpty && _doubleWildcardTree.IsEmpty;
+    private WildcardIndex(WildcardTree<T> singleWildcard, WildcardTree<T> doubleWildcard)
+    {
+        _wildcardTree = singleWildcard;
+        _doubleWildcardTree = doubleWildcard;
+    }
 
-        public WildcardIndex()
+    public bool IsEmpty => _wildcardTree.IsEmpty && _doubleWildcardTree.IsEmpty;
+
+    public bool Equals(WildcardIndex<T> other)
+    {
+        return _wildcardTree.Equals(other._wildcardTree)
+               && _doubleWildcardTree.Equals(other._doubleWildcardTree);
+    }
+
+    public WildcardIndex<T> Insert(IEnumerable<string> elems, T data)
+    {
+        if (elems == null) return this;
+
+        switch (elems.Last())
         {
-            _wildcardTree = new WildcardTree<T>();
-            _doubleWildcardTree = new WildcardTree<T>();
+            case "**":
+                return new WildcardIndex<T>(_wildcardTree, _doubleWildcardTree.Insert(elems.GetEnumerator(), data));
+            default:
+                return new WildcardIndex<T>(_wildcardTree.Insert(elems.GetEnumerator(), data), _doubleWildcardTree);
         }
+    }
 
-        private WildcardIndex(WildcardTree<T> singleWildcard, WildcardTree<T> doubleWildcard)
+    public T Find(IEnumerable<string> elems)
+    {
+        if (_wildcardTree.IsEmpty)
         {
-            _wildcardTree = singleWildcard;
-            _doubleWildcardTree = doubleWildcard;
-        }
-
-        public WildcardIndex<T> Insert(IEnumerable<string> elems, T data)
-        {
-            if (elems == null) return this;
-            
-            switch(elems.Last())
-            {
-                case "**":
-                    return new WildcardIndex<T>(_wildcardTree, _doubleWildcardTree.Insert(elems.GetEnumerator(), data));
-                default:
-                    return new WildcardIndex<T>(_wildcardTree.Insert(elems.GetEnumerator(), data), _doubleWildcardTree);
-            }
-        }
-
-        public T Find(IEnumerable<string> elems)
-        {
-            if(_wildcardTree.IsEmpty)
-            {
-                if (_doubleWildcardTree.IsEmpty)
-                    return default;
-                return _doubleWildcardTree.FindWithTerminalDoubleWildcard(elems.GetEnumerator(), null).Data;
-            }
-
-            var withSingleWildcard = _wildcardTree.FindWithSingleWildcard(elems.GetEnumerator());
-            if (!withSingleWildcard.IsEmpty)
-                return withSingleWildcard.Data;
+            if (_doubleWildcardTree.IsEmpty)
+                return default;
             return _doubleWildcardTree.FindWithTerminalDoubleWildcard(elems.GetEnumerator(), null).Data;
         }
 
-        public bool Equals(WildcardIndex<T> other)
-        {
-            return _wildcardTree.Equals(other._wildcardTree) 
-                && _doubleWildcardTree.Equals(other._doubleWildcardTree);
-        }
+        var withSingleWildcard = _wildcardTree.FindWithSingleWildcard(elems.GetEnumerator());
+        if (!withSingleWildcard.IsEmpty)
+            return withSingleWildcard.Data;
+        return _doubleWildcardTree.FindWithTerminalDoubleWildcard(elems.GetEnumerator(), null).Data;
+    }
 
-        public override bool Equals(object obj)
-        {
-            if (obj is null) return false;
-            if (ReferenceEquals(obj, this)) return true;
-            if (!(obj is WildcardIndex<T> other)) return false;
-            return Equals(other);
-        }
+    public override bool Equals(object obj)
+    {
+        if (obj is null) return false;
+        if (ReferenceEquals(obj, this)) return true;
+        if (!(obj is WildcardIndex<T> other)) return false;
+        return Equals(other);
+    }
 
-        public override int GetHashCode()
+    public override int GetHashCode()
+    {
+        unchecked
         {
-            unchecked
-            {
-                var hashCode = -872755323;
-                hashCode = hashCode * -1521134295 + _wildcardTree.GetHashCode();
-                hashCode = hashCode * -1521134295 + _doubleWildcardTree.GetHashCode();
-                return hashCode;
-            }
+            var hashCode = -872755323;
+            hashCode = hashCode * -1521134295 + _wildcardTree.GetHashCode();
+            hashCode = hashCode * -1521134295 + _doubleWildcardTree.GetHashCode();
+            return hashCode;
         }
     }
 }

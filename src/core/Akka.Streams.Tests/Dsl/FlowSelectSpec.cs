@@ -1,11 +1,10 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="FlowSelectSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="FlowSelectSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,60 +14,55 @@ using Akka.Util;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class FlowSelectSpec : ScriptedTest
 {
-    public class FlowSelectSpec : ScriptedTest
+    private readonly ActorMaterializer _materializer;
+    private readonly ActorMaterializerSettings _settings;
+
+    public FlowSelectSpec(ITestOutputHelper output) : base(output)
     {
-        private readonly ActorMaterializerSettings _settings;
-        private readonly ActorMaterializer _materializer;
+        Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
+        _settings = ActorMaterializerSettings.Create(Sys)
+            .WithInputBuffer(2, 16);
 
-        public FlowSelectSpec(ITestOutputHelper output) : base(output)
+        _materializer = Sys.Materializer(_settings);
+    }
+
+    [Fact]
+    public async Task Select_should_select()
+    {
+        var script = Script.Create(Enumerable.Range(1, ThreadLocalRandom.Current.Next(1, 10)).Select(_ =>
         {
-            Sys.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
-            _settings = ActorMaterializerSettings.Create(Sys)
-                .WithInputBuffer(initialSize: 2, maxSize: 16);
+            var x = ThreadLocalRandom.Current.Next();
+            return ((ICollection<int>)new[] { x }, (ICollection<string>)new[] { x.ToString() });
+        }).ToArray());
 
-            _materializer = Sys.Materializer(_settings);
-        }
+        var n = ThreadLocalRandom.Current.Next(10);
+        for (var i = 0; i < n; i++) await RunScriptAsync(script, _settings, x => x.Select(y => y.ToString()));
+    }
 
-        [Fact]
-        public async Task Select_should_select()
-        {
+    [Fact]
+    public void Select_should_not_blow_up_with_high_request_counts()
+    {
+        var probe = this.CreateManualSubscriberProbe<int>();
 
-            var script = Script.Create(Enumerable.Range(1, ThreadLocalRandom.Current.Next(1, 10)).Select(_ =>
-            {
-                var x = ThreadLocalRandom.Current.Next();
-                return ((ICollection<int>)new[] {x}, (ICollection<string>)new[] {x.ToString()});
-            }).ToArray());
+        Source.From(new[] { 1 })
+            .Select(x => x + 1)
+            .Select(x => x + 1)
+            .Select(x => x + 1)
+            .Select(x => x + 1)
+            .Select(x => x + 1)
+            .RunWith(Sink.AsPublisher<int>(false), _materializer)
+            .Subscribe(probe);
 
-            var n = ThreadLocalRandom.Current.Next(10);
-            for (int i = 0; i < n; i++)
-            {
-                await RunScriptAsync(script, _settings, x => x.Select(y => y.ToString()));
-            }
-        }
+        var subscription = probe.ExpectSubscription();
 
-        [Fact]
-        public void Select_should_not_blow_up_with_high_request_counts()
-        {
-            var probe = this.CreateManualSubscriberProbe<int>();
+        for (var i = 1; i <= 10000; i++)
+            subscription.Request(int.MaxValue);
 
-            Source.From(new [] {1})
-                .Select(x => x + 1)
-                .Select(x => x + 1)
-                .Select(x => x + 1)
-                .Select(x => x + 1)
-                .Select(x => x + 1)
-                .RunWith(Sink.AsPublisher<int>(false), _materializer)
-                .Subscribe(probe);
-
-            var subscription = probe.ExpectSubscription();
-
-            for (int i = 1; i <= 10000; i++)
-                subscription.Request(int.MaxValue);
-
-            probe.ExpectNext(6);
-            probe.ExpectComplete();
-        }
+        probe.ExpectNext(6);
+        probe.ExpectComplete();
     }
 }

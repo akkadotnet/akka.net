@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="FlowAppendSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="FlowAppendSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -17,72 +17,75 @@ using Xunit;
 using Xunit.Abstractions;
 using static Akka.Streams.Tests.Dsl.FlowAppendSpec.River;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class FlowAppendSpec : AkkaSpec
 {
-    public class FlowAppendSpec : Akka.TestKit.AkkaSpec
+    public FlowAppendSpec(ITestOutputHelper helper) : base(helper)
     {
-        private ActorMaterializer Materializer { get; }
+        var settings = ActorMaterializerSettings.Create(Sys);
+        Materializer = ActorMaterializer.Create(Sys, settings);
+    }
 
-        public FlowAppendSpec(ITestOutputHelper helper) : base (helper)
-        {
-            var settings = ActorMaterializerSettings.Create(Sys);
-            Materializer = ActorMaterializer.Create(Sys, settings);
-        }
+    private ActorMaterializer Materializer { get; }
 
-        [Fact]
-        public void Flow_should_append_Flow()
+    [Fact]
+    public void Flow_should_append_Flow()
+    {
+        RiverOf<string>((subscriber, otherFlow, elements) =>
         {
-            RiverOf<string>((subscriber, otherFlow, elements) =>
-            {
-                var flow = Flow.Create<int>().Via(otherFlow);
-                Source.From(elements).Via(flow).To(Sink.FromSubscriber(subscriber)).Run(Materializer);
-            }, this);
-        }
+            var flow = Flow.Create<int>().Via(otherFlow);
+            Source.From(elements).Via(flow).To(Sink.FromSubscriber(subscriber)).Run(Materializer);
+        }, this);
+    }
 
-        [Fact]
-        public void Flow_should_append_Sink()
-        {
-            RiverOf<string>((subscriber, otherFlow, elements) =>
+    [Fact]
+    public void Flow_should_append_Sink()
+    {
+        RiverOf<string>(
+            (subscriber, otherFlow, elements) =>
             {
                 Source.From(elements).To(otherFlow.To(Sink.FromSubscriber(subscriber))).Run(Materializer);
             }, this);
-        }
+    }
 
-        [Fact]
-        public void Source_should_append_Flow()
-        {
-            RiverOf<string>((subscriber, otherFlow, elements) =>
+    [Fact]
+    public void Source_should_append_Flow()
+    {
+        RiverOf<string>(
+            (subscriber, otherFlow, elements) =>
             {
                 Source.From(elements).Via(otherFlow).To(Sink.FromSubscriber(subscriber)).Run(Materializer);
             }, this);
-        }
+    }
 
-        [Fact]
-        public void Source_should_append_Sink()
-        {
-            RiverOf<string>((subscriber, otherFlow, elements) =>
+    [Fact]
+    public void Source_should_append_Sink()
+    {
+        RiverOf<string>(
+            (subscriber, otherFlow, elements) =>
             {
                 Source.From(elements).To(otherFlow.To(Sink.FromSubscriber(subscriber))).Run(Materializer);
             }, this);
-        }
+    }
 
-        internal static class River
+    internal static class River
+    {
+        private static readonly Flow<int, string, NotUsed> OtherFlow = Flow.Create<int>().Select(i => i.ToString());
+
+        public static void RiverOf<T>(
+            Action<ISubscriber<T>, Flow<int, string, NotUsed>, IEnumerable<int>> flowConstructor, TestKitBase kit)
         {
-            private static readonly Flow<int, string, NotUsed> OtherFlow = Flow.Create<int>().Select(i => i.ToString());
-            
-            public static void RiverOf<T>(Action<ISubscriber<T>, Flow<int, string, NotUsed>, IEnumerable<int>> flowConstructor, TestKitBase kit)
-            {
-                var subscriber = kit.CreateManualSubscriberProbe<T>();
+            var subscriber = kit.CreateManualSubscriberProbe<T>();
 
-                var elements = Enumerable.Range(1, 10).ToList();
-                flowConstructor(subscriber, OtherFlow, elements);
+            var elements = Enumerable.Range(1, 10).ToList();
+            flowConstructor(subscriber, OtherFlow, elements);
 
-                var subscription = subscriber.ExpectSubscription();
-                subscription.Request(elements.Count);
-                elements.ForEach(el=>subscriber.ExpectNext().Should().Be(el.ToString()));
-                subscription.Request(1);
-                subscriber.ExpectComplete();
-            }
+            var subscription = subscriber.ExpectSubscription();
+            subscription.Request(elements.Count);
+            elements.ForEach(el => subscriber.ExpectNext().Should().Be(el.ToString()));
+            subscription.Request(1);
+            subscriber.ExpectComplete();
         }
     }
 }

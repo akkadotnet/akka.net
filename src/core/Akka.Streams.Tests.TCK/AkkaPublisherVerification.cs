@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AkkaPublisherVerification.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="AkkaPublisherVerification.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections;
@@ -20,96 +20,109 @@ using NUnit.Framework;
 using Reactive.Streams;
 using Reactive.Streams.TCK;
 
-namespace Akka.Streams.Tests.TCK
+namespace Akka.Streams.Tests.TCK;
+
+[TestFixture]
+internal abstract class AkkaPublisherVerification<T> : PublisherVerification<T>, IDisposable
 {
-    [TestFixture]
-    abstract class AkkaPublisherVerification<T> : PublisherVerification<T>, IDisposable
+    protected AkkaPublisherVerification() : this(false)
     {
-        protected AkkaPublisherVerification() : this(false)
-        {
+    }
 
+    protected AkkaPublisherVerification(bool writeLineDebug)
+        : this(
+            new TestEnvironment(Timeouts.DefaultTimeoutMillis,
+                TestEnvironment.EnvironmentDefaultNoSignalsTimeoutMilliseconds(), writeLineDebug),
+            Timeouts.PublisherShutdownTimeoutMillis,
+            AkkaSpec.AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig))
+    {
+    }
+
+    protected AkkaPublisherVerification(Config config)
+        : this(
+            new TestEnvironment(Timeouts.DefaultTimeoutMillis,
+                TestEnvironment.EnvironmentDefaultNoSignalsTimeoutMilliseconds()),
+            Timeouts.PublisherShutdownTimeoutMillis, config)
+    {
+    }
+
+    protected AkkaPublisherVerification(TestEnvironment environment, long publisherShutdownTimeoutMillis, Config config)
+        : base(environment, publisherShutdownTimeoutMillis)
+    {
+        System = ActorSystem.Create(GetType().Name, config);
+        System.EventStream.Publish(new Mute(new ErrorFilter(typeof(Exception), new ContainsString("Test exception"))));
+
+        Materializer = ActorMaterializer.Create(System,
+            ActorMaterializerSettings.Create(System).WithInputBuffer(512, 512));
+    }
+
+    protected ActorSystem System { get; }
+
+    protected ActorMaterializer Materializer { get; private set; }
+
+    public override bool SkipStochasticTests { get; } = true;
+
+    public void Dispose()
+    {
+        var shutdowned = System.Terminate().Wait(Timeouts.ShutdownTimeout);
+        AfterShutdown();
+        if (!shutdowned)
+            throw new Exception($"Failed to stop {System.Name} within {Timeouts.ShutdownTimeout}");
+    }
+
+    protected virtual void AfterShutdown()
+    {
+    }
+
+    public override IPublisher<T> CreateFailedPublisher()
+    {
+        return TestPublisher.Error<T>(new Exception("Unable to serve subscribers right now!"));
+    }
+
+    protected IEnumerable<int> Enumerate(long elements)
+    {
+        return Enumerate(elements > int.MaxValue, elements);
+    }
+
+    protected IEnumerable<int> Enumerate(bool useInfinite, long elements)
+    {
+        return useInfinite
+            ? new InfiniteEnumerable()
+            : Enumerable.Range(0, (int)elements);
+    }
+
+    private sealed class InfiniteEnumerable : IEnumerable<int>
+    {
+        public IEnumerator<int> GetEnumerator()
+        {
+            return new InfiniteEnumerator();
         }
 
-        protected AkkaPublisherVerification(bool writeLineDebug)
-            : this(
-                new TestEnvironment(Timeouts.DefaultTimeoutMillis,
-                    TestEnvironment.EnvironmentDefaultNoSignalsTimeoutMilliseconds(), writeLineDebug),
-                Timeouts.PublisherShutdownTimeoutMillis,
-                AkkaSpec.AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig))
+        IEnumerator IEnumerable.GetEnumerator()
         {
+            return GetEnumerator();
         }
 
-        protected AkkaPublisherVerification(Config config)
-            : this(
-                new TestEnvironment(Timeouts.DefaultTimeoutMillis,
-                    TestEnvironment.EnvironmentDefaultNoSignalsTimeoutMilliseconds(), false),
-                Timeouts.PublisherShutdownTimeoutMillis, config)
+        private sealed class InfiniteEnumerator : IEnumerator<int>
         {
-        }
-
-        protected AkkaPublisherVerification(TestEnvironment environment, long publisherShutdownTimeoutMillis, Config config)
-            : base(environment, publisherShutdownTimeoutMillis)
-        {
-            System = ActorSystem.Create(GetType().Name, config);
-            System.EventStream.Publish(new Mute(new ErrorFilter(typeof(Exception), new ContainsString("Test exception"))));
-
-            Materializer = ActorMaterializer.Create(System,
-                ActorMaterializerSettings.Create(System).WithInputBuffer(512, 512));
-        }
-
-        protected ActorSystem System { get; private set; }
-
-        protected ActorMaterializer Materializer { get; private set; }
-
-        public override bool SkipStochasticTests { get; } = true;
-
-        public void Dispose()
-        {
-            var shutdowned = System.Terminate().Wait(Timeouts.ShutdownTimeout);
-            AfterShutdown();
-            if(!shutdowned)
-                throw new Exception($"Failed to stop {System.Name} within {Timeouts.ShutdownTimeout}");
-        }
-
-        protected virtual void AfterShutdown() { }
-
-        public override IPublisher<T> CreateFailedPublisher()
-            => TestPublisher.Error<T>(new Exception("Unable to serve subscribers right now!"));
-
-        protected IEnumerable<int> Enumerate(long elements) => Enumerate(elements > int.MaxValue, elements);
-
-        protected IEnumerable<int> Enumerate(bool useInfinite, long elements)
-            => useInfinite
-                ? new InfiniteEnumerable()
-                : Enumerable.Range(0, (int)elements);
-
-        private sealed class InfiniteEnumerable : IEnumerable<int>
-        {
-            public IEnumerator<int> GetEnumerator() => new InfiniteEnumerator();
-
-            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-            private sealed class InfiniteEnumerator : IEnumerator<int>
+            public void Dispose()
             {
-                private int _current;
-
-                public void Dispose()
-                {
-
-                }
-
-                public bool MoveNext()
-                {
-                    _current++;
-                    return true;
-                }
-
-                public void Reset() => _current = 0;
-
-                public int Current => _current;
-
-                object IEnumerator.Current => Current;
             }
+
+            public bool MoveNext()
+            {
+                Current++;
+                return true;
+            }
+
+            public void Reset()
+            {
+                Current = 0;
+            }
+
+            public int Current { get; private set; }
+
+            object IEnumerator.Current => Current;
         }
     }
 }

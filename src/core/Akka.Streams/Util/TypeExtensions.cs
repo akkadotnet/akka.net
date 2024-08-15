@@ -1,50 +1,48 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TypeExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="TypeExtensions.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Linq;
-using System.Reflection;
 using Reactive.Streams;
 
-namespace Akka.Streams.Util
+namespace Akka.Streams.Util;
+
+/// <summary>
+///     TBD
+/// </summary>
+public static class TypeExtensions
 {
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    public static class TypeExtensions
+    /// <param name="type">TBD</param>
+    /// <returns>TBD</returns>
+    public static Type GetSubscribedType(this Type type)
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="type">TBD</param>
-        /// <returns>TBD</returns>
-        public static Type GetSubscribedType(this Type type)
-        {
-            return
-                type
-                    .GetInterfaces()
-                    .Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof (ISubscriber<>))
-                    .GetGenericArguments()
-                    .First();
-        }
+        return
+            type
+                .GetInterfaces()
+                .Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ISubscriber<>))
+                .GetGenericArguments()
+                .First();
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="type">TBD</param>
-        /// <returns>TBD</returns>
-        public static Type GetPublishedType(this Type type)
-        {
-            return
-                type
-                    .GetInterfaces()
-                    .Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof (IPublisher<>))
-                    .GetGenericArguments()
-                    .First();
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="type">TBD</param>
+    /// <returns>TBD</returns>
+    public static Type GetPublishedType(this Type type)
+    {
+        return
+            type
+                .GetInterfaces()
+                .Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPublisher<>))
+                .GetGenericArguments()
+                .First();
     }
 }

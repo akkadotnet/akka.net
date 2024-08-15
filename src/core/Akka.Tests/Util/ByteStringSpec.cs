@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ByteStringSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ByteStringSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Linq;
 using System.Text;
@@ -12,184 +12,190 @@ using FluentAssertions;
 using FsCheck;
 using Xunit;
 
-namespace Akka.Tests.Util
+namespace Akka.Tests.Util;
+
+/// <summary>
+///     TODO: Should we use the FsCheck.XUnit integration when they upgrade to xUnit 2
+/// </summary>
+public class ByteStringSpec
 {
-
-    /// <summary>
-    /// TODO: Should we use the FsCheck.XUnit integration when they upgrade to xUnit 2
-    /// </summary>
-    public class ByteStringSpec
+    private class Generators
     {
-        class Generators
+        // TODO: Align with JVM Akka Generator
+        public static Arbitrary<ByteString> ByteStrings()
         {
-
-            // TODO: Align with JVM Akka Generator
-            public static Arbitrary<ByteString> ByteStrings()
-            {
-                return Arb.From(Arb.Generate<byte[]>().Select(ByteString.CopyFrom));
-            }
+            return Arb.From(Arb.Generate<byte[]>().Select(ByteString.CopyFrom));
         }
+    }
 
-        public ByteStringSpec()
+    public ByteStringSpec()
+    {
+        Arb.Register<Generators>();
+    }
+
+    [Fact]
+    public void A_ByteString_must_have_correct_size_when_concatenating()
+    {
+        Prop.ForAll((ByteString a, ByteString b) => (a + b).Count == a.Count + b.Count)
+            .QuickCheckThrowOnFailure();
+    }
+
+    [Fact]
+    public void A_ByteString_must_have_correct_size_when_slicing_from_index()
+    {
+        var a = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+        var b = ByteString.FromBytes(new byte[] { 10, 11, 12, 13, 14, 15, 16, 17, 18 });
+
+        (a + b).Slice(b.Count).Count.Should().Be(a.Count);
+    }
+
+    [Fact]
+    public void A_ByteString_must_be_sequential_when_slicing_from_start()
+    {
+        Prop.ForAll((ByteString a, ByteString b) => (a + b).Slice(0, a.Count).SequenceEqual(a))
+            .QuickCheckThrowOnFailure();
+    }
+
+    [Fact]
+    public void A_ByteString_must_be_sequential_when_slicing_from_index()
+    {
+        var a = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+        var b = ByteString.FromBytes(new byte[] { 10, 11, 12, 13, 14, 15, 16, 17, 18 });
+
+        (a + b).Slice(a.Count).Should().BeEquivalentTo(b);
+    }
+
+    [Fact]
+    public void A_ByteString_must_be_equal_to_the_original_when_compacting()
+    {
+        Prop.ForAll((ByteString xs) =>
         {
-            Arb.Register<Generators>();
-        }
+            var ys = xs.Compact();
+            return xs.SequenceEqual(ys) && ys.IsCompact;
+        }).QuickCheckThrowOnFailure();
+    }
 
-        [Fact]
-        public void A_ByteString_must_have_correct_size_when_concatenating()
+    [Fact]
+    public void A_ByteString_must_be_equal_to_the_original_when_recombining()
+    {
+        var xs = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+        var tmp1 = xs.Slice(0, xs.Count / 2);
+        var tmp2 = xs.Slice(xs.Count / 2);
+        var tmp11 = tmp1.Slice(0, tmp1.Count / 2);
+        var tmp12 = tmp1.Slice(tmp1.Count / 2);
+        (tmp11 + tmp12 + tmp2).Should().BeEquivalentTo(xs);
+    }
+
+    [Fact]
+    public void A_ByteString_must_behave_as_expected_when_created_from_and_decoding_to_String()
+    {
+        Prop.ForAll((string s) =>
+                ByteString.FromString(s, Encoding.UTF8).ToString(Encoding.UTF8) ==
+                (s ?? "")) // TODO: What should we do with null string?
+            .QuickCheckThrowOnFailure();
+    }
+
+    [Fact]
+    public void A_ByteString_must_behave_as_expected_when_created_from_and_decoding_to_unicode_String()
+    {
+        Prop.ForAll((string s) =>
+                ByteString.FromString(s, Encoding.Unicode).ToString(Encoding.Unicode) ==
+                (s ?? "")) // TODO: What should we do with null string?
+            .QuickCheckThrowOnFailure();
+    }
+
+    [Fact]
+    public void A_ByteString_must_behave_as_expected_when_compacting()
+    {
+        Prop.ForAll((ByteString a) =>
         {
-            Prop.ForAll((ByteString a, ByteString b) => (a + b).Count == a.Count + b.Count)
-                .QuickCheckThrowOnFailure();
-        }
+            var wasCompact = a.IsCompact;
+            var b = a.Compact();
+            return (!wasCompact || b == a) &&
+                   b.SequenceEqual(a) &&
+                   b.IsCompact &&
+                   b.Compact() == b;
+        }).QuickCheckThrowOnFailure();
+    }
 
-        [Fact]
-        public void A_ByteString_must_have_correct_size_when_slicing_from_index()
-        {
-            var a = ByteString.FromBytes(new byte[]{ 1, 2, 3, 4, 5, 6, 7, 8, 9} );
-            var b = ByteString.FromBytes(new byte[] { 10, 11, 12, 13, 14, 15, 16, 17, 18 });
+    [Fact(DisplayName = @"A concatenated byte string should return the index of a byte in one the two byte strings.")]
+    public void A_concatenated_bytestring_must_return_correct_index_of_elements_in_string()
+    {
+        var b = ByteString.FromBytes(new byte[] { 1 }) + ByteString.FromBytes(new byte[] { 2 });
+        var offset = b.IndexOf(2);
 
-            (a + b).Slice(b.Count).Count.Should().Be(a.Count);
-        }
+        Assert.Equal(1, offset);
+    }
 
-        [Fact]
-        public void A_ByteString_must_be_sequential_when_slicing_from_start()
-        {
-            Prop.ForAll((ByteString a, ByteString b) => (a + b).Slice(0, a.Count).SequenceEqual(a))
-                .QuickCheckThrowOnFailure();
-        }
-        [Fact]
-        public void A_ByteString_must_be_sequential_when_slicing_from_index()
-        {
-            var a = ByteString.FromBytes(new byte[]{ 1, 2, 3, 4, 5, 6, 7, 8, 9} );
-            var b = ByteString.FromBytes(new byte[] { 10, 11, 12, 13, 14, 15, 16, 17, 18 });
+    [Fact(DisplayName =
+        @"A concatenated byte string should return -1 when it was not found in the concatenated byte strings")]
+    public void A_concatenated_bytestring_must_return_negative_one_when_an_element_was_not_found()
+    {
+        var b = ByteString.FromBytes(new byte[] { 1 }) + ByteString.FromBytes(new byte[] { 2 });
+        var offset = b.IndexOf(3);
 
-            (a + b).Slice(a.Count).Should().BeEquivalentTo(b);
-        }
+        Assert.Equal(-1, offset);
+    }
 
-        [Fact]
-        public void A_ByteString_must_be_equal_to_the_original_when_compacting()
-        {
-            Prop.ForAll((ByteString xs) =>
-            {
-                var ys = xs.Compact();
-                return xs.SequenceEqual(ys) && ys.IsCompact;
-            }).QuickCheckThrowOnFailure();
-        }
+    [Fact(DisplayName =
+        "A concatenated byte string composed of partial characters must return the correct string for ToString(Unicode)")]
+    public void A_concatenated_ByteString_with_partial_characters_must_return_correct_string_for_ToString_Unicode()
+    {
+        // In Unicode encoding, characters present in the ASCII character set are 2 bytes long.
 
-        [Fact]
-        public void A_ByteString_must_be_equal_to_the_original_when_recombining()
-        {
-            var xs = ByteString.FromBytes(new byte[]{ 1, 2, 3, 4, 5, 6, 7, 8, 9} );
-            var tmp1 = xs.Slice(0, xs.Count / 2);
-            var tmp2 = xs.Slice(xs.Count / 2);
-            var tmp11 = tmp1.Slice(0, tmp1.Count / 2);
-            var tmp12 = tmp1.Slice(tmp1.Count / 2);
-            (tmp11 + tmp12 + tmp2).Should().BeEquivalentTo(xs);
-        }
+        const string expected = "ǢBC";
+        var encoding = Encoding.Unicode;
 
-        [Fact]
-        public void A_ByteString_must_behave_as_expected_when_created_from_and_decoding_to_String()
-        {
-            Prop.ForAll((string s) => ByteString.FromString(s, Encoding.UTF8).ToString(Encoding.UTF8) == (s ?? "")) // TODO: What should we do with null string?
-                .QuickCheckThrowOnFailure();
-        }
+        var rawData = encoding.GetBytes(expected);
 
-        [Fact]
-        public void A_ByteString_must_behave_as_expected_when_created_from_and_decoding_to_unicode_String()
-        {
-            Prop.ForAll((string s) => ByteString.FromString(s, Encoding.Unicode).ToString(Encoding.Unicode) == (s ?? "")) // TODO: What should we do with null string?
-                .QuickCheckThrowOnFailure();
-        }
+        var data = ByteString.Empty;
+        data += ByteString.CopyFrom(rawData, 0, 3); // One and a half characters
+        data += ByteString.CopyFrom(rawData, 3, 3); // One and a half characters
+        Assert.Equal(rawData.Length, data.Count);
 
-        [Fact]
-        public void A_ByteString_must_behave_as_expected_when_compacting()
-        {
-            Prop.ForAll((ByteString a) =>
-            {
-                var wasCompact = a.IsCompact;
-                var b = a.Compact();
-                return ((!wasCompact) || (b == a)) &&
-                       b.SequenceEqual(a) &&
-                       b.IsCompact &&
-                       b.Compact() == b;
-            }).QuickCheckThrowOnFailure();
-        }
+        var actual = data.ToString(encoding);
+        Assert.Equal(expected, actual);
+    }
 
-        [Fact(DisplayName = @"A concatenated byte string should return the index of a byte in one the two byte strings.")]
-        public void A_concatenated_bytestring_must_return_correct_index_of_elements_in_string()
-        {
-            var b = ByteString.FromBytes(new byte[] { 1 }) + ByteString.FromBytes(new byte[] { 2 });
-            int offset = b.IndexOf(2);
+    [Fact(DisplayName =
+        "A concatenated byte string composed of partial characters must return the correct string for ToString(UTF8)")]
+    public void A_concatenated_ByteString_with_partial_characters_must_return_correct_string_for_ToString_UTF8()
+    {
+        // In UTF-8 encoding, characters present in the ASCII character set are only 1 byte long.
 
-            Assert.Equal(1, offset);
-        }
+        const string expected = "ǢBC";
+        var encoding = Encoding.UTF8;
 
-        [Fact(DisplayName = @"A concatenated byte string should return -1 when it was not found in the concatenated byte strings")]
-        public void A_concatenated_bytestring_must_return_negative_one_when_an_element_was_not_found()
-        {
-            var b = ByteString.FromBytes(new byte[] { 1 }) + ByteString.FromBytes(new byte[] { 2 });
-            int offset = b.IndexOf(3);
+        var rawData = encoding.GetBytes(expected);
 
-            Assert.Equal(-1, offset);
-        }
+        var data = ByteString.Empty;
+        data += ByteString.CopyFrom(rawData, 0, 1); // Half a character
+        data += ByteString.CopyFrom(rawData, 1, 3); // One and a half characters
+        Assert.Equal(rawData.Length, data.Count);
 
-        [Fact(DisplayName = "A concatenated byte string composed of partial characters must return the correct string for ToString(Unicode)")]
-        public void A_concatenated_ByteString_with_partial_characters_must_return_correct_string_for_ToString_Unicode()
-        {
-            // In Unicode encoding, characters present in the ASCII character set are 2 bytes long.
+        var actual = data.ToString(encoding);
+        Assert.Equal(expected, actual);
+    }
 
-            const string expected = "ǢBC";
-            Encoding encoding = Encoding.Unicode;
+    [Fact(DisplayName = "A sliced byte string must return the correct string for ToString")]
+    public void A_sliced_ByteString_must_return_correct_string_for_ToString()
+    {
+        const string expected = "ABCDEF";
+        var encoding = Encoding.ASCII;
 
-            byte[] rawData = encoding.GetBytes(expected);
+        var halfExpected = expected.Length / 2;
 
-            ByteString data = ByteString.Empty;
-            data += ByteString.CopyFrom(rawData, 0, 3); // One and a half characters
-            data += ByteString.CopyFrom(rawData, 3, 3); // One and a half characters
-            Assert.Equal(rawData.Length, data.Count);
+        var expectedLeft = expected.Substring(0, halfExpected);
+        var expectedRight = expected.Substring(halfExpected, halfExpected);
 
-            string actual = data.ToString(encoding);
-            Assert.Equal(expected, actual);
-        }
+        var data = ByteString.FromString(expected, encoding);
 
-        [Fact(DisplayName = "A concatenated byte string composed of partial characters must return the correct string for ToString(UTF8)")]
-        public void A_concatenated_ByteString_with_partial_characters_must_return_correct_string_for_ToString_UTF8()
-        {
-            // In UTF-8 encoding, characters present in the ASCII character set are only 1 byte long.
+        var actualLeft = data.Slice(0, halfExpected).ToString(encoding);
+        var actualRight = data.Slice(halfExpected, halfExpected).ToString(encoding);
 
-            const string expected = "ǢBC";
-            Encoding encoding = Encoding.UTF8;
-
-            byte[] rawData = encoding.GetBytes(expected);
-
-            ByteString data = ByteString.Empty;
-            data += ByteString.CopyFrom(rawData, 0, 1); // Half a character
-            data += ByteString.CopyFrom(rawData, 1, 3); // One and a half characters
-            Assert.Equal(rawData.Length, data.Count);
-
-            string actual = data.ToString(encoding);
-            Assert.Equal(expected, actual);
-        }
-
-        [Fact(DisplayName = "A sliced byte string must return the correct string for ToString")]
-        public void A_sliced_ByteString_must_return_correct_string_for_ToString()
-        {
-            const string expected = "ABCDEF";
-            Encoding encoding = Encoding.ASCII;
-
-            int halfExpected = expected.Length / 2;
-
-            string expectedLeft = expected.Substring(startIndex: 0, length: halfExpected);
-            string expectedRight = expected.Substring(startIndex: halfExpected, length: halfExpected);
-
-            ByteString data = ByteString.FromString(expected, encoding);
-
-            string actualLeft = data.Slice(index: 0, count: halfExpected).ToString(encoding);
-            string actualRight = data.Slice(index: halfExpected, count: halfExpected).ToString(encoding);
-
-            Assert.Equal(expectedLeft, actualLeft);
-            Assert.Equal(expectedRight, actualRight);
-        }
+        Assert.Equal(expectedLeft, actualLeft);
+        Assert.Equal(expectedRight, actualRight);
+    }
 
 #if !NETFRAMEWORK
         [Fact(DisplayName = "A sliced byte string using Range must return the correct string for ToString")]
@@ -212,5 +218,4 @@ namespace Akka.Tests.Util
             Assert.Equal(expectedRight, actualRight);
         }
 #endif
-    }
 }

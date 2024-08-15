@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ControllerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ControllerSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -12,42 +12,40 @@ using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
 
-namespace Akka.Remote.TestKit.Tests
+namespace Akka.Remote.TestKit.Tests;
+
+public class ControllerSpec : AkkaSpec
 {
-    public class ControllerSpec : AkkaSpec
-    {
-        private const string Config = @"
+    private const string Config = @"
             akka.testconductor.barrier-timeout = 5s
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
             akka.actor.debug.fsm = on
             akka.actor.debug.lifecycle = on
         ";
 
-        public ControllerSpec()
-            : base(Config)
-        {
-        }
+    private readonly RoleName A = new("a");
+    private readonly RoleName B = new("b");
 
-        private readonly RoleName A = new("a");
-        private readonly RoleName B = new("b");
+    public ControllerSpec()
+        : base(Config)
+    {
+    }
 
-        [Fact]
-        public void Controller_must_publish_its_nodes()
+    [Fact]
+    public void Controller_must_publish_its_nodes()
+    {
+        var c = Sys.ActorOf(Props.Create(() => new Controller(1, new IPEndPoint(IPAddress.Loopback, 0))));
+        c.Tell(new Controller.NodeInfo(A, Address.Parse("akka://sys"), TestActor));
+        ExpectMsg<ToClient<Done>>();
+        c.Tell(new Controller.NodeInfo(B, Address.Parse("akka://sys"), TestActor));
+        ExpectMsg<ToClient<Done>>();
+        c.Tell(Controller.GetNodes.Instance);
+        ExpectMsg<IEnumerable<RoleName>>(names => XAssert.Equivalent(names, new[] { A, B }));
+        AwaitAssert(() =>
         {
-            var c = Sys.ActorOf(Props.Create(() => new Controller(1, new IPEndPoint(IPAddress.Loopback, 0))));
-            c.Tell(new Controller.NodeInfo(A, Address.Parse("akka://sys"), TestActor));
-            ExpectMsg<ToClient<Done>>();
-            c.Tell(new Controller.NodeInfo(B, Address.Parse("akka://sys"), TestActor));
-            ExpectMsg<ToClient<Done>>();
-            c.Tell(Controller.GetNodes.Instance);
-            ExpectMsg<IEnumerable<RoleName>>(names => XAssert.Equivalent(names, new[] {A, B}));
-            AwaitAssert(() =>
-            {
-                Watch(c);
-                c.Tell(PoisonPill.Instance);
-                ExpectMsg<Terminated>();
-            }, TimeSpan.FromSeconds(20));
-        }
+            Watch(c);
+            c.Tell(PoisonPill.Instance);
+            ExpectMsg<Terminated>();
+        }, TimeSpan.FromSeconds(20));
     }
 }
-

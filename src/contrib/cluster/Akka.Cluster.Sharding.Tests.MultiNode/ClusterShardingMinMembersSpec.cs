@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ClusterShardingMinMembersSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ClusterShardingMinMembersSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Linq;
@@ -13,143 +13,139 @@ using Akka.Remote.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
 
-namespace Akka.Cluster.Sharding.Tests
-{
-    public class ClusterShardingMinMembersSpecConfig : MultiNodeClusterShardingConfig
-    {
-        public RoleName First { get; }
-        public RoleName Second { get; }
-        public RoleName Third { get; }
+namespace Akka.Cluster.Sharding.Tests;
 
-        public ClusterShardingMinMembersSpecConfig(StateStoreMode mode)
-            : base(mode: mode, loglevel: "DEBUG", additionalConfig: @"
+public class ClusterShardingMinMembersSpecConfig : MultiNodeClusterShardingConfig
+{
+    public ClusterShardingMinMembersSpecConfig(StateStoreMode mode)
+        : base(mode, loglevel: "DEBUG", additionalConfig: @"
             akka.cluster.sharding.rebalance-interval = 120s #disable rebalance
             akka.cluster.min-nr-of-members = 3
             ")
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
-        }
+    {
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
     }
 
-    public class PersistentClusterShardingMinMembersSpecConfig : ClusterShardingMinMembersSpecConfig
+    public RoleName First { get; }
+    public RoleName Second { get; }
+    public RoleName Third { get; }
+}
+
+public class PersistentClusterShardingMinMembersSpecConfig : ClusterShardingMinMembersSpecConfig
+{
+    public PersistentClusterShardingMinMembersSpecConfig()
+        : base(StateStoreMode.Persistence)
     {
-        public PersistentClusterShardingMinMembersSpecConfig()
-            : base(StateStoreMode.Persistence)
-        {
-        }
+    }
+}
+
+public class DDataClusterShardingMinMembersSpecConfig : ClusterShardingMinMembersSpecConfig
+{
+    public DDataClusterShardingMinMembersSpecConfig()
+        : base(StateStoreMode.DData)
+    {
+    }
+}
+
+public class PersistentClusterShardingMinMembersSpec : ClusterShardingMinMembersSpec
+{
+    public PersistentClusterShardingMinMembersSpec()
+        : base(new PersistentClusterShardingMinMembersSpecConfig(), typeof(PersistentClusterShardingMinMembersSpec))
+    {
+    }
+}
+
+public class DDataClusterShardingMinMembersSpec : ClusterShardingMinMembersSpec
+{
+    public DDataClusterShardingMinMembersSpec()
+        : base(new DDataClusterShardingMinMembersSpecConfig(), typeof(DDataClusterShardingMinMembersSpec))
+    {
+    }
+}
+
+public abstract class ClusterShardingMinMembersSpec : MultiNodeClusterShardingSpec<ClusterShardingMinMembersSpecConfig>
+{
+    [MultiNodeFact]
+    public void Cluster_with_min_nr_of_members_using_sharding_specs()
+    {
+        Cluster_with_min_nr_of_members_using_sharding_must_use_all_nodes();
     }
 
-    public class DDataClusterShardingMinMembersSpecConfig : ClusterShardingMinMembersSpecConfig
+    private void Cluster_with_min_nr_of_members_using_sharding_must_use_all_nodes()
     {
-        public DDataClusterShardingMinMembersSpecConfig()
-            : base(StateStoreMode.DData)
+        Within(TimeSpan.FromSeconds(30), () =>
         {
-        }
-    }
+            StartPersistenceIfNeeded(Config.First, Config.First, Config.Second, Config.Third);
 
-    public class PersistentClusterShardingMinMembersSpec : ClusterShardingMinMembersSpec
-    {
-        public PersistentClusterShardingMinMembersSpec()
-            : base(new PersistentClusterShardingMinMembersSpecConfig(), typeof(PersistentClusterShardingMinMembersSpec))
-        {
-        }
-    }
-
-    public class DDataClusterShardingMinMembersSpec : ClusterShardingMinMembersSpec
-    {
-        public DDataClusterShardingMinMembersSpec()
-            : base(new DDataClusterShardingMinMembersSpecConfig(), typeof(DDataClusterShardingMinMembersSpec))
-        {
-        }
-    }
-
-    public abstract class ClusterShardingMinMembersSpec : MultiNodeClusterShardingSpec<ClusterShardingMinMembersSpecConfig>
-    {
-        #region setup
-
-        private readonly Lazy<IActorRef> _region;
-
-        protected ClusterShardingMinMembersSpec(ClusterShardingMinMembersSpecConfig config, Type type)
-            : base(config, type)
-        {
-            _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
-        }
-
-        private void StartSharding()
-        {
-            StartSharding(
-                Sys,
-                typeName: "Entity",
-                entityProps: SimpleEchoActor.Props(),
-                allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0),
-                handOffStopMessage: ShardedEntity.Stop.Instance);
-        }
-
-        #endregion
-
-        [MultiNodeFact]
-        public void Cluster_with_min_nr_of_members_using_sharding_specs()
-        {
-            Cluster_with_min_nr_of_members_using_sharding_must_use_all_nodes();
-        }
-
-        private void Cluster_with_min_nr_of_members_using_sharding_must_use_all_nodes()
-        {
-            Within(TimeSpan.FromSeconds(30), () =>
+            // the only test not asserting join status before starting to shard
+            Join(Config.First, Config.First, StartSharding, false);
+            Join(Config.Second, Config.First, StartSharding, false);
+            Join(Config.Third, Config.First, assertNodeUp: false);
+            // wait with starting sharding on third
+            Within(Remaining, () =>
             {
-                StartPersistenceIfNeeded(startOn: Config.First, Config.First, Config.Second, Config.Third);
-
-                // the only test not asserting join status before starting to shard
-                Join(Config.First, Config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
-                Join(Config.Second, Config.First, onJoinedRunOnFrom: StartSharding, assertNodeUp: false);
-                Join(Config.Third, Config.First, assertNodeUp: false);
-                // wait with starting sharding on third
-                Within(Remaining, () =>
+                AwaitAssert(() =>
                 {
-                    AwaitAssert(() =>
-                    {
-                        Cluster.State.Members.Count.Should().Be(3);
-                        Cluster.State.Members.Should().OnlyContain(i => i.Status == MemberStatus.Up);
-                    });
+                    Cluster.State.Members.Count.Should().Be(3);
+                    Cluster.State.Members.Should().OnlyContain(i => i.Status == MemberStatus.Up);
                 });
-                EnterBarrier("all-up");
-
-                RunOn(() =>
-                {
-                    _region.Value.Tell(1);
-                    // not allocated because third has not registered yet
-                    ExpectNoMsg(TimeSpan.FromSeconds(2));
-                }, Config.First);
-                EnterBarrier("verified");
-
-                RunOn(() =>
-                {
-                    StartSharding();
-                }, Config.Third);
-
-                RunOn(() =>
-                {
-                    // the 1 was sent above
-                    ExpectMsg(1);
-                    _region.Value.Tell(2);
-                    ExpectMsg(2);
-                    _region.Value.Tell(3);
-                    ExpectMsg(3);
-                }, Config.First);
-                EnterBarrier("shards-allocated");
-
-                _region.Value.Tell(new GetClusterShardingStats(Remaining));
-                var stats = ExpectMsg<ClusterShardingStats>();
-                var firstAddress = Node(Config.First).Address;
-                var secondAddress = Node(Config.Second).Address;
-                var thirdAddress = Node(Config.Third).Address;
-
-                stats.Regions.Keys.Should().BeEquivalentTo(firstAddress, secondAddress, thirdAddress);
-                stats.Regions[firstAddress].Stats.Values.Sum().Should().Be(1);
-                EnterBarrier("after-2");
             });
-        }
+            EnterBarrier("all-up");
+
+            RunOn(() =>
+            {
+                _region.Value.Tell(1);
+                // not allocated because third has not registered yet
+                ExpectNoMsg(TimeSpan.FromSeconds(2));
+            }, Config.First);
+            EnterBarrier("verified");
+
+            RunOn(() => { StartSharding(); }, Config.Third);
+
+            RunOn(() =>
+            {
+                // the 1 was sent above
+                ExpectMsg(1);
+                _region.Value.Tell(2);
+                ExpectMsg(2);
+                _region.Value.Tell(3);
+                ExpectMsg(3);
+            }, Config.First);
+            EnterBarrier("shards-allocated");
+
+            _region.Value.Tell(new GetClusterShardingStats(Remaining));
+            var stats = ExpectMsg<ClusterShardingStats>();
+            var firstAddress = Node(Config.First).Address;
+            var secondAddress = Node(Config.Second).Address;
+            var thirdAddress = Node(Config.Third).Address;
+
+            stats.Regions.Keys.Should().BeEquivalentTo(firstAddress, secondAddress, thirdAddress);
+            stats.Regions[firstAddress].Stats.Values.Sum().Should().Be(1);
+            EnterBarrier("after-2");
+        });
     }
+
+    #region setup
+
+    private readonly Lazy<IActorRef> _region;
+
+    protected ClusterShardingMinMembersSpec(ClusterShardingMinMembersSpecConfig config, Type type)
+        : base(config, type)
+    {
+        _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
+    }
+
+    private void StartSharding()
+    {
+        StartSharding(
+            Sys,
+            "Entity",
+            entityProps: SimpleEchoActor.Props(),
+            allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(2, 1.0),
+            handOffStopMessage: ShardedEntity.Stop.Instance);
+    }
+
+    #endregion
 }

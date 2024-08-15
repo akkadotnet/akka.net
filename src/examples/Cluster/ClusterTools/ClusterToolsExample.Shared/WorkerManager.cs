@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="WorkerManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="WorkerManager.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
@@ -17,13 +17,13 @@ public class WorkerManager : ReceiveActor, IWithTimers
 {
     private const string BatchKey = nameof(BatchKey);
     private const string ReportKey = nameof(ReportKey);
-    
+
     private readonly Random _random = new();
-    
+
     public WorkerManager()
     {
         var log = Context.GetLogger();
-        var counter = Context.ActorOf<WorkLoadCounter>(name: "workload-counter");
+        var counter = Context.ActorOf<WorkLoadCounter>("workload-counter");
         var workerRouter = GetWorkerRouter(counter);
 
         Receive<Batch>(batch =>
@@ -39,18 +39,15 @@ public class WorkerManager : ReceiveActor, IWithTimers
         {
             foreach (var (actor, count) in report.Counts)
             {
-                var name = (string.IsNullOrEmpty(actor.Path.Address.Host) 
-                    ? "local/" 
+                var name = (string.IsNullOrEmpty(actor.Path.Address.Host)
+                    ? "local/"
                     : actor.Path.Address.Host + ":" + actor.Path.Address.Port + "/") + actor.Path.Name;
 
                 log.Info("{0} -> {1}", name, count);
             }
         });
 
-        Receive<SendReport>(msg =>
-        {
-            counter.Tell(msg);
-        });
+        Receive<SendReport>(msg => { counter.Tell(msg); });
 
         Timers.StartSingleTimer(BatchKey, GetBatch(), TimeSpan.FromSeconds(3));
         Timers.StartPeriodicTimer(ReportKey, SendReport.Instance, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10));
@@ -61,8 +58,8 @@ public class WorkerManager : ReceiveActor, IWithTimers
     private IActorRef GetWorkerRouter(IActorRef counter)
     {
         return Context.ActorOf(new ClusterRouterPool(
-                local: new RoundRobinPool(10),
-                settings: new ClusterRouterPoolSettings(30, 10, true, null))
+                new RoundRobinPool(10),
+                new ClusterRouterPoolSettings(30, 10, true))
             .Props(Props.Create(() => new Worker(counter))));
     }
 

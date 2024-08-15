@@ -1,331 +1,318 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TestActorRefBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="TestActorRefBase.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.TestKit.Internal;
 using Akka.Util;
 
-namespace Akka.TestKit
+namespace Akka.TestKit;
+
+/// <summary>
+///     This is the base class for TestActorRefs
+/// </summary>
+/// <typeparam name="TActor">The type of actor</typeparam>
+public abstract class TestActorRefBase<TActor> : ICanTell, IEquatable<IActorRef>, IInternalActorRef
+    where TActor : ActorBase
 {
     /// <summary>
-    /// This is the base class for TestActorRefs
+    ///     TBD
     /// </summary>
-    /// <typeparam name="TActor">The type of actor</typeparam>
-    public abstract class TestActorRefBase<TActor> : ICanTell, IEquatable<IActorRef>, IInternalActorRef where TActor : ActorBase
+    /// <param name="system">TBD</param>
+    /// <param name="actorProps">TBD</param>
+    /// <param name="supervisor">TBD</param>
+    /// <param name="name">TBD</param>
+    protected TestActorRefBase(ActorSystem system, Props actorProps, IActorRef supervisor = null, string name = null)
     {
-        private readonly InternalTestActorRef _internalRef;
+        InternalRef = InternalTestActorRef.Create(system, actorProps, supervisor, name);
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="actorProps">TBD</param>
-        /// <param name="supervisor">TBD</param>
-        /// <param name="name">TBD</param>
-        protected TestActorRefBase(ActorSystem system, Props actorProps, IActorRef supervisor=null, string name=null)
-        {
-            _internalRef = InternalTestActorRef.Create(system, actorProps, supervisor, name);
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public IActorRef Ref => InternalRef;
 
-        /// <summary>
-        /// Directly inject messages into actor receive behavior. Any exceptions
-        /// thrown will be available to you, while still being able to use
-        /// become/unbecome.
-        /// Note: This method violates the actor model and could cause unpredictable 
-        /// behavior. For example, a Receive call to an actor could run simultaneously 
-        /// (2 simultaneous threads running inside the actor) with the actor's handling 
-        /// of a previous Tell call. 
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="sender">The sender.</param>
-        public void Receive(object message, IActorRef sender = null)
-        {
-            _internalRef.Receive(message, sender);
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected InternalTestActorRef InternalRef { get; }
 
-        /// <summary>
-        /// Directly inject messages into actor ReceiveAsync behavior. Any exceptions
-        /// thrown will be available to you, while still being able to use
-        /// become/unbecome.
-        /// Note: This method violates the actor model and could cause unpredictable 
-        /// behavior. For example, a Receive call to an actor could run simultaneously 
-        /// (2 simultaneous threads running inside the actor) with the actor's handling 
-        /// of a previous Tell call. 
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="sender">The sender.</param>
-        public Task ReceiveAsync(object message, IActorRef sender = null)
-        {
-            return _internalRef.ReceiveAsync(message, sender);
-        }
-        
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public IActorRef Ref
-        {
-            get { return _internalRef; }
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public TActor UnderlyingActor => (TActor)InternalRef.UnderlyingActor;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected InternalTestActorRef InternalRef
-        {
-            get { return _internalRef; }
-        }
+    /// <summary>
+    ///     Gets the path of this instance
+    /// </summary>
+    public ActorPath Path => InternalRef.Path;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public TActor UnderlyingActor
-        {
-            get { return (TActor) _internalRef.UnderlyingActor; }
-        }
+    void ICanTell.Tell(object message, IActorRef sender)
+    {
+        InternalRef.Tell(message, sender);
+    }
 
-        /// <summary>
-        /// Gets the path of this instance
-        /// </summary>
-        public ActorPath Path { get { return _internalRef.Path; } }
-
-        /// <summary>
-        /// Sends a message to this actor. 
-        /// If this call is made from within an actor, the current actor will be the sender.
-        /// If the call is made from a test class that is based on TestKit, TestActor will 
-        /// will be the sender;
-        /// otherwise <see cref="ActorRefs.NoSender"/> will be set as sender.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public void Tell(object message)
-        {
-            _internalRef.Tell(message);
-        }
+    bool IEquatable<IActorRef>.Equals(IActorRef other)
+    {
+        return InternalRef.Equals(other);
+    }
 
 
-        /// <summary>
-        /// Forwards a message to this actor.
-        /// If this call is made from within an actor, the current actor will be the sender.
-        /// If the call is made from a test class that is based on TestKit, TestActor will 
-        /// will be the sender;
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public void Forward(object message)
-        {
-            _internalRef.Forward(message);
-        }
+    public int CompareTo(object obj)
+    {
+        return ((IComparable)InternalRef).CompareTo(obj);
+    }
 
-        /// <summary>
-        /// Sends a message to this actor with the specified sender.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="sender">The sender</param>
-        public void Tell(object message, IActorRef sender)
-        {
-            _internalRef.Tell(message, sender);
+    //ActorRef implementations
+    int IComparable<IActorRef>.CompareTo(IActorRef other)
+    {
+        return InternalRef.CompareTo(other);
+    }
 
-        }
+    ActorPath IActorRef.Path => InternalRef.Path;
 
-        /// <summary>
-        /// Registers this actor to be a death monitor of the provided ActorRef
-        /// This means that this actor will get a Terminated()-message when the provided actor
-        /// is permanently terminated.
-        /// Returns the same ActorRef that is provided to it, to allow for cleaner invocations.
-        /// </summary>
-        /// <param name="subject">The subject to watch.</param>
-        /// <returns>Returns the same ActorRef that is provided to it, to allow for cleaner invocations.</returns>
-        public void Watch(IActorRef subject)
-        {
-            _internalRef.Watch(subject);
-        }
+    ISurrogate ISurrogated.ToSurrogate(ActorSystem system)
+    {
+        return InternalRef.ToSurrogate(system);
+    }
 
-        /// <summary>
-        /// Deregisters this actor from being a death monitor of the provided ActorRef
-        /// This means that this actor will not get a Terminated()-message when the provided actor
-        /// is permanently terminated.
-        /// Returns the same ActorRef that is provided to it, to allow for cleaner invocations.
-        /// </summary>
-        /// <returns>Returns the same ActorRef that is provided to it, to allow for cleaner invocations.</returns>
-        /// <param name="subject">The subject to unwatch.</param>
-        public void Unwatch(IActorRef subject)
-        {
-            _internalRef.Unwatch(subject);
-        }
+    bool IActorRefScope.IsLocal => InternalRef.IsLocal;
 
-       
-        public override string ToString()
-        {
-            return _internalRef.ToString();
-        }
+    IInternalActorRef IInternalActorRef.Parent => InternalRef.Parent;
 
-        
-        public override bool Equals(object obj)
-        {
-            return _internalRef.Equals(obj);
-        }
+    IActorRefProvider IInternalActorRef.Provider => InternalRef.Provider;
 
-        
-        public override int GetHashCode()
-        {
-            return _internalRef.GetHashCode();
-        }
+    bool IInternalActorRef.IsTerminated => InternalRef.IsTerminated;
 
-        
-        public int CompareTo(object obj)
-        {
-            return ((IComparable) _internalRef).CompareTo(obj);
-        }
+    IActorRef IInternalActorRef.GetChild(IReadOnlyList<string> name)
+    {
+        return InternalRef.GetChild(name);
+    }
 
-        
-        public bool Equals(IActorRef other)
-        {
-            return _internalRef.Equals(other);
-        }
+    void IInternalActorRef.Resume(Exception causedByFailure)
+    {
+        InternalRef.Resume(causedByFailure);
+    }
 
-        /// <summary>
-        /// Compares a specified <see cref="TestActorRefBase{TActor}"/> to an <see cref="IActorRef"/> for equality.
-        /// </summary>
-        /// <param name="testActorRef">The test actor used for comparison</param>
-        /// <param name="actorRef">The actor used for comparison</param>
-        /// <returns><c>true</c> if both actors are equal; otherwise <c>false</c></returns>
-        public static bool operator ==(TestActorRefBase<TActor> testActorRef, IActorRef actorRef)
-        {
-            if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
-            return testActorRef.Equals(actorRef);
-        }
+    void IInternalActorRef.Start()
+    {
+        InternalRef.Start();
+    }
 
-        /// <summary>
-        /// Compares a specified <see cref="TestActorRefBase{TActor}"/> to an <see cref="IActorRef"/> for inequality.
-        /// </summary>
-        /// <param name="testActorRef">The test actor used for comparison</param>
-        /// <param name="actorRef">The actor used for comparison</param>
-        /// <returns><c>true</c> if both actors are not equal; otherwise <c>false</c></returns>
-        public static bool operator !=(TestActorRefBase<TActor> testActorRef, IActorRef actorRef)
-        {
-            if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
-            return !testActorRef.Equals(actorRef);
-        }
+    void IInternalActorRef.Stop()
+    {
+        InternalRef.Stop();
+    }
 
-        /// <summary>
-        /// Compares a specified <see cref="IActorRef"/> to an <see cref="TestActorRefBase{TActor}"/> for equality.
-        /// </summary>
-        /// <param name="actorRef">The actor used for comparison</param>
-        /// <param name="testActorRef">The test actor used for comparison</param>
-        /// <returns><c>true</c> if both actors are equal; otherwise <c>false</c></returns>
-        public static bool operator ==(IActorRef actorRef, TestActorRefBase<TActor> testActorRef)
-        {
-            if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
-            return testActorRef.Equals(actorRef);
-        }
+    void IInternalActorRef.Restart(Exception cause)
+    {
+        InternalRef.Restart(cause);
+    }
 
-        /// <summary>
-        /// Compares a specified <see cref="IActorRef"/> to an <see cref="TestActorRefBase{TActor}"/> for inequality.
-        /// </summary>
-        /// <param name="actorRef">The actor used for comparison</param>
-        /// <param name="testActorRef">The test actor used for comparison</param>
-        /// <returns><c>true</c> if both actors are not equal; otherwise <c>false</c></returns>
-        public static bool operator !=(IActorRef actorRef, TestActorRefBase<TActor> testActorRef)
-        {
-            if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
-            return !testActorRef.Equals(actorRef);
-        }
+    void IInternalActorRef.Suspend()
+    {
+        InternalRef.Suspend();
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <returns>TBD</returns>
-        public static IActorRef ToActorRef(TestActorRefBase<TActor> actorRef)
-        {
-            return actorRef._internalRef;
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="message">TBD</param>
+    /// <param name="sender">TBD</param>
+    public void SendSystemMessage(ISystemMessage message, IActorRef sender)
+    {
+        InternalRef.SendSystemMessage(message);
+    }
 
-        //ActorRef implementations
-        int IComparable<IActorRef>.CompareTo(IActorRef other)
-        {
-            return _internalRef.CompareTo(other);
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="message">TBD</param>
+    public void SendSystemMessage(ISystemMessage message)
+    {
+        InternalRef.SendSystemMessage(message);
+    }
 
-        bool IEquatable<IActorRef>.Equals(IActorRef other)
-        {
-            return _internalRef.Equals(other);
-        }
+    /// <summary>
+    ///     Directly inject messages into actor receive behavior. Any exceptions
+    ///     thrown will be available to you, while still being able to use
+    ///     become/unbecome.
+    ///     Note: This method violates the actor model and could cause unpredictable
+    ///     behavior. For example, a Receive call to an actor could run simultaneously
+    ///     (2 simultaneous threads running inside the actor) with the actor's handling
+    ///     of a previous Tell call.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="sender">The sender.</param>
+    public void Receive(object message, IActorRef sender = null)
+    {
+        InternalRef.Receive(message, sender);
+    }
 
-        ActorPath IActorRef.Path { get { return _internalRef.Path; } }
+    /// <summary>
+    ///     Directly inject messages into actor ReceiveAsync behavior. Any exceptions
+    ///     thrown will be available to you, while still being able to use
+    ///     become/unbecome.
+    ///     Note: This method violates the actor model and could cause unpredictable
+    ///     behavior. For example, a Receive call to an actor could run simultaneously
+    ///     (2 simultaneous threads running inside the actor) with the actor's handling
+    ///     of a previous Tell call.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="sender">The sender.</param>
+    public Task ReceiveAsync(object message, IActorRef sender = null)
+    {
+        return InternalRef.ReceiveAsync(message, sender);
+    }
 
-        void ICanTell.Tell(object message, IActorRef sender)
-        {
-            _internalRef.Tell(message, sender);
-        }
+    /// <summary>
+    ///     Sends a message to this actor.
+    ///     If this call is made from within an actor, the current actor will be the sender.
+    ///     If the call is made from a test class that is based on TestKit, TestActor will
+    ///     will be the sender;
+    ///     otherwise <see cref="ActorRefs.NoSender" /> will be set as sender.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    public void Tell(object message)
+    {
+        InternalRef.Tell(message);
+    }
 
-        ISurrogate ISurrogated.ToSurrogate(ActorSystem system)
-        {
-            return _internalRef.ToSurrogate(system);
-        }
 
-        bool IActorRefScope.IsLocal { get { return _internalRef.IsLocal; } }
+    /// <summary>
+    ///     Forwards a message to this actor.
+    ///     If this call is made from within an actor, the current actor will be the sender.
+    ///     If the call is made from a test class that is based on TestKit, TestActor will
+    ///     will be the sender;
+    /// </summary>
+    /// <param name="message">The message.</param>
+    public void Forward(object message)
+    {
+        InternalRef.Forward(message);
+    }
 
-        IInternalActorRef IInternalActorRef.Parent { get { return _internalRef.Parent; } }
+    /// <summary>
+    ///     Sends a message to this actor with the specified sender.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="sender">The sender</param>
+    public void Tell(object message, IActorRef sender)
+    {
+        InternalRef.Tell(message, sender);
+    }
 
-        IActorRefProvider IInternalActorRef.Provider { get { return _internalRef.Provider; } }
+    /// <summary>
+    ///     Registers this actor to be a death monitor of the provided ActorRef
+    ///     This means that this actor will get a Terminated()-message when the provided actor
+    ///     is permanently terminated.
+    ///     Returns the same ActorRef that is provided to it, to allow for cleaner invocations.
+    /// </summary>
+    /// <param name="subject">The subject to watch.</param>
+    /// <returns>Returns the same ActorRef that is provided to it, to allow for cleaner invocations.</returns>
+    public void Watch(IActorRef subject)
+    {
+        InternalRef.Watch(subject);
+    }
 
-        bool IInternalActorRef.IsTerminated { get { return _internalRef.IsTerminated; } }
+    /// <summary>
+    ///     Deregisters this actor from being a death monitor of the provided ActorRef
+    ///     This means that this actor will not get a Terminated()-message when the provided actor
+    ///     is permanently terminated.
+    ///     Returns the same ActorRef that is provided to it, to allow for cleaner invocations.
+    /// </summary>
+    /// <returns>Returns the same ActorRef that is provided to it, to allow for cleaner invocations.</returns>
+    /// <param name="subject">The subject to unwatch.</param>
+    public void Unwatch(IActorRef subject)
+    {
+        InternalRef.Unwatch(subject);
+    }
 
-        IActorRef IInternalActorRef.GetChild(IReadOnlyList<string> name)
-        {
-            return _internalRef.GetChild(name);
-        }
 
-        void IInternalActorRef.Resume(Exception causedByFailure)
-        {
-            _internalRef.Resume(causedByFailure);
-        }
+    public override string ToString()
+    {
+        return InternalRef.ToString();
+    }
 
-        void IInternalActorRef.Start()
-        {
-            _internalRef.Start();
-        }
 
-        void IInternalActorRef.Stop()
-        {
-            _internalRef.Stop();
-        }
+    public override bool Equals(object obj)
+    {
+        return InternalRef.Equals(obj);
+    }
 
-        void IInternalActorRef.Restart(Exception cause)
-        {
-            _internalRef.Restart(cause);
-        }
 
-        void IInternalActorRef.Suspend()
-        {
-            _internalRef.Suspend();
-        }
+    public override int GetHashCode()
+    {
+        return InternalRef.GetHashCode();
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        public void SendSystemMessage(ISystemMessage message, IActorRef sender)
-        {
-            _internalRef.SendSystemMessage(message);
-        }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        public void SendSystemMessage(ISystemMessage message)
-        {
-            _internalRef.SendSystemMessage(message);
-        }
+    public bool Equals(IActorRef other)
+    {
+        return InternalRef.Equals(other);
+    }
+
+    /// <summary>
+    ///     Compares a specified <see cref="TestActorRefBase{TActor}" /> to an <see cref="IActorRef" /> for equality.
+    /// </summary>
+    /// <param name="testActorRef">The test actor used for comparison</param>
+    /// <param name="actorRef">The actor used for comparison</param>
+    /// <returns><c>true</c> if both actors are equal; otherwise <c>false</c></returns>
+    public static bool operator ==(TestActorRefBase<TActor> testActorRef, IActorRef actorRef)
+    {
+        if (ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
+        return testActorRef.Equals(actorRef);
+    }
+
+    /// <summary>
+    ///     Compares a specified <see cref="TestActorRefBase{TActor}" /> to an <see cref="IActorRef" /> for inequality.
+    /// </summary>
+    /// <param name="testActorRef">The test actor used for comparison</param>
+    /// <param name="actorRef">The actor used for comparison</param>
+    /// <returns><c>true</c> if both actors are not equal; otherwise <c>false</c></returns>
+    public static bool operator !=(TestActorRefBase<TActor> testActorRef, IActorRef actorRef)
+    {
+        if (ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
+        return !testActorRef.Equals(actorRef);
+    }
+
+    /// <summary>
+    ///     Compares a specified <see cref="IActorRef" /> to an <see cref="TestActorRefBase{TActor}" /> for equality.
+    /// </summary>
+    /// <param name="actorRef">The actor used for comparison</param>
+    /// <param name="testActorRef">The test actor used for comparison</param>
+    /// <returns><c>true</c> if both actors are equal; otherwise <c>false</c></returns>
+    public static bool operator ==(IActorRef actorRef, TestActorRefBase<TActor> testActorRef)
+    {
+        if (ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
+        return testActorRef.Equals(actorRef);
+    }
+
+    /// <summary>
+    ///     Compares a specified <see cref="IActorRef" /> to an <see cref="TestActorRefBase{TActor}" /> for inequality.
+    /// </summary>
+    /// <param name="actorRef">The actor used for comparison</param>
+    /// <param name="testActorRef">The test actor used for comparison</param>
+    /// <returns><c>true</c> if both actors are not equal; otherwise <c>false</c></returns>
+    public static bool operator !=(IActorRef actorRef, TestActorRefBase<TActor> testActorRef)
+    {
+        if (ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
+        return !testActorRef.Equals(actorRef);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="actorRef">TBD</param>
+    /// <returns>TBD</returns>
+    public static IActorRef ToActorRef(TestActorRefBase<TActor> actorRef)
+    {
+        return actorRef.InternalRef;
     }
 }

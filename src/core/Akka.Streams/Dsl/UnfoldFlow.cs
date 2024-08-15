@@ -1,96 +1,99 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="UnfoldFlow.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="UnfoldFlow.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Annotations;
 using Akka.Streams.Stage;
 
-namespace Akka.Streams.Dsl
+namespace Akka.Streams.Dsl;
+
+[InternalApi]
+internal abstract class UnfoldFlowGraphStageLogic<TIn, TState, TOut> : GraphStageLogic, IOutHandler
 {
-    [InternalApi]
-    internal abstract class UnfoldFlowGraphStageLogic<TIn, TState, TOut> : GraphStageLogic, IOutHandler
+    private readonly Outlet<TState> _feedback;
+    protected readonly Inlet<TIn> _nextElem;
+    protected readonly Outlet<TOut> _output;
+    private readonly TimeSpan _timeout;
+
+    protected TState _pending;
+    protected bool _pushedToCycle;
+
+    protected UnfoldFlowGraphStageLogic(FanOutShape<TIn, TState, TOut> shape, TState seed, TimeSpan timeout) :
+        base(shape)
     {
-        private readonly TimeSpan _timeout;
-        private readonly Outlet<TState> _feedback;
-        protected readonly Outlet<TOut> _output;
-        protected readonly Inlet<TIn> _nextElem;
+        _timeout = timeout;
 
-        protected TState _pending;
-        protected bool _pushedToCycle;
+        _feedback = shape.Out0;
+        _output = shape.Out1;
+        _nextElem = shape.In;
 
-        protected UnfoldFlowGraphStageLogic(FanOutShape<TIn, TState, TOut> shape, TState seed, TimeSpan timeout) : base(shape)
+        _pending = seed;
+        _pushedToCycle = false;
+
+        SetHandler(_feedback, this);
+
+        SetHandler(_output, () =>
         {
-            _timeout = timeout;
-
-            _feedback = shape.Out0;
-            _output = shape.Out1;
-            _nextElem = shape.In;
-
-            _pending = seed;
-            _pushedToCycle = false;
-
-            SetHandler(_feedback, this);
-
-            SetHandler(_output, onPull: () =>
-            {
-                Pull(_nextElem);
-                if (!_pushedToCycle && IsAvailable(_feedback))
-                {
-                    Push(_feedback, _pending);
-                    _pending = default(TState);
-                    _pushedToCycle = true;
-                }
-            });
-        }
-
-        public void OnPull()
-        {
-            if (!_pushedToCycle && IsAvailable(_output))
+            Pull(_nextElem);
+            if (!_pushedToCycle && IsAvailable(_feedback))
             {
                 Push(_feedback, _pending);
-                _pending = default(TState);
+                _pending = default;
                 _pushedToCycle = true;
             }
-        }
+        });
+    }
 
-        // TODO: Is this correct? check JVM please
-        public void OnDownstreamFinish(Exception cause)
+    public void OnPull()
+    {
+        if (!_pushedToCycle && IsAvailable(_output))
         {
-            // Do Nothing until `timeout` to try and intercept completion as downstream,
-            // but cancel stream after timeout if inlet is not closed to prevent deadlock.
-            Materializer.ScheduleOnce(_timeout, () =>
-            {
-                var cb = GetAsyncCallback(() =>
-                {
-                    if (!IsClosed(_nextElem))
-                        FailStage(new InvalidOperationException($"unfoldFlow source's inner flow canceled only upstream, while downstream remain available for {_timeout}"));
-                });
-                cb();
-            });
+            Push(_feedback, _pending);
+            _pending = default;
+            _pushedToCycle = true;
         }
     }
 
-    [InternalApi]
-    internal sealed class FanOut2UnfoldingStage<TIn, TState, TOut> : GraphStage<FanOutShape<TIn, TState, TOut>>
+    // TODO: Is this correct? check JVM please
+    public void OnDownstreamFinish(Exception cause)
     {
-        private readonly Func<FanOutShape<TIn, TState, TOut>, UnfoldFlowGraphStageLogic<TIn, TState, TOut>> _generateGraphStageLogic;
-
-        public FanOut2UnfoldingStage(Func<FanOutShape<TIn, TState, TOut>, UnfoldFlowGraphStageLogic<TIn, TState, TOut>> generateGraphStageLogic)
+        // Do Nothing until `timeout` to try and intercept completion as downstream,
+        // but cancel stream after timeout if inlet is not closed to prevent deadlock.
+        Materializer.ScheduleOnce(_timeout, () =>
         {
-            _generateGraphStageLogic = generateGraphStageLogic;
+            var cb = GetAsyncCallback(() =>
+            {
+                if (!IsClosed(_nextElem))
+                    FailStage(new InvalidOperationException(
+                        $"unfoldFlow source's inner flow canceled only upstream, while downstream remain available for {_timeout}"));
+            });
+            cb();
+        });
+    }
+}
 
-            Shape = new FanOutShape<TIn, TState, TOut>("unfoldFlow");            
-        }
+[InternalApi]
+internal sealed class FanOut2UnfoldingStage<TIn, TState, TOut> : GraphStage<FanOutShape<TIn, TState, TOut>>
+{
+    private readonly Func<FanOutShape<TIn, TState, TOut>, UnfoldFlowGraphStageLogic<TIn, TState, TOut>>
+        _generateGraphStageLogic;
 
-        public override FanOutShape<TIn, TState, TOut> Shape { get; }
+    public FanOut2UnfoldingStage(
+        Func<FanOutShape<TIn, TState, TOut>, UnfoldFlowGraphStageLogic<TIn, TState, TOut>> generateGraphStageLogic)
+    {
+        _generateGraphStageLogic = generateGraphStageLogic;
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-        {
-            return _generateGraphStageLogic(Shape);
-        }
+        Shape = new FanOutShape<TIn, TState, TOut>("unfoldFlow");
+    }
+
+    public override FanOutShape<TIn, TState, TOut> Shape { get; }
+
+    protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+    {
+        return _generateGraphStageLogic(Shape);
     }
 }

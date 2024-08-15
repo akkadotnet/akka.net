@@ -8,13 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Internals\Reference.conf" />
-    <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
-    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
+    <EmbeddedResource Include="Internals\Reference.conf"/>
+    <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj"/>
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
+    <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)"/>
     <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -22,12 +22,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Access="internal" Include="../../protobuf/TestConductorProtocol.proto" />
+    <Protobuf Access="internal" Include="../../protobuf/TestConductorProtocol.proto"/>
 
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-    <PackageReference Include="System.Collections.Specialized" Version="4.3.0" />
+    <PackageReference Include="System.Collections.Specialized" Version="4.3.0"/>
   </ItemGroup>
-  
+
 </Project>

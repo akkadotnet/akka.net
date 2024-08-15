@@ -1,9 +1,10 @@
 ﻿// -----------------------------------------------------------------------
 //  <copyright file="DurableProducerQueue.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using System.Collections.Generic;
@@ -38,7 +39,8 @@ public static class DurableProducerQueue
     /// <remarks>
     ///     This command may be retried and the implementation should be idempotent.
     /// </remarks>
-    public sealed record StoreMessageSent<T>(MessageSent<T> MessageSent, IActorRef ReplyTo) : IDurableProducerQueueCommand;
+    public sealed record StoreMessageSent<T>(MessageSent<T> MessageSent, IActorRef ReplyTo)
+        : IDurableProducerQueueCommand;
 
     public sealed record StoreMessageSentAck(long StoredSeqNo);
 
@@ -48,10 +50,11 @@ public static class DurableProducerQueue
     /// <remarks>
     ///     This command may be retried and the implementation should be idempotent.
     /// </remarks>
-    public sealed record StoreMessageConfirmed(long SeqNr, string ConfirmationQualifier, long Timestamp) : IDurableProducerQueueCommand;
+    public sealed record StoreMessageConfirmed(long SeqNr, string ConfirmationQualifier, long Timestamp)
+        : IDurableProducerQueueCommand;
 
     /// <summary>
-    /// INTERNAL API - used for serialization
+    ///     INTERNAL API - used for serialization
     /// </summary>
     internal interface IState
     {
@@ -61,11 +64,22 @@ public static class DurableProducerQueue
     /// <summary>
     ///     Durable producer queue state
     /// </summary>
-    public readonly record struct State<T>(long CurrentSeqNr, long HighestConfirmedSeqNr,
-        ImmutableDictionary<string, (long, long)> ConfirmedSeqNr, ImmutableList<MessageSent<T>> Unconfirmed) : IDeliverySerializable, IState
+    public readonly record struct State<T>(
+        long CurrentSeqNr,
+        long HighestConfirmedSeqNr,
+        ImmutableDictionary<string, (long, long)> ConfirmedSeqNr,
+        ImmutableList<MessageSent<T>> Unconfirmed) : IDeliverySerializable, IState
     {
         public static State<T> Empty { get; } = new(1, 0, ImmutableDictionary<string, (long, long)>.Empty,
             ImmutableList<MessageSent<T>>.Empty);
+
+        public bool Equals(State<T> other)
+        {
+            return CurrentSeqNr == other.CurrentSeqNr && HighestConfirmedSeqNr == other.HighestConfirmedSeqNr &&
+                   ConfirmedSeqNr.SequenceEqual(other.ConfirmedSeqNr) && Unconfirmed.SequenceEqual(other.Unconfirmed);
+        }
+
+        Type IState.MessageType => typeof(T);
 
         public State<T> AddMessageSent(MessageSent<T> messageSent)
         {
@@ -128,12 +142,6 @@ public static class DurableProducerQueue
             return this with { CurrentSeqNr = newCurrentSeqNr, Unconfirmed = newUnconfirmed.ToImmutable() };
         }
 
-        public bool Equals(State<T> other)
-        {
-            return CurrentSeqNr == other.CurrentSeqNr && HighestConfirmedSeqNr == other.HighestConfirmedSeqNr &&
-                   ConfirmedSeqNr.SequenceEqual(other.ConfirmedSeqNr) && Unconfirmed.SequenceEqual(other.Unconfirmed);
-        }
-
         public override int GetHashCode()
         {
             unchecked
@@ -145,8 +153,6 @@ public static class DurableProducerQueue
                 return hashCode;
             }
         }
-
-        Type IState.MessageType => typeof(T);
     }
 
     /// <summary>
@@ -158,7 +164,7 @@ public static class DurableProducerQueue
 
 
     /// <summary>
-    /// INTERNAL API - used for serialization
+    ///     INTERNAL API - used for serialization
     /// </summary>
     internal interface IMessageSent
     {
@@ -168,7 +174,11 @@ public static class DurableProducerQueue
     /// <summary>
     ///     The fact that a message has been sent.
     /// </summary>
-    public sealed record MessageSent<T>(long SeqNr, MessageOrChunk<T> Message, bool Ack, string ConfirmationQualifier,
+    public sealed record MessageSent<T>(
+        long SeqNr,
+        MessageOrChunk<T> Message,
+        bool Ack,
+        string ConfirmationQualifier,
         long Timestamp) : IDurableProducerQueueEvent, IMessageSent
     {
         internal bool IsFirstChunk => Message.Chunk is { FirstChunk: true } or null;
@@ -183,6 +193,8 @@ public static class DurableProducerQueue
                    ConfirmationQualifier == other.ConfirmationQualifier && Timestamp == other.Timestamp;
         }
 
+        Type IMessageSent.MessageType => typeof(T);
+
         public MessageSent<T> WithQualifier(string qualifier)
         {
             return this with { ConfirmationQualifier = qualifier };
@@ -192,6 +204,7 @@ public static class DurableProducerQueue
         {
             return this with { Timestamp = timestamp };
         }
+
         public override int GetHashCode()
         {
             unchecked
@@ -221,8 +234,6 @@ public static class DurableProducerQueue
         {
             return new MessageSent<T>(seqNo, messageOrChunk, ack, confirmationQualifier, timestamp);
         }
-
-        Type IMessageSent.MessageType => typeof(T);
     }
 
     /// <summary>

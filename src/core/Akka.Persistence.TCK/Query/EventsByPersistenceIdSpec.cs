@@ -1,13 +1,11 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="EventsByPersistenceIdSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="EventsByPersistenceIdSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
@@ -19,119 +17,119 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.TCK.Query
+namespace Akka.Persistence.TCK.Query;
+
+public abstract class EventsByPersistenceIdSpec : Akka.TestKit.Xunit2.TestKit
 {
-    public abstract class EventsByPersistenceIdSpec : Akka.TestKit.Xunit2.TestKit
+    protected EventsByPersistenceIdSpec(Config config = null, string actorSystemName = null,
+        ITestOutputHelper output = null)
+        : base(config ?? Config.Empty, actorSystemName, output)
     {
-        protected ActorMaterializer Materializer { get; }
+        Materializer = Sys.Materializer();
+    }
 
-        protected IReadJournal ReadJournal { get; set; }
+    protected ActorMaterializer Materializer { get; }
 
-        protected EventsByPersistenceIdSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
-            : base(config ?? Config.Empty, actorSystemName, output)
-        {
-            Materializer = Sys.Materializer();
-        }
+    protected IReadJournal ReadJournal { get; set; }
 
-        [Fact]
-        public void ReadJournal_should_implement_IEventsByPersistenceIdQuery()
-        {
-            Assert.IsAssignableFrom<IEventsByPersistenceIdQuery>(ReadJournal);
-        }
+    [Fact]
+    public void ReadJournal_should_implement_IEventsByPersistenceIdQuery()
+    {
+        Assert.IsAssignableFrom<IEventsByPersistenceIdQuery>(ReadJournal);
+    }
 
-        [Fact]
-        public void ReadJournal_live_query_EventsByPersistenceId_should_find_new_events()
-        {
-            var queries = ReadJournal.AsInstanceOf<IEventsByPersistenceIdQuery>();
-            var pref = Setup("c");
+    [Fact]
+    public void ReadJournal_live_query_EventsByPersistenceId_should_find_new_events()
+    {
+        var queries = ReadJournal.AsInstanceOf<IEventsByPersistenceIdQuery>();
+        var pref = Setup("c");
 
-            var src = queries.EventsByPersistenceId("c", 0, long.MaxValue);
-            var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
-                .Request(5)
-                .ExpectNext( "c-1", "c-2", "c-3");
+        var src = queries.EventsByPersistenceId("c", 0, long.MaxValue);
+        var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
+            .Request(5)
+            .ExpectNext("c-1", "c-2", "c-3");
 
-            pref.Tell("c-4");
-            ExpectMsg("c-4-done");
+        pref.Tell("c-4");
+        ExpectMsg("c-4-done");
 
-            probe.ExpectNext("c-4");
-        }
+        probe.ExpectNext("c-4");
+    }
 
-        [Fact]
-        public void ReadJournal_live_query_EventsByPersistenceId_should_find_new_events_up_to_SequenceNr()
-        {
-            var queries = ReadJournal.AsInstanceOf<IEventsByPersistenceIdQuery>();
-            var pref = Setup("d");
+    [Fact]
+    public void ReadJournal_live_query_EventsByPersistenceId_should_find_new_events_up_to_SequenceNr()
+    {
+        var queries = ReadJournal.AsInstanceOf<IEventsByPersistenceIdQuery>();
+        var pref = Setup("d");
 
-            var src = queries.EventsByPersistenceId("d", 0, 4);
-            var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
-                .Request(5)
-                .ExpectNext( "d-1", "d-2", "d-3");
+        var src = queries.EventsByPersistenceId("d", 0, 4);
+        var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
+            .Request(5)
+            .ExpectNext("d-1", "d-2", "d-3");
 
-            pref.Tell("d-4");
-            ExpectMsg("d-4-done");
+        pref.Tell("d-4");
+        ExpectMsg("d-4-done");
 
-            probe.ExpectNext("d-4").ExpectComplete();
-        }
+        probe.ExpectNext("d-4").ExpectComplete();
+    }
 
-        [Fact]
-        public void ReadJournal_live_query_EventsByPersistenceId_should_find_new_events_after_demand_request()
-        {
-            var queries = ReadJournal.AsInstanceOf<IEventsByPersistenceIdQuery>();
-            var pref = Setup("e");
+    [Fact]
+    public void ReadJournal_live_query_EventsByPersistenceId_should_find_new_events_after_demand_request()
+    {
+        var queries = ReadJournal.AsInstanceOf<IEventsByPersistenceIdQuery>();
+        var pref = Setup("e");
 
-            var src = queries.EventsByPersistenceId("e", 0, long.MaxValue);
-            var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
-            probe.Request(2)
-                .ExpectNext( "e-1", "e-2")
-                .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+        var src = queries.EventsByPersistenceId("e", 0, long.MaxValue);
+        var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
+        probe.Request(2)
+            .ExpectNext("e-1", "e-2")
+            .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-            pref.Tell("e-4");
-            ExpectMsg("e-4-done");
+        pref.Tell("e-4");
+        ExpectMsg("e-4-done");
 
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-            probe.Request(5)
-                .ExpectNext("e-3")
-                .ExpectNext("e-4");
-        }
+        probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+        probe.Request(5)
+            .ExpectNext("e-3")
+            .ExpectNext("e-4");
+    }
 
-        [Fact]
-        public void ReadJournal_live_query_EventsByPersistenceId_should_include_timestamp_in_EventEnvelope()
-        {
-            Setup("n");
-            
-            var queries = ReadJournal.AsInstanceOf<IEventsByPersistenceIdQuery>();
-            var src = queries.EventsByPersistenceId("n", 0L, long.MaxValue);
+    [Fact]
+    public void ReadJournal_live_query_EventsByPersistenceId_should_include_timestamp_in_EventEnvelope()
+    {
+        Setup("n");
 
-            var probe = src.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
-            probe.Request(5);
-            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
-            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
-            probe.Cancel();
-        }
+        var queries = ReadJournal.AsInstanceOf<IEventsByPersistenceIdQuery>();
+        var src = queries.EventsByPersistenceId("n", 0L, long.MaxValue);
 
-        private IActorRef Setup(string persistenceId)
-        {
-            var pref = SetupEmpty(persistenceId);
+        var probe = src.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
+        probe.Request(5);
+        probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
+        probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
+        probe.Cancel();
+    }
 
-            pref.Tell(persistenceId + "-1");
-            pref.Tell(persistenceId + "-2");
-            pref.Tell(persistenceId + "-3");
+    private IActorRef Setup(string persistenceId)
+    {
+        var pref = SetupEmpty(persistenceId);
 
-            ExpectMsg(persistenceId + "-1-done");
-            ExpectMsg(persistenceId + "-2-done");
-            ExpectMsg(persistenceId + "-3-done");
-            return pref;
-        }
+        pref.Tell(persistenceId + "-1");
+        pref.Tell(persistenceId + "-2");
+        pref.Tell(persistenceId + "-3");
 
-        private IActorRef SetupEmpty(string persistenceId)
-        {
-            return Sys.ActorOf(Query.TestActor.Props(persistenceId));
-        }
+        ExpectMsg(persistenceId + "-1-done");
+        ExpectMsg(persistenceId + "-2-done");
+        ExpectMsg(persistenceId + "-3-done");
+        return pref;
+    }
 
-        protected override void AfterAll()
-        {
-            Materializer.Dispose();
-            base.AfterAll();
-        }
+    private IActorRef SetupEmpty(string persistenceId)
+    {
+        return Sys.ActorOf(Query.TestActor.Props(persistenceId));
+    }
+
+    protected override void AfterAll()
+    {
+        Materializer.Dispose();
+        base.AfterAll();
     }
 }

@@ -1,160 +1,197 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Offset.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Offset.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 
-namespace Akka.Persistence.Query
+namespace Akka.Persistence.Query;
+
+/// <summary>
+///     Used in <see cref="IEventsByTagQuery" /> implementations to signal to Akka.Persistence.Query
+///     where to begin and end event by tag queries.
+///     For concrete implementations, see <see cref="Sequence" /> and <see cref="NoOffset" />.
+/// </summary>
+public abstract class Offset : IComparable<Offset>
 {
     /// <summary>
-    /// Used in <see cref="IEventsByTagQuery"/> implementations to signal to Akka.Persistence.Query
-    /// where to begin and end event by tag queries.
-    ///
-    /// For concrete implementations, see <see cref="Sequence"/> and <see cref="NoOffset"/>.
+    ///     Used to compare to other <see cref="Offset" /> implementations.
     /// </summary>
-    public abstract class Offset : IComparable<Offset>
+    /// <param name="other">The other offset to compare.</param>
+    public abstract int CompareTo(Offset other);
+
+    /// <summary>
+    ///     Used when retrieving all events.
+    /// </summary>
+    public static Offset NoOffset()
     {
-        /// <summary>
-        /// Used when retrieving all events.
-        /// </summary>
-        public static Offset NoOffset() => Query.NoOffset.Instance;
-
-        /// <summary>
-        /// Factory to create an offset of type <see cref="Query.Sequence"/>
-        /// </summary>
-        public static Offset Sequence(long value) => new Sequence(value);
-
-        /// <summary>
-        /// Factory to create an offset of type <see cref="TimeBasedUuid"/>
-        /// </summary>
-        public static Offset TimeBasedUuid(Guid value) => new TimeBasedUuid(value);
-
-        /// <summary>
-        /// Used to compare to other <see cref="Offset"/> implementations.
-        /// </summary>
-        /// <param name="other">The other offset to compare.</param>
-        public abstract int CompareTo(Offset other);
-
-        /// <summary>
-        /// Used to log offset's value
-        /// </summary>
-        public abstract override string ToString();
+        return Query.NoOffset.Instance;
     }
 
     /// <summary>
-    /// Corresponds to an ordered sequence number for the events.Note that the corresponding
-    /// offset of each event is provided in the <see cref="EventEnvelope"/>,
-    /// which makes it possible to resume the stream at a later point from a given offset.
-    /// <para>
-    /// The `offset` is exclusive, i.e.the event with the exact same sequence number will not be included
-    /// in the returned stream. This means that you can use the offset that is returned in <see cref="EventEnvelope"/>
-    /// as the `offset` parameter in a subsequent query.
-    /// </para>
+    ///     Factory to create an offset of type <see cref="Query.Sequence" />
     /// </summary>
-    public sealed class Sequence : Offset, IComparable<Sequence>
+    public static Offset Sequence(long value)
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Sequence"/> class.
-        /// </summary>
-        public Sequence(long value)
-        {
-            Value = value;
-        }
-
-        public long Value { get; }
-
-        public int CompareTo(Sequence other) => Value.CompareTo(other.Value);
-
-        private bool Equals(Sequence other) => Value == other.Value;
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            return obj is Sequence sequence && Equals(sequence);
-        }
-
-        public override int GetHashCode() => Value.GetHashCode();
-
-        public override int CompareTo(Offset other)
-        {
-            if (other is Sequence seq)
-            {
-                return CompareTo(seq);
-            }
-
-            throw new InvalidOperationException($"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
-        }
-
-        public override string ToString() => Value.ToString();
+        return new Sequence(value);
     }
 
     /// <summary>
-    /// Corresponds to an ordered unique identifier of the events. Note that the corresponding
-    /// offset of each event is provided in the <see cref="EventEnvelope"/>, which makes it 
-    /// possible to resume the stream at a later point from a given offset.
-    /// <para>
-    /// The `offset` is exclusive, i.e. the event with the exact same sequence number will not be included
-    /// in the returned stream. This means that you can use the offset that is returned in `EventEnvelope`
-    /// as the `offset` parameter in a subsequent query.
-    /// </para>
+    ///     Factory to create an offset of type <see cref="TimeBasedUuid" />
     /// </summary>
-    public sealed class TimeBasedUuid : Offset, IComparable<TimeBasedUuid>
+    public static Offset TimeBasedUuid(Guid value)
     {
-        public Guid Value { get; }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="TimeBasedUuid"/> class.
-        /// </summary>
-        public TimeBasedUuid(Guid value) => Value = value;
-
-        public int CompareTo(TimeBasedUuid other) => Value.CompareTo(other.Value);
-
-        private bool Equals(TimeBasedUuid other) => Value == other.Value;
-
-        public override bool Equals(object obj)
-        {
-            if (obj is null) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            return obj is TimeBasedUuid uUID && Equals(uUID);
-        }
-
-        public override int GetHashCode() => Value.GetHashCode();
-
-        public override int CompareTo(Offset other)
-        {
-            return other is TimeBasedUuid seq
-                ? CompareTo(seq)
-                : throw new InvalidOperationException($"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
-        }
-
-        public override string ToString() => Value.ToString();
+        return new TimeBasedUuid(value);
     }
 
     /// <summary>
-    /// Used when retrieving all events.
+    ///     Used to log offset's value
     /// </summary>
-    public sealed class NoOffset : Offset
+    public abstract override string ToString();
+}
+
+/// <summary>
+///     Corresponds to an ordered sequence number for the events.Note that the corresponding
+///     offset of each event is provided in the <see cref="EventEnvelope" />,
+///     which makes it possible to resume the stream at a later point from a given offset.
+///     <para>
+///         The `offset` is exclusive, i.e.the event with the exact same sequence number will not be included
+///         in the returned stream. This means that you can use the offset that is returned in <see cref="EventEnvelope" />
+///         as the `offset` parameter in a subsequent query.
+///     </para>
+/// </summary>
+public sealed class Sequence : Offset, IComparable<Sequence>
+{
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="Sequence" /> class.
+    /// </summary>
+    public Sequence(long value)
     {
-        /// <summary>
-        /// The singleton instance of <see cref="NoOffset"/>.
-        /// </summary>
-        public static NoOffset Instance { get; } = new();
-        private NoOffset() { }
+        Value = value;
+    }
 
-        public override int CompareTo(Offset other)
-        {
-            if (other is NoOffset no)
-            {
-                return 0;
-            }
+    public long Value { get; }
 
-            throw new InvalidOperationException($"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
-        }
+    public int CompareTo(Sequence other)
+    {
+        return Value.CompareTo(other.Value);
+    }
 
-        public override string ToString() => "0";
+    private bool Equals(Sequence other)
+    {
+        return Value == other.Value;
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        return obj is Sequence sequence && Equals(sequence);
+    }
+
+    public override int GetHashCode()
+    {
+        return Value.GetHashCode();
+    }
+
+    public override int CompareTo(Offset other)
+    {
+        if (other is Sequence seq) return CompareTo(seq);
+
+        throw new InvalidOperationException(
+            $"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
+    }
+
+    public override string ToString()
+    {
+        return Value.ToString();
+    }
+}
+
+/// <summary>
+///     Corresponds to an ordered unique identifier of the events. Note that the corresponding
+///     offset of each event is provided in the <see cref="EventEnvelope" />, which makes it
+///     possible to resume the stream at a later point from a given offset.
+///     <para>
+///         The `offset` is exclusive, i.e. the event with the exact same sequence number will not be included
+///         in the returned stream. This means that you can use the offset that is returned in `EventEnvelope`
+///         as the `offset` parameter in a subsequent query.
+///     </para>
+/// </summary>
+public sealed class TimeBasedUuid : Offset, IComparable<TimeBasedUuid>
+{
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="TimeBasedUuid" /> class.
+    /// </summary>
+    public TimeBasedUuid(Guid value)
+    {
+        Value = value;
+    }
+
+    public Guid Value { get; }
+
+    public int CompareTo(TimeBasedUuid other)
+    {
+        return Value.CompareTo(other.Value);
+    }
+
+    private bool Equals(TimeBasedUuid other)
+    {
+        return Value == other.Value;
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (obj is null) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        return obj is TimeBasedUuid uUID && Equals(uUID);
+    }
+
+    public override int GetHashCode()
+    {
+        return Value.GetHashCode();
+    }
+
+    public override int CompareTo(Offset other)
+    {
+        return other is TimeBasedUuid seq
+            ? CompareTo(seq)
+            : throw new InvalidOperationException(
+                $"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
+    }
+
+    public override string ToString()
+    {
+        return Value.ToString();
+    }
+}
+
+/// <summary>
+///     Used when retrieving all events.
+/// </summary>
+public sealed class NoOffset : Offset
+{
+    private NoOffset()
+    {
+    }
+
+    /// <summary>
+    ///     The singleton instance of <see cref="NoOffset" />.
+    /// </summary>
+    public static NoOffset Instance { get; } = new();
+
+    public override int CompareTo(Offset other)
+    {
+        if (other is NoOffset no) return 0;
+
+        throw new InvalidOperationException(
+            $"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
+    }
+
+    public override string ToString()
+    {
+        return "0";
     }
 }

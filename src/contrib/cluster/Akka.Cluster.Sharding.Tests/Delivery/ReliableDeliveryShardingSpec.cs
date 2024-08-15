@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------
-// <copyright file="ReliableDeliveryShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+//  <copyright file="ReliableDeliveryShardingSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
@@ -114,7 +114,6 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         producerIds
             .Should().BeEquivalentTo($"p1-{_idCount}-entity-0", $"p1-{_idCount}-entity-1", $"p1-{_idCount}-entity-2",
                 $"p2-{_idCount}-entity-0", $"p2-{_idCount}-entity-1", $"p2-{_idCount}-entity-2");
-       
     }
 
     [Fact]

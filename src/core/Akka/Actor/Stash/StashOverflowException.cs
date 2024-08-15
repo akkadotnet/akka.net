@@ -1,35 +1,42 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="StashOverflowException.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="StashOverflowException.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Runtime.Serialization;
 
-namespace Akka.Actor
+namespace Akka.Actor;
+
+/// <summary>
+///     This exception is thrown when the size of the Stash exceeds the capacity of the stash.
+/// </summary>
+public class StashOverflowException : AkkaException
 {
     /// <summary>
-    /// This exception is thrown when the size of the Stash exceeds the capacity of the stash.
+    ///     Initializes a new instance of the <see cref="StashOverflowException" /> class.
     /// </summary>
-    public class StashOverflowException : AkkaException
+    /// <param name="message">The message that describes the error.</param>
+    /// <param name="cause">The exception that is the cause of the current exception.</param>
+    public StashOverflowException(string message, Exception cause = null) : base(message, cause)
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="StashOverflowException"/> class.
-        /// </summary>
-        /// <param name="message">The message that describes the error.</param>
-        /// <param name="cause">The exception that is the cause of the current exception.</param>
-        public StashOverflowException(string message, Exception cause = null) : base(message, cause) { }
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="StashOverflowException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        protected StashOverflowException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="StashOverflowException" /> class.
+    /// </summary>
+    /// <param name="info">
+    ///     The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being
+    ///     thrown.
+    /// </param>
+    /// <param name="context">
+    ///     The <see cref="StreamingContext" /> that contains contextual information about the source or
+    ///     destination.
+    /// </param>
+    protected StashOverflowException(SerializationInfo info, StreamingContext context)
+        : base(info, context)
+    {
     }
 }

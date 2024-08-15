@@ -1,23 +1,22 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Timeouts.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Timeouts.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 
-namespace Akka.Streams.Tests.TCK
-{
-    /// <summary>
-    /// Specifies timeouts for the TCK
-    /// </summary>
-    static class Timeouts
-    {
-        public const int PublisherShutdownTimeoutMillis = 3000;
+namespace Akka.Streams.Tests.TCK;
 
-        public const int DefaultTimeoutMillis = 800;
-        
-        public static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(30);
-    }
+/// <summary>
+///     Specifies timeouts for the TCK
+/// </summary>
+internal static class Timeouts
+{
+    public const int PublisherShutdownTimeoutMillis = 3000;
+
+    public const int DefaultTimeoutMillis = 800;
+
+    public static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(30);
 }

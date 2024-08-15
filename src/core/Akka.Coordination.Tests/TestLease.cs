@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TestLease.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="TestLease.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
@@ -15,151 +15,178 @@ using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Akka.Util;
 
-namespace Akka.Coordination.Tests
+namespace Akka.Coordination.Tests;
+
+public class TestLeaseExtExtensionProvider : ExtensionIdProvider<TestLeaseExt>
 {
-    public class TestLeaseExtExtensionProvider : ExtensionIdProvider<TestLeaseExt>
+    public override TestLeaseExt CreateExtension(ExtendedActorSystem system)
     {
-        public override TestLeaseExt CreateExtension(ExtendedActorSystem system)
-        {
-            var extension = new TestLeaseExt(system);
-            return extension;
-        }
+        var extension = new TestLeaseExt(system);
+        return extension;
+    }
+}
+
+public class TestLeaseExt : IExtension
+{
+    private readonly ConcurrentDictionary<string, TestLease> _testLeases = new();
+
+    public TestLeaseExt(ExtendedActorSystem system)
+    {
+        system.Settings.InjectTopLevelFallback(LeaseProvider.DefaultConfig());
     }
 
-    public class TestLeaseExt : IExtension
+    public static TestLeaseExt Get(ActorSystem system)
     {
-        public static TestLeaseExt Get(ActorSystem system)
-        {
-            return system.WithExtension<TestLeaseExt, TestLeaseExtExtensionProvider>();
-        }
-
-        private readonly ConcurrentDictionary<string, TestLease> _testLeases = new();
-
-        public TestLeaseExt(ExtendedActorSystem system)
-        {
-            system.Settings.InjectTopLevelFallback(LeaseProvider.DefaultConfig());
-        }
-
-        public TestLease GetTestLease(string name)
-        {
-            if (!_testLeases.TryGetValue(name, out var lease))
-            {
-                throw new InvalidOperationException($"Test lease {name} has not been set yet. Current leases {string.Join(",", _testLeases.Keys)}");
-            }
-            return lease;
-        }
-
-        public void SetTestLease(string name, TestLease lease)
-        {
-            _testLeases[name] = lease;
-        }
+        return system.WithExtension<TestLeaseExt, TestLeaseExtExtensionProvider>();
     }
 
-    public class TestLease : Lease
+    public TestLease GetTestLease(string name)
     {
-        public sealed class AcquireReq : IEquatable<AcquireReq>
-        {
-            public string Owner { get; }
+        if (!_testLeases.TryGetValue(name, out var lease))
+            throw new InvalidOperationException(
+                $"Test lease {name} has not been set yet. Current leases {string.Join(",", _testLeases.Keys)}");
+        return lease;
+    }
 
-            public AcquireReq(string owner)
-            {
-                Owner = owner;
-            }
+    public void SetTestLease(string name, TestLease lease)
+    {
+        _testLeases[name] = lease;
+    }
+}
 
-            public bool Equals(AcquireReq other)
-            {
-                if (ReferenceEquals(other, null)) return false;
-                if (ReferenceEquals(this, other)) return true;
+public class TestLease : Lease
+{
+    private readonly ILoggingAdapter _log;
+    private readonly AtomicReference<Action<Exception>> currentCallBack = new(_ => { });
+    private readonly AtomicReference<Task<bool>> nextAcquireResult;
+    private readonly AtomicBoolean nextCheckLeaseResult = new();
 
-                return Equals(Owner, other.Owner);
-            }
 
-            public override bool Equals(object obj) => obj is AcquireReq a && Equals(a);
+    public TestLease(LeaseSettings settings, ExtendedActorSystem system)
+        : base(settings)
+    {
+        _log = Logging.GetLogger(system, "TestLease");
+        Probe = new TestProbe(system, new XunitAssertions());
+        _log.Info("Creating lease {0}", settings);
 
-            public override int GetHashCode() => Owner.GetHashCode();
+        nextAcquireResult = new AtomicReference<Task<bool>>(InitialPromise.Task);
 
-            public override string ToString() => $"AcquireReq({Owner})";
-        }
+        TestLeaseExt.Get(system).SetTestLease(settings.LeaseName, this);
+    }
 
-        public sealed class ReleaseReq : IEquatable<ReleaseReq>
-        {
-            public string Owner { get; }
-
-            public ReleaseReq(string owner)
-            {
-                Owner = owner;
-            }
-
-            public bool Equals(ReleaseReq other)
-            {
-                if (ReferenceEquals(other, null)) return false;
-                if (ReferenceEquals(this, other)) return true;
-
-                return Equals(Owner, other.Owner);
-            }
-
-            public override bool Equals(object obj) => obj is ReleaseReq r && Equals(r);
-
-            public override int GetHashCode() => Owner.GetHashCode();
-
-            public override string ToString() => $"ReleaseReq({Owner})";
-        }
-
-        public static Config Configuration
-        {
-            get { return ConfigurationFactory.ParseString(@"
+    public static Config Configuration =>
+        ConfigurationFactory.ParseString(@"
                 test-lease {
                     lease-class = ""Akka.Coordination.Tests.TestLease, Akka.Coordination.Tests""
                 }
-                "); }
+                ");
+
+    public TestProbe Probe { get; }
+    public TaskCompletionSource<bool> InitialPromise { get; } = new();
+
+    public void SetNextAcquireResult(Task<bool> next)
+    {
+        nextAcquireResult.GetAndSet(next);
+    }
+
+    public void SetNextCheckLeaseResult(bool value)
+    {
+        nextCheckLeaseResult.GetAndSet(value);
+    }
+
+    public Action<Exception> GetCurrentCallback()
+    {
+        return currentCallBack.Value;
+    }
+
+
+    public override Task<bool> Acquire()
+    {
+        _log.Info("acquire, current response " + nextAcquireResult);
+        Probe.Ref.Tell(new AcquireReq(Settings.OwnerName));
+        return nextAcquireResult.Value;
+    }
+
+    public override Task<bool> Release()
+    {
+        Probe.Ref.Tell(new ReleaseReq(Settings.OwnerName));
+        return Task.FromResult(true);
+    }
+
+    public override bool CheckLease()
+    {
+        return nextCheckLeaseResult.Value;
+    }
+
+    public override Task<bool> Acquire(Action<Exception> leaseLostCallback)
+    {
+        currentCallBack.GetAndSet(leaseLostCallback);
+        return Acquire();
+    }
+
+    public sealed class AcquireReq : IEquatable<AcquireReq>
+    {
+        public AcquireReq(string owner)
+        {
+            Owner = owner;
         }
 
-        public TestProbe Probe { get; }
-        private AtomicReference<Task<bool>> nextAcquireResult;
-        private AtomicBoolean nextCheckLeaseResult = new(false);
-        private AtomicReference<Action<Exception>> currentCallBack = new(_ => { });
-        private ILoggingAdapter _log;
-        public TaskCompletionSource<bool> InitialPromise { get; } = new();
+        public string Owner { get; }
 
-
-        public TestLease(LeaseSettings settings, ExtendedActorSystem system)
-            : base(settings)
+        public bool Equals(AcquireReq other)
         {
-            _log = Logging.GetLogger(system, "TestLease");
-            Probe = new TestProbe(system, new XunitAssertions());
-            _log.Info("Creating lease {0}", settings);
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
 
-            nextAcquireResult = new AtomicReference<Task<bool>>(InitialPromise.Task);
-
-            TestLeaseExt.Get(system).SetTestLease(settings.LeaseName, this);
+            return Equals(Owner, other.Owner);
         }
 
-        public void SetNextAcquireResult(Task<bool> next) => nextAcquireResult.GetAndSet(next);
-
-        public void SetNextCheckLeaseResult(bool value) => nextCheckLeaseResult.GetAndSet(value);
-
-        public Action<Exception> GetCurrentCallback() => currentCallBack.Value;
-
-
-        public override Task<bool> Acquire()
+        public override bool Equals(object obj)
         {
-            _log.Info("acquire, current response " + nextAcquireResult);
-            Probe.Ref.Tell(new AcquireReq(Settings.OwnerName));
-            return nextAcquireResult.Value;
+            return obj is AcquireReq a && Equals(a);
         }
 
-        public override Task<bool> Release()
+        public override int GetHashCode()
         {
-            Probe.Ref.Tell(new ReleaseReq(Settings.OwnerName));
-            return Task.FromResult(true);
+            return Owner.GetHashCode();
         }
 
-        public override bool CheckLease() => nextCheckLeaseResult.Value;
-
-        public override Task<bool> Acquire(Action<Exception> leaseLostCallback)
+        public override string ToString()
         {
-            currentCallBack.GetAndSet(leaseLostCallback);
-            return Acquire();
+            return $"AcquireReq({Owner})";
+        }
+    }
+
+    public sealed class ReleaseReq : IEquatable<ReleaseReq>
+    {
+        public ReleaseReq(string owner)
+        {
+            Owner = owner;
+        }
+
+        public string Owner { get; }
+
+        public bool Equals(ReleaseReq other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Owner, other.Owner);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is ReleaseReq r && Equals(r);
+        }
+
+        public override int GetHashCode()
+        {
+            return Owner.GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            return $"ReleaseReq({Owner})";
         }
     }
 }

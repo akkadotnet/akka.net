@@ -11,7 +11,6 @@ open Akka.Configuration
 open Akka.Serialization
 open Akka.TestKit
 open Newtonsoft.Json
-open Newtonsoft.Json
 open Newtonsoft.Json.Converters
 open Xunit
 open Xunit.Abstractions

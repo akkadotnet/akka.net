@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="CircuitBreakerDocSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="CircuitBreakerDocSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
@@ -11,102 +11,106 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
 
-namespace DocsExamples.Utilities.CircuitBreakers
+namespace DocsExamples.Utilities.CircuitBreakers;
+
+#region circuit-breaker-usage
+
+public class DangerousActor : ReceiveActor
 {
-    #region circuit-breaker-usage
-    public class DangerousActor : ReceiveActor
+    private readonly ILoggingAdapter _log = Context.GetLogger();
+
+    public DangerousActor()
     {
-        private readonly ILoggingAdapter _log = Context.GetLogger();
+        var breaker = new CircuitBreaker(
+            Context.System.Scheduler,
+            5,
+            TimeSpan.FromSeconds(10),
+            TimeSpan.FromMinutes(1)).OnOpen(NotifyMeOnOpen);
+    }
 
-        public DangerousActor()
-        {
-            var breaker = new CircuitBreaker(
-                Context.System.Scheduler,
-                maxFailures: 5,
-                callTimeout: TimeSpan.FromSeconds(10),
-                resetTimeout: TimeSpan.FromMinutes(1)).OnOpen(NotifyMeOnOpen);
-        }
+    private void NotifyMeOnOpen()
+    {
+        _log.Warning("My CircuitBreaker is now open, and will not close for one minute");
+    }
+}
 
-        private void NotifyMeOnOpen()
+#endregion
+
+#region call-protection
+
+public class DangerousActorCallProtection : ReceiveActor
+{
+    private readonly ILoggingAdapter _log = Context.GetLogger();
+
+    public DangerousActorCallProtection()
+    {
+        var breaker = new CircuitBreaker(
+            Context.System.Scheduler,
+            5,
+            TimeSpan.FromSeconds(10),
+            TimeSpan.FromMinutes(1)).OnOpen(NotifyMeOnOpen);
+
+        var dangerousCall = "This really isn't that dangerous of a call after all";
+
+        Receive<string>(str => str.Equals("is my middle name"), _ =>
         {
-            _log.Warning("My CircuitBreaker is now open, and will not close for one minute");
+            var sender = Sender;
+            breaker.WithCircuitBreaker(() => Task.FromResult(dangerousCall)).PipeTo(sender);
+        });
+
+        Receive<string>(str => str.Equals("block for me"),
+            _ => { Sender.Tell(breaker.WithSyncCircuitBreaker(() => dangerousCall)); });
+    }
+
+    private void NotifyMeOnOpen()
+    {
+        _log.Warning("My CircuitBreaker is now open, and will not close for one minute");
+    }
+}
+
+#endregion
+
+public class TellPatternActor : UntypedActor
+{
+    private readonly CircuitBreaker _breaker;
+    private readonly ILoggingAdapter _log = Context.GetLogger();
+    private readonly IActorRef _recipient;
+
+    public TellPatternActor(IActorRef recipient)
+    {
+        _recipient = recipient;
+        _breaker = new CircuitBreaker(
+            Context.System.Scheduler,
+            5,
+            TimeSpan.FromSeconds(10),
+            TimeSpan.FromMinutes(1)).OnOpen(NotifyMeOnOpen);
+    }
+
+    private void NotifyMeOnOpen()
+    {
+        _log.Warning("My CircuitBreaker is now open, and will not close for one minute");
+    }
+
+    #region circuit-breaker-tell-pattern
+
+    protected override void OnReceive(object message)
+    {
+        switch (message)
+        {
+            case "call" when _breaker.IsClosed:
+                _recipient.Tell("message");
+                break;
+            case "response":
+                _breaker.Succeed();
+                break;
+            case Exception _:
+                _breaker.Fail();
+                break;
+            case ReceiveTimeout _:
+                _breaker.Fail();
+                break;
         }
     }
+
     #endregion
-
-    #region call-protection
-    public class DangerousActorCallProtection : ReceiveActor
-    {
-        private readonly ILoggingAdapter _log = Context.GetLogger();
-
-        public DangerousActorCallProtection()
-        {
-            var breaker = new CircuitBreaker(
-                Context.System.Scheduler,
-                maxFailures: 5,
-                callTimeout: TimeSpan.FromSeconds(10),
-                resetTimeout: TimeSpan.FromMinutes(1)).OnOpen(NotifyMeOnOpen);
-
-            var dangerousCall = "This really isn't that dangerous of a call after all";
-
-            Receive<string>(str => str.Equals("is my middle name"), _ =>
-            {
-                var sender = this.Sender;
-                breaker.WithCircuitBreaker(() => Task.FromResult(dangerousCall)).PipeTo(sender);
-            });
-
-            Receive<string>(str => str.Equals("block for me"), _ =>
-            {
-                Sender.Tell(breaker.WithSyncCircuitBreaker(() => dangerousCall));
-            });
-        }
-
-        private void NotifyMeOnOpen()
-        {
-            _log.Warning("My CircuitBreaker is now open, and will not close for one minute");
-        }
-    }
-    #endregion
-
-    public class TellPatternActor : UntypedActor
-    {
-        private readonly IActorRef _recipient;
-        private readonly CircuitBreaker _breaker;
-        private readonly ILoggingAdapter _log = Context.GetLogger();
-
-        public TellPatternActor(IActorRef recipient )
-        {
-            _recipient = recipient;
-            _breaker = new CircuitBreaker(
-                Context.System.Scheduler,
-                maxFailures: 5,
-                callTimeout: TimeSpan.FromSeconds(10),
-                resetTimeout: TimeSpan.FromMinutes(1)).OnOpen(NotifyMeOnOpen);
-        }
-
-        private void NotifyMeOnOpen() => _log.Warning("My CircuitBreaker is now open, and will not close for one minute");
-
-        #region circuit-breaker-tell-pattern
-
-        protected override void OnReceive(object message)
-        {
-            switch (message)
-            {
-                case "call" when _breaker.IsClosed:
-                    _recipient.Tell("message"); 
-                    break;
-                case "response": 
-                    _breaker.Succeed();
-                    break;
-                case Exception _:
-                    _breaker.Fail();
-                    break;
-                case ReceiveTimeout _:
-                    _breaker.Fail();
-                    break;
-            }
-        }
-
-        #endregion
-    }
 }

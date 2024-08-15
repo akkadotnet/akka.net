@@ -1,42 +1,40 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="LeaseTimeoutException.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="LeaseTimeoutException.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Runtime.Serialization;
 
-namespace Akka.Coordination
+namespace Akka.Coordination;
+
+/// <summary>
+///     Lease timeout exception. Lease implementation should use it to report issues when lease is lost
+/// </summary>
+public sealed class LeaseTimeoutException : LeaseException
 {
     /// <summary>
-    /// Lease timeout exception. Lease implementation should use it to report issues when lease is lost
+    ///     Creates a new <see cref="LeaseTimeoutException" /> instance.
     /// </summary>
-    public sealed class LeaseTimeoutException : LeaseException
+    /// <param name="message">Exception message</param>
+    public LeaseTimeoutException(string message) : base(message)
     {
-        /// <summary>
-        /// Creates a new <see cref="LeaseTimeoutException"/> instance.
-        /// </summary>
-        /// <param name="message">Exception message</param>
-        public LeaseTimeoutException(string message) : base(message)
-        {
-        }
+    }
 
-        /// <summary>
-        /// Creates a new <see cref="LeaseTimeoutException"/> instance.
-        /// </summary>
-        /// <param name="message">Exception message</param>
-        /// <param name="innerEx">Inner exception</param>
-        public LeaseTimeoutException(string message, Exception innerEx)
-            : base(message, innerEx)
-        {
-        }
+    /// <summary>
+    ///     Creates a new <see cref="LeaseTimeoutException" /> instance.
+    /// </summary>
+    /// <param name="message">Exception message</param>
+    /// <param name="innerEx">Inner exception</param>
+    public LeaseTimeoutException(string message, Exception innerEx)
+        : base(message, innerEx)
+    {
+    }
 
-        protected LeaseTimeoutException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-
-        }
+    protected LeaseTimeoutException(SerializationInfo info, StreamingContext context)
+        : base(info, context)
+    {
     }
 }

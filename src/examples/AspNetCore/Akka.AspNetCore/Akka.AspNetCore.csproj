@@ -7,12 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\contrib\dependencyinjection\Akka.DependencyInjection\Akka.DependencyInjection.csproj" />
-    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
+    <ProjectReference Include="..\..\..\contrib\dependencyinjection\Akka.DependencyInjection\Akka.DependencyInjection.csproj"/>
+    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj"/>
   </ItemGroup>
 
 </Project>

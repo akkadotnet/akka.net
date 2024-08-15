@@ -1,13 +1,12 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AkkaSubscriberVerification.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="AkkaSubscriberVerification.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
@@ -16,71 +15,68 @@ using Akka.TestKit.TestEvent;
 using NUnit.Framework;
 using Reactive.Streams.TCK;
 
-namespace Akka.Streams.Tests.TCK
+namespace Akka.Streams.Tests.TCK;
+
+[TestFixture]
+internal abstract class AkkaSubscriberBlackboxVerification<T> : SubscriberBlackboxVerification<T>, IDisposable
 {
-    [TestFixture]
-    abstract class AkkaSubscriberBlackboxVerification<T> : SubscriberBlackboxVerification<T>, IDisposable
+    protected AkkaSubscriberBlackboxVerification() : this(false)
     {
-        protected AkkaSubscriberBlackboxVerification() : this(false)
-        {
-
-        }
-
-        protected AkkaSubscriberBlackboxVerification(bool writeLineDebug)
-            : this(
-                new TestEnvironment(Timeouts.DefaultTimeoutMillis,
-                    TestEnvironment.EnvironmentDefaultNoSignalsTimeoutMilliseconds(), writeLineDebug))
-        {
-        }
-
-        protected AkkaSubscriberBlackboxVerification(TestEnvironment environment) : base(environment)
-        {
-            System = ActorSystem.Create(GetType().Name,
-                AkkaSpec.AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig));
-            System.EventStream.Publish(new Mute(new ErrorFilter(typeof(Exception), new ContainsString("Test exception"))));
-            Materializer = ActorMaterializer.Create(System, ActorMaterializerSettings.Create(System));
-        }
-
-        protected ActorSystem System { get; private set; }
-
-        protected ActorMaterializer Materializer { get; private set; }
-        
-        public void Dispose()
-        {
-            if (!System.Terminate().Wait(Timeouts.ShutdownTimeout))
-                throw new Exception($"Failed to stop {System.Name} within {Timeouts.ShutdownTimeout}");
-        }
     }
 
-    abstract class AkkaSubscriberWhiteboxVerification<T> : SubscriberWhiteboxVerification<T>, IDisposable
+    protected AkkaSubscriberBlackboxVerification(bool writeLineDebug)
+        : this(
+            new TestEnvironment(Timeouts.DefaultTimeoutMillis,
+                TestEnvironment.EnvironmentDefaultNoSignalsTimeoutMilliseconds(), writeLineDebug))
     {
-        protected AkkaSubscriberWhiteboxVerification() : this(false)
-        {
+    }
 
-        }
+    protected AkkaSubscriberBlackboxVerification(TestEnvironment environment) : base(environment)
+    {
+        System = ActorSystem.Create(GetType().Name,
+            AkkaSpec.AkkaSpecConfig.WithFallback(StreamTestDefaultMailbox.DefaultConfig));
+        System.EventStream.Publish(new Mute(new ErrorFilter(typeof(Exception), new ContainsString("Test exception"))));
+        Materializer = ActorMaterializer.Create(System, ActorMaterializerSettings.Create(System));
+    }
 
-        protected AkkaSubscriberWhiteboxVerification(bool writeLineDebug)
-            : this(
-                new TestEnvironment(Timeouts.DefaultTimeoutMillis,
-                    TestEnvironment.EnvironmentDefaultNoSignalsTimeoutMilliseconds(), writeLineDebug))
-        {
-        }
+    protected ActorSystem System { get; }
 
-        protected AkkaSubscriberWhiteboxVerification(TestEnvironment environment) : base(environment)
-        {
-            System = ActorSystem.Create(GetType().Name, AkkaSpec.AkkaSpecConfig);
-            System.EventStream.Publish(new Mute(new ErrorFilter(typeof(Exception), new ContainsString("Test exception"))));
-            Materializer = ActorMaterializer.Create(System, ActorMaterializerSettings.Create(System));
-        }
+    protected ActorMaterializer Materializer { get; private set; }
 
-        protected ActorSystem System { get; private set; }
+    public void Dispose()
+    {
+        if (!System.Terminate().Wait(Timeouts.ShutdownTimeout))
+            throw new Exception($"Failed to stop {System.Name} within {Timeouts.ShutdownTimeout}");
+    }
+}
 
-        protected ActorMaterializer Materializer { get; private set; }
+internal abstract class AkkaSubscriberWhiteboxVerification<T> : SubscriberWhiteboxVerification<T>, IDisposable
+{
+    protected AkkaSubscriberWhiteboxVerification() : this(false)
+    {
+    }
 
-        public void Dispose()
-        {
-            if (!System.Terminate().Wait(Timeouts.ShutdownTimeout))
-                throw new Exception($"Failed to stop {System.Name} within {Timeouts.ShutdownTimeout}");
-        }
+    protected AkkaSubscriberWhiteboxVerification(bool writeLineDebug)
+        : this(
+            new TestEnvironment(Timeouts.DefaultTimeoutMillis,
+                TestEnvironment.EnvironmentDefaultNoSignalsTimeoutMilliseconds(), writeLineDebug))
+    {
+    }
+
+    protected AkkaSubscriberWhiteboxVerification(TestEnvironment environment) : base(environment)
+    {
+        System = ActorSystem.Create(GetType().Name, AkkaSpec.AkkaSpecConfig);
+        System.EventStream.Publish(new Mute(new ErrorFilter(typeof(Exception), new ContainsString("Test exception"))));
+        Materializer = ActorMaterializer.Create(System, ActorMaterializerSettings.Create(System));
+    }
+
+    protected ActorSystem System { get; }
+
+    protected ActorMaterializer Materializer { get; private set; }
+
+    public void Dispose()
+    {
+        if (!System.Terminate().Wait(Timeouts.ShutdownTimeout))
+            throw new Exception($"Failed to stop {System.Name} within {Timeouts.ShutdownTimeout}");
     }
 }

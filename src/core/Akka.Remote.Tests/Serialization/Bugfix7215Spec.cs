@@ -9,14 +9,14 @@ using System;
 using System.IO;
 using Akka.Actor;
 using Akka.Remote.Serialization;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using FluentAssertions;
 using static FluentAssertions.FluentActions;
 
 namespace Akka.Remote.Tests.Serialization;
 
-public class Bugfix7215Spec: TestKit.Xunit2.TestKit
+public class Bugfix7215Spec : TestKit.Xunit2.TestKit
 {
     public Bugfix7215Spec(ITestOutputHelper output) : base(nameof(Bugfix7215Spec), output)
     {
@@ -31,7 +31,7 @@ public class Bugfix7215Spec: TestKit.Xunit2.TestKit
     {
         var bytes = File.ReadAllBytes($"./test-files/SerializedException-{framework}.bin");
         var helper = new ExceptionSupport((ExtendedActorSystem)Sys);
-        
+
         Exception exception = null;
         Invoking(() => exception = helper.DeserializeException(bytes)).Should().NotThrow();
         exception.Should().BeOfType<InvalidOperationException>();

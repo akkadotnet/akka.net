@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ReceiveTimeoutSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ReceiveTimeoutSpecs.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
@@ -11,54 +11,52 @@ using Akka.Actor;
 using Akka.TestKit.Xunit2;
 using Xunit;
 
-namespace DocsExamples.Actors
+namespace DocsExamples.Actors;
+
+public class ReceiveTimeoutSpecs : TestKit
 {
-    
-    public class ReceiveTimeoutSpecs : TestKit
+    // </ReceiveTimeoutActor>
+
+    [Fact]
+    public Task ShouldReceiveTimeoutActors()
     {
-        // <ReceiveTimeoutActor>
-        /// <summary>
-        /// Used to query if a <see cref="ReceiveTimeout"/> has been observed.
-        ///
-        /// Can't influence the <see cref="ReceiveTimeout"/> since it implements
-        /// <see cref="INotInfluenceReceiveTimeout"/>.
-        /// </summary>
-        public class CheckTimeout : INotInfluenceReceiveTimeout { }
-        public class ReceiveTimeoutActor : ReceiveActor
+        var receiveTimeout = Sys.ActorOf(
+            Props.Create(() => new ReceiveTimeoutActor(TimeSpan.FromMilliseconds(100), TestActor)),
+            "receive-timeout");
+
+        // should not receive timeout initially
+        ExpectNoMsg(TimeSpan.FromMilliseconds(50));
+
+        // then should receive timeout due to inactivity
+        ExpectMsg("timeout", TimeSpan.FromSeconds(30));
+        return Task.CompletedTask;
+    }
+
+    // <ReceiveTimeoutActor>
+    /// <summary>
+    ///     Used to query if a <see cref="ReceiveTimeout" /> has been observed.
+    ///     Can't influence the <see cref="ReceiveTimeout" /> since it implements
+    ///     <see cref="INotInfluenceReceiveTimeout" />.
+    /// </summary>
+    public class CheckTimeout : INotInfluenceReceiveTimeout
+    {
+    }
+
+    public class ReceiveTimeoutActor : ReceiveActor
+    {
+        private readonly TimeSpan _inactivityTimeout;
+
+        public ReceiveTimeoutActor(TimeSpan inactivityTimeout, IActorRef receiver)
         {
-            private readonly TimeSpan _inactivityTimeout;
+            _inactivityTimeout = inactivityTimeout;
 
-            public ReceiveTimeoutActor(TimeSpan inactivityTimeout, IActorRef receiver)
-            {
-                _inactivityTimeout = inactivityTimeout;
-                
-                // if we don't 
-                Receive<ReceiveTimeout>(_ =>
-                {
-                    receiver.Tell("timeout");
-                });
-            }
-
-            protected override void PreStart()
-            {
-                Context.SetReceiveTimeout(_inactivityTimeout);
-            }
+            // if we don't 
+            Receive<ReceiveTimeout>(_ => { receiver.Tell("timeout"); });
         }
-        // </ReceiveTimeoutActor>
 
-        [Fact]
-        public Task ShouldReceiveTimeoutActors()
+        protected override void PreStart()
         {
-            var receiveTimeout = Sys.ActorOf(
-                Props.Create(() => new ReceiveTimeoutActor(TimeSpan.FromMilliseconds(100), TestActor)), 
-                "receive-timeout");
-            
-            // should not receive timeout initially
-            ExpectNoMsg(TimeSpan.FromMilliseconds(50));
-            
-            // then should receive timeout due to inactivity
-            ExpectMsg("timeout", TimeSpan.FromSeconds(30));
-            return Task.CompletedTask;
+            Context.SetReceiveTimeout(_inactivityTimeout);
         }
     }
 }

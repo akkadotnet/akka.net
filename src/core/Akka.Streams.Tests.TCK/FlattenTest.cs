@@ -1,24 +1,23 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="FlattenTest.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="FlattenTest.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Streams.Dsl;
 using Reactive.Streams;
 
-namespace Akka.Streams.Tests.TCK
+namespace Akka.Streams.Tests.TCK;
+
+internal class FlattenTest : AkkaPublisherVerification<int>
 {
-    class FlattenTest : AkkaPublisherVerification<int>
+    public override IPublisher<int> CreatePublisher(long elements)
     {
-        public override IPublisher<int> CreatePublisher(long elements)
-        {
-            var s1 = Source.From(Enumerate(elements/2));
-            var s2 = Source.From(Enumerate((elements + 1)/2));
-            return Source.From(new[] {s1, s2})
-                .ConcatMany(x => x)
-                .RunWith(Sink.AsPublisher<int>(false), Materializer);
-        }
+        var s1 = Source.From(Enumerate(elements / 2));
+        var s2 = Source.From(Enumerate((elements + 1) / 2));
+        return Source.From(new[] { s1, s2 })
+            .ConcatMany(x => x)
+            .RunWith(Sink.AsPublisher<int>(false), Materializer);
     }
 }

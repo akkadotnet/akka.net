@@ -1,200 +1,223 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="One2OneBidiFlow.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="One2OneBidiFlow.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Runtime.Serialization;
 using Akka.Pattern;
 using Akka.Streams.Stage;
 
-namespace Akka.Streams.Dsl
+namespace Akka.Streams.Dsl;
+
+/// <summary>
+///     TBD
+/// </summary>
+public static class One2OneBidiFlow
 {
     /// <summary>
-    /// TBD
-    /// </summary>
-    public static class One2OneBidiFlow
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <param name="maxPending">TBD</param>
-        /// <returns>TBD</returns>
-        public static BidiFlow<TIn, TIn, TOut, TOut, NotUsed> Apply<TIn, TOut>(int maxPending)
-        {
-            return BidiFlow.FromGraph(new One2OneBidi<TIn, TOut>(maxPending));
-        }
-    }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    public class UnexpectedOutputException : Exception
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="element">TBD</param>
-        public UnexpectedOutputException(object element) : base(element.ToString())
-        {
-
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="UnexpectedOutputException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        protected UnexpectedOutputException(SerializationInfo info, StreamingContext context) : base(info, context) { }
-    }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    public class OutputTruncationException : Exception
-    {
-        public OutputTruncationException() { }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="UserCalledFailException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        protected OutputTruncationException(SerializationInfo info, StreamingContext context) : base(info, context) { }
-    }
-
-    /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
-    public class One2OneBidi<TIn, TOut> : GraphStage<BidiShape<TIn, TIn, TOut, TOut>>
+    /// <param name="maxPending">TBD</param>
+    /// <returns>TBD</returns>
+    public static BidiFlow<TIn, TIn, TOut, TOut, NotUsed> Apply<TIn, TOut>(int maxPending)
     {
-        #region internal classes
+        return BidiFlow.FromGraph(new One2OneBidi<TIn, TOut>(maxPending));
+    }
+}
 
-        private sealed class Logic : GraphStageLogic
+/// <summary>
+///     TBD
+/// </summary>
+public class UnexpectedOutputException : Exception
+{
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="element">TBD</param>
+    public UnexpectedOutputException(object element) : base(element.ToString())
+    {
+    }
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="UnexpectedOutputException" /> class.
+    /// </summary>
+    /// <param name="info">
+    ///     The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being
+    ///     thrown.
+    /// </param>
+    /// <param name="context">
+    ///     The <see cref="StreamingContext" /> that contains contextual information about the source or
+    ///     destination.
+    /// </param>
+    protected UnexpectedOutputException(SerializationInfo info, StreamingContext context) : base(info, context)
+    {
+    }
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+public class OutputTruncationException : Exception
+{
+    public OutputTruncationException()
+    {
+    }
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="UserCalledFailException" /> class.
+    /// </summary>
+    /// <param name="info">
+    ///     The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being
+    ///     thrown.
+    /// </param>
+    /// <param name="context">
+    ///     The <see cref="StreamingContext" /> that contains contextual information about the source or
+    ///     destination.
+    /// </param>
+    protected OutputTruncationException(SerializationInfo info, StreamingContext context) : base(info, context)
+    {
+    }
+}
+
+/// <summary>
+///     TBD
+/// </summary>
+/// <typeparam name="TIn">TBD</typeparam>
+/// <typeparam name="TOut">TBD</typeparam>
+public class One2OneBidi<TIn, TOut> : GraphStage<BidiShape<TIn, TIn, TOut, TOut>>
+{
+    private readonly Inlet<TIn> _inInlet = new("inIn");
+    private readonly Outlet<TIn> _inOutlet = new("inOut");
+
+    private readonly int _maxPending;
+    private readonly Inlet<TOut> _outInlet = new("outIn");
+    private readonly Outlet<TOut> _outOutlet = new("outOut");
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="maxPending">TBD</param>
+    public One2OneBidi(int maxPending)
+    {
+        _maxPending = maxPending;
+        Shape = new BidiShape<TIn, TIn, TOut, TOut>(_inInlet, _inOutlet, _outInlet, _outOutlet);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override BidiShape<TIn, TIn, TOut, TOut> Shape { get; }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override Attributes InitialAttributes { get; } = Attributes.CreateName("One2OneBidi");
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="inheritedAttributes">TBD</param>
+    /// <returns>TBD</returns>
+    protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+    {
+        return new Logic(this);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public override string ToString()
+    {
+        return "One2OneBidi";
+    }
+
+    #region internal classes
+
+    private sealed class Logic : GraphStageLogic
+    {
+        private readonly Inlet<TIn> _inInlet;
+        private readonly Outlet<TIn> _inOutlet;
+        private readonly int _maxPending;
+        private readonly Inlet<TOut> _outInlet;
+        private readonly Outlet<TOut> _outOutlet;
+        private int _pending;
+        private bool _pullSuppressed;
+
+        public Logic(One2OneBidi<TIn, TOut> stage) : base(stage.Shape)
         {
-            private readonly int _maxPending;
-            private readonly Inlet<TIn> _inInlet;
-            private readonly Outlet<TIn> _inOutlet;
-            private readonly Inlet<TOut> _outInlet;
-            private readonly Outlet<TOut> _outOutlet;
-            private int _pending;
-            private bool _pullSuppressed;
+            _maxPending = stage._maxPending;
+            _inInlet = stage._inInlet;
+            _inOutlet = stage._inOutlet;
+            _outInlet = stage._outInlet;
+            _outOutlet = stage._outOutlet;
 
-            public Logic(One2OneBidi<TIn, TOut> stage) : base(stage.Shape)
-            {
-                _maxPending = stage._maxPending;
-                _inInlet = stage._inInlet;
-                _inOutlet = stage._inOutlet;
-                _outInlet = stage._outInlet;
-                _outOutlet = stage._outOutlet;
+            SetInInletHandler();
+            SetInOutletHandler();
+            SetOutInletHandler();
+            SetOutOutletHandler();
+        }
 
-                SetInInletHandler();
-                SetInOutletHandler();
-                SetOutInletHandler();
-                SetOutOutletHandler();
-            }
-
-            private void SetInInletHandler()
-            {
-                SetHandler(_inInlet, onPush: () =>
+        private void SetInInletHandler()
+        {
+            SetHandler(_inInlet, () =>
                 {
                     _pending += 1;
                     Push(_inOutlet, Grab(_inInlet));
                 },
-                    onUpstreamFinish: () => Complete(_inOutlet));
-            }
+                () => Complete(_inOutlet));
+        }
 
-            private void SetInOutletHandler()
-            {
-                SetHandler(_inOutlet, onPull: () =>
+        private void SetInOutletHandler()
+        {
+            SetHandler(_inOutlet, () =>
                 {
                     if (_pending < _maxPending || _maxPending == -1)
                         Pull(_inInlet);
                     else
                         _pullSuppressed = true;
                 },
-                    onDownstreamFinish: cause => Cancel(_inInlet, cause));
-            }
-
-            private void SetOutInletHandler()
-            {
-                SetHandler(_outInlet, onPush: () =>
-                {
-                    var element = Grab(_outInlet);
-
-                    if (_pending <= 0)
-                        throw new UnexpectedOutputException(element);
-
-                    _pending -= 1;
-
-                    Push(_outOutlet, element);
-
-                    if (_pullSuppressed)
-                    {
-                        _pullSuppressed = false;
-                        if(!IsClosed(_inInlet))
-                            Pull(_inInlet);
-                    }
-                }, onUpstreamFinish: () =>
-                {
-                    if (_pending != 0)
-                        throw new OutputTruncationException();
-
-                    Complete(_outOutlet);
-                });
-            }
-
-            private void SetOutOutletHandler()
-            {
-                SetHandler(_outOutlet, onPull: () => Pull(_outInlet), onDownstreamFinish: cause => Cancel(_outInlet, cause));
-            }
+                cause => Cancel(_inInlet, cause));
         }
 
-        #endregion
-
-        private readonly int _maxPending;
-        private readonly Inlet<TIn> _inInlet = new("inIn");
-        private readonly Outlet<TIn> _inOutlet = new("inOut");
-        private readonly Inlet<TOut> _outInlet = new("outIn");
-        private readonly Outlet<TOut> _outOutlet = new("outOut");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="maxPending">TBD</param>
-        public One2OneBidi(int maxPending)
+        private void SetOutInletHandler()
         {
-            _maxPending = maxPending;
-            Shape = new BidiShape<TIn, TIn, TOut, TOut>(_inInlet, _inOutlet, _outInlet, _outOutlet);
+            SetHandler(_outInlet, () =>
+            {
+                var element = Grab(_outInlet);
+
+                if (_pending <= 0)
+                    throw new UnexpectedOutputException(element);
+
+                _pending -= 1;
+
+                Push(_outOutlet, element);
+
+                if (_pullSuppressed)
+                {
+                    _pullSuppressed = false;
+                    if (!IsClosed(_inInlet))
+                        Pull(_inInlet);
+                }
+            }, () =>
+            {
+                if (_pending != 0)
+                    throw new OutputTruncationException();
+
+                Complete(_outOutlet);
+            });
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override BidiShape<TIn, TIn, TOut, TOut> Shape { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("One2OneBidi");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString() => "One2OneBidi";
+        private void SetOutOutletHandler()
+        {
+            SetHandler(_outOutlet, () => Pull(_outInlet), cause => Cancel(_outInlet, cause));
+        }
     }
+
+    #endregion
 }

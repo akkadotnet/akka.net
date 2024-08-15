@@ -1,49 +1,49 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="RealMessageEnvelope.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="RealMessageEnvelope.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 
-namespace Akka.TestKit
+namespace Akka.TestKit;
+
+/// <summary>
+///     TBD
+/// </summary>
+public class RealMessageEnvelope : MessageEnvelope
 {
+    private readonly object _message;
+    private readonly IActorRef _sender;
+
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    public class RealMessageEnvelope : MessageEnvelope
+    /// <param name="message">TBD</param>
+    /// <param name="sender">TBD</param>
+    public RealMessageEnvelope(object message, IActorRef sender)
     {
-        private readonly object _message;
-        private readonly IActorRef _sender;
+        _message = message;
+        _sender = sender;
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        public RealMessageEnvelope(object message, IActorRef sender)
-        {
-            _message = message;
-            _sender = sender;
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override object Message => _message;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override object Message { get { return _message; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override IActorRef Sender{get { return _sender; }}
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    public override IActorRef Sender => _sender;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return "<" + (Message ?? "null") + "> from " + (Sender == ActorRefs.NoSender ? "NoSender" : Sender.ToString());
-        }
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public override string ToString()
+    {
+        return "<" + (Message ?? "null") + "> from " + (Sender == ActorRefs.NoSender ? "NoSender" : Sender.ToString());
     }
 }

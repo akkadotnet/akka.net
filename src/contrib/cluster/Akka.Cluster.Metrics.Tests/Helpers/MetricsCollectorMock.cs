@@ -1,47 +1,46 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="MetricsCollectorMock.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="MetricsCollectorMock.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
 using Akka.Cluster.Metrics.Serialization;
-using Google.Protobuf.WellKnownTypes;
 using Address = Akka.Actor.Address;
 
-namespace Akka.Cluster.Metrics.Tests.Helpers
-{
-    /// <summary>
-    /// Metrics collector mock implementation
-    /// </summary>
-    public class MetricsCollectorMock : IMetricsCollector
-    {
-        private readonly ActorSystem _system;
-        private readonly Random _random;
-        
-        public MetricsCollectorMock(ActorSystem system)
-        {
-            _system = system;
-            _random = new Random();
-        }
+namespace Akka.Cluster.Metrics.Tests.Helpers;
 
-        /// <inheritdoc />
-        public NodeMetrics Sample()
-        {
-            return new NodeMetrics(new Address("akka", _system.Name), DateTime.UtcNow.ToTimestamp(), new []
+/// <summary>
+///     Metrics collector mock implementation
+/// </summary>
+public class MetricsCollectorMock : IMetricsCollector
+{
+    private readonly Random _random;
+    private readonly ActorSystem _system;
+
+    public MetricsCollectorMock(ActorSystem system)
+    {
+        _system = system;
+        _random = new Random();
+    }
+
+    /// <inheritdoc />
+    public NodeMetrics Sample()
+    {
+        return new NodeMetrics(new Address("akka", _system.Name), DateTime.UtcNow.ToTimestamp(),
+            new[]
             {
                 new NodeMetrics.Types.Metric("metric1", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.5)),
-                new NodeMetrics.Types.Metric("metric2", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.2)), 
+                new NodeMetrics.Types.Metric("metric2", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.2)),
                 new NodeMetrics.Types.Metric("metric3", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.3)),
                 new NodeMetrics.Types.Metric("metric4", _random.Next(0, 100), new NodeMetrics.Types.EWMA(5, 0.7))
             });
-        }
-        
-        /// <inheritdoc />
-        public void Dispose()
-        {
-        }
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
     }
 }

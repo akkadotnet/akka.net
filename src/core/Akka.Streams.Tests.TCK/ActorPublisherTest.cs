@@ -1,112 +1,113 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ActorPublisherTest.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ActorPublisherTest.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using Akka.Actor;
 using Akka.Streams.Actors;
 using Akka.Util.Internal;
 using Reactive.Streams;
-using Akka.Actor;
 
-namespace Akka.Streams.Tests.TCK
+namespace Akka.Streams.Tests.TCK;
+
+internal class ActorPublisherTest : AkkaPublisherVerification<int?>
 {
-    class ActorPublisherTest : AkkaPublisherVerification<int?>
+    public override IPublisher<int?> CreatePublisher(long elements)
     {
-        public override IPublisher<int?> CreatePublisher(long elements)
+        var actorRef =
+            System.ActorOf(
+                Props.Create(() => new TestPublisher(elements)).WithDispatcher("akka.test.stream-dispatcher"));
+        return ActorPublisher.Create<int?>(actorRef);
+    }
+
+    private sealed class TestPublisher : ActorPublisher<int?>
+    {
+        private readonly long _allElements;
+        private readonly int _count;
+        private int _current;
+
+        public TestPublisher(long allElements)
         {
-            var actorRef =
-                System.ActorOf(Props.Create(()=> new TestPublisher(elements)).WithDispatcher("akka.test.stream-dispatcher"));
-            return ActorPublisher.Create<int?>(actorRef);
+            _allElements = allElements;
+            if (allElements == long.MaxValue)
+            {
+                _current = 1;
+                _count = int.MaxValue;
+            }
+            else
+            {
+                _current = 0;
+                _count = (int)allElements;
+            }
         }
 
-        private sealed class TestPublisher : ActorPublisher<int?>
+        protected override bool Receive(object message)
         {
-            private sealed class Produce
+            switch (message)
             {
-                public static Produce Instance { get; } = new();
+                case Request _:
+                    LoopDemand();
+                    return true;
 
-                private Produce()
-                {
-                    
-                }
-            }
-
-            private sealed class Loop
-            {
-                public static Loop Instance { get; } = new();
-
-                private Loop()
-                {
-
-                }
-            }
-
-            private sealed class Complete
-            {
-                public static Complete Instance { get; } = new();
-
-                private Complete()
-                {
-
-                }
-            }
-            
-
-            private readonly long _allElements;
-            private int _current;
-            private readonly int _count;
-
-            public TestPublisher(long allElements)
-            {
-                _allElements = allElements;
-                if (allElements == long.MaxValue)
-                {
-                    _current = 1;
-                    _count = int.MaxValue;
-                }
-                else
-                {
-                    _current = 0;
-                    _count = (int)(allElements);
-                }
-            }
-
-            protected override bool Receive(object message)
-            {
-                switch (message)
-                {
-                    case Request _:
-                        LoopDemand();
-                        return true;
-                    
-                    case Produce _:
-                        if (TotalDemand > 0 && !IsCompleted && _current < _count)
-                            OnNext(_current++);
-                        else if (!IsCompleted && _current == _count)
-                            OnComplete();
-                        else if (IsCompleted)
-                        {
-                            //no-op
-                        }
-                        return true;
-                    
-                    default:
+                case Produce _:
+                    if (TotalDemand > 0 && !IsCompleted && _current < _count)
+                    {
+                        OnNext(_current++);
+                    }
+                    else if (!IsCompleted && _current == _count)
+                    {
+                        OnComplete();
+                    }
+                    else if (IsCompleted)
+                    {
                         //no-op
-                        return true;
-                }
+                    }
+
+                    return true;
+
+                default:
+                    //no-op
+                    return true;
+            }
+        }
+
+        private void LoopDemand()
+        {
+            var loopUntil = Math.Min(100, TotalDemand);
+            Enumerable.Range(1, (int)loopUntil).ForEach(_ => Self.Tell(Produce.Instance));
+            if (loopUntil > 100)
+                Self.Tell(Loop.Instance);
+        }
+
+        private sealed class Produce
+        {
+            private Produce()
+            {
             }
 
-            private void LoopDemand()
+            public static Produce Instance { get; } = new();
+        }
+
+        private sealed class Loop
+        {
+            private Loop()
             {
-                var loopUntil = Math.Min(100, TotalDemand);
-                Enumerable.Range(1, (int) loopUntil).ForEach(_ => Self.Tell(Produce.Instance));
-                if(loopUntil > 100)
-                    Self.Tell(Loop.Instance);
             }
+
+            public static Loop Instance { get; } = new();
+        }
+
+        private sealed class Complete
+        {
+            private Complete()
+            {
+            }
+
+            public static Complete Instance { get; } = new();
         }
     }
 }

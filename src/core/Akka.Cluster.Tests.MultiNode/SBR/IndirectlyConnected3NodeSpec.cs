@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="IndirectlyConnected3NodeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="IndirectlyConnected3NodeSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Linq;
@@ -12,24 +12,19 @@ using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
-using Akka.TestKit;
 using FluentAssertions;
 
-namespace Akka.Cluster.Tests.MultiNode.SBR
+namespace Akka.Cluster.Tests.MultiNode.SBR;
+
+public class IndirectlyConnected3NodeSpecConfig : MultiNodeConfig
 {
-    public class IndirectlyConnected3NodeSpecConfig : MultiNodeConfig
+    public IndirectlyConnected3NodeSpecConfig()
     {
-        public RoleName Node1 { get; }
-        public RoleName Node2 { get; }
-        public RoleName Node3 { get; }
+        Node1 = Role("node1");
+        Node2 = Role("node2");
+        Node3 = Role("node3");
 
-        public IndirectlyConnected3NodeSpecConfig()
-        {
-            Node1 = Role("node1");
-            Node2 = Role("node2");
-            Node3 = Role("node3");
-
-            CommonConfig = ConfigurationFactory.ParseString(@"
+        CommonConfig = ConfigurationFactory.ParseString(@"
                 akka {
                     loglevel = INFO
                     cluster {
@@ -44,109 +39,107 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
 
                     test.filter-leeway = 10s
                 }")
-                .WithFallback(MultiNodeLoggingConfig.LoggingConfig)
-                .WithFallback(DebugConfig(true))
-                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
+            .WithFallback(MultiNodeLoggingConfig.LoggingConfig)
+            .WithFallback(DebugConfig(true))
+            .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
-            TestTransport = true;
-        }
+        TestTransport = true;
     }
 
-    public class IndirectlyConnected3NodeSpec : MultiNodeClusterSpec
+    public RoleName Node1 { get; }
+    public RoleName Node2 { get; }
+    public RoleName Node3 { get; }
+}
+
+public class IndirectlyConnected3NodeSpec : MultiNodeClusterSpec
+{
+    private readonly IndirectlyConnected3NodeSpecConfig _config;
+
+    public IndirectlyConnected3NodeSpec()
+        : this(new IndirectlyConnected3NodeSpecConfig())
     {
-        private readonly IndirectlyConnected3NodeSpecConfig _config;
+    }
 
-        public IndirectlyConnected3NodeSpec()
-            : this(new IndirectlyConnected3NodeSpecConfig())
+    protected IndirectlyConnected3NodeSpec(IndirectlyConnected3NodeSpecConfig config)
+        : base(config, typeof(IndirectlyConnected3NodeSpec))
+    {
+        _config = config;
+    }
+
+    [MultiNodeFact]
+    public void IndirectlyConnected3NodeSpecTests()
+    {
+        A_3_node_cluster_should_avoid_a_split_brain_when_two_unreachable_but_can_talk_via_third();
+    }
+
+    public void A_3_node_cluster_should_avoid_a_split_brain_when_two_unreachable_but_can_talk_via_third()
+    {
+        var cluster = Cluster.Get(Sys);
+
+        RunOn(() => { cluster.Join(cluster.SelfAddress); }, _config.Node1);
+        EnterBarrier("node1 joined");
+        RunOn(() => { cluster.Join(Node(_config.Node1).Address); }, _config.Node2, _config.Node3);
+        Within(TimeSpan.FromSeconds(10), () =>
         {
-        }
-
-        protected IndirectlyConnected3NodeSpec(IndirectlyConnected3NodeSpecConfig config)
-            : base(config, typeof(IndirectlyConnected3NodeSpec))
-        {
-            _config = config;
-        }
-
-        [MultiNodeFact]
-        public void IndirectlyConnected3NodeSpecTests()
-        {
-            A_3_node_cluster_should_avoid_a_split_brain_when_two_unreachable_but_can_talk_via_third();
-        }
-
-        public void A_3_node_cluster_should_avoid_a_split_brain_when_two_unreachable_but_can_talk_via_third()
-        {
-            var cluster = Cluster.Get(Sys);
-
-            RunOn(() =>
+            AwaitAssert(() =>
             {
-                cluster.Join(cluster.SelfAddress);
-            }, _config.Node1);
-            EnterBarrier("node1 joined");
-            RunOn(() =>
-            {
-                cluster.Join(Node(_config.Node1).Address);
-            }, _config.Node2, _config.Node3);
-            Within(TimeSpan.FromSeconds(10), () =>
-            {
-                AwaitAssert(() =>
-                {
-                    cluster.State.Members.Count.Should().Be(3);
-                    foreach (var m in cluster.State.Members)
-                    {
-                        m.Status.Should().Be(MemberStatus.Up);
-                    }
-                });
+                cluster.State.Members.Count.Should().Be(3);
+                foreach (var m in cluster.State.Members) m.Status.Should().Be(MemberStatus.Up);
             });
-            EnterBarrier("Cluster formed");
+        });
+        EnterBarrier("Cluster formed");
 
-            RunOn(() =>
+        RunOn(
+            () =>
             {
                 TestConductor.Blackhole(_config.Node2, _config.Node3, ThrottleTransportAdapter.Direction.Both).Wait();
             }, _config.Node1);
-            EnterBarrier("Blackholed");
+        EnterBarrier("Blackholed");
 
-            Within(TimeSpan.FromSeconds(10), () =>
+        Within(TimeSpan.FromSeconds(10), () =>
+        {
+            AwaitAssert(() =>
+            {
+                RunOn(
+                    () =>
+                    {
+                        cluster.State.Unreachable.Select(i => i.Address).Should()
+                            .BeEquivalentTo(Node(_config.Node2).Address);
+                    }, _config.Node3);
+                RunOn(
+                    () =>
+                    {
+                        cluster.State.Unreachable.Select(i => i.Address).Should()
+                            .BeEquivalentTo(Node(_config.Node3).Address);
+                    }, _config.Node2);
+                RunOn(
+                    () =>
+                    {
+                        cluster.State.Unreachable.Select(i => i.Address).Should()
+                            .BeEquivalentTo(new[] { _config.Node3, _config.Node2 }.Select(i => Node(i).Address));
+                    }, _config.Node1);
+            });
+        });
+        EnterBarrier("unreachable");
+
+        RunOn(() =>
+        {
+            Within(TimeSpan.FromSeconds(15), () =>
             {
                 AwaitAssert(() =>
                 {
-                    RunOn(() =>
-                    {
-                        cluster.State.Unreachable.Select(i => i.Address).Should().BeEquivalentTo(Node(_config.Node2).Address);
-                    }, _config.Node3);
-                    RunOn(() =>
-                    {
-                        cluster.State.Unreachable.Select(i => i.Address).Should().BeEquivalentTo(Node(_config.Node3).Address);
-                    }, _config.Node2);
-                    RunOn(() =>
-                    {
-                        cluster.State.Unreachable.Select(i => i.Address).Should().BeEquivalentTo(new[] { _config.Node3, _config.Node2 }.Select(i => Node(i).Address));
-                    }, _config.Node1);
+                    cluster.State.Members.Select(i => i.Address).Should().BeEquivalentTo(Node(_config.Node1).Address);
+                    foreach (var m in cluster.State.Members) m.Status.Should().Be(MemberStatus.Up);
                 });
             });
-            EnterBarrier("unreachable");
+        }, _config.Node1);
 
-            RunOn(() =>
-            {
-                Within(TimeSpan.FromSeconds(15), () =>
-                {
-                    AwaitAssert(() =>
-                    {
-                        cluster.State.Members.Select(i => i.Address).Should().BeEquivalentTo(Node(_config.Node1).Address);
-                        foreach (var m in cluster.State.Members)
-                        {
-                            m.Status.Should().Be(MemberStatus.Up);
-                        }
-                    });
-                });
-            }, _config.Node1);
+        RunOn(() =>
+        {
+            // downed
+            AwaitCondition(() => cluster.IsTerminated, TimeSpan.FromSeconds(15));
+        }, _config.Node2, _config.Node3);
 
-            RunOn(() =>
-            {
-                // downed
-                AwaitCondition(() => cluster.IsTerminated, max: TimeSpan.FromSeconds(15));
-            }, _config.Node2, _config.Node3);
-
-            EnterBarrier("done");
-        }
+        EnterBarrier("done");
     }
 }

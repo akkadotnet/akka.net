@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SeqSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SeqSinkSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Linq;
@@ -14,46 +14,45 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.Tests.Dsl
+namespace Akka.Streams.Tests.Dsl;
+
+public class SeqSinkSpec : AkkaSpec
 {
-    public class SeqSinkSpec : AkkaSpec
+    public SeqSinkSpec(ITestOutputHelper helper) : base(helper)
     {
-        private ActorMaterializer Materializer { get; }
+        var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
+        Materializer = ActorMaterializer.Create(Sys, settings);
+    }
 
-        public SeqSinkSpec(ITestOutputHelper helper) : base(helper)
-        {
-            var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
-            Materializer = ActorMaterializer.Create(Sys, settings);
-        }
+    private ActorMaterializer Materializer { get; }
 
-        [Fact]
-        public void Sink_ToSeq_must_return_a_SeqT_from_a_Source()
-        {
-            var input = Enumerable.Range(1, 6).ToList();
-            var future = Source.From(input).RunWith(Sink.Seq<int>(), Materializer);
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(input);
-        }
+    [Fact]
+    public void Sink_ToSeq_must_return_a_SeqT_from_a_Source()
+    {
+        var input = Enumerable.Range(1, 6).ToList();
+        var future = Source.From(input).RunWith(Sink.Seq<int>(), Materializer);
+        future.Wait(RemainingOrDefault).Should().BeTrue();
+        future.Result.Should().BeEquivalentTo(input);
+    }
 
-        [Fact]
-        public void Sink_ToSeq_must_return_an_empty_SeqT_from_an_empty_Source()
-        {
-            var input = Enumerable.Empty<int>();
-            var future = Source.FromEnumerator(() => input.GetEnumerator()).RunWith(Sink.Seq<int>(), Materializer);
-            future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.Should().BeEquivalentTo(input);
-        }
+    [Fact]
+    public void Sink_ToSeq_must_return_an_empty_SeqT_from_an_empty_Source()
+    {
+        var input = Enumerable.Empty<int>();
+        var future = Source.FromEnumerator(() => input.GetEnumerator()).RunWith(Sink.Seq<int>(), Materializer);
+        future.Wait(RemainingOrDefault).Should().BeTrue();
+        future.Result.Should().BeEquivalentTo(input);
+    }
 
 
-        [Fact]
-        public void Sink_ToSeq_must_fail_the_task_on_abrupt_termination()
-        {
-            var materializer = ActorMaterializer.Create(Sys);
-            var probe = this.CreatePublisherProbe<int>();
-            var task = Source.FromPublisher(probe).RunWith(Sink.Seq<int>(), materializer);
-            materializer.Shutdown();
-            Action a = () => task.Wait(TimeSpan.FromSeconds(3));
-            a.Should().Throw<AbruptTerminationException>();
-        }
+    [Fact]
+    public void Sink_ToSeq_must_fail_the_task_on_abrupt_termination()
+    {
+        var materializer = ActorMaterializer.Create(Sys);
+        var probe = this.CreatePublisherProbe<int>();
+        var task = Source.FromPublisher(probe).RunWith(Sink.Seq<int>(), materializer);
+        materializer.Shutdown();
+        Action a = () => task.Wait(TimeSpan.FromSeconds(3));
+        a.Should().Throw<AbruptTerminationException>();
     }
 }

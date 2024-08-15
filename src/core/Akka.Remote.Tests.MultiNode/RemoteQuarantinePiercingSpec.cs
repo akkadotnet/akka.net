@@ -1,10 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="RemoteQuarantinePiercingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
-
+﻿// -----------------------------------------------------------------------
+//  <copyright file="RemoteQuarantinePiercingSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
@@ -13,122 +12,120 @@ using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 
-namespace Akka.Remote.Tests.MultiNode
+namespace Akka.Remote.Tests.MultiNode;
+
+public class RemoteQuarantinePiercingSpecConfig : MultiNodeConfig
 {
-    public class RemoteQuarantinePiercingSpecConfig : MultiNodeConfig
+    public RemoteQuarantinePiercingSpecConfig()
     {
-        public RoleName First { get; }
-        public RoleName Second { get; }
+        First = Role("first");
+        Second = Role("second");
 
-        public RemoteQuarantinePiercingSpecConfig()
-        {
-            First = Role("first");
-            Second = Role("second");
-
-            CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString(@"
+        CommonConfig = DebugConfig(false)
+            .WithFallback(ConfigurationFactory.ParseString(@"
                   akka.loglevel = INFO
                   akka.remote.log-remote-lifecycle-events = INFO
                 "));
-        }
-
-        public sealed class Subject : ReceiveActor
-        {
-            public Subject()
-            {
-                Receive<string>(str => str == "shutdown", _ => Context.System.Terminate());
-                Receive<string>(str => str == "identify", _ =>
-                {
-                    Sender.Tell((AddressUidExtension.Uid(Context.System), Self));
-                });
-            }
-        }
     }
 
-    public class RemoteQuarantinePiercingSpec : MultiNodeSpec
+    public RoleName First { get; }
+    public RoleName Second { get; }
+
+    public sealed class Subject : ReceiveActor
     {
-        private readonly RemoteQuarantinePiercingSpecConfig _specConfig;
-
-        protected override int InitialParticipantsValueFactory { get; } = 2;
-
-        public RemoteQuarantinePiercingSpec() : this(new RemoteQuarantinePiercingSpecConfig())
+        public Subject()
         {
+            Receive<string>(str => str == "shutdown", _ => Context.System.Terminate());
+            Receive<string>(str => str == "identify",
+                _ => { Sender.Tell((AddressUidExtension.Uid(Context.System), Self)); });
         }
+    }
+}
 
-        protected RemoteQuarantinePiercingSpec(RemoteQuarantinePiercingSpecConfig specConfig) : base(specConfig, typeof(RemoteQuarantinePiercingSpec))
-        {
-            _specConfig = specConfig;
-        }
+public class RemoteQuarantinePiercingSpec : MultiNodeSpec
+{
+    private readonly RemoteQuarantinePiercingSpecConfig _specConfig;
 
-        private (int, IActorRef) Identify(RoleName role, string actorName)
-        {
-            Sys.ActorSelection(Node(role) / "user" / actorName).Tell("identify");
-            return ExpectMsg<(int, IActorRef)>();
-        }
+    public RemoteQuarantinePiercingSpec() : this(new RemoteQuarantinePiercingSpecConfig())
+    {
+    }
 
-        [MultiNodeFact]
-        public void RemoteQuarantinePiercingSpecs()
-        {
-            RemoteNodeShutdownAndComesBack_must_allow_piercing_through_the_quarantine_when_remote_UID_is_new();
-        }
+    protected RemoteQuarantinePiercingSpec(RemoteQuarantinePiercingSpecConfig specConfig) : base(specConfig,
+        typeof(RemoteQuarantinePiercingSpec))
+    {
+        _specConfig = specConfig;
+    }
 
-        private void RemoteNodeShutdownAndComesBack_must_allow_piercing_through_the_quarantine_when_remote_UID_is_new()
+    protected override int InitialParticipantsValueFactory { get; } = 2;
+
+    private (int, IActorRef) Identify(RoleName role, string actorName)
+    {
+        Sys.ActorSelection(Node(role) / "user" / actorName).Tell("identify");
+        return ExpectMsg<(int, IActorRef)>();
+    }
+
+    [MultiNodeFact]
+    public void RemoteQuarantinePiercingSpecs()
+    {
+        RemoteNodeShutdownAndComesBack_must_allow_piercing_through_the_quarantine_when_remote_UID_is_new();
+    }
+
+    private void RemoteNodeShutdownAndComesBack_must_allow_piercing_through_the_quarantine_when_remote_UID_is_new()
+    {
+        RunOn(() =>
         {
-            RunOn(() =>
+            var secondAddress = Node(_specConfig.Second).Address;
+            EnterBarrier("actors-started");
+
+            // Acquire ActorRef from first system
+            var tuple = Identify(_specConfig.Second, "subject");
+            var uidFirst = tuple.Item1;
+            var subjectFirst = tuple.Item2;
+            EnterBarrier("actor-identified");
+
+            // Manually Quarantine the other system
+            RARP.For(Sys).Provider.Transport.Quarantine(Node(_specConfig.Second).Address, uidFirst);
+
+            // Quarantine is up -- Cannot communicate with remote system any more
+            Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("identify");
+            ExpectNoMsg(TimeSpan.FromSeconds(2));
+
+            // Shut down the other system -- which results in restart (see runOn(second))
+            TestConductor.Shutdown(_specConfig.Second).Wait(TimeSpan.FromSeconds(30));
+
+            // Now wait until second system becomes alive again
+            Within(TimeSpan.FromSeconds(30), () =>
             {
-                var secondAddress = Node(_specConfig.Second).Address;
-                EnterBarrier("actors-started");
-
-                // Acquire ActorRef from first system
-                var tuple = Identify(_specConfig.Second, "subject");
-                int uidFirst = tuple.Item1;
-                IActorRef subjectFirst = tuple.Item2;
-                EnterBarrier("actor-identified");
-
-                // Manually Quarantine the other system
-                RARP.For(Sys).Provider.Transport.Quarantine(Node(_specConfig.Second).Address, uidFirst);
-
-                // Quarantine is up -- Cannot communicate with remote system any more
-                Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("identify");
-                ExpectNoMsg(TimeSpan.FromSeconds(2));
-
-                // Shut down the other system -- which results in restart (see runOn(second))
-                TestConductor.Shutdown(_specConfig.Second).Wait(TimeSpan.FromSeconds(30));
-
-                // Now wait until second system becomes alive again
-                Within(TimeSpan.FromSeconds(30), () =>
+                // retry because the Subject actor might not be started yet
+                AwaitAssert(() =>
                 {
-                    // retry because the Subject actor might not be started yet
-                    AwaitAssert(() =>
-                    {
-                        Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("identify");
-                        var tuple2 = ExpectMsg<(int, IActorRef)>(TimeSpan.FromSeconds(1));
-                        tuple2.Item1.Should().NotBe(uidFirst);
-                        tuple2.Item2.Should().NotBe(subjectFirst);
-                    });
+                    Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("identify");
+                    var tuple2 = ExpectMsg<(int, IActorRef)>(TimeSpan.FromSeconds(1));
+                    tuple2.Item1.Should().NotBe(uidFirst);
+                    tuple2.Item2.Should().NotBe(subjectFirst);
                 });
+            });
 
-                // If we got here the Quarantine was successfully pierced since it is configured to last 1 day
-                Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("shutdown");
-            }, _specConfig.First);
+            // If we got here the Quarantine was successfully pierced since it is configured to last 1 day
+            Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("shutdown");
+        }, _specConfig.First);
 
-            RunOn(() =>
-            {
-                var addr = ((ExtendedActorSystem)Sys).Provider.DefaultAddress;
-                Sys.ActorOf(Props.Create<RemoteQuarantinePiercingSpecConfig.Subject>(), "subject");
-                EnterBarrier("actors-started");
+        RunOn(() =>
+        {
+            var addr = ((ExtendedActorSystem)Sys).Provider.DefaultAddress;
+            Sys.ActorOf(Props.Create<RemoteQuarantinePiercingSpecConfig.Subject>(), "subject");
+            EnterBarrier("actors-started");
 
-                EnterBarrier("actor-identified");
-                Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
+            EnterBarrier("actor-identified");
+            Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
 
-                var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($@"
+            var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($@"
                     akka.remote.dot-netty.tcp.hostname = {addr.Host}
                     akka.remote.dot-netty.tcp.port = {addr.Port}
                 ").WithFallback(Sys.Settings.Config));
 
-                freshSystem.ActorOf(Props.Create<RemoteQuarantinePiercingSpecConfig.Subject>(), "subject");
-                freshSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
-            }, _specConfig.Second);
-        }
+            freshSystem.ActorOf(Props.Create<RemoteQuarantinePiercingSpecConfig.Subject>(), "subject");
+            freshSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
+        }, _specConfig.Second);
     }
 }

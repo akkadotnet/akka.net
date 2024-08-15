@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Bug2640Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Bug2640Spec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System.Collections.Generic;
 using System.Linq;
@@ -18,45 +18,15 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Tests.Actor.Dispatch
+namespace Akka.Tests.Actor.Dispatch;
+
+/// <summary>
+///     Bugfix and verification spec for https://github.com/akkadotnet/akka.net/issues/2640
+///     Used to verify that the <see cref="ForkJoinExecutor" /> gets properly disposed upon shutdown.
+/// </summary>
+public class Bug2640Spec : AkkaSpec
 {
-    /// <summary>
-    ///     Bugfix and verification spec for https://github.com/akkadotnet/akka.net/issues/2640
-    ///     Used to verify that the <see cref="ForkJoinExecutor" /> gets properly disposed upon shutdown.
-    /// </summary>
-    public class Bug2640Spec : AkkaSpec
-    {
-        public Bug2640Spec(ITestOutputHelper helper) : base(DispatcherConfig, helper)
-        {
-        }
-
-        private class GetThread
-        {
-            public static readonly GetThread Instance = new();
-
-            private GetThread()
-            {
-            }
-        }
-
-        /// <summary>
-        ///     Used to pass back data on the current thread.
-        /// </summary>
-        public class ThreadReporterActor : ReceiveActor
-        {
-            public ThreadReporterActor()
-            {
-                // Improve reliability of ForkJoinExecutorShouldShutdownUponAllActorsTerminating
-                // test which intermittently can fail because all messages are actually serviced 
-                // by a single thread from the pool. Happens under load, presumably when the processor
-                // finds it more efficient to keep thread locality of the execution.
-                Thread.Sleep(1);
-
-                Receive<GetThread>(_ => Sender.Tell(Thread.CurrentThread));
-            }
-        }
-
-        public static readonly Config DispatcherConfig = @"
+    public static readonly Config DispatcherConfig = @"
             myapp{
                 my-pinned-dispatcher {
                     type = PinnedDispatcher
@@ -69,62 +39,91 @@ namespace Akka.Tests.Actor.Dispatch
             }
         ";
 
-        [Fact(DisplayName = "ForkJoinExecutor should terminate all threads upon ActorSystem.Terminate")]
-        public async Task ForkJoinExecutorShouldShutdownUponActorSystemTermination()
-        {
-            var actor = Sys.ActorOf(Props.Create(() => new ThreadReporterActor())
-                .WithDispatcher("myapp.my-fork-join-dispatcher").WithRouter(new RoundRobinPool(4)));
+    public Bug2640Spec(ITestOutputHelper helper) : base(DispatcherConfig, helper)
+    {
+    }
 
-            Dictionary<int, Thread> threads = null;
-            Watch(actor);
-            for (var i = 0; i < 100; i++)
-                actor.Tell(GetThread.Instance);
+    [Fact(DisplayName = "ForkJoinExecutor should terminate all threads upon ActorSystem.Terminate")]
+    public async Task ForkJoinExecutorShouldShutdownUponActorSystemTermination()
+    {
+        var actor = Sys.ActorOf(Props.Create(() => new ThreadReporterActor())
+            .WithDispatcher("myapp.my-fork-join-dispatcher").WithRouter(new RoundRobinPool(4)));
 
-            var objs = await ReceiveNAsync(100, default).ToListAsync();
-            threads = objs.Cast<Thread>().GroupBy(x => x.ManagedThreadId)
-                .ToDictionary(x => x.Key, grouping => grouping.First());
-
-            await Sys.Terminate();
-            await AwaitAssertAsync(() =>
-                threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
-        }
-
-        [Fact(DisplayName = "ForkJoinExecutor should terminate all threads upon all attached actors shutting down")]
-        public async Task ForkJoinExecutorShouldShutdownUponAllActorsTerminating()
-        {
-            var actor = Sys.ActorOf(Props.Create(() => new ThreadReporterActor())
-                .WithDispatcher("myapp.my-fork-join-dispatcher").WithRouter(new RoundRobinPool(4)));
-
-            Dictionary<int, Thread> threads = null;
-            Watch(actor);
-            for (var i = 0; i < 100; i++)
-                actor.Tell(GetThread.Instance);
-
-            var objs = await ReceiveNAsync(100, default).ToListAsync();
-
-            threads = objs.Cast<Thread>().GroupBy(x => x.ManagedThreadId)
-                .ToDictionary(x => x.Key, grouping => grouping.First());
-
-            Sys.Stop(actor);
-            await ExpectTerminatedAsync(actor);
-            await AwaitAssertAsync(() =>
-                threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
-        }
-
-        [Fact(DisplayName = "PinnedDispatcher should terminate its thread upon actor shutdown")]
-        public async Task PinnedDispatcherShouldShutdownUponActorTermination()
-        {
-            var actor = Sys.ActorOf(Props.Create(() => new ThreadReporterActor())
-                .WithDispatcher("myapp.my-pinned-dispatcher"));
-
-            Watch(actor);
+        Dictionary<int, Thread> threads = null;
+        Watch(actor);
+        for (var i = 0; i < 100; i++)
             actor.Tell(GetThread.Instance);
-            var thread = await ExpectMsgAsync<Thread>();
-            thread.IsAlive.Should().BeTrue();
 
-            Sys.Stop(actor);
-            await ExpectTerminatedAsync(actor);
-            await AwaitConditionAsync(() => Task.FromResult(!thread.IsAlive)); // wait for thread to terminate
+        var objs = await ReceiveNAsync(100).ToListAsync();
+        threads = objs.Cast<Thread>().GroupBy(x => x.ManagedThreadId)
+            .ToDictionary(x => x.Key, grouping => grouping.First());
+
+        await Sys.Terminate();
+        await AwaitAssertAsync(() =>
+            threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
+    }
+
+    [Fact(DisplayName = "ForkJoinExecutor should terminate all threads upon all attached actors shutting down")]
+    public async Task ForkJoinExecutorShouldShutdownUponAllActorsTerminating()
+    {
+        var actor = Sys.ActorOf(Props.Create(() => new ThreadReporterActor())
+            .WithDispatcher("myapp.my-fork-join-dispatcher").WithRouter(new RoundRobinPool(4)));
+
+        Dictionary<int, Thread> threads = null;
+        Watch(actor);
+        for (var i = 0; i < 100; i++)
+            actor.Tell(GetThread.Instance);
+
+        var objs = await ReceiveNAsync(100).ToListAsync();
+
+        threads = objs.Cast<Thread>().GroupBy(x => x.ManagedThreadId)
+            .ToDictionary(x => x.Key, grouping => grouping.First());
+
+        Sys.Stop(actor);
+        await ExpectTerminatedAsync(actor);
+        await AwaitAssertAsync(() =>
+            threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
+    }
+
+    [Fact(DisplayName = "PinnedDispatcher should terminate its thread upon actor shutdown")]
+    public async Task PinnedDispatcherShouldShutdownUponActorTermination()
+    {
+        var actor = Sys.ActorOf(Props.Create(() => new ThreadReporterActor())
+            .WithDispatcher("myapp.my-pinned-dispatcher"));
+
+        Watch(actor);
+        actor.Tell(GetThread.Instance);
+        var thread = await ExpectMsgAsync<Thread>();
+        thread.IsAlive.Should().BeTrue();
+
+        Sys.Stop(actor);
+        await ExpectTerminatedAsync(actor);
+        await AwaitConditionAsync(() => Task.FromResult(!thread.IsAlive)); // wait for thread to terminate
+    }
+
+    private class GetThread
+    {
+        public static readonly GetThread Instance = new();
+
+        private GetThread()
+        {
+        }
+    }
+
+    /// <summary>
+    ///     Used to pass back data on the current thread.
+    /// </summary>
+    public class ThreadReporterActor : ReceiveActor
+    {
+        public ThreadReporterActor()
+        {
+            // Improve reliability of ForkJoinExecutorShouldShutdownUponAllActorsTerminating
+            // test which intermittently can fail because all messages are actually serviced 
+            // by a single thread from the pool. Happens under load, presumably when the processor
+            // finds it more efficient to keep thread locality of the execution.
+            Thread.Sleep(1);
+
+            Receive<GetThread>(_ => Sender.Tell(Thread.CurrentThread));
         }
     }
 }

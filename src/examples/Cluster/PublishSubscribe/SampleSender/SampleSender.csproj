@@ -9,9 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
-    <ProjectReference Include="..\..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
-    <ProjectReference Include="..\..\..\..\core\Akka\Akka.csproj" />
+    <ProjectReference Include="..\..\..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj"/>
+    <ProjectReference Include="..\..\..\..\core\Akka.Cluster\Akka.Cluster.csproj"/>
+    <ProjectReference Include="..\..\..\..\core\Akka\Akka.csproj"/>
   </ItemGroup>
 
 </Project>

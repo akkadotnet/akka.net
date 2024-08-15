@@ -1,7 +1,7 @@
 ﻿// -----------------------------------------------------------------------
 //  <copyright file="ReliableDeliverySerializer.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
 
@@ -24,11 +24,10 @@ using Google.Protobuf;
 namespace Akka.Cluster.Serialization;
 
 /// <summary>
-/// INTERNAL API
+///     INTERNAL API
 /// </summary>
 internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
 {
-    private readonly WrappedPayloadSupport _payloadSupport;
     private const string SequencedMessageManifest = "a";
     private const string AckManifest = "b";
     private const string RequestManifest = "c";
@@ -40,6 +39,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
     private const string DurableQueueConfirmedManifest = "g";
     private const string DurableQueueStateManifest = "h";
     private const string DurableQueueCleanupManifest = "i";
+    private readonly WrappedPayloadSupport _payloadSupport;
 
     public ReliableDeliverySerializer(ExtendedActorSystem system) : base(system)
     {
@@ -69,7 +69,8 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
             case DurableProducerQueue.Cleanup cleanup:
                 return DurableQueueCleanupToProto(cleanup).ToByteArray();
             default:
-                throw new ArgumentException($"Unimplemented serialization of message [{obj.GetType()}] in [{GetType()}]");
+                throw new ArgumentException(
+                    $"Unimplemented serialization of message [{obj.GetType()}] in [{GetType()}]");
         }
     }
 
@@ -96,7 +97,8 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
             case DurableQueueCleanupManifest:
                 return DurableQueueCleanupFromProto(Cleanup.Parser.ParseFrom(bytes));
             default:
-                throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType()}]");
+                throw new ArgumentException(
+                    $"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType()}]");
         }
     }
 
@@ -140,9 +142,9 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
     {
         var msgType = sequencedMessage.PayloadType;
 
-        MethodInfo method = typeof(ReliableDeliverySerializer).GetMethod(nameof(SequencedMessageToProtoGeneric),
+        var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(SequencedMessageToProtoGeneric),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
-        MethodInfo generic = method.MakeGenericMethod(msgType);
+        var generic = method.MakeGenericMethod(msgType);
         return (SequencedMessage)generic.Invoke(this, new object[] { sequencedMessage })!;
     }
 
@@ -209,10 +211,10 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
     // create method to convert RegisterConsumer to Proto
     private RegisterConsumer RegisterConsumerToProto(ProducerController.IRegisterConsumer registerConsumer)
     {
-        MethodInfo method = typeof(ReliableDeliverySerializer).GetMethod(nameof(RegisterConsumerToProtoGeneric),
+        var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(RegisterConsumerToProtoGeneric),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
-        MethodInfo generic = method.MakeGenericMethod(registerConsumer.ConsumerType);
-        return ((RegisterConsumer)generic.Invoke(this, new object[] { registerConsumer })!);
+        var generic = method.MakeGenericMethod(registerConsumer.ConsumerType);
+        return (RegisterConsumer)generic.Invoke(this, new object[] { registerConsumer })!;
     }
 
     private RegisterConsumer RegisterConsumerToProtoGeneric<T>(ProducerController.IRegisterConsumer uncasted)
@@ -233,7 +235,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(DurableQueueMessageSentToProtoGeneric),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         var generic = method.MakeGenericMethod(type);
-        return ((MessageSent)generic.Invoke(this, new object[] { messageSent })!);
+        return (MessageSent)generic.Invoke(this, new object[] { messageSent })!;
     }
 
     private MessageSent DurableQueueMessageSentToProtoGeneric<T>(DurableProducerQueue.IMessageSent uncasted)
@@ -265,7 +267,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(DurableQueueStateToProtoGeneric),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         var generic = method.MakeGenericMethod(type);
-        return ((State)generic.Invoke(this, new object[] { state })!);
+        return (State)generic.Invoke(this, new object[] { state })!;
     }
 
     private State DurableQueueStateToProtoGeneric<T>(DurableProducerQueue.IState uncast)
@@ -277,22 +279,19 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         stateBuilder.CurrentSeqNr = state.CurrentSeqNr;
         stateBuilder.HighestConfirmedSeqNr = state.HighestConfirmedSeqNr;
         stateBuilder.Confirmed.AddRange(state.ConfirmedSeqNr.Select(c =>
-            new Confirmed() { Qualifier = c.Key, SeqNr = c.Value.Item1, Timestamp = c.Value.Item2 }));
+            new Confirmed { Qualifier = c.Key, SeqNr = c.Value.Item1, Timestamp = c.Value.Item2 }));
         stateBuilder.Unconfirmed.AddRange(state.Unconfirmed.Select(DurableQueueMessageSentToProtoGeneric<T>));
         return stateBuilder;
     }
-    
+
     private static DurableProducerQueue.Confirmed DurableQueueConfirmedFromProto(Confirmed parseFrom)
     {
         return new DurableProducerQueue.Confirmed(parseFrom.SeqNr, parseFrom.Qualifier, parseFrom.Timestamp);
     }
-    
+
     private static Cleanup DurableQueueCleanupToProto(DurableProducerQueue.Cleanup cleanup)
     {
-        return new Cleanup
-        {
-            Qualifiers = { cleanup.ConfirmationQualifiers}
-        };
+        return new Cleanup { Qualifiers = { cleanup.ConfirmationQualifiers } };
     }
 
     #endregion
@@ -314,7 +313,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(SequencedMessageFromProto),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         var generic = method.MakeGenericMethod(type);
-        return ((ConsumerController.ISequencedMessage)generic.Invoke(this, new object[] { seqMsg })!);
+        return (ConsumerController.ISequencedMessage)generic.Invoke(this, new object[] { seqMsg })!;
     }
 
     private ConsumerController.ISequencedMessage SequencedMessageFromProto<T>(SequencedMessage seqMsg)
@@ -323,7 +322,8 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         {
             var chunk = new ChunkedMessage(IO.ByteString.CopyFrom(seqMsg.Message.Message.ToByteArray()),
                 seqMsg.FirstChunk,
-                seqMsg.LastChunk, seqMsg.Message.SerializerId, seqMsg.Message.MessageManifest.IsEmpty ? "" : seqMsg.Message.MessageManifest.ToStringUtf8());
+                seqMsg.LastChunk, seqMsg.Message.SerializerId,
+                seqMsg.Message.MessageManifest.IsEmpty ? "" : seqMsg.Message.MessageManifest.ToStringUtf8());
             return ConsumerController.SequencedMessage<T>.FromChunkedMessage(seqMsg.ProducerId, seqMsg.SeqNr, chunk,
                 seqMsg.First, seqMsg.Ack, ResolveActorRef(seqMsg.ProducerControllerRef));
         }
@@ -418,7 +418,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
             SeqNr = confirmed.SeqNr, Qualifier = confirmed.Qualifier, Timestamp = confirmed.Timestamp
         };
     }
-    
+
     private static DurableProducerQueue.Cleanup DurableQueueCleanupFromProto(Cleanup parseFrom)
     {
         return new DurableProducerQueue.Cleanup(parseFrom.Qualifiers.ToImmutableHashSet());

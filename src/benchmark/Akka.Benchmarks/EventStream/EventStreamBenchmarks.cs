@@ -1,57 +1,53 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="EventStreamBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="EventStreamBenchmarks.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
 
-namespace Akka.Benchmarks.EventStream
+namespace Akka.Benchmarks.EventStream;
+
+[Config(typeof(MicroBenchmarkConfig))]
+public class EventStreamBenchmarks
 {
-    [Config(typeof(MicroBenchmarkConfig))]
-    public class EventStreamBenchmarks
+    public const int NumOperations = 1_000_000;
+
+    private const string _msg = "foo";
+    private Event.EventStream _eventStream;
+
+    private FakeActor _fakeActor;
+
+
+    [IterationSetup]
+    public void InitLogger()
     {
-                
-        public const int NumOperations = 1_000_000;
-        
-        internal sealed class FakeActor : MinimalActorRef
-        {
-            public override ActorPath Path { get; } = new RootActorPath(new Address("akka", "test")) / "fake";
-            public override IActorRefProvider Provider => throw new System.NotImplementedException();
-            
-            public int LastMessage { get; private set; }
+        _eventStream = new Event.EventStream(false);
+        _fakeActor = new FakeActor();
+        _eventStream.Subscribe(_fakeActor, typeof(string));
+    }
 
-            protected override void TellInternal(object message, IActorRef sender)
-            {
-                LastMessage++;
-            }
-        }
-        
-        private FakeActor _fakeActor;
-        private Akka.Event.EventStream _eventStream;
+    [Benchmark(OperationsPerInvoke = NumOperations)]
+    public object Publish()
+    {
+        for (var i = 0; i < NumOperations; i++) _eventStream.Publish(_msg);
+        return _fakeActor.LastMessage;
+    }
 
-        private const string _msg = "foo";
+    internal sealed class FakeActor : MinimalActorRef
+    {
+        public override ActorPath Path { get; } = new RootActorPath(new Address("akka", "test")) / "fake";
+        public override IActorRefProvider Provider => throw new NotImplementedException();
 
-        
-        [IterationSetup]
-        public void InitLogger()
+        public int LastMessage { get; private set; }
+
+        protected override void TellInternal(object message, IActorRef sender)
         {
-            _eventStream = new Event.EventStream(false);
-            _fakeActor = new FakeActor();
-            _eventStream.Subscribe(_fakeActor, typeof(string));
-        }
-        
-        [Benchmark(OperationsPerInvoke = NumOperations)]
-        public object Publish()
-        {
-            for (var i = 0; i < NumOperations; i++)
-            {
-                _eventStream.Publish(_msg);
-            }
-            return _fakeActor.LastMessage;
+            LastMessage++;
         }
     }
 }

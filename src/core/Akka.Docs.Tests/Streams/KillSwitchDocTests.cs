@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="KillSwitchDocTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="KillSwitchDocTests.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Linq;
@@ -15,108 +15,118 @@ using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace DocsExamples.Streams
+namespace DocsExamples.Streams;
+
+public class KillSwitchDocTests : TestKit
 {
-    public class KillSwitchDocTests : TestKit
+    public KillSwitchDocTests(ITestOutputHelper output)
+        : base("{}", output)
     {
-        private ActorMaterializer Materializer { get; }
+        Materializer = Sys.Materializer();
+    }
 
-        public KillSwitchDocTests(ITestOutputHelper output) 
-            : base("{}", output)
-        {
-            Materializer = Sys.Materializer();
-        }
+    private ActorMaterializer Materializer { get; }
 
-        private void DoSomethingElse()
-        {
-        }
+    private void DoSomethingElse()
+    {
+    }
 
-        [Fact]
-        public void Unique_kill_switch_must_control_graph_completion_with_shutdown()
-        {
-            #region unique-shutdown
-            var countingSrc = Source.From(Enumerable.Range(1, int.MaxValue)).Delay(1.Seconds(), DelayOverflowStrategy.Backpressure);
-            var lastSink = Sink.Last<int>();
+    [Fact]
+    public void Unique_kill_switch_must_control_graph_completion_with_shutdown()
+    {
+        #region unique-shutdown
 
-            var (killSwitch, last) = countingSrc
-                .ViaMaterialized(KillSwitches.Single<int>(), Keep.Right)
-                .ToMaterialized(lastSink, Keep.Both)
-                .Run(Materializer);
+        var countingSrc = Source.From(Enumerable.Range(1, int.MaxValue))
+            .Delay(1.Seconds(), DelayOverflowStrategy.Backpressure);
+        var lastSink = Sink.Last<int>();
 
-            DoSomethingElse();
+        var (killSwitch, last) = countingSrc
+            .ViaMaterialized(KillSwitches.Single<int>(), Keep.Right)
+            .ToMaterialized(lastSink, Keep.Both)
+            .Run(Materializer);
 
-            killSwitch.Shutdown();
+        DoSomethingElse();
 
-            AwaitCondition(() => last.IsCompleted);
-            #endregion
-        }
+        killSwitch.Shutdown();
 
-        [Fact]
-        public void Unique_kill_switch_must_control_graph_completion_with_abort()
-        {
-            #region unique-abort
-            var countingSrc = Source.From(Enumerable.Range(1, int.MaxValue)).Delay(1.Seconds(), DelayOverflowStrategy.Backpressure);
-            var lastSink = Sink.Last<int>();
+        AwaitCondition(() => last.IsCompleted);
 
-            var (killSwitch, last) = countingSrc
-                .ViaMaterialized(KillSwitches.Single<int>(), Keep.Right)
-                .ToMaterialized(lastSink, Keep.Both)
-                .Run(Materializer);
+        #endregion
+    }
 
-            var error = new Exception("boom");
-            killSwitch.Abort(error);
+    [Fact]
+    public void Unique_kill_switch_must_control_graph_completion_with_abort()
+    {
+        #region unique-abort
 
-            AwaitCondition(() => last.IsFaulted);
-            last.Exception.GetBaseException().Should().Be(error);
-            #endregion
-        }
+        var countingSrc = Source.From(Enumerable.Range(1, int.MaxValue))
+            .Delay(1.Seconds(), DelayOverflowStrategy.Backpressure);
+        var lastSink = Sink.Last<int>();
 
-        [Fact]
-        public void Shared_kill_switch_must_control_graph_completion_with_shutdown()
-        {
-            #region shared-shutdown
-            var countingSrc = Source.From(Enumerable.Range(1, int.MaxValue)).Delay(1.Seconds(), DelayOverflowStrategy.Backpressure);
-            var lastSink = Sink.Last<int>();
-            var sharedKillSwitch = KillSwitches.Shared("my-kill-switch");
+        var (killSwitch, last) = countingSrc
+            .ViaMaterialized(KillSwitches.Single<int>(), Keep.Right)
+            .ToMaterialized(lastSink, Keep.Both)
+            .Run(Materializer);
 
-            var last = countingSrc
-                .Via(sharedKillSwitch.Flow<int>())
-                .RunWith(lastSink, Materializer);
+        var error = new Exception("boom");
+        killSwitch.Abort(error);
 
-            var delayedLast = countingSrc
-                .Delay(1.Seconds(), DelayOverflowStrategy.Backpressure)
-                .Via(sharedKillSwitch.Flow<int>())
-                .RunWith(lastSink, Materializer);
+        AwaitCondition(() => last.IsFaulted);
+        last.Exception.GetBaseException().Should().Be(error);
 
-            DoSomethingElse();
+        #endregion
+    }
 
-            sharedKillSwitch.Shutdown();
+    [Fact]
+    public void Shared_kill_switch_must_control_graph_completion_with_shutdown()
+    {
+        #region shared-shutdown
 
-            AwaitCondition(() => last.IsCompleted);
-            AwaitCondition(() => delayedLast.IsCompleted);
-            #endregion
-        }
+        var countingSrc = Source.From(Enumerable.Range(1, int.MaxValue))
+            .Delay(1.Seconds(), DelayOverflowStrategy.Backpressure);
+        var lastSink = Sink.Last<int>();
+        var sharedKillSwitch = KillSwitches.Shared("my-kill-switch");
 
-        [Fact]
-        public void Shared_kill_switch_must_control_graph_completion_with_abort()
-        {
-            #region shared-abort
-            var countingSrc = Source.From(Enumerable.Range(1, int.MaxValue)).Delay(1.Seconds());
-            var lastSink = Sink.Last<int>();
-            var sharedKillSwitch = KillSwitches.Shared("my-kill-switch");
+        var last = countingSrc
+            .Via(sharedKillSwitch.Flow<int>())
+            .RunWith(lastSink, Materializer);
 
-            var last1 = countingSrc.Via(sharedKillSwitch.Flow<int>()).RunWith(lastSink, Materializer);
-            var last2 = countingSrc.Via(sharedKillSwitch.Flow<int>()).RunWith(lastSink, Materializer);
+        var delayedLast = countingSrc
+            .Delay(1.Seconds(), DelayOverflowStrategy.Backpressure)
+            .Via(sharedKillSwitch.Flow<int>())
+            .RunWith(lastSink, Materializer);
 
-            var error = new Exception("boom");
-            sharedKillSwitch.Abort(error);
+        DoSomethingElse();
 
-            AwaitCondition(() => last1.IsFaulted);
-            last1.Exception.GetBaseException().Should().Be(error);
+        sharedKillSwitch.Shutdown();
 
-            AwaitCondition(() => last2.IsFaulted);
-            last2.Exception.GetBaseException().Should().Be(error);
-            #endregion
-        }
+        AwaitCondition(() => last.IsCompleted);
+        AwaitCondition(() => delayedLast.IsCompleted);
+
+        #endregion
+    }
+
+    [Fact]
+    public void Shared_kill_switch_must_control_graph_completion_with_abort()
+    {
+        #region shared-abort
+
+        var countingSrc = Source.From(Enumerable.Range(1, int.MaxValue)).Delay(1.Seconds());
+        var lastSink = Sink.Last<int>();
+        var sharedKillSwitch = KillSwitches.Shared("my-kill-switch");
+
+        var last1 = countingSrc.Via(sharedKillSwitch.Flow<int>()).RunWith(lastSink, Materializer);
+        var last2 = countingSrc.Via(sharedKillSwitch.Flow<int>()).RunWith(lastSink, Materializer);
+
+        var error = new Exception("boom");
+        sharedKillSwitch.Abort(error);
+
+        AwaitCondition(() => last1.IsFaulted);
+        last1.Exception.GetBaseException().Should().Be(error);
+
+        AwaitCondition(() => last2.IsFaulted);
+        last2.Exception.GetBaseException().Should().Be(error);
+
+        #endregion
     }
 }

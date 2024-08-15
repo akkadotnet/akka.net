@@ -1,22 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <Description>Service Discovery for Akka.NET</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
-        <PackageTags>$(AkkaPackageTags)</PackageTags>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    </PropertyGroup>
+  <PropertyGroup>
+    <Description>Service Discovery for Akka.NET</Description>
+    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags)</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <None Remove="Resources\reference.conf"/>
-    </ItemGroup>
+  <ItemGroup>
+    <None Remove="Resources\reference.conf"/>
+  </ItemGroup>
 
-    <ItemGroup>
-        <EmbeddedResource Include="Resources\reference.conf"/>
-    </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\reference.conf"/>
+  </ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\Akka\Akka.csproj"/>
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Akka\Akka.csproj"/>
+  </ItemGroup>
 
 </Project>

@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="UdpSender.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="UdpSender.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -14,74 +14,73 @@ using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util.Internal;
 
-namespace Akka.IO
+namespace Akka.IO;
+
+using static Udp;
+
+internal class UdpSender : WithUdpSend, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
 {
-    using static Udp;
-    
-    class UdpSender : WithUdpSend, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    private readonly IActorRef _commander;
+
+    private readonly ILoggingAdapter _log = Context.GetLogger();
+    private readonly IEnumerable<Inet.SocketOption> _options;
+
+    private readonly Socket _socket;
+    private readonly UdpExt _udp;
+
+    public UdpSender(UdpExt udp, IActorRef commander, IEnumerable<Inet.SocketOption> options)
     {
-        private readonly UdpExt _udp;
-        private readonly IActorRef _commander;
-        private readonly IEnumerable<Inet.SocketOption> _options;
+        _udp = udp;
+        _commander = commander;
+        _options = options;
 
-        private readonly Socket _socket;
-
-        private readonly ILoggingAdapter _log = Context.GetLogger();
-        
-        public UdpSender(UdpExt udp, IActorRef commander, IEnumerable<Inet.SocketOption> options)
+        _socket = new Func<Socket>(() =>
         {
-            _udp = udp;
-            _commander = commander;
-            _options = options;
+            var socket = new Socket(SocketType.Dgram, ProtocolType.Udp) { Blocking = false };
+            _options.ForEach(x => x.BeforeDatagramBind(socket));
+            return socket;
+        })();
+    }
 
-            _socket = new Func<Socket>(() =>
-            {
-                var socket = new Socket(SocketType.Dgram, ProtocolType.Udp) { Blocking = false };
-                _options.ForEach(x => x.BeforeDatagramBind(socket));
-                return socket;
-            })();
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override UdpExt Udp => _udp;
+
+    protected override Socket Socket => _socket;
+
+    public override void AroundPreStart()
+    {
+        _options
+            .OfType<Inet.SocketOptionV2>()
+            .ForEach(x => x.AfterConnect(Socket));
+        _commander.Tell(SimpleSenderReady.Instance);
+        Context.Become(SendHandlers);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="message">TBD</param>
+    /// <returns>TBD</returns>
+    protected override bool Receive(object message)
+    {
+        throw new NotSupportedException();
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override void PostStop()
+    {
+        _log.Debug("Closing Socket after being stopped");
+        try
+        {
+            Socket.Dispose();
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override UdpExt Udp => _udp;
-
-        protected override Socket Socket => _socket;
-
-        public override void AroundPreStart()
+        catch (Exception e)
         {
-            _options
-                .OfType<Inet.SocketOptionV2>()
-                .ForEach(x => x.AfterConnect(Socket));
-            _commander.Tell(SimpleSenderReady.Instance);
-            Context.Become(SendHandlers);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
-        protected override bool Receive(object message)
-        {
-            throw new NotSupportedException();
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override void PostStop()
-        {
-            _log.Debug("Closing Socket after being stopped");
-            try
-            {
-                Socket.Dispose();
-            }
-            catch (Exception e)
-            {
-                _log.Debug("Error closing Socket: {0}", e);
-            }
+            _log.Debug("Error closing Socket: {0}", e);
         }
     }
 }

@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="DurableShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="DurableShardingSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
@@ -15,9 +15,9 @@ using Akka.Delivery;
 using Akka.Event;
 using Akka.Persistence.Delivery;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using FluentAssertions;
 using static Akka.Tests.Delivery.TestConsumer;
 
 namespace Akka.Cluster.Sharding.Tests.Delivery;
@@ -32,12 +32,12 @@ public class DurableShardingSpec : AkkaSpec
         akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
     ";
 
+    private int _idCount;
+
     public DurableShardingSpec(ITestOutputHelper output) : base(Config, output)
     {
         // TODO: add journal operations subscriptions, once that's properly supported in Akka.Persistence
     }
-
-    private int _idCount;
 
     private string ProducerId => $"p-{_idCount}";
 
@@ -70,7 +70,7 @@ public class DurableShardingSpec : AkkaSpec
                 {
                     // ShardingEnvelope is what is used by Akka.Cluster.Sharding.Delivery, and that msg is
                     // automatically handled by the ShardRegion, so we don't need to explicitly handle it here
-                    if(o is string str)
+                    if (o is string str)
                         return str;
                     return string.Empty;
                 }, o => o));
@@ -87,70 +87,67 @@ public class DurableShardingSpec : AkkaSpec
         // </SpawnDurableProducer>
 
         for (var i = 1; i <= 4; i++)
-        {
             (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>()).SendNextTo.Tell(
                 new ShardingEnvelope("entity-1", new Job($"msg-{i}")));
-            // TODO: need journal operations queries here to verify that the message was persisted
-        }
-
+        // TODO: need journal operations queries here to verify that the message was persisted
         var delivery1 = await consumerProbe.ExpectMsgAsync<JobDelivery>();
         delivery1.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
         // TODO: need journal operations queries here to verify that the Confirmed was persisted
-        
+
         var delivery2 = await consumerProbe.ExpectMsgAsync<JobDelivery>();
         delivery2.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
         // TODO: need journal operations queries here to verify that the Confirmed was persisted
 
         await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
-        
+
         // let the initial messages reach the ShardingConsumerController before stopping ShardingProducerController
         var delivery3 = await consumerProbe.ExpectMsgAsync<JobDelivery>();
         delivery3.Msg.Should().Be(new Job("msg-3"));
         delivery3.SeqNr.Should().Be(3);
 
         await Task.Delay(1000);
-        
+
         Sys.Log.Info("Stopping [{0}]", shardingProducerController);
         Watch(shardingProducerController);
         Sys.Stop(shardingProducerController);
         await ExpectTerminatedAsync(shardingProducerController);
-        
+
         var shardingProducerController2 =
             Sys.ActorOf(
                 ShardingProducerController.Create<Job>(ProducerId, sharding, durableQueueProps,
                     ShardingProducerController.Settings.Create(Sys)), $"shardingProducerController2-{_idCount}");
         shardingProducerController2.Tell(new ShardingProducerController.Start<Job>(producerProbe.Ref));
-        
+
         // delivery3 and delivery4 are still from old shardingProducerController, that were queued in ConsumerController
         delivery3.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
         // that confirmation goes to old dead shardingProducerController, and therefore not stored
         // TODO: need journal operations queries here to verify that the Confirmed WAS NOT persisted
-        
+
         var delivery4 = await consumerProbe.ExpectMsgAsync<JobDelivery>();
         delivery4.Msg.Should().Be(new Job("msg-4"));
         delivery4.SeqNr.Should().Be(4);
         delivery4.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
         // that confirmation goes to old dead shardingProducerController, and therefore not stored
         // TODO: need journal operations queries here to verify that the Confirmed WAS NOT persisted
-        
+
         // now the unconfirmed are re-delivered
         var redelivery3 = await consumerProbe.ExpectMsgAsync<JobDelivery>();
         redelivery3.Msg.Should().Be(new Job("msg-3"));
         redelivery3.SeqNr.Should().Be(1); // new ProducerController and there starting at 1
         redelivery3.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
         // TODO: need journal operations queries here to verify that the Confirmed was persisted
-        
+
         var redelivery4 = await consumerProbe.ExpectMsgAsync<JobDelivery>();
         redelivery4.Msg.Should().Be(new Job("msg-4"));
         redelivery4.SeqNr.Should().Be(2);
         redelivery4.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
         // TODO: need journal operations queries here to verify that the Confirmed was persisted
-        
+
         var next5 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
         next5.SendNextTo.Tell(new ShardingEnvelope("entity-1", new Job("msg-5")));
         // TODO: need journal operations queries here to verify that the message was persisted
-        
-        
+
+
         // the consumer controller may have stopped after msg-5, so allow for resend on timeout (10-15s)
         var delivery5 = await consumerProbe.ExpectMsgAsync<JobDelivery>(TimeSpan.FromSeconds(20));
         delivery5.Msg.Should().Be(new Job("msg-5"));
@@ -160,7 +157,8 @@ public class DurableShardingSpec : AkkaSpec
     }
 
     [Fact]
-    public async Task ReliableDelivery_with_sharding_and_durable_queue_must_reply_to_MessageWithConfirmation_after_storage()
+    public async Task
+        ReliableDelivery_with_sharding_and_durable_queue_must_reply_to_MessageWithConfirmation_after_storage()
     {
         await JoinCluster();
         NextId();
@@ -180,13 +178,13 @@ public class DurableShardingSpec : AkkaSpec
                     ShardingProducerController.Settings.Create(Sys)), $"shardingProducerController-{_idCount}");
         var producerProbe = CreateTestProbe();
         shardingProducerController.Tell(new ShardingProducerController.Start<Job>(producerProbe.Ref));
-        
+
         var replyProbe = CreateTestProbe();
         (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>())
             .AskNextTo(new ShardingProducerController.MessageWithConfirmation<Job>("entity-1", new Job("msg-1"),
                 replyProbe.Ref));
         await replyProbe.ExpectMsgAsync<Done>();
-        
+
         (await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>())
             .AskNextTo(new ShardingProducerController.MessageWithConfirmation<Job>("entity-2", new Job("msg-2"),
                 replyProbe.Ref));
@@ -195,8 +193,8 @@ public class DurableShardingSpec : AkkaSpec
 
     private class Consumer : ReceiveActor
     {
-        private readonly TestProbe _consumerProbe;
         private readonly IActorRef _consumerController;
+        private readonly TestProbe _consumerProbe;
         private readonly IActorRef _deliveryAdapter;
 
         public Consumer(IActorRef consumerController, TestProbe consumerProbe)

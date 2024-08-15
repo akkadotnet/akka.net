@@ -5,22 +5,22 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
-    <ProjectReference Include="..\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
-    <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj" />
-    <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
-    <ProjectReference Include="..\Akka.DistributedData.LightningDB\Akka.DistributedData.LightningDB.csproj" />
+    <ProjectReference Include="..\..\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj"/>
+    <ProjectReference Include="..\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj"/>
+    <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj"/>
+    <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj"/>
+    <ProjectReference Include="..\Akka.DistributedData.LightningDB\Akka.DistributedData.LightningDB.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-      <PackageReference Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)" />
-      <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-      <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
-      <PackageReference Include="xunit" Version="$(XunitVersion)"/>
-      <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVersion)">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
+    <PackageReference Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)"/>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)"/>
+    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)"/>
+    <PackageReference Include="xunit" Version="$(XunitVersion)"/>
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

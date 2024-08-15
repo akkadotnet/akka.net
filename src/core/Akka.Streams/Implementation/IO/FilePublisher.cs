@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="FilePublisher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="FilePublisher.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
@@ -18,206 +18,207 @@ using Akka.Streams.IO;
 
 #pragma warning disable 1587
 
-namespace Akka.Streams.Implementation.IO
+namespace Akka.Streams.Implementation.IO;
+
+/// <summary>
+///     INTERNAL API
+/// </summary>
+internal sealed class FilePublisher : Actors.ActorPublisher<ByteString>
 {
+    private readonly byte[] _buffer;
+    private readonly int _chunkSize;
+    private readonly TaskCompletionSource<IOResult> _completionPromise;
+
+    private readonly FileInfo _f;
+    private readonly ILoggingAdapter _log;
+    private readonly int _maxBuffer;
+    private readonly long _startPosition;
+    private IImmutableList<ByteString> _availableChunks = ImmutableList<ByteString>.Empty;
+    private FileStream _chan;
+    private long _eofReachedAtOffset = long.MinValue;
+    private long _readBytesTotal;
+
     /// <summary>
-    /// INTERNAL API
+    ///     TBD
     /// </summary>
-    internal sealed class FilePublisher : Actors.ActorPublisher<ByteString>
+    /// <param name="f">TBD</param>
+    /// <param name="completionPromise">TBD</param>
+    /// <param name="chunkSize">TBD</param>
+    /// <param name="startPosition">TBD</param>
+    /// <param name="maxBuffer">TBD</param>
+    /// If this changes you must also change
+    /// <see cref="FilePublisher.Props" />
+    /// as well!
+    public FilePublisher(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize,
+        long startPosition, int maxBuffer)
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="f">TBD</param>
-        /// <param name="completionPromise">TBD</param>
-        /// <param name="chunkSize">TBD</param>
-        /// <param name="startPosition">TBD</param>
-        /// <param name="initialBuffer">TBD</param>
-        /// <param name="maxBuffer">TBD</param>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown when one of the following conditions is met.
-        /// 
-        /// <ul>
-        /// <li>The specified <paramref name="chunkSize"/> is less than or equal to zero.</li>
-        /// <li>The specified <paramref name="startPosition"/> is less than zero</li>
-        /// <li>The specified <paramref name="initialBuffer"/> is less than or equal to zero.</li>
-        /// <li>The specified <paramref name="maxBuffer"/> is less than the specified <paramref name="initialBuffer"/>.</li>
-        /// </ul>
-        /// </exception>
-        /// <returns>TBD</returns>
-        public static Props Props(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize,
-            long startPosition, int initialBuffer, int maxBuffer)
-        {
-            if (chunkSize <= 0)
-                throw new ArgumentException($"chunkSize must be > 0 (was {chunkSize})", nameof(chunkSize));
-            if(startPosition < 0)
-                throw new ArgumentException($"startPosition must be >= 0 (was {startPosition})", nameof(startPosition));
-            if (initialBuffer <= 0)
-                throw new ArgumentException($"initialBuffer must be > 0 (was {initialBuffer})", nameof(initialBuffer));
-            if (maxBuffer < initialBuffer)
-                throw new ArgumentException($"maxBuffer must be >= initialBuffer (was {maxBuffer})", nameof(maxBuffer));
+        _f = f;
+        _completionPromise = completionPromise;
+        _chunkSize = chunkSize;
+        _startPosition = startPosition;
+        _maxBuffer = maxBuffer;
 
-            return Actor.Props.Create<FilePublisher>( f, completionPromise, chunkSize, startPosition, maxBuffer)
-                .WithDeploy(Deploy.Local);
+        _log = Context.GetLogger();
+        _buffer = new byte[chunkSize];
+    }
+
+    private bool EofEncountered => _eofReachedAtOffset != long.MinValue;
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="f">TBD</param>
+    /// <param name="completionPromise">TBD</param>
+    /// <param name="chunkSize">TBD</param>
+    /// <param name="startPosition">TBD</param>
+    /// <param name="initialBuffer">TBD</param>
+    /// <param name="maxBuffer">TBD</param>
+    /// <exception cref="ArgumentException">
+    ///     This exception is thrown when one of the following conditions is met.
+    ///     <ul>
+    ///         <li>The specified <paramref name="chunkSize" /> is less than or equal to zero.</li>
+    ///         <li>The specified <paramref name="startPosition" /> is less than zero</li>
+    ///         <li>The specified <paramref name="initialBuffer" /> is less than or equal to zero.</li>
+    ///         <li>The specified <paramref name="maxBuffer" /> is less than the specified <paramref name="initialBuffer" />.</li>
+    ///     </ul>
+    /// </exception>
+    /// <returns>TBD</returns>
+    public static Props Props(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize,
+        long startPosition, int initialBuffer, int maxBuffer)
+    {
+        if (chunkSize <= 0)
+            throw new ArgumentException($"chunkSize must be > 0 (was {chunkSize})", nameof(chunkSize));
+        if (startPosition < 0)
+            throw new ArgumentException($"startPosition must be >= 0 (was {startPosition})", nameof(startPosition));
+        if (initialBuffer <= 0)
+            throw new ArgumentException($"initialBuffer must be > 0 (was {initialBuffer})", nameof(initialBuffer));
+        if (maxBuffer < initialBuffer)
+            throw new ArgumentException($"maxBuffer must be >= initialBuffer (was {maxBuffer})", nameof(maxBuffer));
+
+        return Actor.Props.Create<FilePublisher>(f, completionPromise, chunkSize, startPosition, maxBuffer)
+            .WithDeploy(Deploy.Local);
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override void PreStart()
+    {
+        try
+        {
+            // Allow opening the same file for reading multiple times
+            _chan = _f.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (_startPosition > 0)
+                _chan.Position = _startPosition;
+        }
+        catch (Exception ex)
+        {
+            _completionPromise.TrySetResult(IOResult.Failed(0, ex));
+            OnErrorThenStop(ex);
         }
 
-        private readonly struct Continue : IDeadLetterSuppression
+        base.PreStart();
+    }
+
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    /// <param name="message">TBD</param>
+    /// <returns>TBD</returns>
+    protected override bool Receive(object message)
+    {
+        switch (message)
         {
-            public static readonly Continue Instance = new();
+            case Request _:
+            case Continue _:
+                ReadAndSignal(_maxBuffer);
+                return true;
+            case Actors.Cancel _:
+                Context.Stop(Self);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void ReadAndSignal(int maxReadAhead)
+    {
+        if (IsActive)
+        {
+            // Write previously buffered, then refill buffer
+            _availableChunks = ReadAhead(maxReadAhead, SignalOnNexts(_availableChunks));
+
+            if (TotalDemand > 0 && IsActive)
+                Self.Tell(Continue.Instance);
+        }
+    }
+
+    private IImmutableList<ByteString> SignalOnNexts(IImmutableList<ByteString> chunks)
+    {
+        if (chunks.Count != 0 && TotalDemand > 0)
+        {
+            OnNext(chunks.First());
+            return SignalOnNexts(chunks.RemoveAt(0));
         }
 
-        private readonly FileInfo _f;
-        private readonly TaskCompletionSource<IOResult> _completionPromise;
-        private readonly int _chunkSize;
-        private readonly long _startPosition;
-        private readonly int _maxBuffer;
-        private readonly byte[] _buffer;
-        private readonly ILoggingAdapter _log;
-        private long _eofReachedAtOffset = long.MinValue;
-        private long _readBytesTotal;
-        private IImmutableList<ByteString> _availableChunks = ImmutableList<ByteString>.Empty;
-        private FileStream _chan;
+        if (chunks.Count == 0 && EofEncountered)
+            OnCompleteThenStop();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="f">TBD</param>
-        /// <param name="completionPromise">TBD</param>
-        /// <param name="chunkSize">TBD</param>
-        /// <param name="startPosition">TBD</param>
-        /// <param name="maxBuffer">TBD</param>
-        /// If this changes you must also change <see cref="FilePublisher.Props"/> as well!
-        public FilePublisher(FileInfo f, TaskCompletionSource<IOResult> completionPromise, int chunkSize, long startPosition, int maxBuffer)
-        {
-            _f = f;
-            _completionPromise = completionPromise;
-            _chunkSize = chunkSize;
-            _startPosition = startPosition;
-            _maxBuffer = maxBuffer;
+        return chunks;
+    }
 
-            _log = Context.GetLogger();
-            _buffer = new byte[chunkSize];
-        }
-
-        private bool EofEncountered => _eofReachedAtOffset != long.MinValue;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override void PreStart()
-        {
+    //BLOCKING IO READ
+    private IImmutableList<ByteString> ReadAhead(int maxChunks, IImmutableList<ByteString> chunks)
+    {
+        if (chunks.Count <= maxChunks && IsActive)
             try
             {
-                // Allow opening the same file for reading multiple times
-                _chan = _f.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
-                if (_startPosition > 0)
-                    _chan.Position = _startPosition;
+                var readBytes = _chan.Read(_buffer, 0, _chunkSize);
+
+                if (readBytes == 0)
+                {
+                    //EOF
+                    _eofReachedAtOffset = _chan.Position;
+                    _log.Debug(
+                        $"No more bytes available to read (got 0 from read), marking final bytes of file @ {_eofReachedAtOffset}");
+                    return chunks;
+                }
+
+                _readBytesTotal += readBytes;
+                var newChunks = chunks.Add(ByteString.CopyFrom(_buffer, 0, readBytes));
+                return ReadAhead(maxChunks, newChunks);
             }
             catch (Exception ex)
             {
-                _completionPromise.TrySetResult(IOResult.Failed(0, ex));
                 OnErrorThenStop(ex);
+                //read failed, we're done here
+                return ImmutableList<ByteString>.Empty;
             }
 
-            base.PreStart();
-        }
+        return chunks;
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
-        protected override bool Receive(object message)
+    /// <summary>
+    ///     TBD
+    /// </summary>
+    protected override void PostStop()
+    {
+        base.PostStop();
+
+        try
         {
-            switch (message)
-            {
-                case Request _:
-                case Continue _:
-                    ReadAndSignal(_maxBuffer);
-                    return true;
-                case Actors.Cancel _:
-                    Context.Stop(Self);
-                    return true;
-                default:
-                    return false;
-            }
+            _chan?.Dispose();
         }
-
-        private void ReadAndSignal(int maxReadAhead)
+        catch (Exception ex)
         {
-            if (IsActive)
-            {
-                // Write previously buffered, then refill buffer
-                _availableChunks = ReadAhead(maxReadAhead, SignalOnNexts(_availableChunks));
-
-                if (TotalDemand > 0 && IsActive)
-                    Self.Tell(Continue.Instance);
-            }
+            _completionPromise.TrySetResult(IOResult.Failed(_readBytesTotal, ex));
         }
 
-        private IImmutableList<ByteString> SignalOnNexts(IImmutableList<ByteString> chunks)
-        {
-            if (chunks.Count != 0 && TotalDemand > 0)
-            {
-                OnNext(chunks.First());
-                return SignalOnNexts(chunks.RemoveAt(0));
-            }
+        _completionPromise.TrySetResult(IOResult.Success(_readBytesTotal));
+    }
 
-            if (chunks.Count == 0 && EofEncountered)
-                OnCompleteThenStop();
-
-            return chunks;
-        }
-
-        //BLOCKING IO READ
-        private IImmutableList<ByteString> ReadAhead(int maxChunks, IImmutableList<ByteString> chunks)
-        {
-            if (chunks.Count <= maxChunks && IsActive)
-            {
-                try
-                {
-                    var readBytes = _chan.Read(_buffer, 0, _chunkSize);
-
-                    if (readBytes == 0)
-                    {
-                        //EOF
-                        _eofReachedAtOffset = _chan.Position;
-                        _log.Debug($"No more bytes available to read (got 0 from read), marking final bytes of file @ {_eofReachedAtOffset}");
-                        return chunks;
-                    }
-
-                    _readBytesTotal += readBytes;
-                    var newChunks = chunks.Add(ByteString.CopyFrom(_buffer, 0, readBytes));
-                    return ReadAhead(maxChunks, newChunks);
-                }
-                catch (Exception ex)
-                {
-                    OnErrorThenStop(ex);
-                    //read failed, we're done here
-                    return ImmutableList<ByteString>.Empty;
-                }
-            }
-
-            return chunks;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected override void PostStop()
-        {
-            base.PostStop();
-
-            try
-            {
-                _chan?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                _completionPromise.TrySetResult(IOResult.Failed(_readBytesTotal, ex));
-            }
-
-            _completionPromise.TrySetResult(IOResult.Success(_readBytesTotal));
-        }
+    private readonly struct Continue : IDeadLetterSuppression
+    {
+        public static readonly Continue Instance = new();
     }
 }

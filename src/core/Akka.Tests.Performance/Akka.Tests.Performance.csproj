@@ -7,11 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Akka\Akka.csproj" />
-    <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
+    <ProjectReference Include="..\Akka\Akka.csproj"/>
+    <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NBench" Version="$(NBenchVersion)" />
+    <PackageReference Include="NBench" Version="$(NBenchVersion)"/>
   </ItemGroup>
 </Project>

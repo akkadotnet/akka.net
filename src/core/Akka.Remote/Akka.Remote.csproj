@@ -1,30 +1,30 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <Description>Remoting support for Akka.NET. Allows actors to communicate over the network.</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
-        <PackageTags>$(AkkaPackageTags);network</PackageTags>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    </PropertyGroup>
-    <ItemGroup>
-        <EmbeddedResource Include="Configuration\Remote.conf" />
-        <ProjectReference Include="..\Akka\Akka.csproj" />
-    </ItemGroup>
-    <ItemGroup>
-        <PackageReference Include="DotNetty.Handlers" Version="0.7.6" />
-        <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
-        <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-    </ItemGroup>
+  <PropertyGroup>
+    <Description>Remoting support for Akka.NET. Allows actors to communicate over the network.</Description>
+    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags);network</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Configuration\Remote.conf"/>
+    <ProjectReference Include="..\Akka\Akka.csproj"/>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="DotNetty.Handlers" Version="0.7.6"/>
+    <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)"/>
+    <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Access="internal" Include="../../protobuf/ContainerFormats.proto" />
-    <Protobuf Access="internal" Include="../../protobuf/SystemMessageFormats.proto" />
-    <Protobuf Access="internal" Include="../../protobuf/WireFormats.proto" />
+    <Protobuf Access="internal" Include="../../protobuf/ContainerFormats.proto"/>
+    <Protobuf Access="internal" Include="../../protobuf/SystemMessageFormats.proto"/>
+    <Protobuf Access="internal" Include="../../protobuf/WireFormats.proto"/>
 
   </ItemGroup>
-    <PropertyGroup>
-        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-    </PropertyGroup>
+  <PropertyGroup>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
 </Project>

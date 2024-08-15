@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Settings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Settings.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Data;
@@ -14,66 +14,16 @@ using Akka.Persistence.Sql.Common.Journal;
 namespace Akka.Persistence.Sql.Common
 {
     /// <summary>
-    /// Configuration settings representation targeting Sql Server journal actor.
+    ///     Configuration settings representation targeting Sql Server journal actor.
     /// </summary>
     public class JournalSettings
     {
         /// <summary>
-        /// Connection string used to access a persistent SQL Server instance.
-        /// </summary>
-        public string ConnectionString { get; private set; }
-
-        /// <summary>
-        /// Name of the connection string stored in &lt;connectionStrings&gt; section of *.config file.
-        /// </summary>
-        public string ConnectionStringName { get; private set; }
-
-        /// <summary>
-        /// Connection timeout for SQL Server related operations.
-        /// </summary>
-        public TimeSpan ConnectionTimeout { get; private set; }
-        
-        /// <summary>
-        /// Name of the table corresponding to event journal.
-        /// </summary>
-        public string JournalTableName { get; private set; }
-
-        /// <summary>
-        /// Name of the schema, where journal table resides.
-        /// </summary>
-        public string SchemaName { get; private set; }
-
-        /// <summary>
-        /// Name of the table corresponding to event journal persistenceId and sequenceNr metadata.
-        /// </summary>
-        public string MetaTableName { get; private set; }
-
-        /// <summary>
-        /// Fully qualified type name for <see cref="ITimestampProvider"/> used to generate journal timestamps.
-        /// </summary>
-        public string TimestampProvider { get; set; }
-
-        /// <summary>
-        /// Flag determining in in case of event journal or metadata table missing, they should be automatically initialized.
-        /// </summary>
-        public bool AutoInitialize { get; private set; }
-        
-        /// <summary>
-        /// Isolation level of transactions used during read query execution.
-        /// </summary>
-        public IsolationLevel ReadIsolationLevel { get; }
-
-        /// <summary>
-        /// Isolation level of transactions used during write query execution.
-        /// </summary>
-        public IsolationLevel WriteIsolationLevel { get; }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="JournalSettings"/> class.
+        ///     Initializes a new instance of the <see cref="JournalSettings" /> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the settings.</param>
         /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="config"/> is undefined.
+        ///     This exception is thrown when the specified <paramref name="config" /> is undefined.
         /// </exception>
         public JournalSettings(Config config)
         {
@@ -83,7 +33,7 @@ namespace Akka.Persistence.Sql.Common
             ConnectionString = config.GetString("connection-string");
             ConnectionStringName = config.GetString("connection-string-name");
             ConnectionTimeout = config.GetTimeSpan("connection-timeout");
-            SchemaName = config.GetString("schema-name", null);
+            SchemaName = config.GetString("schema-name");
             JournalTableName = config.GetString("table-name");
             MetaTableName = config.GetString("metadata-table-name");
             TimestampProvider = config.GetString("timestamp-provider");
@@ -92,65 +42,69 @@ namespace Akka.Persistence.Sql.Common
             ReadIsolationLevel = config.GetIsolationLevel("read-isolation-level");
             WriteIsolationLevel = config.GetIsolationLevel("write-isolation-level");
         }
-    }
 
-    /// <summary>
-    /// Configuration settings representation targeting Sql Server snapshot store actor.
-    /// </summary>
-    public class SnapshotStoreSettings
-    {
         /// <summary>
-        /// Connection string used to access a persistent SQL Server instance.
+        ///     Connection string used to access a persistent SQL Server instance.
         /// </summary>
         public string ConnectionString { get; private set; }
 
         /// <summary>
-        /// Name of the connection string stored in &lt;connectionStrings&gt; section of *.config file.
+        ///     Name of the connection string stored in &lt;connectionStrings&gt; section of *.config file.
         /// </summary>
         public string ConnectionStringName { get; private set; }
 
         /// <summary>
-        /// Connection timeout for SQL Server related operations.
+        ///     Connection timeout for SQL Server related operations.
         /// </summary>
         public TimeSpan ConnectionTimeout { get; private set; }
 
         /// <summary>
-        /// Schema name, where table corresponding to snapshot store is placed.
+        ///     Name of the table corresponding to event journal.
+        /// </summary>
+        public string JournalTableName { get; private set; }
+
+        /// <summary>
+        ///     Name of the schema, where journal table resides.
         /// </summary>
         public string SchemaName { get; private set; }
 
         /// <summary>
-        /// Name of the table corresponding to snapshot store.
+        ///     Name of the table corresponding to event journal persistenceId and sequenceNr metadata.
         /// </summary>
-        public string TableName { get; private set; }
+        public string MetaTableName { get; private set; }
 
         /// <summary>
-        /// Flag determining in in case of snapshot store table missing, they should be automatically initialized.
+        ///     Fully qualified type name for <see cref="ITimestampProvider" /> used to generate journal timestamps.
+        /// </summary>
+        public string TimestampProvider { get; set; }
+
+        /// <summary>
+        ///     Flag determining in in case of event journal or metadata table missing, they should be automatically initialized.
         /// </summary>
         public bool AutoInitialize { get; private set; }
 
         /// <summary>
-        /// The default serializer being used if no type match override is specified
-        /// </summary>
-        [Obsolete(message: "This property should never be used, use the default `System.Object` serializer instead")]
-        public string DefaultSerializer { get; private set; }
-        
-        /// <summary>
-        /// Isolation level of transactions used during read query execution.
+        ///     Isolation level of transactions used during read query execution.
         /// </summary>
         public IsolationLevel ReadIsolationLevel { get; }
 
         /// <summary>
-        /// Isolation level of transactions used during write query execution.
+        ///     Isolation level of transactions used during write query execution.
         /// </summary>
         public IsolationLevel WriteIsolationLevel { get; }
+    }
 
+    /// <summary>
+    ///     Configuration settings representation targeting Sql Server snapshot store actor.
+    /// </summary>
+    public class SnapshotStoreSettings
+    {
         /// <summary>
-        /// Initializes a new instance of the <see cref="SnapshotStoreSettings"/> class.
+        ///     Initializes a new instance of the <see cref="SnapshotStoreSettings" /> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the settings.</param>
         /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="config"/> is undefined.
+        ///     This exception is thrown when the specified <paramref name="config" /> is undefined.
         /// </exception>
         public SnapshotStoreSettings(Config config)
         {
@@ -160,11 +114,11 @@ namespace Akka.Persistence.Sql.Common
             ConnectionString = config.GetString("connection-string");
             ConnectionStringName = config.GetString("connection-string-name");
             ConnectionTimeout = config.GetTimeSpan("connection-timeout");
-            SchemaName = config.GetString("schema-name", null);
+            SchemaName = config.GetString("schema-name");
             TableName = config.GetString("table-name");
             AutoInitialize = config.GetBoolean("auto-initialize");
 #pragma warning disable CS0618
-            DefaultSerializer = config.GetString("serializer", null);
+            DefaultSerializer = config.GetString("serializer");
 #pragma warning restore CS0618
 
             ReadIsolationLevel = config.GetIsolationLevel("read-isolation-level");
@@ -172,7 +126,53 @@ namespace Akka.Persistence.Sql.Common
         }
 
         /// <summary>
-        /// TBD
+        ///     Connection string used to access a persistent SQL Server instance.
+        /// </summary>
+        public string ConnectionString { get; private set; }
+
+        /// <summary>
+        ///     Name of the connection string stored in &lt;connectionStrings&gt; section of *.config file.
+        /// </summary>
+        public string ConnectionStringName { get; private set; }
+
+        /// <summary>
+        ///     Connection timeout for SQL Server related operations.
+        /// </summary>
+        public TimeSpan ConnectionTimeout { get; private set; }
+
+        /// <summary>
+        ///     Schema name, where table corresponding to snapshot store is placed.
+        /// </summary>
+        public string SchemaName { get; }
+
+        /// <summary>
+        ///     Name of the table corresponding to snapshot store.
+        /// </summary>
+        public string TableName { get; }
+
+        /// <summary>
+        ///     Flag determining in in case of snapshot store table missing, they should be automatically initialized.
+        /// </summary>
+        public bool AutoInitialize { get; private set; }
+
+        /// <summary>
+        ///     The default serializer being used if no type match override is specified
+        /// </summary>
+        [Obsolete("This property should never be used, use the default `System.Object` serializer instead")]
+        public string DefaultSerializer { get; private set; }
+
+        /// <summary>
+        ///     Isolation level of transactions used during read query execution.
+        /// </summary>
+        public IsolationLevel ReadIsolationLevel { get; }
+
+        /// <summary>
+        ///     Isolation level of transactions used during write query execution.
+        /// </summary>
+        public IsolationLevel WriteIsolationLevel { get; }
+
+        /// <summary>
+        ///     TBD
         /// </summary>
         public string FullTableName => string.IsNullOrEmpty(SchemaName) ? TableName : SchemaName + "." + TableName;
     }

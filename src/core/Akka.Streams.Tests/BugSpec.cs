@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="BugSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="BugSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -20,44 +20,44 @@ using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Streams.Tests
+namespace Akka.Streams.Tests;
+
+public class BugSpec : AkkaSpec
 {
-    public class BugSpec : AkkaSpec
+    public BugSpec(ITestOutputHelper helper) : base(helper)
     {
-        private ActorMaterializer Materializer { get; }
+        Materializer = ActorMaterializer.Create(Sys);
+    }
 
-        public BugSpec(ITestOutputHelper helper) : base(helper)
-        {
-            Materializer = ActorMaterializer.Create(Sys);
-        }
+    private ActorMaterializer Materializer { get; }
 
-        [Fact]
-        public async Task Issue_4580_EmptyByteStringCausesPipeToBeClosed()
-        {
-            var serverPipe = new NamedPipeServerStream("unique-pipe-name", PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 20, 20);
-            var serverPipeConnectionTask = serverPipe.WaitForConnectionAsync();
+    [Fact]
+    public async Task Issue_4580_EmptyByteStringCausesPipeToBeClosed()
+    {
+        var serverPipe = new NamedPipeServerStream("unique-pipe-name", PipeDirection.Out, 1, PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous, 20, 20);
+        var serverPipeConnectionTask = serverPipe.WaitForConnectionAsync();
 
-            var clientPipe = new NamedPipeClientStream(".", "unique-pipe-name", PipeDirection.In, PipeOptions.Asynchronous);
-            await clientPipe.ConnectAsync();
+        var clientPipe = new NamedPipeClientStream(".", "unique-pipe-name", PipeDirection.In, PipeOptions.Asynchronous);
+        await clientPipe.ConnectAsync();
 
-            await serverPipeConnectionTask;
-            var cnt = 0;
+        await serverPipeConnectionTask;
+        var cnt = 0;
 
-            var writeToStreamTask = Source.From(Enumerable.Range(0, 100))
-                .Select(i => ByteString.FromString(i.ToString()))
-                .Select(bs => cnt++ == 10 ? ByteString.Empty : bs) // ByteString.Empty.ToArray() failed in original bug
-                .ToMaterialized(StreamConverters.FromOutputStream(() => serverPipe), Keep.Right)
-                .Run(Materializer);
+        var writeToStreamTask = Source.From(Enumerable.Range(0, 100))
+            .Select(i => ByteString.FromString(i.ToString()))
+            .Select(bs => cnt++ == 10 ? ByteString.Empty : bs) // ByteString.Empty.ToArray() failed in original bug
+            .ToMaterialized(StreamConverters.FromOutputStream(() => serverPipe), Keep.Right)
+            .Run(Materializer);
 
-            var result = new List<string>();
-            var readFromStreamTask = StreamConverters.FromInputStream(() => clientPipe, 1)
-                .RunForeach(bs => result.Add(bs.ToString(Encoding.ASCII)), Materializer);
+        var result = new List<string>();
+        var readFromStreamTask = StreamConverters.FromInputStream(() => clientPipe, 1)
+            .RunForeach(bs => result.Add(bs.ToString(Encoding.ASCII)), Materializer);
 
-            await Task.WhenAll(writeToStreamTask, readFromStreamTask).ShouldCompleteWithin(3.Seconds());
+        await Task.WhenAll(writeToStreamTask, readFromStreamTask).ShouldCompleteWithin(3.Seconds());
 
-            var expected = Enumerable.Range(0, 100)
-                .SelectMany(i => i == 10 ? Array.Empty<string>() : i.ToString().Select(c => c.ToString()));
-            expected.Should().BeEquivalentTo(result, options => options.WithStrictOrdering());
-        }
+        var expected = Enumerable.Range(0, 100)
+            .SelectMany(i => i == 10 ? Array.Empty<string>() : i.ToString().Select(c => c.ToString()));
+        expected.Should().BeEquivalentTo(result, options => options.WithStrictOrdering());
     }
 }

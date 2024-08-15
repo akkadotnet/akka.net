@@ -1,25 +1,32 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="SqliteCurrentPersistenceIdsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SqliteCurrentPersistenceIdsSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Configuration;
 using Akka.Persistence.Query;
 using Akka.Persistence.Query.Sql;
 using Akka.Persistence.TCK.Query;
 using Akka.Util.Internal;
-using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Sqlite.Tests.Query
-{
-    public class SqliteCurrentPersistenceIdsSpec : CurrentPersistenceIdsSpec
-    {
-        public static readonly AtomicCounter Counter = new(0);
+namespace Akka.Persistence.Sqlite.Tests.Query;
 
-        public static Config Config(int id) => ConfigurationFactory.ParseString($@"
+public class SqliteCurrentPersistenceIdsSpec : CurrentPersistenceIdsSpec
+{
+    public static readonly AtomicCounter Counter = new(0);
+
+    public SqliteCurrentPersistenceIdsSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()),
+        nameof(SqliteCurrentPersistenceIdsSpec), output)
+    {
+        ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
+    }
+
+    public static Config Config(int id)
+    {
+        return ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
             akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
             akka.persistence.query.journal.sql.refresh-interval = 1s
@@ -33,10 +40,5 @@ namespace Akka.Persistence.Sqlite.Tests.Query
             }}
             akka.test.single-expect-default = 10s")
             .WithFallback(SqlReadJournal.DefaultConfiguration());
-
-        public SqliteCurrentPersistenceIdsSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(SqliteCurrentPersistenceIdsSpec), output)
-        {
-            ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
-        }
     }
 }

@@ -1,22 +1,21 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ISnapshotStoreInterceptor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ISnapshotStoreInterceptor.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
-namespace Akka.Persistence.TestKit
+using System.Threading.Tasks;
+
+namespace Akka.Persistence.TestKit;
+
+/// <summary>
+///     Interface to object which will intercept all action in <see cref="TestSnapshotStore" />.
+/// </summary>
+public interface ISnapshotStoreInterceptor
 {
-    using System.Threading.Tasks;
-
     /// <summary>
-    ///     Interface to object which will intercept all action in <see cref="TestSnapshotStore"/>.
+    ///     Method will be called for each load, save or delete attempt in <see cref="TestSnapshotStore" />.
     /// </summary>
-    public interface ISnapshotStoreInterceptor
-    {
-        /// <summary>
-        ///     Method will be called for each load, save or delete attempt in <see cref="TestSnapshotStore"/>.
-        /// </summary>
-        Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria);
-    }
+    Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria);
 }

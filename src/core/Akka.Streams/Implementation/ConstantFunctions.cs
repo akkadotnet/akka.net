@@ -1,24 +1,26 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ConstantFunctions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="ConstantFunctions.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using System;
 
-namespace Akka.Streams.Implementation
+namespace Akka.Streams.Implementation;
+
+/// <summary>
+///     TBD
+/// </summary>
+internal static class ConstantFunctions
 {
     /// <summary>
-    /// TBD
+    ///     TBD
     /// </summary>
-    internal static class ConstantFunctions
+    /// <typeparam name="T">TBD</typeparam>
+    /// <returns>TBD</returns>
+    public static Func<T, long> OneLong<T>()
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <returns>TBD</returns>
-        public static Func<T, long> OneLong<T>() => _ => 1L;
+        return _ => 1L;
     }
 }

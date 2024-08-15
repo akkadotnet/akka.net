@@ -10,11 +10,10 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
-using Akka.Routing;
 using Akka.TestKit;
 using FluentAssertions;
-using FsCheck;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,33 +21,30 @@ namespace Akka.Tests.Actor;
 
 public class TimerStartupCrashBugFixSpec : AkkaSpec
 {
-    public TimerStartupCrashBugFixSpec(ITestOutputHelper output) : base(output: output, Akka.Configuration.Config.Empty)
+    public TimerStartupCrashBugFixSpec(ITestOutputHelper output) : base(output, Config.Empty)
     {
         Sys.Log.Info("Starting TimerStartupCrashBugFixSpec");
     }
 
+    [Fact]
+    public async Task TimerActor_should_not_crash_on_startup()
+    {
+        var actors = Enumerable.Range(0, 10).Select(c => Sys.ActorOf(Props.Create(() => new TimerActor()))).ToList();
+        var watchTasks = actors.Select(actor => actor.WatchAsync()).ToList();
+
+        var i = 0;
+        while (i == 0)
+            // guarantee that the actor has started and processed a message from scheduler
+            i = await actors[0].Ask<int>(TimerActor.Check.Instance);
+
+
+        watchTasks.Any(c => c.IsCompleted).Should().BeFalse();
+    }
+
     private class TimerActor : UntypedActor, IWithTimers
     {
-        public sealed class Check
-        {
-            public static Check Instance { get; } = new Check();
-
-            private Check()
-            {
-            }
-        }
-
-        public sealed class Hit
-        {
-            public static Hit Instance { get; } = new Hit();
-
-            private Hit()
-            {
-            }
-        }
-
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        private int _counter = 0;
+        private int _counter;
         public ITimerScheduler? Timers { get; set; } = null;
 
         protected override void PreStart()
@@ -76,22 +72,23 @@ public class TimerStartupCrashBugFixSpec : AkkaSpec
             _log.Error(reason, "Not restarting - shutting down");
             Context.Stop(Self);
         }
-    }
 
-    [Fact]
-    public async Task TimerActor_should_not_crash_on_startup()
-    {
-        var actors = Enumerable.Range(0, 10).Select(c => Sys.ActorOf(Props.Create(() => new TimerActor()))).ToList();
-        var watchTasks = actors.Select(actor => actor.WatchAsync()).ToList();
-
-        var i = 0;
-        while (i == 0)
+        public sealed class Check
         {
-            // guarantee that the actor has started and processed a message from scheduler
-            i = await actors[0].Ask<int>(TimerActor.Check.Instance);
+            private Check()
+            {
+            }
+
+            public static Check Instance { get; } = new();
         }
 
+        public sealed class Hit
+        {
+            private Hit()
+            {
+            }
 
-        watchTasks.Any(c => c.IsCompleted).Should().BeFalse();
+            public static Hit Instance { get; } = new();
+        }
     }
 }

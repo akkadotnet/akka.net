@@ -1,38 +1,39 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Defer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
+//  <copyright file="Defer.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Persistence;
 
-namespace DocsExamples.Persistence.PersistentActor
+namespace DocsExamples.Persistence.PersistentActor;
+
+public static class Defer
 {
-    public static class Defer
+    #region Defer
+
+    public class MyPersistentActor : UntypedPersistentActor
     {
-        #region Defer
-        public class MyPersistentActor : UntypedPersistentActor
+        public override string PersistenceId => "my-stable-persistence-id";
+
+        protected override void OnRecover(object message)
         {
-            public override string PersistenceId => "my-stable-persistence-id";
+            // handle recovery here
+        }
 
-            protected override void OnRecover(object message)
+        protected override void OnCommand(object message)
+        {
+            if (message is string c)
             {
-                // handle recovery here
-            }
-
-            protected override void OnCommand(object message)
-            {
-                if (message is string c)
-                {
-                    Sender.Tell(c);
-                    PersistAsync($"evt-{c}-1", e => Sender.Tell(e));
-                    PersistAsync($"evt-{c}-2", e => Sender.Tell(e));
-                    DeferAsync($"evt-{c}-3", e => Sender.Tell(e));
-                }
+                Sender.Tell(c);
+                PersistAsync($"evt-{c}-1", e => Sender.Tell(e));
+                PersistAsync($"evt-{c}-2", e => Sender.Tell(e));
+                DeferAsync($"evt-{c}-3", e => Sender.Tell(e));
             }
         }
-        #endregion
     }
+
+    #endregion
 }

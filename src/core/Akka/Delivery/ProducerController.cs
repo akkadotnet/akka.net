@@ -1,9 +1,10 @@
 ﻿// -----------------------------------------------------------------------
 //  <copyright file="ProducerController.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using System.Threading;
@@ -91,30 +92,6 @@ public static class ProducerController
     {
         public const int DefaultDeliveryBufferSize = 128;
 
-        public static Settings Create(ActorSystem actorSystem)
-        {
-            return Create(actorSystem.Settings.Config.GetConfig("akka.reliable-delivery.producer-controller")!);
-        }
-
-        public static Settings Create(Config config)
-        {
-            var chunkLargeMessageBytes = config.GetString("chunk-large-messages") switch
-            {
-                "off" => 0,
-                _ => (config.GetByteSize("chunk-large-messages") ??
-                      throw new ArgumentException("chunk-large-messages must be set to a valid byte size")),
-            };
-
-            if (chunkLargeMessageBytes > int.MaxValue)
-                throw new ArgumentOutOfRangeException(nameof(config),
-                    "Too large chunk-large-messages value. Must be less than 2GB");
-
-            return new Settings(durableQueueRequestTimeout: config.GetTimeSpan("durable-queue.request-timeout"),
-                durableQueueRetryAttempts: config.GetInt("durable-queue.retry-attempts"),
-                durableQueueResendFirstInterval: config.GetTimeSpan("durable-queue.resend-first-interval"),
-                chunkLargeMessagesBytes: (int)chunkLargeMessageBytes);
-        }
-
         private Settings(TimeSpan durableQueueRequestTimeout,
             int durableQueueRetryAttempts, TimeSpan durableQueueResendFirstInterval,
             int? chunkLargeMessagesBytes = null)
@@ -133,19 +110,43 @@ public static class ProducerController
 
 
         /// <summary>
-        /// The timeout for each request to the durable queue.
+        ///     The timeout for each request to the durable queue.
         /// </summary>
         public TimeSpan DurableQueueRequestTimeout { get; init; }
 
         /// <summary>
-        /// Number of retries allowed for each request to the durable queue.
+        ///     Number of retries allowed for each request to the durable queue.
         /// </summary>
         public int DurableQueueRetryAttempts { get; init; }
 
         /// <summary>
-        /// Timeframe for re-delivery of the first message
+        ///     Timeframe for re-delivery of the first message
         /// </summary>
         public TimeSpan DurableQueueResendFirstInterval { get; init; }
+
+        public static Settings Create(ActorSystem actorSystem)
+        {
+            return Create(actorSystem.Settings.Config.GetConfig("akka.reliable-delivery.producer-controller")!);
+        }
+
+        public static Settings Create(Config config)
+        {
+            var chunkLargeMessageBytes = config.GetString("chunk-large-messages") switch
+            {
+                "off" => 0,
+                _ => config.GetByteSize("chunk-large-messages") ??
+                     throw new ArgumentException("chunk-large-messages must be set to a valid byte size")
+            };
+
+            if (chunkLargeMessageBytes > int.MaxValue)
+                throw new ArgumentOutOfRangeException(nameof(config),
+                    "Too large chunk-large-messages value. Must be less than 2GB");
+
+            return new Settings(config.GetTimeSpan("durable-queue.request-timeout"),
+                config.GetInt("durable-queue.retry-attempts"),
+                config.GetTimeSpan("durable-queue.resend-first-interval"),
+                (int)chunkLargeMessageBytes);
+        }
     }
 
 
@@ -189,12 +190,12 @@ public static class ProducerController
         public string ProducerId { get; }
 
         /// <summary>
-        /// The current seqNr being handled by the producer controller.
+        ///     The current seqNr being handled by the producer controller.
         /// </summary>
         public long CurrentSeqNr { get; }
 
         /// <summary>
-        /// The highest confirmed seqNr observed by the producer controller.
+        ///     The highest confirmed seqNr observed by the producer controller.
         /// </summary>
         public long ConfirmedSeqNr { get; }
 
@@ -204,13 +205,17 @@ public static class ProducerController
         public IActorRef SendNextTo { get; }
 
         /// <summary>
-        /// Uses an Ask{T} to send the message to the SendNextTo actor and returns an Ack(long).
+        ///     Uses an Ask{T} to send the message to the SendNextTo actor and returns an Ack(long).
         /// </summary>
         /// <param name="msg">The message to send with confirmation back to the temporary Ask actor.</param>
-        /// <param name="cancellationToken">Optional - a CancellationToken.
-        ///
-        /// Note: this token only cancels the receipt of the Ack (long) - it does not stop the message from being delivered.</param>
-        /// <returns>A task that will complete once the message has been successfully persisted by the <see cref="ProducerController"/>.</returns>
+        /// <param name="cancellationToken">
+        ///     Optional - a CancellationToken.
+        ///     Note: this token only cancels the receipt of the Ack (long) - it does not stop the message from being delivered.
+        /// </param>
+        /// <returns>
+        ///     A task that will complete once the message has been successfully persisted by the
+        ///     <see cref="ProducerController" />.
+        /// </returns>
         public Task<long> AskNextTo(T msg, CancellationToken cancellationToken = default)
         {
             MessageWithConfirmation<T> Wrapper(IActorRef r)
@@ -222,16 +227,15 @@ public static class ProducerController
         }
 
         /// <summary>
-        /// Delivers a <see cref="MessageWithConfirmation{T}"/> to the <see cref="SendNextTo"/> actor.
-        ///
-        /// The <see cref="MessageWithConfirmation{T}.ReplyTo"/> actor will receive a confirmation message containing the confirmed SeqNo (long) for this message
-        /// once it's been successfully processed by the consumer.
+        ///     Delivers a <see cref="MessageWithConfirmation{T}" /> to the <see cref="SendNextTo" /> actor.
+        ///     The <see cref="MessageWithConfirmation{T}.ReplyTo" /> actor will receive a confirmation message containing the
+        ///     confirmed SeqNo (long) for this message
+        ///     once it's been successfully processed by the consumer.
         /// </summary>
         /// <param name="msgWithConfirmation">The message and the replyTo address.</param>
         /// <remarks>
-        /// This method name is a bit misleading - we're actually performing a Tell, not an Ask.
-        ///
-        /// The other overload does perform an Ask and uses the temporary Ask actor as the replyTo address.
+        ///     This method name is a bit misleading - we're actually performing a Tell, not an Ask.
+        ///     The other overload does perform an Ask and uses the temporary Ask actor as the replyTo address.
         /// </remarks>
         public void AskNextTo(MessageWithConfirmation<T> msgWithConfirmation)
         {
@@ -240,10 +244,11 @@ public static class ProducerController
     }
 
     /// <summary>
-    /// For sending with confirmation back to the producer - message is confirmed once it's stored inside the durable queue.
+    ///     For sending with confirmation back to the producer - message is confirmed once it's stored inside the durable
+    ///     queue.
     /// </summary>
     /// <remarks>
-    /// Reply message type is a SeqNo (long).
+    ///     Reply message type is a SeqNo (long).
     /// </remarks>
     /// <typeparam name="T"></typeparam>
     public sealed class MessageWithConfirmation<T> : IProducerCommand<T>
@@ -260,7 +265,7 @@ public static class ProducerController
     }
 
     /// <summary>
-    /// INTERNAL API - used for serializaiton
+    ///     INTERNAL API - used for serializaiton
     /// </summary>
     internal interface IRegisterConsumer
     {
@@ -270,7 +275,8 @@ public static class ProducerController
     /// <summary>
     ///     Registers a ConsumerController with a ProducerController.
     /// </summary>
-    public sealed record RegisterConsumer<T>(IActorRef ConsumerController) : IProducerCommand<T>, IDeliverySerializable, IRegisterConsumer
+    public sealed record RegisterConsumer<T>(IActorRef ConsumerController)
+        : IProducerCommand<T>, IDeliverySerializable, IRegisterConsumer
     {
         Type IRegisterConsumer.ConsumerType => typeof(T);
     }
@@ -300,7 +306,7 @@ public static class ProducerController
 
         public override bool Equals(object? obj)
         {
-            return ReferenceEquals(this, obj) || obj is Resend other && Equals(other);
+            return ReferenceEquals(this, obj) || (obj is Resend other && Equals(other));
         }
 
         public override int GetHashCode()
@@ -308,14 +314,17 @@ public static class ProducerController
             return FromSeqNr.GetHashCode();
         }
 
-        public override string ToString() => $"Resend({FromSeqNr})";
+        public override string ToString()
+        {
+            return $"Resend({FromSeqNr})";
+        }
     }
 
     /// <summary>
-    /// INTERNAL API
+    ///     INTERNAL API
     /// </summary>
     /// <remarks>
-    /// Used when a sequenced message has Ack set to <c>true</c>.
+    ///     Used when a sequenced message has Ack set to <c>true</c>.
     /// </remarks>
     internal sealed class Ack : IInternalCommand, IDeliverySerializable, IDeadLetterSuppression, IEquatable<Ack>
     {
@@ -335,7 +344,7 @@ public static class ProducerController
 
         public override bool Equals(object? obj)
         {
-            return ReferenceEquals(this, obj) || obj is Ack other && Equals(other);
+            return ReferenceEquals(this, obj) || (obj is Ack other && Equals(other));
         }
 
         public override int GetHashCode()
@@ -409,7 +418,7 @@ public static class ProducerController
         public bool SupportResend { get; }
 
         /// <summary>
-        /// Indicates whether or not this <see cref="Request"/> was sent due to timeout.
+        ///     Indicates whether or not this <see cref="Request" /> was sent due to timeout.
         /// </summary>
         public bool ViaTimeout { get; }
 
@@ -421,7 +430,7 @@ public static class ProducerController
 
         public override bool Equals(object? obj)
         {
-            return ReferenceEquals(this, obj) || obj is Request other && Equals(other);
+            return ReferenceEquals(this, obj) || (obj is Request other && Equals(other));
         }
 
         public override int GetHashCode()

@@ -1,5 +1,6 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="TimerSchedulerSettings.cs" company="Akka.NET Project">
+//  <copyright file="TimerSchedulerDebugSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
 //      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -9,8 +10,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
-using Akka.TestKit;
 using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,8 +17,10 @@ using Debug = Akka.Event.Debug;
 
 namespace Akka.Tests.Actor.Scheduler;
 
-internal sealed class TimerTestActor: UntypedActor, IWithTimers
+internal sealed class TimerTestActor : UntypedActor, IWithTimers
 {
+    public ITimerScheduler Timers { get; set; }
+
     protected override void OnReceive(object message)
     {
         switch (message)
@@ -34,11 +35,9 @@ internal sealed class TimerTestActor: UntypedActor, IWithTimers
                 break;
         }
     }
-
-    public ITimerScheduler Timers { get; set; }
 }
-    
-public class TimerSchedulerDebug: TestKit.Xunit2.TestKit
+
+public class TimerSchedulerDebug : TestKit.Xunit2.TestKit
 {
     public TimerSchedulerDebug(ITestOutputHelper output) : base("akka.actor.debug.log-timers = true", null, output)
     {
@@ -55,9 +54,10 @@ public class TimerSchedulerDebug: TestKit.Xunit2.TestKit
     }
 }
 
-public class TimerSchedulerSuppressDebug: TestKit.Xunit2.TestKit
+public class TimerSchedulerSuppressDebug : TestKit.Xunit2.TestKit
 {
-    public TimerSchedulerSuppressDebug(ITestOutputHelper output) : base("akka.actor.debug.log-timers = false", null, output)
+    public TimerSchedulerSuppressDebug(ITestOutputHelper output) : base("akka.actor.debug.log-timers = false", null,
+        output)
     {
     }
 
@@ -69,12 +69,12 @@ public class TimerSchedulerSuppressDebug: TestKit.Xunit2.TestKit
         timerActor.Tell("startTimer");
 
         await ExpectNoMsgAsync(
-            predicate: msg => msg is Debug dbg && dbg.Message.ToString()!.StartsWith("Start timer ["), 
-            timeout: 1.Seconds());
+            msg => msg is Debug dbg && dbg.Message.ToString()!.StartsWith("Start timer ["),
+            1.Seconds());
     }
-    
+
     private async Task ExpectNoMsgAsync(
-        Predicate<object> predicate, 
+        Predicate<object> predicate,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
@@ -87,17 +87,16 @@ public class TimerSchedulerSuppressDebug: TestKit.Xunit2.TestKit
             var (success, envelope) = await TryReceiveOneAsync(timeout - offset, cancellationToken);
             stopwatch.Stop();
             offset += stopwatch.Elapsed;
-            
-            if(!success)
+
+            if (!success)
                 continue;
 
             var message = envelope.Message;
-            if (!predicate(message)) 
+            if (!predicate(message))
                 continue;
-            
+
             Assertions.Fail("Expected no message to match predicate, received {0} instead.", message);
             break;
         }
     }
-    
 }
