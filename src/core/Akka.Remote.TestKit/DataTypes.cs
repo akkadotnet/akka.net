@@ -295,7 +295,7 @@ namespace Akka.Remote.TestKit
 
         public override string ToString()
         {
-            return $"EnterBarrier(Name: {Name}, Timeout:{(Timeout.HasValue ? Timeout.Value.ToString() : "null")})";
+            return $"EnterBarrier(Name: {Name}, Role: [{Role}], Timeout:{(Timeout.HasValue ? Timeout.Value.ToString() : "null")})";
         }
 
         private bool Equals(EnterBarrier other)
@@ -366,7 +366,12 @@ namespace Akka.Remote.TestKit
             return string.Equals(Name, other.Name);
         }
 
-        
+        public override string ToString()
+        {
+            return $"FailBarrier(Name: {Name}, Role: [{Role}])";
+        }
+
+
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
