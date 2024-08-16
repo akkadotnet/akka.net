@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.TCK.Serialization;
 using Akka.TestKit;
+using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
@@ -184,7 +185,7 @@ namespace Akka.Persistence.TCK.Snapshot
         public virtual void SnapshotStore_should_delete_a_single_snapshot_identified_by_SequenceNr_in_snapshot_metadata()
         {
             var md = Metadata[2];
-            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr, Sys.Scheduler.Now.DateTime);
+            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr,  md.Timestamp);
             var command = new DeleteSnapshot(md);
             var sub = CreateTestProbe();
 
@@ -195,10 +196,10 @@ namespace Akka.Persistence.TCK.Snapshot
 
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(md.SequenceNr), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
-                result.ToSequenceNr == long.MaxValue
-                && result.Snapshot != null
-                && result.Snapshot.Metadata.Equals(Metadata[1])
-                && result.Snapshot.Snapshot.ToString() == "s-2");
+                              result.ToSequenceNr == long.MaxValue
+                              && result.Snapshot != null
+                              && result.Snapshot.Metadata.Equals(Metadata[1])
+                              && result.Snapshot.Snapshot.ToString() == "s-2");
         }
 
         // Issue #7312
