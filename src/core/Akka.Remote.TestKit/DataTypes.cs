@@ -292,15 +292,20 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    sealed class EnterBarrier : IServerOp, INetworkOp
+    internal sealed class EnterBarrier : IServerOp, INetworkOp
     {
-        readonly string _name;
-        readonly TimeSpan? _timeout;
+        private readonly string _name;
+        private readonly TimeSpan? _timeout;
 
         public EnterBarrier(string name, TimeSpan? timeout)
         {
             _name = name;
             _timeout = timeout;
+        }
+
+        public override string ToString()
+        {
+            return $"EnterBarrier(Name: {_name}, Timeout:{(_timeout.HasValue ? _timeout.Value.ToString() : "null")})";
         }
 
         private bool Equals(EnterBarrier other)
