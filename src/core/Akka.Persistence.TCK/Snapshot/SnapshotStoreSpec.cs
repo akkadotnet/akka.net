@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.TCK.Serialization;
 using Akka.TestKit;
+using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
@@ -195,10 +196,10 @@ namespace Akka.Persistence.TCK.Snapshot
 
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(md.SequenceNr), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
-                result.ToSequenceNr == long.MaxValue
-                && result.Snapshot != null
-                && result.Snapshot.Metadata.Equals(Metadata[1])
-                && result.Snapshot.Snapshot.ToString() == "s-2");
+                              result.ToSequenceNr == long.MaxValue
+                              && result.Snapshot != null
+                              && result.Snapshot.Metadata.Equals(Metadata[2])
+                              && result.Snapshot.Snapshot.ToString() == "s-3");
         }
 
         // Issue #7312
