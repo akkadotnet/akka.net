@@ -185,7 +185,7 @@ namespace Akka.Persistence.TCK.Snapshot
         public virtual void SnapshotStore_should_delete_a_single_snapshot_identified_by_SequenceNr_in_snapshot_metadata()
         {
             var md = Metadata[2];
-            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr, Sys.Scheduler.Now.DateTime);
+            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr,  md.Timestamp);
             var command = new DeleteSnapshot(md);
             var sub = CreateTestProbe();
 
@@ -198,8 +198,8 @@ namespace Akka.Persistence.TCK.Snapshot
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
                               result.ToSequenceNr == long.MaxValue
                               && result.Snapshot != null
-                              && result.Snapshot.Metadata.Equals(Metadata[2])
-                              && result.Snapshot.Snapshot.ToString() == "s-3");
+                              && result.Snapshot.Metadata.Equals(Metadata[1])
+                              && result.Snapshot.Snapshot.ToString() == "s-2");
         }
 
         // Issue #7312
