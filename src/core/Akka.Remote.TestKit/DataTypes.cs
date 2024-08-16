@@ -286,11 +286,11 @@ namespace Akka.Remote.TestKit
 
     internal sealed class EnterBarrier : IServerOp, INetworkOp
     {
-        public EnterBarrier(string name, TimeSpan? timeout, Address address)
+        public EnterBarrier(string name, TimeSpan? timeout, RoleName role)
         {
             Name = name;
             Timeout = timeout;
-            Address = address;
+            Role = role;
         }
 
         public override string ToString()
@@ -346,17 +346,20 @@ namespace Akka.Remote.TestKit
 
         public TimeSpan? Timeout { get; }
         
-        public Address Address { get; }
+        public RoleName Role { get; }
     }
 
     internal sealed class FailBarrier : IServerOp, INetworkOp
     {
-        public FailBarrier(string name)
+        public FailBarrier(string name, RoleName role)
         {
             Name = name;
+            Role = role;
         }
 
         public string Name { get; }
+        
+        public RoleName Role { get; }
 
         private bool Equals(FailBarrier other)
         {

@@ -549,7 +549,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public void EnterBarrier(params string[] name)
         {
-            TestConductor.Enter(RemainingOr(TestConductor.Settings.BarrierTimeout), name.ToImmutableList());
+            TestConductor.Enter(RemainingOr(TestConductor.Settings.BarrierTimeout), Myself, name.ToImmutableList());
         }
 
         /// <summary>

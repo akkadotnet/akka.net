@@ -299,8 +299,8 @@ namespace Akka.Remote.TestKit
 
         public sealed class WrongBarrierException : Exception
         {
-            public WrongBarrierException(string barrier, IActorRef client, Data barrierData)
-                : base($"[{client}] tried to enter '{barrier}' while we were waiting for '{barrierData.Barrier}'")
+            public WrongBarrierException(string barrier, IActorRef client, RoleName roleName, Data barrierData)
+                : base($"[{client}] [{roleName}] tried to enter '{barrier}' while we were waiting for '{barrierData.Barrier}'")
             {
                 BarrierData = barrierData;
                 Client = client;
@@ -564,7 +564,7 @@ namespace Akka.Remote.TestKit
                 {
                     case EnterBarrier barrier:
                         if (barrier.Name != currentBarrier)
-                            throw new WrongBarrierException(barrier.Name, Sender, @event.StateData);
+                            throw new WrongBarrierException(barrier.Name, Sender, barrier.Role, @event.StateData);
                         var together = clients.Any(x => Equals(x.FSM, Sender))
                             ? @event.StateData.Arrived.Add(Sender)
                             : @event.StateData.Arrived;
@@ -588,7 +588,7 @@ namespace Akka.Remote.TestKit
                     
                     case FailBarrier barrier:
                         if(barrier.Name != currentBarrier) 
-                            throw new WrongBarrierException(barrier.Name, Sender, @event.StateData);
+                            throw new WrongBarrierException(barrier.Name, Sender, barrier.Role, @event.StateData);
                         throw new FailedBarrierException(@event.StateData);
                         
                     case StateTimeout _:

@@ -103,16 +103,16 @@ namespace Akka.Remote.TestKit
         /// Enter the named barriers, one after the other, in the order given. Will
         /// throw an exception in case of timeouts or other errors.
         /// </summary>
-        public void Enter(string name)
+        public void Enter(RoleName roleName, string name)
         {
-            Enter(Settings.BarrierTimeout, ImmutableList.Create(name));
+            Enter(Settings.BarrierTimeout, roleName, ImmutableList.Create(name));
         }
 
         /// <summary>
         /// Enter the named barriers, one after the other, in the order given. Will
         /// throw an exception in case of timeouts or other errors.
         /// </summary>
-        public void Enter(TimeSpan timeout, ImmutableList<string> names)
+        public void Enter(TimeSpan timeout, RoleName roleName, ImmutableList<string> names)
         {
             _system.Log.Debug("entering barriers {0}", names.Aggregate((a, b) => "(" + a + "," + b + ")"));
             var stop = Deadline.Now + timeout;
@@ -122,7 +122,7 @@ namespace Akka.Remote.TestKit
                 var barrierTimeout = stop.TimeLeft;
                 if (barrierTimeout.Ticks < 0)
                 {
-                    _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name)));
+                    _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name, roleName)));
                     throw new TimeoutException("Server timed out while waiting for barrier " + name);
                 }
                 try
@@ -130,11 +130,11 @@ namespace Akka.Remote.TestKit
                     var askTimeout = barrierTimeout + Settings.QueryTimeout;
                     // Need to force barrier to wait here, so we can pass along a "fail barrier" message in the event
                     // of a failed operation
-                    var result = _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Result;
+                    var result = _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout, roleName)), askTimeout).Result;
                 }
                 catch (AggregateException ex)
                 {
-                    _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name)));
+                    _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name, roleName)));
                     throw new TimeoutException("Client timed out while waiting for barrier " + name, ex);
                 }
                 catch (OperationCanceledException)
