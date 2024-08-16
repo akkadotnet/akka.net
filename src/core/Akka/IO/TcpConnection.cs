@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -52,17 +52,17 @@ namespace Akka.IO
         enum ConnectionStatus
         {
             /// <summary>
-            /// Marks that connection has invoked <see cref="Socket.ReceiveAsync(ByteBuffer, SocketFlags)"/> and that 
+            /// Marks that connection has invoked Socket.ReceiveAsync and that 
             /// <see cref="TcpConnection.ReceiveArgs"/> are currently trying to receive data.
             /// </summary>
             Receiving = 1,
 
             /// <summary>
-            /// Marks that connection has invoked <see cref="Socket.SendAsync(ByteBuffer, SocketFlags)"/> and that 
+            /// Marks that connection has invoked Socket.SendAsync and that 
             /// <see cref="TcpConnection.SendArgs"/> are currently sending data. It's important as 
             /// <see cref="SocketAsyncEventArgs"/> will throw exception if another socket operations will
             /// be called over it as it's performing send request. For that reason we cannot release send args
-            /// back to pool if it's sending (another connection actor could aquire that buffer and try to 
+            /// back to pool if it's sending (another connection actor could acquire that buffer and try to 
             /// use it while it's sending the data).
             /// </summary>
             Sending = 1 << 1,
