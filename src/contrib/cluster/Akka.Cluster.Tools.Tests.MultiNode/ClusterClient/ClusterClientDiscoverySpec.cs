@@ -107,8 +107,6 @@ akka {
             _config = config;
         }
 
-        protected override int InitialParticipantsValueFactory => 3;
-
         private void Join(RoleName from, RoleName to)
         {
             RunOn(() =>
