@@ -298,11 +298,11 @@ namespace Akka.Remote.TestKit
                 Barrier = barrier;
             }
 
-            public string Barrier { get; private set; }
+            public string Barrier { get; }
 
-            public IActorRef Client { get; private set; }
+            public IActorRef Client { get; }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
             private bool Equals(WrongBarrierException other)
             {
@@ -413,9 +413,9 @@ namespace Akka.Remote.TestKit
                 BarrierData = barrierData;
             }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
-            public RoleName Client { get; private set; }
+            public RoleName Client { get; }
 
             private bool Equals(ClientLostException other)
             {
@@ -622,7 +622,7 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        public Deadline GetDeadline(TimeSpan? timeout)
+        public static Deadline GetDeadline(TimeSpan? timeout)
         {
             return Deadline.Now + (timeout ?? TestConductor.Get(Context.System).Settings.BarrierTimeout);
         }
