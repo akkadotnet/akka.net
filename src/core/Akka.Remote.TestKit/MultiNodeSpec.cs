@@ -549,7 +549,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public void EnterBarrier(params string[] name)
         {
-            TestConductor.Enter(RemainingOr(TestConductor.Settings.BarrierTimeout), name.ToImmutableList());
+            TestConductor.Enter(RemainingOr(TestConductor.Settings.BarrierTimeout), Myself, name.ToImmutableList());
         }
 
         /// <summary>
@@ -579,7 +579,7 @@ namespace Akka.Remote.TestKit
         * Implementation (i.e. wait for start etc.)
         */
 
-        readonly IPEndPoint _controllerAddr;
+        private readonly IPEndPoint _controllerAddr;
 
         protected void AttachConductor(TestConductor tc)
         {
@@ -601,19 +601,17 @@ namespace Akka.Remote.TestKit
 
         // now add deployments, if so desired
 
-        sealed class Replacement
+        private sealed class Replacement
         {
-            readonly string _tag;
-            public string Tag { get { return _tag; } }
-            readonly RoleName _role;
-            public RoleName Role { get { return _role; } }
-            readonly Lazy<string> _addr;
+            public string Tag { get; }
+            public RoleName Role { get; }
+            private readonly Lazy<string> _addr;
             public string Addr { get { return _addr.Value; } }
 
             public Replacement(string tag, RoleName role, MultiNodeSpec spec)
             {
-                _tag = tag;
-                _role = role;
+                Tag = tag;
+                Role = role;
                 _addr = new Lazy<string>(() => spec.Node(role).Address.ToString());
             }
         }

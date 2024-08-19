@@ -8,6 +8,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Event;
 using Akka.TestKit.Internal;
 using Nito.AsyncEx.Synchronous;
 
@@ -45,9 +46,11 @@ namespace Akka.TestKit
             var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
             if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;
             intervalValue.EnsureIsPositiveFinite(nameof(interval));
+            var start = Now;
             var max = RemainingOrDilated(duration);
             var stop = Now + max;
             var t = max.Min(intervalValue);
+            var attempts = 0;
             while(true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -59,9 +62,15 @@ namespace Akka.TestKit
                 }
                 catch(Exception)
                 {
-                    if(Now + t >= stop)
+                    var stopped = Now + t;
+                    if (stopped >= stop)
+                    {
+                        Sys.Log.Warning("AwaitAssert failed, timeout [{0}] is over after [{1}] attempts and [{2}] elapsed time", max, attempts, stopped - start);
                         throw;
+                    }
+                        
                 }
+                attempts++;
                 await Task.Delay(t, cancellationToken);
                 t = (stop - Now).Min(intervalValue);
             }

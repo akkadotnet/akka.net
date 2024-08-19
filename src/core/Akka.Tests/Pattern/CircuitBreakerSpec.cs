@@ -84,7 +84,7 @@ namespace Akka.Tests.Pattern
         {
             var breaker = ShortCallTimeoutCb();
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            // meant to run as detatched task
+            // meant to run as detached task
             Task.Run(() => breaker.Instance.WithSyncCircuitBreaker(() => Thread.Sleep(Dilated(TimeSpan.FromSeconds(1)))));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             var epsilon = TimeSpan.FromMilliseconds(500); // need to pad timeouts due to non-determinism of OS scheduler
