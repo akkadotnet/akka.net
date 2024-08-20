@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MsgEncoder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -48,101 +48,91 @@ namespace Akka.Remote.TestKit
 
             var wrapper = new Proto.Msg.Wrapper();
 
-            if (message is Hello hello)
+            switch (message)
             {
-                wrapper.Hello = new Proto.Msg.Hello
-                {
-                    Name = hello.Name,
-                    Address = AddressMessageBuilder(hello.Address)
-                };
-            }
-            else if (message is EnterBarrier enterBarrier)
-            {
-                wrapper.Barrier = new Proto.Msg.EnterBarrier
-                {
-                    Name = enterBarrier.Name,
-                    Timeout = enterBarrier.Timeout?.Ticks ?? 0,
-                    Op = Proto.Msg.EnterBarrier.Types.BarrierOp.Enter,
-                };
-            }
-            else if (message is BarrierResult barrierResult)
-            {
-                wrapper.Barrier = new Proto.Msg.EnterBarrier
-                {
-                    Name = barrierResult.Name,
-                    Op = barrierResult.Success
-                        ? Proto.Msg.EnterBarrier.Types.BarrierOp.Succeeded
-                        : Proto.Msg.EnterBarrier.Types.BarrierOp.Failed
-                };
-            }
-            else if (message is FailBarrier failBarrier)
-            {
-                wrapper.Barrier = new Proto.Msg.EnterBarrier
-                {
-                    Name = failBarrier.Name,
-                    Op = Proto.Msg.EnterBarrier.Types.BarrierOp.Fail
-                };
-            }
-            else if (message is ThrottleMsg throttleMsg)
-            {
-                wrapper.Failure = new Proto.Msg.InjectFailure
-                {
-                    Address = AddressMessageBuilder(throttleMsg.Target),
-                    Failure = Proto.Msg.InjectFailure.Types.FailType.Throttle,
-                    Direction = Direction2Proto(throttleMsg.Direction),
-                    RateMBit = throttleMsg.RateMBit
-                };
-            }
-            else if (message is DisconnectMsg disconnectMsg)
-            {
-                wrapper.Failure = new Proto.Msg.InjectFailure
-                {
-                    Address = AddressMessageBuilder(disconnectMsg.Target),
-                    Failure = disconnectMsg.Abort
-                        ? Proto.Msg.InjectFailure.Types.FailType.Abort
-                        : Proto.Msg.InjectFailure.Types.FailType.Disconnect
-                };
-            }
-            else if (message is TerminateMsg terminate)
-            {
-                if (terminate.ShutdownOrExit.IsRight)
-                {
+                case Hello hello:
+                    wrapper.Hello = new Proto.Msg.Hello
+                    {
+                        Name = hello.Name,
+                        Address = AddressMessageBuilder(hello.Address)
+                    };
+                    break;
+                case EnterBarrier enterBarrier:
+                    wrapper.Barrier = new Proto.Msg.EnterBarrier
+                    {
+                        Name = enterBarrier.Name,
+                        Timeout = enterBarrier.Timeout?.Ticks ?? 0,
+                        Op = Proto.Msg.EnterBarrier.Types.BarrierOp.Enter,
+                        RoleName = enterBarrier.Role.Name
+                    };
+                    break;
+                case BarrierResult barrierResult:
+                    wrapper.Barrier = new Proto.Msg.EnterBarrier
+                    {
+                        Name = barrierResult.Name,
+                        Op = barrierResult.Success
+                            ? Proto.Msg.EnterBarrier.Types.BarrierOp.Succeeded
+                            : Proto.Msg.EnterBarrier.Types.BarrierOp.Failed
+                    };
+                    break;
+                case FailBarrier failBarrier:
+                    wrapper.Barrier = new Proto.Msg.EnterBarrier
+                    {
+                        Name = failBarrier.Name,
+                        Op = Proto.Msg.EnterBarrier.Types.BarrierOp.Fail,
+                        RoleName = failBarrier.Role.Name
+                    };
+                    break;
+                case ThrottleMsg throttleMsg:
+                    wrapper.Failure = new Proto.Msg.InjectFailure
+                    {
+                        Address = AddressMessageBuilder(throttleMsg.Target),
+                        Failure = Proto.Msg.InjectFailure.Types.FailType.Throttle,
+                        Direction = Direction2Proto(throttleMsg.Direction),
+                        RateMBit = throttleMsg.RateMBit
+                    };
+                    break;
+                case DisconnectMsg disconnectMsg:
+                    wrapper.Failure = new Proto.Msg.InjectFailure
+                    {
+                        Address = AddressMessageBuilder(disconnectMsg.Target),
+                        Failure = disconnectMsg.Abort
+                            ? Proto.Msg.InjectFailure.Types.FailType.Abort
+                            : Proto.Msg.InjectFailure.Types.FailType.Disconnect
+                    };
+                    break;
+                case TerminateMsg terminate when terminate.ShutdownOrExit.IsRight:
                     wrapper.Failure = new Proto.Msg.InjectFailure()
                     {
                         Failure = Proto.Msg.InjectFailure.Types.FailType.Exit,
                         ExitValue = terminate.ShutdownOrExit.ToRight().Value
                     };
-                }
-                else if (terminate.ShutdownOrExit.IsLeft && !terminate.ShutdownOrExit.ToLeft().Value)
-                {
+                    break;
+                case TerminateMsg terminate when terminate.ShutdownOrExit.IsLeft && !terminate.ShutdownOrExit.ToLeft().Value:
                     wrapper.Failure = new Proto.Msg.InjectFailure()
                     {
                         Failure = Proto.Msg.InjectFailure.Types.FailType.Shutdown
                     };
-                }
-                else
-                {
+                    break;
+                case TerminateMsg terminate:
                     wrapper.Failure = new Proto.Msg.InjectFailure()
                     {
                         Failure = Proto.Msg.InjectFailure.Types.FailType.ShutdownAbrupt
                     };
-                }
-            }
-            else if (message is GetAddress getAddress)
-            {
-                wrapper.Addr = new Proto.Msg.AddressRequest { Node = getAddress.Node.Name };
-            }
-            else if (message is AddressReply addressReply)
-            {
-                wrapper.Addr = new Proto.Msg.AddressRequest
-                {
-                    Node = addressReply.Node.Name,
-                    Addr = AddressMessageBuilder(addressReply.Addr)
-                };
-            }
-            else if (message is Done)
-            {
-                wrapper.Done = " ";
+                    break;
+                case GetAddress getAddress:
+                    wrapper.Addr = new Proto.Msg.AddressRequest { Node = getAddress.Node.Name };
+                    break;
+                case AddressReply addressReply:
+                    wrapper.Addr = new Proto.Msg.AddressRequest
+                    {
+                        Node = addressReply.Node.Name,
+                        Addr = AddressMessageBuilder(addressReply.Addr)
+                    };
+                    break;
+                case Done:
+                    wrapper.Done = " ";
+                    break;
             }
 
             output.Add(wrapper);

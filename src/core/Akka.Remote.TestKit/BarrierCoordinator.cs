@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BarrierCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using Akka.Util.Internal;
 using Akka.Event;
 
 namespace Akka.Remote.TestKit
@@ -28,7 +27,7 @@ namespace Akka.Remote.TestKit
     ///
     ///INTERNAL API.
     /// </summary>
-    internal class BarrierCoordinator : FSM<BarrierCoordinator.State, BarrierCoordinator.Data>, ILoggingFSM
+    internal sealed class BarrierCoordinator : FSM<BarrierCoordinator.State, BarrierCoordinator.Data>, ILoggingFSM
     {
         #region State types and messages
 
@@ -45,19 +44,11 @@ namespace Akka.Remote.TestKit
                 Name = name;
             }
 
-            public RoleName Name { get; private set; }
+            public RoleName Name { get; }
         }
 
         public sealed class Data
         {
-            public Data(IEnumerable<Controller.NodeInfo> clients, string barrier, IEnumerable<IActorRef> arrived, Deadline deadline) :
-                this(clients == null ? ImmutableHashSet.Create<Controller.NodeInfo>() : ImmutableHashSet.Create(clients.ToArray()),
-                barrier,
-                arrived == null ? ImmutableHashSet.Create<IActorRef>() : ImmutableHashSet.Create(arrived.ToArray()),
-                deadline)
-            {
-            }
-
             public Data(ImmutableHashSet<Controller.NodeInfo> clients, string barrier, ImmutableHashSet<IActorRef> arrived, Deadline deadline)
             {
                 Deadline = deadline;
@@ -66,13 +57,13 @@ namespace Akka.Remote.TestKit
                 Clients = clients;
             }
 
-            public ImmutableHashSet<Controller.NodeInfo> Clients { get; private set; }
+            public ImmutableHashSet<Controller.NodeInfo> Clients { get; }
 
-            public string Barrier { get; private set; }
+            public string Barrier { get; }
 
-            public ImmutableHashSet<IActorRef> Arrived { get; private set; }
+            public ImmutableHashSet<IActorRef> Arrived { get; }
 
-            public Deadline Deadline { get; private set; }
+            public Deadline Deadline { get; }
 
             public Data Copy(ImmutableHashSet<Controller.NodeInfo> clients = null, string barrier = null,
                 ImmutableHashSet<IActorRef> arrived = null, Deadline deadline = null)
@@ -143,7 +134,7 @@ namespace Akka.Remote.TestKit
                 BarrierData = barrierData;
             }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
             private bool Equals(BarrierTimeoutException other)
             {
@@ -195,7 +186,7 @@ namespace Akka.Remote.TestKit
                 BarrierData = barrierData;
             }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
             private bool Equals(FailedBarrierException other)
             {
@@ -248,9 +239,9 @@ namespace Akka.Remote.TestKit
                 BarrierData = barrierData;
             }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
-            public Controller.NodeInfo Node { get; private set; }
+            public Controller.NodeInfo Node { get; }
 
             private bool Equals(DuplicateNodeException other)
             {
@@ -299,19 +290,19 @@ namespace Akka.Remote.TestKit
 
         public sealed class WrongBarrierException : Exception
         {
-            public WrongBarrierException(string barrier, IActorRef client, Data barrierData)
-                : base($"[{client}] tried to enter '{barrier}' while we were waiting for '{barrierData.Barrier}'")
+            public WrongBarrierException(string barrier, IActorRef client, RoleName roleName, Data barrierData)
+                : base($"[{client}] [{roleName}] tried to enter '{barrier}' while we were waiting for '{barrierData.Barrier}'")
             {
                 BarrierData = barrierData;
                 Client = client;
                 Barrier = barrier;
             }
 
-            public string Barrier { get; private set; }
+            public string Barrier { get; }
 
-            public IActorRef Client { get; private set; }
+            public IActorRef Client { get; }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
             private bool Equals(WrongBarrierException other)
             {
@@ -369,7 +360,7 @@ namespace Akka.Remote.TestKit
                 BarrierData = barrierData;
             }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
             private bool Equals(BarrierEmptyException other)
             {
@@ -422,9 +413,9 @@ namespace Akka.Remote.TestKit
                 BarrierData = barrierData;
             }
 
-            public Data BarrierData { get; private set; }
+            public Data BarrierData { get; }
 
-            public RoleName Client { get; private set; }
+            public RoleName Client { get; }
 
             private bool Equals(ClientLostException other)
             {
@@ -564,7 +555,7 @@ namespace Akka.Remote.TestKit
                 {
                     case EnterBarrier barrier:
                         if (barrier.Name != currentBarrier)
-                            throw new WrongBarrierException(barrier.Name, Sender, @event.StateData);
+                            throw new WrongBarrierException(barrier.Name, Sender, barrier.Role, @event.StateData);
                         var together = clients.Any(x => Equals(x.FSM, Sender))
                             ? @event.StateData.Arrived.Add(Sender)
                             : @event.StateData.Arrived;
@@ -588,7 +579,7 @@ namespace Akka.Remote.TestKit
                     
                     case FailBarrier barrier:
                         if(barrier.Name != currentBarrier) 
-                            throw new WrongBarrierException(barrier.Name, Sender, @event.StateData);
+                            throw new WrongBarrierException(barrier.Name, Sender, barrier.Role, @event.StateData);
                         throw new FailedBarrierException(@event.StateData);
                         
                     case StateTimeout _:
@@ -631,7 +622,7 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        public Deadline GetDeadline(TimeSpan? timeout)
+        public static Deadline GetDeadline(TimeSpan? timeout)
         {
             return Deadline.Now + (timeout ?? TestConductor.Get(Context.System).Settings.BarrierTimeout);
         }

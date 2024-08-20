@@ -31,6 +31,7 @@ message EnterBarrier {
   string name = 1;
   BarrierOp op = 2;
   int64 timeout = 3;
+  string roleName = 4;
 }
 
 message AddressRequest {

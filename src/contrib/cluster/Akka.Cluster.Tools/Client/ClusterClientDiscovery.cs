@@ -1,9 +1,9 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="ClusterClientDiscovery.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
-//  </copyright>
-// -----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterClientDiscovery.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
@@ -287,7 +287,9 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
 
             case ActorPath?[] resolved:
             {
+#pragma warning disable CS8619 // Converting null literal or possible null value to non-nullable type.
                 var contacts = (ActorPath[]) resolved.Where(r => r is not null).ToArray();
+#pragma warning restore CS8619 // Converting null literal or possible null value to non-nullable type.
                 if (contacts.Length == 0)
                 {
                     if(_verboseLogging && _log.IsInfoEnabled)
