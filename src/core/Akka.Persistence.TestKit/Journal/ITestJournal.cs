@@ -21,5 +21,7 @@ namespace Akka.Persistence.TestKit
         ///     List of interceptors to alter recovery behavior of proxied journal.
         /// </summary>
         JournalRecoveryBehavior OnRecovery { get; }
+        
+        JournalConnectionBehavior OnConnect { get; }
     }
 }

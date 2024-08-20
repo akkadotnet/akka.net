@@ -12,5 +12,6 @@ namespace Akka.Persistence.TestKit
         SnapshotStoreSaveBehavior OnSave { get; }
         SnapshotStoreLoadBehavior OnLoad { get; }
         SnapshotStoreDeleteBehavior OnDelete { get; }
+        SnapshotStoreConnectionBehavior OnConnect { get; }
     }
 }
