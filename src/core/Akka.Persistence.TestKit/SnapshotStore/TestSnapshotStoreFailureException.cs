@@ -7,8 +7,8 @@
 
 namespace Akka.Persistence.TestKit
 {
-    using System;
-    using System.Runtime.Serialization;
+using System;
+using System.Runtime.Serialization;
 
     [Serializable]
     public class TestSnapshotStoreFailureException : Exception

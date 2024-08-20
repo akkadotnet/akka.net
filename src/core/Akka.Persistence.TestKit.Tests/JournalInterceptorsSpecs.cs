@@ -5,6 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading;
+using FluentAssertions.Extensions;
+
 namespace Akka.Persistence.TestKit.Tests
 {
     using System;
@@ -58,6 +61,28 @@ namespace Akka.Persistence.TestKit.Tests
             probe.CalledAt.Should().BeOnOrAfter(startedAt + duration - epsilon);
         }
 
+        [Fact]
+        public async Task cancelable_delay_must_call_next_interceptor_immediately_after_cancellation()
+        {
+            var totalDuration = 400.Milliseconds();
+            var delayDuration = 200.Milliseconds();
+            var epsilon = TimeSpan.FromMilliseconds(50);
+            using var cts = new CancellationTokenSource();
+            var probe = new InterceptorProbe();
+            var delay = new JournalInterceptors.CancelableDelay(totalDuration, probe, cts.Token);
+
+            var startedAt = DateTime.Now;
+            var task = delay.InterceptAsync(null);
+            await Task.Delay(delayDuration - epsilon);
+
+            probe.WasCalled.Should().BeFalse();
+            cts.Cancel();
+            await task;
+
+            probe.WasCalled.Should().BeTrue();
+            probe.CalledAt.Should().BeOnOrAfter(startedAt + delayDuration - epsilon);
+        }
+        
         [Fact]
         public async Task on_type_must_call_next_interceptor_when_message_is_exactly_awaited_type()
         {
