@@ -257,8 +257,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                     return true;
                 case Status.Failure fail:
                     Log.Error(fail.Cause, "Failure during {0} initialization.", Self);
-                    Context.Stop(Self);
-                    return true;
+                    
+                    // trigger a restart so we have some hope of succeeding in the future even if initialization failed
+                    throw new ApplicationException("Failed to initialize SQL Journal.", fail.Cause);
                 default:
                     Stash.Stash();
                     return true;

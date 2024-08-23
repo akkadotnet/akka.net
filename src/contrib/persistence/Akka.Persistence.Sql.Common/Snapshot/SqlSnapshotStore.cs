@@ -137,8 +137,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
                     return true;
                 case Status.Failure msg:
                     Log.Error(msg.Cause, "Error during snapshot store initialization");
-                    Context.Stop(Self);
-                    return true;
+                    
+                    // trigger a restart so we have some hope of succeeding in the future even if initialization failed
+                    throw new ApplicationException("Failed to initialize SQL SnapshotStore.", msg.Cause);
                 default:
                     Stash.Stash();
                     return true;
