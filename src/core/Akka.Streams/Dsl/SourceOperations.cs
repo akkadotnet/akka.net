@@ -1706,7 +1706,7 @@ namespace Akka.Streams.Dsl
         /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements that passes
         /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
         /// 
-        /// @see <seealso cref="AlsoTo{TOut,TMat}"/>
+        /// @see <seealso cref="AlsoTo{TOut,TMat}(Source{TOut, TMat}, IGraph{SinkShape{TOut}, TMat})"/>
         /// 
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
@@ -1723,7 +1723,32 @@ namespace Akka.Streams.Dsl
             this Source<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat2> that,
             Func<TMat, TMat2, TMat3> materializerFunction)
         {
-            return (Source<TOut, TMat3>)InternalFlowOperations.AlsoToMaterialized(flow, that, materializerFunction);
+            return (Source<TOut, TMat3>)InternalFlowOperations.AlsoToMaterialized(flow, that, materializerFunction, false);
+        }
+
+        /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements that passes
+        /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
+        /// 
+        /// @see <seealso cref="AlsoTo{TOut,TMat}(Source{TOut, TMat}, IGraph{SinkShape{TOut}, TMat}, bool)"/>
+        /// 
+        /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <param name="materializerFunction">TBD</param>
+        /// <param name="propagateFailure">Propagate downstream failures and cancels parent stream</param>
+        /// <returns>TBD</returns>
+        public static Source<TOut, TMat3> AlsoToMaterialized<TOut, TMat, TMat2, TMat3>(
+            this Source<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat2> that,
+            Func<TMat, TMat2, TMat3> materializerFunction, bool propagateFailure)
+        {
+            return (Source<TOut, TMat3>)InternalFlowOperations.AlsoToMaterialized(flow, that, materializerFunction, propagateFailure);
         }
 
         /// <summary>
@@ -1745,7 +1770,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Source<TOut, TMat> AlsoTo<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that)
         {
-            return (Source<TOut, TMat>)InternalFlowOperations.AlsoTo(flow, that);
+            return (Source<TOut, TMat>)InternalFlowOperations.AlsoTo(flow, that, false);
         }
 
         /// <summary>
