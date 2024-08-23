@@ -366,14 +366,6 @@ namespace Akka.Cluster.Sharding
                 throw ConfigurationException.NullOrEmptyConfig<ClusterShardingSettings>();
 
 
-            int ConfigMajorityPlus(string p)
-            {
-                if (config.GetString(p)?.ToLowerInvariant() == "all")
-                    return int.MaxValue;
-                else
-                    return config.GetInt(p);
-            }
-
             var tuningParameters = new TuningParameters(
                 coordinatorFailureBackoff: config.GetTimeSpan("coordinator-failure-backoff"),
                 retryInterval: config.GetTimeSpan("retry-interval"),
@@ -426,6 +418,13 @@ namespace Akka.Cluster.Sharding
                 tuningParameters: tuningParameters,
                 coordinatorSingletonSettings: coordinatorSingletonSettings,
                 leaseSettings: lease);
+
+            int ConfigMajorityPlus(string p)
+            {
+                if (config.GetString(p)?.ToLowerInvariant() == "all")
+                    return int.MaxValue;
+                return config.GetInt(p);
+            }
         }
 
         /// <summary>
