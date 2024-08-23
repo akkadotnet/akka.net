@@ -1,6 +1,6 @@
 #### 1.5.28-beta1 August 23rd 2024 ####
 
-Akka.NET v1.5.28-beta1 is a patch beta release with several bug fix and improvements.
+Akka.NET v1.5.28-beta1 is a patch beta release with several bug fixes and improvements.
 
 * [Singleton: Fix oldest member transition log message](https://github.com/akkadotnet/akka.net/pull/7309)
 * [Core: Make ITimeProvider injectable into consuming classes](https://github.com/akkadotnet/akka.net/pull/7314)
