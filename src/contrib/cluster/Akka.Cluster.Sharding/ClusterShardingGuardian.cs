@@ -303,8 +303,8 @@ namespace Akka.Cluster.Sharding
                 .WithFallback(Context.System.Settings.Config.GetConfig("akka.cluster.distributed-data"));
             var configuredSettings = ReplicatorSettings.Create(config);
             var settingsWithRoles = configuredSettings.WithRole(shardingSettings.Role);
-            if (shardingSettings.RememberEntities)
-                return settingsWithRoles;
+            if (shardingSettings.RememberEntities && shardingSettings.RememberEntitiesStore == RememberEntitiesStore.DData)
+                return settingsWithRoles; // only enable durable keys when using DData for remember-entities
             else
                 return settingsWithRoles.WithDurableKeys(ImmutableHashSet<string>.Empty);
         }
