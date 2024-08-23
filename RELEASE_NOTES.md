@@ -1,3 +1,24 @@
+#### 1.5.28-beta1 August 23rd 2024 ####
+
+Akka.NET v1.5.28-beta1 is a patch beta release with several bug fix and improvements.
+
+* [Singleton: Fix oldest member transition log message](https://github.com/akkadotnet/akka.net/pull/7309)
+* [Core: Make ITimeProvider injectable into consuming classes](https://github.com/akkadotnet/akka.net/pull/7314)
+* [Singleton: Fix ClusterSingletonProxy failed to re-acquire singleton actor](https://github.com/akkadotnet/akka.net/pull/7315)
+* [Persistence: Make DateTime.UtcNow the default SnapshotMetadata timestamp](https://github.com/akkadotnet/akka.net/pull/7313)
+* [Remote.TestKit: Improve diagnostics and code modernization](https://github.com/akkadotnet/akka.net/pull/7321)
+* [Persistence.TestKit: Add new ConnectionInterceptor and improve usability](https://github.com/akkadotnet/akka.net/pull/7324)
+* [Sharding: Disable durable DData if RememberEntity does not use DData storage](https://github.com/akkadotnet/akka.net/pull/7327)
+* [Persistence.Sql.Common: Harden journal and snapshot store initialization](https://github.com/akkadotnet/akka.net/pull/7325)
+* [Streams: Fix missing AlsoTo public API in Flow, SubFlow, and Source](https://github.com/akkadotnet/akka.net/pull/7325)
+
+To [see the full set of changes in Akka.NET v1.5.28-beta1, click here](https://github.com/akkadotnet/akka.net/milestone/110?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 10      | 5318 | 5153 | Aaron Stannard      |
+| 4       | 1440 | 115  | Gregorius Soedharmo |
+
 #### 1.5.27.1 July 25th 2024 ####
 
 Akka.NET v1.5.27.1 is a minor patch to fix a race condition between the logging and remoting system.
