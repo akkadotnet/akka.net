@@ -131,7 +131,7 @@ While the client is running it will detect failures in its connection to the rec
 
 It is possible to make the cluster client stop entirely if it cannot find a receptionist it can talk to within a configurable interval. This is configured with the `reconnect-timeout`, which defaults to off. This can be useful when initial contacts are provided from some kind of service registry, cluster node addresses are entirely dynamic and the entire cluster might shut down or crash, be restarted on new addresses. Since the client will be stopped in that case a monitoring actor can watch it and upon `Terminate` a new set of initial contacts can be fetched and a new cluster client started.
 
-### Contact Auto-Discovery Using Akka.Discovery
+# Contact Auto-Discovery Using Akka.Discovery
 
 > [!NOTE]
 > This feature can only be used with:
@@ -142,11 +142,11 @@ It is possible to make the cluster client stop entirely if it cannot find a rece
 
 This feature is added in Akka.NET 1.5.27. Instead of watching for actor termination manually, you can leverage [Akka.Discovery](../discovery/index.md) to discover cluster client contact points inside a dynamic environment such as [Kubernetes](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/kubernetes.md), [AWS](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/aws.md), or anywhere else with [Azure Table](https://github.com/akkadotnet/Akka.Management/blob/dev/src/discovery/azure/Akka.Discovery.Azure/README.md)
 
-### Contact Auto-Discovery Setup Using Akka.Hosting
+## Contact Auto-Discovery Setup Using Akka.Hosting
 
 Cluster client discovery API has been added in `Akka.Cluster.Hosting` v1.5.27. You can use the `.WithClusterClientDiscovery()` extension method to use the cluster client initial contact auto discovery feature.
 
-#### Example: Setting Up Contact Auto-Discovery With Akka.Discovery.KubernetesApi
+### Example: Setting Up Contact Auto-Discovery With Akka.Discovery.KubernetesApi
 
 On your cluster client node side, these are the code you'll need to implement:
 
@@ -203,7 +203,7 @@ services.AddAkka("ReceptionistSys", (builder, provider) => {
 });
 ```
 
-#### Example: Setting Up Contact Auto-Discovery With Akka.Discovery.Azure
+### Example: Setting Up Contact Auto-Discovery With Akka.Discovery.Azure
 
 On your cluster client node side, these are the code you'll need to implement:
 
@@ -286,7 +286,7 @@ services.AddAkka("ReceptionistSys", (builder, provider) => {
 
 ```
 
-### Contact Auto-Discovery Setup Using Hocon Configuration
+## Contact Auto-Discovery Setup Using Hocon Configuration
 
 The HOCON configuration to set these are:
 
@@ -322,11 +322,11 @@ To enable contact auto-discovery, you will need to:
 * **OPTIONAL**. Set `akka.cluster.client.discovery,port-name` if the discovery extension that you're using depends on port names.
 * **OPTIONAL**. Set `akka.cluster.client.discovery.receptionist-name` if you're using a non-default receptionist name.
 
-### Using Akka.Discovery For Both Akka.Cluster.Tools.Client And Akka.Management.Cluster.Bootstrap
+## Using Akka.Discovery For Both Akka.Cluster.Tools.Client And Akka.Management.Cluster.Bootstrap
 
 If you need to use Akka.Discovery with both ClusterClient AND ClusterBootstrap, you will have to **make sure** that you have **TWO** different Akka.Discovery settings living side-by-side under the `akka.discovery` HOCON setting section.
 
-#### Akka.Discovery.KubernetesApi Example
+### Akka.Discovery.KubernetesApi Example
 
 In your YAML file:
 
@@ -362,7 +362,7 @@ In your cluster client Akka.NET node HOCON settings:
 * Keep the `akka.discovery.method` HOCON value to "kubernetes-api", this is the discovery extension that will be used by ClusterBootstrap.
 * Change the `akka.cluster.client.discovery.method` value from "\<method>" to "kubernetes-api-cluster-client", this is the discovery extension that will be used by ClusterClient. If not set, this will default to the value set in `akka.discovery.method`, which is **NOT** what we want.
 
-#### Akka.Discovery.Azure Example
+### Akka.Discovery.Azure Example
 
 In your cluster receptionist Akka.NET node HOCON settings:
 
