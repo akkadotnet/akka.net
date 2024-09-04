@@ -1,3 +1,24 @@
+#### 1.5.28 September 5th 2024 ####
+
+Akka.NET v1.5.28 is a release with several bug fixes and improvements.
+
+* [Singleton: Fix oldest member transition log message](https://github.com/akkadotnet/akka.net/pull/7309)
+* [Core: Make ITimeProvider injectable into consuming classes](https://github.com/akkadotnet/akka.net/pull/7314)
+* [Singleton: Fix ClusterSingletonProxy failed to re-acquire singleton actor](https://github.com/akkadotnet/akka.net/pull/7315)
+* [Persistence: Make DateTime.UtcNow the default SnapshotMetadata timestamp](https://github.com/akkadotnet/akka.net/pull/7313)
+* [Remote.TestKit: Improve diagnostics and code modernization](https://github.com/akkadotnet/akka.net/pull/7321)
+* [Persistence.TestKit: Add new ConnectionInterceptor and improve usability](https://github.com/akkadotnet/akka.net/pull/7324)
+* [Sharding: Disable durable DData if RememberEntity does not use DData storage](https://github.com/akkadotnet/akka.net/pull/7327)
+* [Persistence.Sql.Common: Harden journal and snapshot store initialization](https://github.com/akkadotnet/akka.net/pull/7325)
+* [Streams: Fix missing AlsoTo public API in Flow, SubFlow, and Source](https://github.com/akkadotnet/akka.net/pull/7325)
+* [Streams: Fix StreamRefSerializer NRE bug](https://github.com/akkadotnet/akka.net/pull/7333)
+* [Persistence: Fix SnapshotStore.SaveSnapshot metadata timestamp bug](https://github.com/akkadotnet/akka.net/pull/7334)
+* [Persistence.TCK: Add new optional SnapshotStore save data integrity spec](https://github.com/akkadotnet/akka.net/pull/7335)
+
+To [see the full set of changes in Akka.NET v1.5.28, click here](https://github.com/akkadotnet/akka.net/milestone/110?closed=1).
+
+
+
 #### 1.5.28-beta1 August 23rd 2024 ####
 
 Akka.NET v1.5.28-beta1 is a patch beta release with several bug fixes and improvements.
