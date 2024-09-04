@@ -17,7 +17,12 @@ Akka.NET v1.5.28 is a release with several bug fixes and improvements.
 
 To [see the full set of changes in Akka.NET v1.5.28, click here](https://github.com/akkadotnet/akka.net/milestone/110?closed=1).
 
+2 contributors since release 1.5.27.1
 
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 10      | 5318 | 5153 | Aaron Stannard      |
+| 8       | 1568 | 158  | Gregorius Soedharmo |
 
 #### 1.5.28-beta1 August 23rd 2024 ####
 
