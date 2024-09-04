@@ -4753,6 +4753,7 @@ namespace Akka.Streams.Implementation.Stages
 }
 namespace Akka.Streams.Serialization
 {
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class StreamRefSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public StreamRefSerializer(Akka.Actor.ExtendedActorSystem system) { }
