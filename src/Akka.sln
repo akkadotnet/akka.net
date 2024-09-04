@@ -58,6 +58,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{10C5B1E8
 		..\build.fsx = ..\build.fsx
 		Directory.Build.props = Directory.Build.props
 		NuGet.Config = NuGet.Config
+		..\RELEASE_NOTES.md = ..\RELEASE_NOTES.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Contrib", "Contrib", "{588C1513-FAB6-42C3-B6FC-3485F13620CF}"
