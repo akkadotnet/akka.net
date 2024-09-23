@@ -105,7 +105,25 @@ namespace Akka.Actor.Scheduler
         /// <param name="interval">Interval</param>
         public void StartPeriodicTimer(object key, object msg, TimeSpan interval)
         {
-            StartTimer(key, msg, interval, interval, true);
+            StartTimer(key, msg, interval, interval, true, ActorRefs.NoSender);
+        }
+
+        /// <summary>
+        /// Start a periodic timer that will send <paramref name="msg"/> to the "Self" actor at
+        /// a fixed <paramref name="interval"/>.
+        ///
+        /// Each timer has a key and if a new timer with same key is started
+        /// the previous is cancelled and it's guaranteed that a message from the
+        /// previous timer is not received, even though it might already be enqueued
+        /// in the mailbox when the new timer is started.
+        /// </summary>
+        /// <param name="key">Name of timer</param>
+        /// <param name="msg">Message to schedule</param>
+        /// <param name="interval">Interval</param>
+        /// <param name="sender">The sender override for the timer message</param>
+        public void StartPeriodicTimer(object key, object msg, TimeSpan interval, IActorRef sender)
+        {
+            StartTimer(key, msg, interval, interval, true, sender);
         }
 
         /// <summary>
@@ -123,7 +141,26 @@ namespace Akka.Actor.Scheduler
         /// <param name="interval">Interval</param>
         public void StartPeriodicTimer(object key, object msg, TimeSpan initialDelay, TimeSpan interval)
         {
-            StartTimer(key, msg, interval, initialDelay, true);
+            StartTimer(key, msg, interval, initialDelay, true, ActorRefs.NoSender);
+        }
+
+        /// <summary>
+        /// Start a periodic timer that will send <paramref name="msg"/> to the "Self" actor at
+        /// a fixed <paramref name="interval"/>.
+        ///
+        /// Each timer has a key and if a new timer with same key is started
+        /// the previous is cancelled and it's guaranteed that a message from the
+        /// previous timer is not received, even though it might already be enqueued
+        /// in the mailbox when the new timer is started.
+        /// </summary>
+        /// <param name="key">Name of timer</param>
+        /// <param name="msg">Message to schedule</param>
+        /// <param name="initialDelay">Initial delay</param>
+        /// <param name="interval">Interval</param>
+        /// <param name="sender">The sender override for the timer message</param>
+        public void StartPeriodicTimer(object key, object msg, TimeSpan initialDelay, TimeSpan interval, IActorRef sender)
+        {
+            StartTimer(key, msg, interval, initialDelay, true, sender);
         }
 
         /// <summary>
@@ -140,7 +177,25 @@ namespace Akka.Actor.Scheduler
         /// <param name="timeout">Interval</param>
         public void StartSingleTimer(object key, object msg, TimeSpan timeout)
         {
-            StartTimer(key, msg, timeout, TimeSpan.Zero, false);
+            StartTimer(key, msg, timeout, TimeSpan.Zero, false, ActorRefs.NoSender);
+        }
+
+        /// <summary>
+        /// Start a timer that will send <paramref name="msg"/> once to the "Self" actor after
+        /// the given <paramref name="timeout"/>.
+        ///
+        /// Each timer has a key and if a new timer with same key is started
+        /// the previous is cancelled and it's guaranteed that a message from the
+        /// previous timer is not received, even though it might already be enqueued
+        /// in the mailbox when the new timer is started.
+        /// </summary>
+        /// <param name="key">Name of timer</param>
+        /// <param name="msg">Message to schedule</param>
+        /// <param name="timeout">Interval</param>
+        /// <param name="sender">The sender override for the timer message</param>
+        public void StartSingleTimer(object key, object msg, TimeSpan timeout, IActorRef sender)
+        {
+            StartTimer(key, msg, timeout, TimeSpan.Zero, false, sender);
         }
 
         /// <summary>
@@ -195,7 +250,7 @@ namespace Akka.Actor.Scheduler
         }
 
 
-        private void StartTimer(object key, object msg, TimeSpan timeout, TimeSpan initialDelay, bool repeat)
+        private void StartTimer(object key, object msg, TimeSpan timeout, TimeSpan initialDelay, bool repeat, IActorRef sender)
         {
             if (_timers.TryGetValue(key, out var timer))
                 CancelTimer(timer);
@@ -210,9 +265,9 @@ namespace Akka.Actor.Scheduler
 
             ICancelable task;
             if (repeat)
-                task = _ctx.System.Scheduler.ScheduleTellRepeatedlyCancelable(initialDelay, timeout, _ctx.Self, timerMsg, ActorRefs.NoSender);
+                task = _ctx.System.Scheduler.ScheduleTellRepeatedlyCancelable(initialDelay, timeout, _ctx.Self, timerMsg, sender);
             else
-                task = _ctx.System.Scheduler.ScheduleTellOnceCancelable(timeout, _ctx.Self, timerMsg, ActorRefs.NoSender);
+                task = _ctx.System.Scheduler.ScheduleTellOnceCancelable(timeout, _ctx.Self, timerMsg, sender);
 
             var nextTimer = new Timer(key, msg, repeat, nextGen, task);
             
