@@ -15,10 +15,10 @@ jobs:
     if: github.repository == 'akkadotnet/akka.net'
     steps:
     - uses: actions/checkout@v4
-    - name: Setup .NET 5
+    - name: Setup .NET 8
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 5.0.101
+        dotnet-version: 8.0.402
         source-url: https://nuget.pkg.github.com/akkadotnet/index.json
       env:
         NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
