@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <Description>TestKit for writing tests for Akka.NET using xUnit.</Description>
@@ -9,7 +9,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\core\Akka.TestKit\Akka.TestKit.csproj" />
-        <PackageReference Include="xunit" Version="2.8.1" />
+        <PackageReference Include="xunit" />
     </ItemGroup>
 
     <PropertyGroup>

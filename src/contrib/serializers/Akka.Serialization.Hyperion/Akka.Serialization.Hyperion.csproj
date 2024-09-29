@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <Description>Hyperion serializer for Akka.NET</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
@@ -6,13 +6,13 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
     <ItemGroup>
-        <EmbeddedResource Include="reference.conf"/>
-        <PackageReference Include="Hyperion" Version="0.12.2"/>
-        <ProjectReference Include="..\..\..\core\Akka\Akka.csproj"/>
+        <EmbeddedResource Include="reference.conf" />
+        <PackageReference Include="Hyperion" />
+        <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
     </ItemGroup>
     <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-        <PackageReference Include="System.Reflection" Version="4.3.0"/>
-        <PackageReference Include="System.Runtime" Version="4.3.1"/>
+        <PackageReference Include="System.Reflection" />
+        <PackageReference Include="System.Runtime" />
     </ItemGroup>
 
 </Project>

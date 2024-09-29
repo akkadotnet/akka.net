@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <Description>Akka.NET Persistence ADO.NET middleware</Description>
@@ -8,17 +8,17 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj"/>
+        <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="System.Data.Common" Version="4.3.0"/>
+        <PackageReference Include="System.Data.Common" />
       
         <!--
           This reference is added to resolve CVE-2018-8292 because System.Data.Common references the bad version
           of this package. This can be removed if System.Data.Common ever release a clean version in the future
         -->
-        <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
+        <PackageReference Include="System.Text.RegularExpressions" />
     </ItemGroup>
 
 </Project>

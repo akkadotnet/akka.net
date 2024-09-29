@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <Description>Distributed publish/subscribe, client and singleton support for Akka.NET cluster</Description>
@@ -8,10 +8,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <EmbeddedResource Include="Client\reference.conf;PublishSubscribe\reference.conf;Singleton\reference.conf"/>
-        <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj"/>
-        <ProjectReference Include="..\..\..\core\Akka.Coordination\Akka.Coordination.csproj"/>
-        <PackageReference Include="Grpc.Tools" Version="2.60.0">
+        <EmbeddedResource Include="Client\reference.conf;PublishSubscribe\reference.conf;Singleton\reference.conf" />
+        <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
+        <ProjectReference Include="..\..\..\core\Akka.Coordination\Akka.Coordination.csproj" />
+        <PackageReference Include="Grpc.Tools">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
