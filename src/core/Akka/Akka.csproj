@@ -13,17 +13,17 @@
 
   <ItemGroup>
       <PackageReference Include="Polyfill" Version="1.28.0" PrivateAssets="all" />
-      <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="$(MsExtVersion)" />
-      <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
+      <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="6.0.0" />
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
       <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
-      <PackageReference Include="System.Collections.Immutable" Version="$(MicrosoftLibVersion)" />
-      <PackageReference Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
-      <PackageReference Include="System.Configuration.ConfigurationManager" Version="$(ConfigurationManagerVersion)"/>
+      <PackageReference Include="System.Collections.Immutable" Version="6.0.0" />
+      <PackageReference Include="System.Threading.Channels" Version="6.0.0" />
+      <PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.1"/>
       
   </ItemGroup>
   
   <ItemGroup Label="PublicAnalyzers">
-    <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" />
+    <PackageReference Include="Akka.Analyzers" Version="0.2.5" />
   </ItemGroup>
   
   <ItemGroup>

@@ -13,7 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
+      <PackageReference Include="Grpc.Tools" Version="2.60.0">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>

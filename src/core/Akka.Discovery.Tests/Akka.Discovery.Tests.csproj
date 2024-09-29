@@ -6,11 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="FluentAssertions" Version="5.10.3" />
     <PackageReference Include="FluentDateTime" Version="3.0.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-    <PackageReference Include="xunit" Version="$(XunitVersion)" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+    <PackageReference Include="xunit" Version="2.8.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.1" />
   </ItemGroup>
 
   <ItemGroup>

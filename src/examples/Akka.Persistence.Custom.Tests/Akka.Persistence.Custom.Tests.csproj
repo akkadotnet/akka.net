@@ -7,9 +7,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-        <PackageReference Include="xunit" Version="$(XunitVersion)" />
-        <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)">
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+        <PackageReference Include="xunit" Version="2.8.1" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.8.1">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>

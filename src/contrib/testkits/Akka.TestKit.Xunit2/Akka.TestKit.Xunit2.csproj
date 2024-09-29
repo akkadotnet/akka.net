@@ -9,7 +9,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\core\Akka.TestKit\Akka.TestKit.csproj" />
-        <PackageReference Include="xunit" Version="$(XunitVersion)" />
+        <PackageReference Include="xunit" Version="2.8.1" />
     </ItemGroup>
 
     <PropertyGroup>
