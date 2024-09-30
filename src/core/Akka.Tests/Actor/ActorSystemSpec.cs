@@ -452,6 +452,7 @@ namespace Akka.Tests.Actor
         }
 
         public DateTimeOffset Now { get; private set; }
+        public DateTime DateTimeNow { get; private set; }
         public TimeSpan MonotonicClock { get; private set; }
         public TimeSpan HighResMonotonicClock { get; private set; }
         public IAdvancedScheduler Advanced { get; private set; }
