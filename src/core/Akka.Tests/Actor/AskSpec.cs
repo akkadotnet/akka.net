@@ -218,7 +218,7 @@ namespace Akka.Tests.Actor
             }
             catch (AskTimeoutException e)
             {
-                Assert.Equal("Timeout after 00:00:03 seconds", e.Message);
+                Assert.Equal("Timeout after 3.00 seconds", e.Message);
             }
         }
 
