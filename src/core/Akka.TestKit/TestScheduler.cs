@@ -212,6 +212,10 @@ namespace Akka.TestKit
         /// <summary>
         /// TBD
         /// </summary>
+        public DateTime DateTimeNow { get { return DateTime.SpecifyKind(_now.DateTime, DateTimeKind.Utc); } }
+        /// <summary>
+        /// TBD
+        /// </summary>
         public TimeSpan MonotonicClock { get { return Util.MonotonicClock.Elapsed; } }
         /// <summary>
         /// TBD

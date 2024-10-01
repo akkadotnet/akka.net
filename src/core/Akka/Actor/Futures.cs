@@ -137,7 +137,7 @@ namespace Akka.Actor
 
                 ctr1 = timeoutCancellation.Token.Register(() =>
                 {
-                    result.TrySetException(new AskTimeoutException($"Timeout after {timeout} seconds"));
+                    result.TrySetException(new AskTimeoutException($"Timeout after {timeout.Value.TotalSeconds:F2} seconds"));
                 });
 
                 timeoutCancellation.CancelAfter(timeout.Value);

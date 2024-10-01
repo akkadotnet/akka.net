@@ -592,6 +592,7 @@ namespace Akka.Actor
     [System.ObsoleteAttribute("This class will be removed in Akka.NET v1.6.0 - use the IScheduler instead.")]
     public class DateTimeOffsetNowTimeProvider : Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider
     {
+        public System.DateTime DateTimeNow { get; }
         public System.TimeSpan HighResMonotonicClock { get; }
         public static Akka.Actor.DateTimeOffsetNowTimeProvider Instance { get; }
         public System.TimeSpan MonotonicClock { get; }
@@ -932,6 +933,7 @@ namespace Akka.Actor
     public sealed class HashedWheelTimerScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider, System.IDisposable
     {
         public HashedWheelTimerScheduler(Akka.Configuration.Config scheduler, Akka.Event.ILoggingAdapter log) { }
+        protected override System.DateTime DateTimeNow { get; }
         public override System.TimeSpan HighResMonotonicClock { get; }
         public override System.TimeSpan MonotonicClock { get; }
         protected override System.DateTimeOffset TimeNow { get; }
@@ -1172,6 +1174,7 @@ namespace Akka.Actor
     }
     public interface ITimeProvider
     {
+        System.DateTime DateTimeNow { get; }
         System.TimeSpan HighResMonotonicClock { get; }
         System.TimeSpan MonotonicClock { get; }
         System.DateTimeOffset Now { get; }
@@ -1622,6 +1625,7 @@ namespace Akka.Actor
         protected readonly Akka.Event.ILoggingAdapter Log;
         protected readonly Akka.Configuration.Config SchedulerConfig;
         protected SchedulerBase(Akka.Configuration.Config scheduler, Akka.Event.ILoggingAdapter log) { }
+        protected abstract System.DateTime DateTimeNow { get; }
         public abstract System.TimeSpan HighResMonotonicClock { get; }
         public abstract System.TimeSpan MonotonicClock { get; }
         protected abstract System.DateTimeOffset TimeNow { get; }

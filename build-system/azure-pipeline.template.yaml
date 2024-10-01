@@ -24,9 +24,9 @@ jobs:
         value: true
     steps:
       - task: UseDotNet@2
-        displayName: 'Use .NET 8 SDK 8.0.100'
+        displayName: 'Use .NET 8 SDK 8.0.402'
         inputs:
-          version: 8.0.100
+          version: 8.0.402
       - task: Bash@3 
         displayName: Linux / OSX Build
         inputs:
