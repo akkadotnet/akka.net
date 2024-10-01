@@ -8,7 +8,7 @@ Akka.NET v1.5.29 is an emergency patch release that addresses a severe bug for p
 * [Persistence: Fix SnapshotMetadata default timestamp value (DateTimeKind.Utc bug)](https://github.com/akkadotnet/akka.net/pull/7349)
 * [Core: Fix AskTimeoutException message formatting bug](https://github.com/akkadotnet/akka.net/pull/7350)
 
-To [see the full set of changes in Akka.NET v1.5.28, click here](https://github.com/akkadotnet/akka.net/milestone/112?closed=1).
+To [see the full set of changes in Akka.NET v1.5.29, click here](https://github.com/akkadotnet/akka.net/milestone/112?closed=1).
 
 3 contributors since release 1.5.28
 
