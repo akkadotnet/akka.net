@@ -102,7 +102,8 @@ namespace Akka.Persistence.TCK.Snapshot
         {
             for (int i = 1; i <= 5; i++)
             {
-                var metadata = new SnapshotMetadata(Pid, i + 10, Sys.Scheduler.Now.DateTime);
+                var metadata = new SnapshotMetadata(Pid, i + 10, Sys.Scheduler.DateTimeNow);
+                metadata.Timestamp.Kind.Should().Be(DateTimeKind.Utc);
                 SnapshotStore.Tell(new SaveSnapshot(metadata, $"s-{i}"), _senderProbe.Ref);
                 yield return _senderProbe.ExpectMsg<SaveSnapshotSuccess>().Metadata;
             }
@@ -312,7 +313,8 @@ namespace Akka.Persistence.TCK.Snapshot
         [Fact]
         public virtual void SnapshotStore_should_save_bigger_size_snapshot()
         {
-            var metadata = new SnapshotMetadata(Pid, 100, Sys.Scheduler.Now.DateTime);
+            var metadata = new SnapshotMetadata(Pid, 100, Sys.Scheduler.DateTimeNow);
+            metadata.Timestamp.Kind.Should().Be(DateTimeKind.Utc);
             var bigSnapshot = new byte[SnapshotByteSizeLimit];
             new Random().NextBytes(bigSnapshot);
             SnapshotStore.Tell(new SaveSnapshot(metadata, bigSnapshot), _senderProbe.Ref);
@@ -326,7 +328,8 @@ namespace Akka.Persistence.TCK.Snapshot
             if (!SupportsSerialization) return;
 
             var probe = CreateTestProbe();
-            var metadata = new SnapshotMetadata(Pid, 100L, Sys.Scheduler.Now.DateTime);
+            var metadata = new SnapshotMetadata(Pid, 100L, Sys.Scheduler.DateTimeNow);
+            metadata.Timestamp.Kind.Should().Be(DateTimeKind.Utc);
             var snap = new TestPayload(probe.Ref);
 
             SnapshotStore.Tell(new SaveSnapshot(metadata, snap), _senderProbe.Ref);
