@@ -247,7 +247,8 @@ namespace Akka.Persistence.TCK.Query
                 ExpectMsg($"{persistenceId}-{i}-done");
             }
 
-            var metadata = new SnapshotMetadata(persistenceId, n + 10, Sys.Scheduler.Now.DateTime);
+            var metadata = new SnapshotMetadata(persistenceId, n + 10, Sys.Scheduler.DateTimeNow);
+            metadata.Timestamp.Kind.Should().Be(DateTimeKind.Utc);
             SnapshotStore.Tell(new SaveSnapshot(metadata, $"s-{n}"), _senderProbe.Ref);
             _senderProbe.ExpectMsg<SaveSnapshotSuccess>();
 
