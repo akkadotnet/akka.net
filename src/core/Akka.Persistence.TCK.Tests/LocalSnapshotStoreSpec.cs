@@ -42,7 +42,7 @@ namespace Akka.Persistence.TCK.Tests
         public void LocalSnapshotStore_can_snapshot_actors_with_PersistenceId_containing_invalid_path_characters()
         {
             var pid = @"p\/:*?-1";
-            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(pid, 1, Sys.Scheduler.Now.DateTime), "sample data"), TestActor);
+            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(pid, 1, Sys.Scheduler.DateTimeNow), "sample data"), TestActor);
             ExpectMsg<SaveSnapshotSuccess>();
 
             SnapshotStore.Tell(new LoadSnapshot(pid, SnapshotSelectionCriteria.Latest, long.MaxValue), TestActor);
