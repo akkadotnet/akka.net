@@ -1,3 +1,23 @@
+#### 1.5.28.1 October 1st 2024 ####
+
+Akka.NET v1.5.28.1 is an emergency patch release that addresses a severe bug for persistence users whom also use protobuf serializer.
+
+* [DData: Remove Hyperion dependency](https://github.com/akkadotnet/akka.net/pull/7337)
+* [Streams: Fix SelectAsync race condition bug](https://github.com/akkadotnet/akka.net/pull/7338)
+* [Core: Add new IWithTimers API to allow sender override](https://github.com/akkadotnet/akka.net/pull/7341)
+* [Persistence: Fix SnapshotMetadata default timestamp value (DateTimeKind.Utc bug)](https://github.com/akkadotnet/akka.net/pull/7349)
+* [Core: Fix AskTimeoutException message formatting bug](https://github.com/akkadotnet/akka.net/pull/7350)
+
+To [see the full set of changes in Akka.NET v1.5.28, click here](https://github.com/akkadotnet/akka.net/milestone/112?closed=1).
+
+3 contributors since release 1.5.28
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 4       | 177  | 14   | Gregorius Soedharmo |
+| 1       | 10   | 10   | Simon Cropp         |
+| 1       | 0    | 1    | Aaron Stannard      |
+
 #### 1.5.28 September 5th 2024 ####
 
 Akka.NET v1.5.28 is a release with several bug fixes and improvements.
