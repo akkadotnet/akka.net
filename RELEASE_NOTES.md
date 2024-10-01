@@ -1,6 +1,6 @@
-#### 1.5.28.1 October 1st 2024 ####
+#### 1.5.29 October 1st 2024 ####
 
-Akka.NET v1.5.28.1 is an emergency patch release that addresses a severe bug for persistence users whom also use protobuf serializer.
+Akka.NET v1.5.29 is an emergency patch release that addresses a severe bug for persistence users whom also use protobuf serializer.
 
 * [DData: Remove Hyperion dependency](https://github.com/akkadotnet/akka.net/pull/7337)
 * [Streams: Fix SelectAsync race condition bug](https://github.com/akkadotnet/akka.net/pull/7338)
