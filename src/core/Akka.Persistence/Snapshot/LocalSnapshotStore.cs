@@ -292,7 +292,7 @@ namespace Akka.Persistence.Snapshot
 
                 if (long.TryParse(seqNrString, out var sequenceNr) && long.TryParse(timestampTicks, out var ticks))
                 {
-                    return new SnapshotMetadata(pid, sequenceNr, new DateTime(ticks));
+                    return new SnapshotMetadata(pid, sequenceNr, DateTime.SpecifyKind(new DateTime(ticks), DateTimeKind.Utc));
                 }
             }
 

@@ -651,7 +651,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         {
             var persistenceId = reader.GetString(0);
             var sequenceNr = reader.GetInt64(1);
-            var timestamp = reader.GetDateTime(2);
+            var timestamp = DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc);
 
             var metadata = new SnapshotMetadata(persistenceId, sequenceNr, timestamp);
             var snapshot = GetSnapshot(reader);

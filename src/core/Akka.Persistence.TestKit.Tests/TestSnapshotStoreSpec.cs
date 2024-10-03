@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Xunit.Abstractions;
+
 namespace Akka.Persistence.TestKit.Tests
 {
     using System;
@@ -15,7 +17,7 @@ namespace Akka.Persistence.TestKit.Tests
 
     public sealed class TestSnapshotStoreSpec : PersistenceTestKit
     {
-        public TestSnapshotStoreSpec()
+        public TestSnapshotStoreSpec(ITestOutputHelper output) : base(nameof(TestSnapshotStoreSpec), output)
         {
             _probe = CreateTestProbe();
         }

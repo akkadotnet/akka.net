@@ -99,7 +99,11 @@ namespace Akka.Persistence.Snapshot
 
         private static SelectedSnapshot ToSelectedSnapshot(SnapshotEntry entry)
         {
-            return new SelectedSnapshot(new SnapshotMetadata(entry.PersistenceId, entry.SequenceNr, new DateTime(entry.Timestamp)), entry.Snapshot);
+            return new SelectedSnapshot(metadata: new SnapshotMetadata(
+                persistenceId: entry.PersistenceId,
+                sequenceNr: entry.SequenceNr,
+                timestamp: DateTime.SpecifyKind(new DateTime(entry.Timestamp), DateTimeKind.Utc)), 
+                snapshot: entry.Snapshot);
         }
     }
 
