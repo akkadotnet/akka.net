@@ -399,11 +399,6 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        protected override DateTime DateTimeNow => DateTime.UtcNow;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         public override TimeSpan MonotonicClock => Util.MonotonicClock.Elapsed;
 
         /// <summary>

@@ -19,8 +19,6 @@ namespace Akka.Actor
         
         public DateTimeOffset Now { get { return DateTimeOffset.UtcNow; } }
         
-        public DateTime DateTimeNow => DateTime.UtcNow;
-        
         public TimeSpan MonotonicClock {get { return Util.MonotonicClock.Elapsed; }}
         
         public TimeSpan HighResMonotonicClock{get { return Util.MonotonicClock.ElapsedHighRes; }}

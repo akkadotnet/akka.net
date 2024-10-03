@@ -577,7 +577,6 @@ namespace Akka.TestKit
     {
         public TestScheduler(Akka.Configuration.Config schedulerConfig, Akka.Event.ILoggingAdapter log) { }
         public Akka.Actor.IAdvancedScheduler Advanced { get; }
-        public System.DateTime DateTimeNow { get; }
         public System.TimeSpan HighResMonotonicClock { get; }
         public System.TimeSpan MonotonicClock { get; }
         public System.DateTimeOffset Now { get; }
