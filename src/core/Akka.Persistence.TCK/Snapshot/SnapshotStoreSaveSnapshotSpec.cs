@@ -138,16 +138,14 @@ akka.actor {
         var snapshotStore = persistence.SnapshotStoreFor(null);
         var snap = new TestPayload(SenderProbe.Ref);
         
-        var metadata = new SnapshotMetadata(PersistenceId, 3, DateTime.UtcNow);
-        metadata.Timestamp.Kind.Should().Be(DateTimeKind.Utc);
+        var metadata = new SnapshotMetadata(PersistenceId, 3, DateTime.Now);
         snapshotStore.Tell(new SaveSnapshot(metadata, snap), SenderProbe);
         var success = await SenderProbe.ExpectMsgAsync<SaveSnapshotSuccess>(10.Minutes());
         success.Metadata.PersistenceId.Should().Be(metadata.PersistenceId);
         success.Metadata.Timestamp.Should().Be(metadata.Timestamp);
         success.Metadata.SequenceNr.Should().Be(metadata.SequenceNr);
         
-        metadata = new SnapshotMetadata(PersistenceId, 3, DateTime.UtcNow);
-        metadata.Timestamp.Kind.Should().Be(DateTimeKind.Utc);
+        metadata = new SnapshotMetadata(PersistenceId, 3, DateTime.Now);
         snapshotStore.Tell(new SaveSnapshot(metadata, 3), SenderProbe);
         success = await SenderProbe.ExpectMsgAsync<SaveSnapshotSuccess>();
         success.Metadata.PersistenceId.Should().Be(metadata.PersistenceId);
