@@ -97,17 +97,10 @@ namespace Akka.Actor
         IAdvancedScheduler IScheduler.Advanced { get { return this; } }
         DateTimeOffset ITimeProvider.Now { get { return TimeNow; } }
 
-        DateTime ITimeProvider.DateTimeNow => DateTime.SpecifyKind(TimeNow.DateTime, DateTimeKind.Utc);
-        
         /// <summary>
-        /// The current time in <see cref="DateTimeOffset"/> UTC.
+        /// The current time in UTC.
         /// </summary>
         protected abstract DateTimeOffset TimeNow { get; }
-
-        /// <summary>
-        /// The current time in <see cref="DateTime"/> UTC.
-        /// </summary>
-        protected abstract DateTime DateTimeNow { get; }
 
         /// <summary>
         /// The current time since startup, as determined by the monotonic clock implementation.

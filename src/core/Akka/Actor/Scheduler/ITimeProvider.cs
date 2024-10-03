@@ -20,13 +20,9 @@ namespace Akka.Actor
     public interface ITimeProvider
     {
         /// <summary>
-        /// Gets the scheduler's notion of current time in <see cref="DateTimeOffset"/>.
+        /// Gets the scheduler's notion of current time.
         /// </summary>
         DateTimeOffset Now { get; }
-        /// <summary>
-        /// Gets the scheduler's notion of current time in <see cref="DateTime"/>.
-        /// </summary>
-        DateTime DateTimeNow { get; }
         /// <summary>
         /// TBD
         /// </summary>

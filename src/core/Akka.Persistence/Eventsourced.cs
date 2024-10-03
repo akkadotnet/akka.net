@@ -218,7 +218,7 @@ namespace Akka.Persistence
         /// <param name="snapshot">TBD</param>
         public void SaveSnapshot(object snapshot)
         {
-            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(SnapshotterId, SnapshotSequenceNr, Context.System.Scheduler.DateTimeNow), snapshot));
+            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(SnapshotterId, SnapshotSequenceNr, Context.System.Scheduler.Now.Date), snapshot));
         }
 
         /// <summary>

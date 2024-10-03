@@ -36,7 +36,6 @@ namespace Akka.Tests.Actor.Scheduler
             
 
             protected override DateTimeOffset TimeNow { get; }
-            protected override DateTime DateTimeNow { get; }
             public override TimeSpan MonotonicClock { get; }
             public override TimeSpan HighResMonotonicClock { get; }
 
