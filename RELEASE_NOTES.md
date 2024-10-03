@@ -1,6 +1,6 @@
 #### 1.5.30 October 1st 2024 ####
 
-Akka.NET v1.5.30 is an emergency patch release that addresses a severe bug for persistence users whom also use protobuf serializer.
+Akka.NET v1.5.29 introduced an interface change on the `IScheduler` that unfortunately caused a lot of other plugins to break due to API compatibility issues. v1.5.30 rolls back that change but still fixes the underlying bug in Akka.Persistence's handling and serialziation of timestamps without any interface changes. v1.5.29 will be deprecated from NuGet.
 
 * [DData: Remove Hyperion dependency](https://github.com/akkadotnet/akka.net/pull/7337)
 * [Streams: Fix SelectAsync race condition bug](https://github.com/akkadotnet/akka.net/pull/7338)
