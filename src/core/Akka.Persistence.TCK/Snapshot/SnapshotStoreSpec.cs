@@ -102,7 +102,7 @@ namespace Akka.Persistence.TCK.Snapshot
         {
             for (int i = 1; i <= 5; i++)
             {
-                var metadata = new SnapshotMetadata(Pid, i + 10, Sys.Scheduler.Now.DateTime);
+                var metadata = new SnapshotMetadata(Pid, i + 10, Sys.Scheduler.Now.UtcDateTime);
                 SnapshotStore.Tell(new SaveSnapshot(metadata, $"s-{i}"), _senderProbe.Ref);
                 yield return _senderProbe.ExpectMsg<SaveSnapshotSuccess>().Metadata;
             }
@@ -209,7 +209,7 @@ namespace Akka.Persistence.TCK.Snapshot
         {
             var md = Metadata[2];
             // In previous incarnation, timestamp argument defaults to DateTime.MinValue
-            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr, DateTime.MinValue);
+            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr, DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc));
             var command = new DeleteSnapshot(md);
             var sub = CreateTestProbe();
 
@@ -312,7 +312,7 @@ namespace Akka.Persistence.TCK.Snapshot
         [Fact]
         public virtual void SnapshotStore_should_save_bigger_size_snapshot()
         {
-            var metadata = new SnapshotMetadata(Pid, 100, Sys.Scheduler.Now.DateTime);
+            var metadata = new SnapshotMetadata(Pid, 100, Sys.Scheduler.Now.UtcDateTime);
             var bigSnapshot = new byte[SnapshotByteSizeLimit];
             new Random().NextBytes(bigSnapshot);
             SnapshotStore.Tell(new SaveSnapshot(metadata, bigSnapshot), _senderProbe.Ref);
@@ -326,7 +326,7 @@ namespace Akka.Persistence.TCK.Snapshot
             if (!SupportsSerialization) return;
 
             var probe = CreateTestProbe();
-            var metadata = new SnapshotMetadata(Pid, 100L, Sys.Scheduler.Now.DateTime);
+            var metadata = new SnapshotMetadata(Pid, 100L, Sys.Scheduler.Now.UtcDateTime);
             var snap = new TestPayload(probe.Ref);
 
             SnapshotStore.Tell(new SaveSnapshot(metadata, snap), _senderProbe.Ref);
