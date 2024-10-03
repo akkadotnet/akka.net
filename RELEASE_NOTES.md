@@ -1,4 +1,30 @@
+#### 1.5.30 October 1st 2024 ####
+
+Akka.NET v1.5.29 introduced an interface change on the `IScheduler` that unfortunately caused a lot of other plugins to break due to API compatibility issues. v1.5.30 rolls back that change but still fixes the underlying bug in Akka.Persistence's handling and serialziation of timestamps without any interface changes. v1.5.29 will be deprecated from NuGet.
+
+* [DData: Remove Hyperion dependency](https://github.com/akkadotnet/akka.net/pull/7337)
+* [Streams: Fix SelectAsync race condition bug](https://github.com/akkadotnet/akka.net/pull/7338)
+* [Core: Add new IWithTimers API to allow sender override](https://github.com/akkadotnet/akka.net/pull/7341)
+* [Persistence: Fix SnapshotMetadata default timestamp value (DateTimeKind.Utc bug)](https://github.com/akkadotnet/akka.net/pull/7354)
+* [Core: Fix AskTimeoutException message formatting bug](https://github.com/akkadotnet/akka.net/pull/7350)
+
+To [see the full set of changes in Akka.NET v1.5.30, click here](https://github.com/akkadotnet/akka.net/milestone/113?closed=1).
+
+3 contributors since release 1.5.28
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 259 | 104 | Gregorius Soedharmo |
+| 1 | 10 | 10 | Simon Cropp |
+| 1 | 0 | 1 | Aaron Stannard |
+
 #### 1.5.29 October 1st 2024 ####
+
+> [!NOTE]
+> 
+> **Deprecated**
+> 
+> This version introduced breaking changes that needs to be reverted. Please use 1.5.30 instead.
 
 Akka.NET v1.5.29 is an emergency patch release that addresses a severe bug for persistence users whom also use protobuf serializer.
 
