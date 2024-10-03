@@ -67,7 +67,7 @@ akka.actor {
     }
 
     [Fact(DisplayName = "Rapid multiple SaveSnapshot invocation with no journal persist should only save the latest snapshot")]
-    public async Task MultipleSnapshotsWithNoPersistTest()
+    public virtual async Task MultipleSnapshotsWithNoPersistTest()
     {
         if(!SupportsConcurrentSaves)
             return;
@@ -97,7 +97,7 @@ akka.actor {
     }
 
     [Fact(DisplayName = "Rapid multiple SaveSnapshot invocation with journal persist should only save the latest snapshot")]
-    public async Task MultipleSnapshotsWithPersistTest()
+    public virtual async Task MultipleSnapshotsWithPersistTest()
     {
         if(!SupportsConcurrentSaves)
             return;
@@ -132,20 +132,20 @@ akka.actor {
     }
     
     [Fact(DisplayName = "Multiple SaveSnapshot invocation with the same sequence number should not throw")]
-    public async Task MultipleSnapshotsWithSameSeqNo()
+    public virtual async Task MultipleSnapshotsWithSameSeqNo()
     {
         var persistence = Persistence.Instance.Apply(Sys);
         var snapshotStore = persistence.SnapshotStoreFor(null);
         var snap = new TestPayload(SenderProbe.Ref);
         
-        var metadata = new SnapshotMetadata(PersistenceId, 3, DateTime.Now);
+        var metadata = new SnapshotMetadata(PersistenceId, 3, DateTime.UtcNow);
         snapshotStore.Tell(new SaveSnapshot(metadata, snap), SenderProbe);
         var success = await SenderProbe.ExpectMsgAsync<SaveSnapshotSuccess>(10.Minutes());
         success.Metadata.PersistenceId.Should().Be(metadata.PersistenceId);
         success.Metadata.Timestamp.Should().Be(metadata.Timestamp);
         success.Metadata.SequenceNr.Should().Be(metadata.SequenceNr);
         
-        metadata = new SnapshotMetadata(PersistenceId, 3, DateTime.Now);
+        metadata = new SnapshotMetadata(PersistenceId, 3, DateTime.UtcNow);
         snapshotStore.Tell(new SaveSnapshot(metadata, 3), SenderProbe);
         success = await SenderProbe.ExpectMsgAsync<SaveSnapshotSuccess>();
         success.Metadata.PersistenceId.Should().Be(metadata.PersistenceId);
