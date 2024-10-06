@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
     <Description>Persistence for Akka.NET actors. Allows actors to persist and recover their state in a database-agnostic fashion.</Description>
@@ -10,8 +10,8 @@
     <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
-    <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.Tools">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

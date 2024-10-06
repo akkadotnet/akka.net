@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>$(NetTestVersion)</TargetFramework>
     <ServerGarbageCollection>true</ServerGarbageCollection>
@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NBench" Version="$(NBenchVersion)" />
+    <PackageReference Include="NBench" />
   </ItemGroup>
 
 </Project>

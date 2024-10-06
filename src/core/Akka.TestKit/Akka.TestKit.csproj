@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <Description>You need a Akka.TestKit.* package! Add the one appropriate for the test framework you use instead. For example: Akka.TestKit.Xunit or Akka.TestKit.VsTest. This package only contains base functionality for writing tests for the Akka.NET framework.</Description>
@@ -8,8 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <EmbeddedResource Include="Configs\TestScheduler.conf;Internal\Reference.conf"/>
-        <ProjectReference Include="..\Akka\Akka.csproj"/>
+        <EmbeddedResource Include="Configs\TestScheduler.conf;Internal\Reference.conf" />
+        <ProjectReference Include="..\Akka\Akka.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -25,11 +25,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftLibVersion)" />
-        <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
-        <PackageReference Include="Nito.AsyncEx.Context" Version="5.1.2" />
-        <PackageReference Include="System.Linq.Async" Version="6.0.1" />
-        <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+        <PackageReference Include="Nito.AsyncEx.Coordination" />
+        <PackageReference Include="Nito.AsyncEx.Context" />
+        <PackageReference Include="System.Linq.Async" />
+        <PackageReference Include="FluentAssertions" />
     </ItemGroup>
 
 </Project>

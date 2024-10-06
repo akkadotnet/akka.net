@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <Description>Replicated data using CRDT structures</Description>
@@ -8,12 +8,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <EmbeddedResource Include="reference.conf"/>
-        <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj"/>
+        <EmbeddedResource Include="reference.conf" />
+        <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
+      <PackageReference Include="Grpc.Tools">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>

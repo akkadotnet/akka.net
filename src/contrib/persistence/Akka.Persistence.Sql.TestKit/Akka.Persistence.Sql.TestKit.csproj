@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Description>Akka.NET TestKit for SQL-based ADO.NET Persistence middleware</Description>
@@ -11,7 +11,7 @@
     <ProjectReference Include="..\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Persistence.TCK\Akka.Persistence.TCK.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />
-    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="FluentAssertions" />
   </ItemGroup>
 
 </Project>

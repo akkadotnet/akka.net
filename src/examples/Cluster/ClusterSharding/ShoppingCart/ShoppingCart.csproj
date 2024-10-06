@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Akka.Bootstrap.Docker" Version="0.5.3" />
+        <PackageReference Include="Akka.Bootstrap.Docker" />
     </ItemGroup>
 
     <ItemGroup>

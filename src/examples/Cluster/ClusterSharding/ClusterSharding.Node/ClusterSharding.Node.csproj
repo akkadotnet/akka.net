@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Akka.Bootstrap.Docker" Version="0.5.3" />
+    <PackageReference Include="Akka.Bootstrap.Docker" />
   </ItemGroup>
 
 </Project>
