@@ -64,6 +64,17 @@ namespace Akka.TestKit
         private readonly ITestKitAssertions _assertions;
         private TestState _testState;
 
+        private readonly ActorSystem _ctorSystem;
+        private readonly ActorSystemSetup _ctorConfig;
+        private readonly string _ctorSystemName;
+        private readonly string _ctorTestActorName;
+        
+        /// <summary>
+        /// If overriden to return <c>true</c>, <see cref="ActorSystem"/> would not be started automatically.
+        /// You would need to call the <see cref="Start"/> method to start the TestKit <see cref="ActorSystem"/>
+        /// </summary>
+        protected virtual bool DeferredStart => false;
+
         /// <summary>
         /// Create a new instance of the <see cref="TestKitBase"/> class.
         /// If no <paramref name="system"/> is passed in, a new system 
@@ -116,9 +127,30 @@ namespace Akka.TestKit
         {
             _assertions = assertions ?? throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
             
-            InitializeTest(system, config, actorSystemName, testActorName);
+            if (DeferredStart)
+            {
+                _ctorSystem = system;
+                _ctorConfig = config;
+                _ctorSystemName = actorSystemName;
+                _ctorTestActorName = testActorName;
+            }
+            else
+            {
+                InitializeTest(system, config, actorSystemName, testActorName);
+            }
         }
 
+        /// <summary>
+        /// Start the <see cref="ActorSystem"/> if TestKit is set to deferred mode.
+        /// </summary>
+        public void Start()
+        {
+            if (!DeferredStart)
+                return;
+            
+            InitializeTest(_ctorSystem, _ctorConfig, _ctorSystemName, _ctorTestActorName);
+        }
+        
         /// <summary>
         /// Initializes the <see cref="TestState"/> for a new spec.
         /// </summary>
