@@ -339,6 +339,12 @@ namespace Akka.Streams.Dsl.Internal
         {
             return flow.Via(new Fusing.SelectAsync<TIn, TOut>(parallelism, asyncMapper));
         }
+        
+        public static IFlow<TOut, TMat> SelectValueTaskAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
+            Func<TIn, ValueTask<TOut>> asyncMapper)
+        {
+            return flow.Via(new Fusing.SelectValueTaskAsync<TIn, TOut>(parallelism, asyncMapper));
+        }
 
         /// <summary>
         /// Transform this stream by applying the given function <paramref name="asyncMapper"/> to each of the elements

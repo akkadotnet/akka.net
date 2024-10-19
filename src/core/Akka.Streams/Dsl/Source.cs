@@ -789,6 +789,9 @@ namespace Akka.Streams.Dsl
         public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Option<(TState, TElem)>>> unfoldAsync)
             => FromGraph(new UnfoldAsync<TState, TElem>(state, unfoldAsync)).WithAttributes(DefaultAttributes.UnfoldAsync);
 
+        
+        public static Source<TElem, NotUsed> UnfoldValueTaskAsync<TState, TElem>(TState state, Func<TState, ValueTask<Option<(TState, TElem)>>> unfoldAsync)
+            => FromGraph(new UnfoldValueTaskAsync<TState, TElem>(state, unfoldAsync)).WithAttributes(DefaultAttributes.UnfoldValueTaskAsync);
         /// <summary>
         /// Simpler <see cref="Unfold{TState,TElem}"/>, for infinite sequences. 
         /// </summary>
@@ -1135,6 +1138,62 @@ namespace Akka.Streams.Dsl
             Func<TSource, Task<Option<T>>> read, Func<TSource, Task<Done>> close)
         {
             return FromGraph(new UnfoldResourceSourceAsync<T, TSource>(create, read, close));
+        }
+        
+        /// <summary>
+        /// Unfolds a resource, using ValueTask returns instead of normal tasks,
+        /// As well as optimizing when the result successfully completed synchronously.
+        /// <para/>
+        /// There is an overload that takes a create State,
+        /// allowing one to minimize captures and leakage
+        /// 
+        ///   (essentially, pass initial state in,
+        ///    then any additional state gets passed into initial TState) 
+        /// </summary>
+        /// <param name="create">function that is called on stream start and creates/opens resource.</param>
+        /// <param name="read">function that reads data from opened resource. It is called each time backpressure signal
+        /// is received. Stream calls close and completes when <see cref="Task"/> from read function returns None.</param>
+        /// <param name="close">function that closes resource</param>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TSource"></typeparam>
+        /// <returns>A source of T that is created on stream start and read on backpressure</returns>
+        public static Source<T, NotUsed> UnfoldResourceValueTaskAsync<T,
+            TSource>(Func<ValueTask<TSource>> create,
+            Func<TSource, ValueTask<Option<T>>> read,
+            Func<TSource, ValueTask> close)
+        {
+            return FromGraph(
+                new UnfoldResourceSourceValueTaskAsync<T, Func<ValueTask<TSource>>, TSource>(
+                    create, (a) => a(), read, close));
+        }
+
+        /// <summary>
+        /// Unfolds a resource, using ValueTask returns instead of normal tasks,
+        /// As well as optimizing when the result successfully completed synchronously.
+        /// <para/>
+        /// By passing an initial state in,
+        /// one can minimize accidental delegate over-captures. 
+        /// </summary>
+        /// <param name="createState">The initial state to be passed to the create function</param>
+        /// <param name="create">function that is called on stream start and creates/opens resource.</param>
+        /// <param name="read">function that reads data from opened resource. It is called each time backpressure signal
+        /// is received. Stream calls close and completes when <see cref="Task"/> from read function returns None.</param>
+        /// <param name="close">function that closes resource</param>
+        /// <typeparam name="T">The type this source will emit while read returns with a value</typeparam>
+        /// <typeparam name="TReadState">The State type</typeparam>
+        /// <typeparam name="TCreateState">The Initial state to be passed in to the Creation function.</typeparam>
+        /// <returns>A source of T that is created on stream start and read on backpressure</returns>
+        public static Source<T, NotUsed> 
+            UnfoldResourceValueTaskAsync<TCreateState,T, TReadState>(
+                TCreateState createState,
+                Func<TCreateState,ValueTask<TReadState>> create, 
+                Func<TReadState, ValueTask<Option<T>>> read, 
+                Func<TReadState, ValueTask> close
+                )
+        {
+            return FromGraph(
+                new UnfoldResourceSourceValueTaskAsync<T, TCreateState, TReadState>(
+                    createState, create, read, close));
         }
 
         /// <summary>

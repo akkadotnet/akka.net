@@ -6,12 +6,15 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
 using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
@@ -22,6 +25,7 @@ using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
+using Debug = System.Diagnostics.Debug;
 using Decider = Akka.Streams.Supervision.Decider;
 using Directive = Akka.Streams.Supervision.Directive;
 
@@ -2513,6 +2517,334 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => "Expand";
     }
 
+    public sealed class NotYetThereSentinel : Exception
+    {
+        public static readonly NotYetThereSentinel Instance = new();
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <typeparam name="TIn">TBD</typeparam>
+    /// <typeparam name="TOut">TBD</typeparam>
+    [InternalApi]
+    public sealed class
+        SelectValueTaskAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
+    {
+        #region internal classes
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private sealed class Holder<T>
+            {
+                public SlimResult<T> Element { get; private set; }
+                private readonly Action<Holder<T>> _callback;
+                private ValueTask<T> _pending;
+                private readonly Action _taskCompletedAction;
+                
+
+                private void VTCompletionError(ValueTask<T> vtCapture)
+                {
+                    var t = vtCapture.AsTask();
+                    //We only care about faulted, not canceled.
+                    if (t.IsFaulted)
+                    {
+                        var exception = t.Exception?.InnerExceptions != null &&
+                                        t.Exception.InnerExceptions.Count == 1
+                            ? t.Exception.InnerExceptions[0]
+                            : t.Exception;
+
+                        Invoke(SlimResult<T>.ForError(exception));
+                    }
+                }
+
+                public Holder(SlimResult<T> element, Action<Holder<T>> callback)
+                {
+                    _callback = callback;
+                    Element = element;
+                    _taskCompletedAction = () =>
+                    {
+                        var inst = this._pending;
+                        this._pending = default;
+                        if (inst.IsCompletedSuccessfully)
+                        {
+                            this.Invoke(SlimResult<T>.ForSuccess(inst.Result));
+                        }
+                        else
+                        {
+                            this.VTCompletionError(inst);
+                        }
+                    };
+                }
+
+                public void SetElement(SlimResult<T> result)
+                {
+                    Element = result;
+                }
+
+                public void SetContinuation(ValueTask<T> vt)
+                {
+                    _pending = vt;
+                    vt.ConfigureAwait(true).GetAwaiter()
+                        .OnCompleted(_taskCompletedAction);
+                }
+
+                public void Invoke(SlimResult<T> result)
+                {
+                    SetElement(result);
+                    _callback(this);
+                }
+            }
+
+            private static readonly SlimResult<TOut> NotYetThere =
+                SlimResult<TOut>.NotYetReady;
+
+            private readonly SelectValueTaskAsync<TIn, TOut> _stage;
+            private readonly Decider _decider;
+            private IBuffer<Holder<TOut>> _buffer;
+            private readonly Action<Holder<TOut>> _taskCallback;
+
+            //Use this to hold on to reused holders.
+            private readonly ConcurrentQueue<Holder<TOut>> _holderReuseQueue;
+            
+            public Logic(Attributes inheritedAttributes,
+                SelectValueTaskAsync<TIn, TOut> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                var attr = inheritedAttributes
+                    .GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                _decider = attr != null
+                    ? attr.Decider
+                    : Deciders.StoppingDecider;
+
+                _taskCallback =
+                    GetAsyncCallback<Holder<TOut>>(hc =>
+                        HolderCompleted(hc));
+                _holderReuseQueue =
+                    new ConcurrentQueue<
+                        Holder<TOut>>();
+                SetHandlers(stage.In, stage.Out, this);
+            }
+
+            private Holder<TOut> RentOrGet()
+            {
+                if (_holderReuseQueue.TryDequeue(out var item))
+                {
+                    return item;
+                }
+                else
+                {
+                    return new Holder<TOut>(NotYetThere, _taskCallback);
+                }
+            }
+
+            public override void OnPush()
+            {
+                var message = Grab(_stage.In);
+                try
+                {
+                    var task = _stage._mapFunc(message);
+                    var holder = RentOrGet();
+                    _buffer.Enqueue(holder);
+                    // We dispatch the task if it's ready to optimize away
+                    // scheduling it to an execution context
+                    if (task.IsCompletedSuccessfully)
+                    {
+                        holder.SetElement(SlimResult<TOut>.ForSuccess(task.Result));
+                        HolderCompleted(holder);
+                    }
+                    else
+                        holder.SetContinuation(task);
+                }
+                catch (Exception e)
+                {
+                    onPushErrorDecider(e, message);
+                }
+
+                if (Todo < _stage._parallelism && !HasBeenPulled(_stage.In))
+                    TryPull(_stage.In);
+            }
+
+            private void onPushErrorDecider(Exception e, TIn message)
+            {
+                var strategy = _decider(e);
+                Log.Error(e,
+                    "An exception occured inside SelectValueTaskAsync while processing message [{0}]. Supervision strategy: {1}",
+                    message, strategy);
+                switch (strategy)
+                {
+                    case Directive.Stop:
+                        FailStage(e);
+                        break;
+
+                    case Directive.Resume:
+                    case Directive.Restart:
+                        break;
+
+                    default:
+                        throw new AggregateException(
+                            $"Unknown SupervisionStrategy directive: {strategy}",
+                            e);
+                }
+            }
+
+            public override void OnUpstreamFinish()
+            {
+                if (Todo == 0)
+                    CompleteStage();
+            }
+
+            public override void OnPull() => PushOne(null);
+
+            private int Todo => _buffer.Used;
+
+            public override void PreStart() =>
+                _buffer =
+                    Buffer.Create<Holder<TOut>>(_stage._parallelism,
+                        Materializer);
+
+            private void PushOne(Holder<TOut> holder)
+            {
+                var inlet = _stage.In;
+                while (true)
+                {
+                    if (_buffer.IsEmpty)
+                    {
+                        if (IsClosed(inlet))
+                        {
+                            CompleteStage();
+                        }
+                        else if (!HasBeenPulled(inlet))
+                        {
+                            Pull(inlet);
+                        }
+                    }
+                    else if (_buffer.Peek().Element.IsDone() == false)
+                    {
+                        if (Todo < _stage._parallelism && !HasBeenPulled(inlet))
+                        {
+                            TryPull(inlet);
+                        }
+                    }
+                    else
+                    {
+                        var dequeued = _buffer.Dequeue();
+                        var result = dequeued!.Element;
+                        if (!result.IsSuccess())
+                            continue;
+                        // Important! We can only re-use if the DQ holder
+                        // is the one that was passed in.
+                        // That means it already passed through HolderCompleted,
+                        // otherwise (i.e. HolderCompleted not yet called)
+                        // when that happens, because it is reset, we blow up =(
+                        if (holder == dequeued)
+                        {
+                            dequeued.SetElement(NotYetThere);
+                            _holderReuseQueue.Enqueue(dequeued);
+                        }
+
+                        Push(_stage.Out, result.Result);
+
+                        if (Todo < _stage._parallelism && !HasBeenPulled(inlet))
+                            TryPull(inlet);
+                    }
+
+                    break;
+                }
+            }
+
+            private void HolderCompleted(Holder<TOut> holder)
+            {
+                var element = holder.Element;
+                if (element.IsSuccess())
+                {
+                    if (IsAvailable(_stage.Out))
+                        PushOne(holder);
+                    return;
+                }
+
+                HolderCompletedError(element);
+            }
+
+            private void HolderCompletedError(SlimResult<TOut> element)
+            {
+                var exception = element.Error;
+                var strategy = _decider(exception);
+                Log.Error(exception,
+                    "An exception occured inside SelectValueTaskAsync while executing Task. Supervision strategy: {0}",
+                    strategy);
+                switch (strategy)
+                {
+                    case Directive.Stop:
+                        FailStage(exception);
+                        break;
+
+                    case Directive.Resume:
+                    case Directive.Restart:
+                        if (IsAvailable(_stage.Out))
+                            PushOne(null);
+                        break;
+
+                    default:
+                        throw new AggregateException(
+                            $"Unknown SupervisionStrategy directive: {strategy}",
+                            exception);
+                }
+            }
+
+            public override string ToString() =>
+                $"SelectValueTaskAsync.Logic(buffer={_buffer})";
+        }
+
+        #endregion
+
+        private readonly int _parallelism;
+        private readonly Func<TIn, ValueTask<TOut>> _mapFunc;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly Inlet<TIn> In = new("SelectValueTaskAsync.in");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly Outlet<TOut> Out = new("SelectValueTaskAsync.out");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="parallelism">TBD</param>
+        /// <param name="mapFunc">TBD</param>
+        public SelectValueTaskAsync(int parallelism,
+            Func<TIn, ValueTask<TOut>> mapFunc)
+        {
+            _parallelism = parallelism;
+            _mapFunc = mapFunc;
+            Shape = new FlowShape<TIn, TOut>(In, Out);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override Attributes InitialAttributes { get; } =
+            Attributes.CreateName("selectValueTaskAsync");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override FlowShape<TIn, TOut> Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        protected override GraphStageLogic CreateLogic(
+            Attributes inheritedAttributes)
+            => new Logic(inheritedAttributes, this);
+    }
+
     /// <summary>
     /// INTERNAL API
     /// </summary>
@@ -2553,7 +2885,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
 
-            private static readonly Result<TOut> NotYetThere = Result.Failure<TOut>(new Exception());
+            private static readonly Result<TOut> NotYetThere = Result.Failure<TOut>(NotYetThereSentinel.Instance);
 
             private readonly SelectAsync<TIn, TOut> _stage;
             private readonly Decider _decider;
@@ -3841,6 +4173,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _completionCts = new CancellationTokenSource();
                 SetHandler(_outlet, this);
             }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private void OnComplete() => CompleteStage();
 
@@ -3903,16 +4236,12 @@ namespace Akka.Streams.Implementation.Fusing
                 var vtask = _enumerator.MoveNextAsync();
                 if (vtask.IsCompletedSuccessfully)
                 {
-                    // When MoveNextAsync returned immediately, we don't need to await.
-                    // We can use fast path instead.
                     if (vtask.Result)
                     {
-                        // if result is true, it means we got an element. Push it downstream.
                         Push(_outlet, _enumerator.Current);
                     }
                     else
                     {
-                        // if result is false, it means enumerator was closed. Complete stage in that case.
                         CompleteStage();
                     }
                 }

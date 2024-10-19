@@ -6,8 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
 using Akka.Annotations;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
 using Akka.Util;
@@ -88,6 +91,116 @@ namespace Akka.Streams.Implementation
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <typeparam name="TState">TBD</typeparam>
+    /// <typeparam name="TElement">TBD</typeparam>
+    [InternalApi]
+    public class UnfoldValueTaskAsync<TState, TElement> : GraphStage<SourceShape<TElement>>
+    {
+        #region stage logic
+        private sealed class Logic : PooledAwaitOutGraphStageLogic<Option<(TState,TElement)>>
+        {
+            private readonly UnfoldValueTaskAsync<TState, TElement> _stage;
+            private TState _state;
+
+            public Logic(UnfoldValueTaskAsync<TState, TElement> stage) : base(stage.Shape)
+            {
+                
+                _stage = stage;
+                _state = _stage.State;
+                SetPooledCompletionCallback(SyncResult);
+                SetHandler(_stage.Out, this);
+            }
+
+            public override void OnPull()
+            {
+                ValueTask<Option<(TState, TElement)>> vt;
+                bool taken = false;
+                try
+                {
+                    vt = _stage.UnfoldFunc(_state);
+                    taken = true;
+                }
+                catch (Exception e)
+                {
+                    vt = default;
+                    Fail(_stage.Out,e);
+                }
+
+                if (taken)
+                {
+                    if (vt.IsCompletedSuccessfully)
+                    {
+                        SyncResult(
+                            SlimResult<Option<(TState, TElement)>>.ForSuccess(
+                                vt.Result));
+                    }
+                    else
+                    {
+                        SetContinuation(vt);
+                    }
+                }
+            }
+
+            private void SyncResult(SlimResult<Option<(TState, TElement)>> result)
+            {
+                if (!result.IsSuccess())
+                    Fail(_stage.Out, result.Error);
+                else
+                {
+                    var option = result.Result;
+                    if (!option.HasValue)
+                        Complete(_stage.Out);
+                    else
+                    {
+                        Push(_stage.Out, option.Value.Item2);
+                        _state = option.Value.Item1;
+                    }
+                }
+            }
+        }
+        #endregion
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly TState State;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly Func<TState, ValueTask<Option<(TState, TElement)>>> UnfoldFunc;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly Outlet<TElement> Out = new("UnfoldValueTaskAsync.out");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="state">TBD</param>
+        /// <param name="unfoldFunc">TBD</param>
+        public UnfoldValueTaskAsync(TState state, Func<TState, ValueTask<Option<(TState, TElement)>>> unfoldFunc)
+        {
+            State = state;
+            UnfoldFunc = unfoldFunc;
+            Shape = new SourceShape<TElement>(Out);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override SourceShape<TElement> Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+    }
+    
     /// <summary>
     /// INTERNAL API
     /// </summary>

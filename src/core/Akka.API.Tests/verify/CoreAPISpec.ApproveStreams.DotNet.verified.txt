@@ -2046,6 +2046,9 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<TElem, Akka.NotUsed> UnfoldInfinite<TState, TElem>(TState state, System.Func<TState, System.ValueTuple<TState, TElem>> unfold) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> UnfoldResource<T, TSource>(System.Func<TSource> create, System.Func<TSource, Akka.Util.Option<T>> read, System.Action<TSource> close) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> UnfoldResourceAsync<T, TSource>(System.Func<System.Threading.Tasks.Task<TSource>> create, System.Func<TSource, System.Threading.Tasks.Task<Akka.Util.Option<T>>> read, System.Func<TSource, System.Threading.Tasks.Task<Akka.Done>> close) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> UnfoldResourceValueTaskAsync<T, TSource>(System.Func<System.Threading.Tasks.ValueTask<TSource>> create, System.Func<TSource, System.Threading.Tasks.ValueTask<Akka.Util.Option<T>>> read, System.Func<TSource, System.Threading.Tasks.ValueTask> close) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> UnfoldResourceValueTaskAsync<TCreateState, T, TReadState>(TCreateState createState, System.Func<TCreateState, System.Threading.Tasks.ValueTask<TReadState>> create, System.Func<TReadState, System.Threading.Tasks.ValueTask<Akka.Util.Option<T>>> read, System.Func<TReadState, System.Threading.Tasks.ValueTask> close) { }
+        public static Akka.Streams.Dsl.Source<TElem, Akka.NotUsed> UnfoldValueTaskAsync<TState, TElem>(TState state, System.Func<TState, System.Threading.Tasks.ValueTask<Akka.Util.Option<System.ValueTuple<TState, TElem>>>> unfoldAsync) { }
         public static Akka.Streams.Dsl.Source<System.Collections.Immutable.IImmutableList<T>, Akka.NotUsed> ZipN<T>(System.Collections.Generic.IEnumerable<Akka.Streams.Dsl.Source<T, Akka.NotUsed>> sources) { }
         public static Akka.Streams.Dsl.Source<TOut2, Akka.NotUsed> ZipWithN<T, TOut2>(System.Func<System.Collections.Immutable.IImmutableList<T>, TOut2> zipper, System.Collections.Generic.IEnumerable<Akka.Streams.Dsl.Source<T, Akka.NotUsed>> sources) { }
     }
@@ -2130,6 +2133,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<TOut, TMat> SelectAsyncUnordered<TIn, TOut, TMat>(this Akka.Streams.Dsl.Source<TIn, TMat> flow, int parallelism, System.Func<TIn, System.Threading.Tasks.Task<TOut>> asyncMapper) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> SelectError<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<System.Exception, System.Exception> selector) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> SelectMany<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<TOut1, System.Collections.Generic.IEnumerable<TOut2>> mapConcater) { }
+        public static Akka.Streams.Dsl.Source<TOut, TMat> SelectValueTaskAsync<TIn, TOut, TMat>(this Akka.Streams.Dsl.Source<TIn, TMat> flow, int parallelism, System.Func<TIn, System.Threading.Tasks.ValueTask<TOut>> asyncMapper) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Skip<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long n) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> SkipWhile<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Predicate<TOut> predicate) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> SkipWithin<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.TimeSpan duration) { }
@@ -3887,6 +3891,16 @@ namespace Akka.Streams.Implementation
         public override string ToString() { }
     }
     [Akka.Annotations.InternalApiAttribute()]
+    public sealed class UnfoldResourceSourceValueTaskAsync<TOut, TCreateState, TSource> : Akka.Streams.Stage.GraphStage<Akka.Streams.SourceShape<TOut>>
+    {
+        public UnfoldResourceSourceValueTaskAsync(TCreateState createState, System.Func<TCreateState, System.Threading.Tasks.ValueTask<TSource>> create, System.Func<TSource, System.Threading.Tasks.ValueTask<Akka.Util.Option<TOut>>> readData, System.Func<TSource, System.Threading.Tasks.ValueTask> close) { }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        public Akka.Streams.Outlet<TOut> Out { get; }
+        public override Akka.Streams.SourceShape<TOut> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+        public override string ToString() { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
     public sealed class UnfoldResourceSource<TOut, TSource> : Akka.Streams.Stage.GraphStage<Akka.Streams.SourceShape<TOut>>
     {
         public UnfoldResourceSource(System.Func<TSource> create, System.Func<TSource, Akka.Util.Option<TOut>> readData, System.Action<TSource> close) { }
@@ -3895,6 +3909,16 @@ namespace Akka.Streams.Implementation
         public override Akka.Streams.SourceShape<TOut> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class UnfoldValueTaskAsync<TState, TElement> : Akka.Streams.Stage.GraphStage<Akka.Streams.SourceShape<TElement>>
+    {
+        public readonly Akka.Streams.Outlet<TElement> Out;
+        public readonly TState State;
+        public readonly System.Func<TState, System.Threading.Tasks.ValueTask<Akka.Util.Option<System.ValueTuple<TState, TElement>>>> UnfoldFunc;
+        public UnfoldValueTaskAsync(TState state, System.Func<TState, System.Threading.Tasks.ValueTask<Akka.Util.Option<System.ValueTuple<TState, TElement>>>> unfoldFunc) { }
+        public override Akka.Streams.SourceShape<TElement> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public class Unfold<TState, TElement> : Akka.Streams.Stage.GraphStage<Akka.Streams.SourceShape<TElement>>
@@ -4375,6 +4399,11 @@ namespace Akka.Streams.Implementation.Fusing
         public void SetValue(T value) { }
         public override string ToString() { }
     }
+    public sealed class NotYetThereSentinel : System.Exception
+    {
+        public static readonly Akka.Streams.Implementation.Fusing.NotYetThereSentinel Instance;
+        public NotYetThereSentinel() { }
+    }
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class OnCompleted<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<T, Akka.NotUsed>>
     {
@@ -4449,6 +4478,16 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
+    public sealed class SelectValueTaskAsync<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
+    {
+        public readonly Akka.Streams.Inlet<TIn> In;
+        public readonly Akka.Streams.Outlet<TOut> Out;
+        public SelectValueTaskAsync(int parallelism, System.Func<TIn, System.Threading.Tasks.ValueTask<TOut>> mapFunc) { }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        public override Akka.Streams.FlowShape<TIn, TOut> Shape { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
     public sealed class Select<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
     {
         public Select(System.Func<TIn, TOut> func) { }
@@ -4506,6 +4545,19 @@ namespace Akka.Streams.Implementation.Fusing
         public override Akka.Streams.FlowShape<T, System.Collections.Generic.IEnumerable<T>> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
+    }
+    [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
+    public struct SlimResult<T>
+    {
+        public readonly System.Exception Error;
+        public static readonly Akka.Streams.Implementation.Fusing.SlimResult<T> NotYetReady;
+        public readonly T Result;
+        public SlimResult(System.Exception errorOrSentinel, T result) { }
+        public static Akka.Streams.Implementation.Fusing.SlimResult<T> ForError(System.Exception errorOrSentinel) { }
+        public static Akka.Streams.Implementation.Fusing.SlimResult<T> ForSuccess(T result) { }
+        public static Akka.Streams.Implementation.Fusing.SlimResult<T> FromTask(System.Threading.Tasks.Task<T> task) { }
+        public bool IsDone() { }
+        public bool IsSuccess() { }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class StatefulSelectMany<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
@@ -4711,6 +4763,8 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Akka.Streams.Attributes UnfoldInf;
         public static readonly Akka.Streams.Attributes UnfoldResourceSource;
         public static readonly Akka.Streams.Attributes UnfoldResourceSourceAsync;
+        public static readonly Akka.Streams.Attributes UnfoldResourceSourceValueTaskAsync;
+        public static readonly Akka.Streams.Attributes UnfoldValueTaskAsync;
         public static readonly Akka.Streams.Attributes Unzip;
         public static readonly Akka.Streams.Attributes Watch;
         public static readonly Akka.Streams.Attributes Where;

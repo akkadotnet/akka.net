@@ -7,10 +7,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
@@ -759,6 +761,262 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <returns>TBD</returns>
         public override string ToString() => "UnfoldResourceSourceAsync";
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TSource">TBD</typeparam>
+    /// <typeparam name="TCreateState">The state passed to resource create function</typeparam>
+    [InternalApi]
+    public sealed class UnfoldResourceSourceValueTaskAsync<TOut, TCreateState, TSource> : GraphStage<SourceShape<TOut>>
+    {
+        #region Logic
+
+        private sealed class Logic : PooledAwaitOutGraphStageLogic<Option<TOut>>
+        {
+            private readonly UnfoldResourceSourceValueTaskAsync<TOut, TCreateState, TSource> _stage;
+            private readonly Lazy<Decider> _decider;
+            private Option<TSource> _state = Option<TSource>.None;
+
+            public Logic(UnfoldResourceSourceValueTaskAsync<TOut, TCreateState, TSource> stage, Attributes inheritedAttributes)
+                : base(stage.Shape)
+            {
+                _stage = stage;
+                _decider = new Lazy<Decider>(() =>
+                {
+                    var strategy = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                    return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
+                });
+                SetPooledCompletionCallback(Handler);
+                SetHandler(_stage.Out, this);
+            }
+
+
+            private Action<Try<TSource>> CreatedCallback => GetAsyncCallback<Try<TSource>>(resource =>
+            {
+                if (resource.IsSuccess)
+                {
+                    _state = resource.Success;
+                    if (IsAvailable(_stage.Out)) OnPull();
+                }
+                else FailStage(resource.Failure.Value);
+            });
+
+            private void ErrorHandler(Exception ex)
+            {
+                switch (_decider.Value(ex))
+                {
+                    case Directive.Stop:
+                        FailStage(ex);
+                        break;
+                    case Directive.Restart:
+                        try
+                        {
+                            RestartResource();
+                        }
+                        catch (Exception ex1)
+                        {
+                            FailStage(ex1);
+                        }
+                        break;
+                    case Directive.Resume:
+                        OnPull();
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+            
+            private void Handler(SlimResult<Option<TOut>> read)
+            {
+                if (read.IsSuccess())
+                {
+                    var data = read.Result;
+                    if (data.HasValue)
+                    {
+                        var some = data.Value;
+                        Push(_stage.Out, some);
+                    }
+                    else
+                    {
+                        // end of resource reached, lets close it
+                        if (_state.HasValue)
+                        {
+                            CloseResource();
+                        }
+                        else
+                        {
+                            // cannot happen, but for good measure
+                            throw new InvalidOperationException("Reached end of data but there is no open resource");
+                        }
+                    }
+                }
+                else
+                    ErrorHandler(read.Error);
+            }
+
+            private void CloseResource()
+            {
+                var resource = _state.Value;
+                _stage._close(resource).AsTask().OnComplete(GetAsyncCallback<Try<Done>>(
+                    done =>
+                    {
+                        if (done.IsSuccess) CompleteStage();
+                        else FailStage(done.Failure.Value);
+                    }));
+                _state = Option<TSource>.None;
+            }
+
+            public override void PreStart()
+            {
+                CreateResource();
+                base.PreStart();
+            }
+
+            public override void OnPull()
+            {
+                if (_state.HasValue)
+                {
+                    try
+                    {
+                        var resource = _state.Value;
+                        var vt = _stage._readData(resource);
+                        if (vt.IsCompletedSuccessfully)
+                        {
+                            var maybe = vt.GetAwaiter().GetResult();
+                            if (maybe.HasValue)
+                            {
+                                Push(_stage.Out, maybe.Value);   
+                            }
+                            else
+                            {
+                                CloseResource();
+                            }
+                        }
+                        else
+                        {
+                            SetContinuation(vt);
+                        }
+
+                        
+                    }
+                    catch (Exception ex)
+                    {
+                        ErrorHandler(ex);
+                    }
+                }
+                else
+                {
+                    // we got a pull but there is no open resource, we are either
+                    // currently creating/restarting then the read will be triggered when creating the
+                    // resource completes, or shutting down and then the pull does not matter anyway
+                }
+            }
+
+            public override void PostStop()
+            {
+                if (_state.HasValue)
+                    _stage._close(_state.Value);
+            }
+
+            private void RestartResource()
+            {
+                if (_state.HasValue)
+                {
+                    var resource = _state.Value;
+                    // wait for the resource to close before restarting
+                    _stage._close(resource).AsTask().OnComplete(GetAsyncCallback<Try<Done>>(done =>
+                    {
+                        if (done.IsSuccess) CreateResource();
+                        else FailStage(done.Failure.Value);
+                    }));
+                    _state = Option<TSource>.None;
+                }
+                else CreateResource();
+            }
+
+            private void CreateResource()
+            {
+                _stage._create(_stage._createState).AsTask().OnComplete(resource =>
+                {
+                    try
+                    {
+                        CreatedCallback(resource);
+                    }
+                    catch (StreamDetachedException)
+                    {
+                        // stream stopped before created callback could be invoked, we need
+                        // to close the resource if it is was opened, to not leak it
+                        if (resource.IsSuccess)
+                        {
+                            _stage._close(resource.Success.Value);
+                        }
+                        else
+                        {
+                            // failed to open but stream is stopped already
+                            throw resource.Failure.Value;
+                        }
+                    }
+                });
+            }
+        }
+
+        #endregion
+
+        private readonly Func<TCreateState, ValueTask<TSource>> _create;
+        private readonly Func<TSource, ValueTask<Option<TOut>>> _readData;
+        private readonly Func<TSource, ValueTask> _close;
+        private readonly TCreateState _createState;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="createState"></param>
+        /// <param name="create">TBD</param>
+        /// <param name="readData">TBD</param>
+        /// <param name="close">TBD</param>
+        public UnfoldResourceSourceValueTaskAsync(TCreateState createState,
+            Func<TCreateState, ValueTask<TSource>> create,
+            Func<TSource, ValueTask<Option<TOut>>> readData,
+            Func<TSource, ValueTask> close)
+        {
+            _createState = createState;
+            _create = create;
+            _readData = readData;
+            _close = close;
+
+            Shape = new SourceShape<TOut>(Out);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected override Attributes InitialAttributes => DefaultAttributes.UnfoldResourceSourceValueTaskAsync;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Outlet<TOut> Out { get; } = new("UnfoldResourceSourceValueTaskAsync.out");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public override SourceShape<TOut> Shape { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="inheritedAttributes">TBD</param>
+        /// <returns>TBD</returns>
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public override string ToString() => "UnfoldResourceSourceValueTaskAsync";
     }
 
     /// <summary>

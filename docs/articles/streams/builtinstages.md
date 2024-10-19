@@ -113,6 +113,14 @@ Can be used to implement many stateful sources without having to touch the more 
 
 **completes** when the task returned by the unfold function completes with an null value
 
+### UnfoldValueTaskAsync
+
+Just like ``UnfoldAsync``, but the fold function returns a ``ValueTask``, with internal pooling to minimize allocation and improve latency.
+
+**emits** when there is demand and unfold state returned task completes with not null value
+
+**completes** when the task returned by the unfold function completes with an null value
+
 ### Empty
 
 Complete right away without ever emitting any elements. Useful when you have to provide a source to
@@ -195,6 +203,14 @@ Functions return ``Task`` to achieve asynchronous processing
 **emits** when there is demand and ``Task`` from read function returns value
 
 **completes** when ``Task`` from read function returns ``None``
+
+### UnfoldResourceValueTaskAsync
+
+Like ``UnfoldResourceAsync`` but takes ``ValueTask`` Functions instead, with amortization of allocations for the main read stage.
+
+**emits** when there is demand and ``ValueTask`` from read function returns value
+
+**completes** when ``ValueTask`` from read function returns ``None``
 
 ### Queue
 
@@ -852,6 +868,16 @@ order will be kept when results complete. For use cases where order does not mat
 If a Task fails, the stream also fails (unless a different supervision strategy is applied)
 
 **emits** when the Task returned by the provided function finishes for the next element in sequence
+
+**backpressures** when the number of tasks reaches the configured parallelism and the downstream backpressures
+
+**completes** when upstream completes and all tasks has been completed and all elements has been emitted
+
+### SelectValueTaskAsync
+
+Version of ``SelectAsync`` that is optimized for ValueTask returns. Prefer this over ``SelectAsync`` if your work may be synchronus or is primarily waiting on ``ValueTask``
+
+**emits** when the ``ValueTask`` returned by the provided function finishes for the next element in sequence
 
 **backpressures** when the number of tasks reaches the configured parallelism and the downstream backpressures
 
