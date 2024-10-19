@@ -209,7 +209,7 @@ namespace Akka.Dispatch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal int CurrentStatus()
         {
-            return Volatile.Read(ref _statusDotNotCallMeDirectly);
+            return _statusDotNotCallMeDirectly;
         }
 
         /// <summary>
