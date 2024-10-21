@@ -99,15 +99,16 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// 'akka.persistence.journal.sql-server' scope with 'schema-name' and 'table-name' keys.
         /// </summary>
         /// <param name="messages">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <exception cref="InvalidOperationException">TBD</exception>
         /// <returns>TBD</returns>
-        protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+        protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken = default)
         {
             var writeTasks = messages.Select(async message =>
             {
                 using (var connection = CreateDbConnection())
                 {
-                    await connection.OpenAsync();
+                    await connection.OpenAsync(cancellationToken);
 
                     var eventToTags = new Dictionary<IPersistentRepresentation, IImmutableSet<string>>();
                     var persistentMessages = ((IImmutableList<IPersistentRepresentation>)message.Payload).ToArray();
@@ -126,15 +127,15 @@ namespace Akka.Persistence.Sql.Common.Journal
                     }
 
                     var batch = new WriteJournalBatch(eventToTags);
-                    using(var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
-                        await QueryExecutor.InsertBatchAsync(connection, cancellationToken.Token, batch);
+                    using(var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))
+                        await QueryExecutor.InsertBatchAsync(connection, cts.Token, batch);
                 }
             }).ToArray();
 
             var result = await Task<IImmutableList<Exception>>
                 .Factory
                 .ContinueWhenAll(writeTasks,
-                    tasks => tasks.Select(t => t.IsFaulted ? TryUnwrapException(t.Exception) : null).ToImmutableList());
+                    tasks => tasks.Select(t => t.IsFaulted ? TryUnwrapException(t.Exception) : null).ToImmutableList(), cancellationToken);
 
             return result;
         }
@@ -148,9 +149,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             using (var connection = CreateDbConnection())
             {
-                await connection.OpenAsync();
                 using(var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
                 {
+                    await connection.OpenAsync(cancellationToken.Token);
                     return await QueryExecutor
                         .SelectByTagAsync(connection, cancellationToken.Token, replay.Tag, replay.FromOffset, replay.ToOffset, replay.Max, replayedTagged => {
                             foreach(var adapted in AdaptFromJournal(replayedTagged.Persistent))
@@ -166,9 +167,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             using (var connection = CreateDbConnection())
             {
-                await connection.OpenAsync();
                 using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
                 {
+                    await connection.OpenAsync(cancellationToken.Token);
                     return await QueryExecutor
                         .SelectAllEventsAsync(
                             connection,
@@ -190,9 +191,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             using (var connection = CreateDbConnection())
             {
-                await connection.OpenAsync();
                 using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
                 {
+                    await connection.OpenAsync(cancellationToken.Token);
                     var lastOrdering = await QueryExecutor.SelectHighestSequenceNrAsync(connection, cancellationToken.Token);
                     var ids = await QueryExecutor.SelectAllPersistenceIdsAsync(connection, cancellationToken.Token, offset);
                     return (ids, lastOrdering);
@@ -215,9 +216,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             using (var connection = CreateDbConnection())
             {
-                await connection.OpenAsync();
                 using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
                 {
+                    await connection.OpenAsync(cancellationToken.Token);
                     await QueryExecutor.SelectByPersistenceIdAsync(connection, cancellationToken.Token, persistenceId, fromSequenceNr, toSequenceNr, max, recoveryCallback);
                 }
             }
@@ -322,15 +323,16 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="toSequenceNr">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected override async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+        protected override async Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken = default)
         {
             using (var connection = CreateDbConnection())
             {
-                await connection.OpenAsync();
-                using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                await connection.OpenAsync(cancellationToken);
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))
                 {
-                    await QueryExecutor.DeleteBatchAsync(connection, cancellationToken.Token, persistenceId, toSequenceNr);
+                    await QueryExecutor.DeleteBatchAsync(connection, cts.Token, persistenceId, toSequenceNr);
                 }
             }
         }
@@ -340,15 +342,16 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="fromSequenceNr">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        public override async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        public override async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken = default)
         {
             using (var connection = CreateDbConnection())
             {
                 await connection.OpenAsync();
-                using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))
                 {
-                    return await QueryExecutor.SelectHighestSequenceNrAsync(connection, cancellationToken.Token, persistenceId);
+                    return await QueryExecutor.SelectHighestSequenceNrAsync(connection, cts.Token, persistenceId);
                 }
             }
         }

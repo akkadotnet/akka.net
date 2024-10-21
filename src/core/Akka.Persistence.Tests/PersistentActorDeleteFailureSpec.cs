@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -41,7 +42,7 @@ namespace Akka.Persistence.Tests
 
         public class DeleteFailingMemoryJournal : MemoryJournal
         {
-            protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+            protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken = default)
             {
                 var promise = new TaskCompletionSource<object>();
                 promise.SetException(new SimulatedException("Boom! Unable to delete events!"));

@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Dispatch;
 using Akka.Event;
@@ -67,7 +68,7 @@ namespace Akka.Persistence.Snapshot
         private readonly ILoggingAdapter _log;
 
         /// <inheritdoc/>
-        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default)
         {
             //
             // Heuristics:
@@ -81,7 +82,7 @@ namespace Akka.Persistence.Snapshot
         }
 
         /// <inheritdoc/>
-        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot, CancellationToken cancellationToken = default)
         {
             _saving.Add(metadata);
             return RunWithStreamDispatcher(() =>
@@ -92,7 +93,7 @@ namespace Akka.Persistence.Snapshot
         }
 
         /// <inheritdoc/>
-        protected override Task DeleteAsync(SnapshotMetadata metadata)
+        protected override Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken = default)
         {
             _saving.Remove(metadata);
             return RunWithStreamDispatcher(() =>
@@ -109,11 +110,11 @@ namespace Akka.Persistence.Snapshot
         }
 
         /// <inheritdoc/>
-        protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default)
         {
             foreach (var metadata in GetSnapshotMetadata(persistenceId, criteria))
             {
-                await DeleteAsync(metadata);
+                await DeleteAsync(metadata, cancellationToken);
             }
         }
 

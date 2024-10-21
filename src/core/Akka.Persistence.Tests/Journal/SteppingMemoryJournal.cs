@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -110,14 +111,14 @@ akka.persistence.journal.stepping-inmem.instance-id = """ + instanceId + @"""");
             _current.TryRemove(_instanceId, out foo);
         }
 
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken = default)
         {
             var tasks = messages.Select(message =>
             {
                 return
                     WrapAndDoOrEnqueue(
                         () =>
-                            base.WriteMessagesAsync(new[] {message})
+                            base.WriteMessagesAsync(new[] {message}, cancellationToken)
                                 .ContinueWith(t => t.Result != null ? t.Result.FirstOrDefault() : null,
                                     _continuationOptions | TaskContinuationOptions.OnlyOnRanToCompletion));
             });
@@ -127,19 +128,19 @@ akka.persistence.journal.stepping-inmem.instance-id = """ + instanceId + @"""");
                     _continuationOptions | TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken = default)
         {
             return
                 WrapAndDoOrEnqueue(
                     () =>
-                        base.DeleteMessagesToAsync(persistenceId, toSequenceNr)
+                        base.DeleteMessagesToAsync(persistenceId, toSequenceNr, cancellationToken)
                             .ContinueWith(_ => new object(),
                                 _continuationOptions | TaskContinuationOptions.OnlyOnRanToCompletion));
         }
 
-        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken = default)
         {
-            return WrapAndDoOrEnqueue(() => base.ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr));
+            return WrapAndDoOrEnqueue(() => base.ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr, cancellationToken));
         }
 
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,

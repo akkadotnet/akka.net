@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Util.Internal;
 
@@ -25,7 +26,7 @@ namespace Akka.Persistence.Snapshot
         /// </summary>
         protected virtual List<SnapshotEntry> Snapshots { get; } = new();
 
-        protected override Task DeleteAsync(SnapshotMetadata metadata)
+        protected override Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken = default)
         {
             bool Pred(SnapshotEntry x) => x.PersistenceId == metadata.PersistenceId && (metadata.SequenceNr <= 0 || metadata.SequenceNr == long.MaxValue || x.SequenceNr == metadata.SequenceNr)
                                                                                     && (metadata.Timestamp == DateTime.MinValue || metadata.Timestamp == DateTime.MaxValue || x.Timestamp == metadata.Timestamp.Ticks);
@@ -37,7 +38,7 @@ namespace Akka.Persistence.Snapshot
             return TaskEx.Completed;
         }
 
-        protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default)
         {
             var filter = CreateRangeFilter(persistenceId, criteria);
 
@@ -45,7 +46,7 @@ namespace Akka.Persistence.Snapshot
             return TaskEx.Completed;
         }
 
-        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default)
         {
             var filter = CreateRangeFilter(persistenceId, criteria);
 
@@ -54,7 +55,7 @@ namespace Akka.Persistence.Snapshot
             return Task.FromResult(snapshot);
         }
 
-        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot, CancellationToken cancellationToken = default)
         {
 
             var snapshotEntry = ToSnapshotEntry(metadata, snapshot);

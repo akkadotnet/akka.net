@@ -184,12 +184,13 @@ namespace Akka.Persistence.Custom.Snapshot
         //<LoadAsync>
         protected sealed override async Task<SelectedSnapshot> LoadAsync(
             string persistenceId,
-            SnapshotSelectionCriteria criteria)
+            SnapshotSelectionCriteria criteria,
+            CancellationToken cancellationToken = default)
         {
             // Create a new DbConnection instance
             using (var connection = new SqliteConnection(_connectionString))
             using (var cts = CancellationTokenSource
-                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                       .CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(cts.Token);
                 
@@ -234,12 +235,13 @@ namespace Akka.Persistence.Custom.Snapshot
         //<SaveAsync>
         protected sealed override async Task SaveAsync(
             SnapshotMetadata metadata,
-            object snapshot)
+            object snapshot,
+            CancellationToken cancellationToken = default)
         {
             // Create a new DbConnection instance
             using (var connection = new SqliteConnection(_connectionString))
             using (var cts = CancellationTokenSource
-                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                       .CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(cts.Token);
                 
@@ -302,12 +304,14 @@ namespace Akka.Persistence.Custom.Snapshot
         //</SaveAsync>
 
         //<DeleteAsync>
-        protected sealed override async Task DeleteAsync(SnapshotMetadata metadata)
+        protected sealed override async Task DeleteAsync(
+            SnapshotMetadata metadata,
+            CancellationToken cancellationToken = default)
         {
             // Create a new DbConnection instance
             using (var connection = new SqliteConnection(_connectionString))
             using (var cts = CancellationTokenSource
-                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))    
+                       .CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))    
             {
                 await connection.OpenAsync(cts.Token);
                 var timestamp = metadata.Timestamp != DateTime.MinValue 
@@ -346,12 +350,13 @@ namespace Akka.Persistence.Custom.Snapshot
         //<DeleteAsync2>
         protected sealed override async Task DeleteAsync(
             string persistenceId, 
-            SnapshotSelectionCriteria criteria)
+            SnapshotSelectionCriteria criteria,
+            CancellationToken cancellationToken = default)
         {
             // Create a new DbConnection instance
             using (var connection = new SqliteConnection(_connectionString))
             using (var cts = CancellationTokenSource
-                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                       .CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(cts.Token);
                 

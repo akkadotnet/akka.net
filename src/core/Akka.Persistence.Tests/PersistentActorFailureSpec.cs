@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Persistence.Journal;
@@ -49,7 +50,7 @@ namespace Akka.Persistence.Tests
         internal class FailingMemoryJournal : MemoryJournal
         {
 
-            protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+            protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken = default)
             {
                 var msgs = messages.ToList();
                 if (IsWrong(msgs))
@@ -59,7 +60,7 @@ namespace Akka.Persistence.Tests
                 {
                     return Task.FromResult(checkSerializable);
                 }
-                return base.WriteMessagesAsync(msgs);
+                return base.WriteMessagesAsync(msgs, cancellationToken);
             }
 
             public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr,

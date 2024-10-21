@@ -122,17 +122,17 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected void AddParameter(TCommand command, string paramName, System.Data.DbType dbType, object value) { }
         protected void BatchRequest(Akka.Persistence.IJournalRequest message) { }
         protected abstract TConnection CreateConnection(string connectionString);
-        protected virtual System.Threading.Tasks.Task HandleDeleteMessagesTo(Akka.Persistence.DeleteMessagesTo req, TCommand command) { }
-        protected virtual System.Threading.Tasks.Task HandleReplayAllMessages(Akka.Persistence.Sql.Common.Journal.ReplayAllEvents req, TCommand command) { }
-        protected virtual System.Threading.Tasks.Task HandleReplayMessages(Akka.Persistence.ReplayMessages req, TCommand command, Akka.Actor.IActorContext context) { }
-        protected virtual System.Threading.Tasks.Task HandleReplayTaggedMessages(Akka.Persistence.Sql.Common.Journal.ReplayTaggedMessages req, TCommand command) { }
-        protected virtual System.Threading.Tasks.Task HandleSelectCurrentPersistenceIds(Akka.Persistence.Sql.Common.Journal.SelectCurrentPersistenceIds message, TCommand command) { }
+        protected virtual System.Threading.Tasks.Task HandleDeleteMessagesTo(Akka.Persistence.DeleteMessagesTo req, TCommand command, System.Threading.CancellationToken cancellationToken = null) { }
+        protected virtual System.Threading.Tasks.Task HandleReplayAllMessages(Akka.Persistence.Sql.Common.Journal.ReplayAllEvents req, TCommand command, System.Threading.CancellationToken cancellationToken = null) { }
+        protected virtual System.Threading.Tasks.Task HandleReplayMessages(Akka.Persistence.ReplayMessages req, TCommand command, Akka.Actor.IActorContext context, System.Threading.CancellationToken cancellationToken = null) { }
+        protected virtual System.Threading.Tasks.Task HandleReplayTaggedMessages(Akka.Persistence.Sql.Common.Journal.ReplayTaggedMessages req, TCommand command, System.Threading.CancellationToken cancellationToken = null) { }
+        protected virtual System.Threading.Tasks.Task HandleSelectCurrentPersistenceIds(Akka.Persistence.Sql.Common.Journal.SelectCurrentPersistenceIds message, TCommand command, System.Threading.CancellationToken cancellationToken = null) { }
         protected virtual void OnBufferOverflow(Akka.Persistence.IJournalMessage request) { }
         protected virtual void PreAddParameterToCommand(TCommand command, System.Data.Common.DbParameter param) { }
         protected override void PreStart() { }
         protected virtual Akka.Persistence.IPersistentRepresentation ReadEvent(System.Data.Common.DbDataReader reader) { }
-        protected virtual System.Threading.Tasks.Task<long> ReadHighestSequenceNr(string persistenceId, TCommand command) { }
-        protected virtual System.Threading.Tasks.Task<long> ReadHighestSequenceNr(TCommand command) { }
+        protected virtual System.Threading.Tasks.Task<long> ReadHighestSequenceNr(string persistenceId, TCommand command, System.Threading.CancellationToken cancellationToken = null) { }
+        protected virtual System.Threading.Tasks.Task<long> ReadHighestSequenceNr(TCommand command, System.Threading.CancellationToken cancellationToken = null) { }
         protected virtual bool Receive(object message) { }
         protected virtual void WriteEvent(TCommand command, Akka.Persistence.IPersistentRepresentation persistent, string tags = "") { }
     }
@@ -326,12 +326,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         public Akka.Actor.IStash Stash { get; set; }
         protected abstract System.Data.Common.DbConnection CreateDbConnection(string connectionString);
         public System.Data.Common.DbConnection CreateDbConnection() { }
-        protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr) { }
+        protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, System.Threading.CancellationToken cancellationToken = null) { }
         protected virtual string GetConnectionString() { }
         protected Akka.Persistence.Sql.Common.Journal.ITimestampProvider GetTimestampProvider(string typeName) { }
         protected override void PostStop() { }
         protected override void PreStart() { }
-        public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr) { }
+        public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, System.Threading.CancellationToken cancellationToken = null) { }
         protected override bool ReceivePluginInternal(object message) { }
         protected virtual System.Threading.Tasks.Task<long> ReplayAllEventsAsync(Akka.Persistence.Sql.Common.Journal.ReplayAllEvents replay) { }
         public override System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback) { }
@@ -341,7 +341,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 "LastOrdering"})]
         protected virtual System.Threading.Tasks.Task<System.ValueTuple<System.Collections.Generic.IEnumerable<string>, long>> SelectAllPersistenceIdsAsync(long offset) { }
         protected bool WaitingForInitialization(object message) { }
-        protected override System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> messages) { }
+        protected override System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> messages, System.Threading.CancellationToken cancellationToken = null) { }
     }
     [System.ObsoleteAttribute("Query is not implemented.", true)]
     public sealed class SubscribeNewEvents : Akka.Persistence.Sql.Common.Journal.ISubscriptionCommand
@@ -490,12 +490,12 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         public Akka.Actor.IStash Stash { get; set; }
         protected abstract System.Data.Common.DbConnection CreateDbConnection(string connectionString);
         public System.Data.Common.DbConnection CreateDbConnection() { }
-        protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata) { }
-        protected override System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata, System.Threading.CancellationToken cancellationToken = null) { }
+        protected override System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken = null) { }
         protected virtual string GetConnectionString() { }
-        protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria) { }
+        protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken = null) { }
         protected override void PostStop() { }
         protected override void PreStart() { }
-        protected override System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot) { }
+        protected override System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot, System.Threading.CancellationToken cancellationToken = null) { }
     }
 }

@@ -167,11 +167,12 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="criteria">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default)
         {
             using (var connection = CreateDbConnection())
-            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(nestedCancellationTokenSource.Token);
                 return await QueryExecutor.SelectSnapshotAsync(connection, nestedCancellationTokenSource.Token, persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
@@ -183,11 +184,12 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// </summary>
         /// <param name="metadata">TBD</param>
         /// <param name="snapshot">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot, CancellationToken cancellationToken = default)
         {
             using (var connection = CreateDbConnection())
-            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(nestedCancellationTokenSource.Token);
                 await QueryExecutor.InsertAsync(connection, nestedCancellationTokenSource.Token, snapshot, metadata);
@@ -198,11 +200,12 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// TBD
         /// </summary>
         /// <param name="metadata">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected override async Task DeleteAsync(SnapshotMetadata metadata)
+        protected override async Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken = default)
         {
             using (var connection = CreateDbConnection())
-            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))    
+            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))    
             {
                 await connection.OpenAsync(nestedCancellationTokenSource.Token);
                 DateTime? timestamp = metadata.Timestamp != DateTime.MinValue ? metadata.Timestamp : default(DateTime?);
@@ -215,11 +218,12 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="criteria">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default)
         {
             using (var connection = CreateDbConnection())
-            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(nestedCancellationTokenSource.Token);
                 await QueryExecutor.DeleteBatchAsync(connection, nestedCancellationTokenSource.Token, persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);

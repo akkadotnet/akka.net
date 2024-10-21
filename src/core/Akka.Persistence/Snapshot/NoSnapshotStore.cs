@@ -7,6 +7,7 @@
 
 using System;
 using System.Runtime.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Akka.Persistence.Snapshot
@@ -64,8 +65,9 @@ namespace Akka.Persistence.Snapshot
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="criteria">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default)
         {
             return Task.FromResult((SelectedSnapshot)null);
         }
@@ -75,11 +77,12 @@ namespace Akka.Persistence.Snapshot
         /// </summary>
         /// <param name="metadata">TBD</param>
         /// <param name="snapshot">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <exception cref="NoSnapshotStoreException">
         /// This exception is thrown when no snapshot store is configured.
         /// </exception>
         /// <returns>TBD</returns>
-        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot, CancellationToken cancellationToken = default)
         {
             return Flop();
         }
@@ -88,11 +91,12 @@ namespace Akka.Persistence.Snapshot
         /// TBD
         /// </summary>
         /// <param name="metadata">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <exception cref="NoSnapshotStoreException">
         /// This exception is thrown when no snapshot store is configured.
         /// </exception>
         /// <returns>TBD</returns>
-        protected override Task DeleteAsync(SnapshotMetadata metadata)
+        protected override Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken = default)
         {
             return Flop();
         }
@@ -102,11 +106,12 @@ namespace Akka.Persistence.Snapshot
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="criteria">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <exception cref="NoSnapshotStoreException">
         /// This exception is thrown when no snapshot store is configured.
         /// </exception>
         /// <returns>TBD</returns>
-        protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default)
         {
             return Flop();
         }

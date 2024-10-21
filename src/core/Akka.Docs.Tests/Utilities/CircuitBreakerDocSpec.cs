@@ -52,7 +52,7 @@ namespace DocsExamples.Utilities.CircuitBreakers
             Receive<string>(str => str.Equals("is my middle name"), _ =>
             {
                 var sender = this.Sender;
-                breaker.WithCircuitBreaker(() => Task.FromResult(dangerousCall)).PipeTo(sender);
+                breaker.WithCircuitBreaker(cancellationToken => Task.FromResult(dangerousCall)).PipeTo(sender);
             });
 
             Receive<string>(str => str.Equals("block for me"), _ =>

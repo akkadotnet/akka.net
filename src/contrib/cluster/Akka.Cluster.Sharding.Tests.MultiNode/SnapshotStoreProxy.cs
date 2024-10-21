@@ -7,6 +7,7 @@
 
 using System;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -89,14 +90,14 @@ namespace Akka.Cluster.Sharding.Tests
             return true;
         }
 
-        protected async override Task DeleteAsync(SnapshotMetadata metadata)
+        protected override async Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken = default)
         {
             if (_store == null)
                 throw new TimeoutException("Store not intialized.");
             var s = Sender;
             try
             {
-                var response = await _store.Ask(new DeleteSnapshot(metadata), Timeout);
+                var response = await _store.Ask(new DeleteSnapshot(metadata), Timeout, cancellationToken);
                 if (response is DeleteSnapshotFailure f)
                 {
                     ExceptionDispatchInfo.Capture(f.Cause).Throw();
@@ -108,14 +109,14 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        protected async override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default)
         {
             if (_store == null)
                 throw new TimeoutException("Store not intialized.");
             var s = Sender;
             try
             {
-                var response = await _store.Ask(new DeleteSnapshots(persistenceId, criteria), Timeout);
+                var response = await _store.Ask(new DeleteSnapshots(persistenceId, criteria), Timeout, cancellationToken);
                 if (response is DeleteSnapshotsFailure f)
                 {
                     ExceptionDispatchInfo.Capture(f.Cause).Throw();
@@ -127,14 +128,14 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default)
         {
             if (_store == null)
                 throw new TimeoutException("Store not intialized.");
             var s = Sender;
             try
             {
-                var response = await _store.Ask(new LoadSnapshot(persistenceId, criteria, criteria.MaxSequenceNr), Timeout);
+                var response = await _store.Ask(new LoadSnapshot(persistenceId, criteria, criteria.MaxSequenceNr), Timeout, cancellationToken);
                 switch (response)
                 {
                     case LoadSnapshotResult ls:
@@ -154,14 +155,14 @@ namespace Akka.Cluster.Sharding.Tests
             throw new TimeoutException();
         }
 
-        protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot, CancellationToken cancellationToken = default)
         {
             if (_store == null)
                 throw new TimeoutException("Store not intialized.");
             var s = Sender;
             try
             {
-                var response = await _store.Ask(new SaveSnapshot(metadata, snapshot), Timeout);
+                var response = await _store.Ask(new SaveSnapshot(metadata, snapshot), Timeout, cancellationToken);
                 if (response is SaveSnapshotFailure f)
                 {
                     ExceptionDispatchInfo.Capture(f.Cause).Throw();

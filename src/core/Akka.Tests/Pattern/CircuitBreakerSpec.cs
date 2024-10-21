@@ -246,8 +246,12 @@ namespace Akka.Tests.Pattern
         {
             var breaker = ShortCallTimeoutCb();
 
-            var innerFuture = SlowThrowing();
-            var future = breaker.Instance.WithCircuitBreaker(() => innerFuture);
+            Task innerFuture = null;
+            var future = breaker.Instance.WithCircuitBreaker(ct =>
+            {
+                innerFuture = SlowThrowing(ct);
+                return innerFuture;
+            });
 
             CheckLatch(breaker.OpenLatch).Should().BeTrue();
             breaker.Instance.CurrentFailureCount.Should().Be(1);
@@ -257,20 +261,17 @@ namespace Akka.Tests.Pattern
             await InterceptException<TimeoutException>(() => future);
             
             // Issue https://github.com/akkadotnet/akka.net/issues/7358
-            // The actual exception is thrown out-of-band with no handler because inner Task is detached
-            // after a timeout and NOT protected
-            
-            // In the bug, the task is still running when it should've been stopped. 
+            // In the bug, TestException was thrown out-of-band with no handler because inner Task is detached
+            // after a timeout and NOT protected when it SHOULD be cancelled/stopped.
             innerFuture.IsCompleted.Should().BeTrue();
-            innerFuture.IsFaulted.Should().BeTrue();
-            innerFuture.Exception.Should().BeOfType<TestException>();
+            innerFuture.IsCanceled.Should().BeTrue();
             
             return;
             
-            async Task SlowThrowing()
+            async Task SlowThrowing(CancellationToken ct)
             {
-                await Task.Delay(150);
-                await ThrowExceptionAsync();
+                await Task.Delay(500, ct);
+                await ThrowExceptionAsync(ct);
             }
         }
 
@@ -347,7 +348,7 @@ namespace Akka.Tests.Pattern
         {
             var breaker = NonOneFactorCb();
             await InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
+            _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
             CheckLatch(breaker.OpenLatch).Should().BeTrue();
 
             var e1 = await InterceptException<OpenCircuitException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
@@ -378,7 +379,7 @@ namespace Akka.Tests.Pattern
         public static void ThrowException() => throw new TestException("Test Exception");
 
         [DebuggerStepThrough]
-        public static async Task ThrowExceptionAsync()
+        public static async Task ThrowExceptionAsync(CancellationToken ct)
         {
             await Task.Yield();
             throw new TestException("Test Exception");
@@ -386,7 +387,7 @@ namespace Akka.Tests.Pattern
 
         public static string SayHi() => "hi";
 
-        public static async Task<string> SayHiAsync()
+        public static async Task<string> SayHiAsync(CancellationToken ct)
         {
             await Task.Yield();
             return "hi";

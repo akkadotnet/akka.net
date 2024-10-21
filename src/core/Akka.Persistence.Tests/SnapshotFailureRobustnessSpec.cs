@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -168,18 +169,18 @@ namespace Akka.Persistence.Tests
 
         internal class DeleteFailingLocalSnapshotStore : LocalSnapshotStore
         {
-            protected override Task DeleteAsync(SnapshotMetadata metadata)
+            protected override Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken = default)
             {
-                base.DeleteAsync(metadata); // we actually delete it properly, but act as if it failed
+                base.DeleteAsync(metadata, cancellationToken); // we actually delete it properly, but act as if it failed
                 var promise = new TaskCompletionSource<object>();
                 promise.SetException(new InvalidOperationException("Failed to delete snapshot for some reason."));
                 return promise.Task;
             }
 
-            protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+            protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default)
             {
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                base.DeleteAsync(persistenceId, criteria); // we actually delete it properly, but act as if it failed
+                base.DeleteAsync(persistenceId, criteria, cancellationToken); // we actually delete it properly, but act as if it failed
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 var promise = new TaskCompletionSource<object>();
                 promise.SetException(new InvalidOperationException("Failed to delete snapshot for some reason."));

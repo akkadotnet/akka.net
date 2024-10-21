@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading;
+
 namespace Akka.Persistence.TestKit
 {
     using Akka.Actor;
@@ -48,7 +50,7 @@ namespace Akka.Persistence.TestKit
             }
         }
 
-        protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+        protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken = default)
         {
             await _connectionInterceptor.InterceptAsync();
             var exceptions = new List<Exception>();
@@ -103,10 +105,10 @@ namespace Akka.Persistence.TestKit
             }
         }
 
-        public override async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        public override async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken = default)
         {
             await _connectionInterceptor.InterceptAsync();
-            return await base.ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr);
+            return await base.ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr, cancellationToken);
         }
 
         /// <summary>
