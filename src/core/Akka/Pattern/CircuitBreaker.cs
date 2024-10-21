@@ -252,7 +252,7 @@ namespace Akka.Pattern
         /// <param name="body">Call needing protected</param>
         /// <returns>The result of the call</returns>
         public T WithSyncCircuitBreaker<T>(Func<T> body) =>
-            WithCircuitBreaker(body, b => Task.Run(b)).Result;
+            WithCircuitBreaker(body, b => Task.Run(b)).GetAwaiter().GetResult();
 
         /// <summary>
         /// Mark a successful call through CircuitBreaker. Sometimes the callee of CircuitBreaker sends back a message to the
