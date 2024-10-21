@@ -80,22 +80,15 @@ namespace Akka.Util.Internal
         public async Task<T> CallThrough<T>(Func<CancellationToken, Task<T>> task)
         {
             var result = default(T);
+            using var cts = new CancellationTokenSource();
             try
             {
-                using var cts = new CancellationTokenSource();
-                try
-                {
-                    result = await task(cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
-                    CallSucceeds();
-                }
-                catch
-                {
-                    cts.Cancel();
-                    throw;
-                }
+                result = await task(cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
+                CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel();
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
@@ -107,24 +100,15 @@ namespace Akka.Util.Internal
         public async Task<T> CallThrough<T, TState>(TState state, Func<TState, CancellationToken, Task<T>> task)
         {
             var result = default(T);
+            using var cts = new CancellationTokenSource(_callTimeout);
             try
             {
-                using var cts = new CancellationTokenSource(_callTimeout);
-                try
-                {
-                    result = await task(state, cts.Token).WaitAsync(_callTimeout, cts.Token).ConfigureAwait(false);
-                    CallSucceeds();
-                }
-                catch (OperationCanceledException cancelled)
-                {
-                    if(cts.IsCancellationRequested)
-                        throw new TimeoutException(null, cancelled);
-                    
-                    throw;
-                }
+                result = await task(state, cts.Token).WaitAsync(_callTimeout, cts.Token).ConfigureAwait(false);
+                CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel();
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
@@ -141,22 +125,15 @@ namespace Akka.Util.Internal
         /// <returns><see cref="Task"/> containing the result of the call</returns>
         public async Task CallThrough(Func<CancellationToken, Task> task)
         {
+            using var cts = new CancellationTokenSource();
             try
             {
-                using var cts = new CancellationTokenSource();
-                try
-                {
-                    await task(cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
-                    CallSucceeds();
-                }
-                catch
-                {
-                    cts.Cancel();
-                    throw;
-                }
+                await task(cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
+                CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel();
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
@@ -165,22 +142,15 @@ namespace Akka.Util.Internal
 
         public async Task CallThrough<TState>(TState state, Func<TState, CancellationToken, Task> task)
         {
+            using var cts = new CancellationTokenSource();
             try
             {
-                using var cts = new CancellationTokenSource();
-                try
-                {
-                    await task(state, cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
-                    CallSucceeds();
-                }
-                catch
-                {
-                    cts.Cancel();
-                    throw;
-                }
+                await task(state, cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
+                CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel();
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
