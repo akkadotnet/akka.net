@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManagerSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -99,6 +99,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// When set to false, singleton instance will always be created on oldest member.
         /// When set to true, singleton instance will be created on the oldest member with the highest <see cref="Member.AppVersion"/> number.
         /// </summary>
+        [Obsolete("ConsiderAppVersion is not used anymore and will be removed in future versions.")]
         public bool ConsiderAppVersion { get; }
 
         /// <summary>
@@ -188,7 +189,9 @@ namespace Akka.Cluster.Tools.Singleton
             RemovalMargin = removalMargin;
             HandOverRetryInterval = handOverRetryInterval;
             LeaseSettings = leaseSettings;
+#pragma warning disable CS0618 // Type or member is obsolete
             ConsiderAppVersion = considerAppVersion;
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         /// <summary>
@@ -255,7 +258,7 @@ namespace Akka.Cluster.Tools.Singleton
                 removalMargin: removalMargin ?? RemovalMargin,
                 handOverRetryInterval: handOverRetryInterval ?? HandOverRetryInterval,
                 leaseSettings: leaseSettings.HasValue ? leaseSettings.Value : LeaseSettings,
-                considerAppVersion: considerAppVersion ?? ConsiderAppVersion
+                considerAppVersion: false
                 );
         }
     }

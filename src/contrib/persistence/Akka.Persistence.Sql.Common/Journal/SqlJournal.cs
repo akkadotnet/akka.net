@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqlJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -257,8 +257,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                     return true;
                 case Status.Failure fail:
                     Log.Error(fail.Cause, "Failure during {0} initialization.", Self);
-                    Context.Stop(Self);
-                    return true;
+                    
+                    // trigger a restart so we have some hope of succeeding in the future even if initialization failed
+                    throw new ApplicationException("Failed to initialize SQL Journal.", fail.Cause);
                 default:
                     Stash.Stash();
                     return true;

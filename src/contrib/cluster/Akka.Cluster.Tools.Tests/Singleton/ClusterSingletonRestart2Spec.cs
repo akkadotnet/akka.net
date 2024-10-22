@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonRestart2Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                                                                                            akka.loglevel = INFO
                                                                                            akka.actor.provider = "cluster"
                                                                                            akka.cluster.roles = [singleton]
-                                                                                           #akka.cluster.auto-down-unreachable-after = 2s
+                                                                                           akka.cluster.split-brain-resolver.stable-after = 2s
                                                                                            akka.cluster.singleton.min-number-of-hand-over-retries = 5
                                                                                            akka.remote {
                                                                                              dot-netty.tcp {
@@ -120,7 +120,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             await Join(_sys4, _sys3);
 
             // let it stabilize
-            //Task.Delay(TimeSpan.FromSeconds(5)).Wait();
+            await Task.Delay(TimeSpan.FromSeconds(5));
 
             await WithinAsync(TimeSpan.FromSeconds(10), () =>
             {

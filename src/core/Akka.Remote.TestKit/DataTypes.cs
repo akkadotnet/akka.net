@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DataTypes.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -134,29 +134,24 @@ namespace Akka.Remote.TestKit
         object Msg { get; }
     }
 
-    class ToServer<T> : IToServer where T : IServerOp, INetworkOp
+    internal class ToServer<T> : IToServer where T : IServerOp, INetworkOp
     {
-        readonly T _msg;
-
         public ToServer(T msg)
         {
-            _msg = msg;
+            Msg = msg;
         }
 
-        public T Msg
-        {
-            get { return _msg; }
-        }
+        public T Msg { get; }
 
         object IToServer.Msg
         {
-            get { return _msg; }
+            get { return Msg; }
         }
 
         
         protected bool Equals(ToServer<T> other)
         {
-            return EqualityComparer<T>.Default.Equals(_msg, other._msg);
+            return EqualityComparer<T>.Default.Equals(Msg, other.Msg);
         }
 
         
@@ -171,7 +166,7 @@ namespace Akka.Remote.TestKit
         
         public override int GetHashCode()
         {
-            return EqualityComparer<T>.Default.GetHashCode(_msg);
+            return EqualityComparer<T>.Default.GetHashCode(Msg);
         }
 
         /// <summary>
@@ -200,40 +195,38 @@ namespace Akka.Remote.TestKit
     /// <summary>
     /// messages sent to from Conductor to Player
     /// </summary>
-    interface IClientOp { } 
+    internal interface IClientOp { } 
 
     /// <summary>
     /// messages sent to from Player to Conductor
     /// </summary>
-    interface IServerOp { }
+    internal interface IServerOp { }
 
     /// <summary>
     /// messages sent from TestConductorExt to Conductor
     /// </summary>
-    interface ICommandOp { }
+    internal interface ICommandOp { }
 
     /// <summary>
     ///  messages sent over the wire
     /// </summary> 
-    interface INetworkOp { }
+    internal interface INetworkOp { }
 
     /// <summary>
     /// unconfirmed messages going to the Player
     /// </summary>
-    interface IUnconfirmedClientOp : IClientOp { }
-    interface IConfirmedClientOp : IClientOp { }
+    internal interface IUnconfirmedClientOp : IClientOp { }
+
+    internal interface IConfirmedClientOp : IClientOp { }
 
     /// <summary>
     /// First message of connection sets names straight.
     /// </summary>
-    sealed class Hello : INetworkOp
+    internal sealed class Hello : INetworkOp
     {
-        readonly string _name;
-        readonly Address _address;
-
         private bool Equals(Hello other)
         {
-            return string.Equals(_name, other._name) && Equals(_address, other._address);
+            return string.Equals(Name, other.Name) && Equals(Address, other.Address);
         }
 
         
@@ -249,7 +242,7 @@ namespace Akka.Remote.TestKit
         {
             unchecked
             {
-                return ((_name != null ? _name.GetHashCode() : 0) * 397) ^ (_address != null ? _address.GetHashCode() : 0);
+                return ((Name != null ? Name.GetHashCode() : 0) * 397) ^ (Address != null ? Address.GetHashCode() : 0);
             }
         }
 
@@ -277,35 +270,37 @@ namespace Akka.Remote.TestKit
 
         public Hello(string name, Address address)
         {
-            _name = name;
-            _address = address;
+            Name = name;
+            Address = address;
         }
 
-        public string Name
-        {
-            get { return _name; }
-        }
+        public string Name { get; }
 
-        public Address Address
+        public Address Address { get; }
+
+        public override string ToString()
         {
-            get { return _address; }
+            return $"Hello(Name: {Name}, Address: {Address})";
         }
     }
 
-    sealed class EnterBarrier : IServerOp, INetworkOp
+    internal sealed class EnterBarrier : IServerOp, INetworkOp
     {
-        readonly string _name;
-        readonly TimeSpan? _timeout;
-
-        public EnterBarrier(string name, TimeSpan? timeout)
+        public EnterBarrier(string name, TimeSpan? timeout, RoleName role)
         {
-            _name = name;
-            _timeout = timeout;
+            Name = name;
+            Timeout = timeout;
+            Role = role;
+        }
+
+        public override string ToString()
+        {
+            return $"EnterBarrier(Name: {Name}, Role: [{Role}], Timeout:{(Timeout.HasValue ? Timeout.Value.ToString() : "null")})";
         }
 
         private bool Equals(EnterBarrier other)
         {
-            return string.Equals(_name, other._name) && _timeout.Equals(other._timeout);
+            return string.Equals(Name, other.Name) && Timeout.Equals(other.Timeout);
         }
 
         
@@ -321,7 +316,7 @@ namespace Akka.Remote.TestKit
         {
             unchecked
             {
-                return ((_name != null ? _name.GetHashCode() : 0) * 397) ^ _timeout.GetHashCode();
+                return ((Name != null ? Name.GetHashCode() : 0) * 397) ^ Timeout.GetHashCode();
             }
         }
 
@@ -347,37 +342,36 @@ namespace Akka.Remote.TestKit
             return !Equals(left, right);
         }
 
-        public string Name
-        {
-            get { return _name; }
-        }
+        public string Name { get; }
 
-        public TimeSpan? Timeout
-        {
-            get { return _timeout; }
-        }
+        public TimeSpan? Timeout { get; }
+        
+        public RoleName Role { get; }
     }
 
-    sealed class FailBarrier : IServerOp, INetworkOp
+    internal sealed class FailBarrier : IServerOp, INetworkOp
     {
-        readonly string _name;
-
-        public FailBarrier(string name)
+        public FailBarrier(string name, RoleName role)
         {
-            _name = name;
+            Name = name;
+            Role = role;
         }
 
-        public string Name
-        {
-            get { return _name; }
-        }
+        public string Name { get; }
+        
+        public RoleName Role { get; }
 
         private bool Equals(FailBarrier other)
         {
-            return string.Equals(_name, other._name);
+            return string.Equals(Name, other.Name);
         }
 
-        
+        public override string ToString()
+        {
+            return $"FailBarrier(Name: {Name}, Role: [{Role}])";
+        }
+
+
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -388,7 +382,7 @@ namespace Akka.Remote.TestKit
         
         public override int GetHashCode()
         {
-            return (_name != null ? _name.GetHashCode() : 0);
+            return (Name != null ? Name.GetHashCode() : 0);
         }
 
         /// <summary>
@@ -414,7 +408,7 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    sealed class BarrierResult : IUnconfirmedClientOp, INetworkOp
+    internal sealed class BarrierResult : IUnconfirmedClientOp, INetworkOp
     {
         readonly string _name;
         readonly bool _success;

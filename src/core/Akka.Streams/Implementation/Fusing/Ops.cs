@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Ops.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -2529,13 +2529,15 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 private readonly Action<Holder<T>> _callback;
 
-                public Holder(Result<T> element, Action<Holder<T>> callback)
+                public Holder(object message, Result<T> element, Action<Holder<T>> callback)
                 {
                     _callback = callback;
+                    Message = message;
                     Element = element;
                 }
 
                 public Result<T> Element { get; private set; }
+                public object Message { get; }
 
                 public void SetElement(Result<T> result)
                 {
@@ -2575,7 +2577,7 @@ namespace Akka.Streams.Implementation.Fusing
                 try
                 {
                     var task = _stage._mapFunc(message);
-                    var holder = new Holder<TOut>(NotYetThere, _taskCallback);
+                    var holder = new Holder<TOut>(message, NotYetThere, _taskCallback);
                     _buffer.Enqueue(holder);
 
                     // We dispatch the task if it's ready to optimize away
@@ -2642,9 +2644,29 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     else
                     {
-                        var result = _buffer.Dequeue().Element;
+                        var holder = _buffer.Dequeue();
+                        var result = holder.Element;
                         if (!result.IsSuccess)
+                        {
+                            // this could happen if we are looping in PushOne and end up on a failed Task before the
+                            // HolderCompleted callback has run
+                            var strategy = _decider(result.Exception);
+                            Log.Error(result.Exception, "An exception occured inside SelectAsync while processing message [{0}]. Supervision strategy: {1}", holder.Message, strategy);
+                            switch (strategy)
+                            {
+                                case Directive.Stop:
+                                    FailStage(result.Exception);
+                                    return;
+                        
+                                case Directive.Resume:
+                                case Directive.Restart:
+                                    break;
+                        
+                                default:
+                                    throw new AggregateException($"Unknown SupervisionStrategy directive: {strategy}", result.Exception);
+                            }
                             continue;
+                        }
 
                         Push(_stage.Out, result.Value);
                         if (Todo < _stage._parallelism && !HasBeenPulled(inlet))

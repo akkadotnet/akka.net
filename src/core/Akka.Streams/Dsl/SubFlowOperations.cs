@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SubFlowOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1542,7 +1542,7 @@ namespace Akka.Streams.Dsl
         /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements that passes
         /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
         /// 
-        /// @see <seealso cref="AlsoTo{TOut,TMat,TClosed}"/>
+        /// @see <seealso cref="AlsoTo{TOut,TMat,TClosed}(SubFlow{TOut, TMat, TClosed}, IGraph{SinkShape{TOut}, TMat})"/>
         /// 
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
@@ -1560,7 +1560,35 @@ namespace Akka.Streams.Dsl
             this SubFlow<TOut, TMat, TClosed> flow, IGraph<SinkShape<TOut>, TMat2> that,
             Func<TMat, TMat2, TMat3> materializerFunction)
         {
-            return (SubFlow<TOut, TMat3, TClosed>) InternalFlowOperations.AlsoToMaterialized(flow, that, materializerFunction);
+            return (SubFlow<TOut, TMat3, TClosed>) InternalFlowOperations.AlsoToMaterialized(flow, that, materializerFunction, false);
+        }
+
+        /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements that passes
+        /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
+        /// 
+        /// @see <seealso cref="AlsoTo{TOut,TMat,TClosed}(SubFlow{TOut, TMat, TClosed}, IGraph{SinkShape{TOut}, TMat}, bool)"/>
+        /// 
+        /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <param name="materializerFunction">TBD</param>
+        /// <param name="propagateFailure">Propagate downstream failures and cancels parent stream</param>
+        /// <returns>TBD</returns>
+        public static SubFlow<TOut, TMat3, TClosed> AlsoToMaterialized<TOut, TMat, TMat2, TMat3, TClosed>(
+            this SubFlow<TOut, TMat, TClosed> flow, 
+            IGraph<SinkShape<TOut>, TMat2> that,
+            Func<TMat, TMat2, TMat3> materializerFunction, 
+            bool propagateFailure)
+        {
+            return (SubFlow<TOut, TMat3, TClosed>) InternalFlowOperations.AlsoToMaterialized(flow, that, materializerFunction, propagateFailure);
         }
 
         /// <summary>
@@ -1583,7 +1611,34 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, TClosed> AlsoTo<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, IGraph<SinkShape<TOut>, TMat> that)
         {
-            return (SubFlow<TOut, TMat, TClosed>) InternalFlowOperations.AlsoTo(flow, that);
+            return (SubFlow<TOut, TMat, TClosed>) InternalFlowOperations.AlsoTo(flow, that, false);
+        }
+
+        /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements that passes
+        /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
+        /// 
+        /// Emits when element is available and demand exists both from the Sink and the downstream.
+        /// 
+        /// Backpressures when downstream or Sink backpressures
+        /// 
+        /// Completes when upstream completes
+        /// 
+        /// Cancels when downstream cancels
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TClosed">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <param name="propagateFailure">Propagate downstream failures and cancels parent stream</param>
+        /// <returns>TBD</returns>
+        public static SubFlow<TOut, TMat, TClosed> AlsoTo<TOut, TMat, TClosed>(
+            this SubFlow<TOut, TMat, TClosed> flow,
+            IGraph<SinkShape<TOut>, TMat> that,
+            bool propagateFailure)
+        {
+            return (SubFlow<TOut, TMat, TClosed>) InternalFlowOperations.AlsoTo(flow, that, propagateFailure);
         }
 
         /// <summary>
@@ -1592,7 +1647,7 @@ namespace Akka.Streams.Dsl
         /// through will also be sent to the wire-tap Sink, without the latter affecting the mainline flow. If the wire-tap Sink backpressures,
         /// elements that would've been sent to it will be dropped instead.
         /// </para>
-        /// <para>It is similar to <seealso cref="AlsoTo{TOut,TMat,TClosed}"/> which does backpressure instead of dropping elements.</para>
+        /// <para>It is similar to <seealso cref="AlsoTo{TOut,TMat,TClosed}(SubFlow{TOut, TMat, TClosed}, IGraph{SinkShape{TOut}, TMat})"/> which does backpressure instead of dropping elements.</para>
         /// <para>Emits when element is available and demand exists from the downstream; the element will also be sent to the wire-tap Sink if there is demand.</para>
         /// <para>Backpressures when downstream backpressures</para>
         /// <para>Completes when upstream completes</para>

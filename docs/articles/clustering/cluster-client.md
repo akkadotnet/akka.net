@@ -131,14 +131,162 @@ While the client is running it will detect failures in its connection to the rec
 
 It is possible to make the cluster client stop entirely if it cannot find a receptionist it can talk to within a configurable interval. This is configured with the `reconnect-timeout`, which defaults to off. This can be useful when initial contacts are provided from some kind of service registry, cluster node addresses are entirely dynamic and the entire cluster might shut down or crash, be restarted on new addresses. Since the client will be stopped in that case a monitoring actor can watch it and upon `Terminate` a new set of initial contacts can be fetched and a new cluster client started.
 
-### Contact Auto-Discovery Using Akka.Discovery
+# Contact Auto-Discovery Using Akka.Discovery
 
 > [!NOTE]
-> This feature is currently considered as an advanced feature and is not currently compatible with Akka.Discovery Akka.Hosting extensions.
+> This feature can only be used with:
 >
-> This feature should not be used until Akka.Management 1.5.26 is released.
+> * Akka.Management v1.5.27 or later.
+> * Akka.Cluster.Hosting v1.5.27 or later
+> * Akka.Cluster.Tools v1.5.27 or later
 
-This feature is added in Akka.NET 1.5.26. Instead of watching for actor termination manually, you can leverage [Akka.Discovery](../discovery/index.md) to discover cluster client contact points inside a dynamic environment such as [Kubernetes](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/kubernetes.md), [AWS](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/aws.md), or anywhere else with [Azure Table](https://github.com/akkadotnet/Akka.Management/blob/dev/src/discovery/azure/Akka.Discovery.Azure/README.md)
+This feature is added in Akka.NET 1.5.27. Instead of watching for actor termination manually, you can leverage [Akka.Discovery](../discovery/index.md) to discover cluster client contact points inside a dynamic environment such as [Kubernetes](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/kubernetes.md), [AWS](https://github.com/akkadotnet/Akka.Management/blob/dev/docs/articles/discovery/aws.md), or anywhere else with [Azure Table](https://github.com/akkadotnet/Akka.Management/blob/dev/src/discovery/azure/Akka.Discovery.Azure/README.md)
+
+## Contact Auto-Discovery Setup Using Akka.Hosting
+
+Cluster client discovery API has been added in `Akka.Cluster.Hosting` v1.5.27. You can use the `.WithClusterClientDiscovery()` extension method to use the cluster client initial contact auto discovery feature.
+
+### Example: Setting Up Contact Auto-Discovery With Akka.Discovery.KubernetesApi
+
+On your cluster client node side, these are the code you'll need to implement:
+
+```csharp
+services.AddAkka("ClusterClientSys", (builder, provider) => {
+  builder
+    // This code sets up ClusterClient that works using Akka.Discovery
+    .WithClusterClientDiscovery<MyClusterClientActorKey>(options => {
+      // This is the Discovery plugin that will be used with ClusterClientDiscovery.
+      options.DiscoveryOptions = new KubernetesDiscoveryOptions {
+        // IMPORTANT:
+        // This signals Akka.Hosting that this plugin **should not** be used for ClusterBootstrap
+        IsDefaultPlugin = false,
+      
+        // IMPORTANT:
+        // The ConfigPath property has to be different than the default discovery ConfigPath.
+        // The actual name does not matter, but it has to be different than the default name "kubernetes-api"
+        ConfigPath = "kubernetes-api-cluster-client",
+      
+        // IMPORTANT:
+        // The PodLabelSelector property has to be different than the default k8s discovery 
+        // PodLabelSelector, which defaults to "app={0}". The "{0}" is important because 
+        // it will be used inside a String.Format()
+        PodLabelSelector = "discovery={0}";
+      };
+      
+      // This has to match the Kubernetes metadata label that we'll set in YAML
+      options.ServiceName = "initial-contact";
+
+      // his has to match the Kubernetes port name for the Akka.Management port
+      options.PortName = "management";
+    });
+```
+
+On the YAML side, you will need to change the Receptionist YAML and add a new metadata label to tag the pods:
+
+```yaml
+spec:
+  template:
+    metadata:
+      labels:
+        # Note that "discovery" matches the `PodLabelSelector` in `.WithClusterClientDiscovery()`
+        # Note that "initial-contact" matches the `ServiceName` in `.WithClusterClientDiscovery()`
+        discovery: initial-contact 
+```
+
+If you're not using ClusterBootstrap on the Receptionist side, you have to start Akka.Management. Skip this step if you're using ClusterBootstrap:
+
+```csharp
+services.AddAkka("ReceptionistSys", (builder, provider) => {
+  builder.AddStartup(async (system, registry) => {
+    await AkkaManagement.Get(system).Start();
+  });
+});
+```
+
+### Example: Setting Up Contact Auto-Discovery With Akka.Discovery.Azure
+
+On your cluster client node side, these are the code you'll need to implement:
+
+```csharp
+services.AddAkka("ClusterClientSys", (builder, provider) => {
+  builder
+    // This code sets up ClusterClient that works using Akka.Discovery
+    .WithClusterClientDiscovery<MyClusterClientActorKey>(options => {
+      // This is the Discovery plugin that will be used with ClusterClientDiscovery.
+      options.DiscoveryOptions = new AkkaDiscoveryOptions {
+        // IMPORTANT:
+        // This signals Akka.Hosting that this plugin **should not** be used for ClusterBootstrap
+        IsDefaultPlugin = false,
+      
+        // IMPORTANT:
+        // The ConfigPath property has to be different than the default discovery ConfigPath.
+        // The actual name does not matter, but it has to be different than the default name "azure"
+        ConfigPath = "azure-cluster-client",
+        
+        // IMPORTANT:
+        // This discovery plugin **should not** participate in updating the Azure cluster member table
+        ReadOnly = true,
+        
+        // IMPORTANT:
+        // All service names for cluster client discovery should be the same.
+        // If you're also using ClusterBootstrap, make sure that this name does not collide.  
+        ServiceName = "cluster-client",
+        
+        // IMPORTANT:
+        // All table names for cluster client discovery should be the same.
+        // If you're also using ClusterBootstrap, make sure that this table name does not collide.  
+        TableName = "akkaclusterreceptionists",
+      };
+      
+      // This has to match the name we set inside the discovery options
+      options.ServiceName = "cluster-client";
+    })
+      
+    // If you're not using ClusterBootstrap in the cluster client side, you will need to add
+    // these code
+    .AddStartup(async (system, registry) => {
+      await AkkaManagement.Get(system).Start();
+    });
+```
+
+On the cluster client receptionist side, you will need to implement these code:
+
+```csharp
+services.AddAkka("ReceptionistSys", (builder, provider) => {
+    
+  builder
+    // This is the Discovery plugin that will be used with ClusterClientDiscovery.
+    .WithAzureDiscovery(options => {
+      // IMPORTANT:
+      // This signals Akka.Hosting that this plugin **should not** be used for ClusterBootstrap
+      options.IsDefaultPlugin = false,
+      
+      // IMPORTANT:
+      // The ConfigPath property has to be different than the default discovery ConfigPath.
+      // The actual name does not matter, but it has to be different than the default name "azure"
+      options.ConfigPath = "azure-cluster-client",
+        
+      // IMPORTANT:
+      // All service names for cluster client discovery should be the same.
+      // If you're also using ClusterBootstrap, make sure that this name does not collide.  
+      options.ServiceName = "cluster-client",
+        
+      // IMPORTANT:
+      // All table names for cluster client discovery should be the same.
+      // If you're also using ClusterBootstrap, make sure that this table name does not collide.  
+      options.TableName = "akkaclusterreceptionists",
+    }
+
+    // If you're not using ClusterBootstrap in the cluster client side, you will need to add
+    // these code
+    .AddStartup(async (system, registry) => {
+      await AkkaManagement.Get(system).Start();
+    });
+});
+
+```
+
+## Contact Auto-Discovery Setup Using Hocon Configuration
 
 The HOCON configuration to set these are:
 
@@ -174,11 +322,11 @@ To enable contact auto-discovery, you will need to:
 * **OPTIONAL**. Set `akka.cluster.client.discovery,port-name` if the discovery extension that you're using depends on port names.
 * **OPTIONAL**. Set `akka.cluster.client.discovery.receptionist-name` if you're using a non-default receptionist name.
 
-### Using Akka.Discovery For Both Akka.Cluster.Tools.Client And Akka.Management.Cluster.Bootstrap
+## Using Akka.Discovery For Both Akka.Cluster.Tools.Client And Akka.Management.Cluster.Bootstrap
 
-If you need to use Akka.Discovery with both ClusterClient AND ClusterBootstrap, you will have to **make sure** that you have **TWO** different Akka.Discovery settings living side-by-side under the `akka.discovery` HOCON setting object.
+If you need to use Akka.Discovery with both ClusterClient AND ClusterBootstrap, you will have to **make sure** that you have **TWO** different Akka.Discovery settings living side-by-side under the `akka.discovery` HOCON setting section.
 
-#### Akka.Discovery.KubernetesApi Example
+### Akka.Discovery.KubernetesApi Example
 
 In your YAML file:
 
@@ -191,7 +339,7 @@ In your YAML file:
       contact: cluster-client
   ```
 
-* Make sure you name the Akka remoting port
+* Make sure you name the Akka.Management port
 
   ```yaml
   spec:
@@ -199,9 +347,9 @@ In your YAML file:
       spec:
         containers:
           ports:
-          - containerPort: 2552 # This is the remoting port, change this to match yours
+          - containerPort: 8558 # This is the remoting port, change this to match yours
             protocol: TCP
-            name: akka-remote # this is important
+            name: management # this is important
   ```
 
 In your cluster client Akka.NET node HOCON settings:
@@ -210,17 +358,17 @@ In your cluster client Akka.NET node HOCON settings:
 * Rename the HOCON section to `akka.discovery.kubernetes-api-cluster-client`. The key name does not matter, what matters is that the name does not collide with any other setting section name under `akka.discovery`.
 * Make sure you change `akka.discovery.kubernetes-api-cluster-client.pod-label-selector` to "contact={0}" to match what we have in the YAML file.
 * Make sure you change `akka.cluster.client.discovery.service-name` to "cluster-client" to match what we have in the YAML file.
-* Make sure you change `akka.cluster.client.discovery.port-name` value to "akka-remote" to match what we have in the YAML file.
+* Make sure you change `akka.cluster.client.discovery.port-name` value to "management" to match what we have in the YAML file.
 * Keep the `akka.discovery.method` HOCON value to "kubernetes-api", this is the discovery extension that will be used by ClusterBootstrap.
 * Change the `akka.cluster.client.discovery.method` value from "\<method>" to "kubernetes-api-cluster-client", this is the discovery extension that will be used by ClusterClient. If not set, this will default to the value set in `akka.discovery.method`, which is **NOT** what we want.
 
-#### Akka.Discovery.Azure Example
+### Akka.Discovery.Azure Example
 
 In your cluster receptionist Akka.NET node HOCON settings:
 
 * Copy the `akka.discovery.azure` HOCON section and paste it above or under the original settings. You can also copy the value from [here](https://github.com/akkadotnet/Akka.Management/blob/dev/src/discovery/azure/Akka.Discovery.Azure/reference.conf)
 * Rename the HOCON section to `akka.discovery.azure-cluster-client`. The key name does not matter, what matters is that the name does not collide with any other setting section name under `akka.discovery`.
-* Change `akka.discovery.azure-cluster-client.public-port` to the remoting port of the Akka.NET node.
+* Change `akka.discovery.azure-cluster-client.public-port` to the management port of the Akka.NET node.
 * Change `akka.discovery.azure-cluster-client.service-name` to "cluster-client". The name does not matter, what matters is that this name **HAS** to match the service name we'll be using in `akka.cluster.client.discovery.service-name`.
 * **[OPTIONAL]** change `akka.discovery.azure-cluster-client.table-name` to `akkaclusterreceptionists` to separate the discovery table from ClusterBootstrap entries.
 * Make sure that you start the discovery extension in the receptionist side. This needs to be done because the extension is responsible for updating the Azure table.

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -366,14 +366,6 @@ namespace Akka.Cluster.Sharding
                 throw ConfigurationException.NullOrEmptyConfig<ClusterShardingSettings>();
 
 
-            int ConfigMajorityPlus(string p)
-            {
-                if (config.GetString(p)?.ToLowerInvariant() == "all")
-                    return int.MaxValue;
-                else
-                    return config.GetInt(p);
-            }
-
             var tuningParameters = new TuningParameters(
                 coordinatorFailureBackoff: config.GetTimeSpan("coordinator-failure-backoff"),
                 retryInterval: config.GetTimeSpan("retry-interval"),
@@ -426,6 +418,13 @@ namespace Akka.Cluster.Sharding
                 tuningParameters: tuningParameters,
                 coordinatorSingletonSettings: coordinatorSingletonSettings,
                 leaseSettings: lease);
+
+            int ConfigMajorityPlus(string p)
+            {
+                if (config.GetString(p)?.ToLowerInvariant() == "all")
+                    return int.MaxValue;
+                return config.GetInt(p);
+            }
         }
 
         /// <summary>

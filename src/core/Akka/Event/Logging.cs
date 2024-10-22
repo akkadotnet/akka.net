@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Logging.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -112,8 +112,15 @@ namespace Akka.Event
 
         public static string FromActorRef(IActorRef a, ActorSystem system)
         {
-            var defaultAddress = system.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
-            return defaultAddress is null ? a.Path.ToString() : a.Path.ToStringWithAddress(defaultAddress);
+            try
+            {
+                var defaultAddress = system.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
+                return defaultAddress is null ? a.Path.ToString() : a.Path.ToStringWithAddress(defaultAddress);
+            }
+            catch // can fail if the ActorSystem (remoting) is not completely started yet
+            {
+                return a.Path.ToString();
+            }
         }
     }
 

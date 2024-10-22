@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LocalSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -292,7 +292,7 @@ namespace Akka.Persistence.Snapshot
 
                 if (long.TryParse(seqNrString, out var sequenceNr) && long.TryParse(timestampTicks, out var ticks))
                 {
-                    return new SnapshotMetadata(pid, sequenceNr, new DateTime(ticks));
+                    return new SnapshotMetadata(pid, sequenceNr, DateTime.SpecifyKind(new DateTime(ticks), DateTimeKind.Utc));
                 }
             }
 

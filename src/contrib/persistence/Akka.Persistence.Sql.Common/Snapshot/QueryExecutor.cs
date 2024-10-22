@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueryExecutor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -463,7 +463,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             await connection.ExecuteInTransaction(WriteIsolationLevel, cancellationToken, async (tx, token) =>
             {
                 var sql = timestamp.HasValue
-                    ? DeleteSnapshotRangeSql + " AND { Configuration.TimestampColumnName} = @Timestamp"
+                    ? DeleteSnapshotSql + $" AND {Configuration.TimestampColumnName} <= @Timestamp"
                     : DeleteSnapshotSql;
 
                 using var command = GetCommand(connection, sql); 
@@ -651,7 +651,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         {
             var persistenceId = reader.GetString(0);
             var sequenceNr = reader.GetInt64(1);
-            var timestamp = reader.GetDateTime(2);
+            var timestamp = DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc);
 
             var metadata = new SnapshotMetadata(persistenceId, sequenceNr, timestamp);
             var snapshot = GetSnapshot(reader);

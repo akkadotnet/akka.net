@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonProxy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -76,7 +76,7 @@ namespace Akka.Cluster.Tools.Singleton
                 .WithDeploy(Deploy.Local);
         }
 
-        private readonly MemberAgeOrdering _memberAgeComparer;
+        private readonly IComparer<Member> _memberAgeComparer;
         private readonly ClusterSingletonProxySettings _settings;
         private readonly Cluster _cluster = Cluster.Get(Context.System);
         private readonly Queue<KeyValuePair<object, IActorRef>> _buffer = new(); // queue seems to fit better
@@ -99,9 +99,7 @@ namespace Akka.Cluster.Tools.Singleton
             _singletonPath = (singletonManagerPath + "/" + settings.SingletonName).Split('/');
             _identityId = CreateIdentifyId(_identityCounter);
 
-            _memberAgeComparer = settings.ConsiderAppVersion
-                ? MemberAgeOrdering.DescendingWithAppVersion
-                : MemberAgeOrdering.Descending;
+            _memberAgeComparer = Member.AgeOrdering;
             _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(_memberAgeComparer);
 
             Receive<ClusterEvent.CurrentClusterState>(s => HandleInitial(s));
@@ -145,8 +143,12 @@ namespace Akka.Cluster.Tools.Singleton
                 {
                     if (Equals(_singleton, terminated.ActorRef))
                     {
-                        // buffering mode, identification of new will start when old node is removed
+                        // buffering mode
                         _singleton = null;
+                        
+                        // Bugfix: https://github.com/akkadotnet/Akka.Management/issues/2490
+                        // try to re-acquire singleton in-case this is caused by a lost lease condition
+                        IdentifySingleton();
                     }
                 });
             ReceiveAny(msg =>

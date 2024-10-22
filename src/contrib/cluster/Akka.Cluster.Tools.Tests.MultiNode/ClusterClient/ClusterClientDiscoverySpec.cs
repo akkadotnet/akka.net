@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="ClusterClientHandoverSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="ClusterClientDiscoverySpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -106,8 +106,6 @@ akka {
         {
             _config = config;
         }
-
-        protected override int InitialParticipantsValueFactory => 3;
 
         private void Join(RoleName from, RoleName to)
         {

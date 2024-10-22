@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,6 +19,7 @@ namespace Akka.Persistence.TestKit
         private ISnapshotStoreInterceptor _saveInterceptor = SnapshotStoreInterceptors.Noop.Instance;
         private ISnapshotStoreInterceptor _loadInterceptor = SnapshotStoreInterceptors.Noop.Instance;
         private ISnapshotStoreInterceptor _deleteInterceptor = SnapshotStoreInterceptors.Noop.Instance;
+        private IConnectionInterceptor _connectionInterceptor = ConnectionInterceptors.Noop.Instance;
 
         protected override bool ReceivePluginInternal(object message)
         {
@@ -39,6 +40,11 @@ namespace Akka.Persistence.TestKit
                     Sender.Tell(Ack.Instance);
                     return true;
 
+                case UseConnectionInterceptor use:
+                    _connectionInterceptor = use.Interceptor;
+                    Sender.Tell(Ack.Instance);
+                    return true;
+                
                 default:
                     return base.ReceivePluginInternal(message);
             }
@@ -46,24 +52,28 @@ namespace Akka.Persistence.TestKit
 
         protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
+            await _connectionInterceptor.InterceptAsync();
             await _saveInterceptor.InterceptAsync(metadata.PersistenceId, ToSelectionCriteria(metadata));
             await base.SaveAsync(metadata, snapshot);
         }
 
         protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
+            await _connectionInterceptor.InterceptAsync();
             await _loadInterceptor.InterceptAsync(persistenceId, criteria);
             return await base.LoadAsync(persistenceId, criteria);
         }
 
         protected override async Task DeleteAsync(SnapshotMetadata metadata)
         {
+            await _connectionInterceptor.InterceptAsync();
             await _deleteInterceptor.InterceptAsync(metadata.PersistenceId, ToSelectionCriteria(metadata));
             await base.DeleteAsync(metadata);
         }
 
         protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
+            await _connectionInterceptor.InterceptAsync();
             await _deleteInterceptor.InterceptAsync(persistenceId, criteria);
             await base.DeleteAsync(persistenceId, criteria);
         }
@@ -113,7 +123,17 @@ namespace Akka.Persistence.TestKit
 
             public ISnapshotStoreInterceptor Interceptor { get; }
         }
+        
+        public sealed class UseConnectionInterceptor
+        {
+            public UseConnectionInterceptor(IConnectionInterceptor interceptor)
+            {
+                Interceptor = interceptor;
+            }
 
+            public IConnectionInterceptor Interceptor { get; }
+        }
+        
         public sealed class Ack
         {
             public static readonly Ack Instance = new();
@@ -131,6 +151,7 @@ namespace Akka.Persistence.TestKit
             public SnapshotStoreSaveBehavior OnSave => new(new SnapshotStoreSaveBehaviorSetter(_actor));
             public SnapshotStoreLoadBehavior OnLoad => new(new SnapshotStoreLoadBehaviorSetter(_actor));
             public SnapshotStoreDeleteBehavior OnDelete => new(new SnapshotStoreDeleteBehaviorSetter(_actor));
+            public SnapshotStoreConnectionBehavior OnConnect => new(new SnapshotStoreConnectionBehaviorSetter(_actor));
         }
     }
 }

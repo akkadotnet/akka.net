@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManagerLeaseSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,6 +19,7 @@ using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 {
@@ -43,7 +44,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 akka.actor.provider = ""cluster""
                 akka.remote.log-remote-lifecycle-events = off
                 #akka.cluster.auto-down-unreachable-after = off
-                #akka.cluster.downing-provider-class = akka.cluster.testkit.AutoDowning
+                # akka.cluster.downing-provider-class = akka.cluster.testkit.AutoDowning
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.testkit.auto-down-unreachable-after = 0s
                 test-lease {
@@ -134,7 +135,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         protected override int InitialParticipantsValueFactory => Roles.Count;
 
         // used on the controller
-        private TestProbe leaseProbe;
+        private TestProbe _leaseProbe;
+
+        private IActorRef _proxy;
 
         public ClusterSingletonManagerLeaseSpec()
             : this(new ClusterSingletonManagerLeaseSpecConfig())
@@ -145,7 +148,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         {
             _config = config;
 
-            leaseProbe = CreateTestProbe();
+            _leaseProbe = CreateTestProbe();
         }
 
         [MultiNodeFact]
@@ -156,6 +159,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             Cluster_singleton_manager_with_lease_should_find_the_lease_on_every_node();
             Cluster_singleton_manager_with_lease_should_Start_singleton_and_ping_from_all_nodes();
             Cluster_singleton_manager_with_lease_should_Move_singleton_when_oldest_node_downed();
+            Cluster_singleton_manager_with_lease_proxy_should_reacquire_singleton_actor_when_lease_lost();
         }
 
         public void Cluster_singleton_manager_with_lease_should_form_a_cluster()
@@ -216,19 +220,21 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             {
                 Sys.ActorOf(
                     ClusterSingletonManager.Props(
-                        ClusterSingletonManagerLeaseSpecConfig.ImportantSingleton.Props, PoisonPill.Instance, ClusterSingletonManagerSettings.Create(Sys).WithRole("worker")),
+                        ClusterSingletonManagerLeaseSpecConfig.ImportantSingleton.Props, 
+                        PoisonPill.Instance, 
+                        ClusterSingletonManagerSettings.Create(Sys).WithRole("worker")),
                         "important");
             }, _config.First, _config.Second, _config.Third, _config.Fourth);
             EnterBarrier("singleton-started");
 
-            var proxy = Sys.ActorOf(
+            _proxy = Sys.ActorOf(
                 ClusterSingletonProxy.Props(
                     singletonManagerPath: "/user/important",
                     settings: ClusterSingletonProxySettings.Create(Sys).WithRole("worker")));
 
             RunOn(() =>
             {
-                proxy.Tell("Ping");
+                _proxy.Tell("Ping");
                 // lease has not been granted so now allowed to come up
                 ExpectNoMsg(TimeSpan.FromSeconds(2));
             }, _config.First, _config.Second, _config.Third, _config.Fourth);
@@ -286,14 +292,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             EnterBarrier("first node downed");
 
-            var proxy = Sys.ActorOf(
-                ClusterSingletonProxy.Props(
-                    singletonManagerPath: "/user/important",
-                    settings: ClusterSingletonProxySettings.Create(Sys).WithRole("worker")));
-
             RunOn(() =>
             {
-                proxy.Tell("Ping");
+                _proxy.Tell("Ping");
                 // lease has not been granted so now allowed to come up
                 ExpectNoMsg(TimeSpan.FromSeconds(2));
             }, _config.Second, _config.Third, _config.Fourth);
@@ -301,17 +302,78 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
             RunOn(() =>
             {
-                TestLeaseActorClientExt.Get(Sys).GetLeaseActor().Tell(new TestLeaseActor.ActionRequest(new TestLeaseActor.Acquire(GetAddress(_config.Second).HostPort()), true));
+                var leaseActor = TestLeaseActorClientExt.Get(Sys).GetLeaseActor();
+                leaseActor.Tell(new TestLeaseActor.ActionRequest(new TestLeaseActor.Release(GetAddress(_config.First).HostPort()), true));
+                leaseActor.Tell(new TestLeaseActor.ActionRequest(new TestLeaseActor.Acquire(GetAddress(_config.Second).HostPort()), true));
             }, _config.Controller);
 
-            EnterBarrier("singleton-moved-to-second");
+            EnterBarrier("singleton-moving-to-second");
 
             RunOn(() =>
             {
-                proxy.Tell("Ping");
                 ExpectMsg(new ClusterSingletonManagerLeaseSpecConfig.ImportantSingleton.Response("Ping", GetAddress(_config.Second)), TimeSpan.FromSeconds(20));
             }, _config.Second, _config.Third, _config.Fourth);
-            EnterBarrier("finished");
+            
+            EnterBarrier("singleton-moved-to-second");
+        }
+
+        // Reproduction for https://github.com/akkadotnet/Akka.Management/issues/2490
+        public void Cluster_singleton_manager_with_lease_proxy_should_reacquire_singleton_actor_when_lease_lost()
+        {
+            RunOn(() =>
+            {
+                var singletonManager = new RootActorPath(GetAddress(_config.Second)) / "user" / "important";
+                var selection = Sys.ActorSelection(singletonManager);
+                var actorRef = selection.ResolveOne(3.Seconds()).GetAwaiter().GetResult();
+                actorRef.Tell(new LeaseLost(new Exception("Lease not found")), TestLeaseActorClientExt.Get(Sys).GetLeaseActor());
+            }, _config.Second);
+            
+            EnterBarrier("lease-deleted");
+            
+            RunOn(() =>
+            {
+                TestLeaseActor.LeaseRequests requests = null;
+                AwaitAssert(() =>
+                {
+                    TestLeaseActorClientExt.Get(Sys).GetLeaseActor().Tell(TestLeaseActor.GetRequests.Instance);
+                    var msg = ExpectMsg<TestLeaseActor.LeaseRequests>();
+
+                    msg.Requests.Count.Should().Be(2);
+                    requests = msg;
+                }, TimeSpan.FromSeconds(10));
+
+                requests.Requests[0].Should().Be(new TestLeaseActor.Acquire(GetAddress(_config.Second).HostPort()));
+                requests.Requests[1].Should().Be(new TestLeaseActor.Release(GetAddress(_config.Second).HostPort()));
+                
+                TestLeaseActorClientExt.Get(Sys).GetLeaseActor().Tell(
+                    new TestLeaseActor.ActionRequest(new TestLeaseActor.Release(GetAddress(_config.Second).HostPort()), false));
+            }, _config.Controller);
+            
+            EnterBarrier("singleton-actor-downed");
+            
+            RunOn(() =>
+            {
+                _proxy.Tell("Ping");
+                // lease was lost
+                ExpectNoMsg(TimeSpan.FromSeconds(2));
+            }, _config.Second, _config.Third, _config.Fourth);
+            EnterBarrier("lease-lost");
+
+            RunOn(() =>
+            {
+                TestLeaseActorClientExt.Get(Sys).GetLeaseActor().Tell(new TestLeaseActor.ActionRequest(new TestLeaseActor.Acquire(GetAddress(_config.Second).HostPort()), true));
+            }, _config.Controller);
+            
+            EnterBarrier("singleton-actor-recreated");
+
+            // In the bug, even though second node manages to reacquire the lease and restarts the singleton actor,
+            // all the proxies failed to reacquire the new singleton actor ref
+            RunOn(() =>
+            {
+                ExpectMsg(new ClusterSingletonManagerLeaseSpecConfig.ImportantSingleton.Response("Ping", GetAddress(_config.Second)), TimeSpan.FromSeconds(20));
+            }, _config.Second, _config.Third, _config.Fourth);
+            
+            EnterBarrier("singleton-proxy-reacquire-singleton-actor");
         }
     }
 }

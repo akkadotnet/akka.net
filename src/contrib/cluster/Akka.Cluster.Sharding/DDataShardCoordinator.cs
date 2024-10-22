@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DDataShardCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -123,7 +123,7 @@ namespace Akka.Cluster.Sharding
             else
                 _stateWriteConsistency = new WriteMajorityPlus(settings.TuningParameters.UpdatingStateTimeout, settings.TuningParameters.CoordinatorStateWriteMajorityPlus, majorityMinCap);
 
-            Cluster node = Cluster.Get(Context.System);
+            var node = Cluster.Get(Context.System);
             _selfUniqueAddress = node.SelfUniqueAddress;
 
             _coordinatorStateKey = new LWWRegisterKey<CoordinatorState>(typeName + "CoordinatorState");

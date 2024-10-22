@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistenceIdsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -247,7 +247,7 @@ namespace Akka.Persistence.TCK.Query
                 ExpectMsg($"{persistenceId}-{i}-done");
             }
 
-            var metadata = new SnapshotMetadata(persistenceId, n + 10);
+            var metadata = new SnapshotMetadata(persistenceId, n + 10, Sys.Scheduler.Now.UtcDateTime);
             SnapshotStore.Tell(new SaveSnapshot(metadata, $"s-{n}"), _senderProbe.Ref);
             _senderProbe.ExpectMsg<SaveSnapshotSuccess>();
 

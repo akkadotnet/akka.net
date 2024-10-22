@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MsgDecoder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Remote.TestKit.Proto.Msg;
 using Akka.Remote.Transport;
 using Akka.Util;
 using DotNetty.Codecs;
@@ -41,8 +42,7 @@ namespace Akka.Remote.TestKit
         {
             _logger.LogDebug("Decoding {0}", message);
 
-            var w = message as Proto.Msg.Wrapper;
-            if (w != null)
+            if (message is Wrapper w)
             {
                 if (w.Hello != null)
                 {
@@ -54,9 +54,9 @@ namespace Akka.Remote.TestKit
                     {
                         case Proto.Msg.EnterBarrier.Types.BarrierOp.Succeeded: return new BarrierResult(w.Barrier.Name, true);
                         case Proto.Msg.EnterBarrier.Types.BarrierOp.Failed: return new BarrierResult(w.Barrier.Name, false);
-                        case Proto.Msg.EnterBarrier.Types.BarrierOp.Fail: return new FailBarrier(w.Barrier.Name);
+                        case Proto.Msg.EnterBarrier.Types.BarrierOp.Fail: return new FailBarrier(w.Barrier.Name, new RoleName(w.Barrier.RoleName));
                         case Proto.Msg.EnterBarrier.Types.BarrierOp.Enter:
-                            return new EnterBarrier(w.Barrier.Name, w.Barrier.Timeout > 0 ? (TimeSpan?)TimeSpan.FromTicks(w.Barrier.Timeout) : null);
+                            return new EnterBarrier(w.Barrier.Name, w.Barrier.Timeout > 0 ? (TimeSpan?)TimeSpan.FromTicks(w.Barrier.Timeout) : null, new RoleName(w.Barrier.RoleName));
                     }
                 }
                 else if (w.Failure != null)

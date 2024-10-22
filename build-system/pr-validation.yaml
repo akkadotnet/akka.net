@@ -62,9 +62,9 @@ jobs:
         submodules: recursive # set to 'true' for a single level of submodules or 'recursive' to get submodules of submodules
         persistCredentials: true
       - task: UseDotNet@2
-        displayName: "Use .NET 8 SDK 8.0.100"
+        displayName: "Use .NET 8 SDK 8.0.402"
         inputs:
-          version: 8.0.100
+          version: 8.0.402
       - task: BatchScript@1
         displayName: Windows Build
         inputs:
@@ -113,33 +113,33 @@ jobs:
       
   - template: azure-pipeline.template.yaml
     parameters:
-      name: "net_7_tests_windows"
-      displayName: ".NET 7 Unit Tests (Windows)"
+      name: "net_tests_windows"
+      displayName: ".NET Unit Tests (Windows)"
       vmImage: "windows-latest"
       scriptFileName: build.cmd
       scriptArgs: runTestsNet incremental
       outputDirectory: "TestResults"
-      artifactName: "net_7_tests_windows-$(Build.BuildId)"
+      artifactName: "net_tests_windows-$(Build.BuildId)"
 
   - template: azure-pipeline.template.yaml
     parameters:
-      name: "net_7_tests_linux"
-      displayName: ".NET 7 Unit Tests (Linux)"
+      name: "net_tests_linux"
+      displayName: ".NET Unit Tests (Linux)"
       vmImage: "ubuntu-latest"
       scriptFileName: "./build.sh"
       scriptArgs: runTestsNet incremental
       outputDirectory: "TestResults"
-      artifactName: "net_7_tests_linux-$(Build.BuildId)"
+      artifactName: "net_tests_linux-$(Build.BuildId)"
 
   - template: azure-pipeline.mntr-template.yaml
     parameters:
-      name: "net_7_mntr_windows"
-      displayName: ".NET 7 Multi-Node Tests (Windows)"
+      name: "net_mntr_windows"
+      displayName: ".NET Multi-Node Tests (Windows)"
       vmImage: "windows-latest"
       scriptFileName: "build.cmd"
       scriptArgs: MultiNodeTestsNet incremental
       outputDirectory: "TestResults"
-      artifactName: "net_7_mntr_windows-$(Build.BuildId)"
+      artifactName: "net_mntr_windows-$(Build.BuildId)"
       mntrFailuresDir: 'TestResults\\multinode'
       mntrFailuresArtifactName: "net_7_mntr_FAILED_windows-$(Build.BuildId)"
 

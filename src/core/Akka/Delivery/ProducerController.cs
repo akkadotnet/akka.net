@@ -1,9 +1,10 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="ProducerController.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-//  </copyright>
-// -----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ProducerController.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using System.Threading;
@@ -82,9 +83,9 @@ public static class ProducerController
     {
         if (sendAdapter == null)
             return Props.Create(() => new ProducerController<T>(producerId, durableProducerQueue, settings,
-                DateTimeOffsetNowTimeProvider.Instance, fuzzing));
+                actorSystem.Scheduler, fuzzing));
         return Props.Create(() => new ProducerController<T>(producerId, durableProducerQueue, sendAdapter, settings,
-            DateTimeOffsetNowTimeProvider.Instance, fuzzing));
+            actorSystem.Scheduler, fuzzing));
     }
 
     public sealed record Settings

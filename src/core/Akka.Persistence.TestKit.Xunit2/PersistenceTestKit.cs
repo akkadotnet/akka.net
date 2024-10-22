@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistenceTestKit.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ namespace Akka.Persistence.TestKit
     /// This class represents an Akka.NET Persistence TestKit that uses <a href="https://xunit.github.io/">xUnit</a>
     /// as its testing framework.
     /// </summary>
-    public abstract class PersistenceTestKit : TestKit
+    public class PersistenceTestKit : TestKit
     {
         /// <summary>
         /// Create a new instance of the <see cref="PersistenceTestKit"/> class.
@@ -30,7 +30,7 @@ namespace Akka.Persistence.TestKit
         /// <param name="setup">Test ActorSystem configuration</param>
         /// <param name="actorSystemName">Optional: The name of the actor system</param>
         /// <param name="output">TBD</param>
-        protected PersistenceTestKit(ActorSystemSetup setup, string actorSystemName = null, ITestOutputHelper output = null)
+        public PersistenceTestKit(ActorSystemSetup setup, string actorSystemName = null, ITestOutputHelper output = null)
             : base(GetConfig(setup), actorSystemName, output)
         {
             var persistenceExtension = Persistence.Instance.Apply(Sys);
@@ -49,7 +49,7 @@ namespace Akka.Persistence.TestKit
         /// <param name="config">Test ActorSystem configuration</param>
         /// <param name="actorSystemName">Optional: The name of the actor system</param>
         /// <param name="output">TBD</param>
-        protected PersistenceTestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
+        public PersistenceTestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
             : base(GetConfig(config), actorSystemName, output)
         {
             var persistenceExtension = Persistence.Instance.Apply(Sys);
@@ -61,13 +61,25 @@ namespace Akka.Persistence.TestKit
             Snapshots = TestSnapshotStore.FromRef(SnapshotsActorRef);
         }
 
+        public PersistenceTestKit(ActorSystem actorSystem, ITestOutputHelper output = null)
+            : base(actorSystem, output)
+        {
+            var persistenceExtension = Persistence.Instance.Apply(Sys);
+
+            JournalActorRef = persistenceExtension.JournalFor(null);
+            Journal = TestJournal.FromRef(JournalActorRef);
+
+            SnapshotsActorRef = persistenceExtension.SnapshotStoreFor(null);
+            Snapshots = TestSnapshotStore.FromRef(SnapshotsActorRef);
+        }
+        
         /// <summary>
         /// Create a new instance of the <see cref="PersistenceTestKit"/> class.
         /// A new system with the default configuration will be created.
         /// </summary>
         /// <param name="actorSystemName">Optional: The name of the actor system</param>
         /// <param name="output">TBD</param>
-        protected PersistenceTestKit(string actorSystemName = null, ITestOutputHelper output = null)
+        public PersistenceTestKit(string actorSystemName = null, ITestOutputHelper output = null)
             : this(Config.Empty, actorSystemName, output)
         {
         }

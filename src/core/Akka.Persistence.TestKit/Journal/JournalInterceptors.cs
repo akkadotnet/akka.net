@@ -1,39 +1,41 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="JournalInterceptors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System.Threading;
 
 namespace Akka.Persistence.TestKit
 {
     using System;
     using System.Threading.Tasks;
 
-    internal static class JournalInterceptors
+    public static class JournalInterceptors
     {
-        internal class Noop : IJournalInterceptor
+        public sealed class Noop : IJournalInterceptor
         {
             public static readonly IJournalInterceptor Instance = new Noop();
 
             public Task InterceptAsync(IPersistentRepresentation message) => Task.FromResult(true);
         }
 
-        internal class Failure : IJournalInterceptor
+        public sealed class Failure : IJournalInterceptor
         {
             public static readonly IJournalInterceptor Instance = new Failure();
 
             public Task InterceptAsync(IPersistentRepresentation message) => throw new TestJournalFailureException(); 
         }
 
-        internal class Rejection : IJournalInterceptor
+        public sealed class Rejection : IJournalInterceptor
         {
             public static readonly IJournalInterceptor Instance = new Rejection();
 
             public Task InterceptAsync(IPersistentRepresentation message) => throw new TestJournalRejectionException(); 
         }
         
-        internal class Delay : IJournalInterceptor
+        public sealed class Delay : IJournalInterceptor
         {
             public Delay(TimeSpan delay, IJournalInterceptor next)
             {
@@ -51,7 +53,7 @@ namespace Akka.Persistence.TestKit
             }
         }
 
-        internal sealed class OnCondition : IJournalInterceptor
+        public sealed class OnCondition : IJournalInterceptor
         {
             public OnCondition(Func<IPersistentRepresentation, Task<bool>> predicate, IJournalInterceptor next, bool negate = false)
             {
@@ -81,7 +83,7 @@ namespace Akka.Persistence.TestKit
             }
         }
 
-        internal class OnType : IJournalInterceptor
+        public sealed class OnType : IJournalInterceptor
         {
             public OnType(Type messageType, IJournalInterceptor next)
             {
@@ -100,6 +102,37 @@ namespace Akka.Persistence.TestKit
                 {
                     await _next.InterceptAsync(message);
                 }
+            }
+        }
+        
+        public sealed class CancelableDelay: IJournalInterceptor
+        {
+            public CancelableDelay(TimeSpan delay, IJournalInterceptor next, CancellationToken cancellationToken)
+            {
+                _delay = delay;
+                _next = next;
+                _cancellationToken = cancellationToken;
+            }
+
+            private readonly TimeSpan _delay;
+            private readonly IJournalInterceptor _next;
+            private readonly CancellationToken _cancellationToken;
+
+            public async Task InterceptAsync(IPersistentRepresentation message)
+            {
+                try
+                {
+                    await Task.Delay(_delay, _cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    // no-op
+                }
+                catch (TimeoutException)
+                {
+                    // no-op
+                }
+                await _next.InterceptAsync(message);
             }
         }
     }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Player.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,6 @@ using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
-using Akka.Util;
 using Akka.Util.Internal;
 using DotNetty.Transport.Channels;
 using Akka.Configuration;
@@ -33,7 +32,7 @@ namespace Akka.Remote.TestKit
     /// </summary>
     partial class TestConductor //Player trait in JVM version
     {
-        IActorRef _client;
+        private IActorRef _client;
 
         public IActorRef Client
         {
@@ -58,8 +57,7 @@ namespace Akka.Remote.TestKit
             if(_client != null) throw new IllegalStateException("TestConductorClient already started");
                 _client =
                 _system.ActorOf(Props.Create(() => new ClientFSM(name, controllerAddr)), "TestConductorClient");
-
-            //TODO: IRequiresMessageQueue
+                
             var a = _system.ActorOf(Props.Create<WaitForClientFSMToConnect>());
 
             return a.Ask<Done>(_client);
@@ -71,38 +69,33 @@ namespace Akka.Remote.TestKit
 
             protected override void OnReceive(object message)
             {
-                var fsm = message as IActorRef;
-                if (fsm != null)
+                if (message is IActorRef fsm)
                 {
                     _waiting = Sender;
                     fsm.Tell(new FSMBase.SubscribeTransitionCallBack(Self));
                     return;
                 }
-                var transition = message as FSMBase.Transition<ClientFSM.State>;
-                if (transition != null)
-                {
-                    if (transition.From == ClientFSM.State.Connecting && transition.To == ClientFSM.State.AwaitDone)
-                        return;
-                    if (transition.From == ClientFSM.State.AwaitDone && transition.To == ClientFSM.State.Connected)
-                    {
-                        _waiting.Tell(Done.Instance);
-                        Context.Stop(Self);
-                        return;
-                    }
-                    _waiting.Tell(new Exception("unexpected transition: " + transition));
-                    Context.Stop(Self);
-                }
-                var currentState = message as FSMBase.CurrentState<ClientFSM.State>;
-                if (currentState != null)
-                {
-                    if (currentState.State == ClientFSM.State.Connected)
-                    {
-                        _waiting.Tell(Done.Instance);
-                        Context.Stop(Self);
-                        return;
 
+                if (message is FSMBase.Transition<ClientFSM.State> transition)
+                {
+                    switch (transition.From)
+                    {
+                        case ClientFSM.State.Connecting when transition.To == ClientFSM.State.AwaitDone:
+                            return;
+                        case ClientFSM.State.AwaitDone when transition.To == ClientFSM.State.Connected:
+                            _waiting.Tell(Done.Instance);
+                            Context.Stop(Self);
+                            return;
+                        default:
+                            _waiting.Tell(new Exception("unexpected transition: " + transition));
+                            Context.Stop(Self);
+                            break;
                     }
                 }
+
+                if (message is not FSMBase.CurrentState<ClientFSM.State> { State: ClientFSM.State.Connected }) return;
+                _waiting.Tell(Done.Instance);
+                Context.Stop(Self);
             }
         }
 
@@ -110,16 +103,16 @@ namespace Akka.Remote.TestKit
         /// Enter the named barriers, one after the other, in the order given. Will
         /// throw an exception in case of timeouts or other errors.
         /// </summary>
-        public void Enter(string name)
+        public void Enter(RoleName roleName, string name)
         {
-            Enter(Settings.BarrierTimeout, ImmutableList.Create(name));
+            Enter(Settings.BarrierTimeout, roleName, ImmutableList.Create(name));
         }
 
         /// <summary>
         /// Enter the named barriers, one after the other, in the order given. Will
         /// throw an exception in case of timeouts or other errors.
         /// </summary>
-        public void Enter(TimeSpan timeout, ImmutableList<string> names)
+        public void Enter(TimeSpan timeout, RoleName roleName, ImmutableList<string> names)
         {
             _system.Log.Debug("entering barriers {0}", names.Aggregate((a, b) => "(" + a + "," + b + ")"));
             var stop = Deadline.Now + timeout;
@@ -129,7 +122,7 @@ namespace Akka.Remote.TestKit
                 var barrierTimeout = stop.TimeLeft;
                 if (barrierTimeout.Ticks < 0)
                 {
-                    _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name)));
+                    _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name, roleName)));
                     throw new TimeoutException("Server timed out while waiting for barrier " + name);
                 }
                 try
@@ -137,11 +130,11 @@ namespace Akka.Remote.TestKit
                     var askTimeout = barrierTimeout + Settings.QueryTimeout;
                     // Need to force barrier to wait here, so we can pass along a "fail barrier" message in the event
                     // of a failed operation
-                    var result = _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout)), askTimeout).Result;
+                    var result = _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout, roleName)), askTimeout).Result;
                 }
                 catch (AggregateException ex)
                 {
-                    _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name)));
+                    _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name, roleName)));
                     throw new TimeoutException("Client timed out while waiting for barrier " + name, ex);
                 }
                 catch (OperationCanceledException)
@@ -173,8 +166,7 @@ namespace Akka.Remote.TestKit
     /// INTERNAL API.
     /// </summary>
     [InternalApi]
-    class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
-        //TODO: RequireMessageQueue
+    internal class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
     {
         public enum State
         {
@@ -196,9 +188,8 @@ namespace Akka.Remote.TestKit
                 _channel = channel;
                 _runningOp = runningOp;
             }
-
-            /// <inheritdoc/>
-            protected bool Equals(Data other)
+            
+            private bool Equals(Data other)
             {
                 return Equals(_channel, other._channel) && Equals(_runningOp, other._runningOp);
             }
@@ -208,7 +199,7 @@ namespace Akka.Remote.TestKit
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                if (obj.GetType() != this.GetType()) return false;
+                if (obj.GetType() != GetType()) return false;
                 return Equals((Data) obj);
             }
 
@@ -370,26 +361,22 @@ namespace Akka.Remote.TestKit
 
             When(State.AwaitDone, @event =>
             {
-                if (@event.FsmEvent is Done)
+                switch (@event.FsmEvent)
                 {
-                    _log.Debug("received Done: starting test");
-                    return GoTo(State.Connected);
+                    case Done:
+                        _log.Debug("received Done: starting test");
+                        return GoTo(State.Connected);
+                    case INetworkOp:
+                        _log.Error("Received {0} instead of Done", @event.FsmEvent);
+                        return GoTo(State.Failed);
+                    case IServerOp:
+                        return Stay().Replying(new Failure(new IllegalStateException("not connected yet")));
+                    case StateTimeout:
+                        _log.Error("connect timeout to TestConductor");
+                        return GoTo(State.Failed);
+                    default:
+                        return null;
                 }
-                if (@event.FsmEvent is INetworkOp)
-                {
-                    _log.Error("Received {0} instead of Done", @event.FsmEvent);
-                    return GoTo(State.Failed);
-                }
-                if (@event.FsmEvent is IServerOp)
-                {
-                    return Stay().Replying(new Failure(new IllegalStateException("not connected yet")));
-                }
-                if (@event.FsmEvent is StateTimeout)
-                {
-                    _log.Error("connect timeout to TestConductor");
-                    return GoTo(State.Failed);
-                }
-                return null;
             }, _settings.BarrierTimeout);
 
             When(State.Connected, @event =>
@@ -558,16 +545,16 @@ namespace Akka.Remote.TestKit
     /// </summary>
     internal class PlayerHandler : ChannelHandlerAdapter
     {
-        readonly IPEndPoint _server;
-        int _reconnects;
-        readonly TimeSpan _backoff;
-        readonly int _poolSize;
-        readonly IActorRef _fsm;
-        readonly ILoggingAdapter _log;
-        readonly IScheduler _scheduler;
+        private readonly IPEndPoint _server;
+        private int _reconnects;
+        private readonly TimeSpan _backoff;
+        private readonly int _poolSize;
+        private readonly IActorRef _fsm;
+        private readonly ILoggingAdapter _log;
+        private readonly IScheduler _scheduler;
         private bool _loggedDisconnect = false;
-        
-        Deadline _nextAttempt;
+
+        private Deadline _nextAttempt;
 
         /// <summary>
         /// Shareable, since the handler may be added multiple times during reconnect

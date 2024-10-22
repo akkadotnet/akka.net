@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotStoreSerializationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -69,7 +69,7 @@ akka.actor {
 
             var snapshot = new Test.MySnapshot("a");
 
-            var metadata = new SnapshotMetadata(Pid, 1);
+            var metadata = new SnapshotMetadata(Pid, 1, Sys.Scheduler.Now.UtcDateTime);
             SnapshotStore.Tell(new SaveSnapshot(metadata, snapshot), probe.Ref);
             probe.ExpectMsg<SaveSnapshotSuccess>();
 
@@ -85,7 +85,7 @@ akka.actor {
 
             var snapshot = new Test.MySnapshot2("a");
 
-            var metadata = new SnapshotMetadata(Pid, 1);
+            var metadata = new SnapshotMetadata(Pid, 1, Sys.Scheduler.Now.UtcDateTime);
             SnapshotStore.Tell(new SaveSnapshot(metadata, snapshot), probe.Ref);
             probe.ExpectMsg<SaveSnapshotSuccess>();
 
@@ -107,7 +107,7 @@ akka.actor {
             };
             var atLeastOnceDeliverySnapshot = new AtLeastOnceDeliverySnapshot(17, unconfirmed);
 
-            var metadata = new SnapshotMetadata(Pid, 2);
+            var metadata = new SnapshotMetadata(Pid, 2, Sys.Scheduler.Now.UtcDateTime);
             SnapshotStore.Tell(new SaveSnapshot(metadata, atLeastOnceDeliverySnapshot), probe.Ref);
             probe.ExpectMsg<SaveSnapshotSuccess>();
 
@@ -123,7 +123,7 @@ akka.actor {
             var unconfirmed = Array.Empty<UnconfirmedDelivery>();
             var atLeastOnceDeliverySnapshot = new AtLeastOnceDeliverySnapshot(13, unconfirmed);
 
-            var metadata = new SnapshotMetadata(Pid, 2);
+            var metadata = new SnapshotMetadata(Pid, 2, Sys.Scheduler.Now.UtcDateTime);
             SnapshotStore.Tell(new SaveSnapshot(metadata, atLeastOnceDeliverySnapshot), probe.Ref);
             probe.ExpectMsg<SaveSnapshotSuccess>();
 
@@ -138,7 +138,7 @@ akka.actor {
 
             var persistentFSMSnapshot = new PersistentFSM.PersistentFSMSnapshot<string>("mystate", "mydata", TimeSpan.FromDays(4));
 
-            var metadata = new SnapshotMetadata(Pid, 2);
+            var metadata = new SnapshotMetadata(Pid, 2, Sys.Scheduler.Now.UtcDateTime);
             SnapshotStore.Tell(new SaveSnapshot(metadata, persistentFSMSnapshot), probe.Ref);
             probe.ExpectMsg<SaveSnapshotSuccess>();
 

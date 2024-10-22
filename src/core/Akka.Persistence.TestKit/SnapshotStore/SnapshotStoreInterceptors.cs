@@ -1,32 +1,34 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotStoreInterceptors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System.Threading;
 
 namespace Akka.Persistence.TestKit
 {
     using System;
     using System.Threading.Tasks;
 
-    internal static class SnapshotStoreInterceptors
+    public static class SnapshotStoreInterceptors
     {
-        internal class Noop : ISnapshotStoreInterceptor
+        public sealed class Noop : ISnapshotStoreInterceptor
         {
             public static readonly ISnapshotStoreInterceptor Instance = new Noop();
 
             public Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria) => Task.FromResult(true);
         }
 
-        internal class Failure : ISnapshotStoreInterceptor
+        public sealed  class Failure : ISnapshotStoreInterceptor
         {
             public static readonly ISnapshotStoreInterceptor Instance = new Failure();
 
             public Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria) => throw new TestSnapshotStoreFailureException(); 
         }
 
-        internal class Delay : ISnapshotStoreInterceptor
+        public sealed  class Delay : ISnapshotStoreInterceptor
         {
             public Delay(TimeSpan delay, ISnapshotStoreInterceptor next)
             {
@@ -44,7 +46,7 @@ namespace Akka.Persistence.TestKit
             }
         }
 
-        internal sealed class OnCondition : ISnapshotStoreInterceptor
+        public sealed class OnCondition : ISnapshotStoreInterceptor
         {
             public OnCondition(Func<string, SnapshotSelectionCriteria, Task<bool>> predicate, ISnapshotStoreInterceptor next, bool negate = false)
             {
@@ -71,6 +73,37 @@ namespace Akka.Persistence.TestKit
                 {
                     await _next.InterceptAsync(persistenceId, criteria);
                 }
+            }
+        }
+        
+        public sealed class CancelableDelay: ISnapshotStoreInterceptor
+        {
+            public CancelableDelay(TimeSpan delay, ISnapshotStoreInterceptor next, CancellationToken cancellationToken)
+            {
+                _delay = delay;
+                _next = next;
+                _cancellationToken = cancellationToken;
+            }
+
+            private readonly TimeSpan _delay;
+            private readonly ISnapshotStoreInterceptor _next;
+            private readonly CancellationToken _cancellationToken;
+
+            public async Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+            {
+                try
+                {
+                    await Task.Delay(_delay, _cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    // no-op
+                }
+                catch (TimeoutException)
+                {
+                    // no-op
+                }
+                await _next.InterceptAsync(persistenceId, criteria);
             }
         }
     }

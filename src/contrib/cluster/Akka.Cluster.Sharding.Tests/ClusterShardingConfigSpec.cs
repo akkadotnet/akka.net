@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -29,6 +30,8 @@ namespace Akka.Cluster.Sharding.Tests
         {
             ClusterSharding.Get(Sys);
             var config = Sys.Settings.Config.GetConfig("akka.cluster.sharding");
+
+            var clusterShardingSettings = ClusterShardingSettings.Create(Sys);
 
             Assert.False(config.IsNullOrEmpty());
             Assert.Equal("sharding", config.GetString("guardian-name"));
@@ -64,6 +67,28 @@ namespace Akka.Cluster.Sharding.Tests
             Assert.Equal(string.Empty, singletonConfig.GetString("role"));
             Assert.Equal(TimeSpan.FromSeconds(1), singletonConfig.GetTimeSpan("hand-over-retry-interval"));
             Assert.Equal(15, singletonConfig.GetInt("min-number-of-hand-over-retries"));
+            
+            // DData settings
+            var minCap = config.GetInt("distributed-data.majority-min-cap");
+            minCap.Should().Be(5);
+            clusterShardingSettings.TuningParameters.CoordinatorStateReadMajorityPlus.Should().Be(5);
+            clusterShardingSettings.TuningParameters.CoordinatorStateWriteMajorityPlus.Should().Be(3);
+        }
+
+        [Fact]
+        public void ClusterSharding_replicator_settings_should_have_default_values()
+        {
+            ClusterSharding.Get(Sys);
+            var clusterShardingSettings = ClusterShardingSettings.Create(Sys);
+            var replicatorSettings = ClusterShardingGuardian.GetReplicatorSettings(clusterShardingSettings);
+            
+            replicatorSettings.Should().NotBeNull();
+            replicatorSettings.Role.Should().BeNullOrEmpty();
+            
+            // only populated when remember-entities is enabled
+            replicatorSettings.DurableKeys.Should().BeEmpty();
+            replicatorSettings.MaxDeltaElements.Should().Be(5);
+            replicatorSettings.PreferOldest.Should().BeTrue();
         }
     }
 }

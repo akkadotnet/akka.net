@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -75,7 +75,7 @@ namespace Akka.Persistence.Snapshot
             }
             else if (message is SaveSnapshot saveSnapshot)
             {
-                var metadata = new SnapshotMetadata(saveSnapshot.Metadata.PersistenceId, saveSnapshot.Metadata.SequenceNr, DateTime.UtcNow);
+                var metadata = new SnapshotMetadata(saveSnapshot.Metadata.PersistenceId, saveSnapshot.Metadata.SequenceNr, saveSnapshot.Metadata.Timestamp == DateTime.MinValue ? DateTime.UtcNow : saveSnapshot.Metadata.Timestamp);
 
                 _breaker.WithCircuitBreaker(() => SaveAsync(metadata, saveSnapshot.Snapshot))
                     .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
@@ -83,7 +83,7 @@ namespace Akka.Persistence.Snapshot
                         : new SaveSnapshotFailure(saveSnapshot.Metadata,
                             t.IsFaulted
                                 ? TryUnwrapException(t.Exception)
-                                : new OperationCanceledException("SaveAsync canceled, possibly due to timing out.")),
+                                : new OperationCanceledException("SaveAsync canceled, possibly due to timing out.", TryUnwrapException(t.Exception))),
                         _continuationOptions)
                     .PipeTo(self, senderPersistentActor);
             }
@@ -196,8 +196,7 @@ namespace Akka.Persistence.Snapshot
 
         private Exception TryUnwrapException(Exception e)
         {
-            var aggregateException = e as AggregateException;
-            if (aggregateException != null)
+            if (e is AggregateException aggregateException)
             {
                 aggregateException = aggregateException.Flatten();
                 if (aggregateException.InnerExceptions.Count == 1)

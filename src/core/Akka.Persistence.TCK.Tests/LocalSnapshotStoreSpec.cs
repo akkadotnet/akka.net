@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LocalSnapshotStoreSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,7 +42,7 @@ namespace Akka.Persistence.TCK.Tests
         public void LocalSnapshotStore_can_snapshot_actors_with_PersistenceId_containing_invalid_path_characters()
         {
             var pid = @"p\/:*?-1";
-            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(pid, 1), "sample data"), TestActor);
+            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(pid, 1, Sys.Scheduler.Now.UtcDateTime), "sample data"), TestActor);
             ExpectMsg<SaveSnapshotSuccess>();
 
             SnapshotStore.Tell(new LoadSnapshot(pid, SnapshotSelectionCriteria.Latest, long.MaxValue), TestActor);

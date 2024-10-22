@@ -1,9 +1,10 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="DurableProducerQueue.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-//  </copyright>
-// -----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="DurableProducerQueue.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using System.Collections.Generic;
@@ -21,7 +22,6 @@ public static class DurableProducerQueue
     /// <summary>
     ///     Marker interface for all commands handled by the durable producer queue.
     /// </summary>
-    /// <typeparam name="T">The same type of messages that are handled by the ProducerController{T}</typeparam>
     public interface IDurableProducerQueueCommand
     {
     }

@@ -589,6 +589,7 @@ namespace Akka.Actor
         public CoordinatedShutdownExtension() { }
         public override Akka.Actor.CoordinatedShutdown CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
+    [System.ObsoleteAttribute("This class will be removed in Akka.NET v1.6.0 - use the IScheduler instead.")]
     public class DateTimeOffsetNowTimeProvider : Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider
     {
         public System.TimeSpan HighResMonotonicClock { get; }
@@ -1182,8 +1183,11 @@ namespace Akka.Actor
         void CancelAll();
         bool IsTimerActive(object key);
         void StartPeriodicTimer(object key, object msg, System.TimeSpan interval);
+        void StartPeriodicTimer(object key, object msg, System.TimeSpan interval, Akka.Actor.IActorRef sender);
         void StartPeriodicTimer(object key, object msg, System.TimeSpan initialDelay, System.TimeSpan interval);
+        void StartPeriodicTimer(object key, object msg, System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.IActorRef sender);
         void StartSingleTimer(object key, object msg, System.TimeSpan timeout);
+        void StartSingleTimer(object key, object msg, System.TimeSpan timeout, Akka.Actor.IActorRef sender);
     }
     public interface IUntypedActorContext : Akka.Actor.IActorContext, Akka.Actor.IActorRefFactory, Akka.Actor.ICanWatch
     {

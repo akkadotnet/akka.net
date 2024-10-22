@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingGuardian.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -179,7 +179,7 @@ namespace Akka.Cluster.Sharding
                     {
                         // with the deprecated persistence state store mode we always use the event sourced provider for shard regions
                         // and no store for coordinator (the coordinator is a PersistentActor in that case)
-                        RememberEntitiesStore rememberEntitiesProvider =
+                        var rememberEntitiesProvider =
                           (settings.StateStoreMode == StateStoreMode.Persistence) ?
                             RememberEntitiesStore.Eventsourced : settings.RememberEntitiesStore;
 
@@ -297,14 +297,14 @@ namespace Akka.Cluster.Sharding
             });
         }
 
-        private ReplicatorSettings GetReplicatorSettings(ClusterShardingSettings shardingSettings)
+        internal static ReplicatorSettings GetReplicatorSettings(ClusterShardingSettings shardingSettings)
         {
             var config = Context.System.Settings.Config.GetConfig("akka.cluster.sharding.distributed-data")
                 .WithFallback(Context.System.Settings.Config.GetConfig("akka.cluster.distributed-data"));
             var configuredSettings = ReplicatorSettings.Create(config);
             var settingsWithRoles = configuredSettings.WithRole(shardingSettings.Role);
-            if (shardingSettings.RememberEntities)
-                return settingsWithRoles;
+            if (shardingSettings.RememberEntities && shardingSettings.RememberEntitiesStore == RememberEntitiesStore.DData)
+                return settingsWithRoles; // only enable durable keys when using DData for remember-entities
             else
                 return settingsWithRoles.WithDurableKeys(ImmutableHashSet<string>.Empty);
         }
