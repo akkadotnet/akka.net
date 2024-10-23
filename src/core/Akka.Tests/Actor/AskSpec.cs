@@ -282,6 +282,23 @@ namespace Akka.Tests.Actor
             resp.Should().BeNullOrEmpty();
         }
 
+        /// <summary>
+        /// Reproduction for https://github.com/akkadotnet/akka.net/issues/7254
+        /// </summary>
+        [Fact]
+        public async Task Bugfix7254_should_throw_error_when_expecting_object_type()
+        {
+            const string textExceptionMessage = "THIS IS TEST";
+
+            var actor = Sys.ActorOf(act => act.ReceiveAny((_, context) =>
+            {
+                context.Sender.Tell(new Status.Failure(new Exception(textExceptionMessage)));
+            }));
+
+            var ex = await Assert.ThrowsAsync<Exception>(async () => await actor.Ask("answer"));
+            ex.Message.ShouldBe(textExceptionMessage);
+        }
+
         [Fact]
         public void AskDoesNotDeadlockWhenWaitForResultInGuiApplication()
         {
