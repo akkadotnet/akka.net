@@ -52,6 +52,35 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
+        /// Used by the proxy to signal that no singleton has been found after a period of time
+        /// </summary>
+        internal sealed class IdentifySingletonTimeOutTick : INoSerializationVerificationNeeded
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public static IdentifySingletonTimeOutTick Instance { get; } = new();
+            private IdentifySingletonTimeOutTick() { }
+        }
+
+        /// <summary>
+        /// Used by the proxy to signal that no singleton has been found after a period of time
+        /// </summary>
+        public sealed class IdentifySingletonTimedOut : INoSerializationVerificationNeeded
+        {
+            public IdentifySingletonTimedOut(string singletonName, string role, TimeSpan duration)
+            {
+                SingletonName = singletonName;
+                Role = role;
+                Duration = duration;
+            }
+
+            public string SingletonName { get; }
+            public string Role { get; }
+            public TimeSpan Duration { get; }
+        }
+
+        /// <summary>
         /// Returns default HOCON configuration for the cluster singleton.
         /// </summary>
         /// <returns>TBD</returns>
@@ -85,6 +114,7 @@ namespace Akka.Cluster.Tools.Singleton
         private string _identityId;
         private IActorRef _singleton = null;
         private ICancelable _identityTimer = null;
+        private ICancelable _identityTimeoutTimer = null;
         private ImmutableSortedSet<Member> _membersByAge;
         private ILoggingAdapter _log;
 
@@ -110,7 +140,12 @@ namespace Akka.Cluster.Tools.Singleton
                 if (m.Member.UniqueAddress.Equals(_cluster.SelfUniqueAddress))
                     Context.Stop(Self);
                 else
+                {
                     Remove(m.Member);
+                    
+                    // start or reset identify timeout every time a member is removed (excluding self)
+                    TrackIdentifyTimeout();
+                }
             });
             Receive<ClusterEvent.IMemberEvent>(_ =>
             {
@@ -139,6 +174,22 @@ namespace Akka.Cluster.Tools.Singleton
                          Context.ActorSelection(singletonAddress).Tell(new Identify(_identityId));
                      }
                  });
+            Receive<IdentifySingletonTimeOutTick>(_ =>
+            {
+                // We somehow missed a CancelTimer() and a singleton reference was found when we waited,
+                // ignoring the timeout tick message.
+                if (_singleton is not null)
+                    return;
+                
+                Log.Warning(
+                    "ClusterSingletonProxy failed to find an associated singleton named [{0}] in role [{1}] after {2} seconds.",
+                    _settings.SingletonName, _settings.Role, _settings.SingletonIdentificationFailurePeriod.TotalSeconds);
+                
+                Context.System.EventStream.Publish(new IdentifySingletonTimedOut(
+                    singletonName: _settings.SingletonName, 
+                    role: _settings.Role,
+                    duration: _settings.SingletonIdentificationFailurePeriod));
+            });
             Receive<Terminated>(terminated =>
                 {
                     if (Equals(_singleton, terminated.ActorRef))
@@ -191,6 +242,12 @@ namespace Akka.Cluster.Tools.Singleton
                 _identityTimer.Cancel();
                 _identityTimer = null;
             }
+
+            if (_identityTimeoutTimer is not null)
+            {
+                _identityTimeoutTimer.Cancel();
+                _identityTimeoutTimer = null;
+            }
         }
 
         private bool MatchingRole(Member member)
@@ -222,6 +279,29 @@ namespace Akka.Cluster.Tools.Singleton
                 receiver: Self,
                 message: TryToIdentifySingleton.Instance,
                 sender: Self);
+            
+            // reset identify timeout every time we try to identify a new singleton
+            TrackIdentifyTimeout();
+        }
+
+        private void TrackIdentifyTimeout()
+        {
+            if (_identityTimeoutTimer is not null)
+            {
+                _identityTimeoutTimer.Cancel();
+                _identityTimeoutTimer = null;
+            }
+
+            // Don't start the timer if we already have a singleton reference
+            if (_singleton is not null)
+                return;
+            
+            if(_settings.LogSingletonIdentificationFailure)
+                _identityTimeoutTimer = Context.System.Scheduler.ScheduleTellOnceCancelable(
+                    delay: _settings.SingletonIdentificationFailurePeriod, 
+                    receiver: Self,
+                    message: IdentifySingletonTimeOutTick.Instance, 
+                    sender: Self);
         }
 
         private void TrackChanges(Action block)
@@ -242,6 +322,9 @@ namespace Akka.Cluster.Tools.Singleton
                     _membersByAge = _membersByAge.Remove(member); //replace
                     _membersByAge = _membersByAge.Add(member);
                 });
+            
+            // start or reset identify timeout every time a new member joined (including self)
+            TrackIdentifyTimeout();
         }
 
         private void Remove(Member member)
