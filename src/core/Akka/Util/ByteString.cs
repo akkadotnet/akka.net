@@ -25,8 +25,8 @@ namespace Akka.IO
     /// when concatenating and slicing sequences of bytes,
     /// and also providing a thread safe way of working with bytes.
     /// </summary>
-    [DebuggerDisplay("(Count = {_count}, Buffers = {_buffers})")]
-    public sealed class ByteString : IEquatable<ByteString>, IEnumerable<byte>
+    [DebuggerDisplay("(Count = {Count}, Buffer = {Memory})")]
+    public sealed class ByteString : IEquatable<ByteString>
     {
         #region creation methods
 
@@ -244,49 +244,69 @@ namespace Akka.IO
 
         #endregion
 
-        private readonly int _count;
-        private readonly ByteBuffer[] _buffers;
+        private readonly ReadOnlyMemory<byte> _memory;
+        
+        public ReadOnlyMemory<byte> Memory => _memory;
 
-        private ByteString(ByteBuffer[] buffers, int count)
+        private static ReadOnlyMemory<byte> ConvertToMemory(ByteBuffer[] buffers)
         {
-            _buffers = buffers;
-            _count = count;
+            return buffers.Length switch
+            {
+                0 => ReadOnlyMemory<byte>.Empty,
+                1 => new ReadOnlyMemory<byte>(buffers[0].Array, buffers[0].Offset, buffers[0].Count),
+                _ => new ReadOnlyMemory<byte>(ConcatBuffers(buffers))
+            };
+            
+            static byte[] ConcatBuffers(ByteBuffer[] buffers)
+            {
+                var count = buffers.Sum(x => x.Count);
+                var result = new byte[count];
+                var offset = 0;
+                foreach (var buffer in buffers)
+                {
+                    Array.Copy(buffer.Array ?? throw new InvalidOperationException(), buffer.Offset, result, offset, buffer.Count);
+                    offset += buffer.Count;
+                }
+
+                return result;
+            }
         }
 
-        private ByteString(ByteBuffer buffer)
+        private ByteString(ByteBuffer[] buffers, int count) : this(ConvertToMemory(buffers))
         {
-            _buffers = new[] { buffer };
-            _count = buffer.Count;
         }
 
-        private ByteString(byte[] array, int offset, int count)
+        private ByteString(ByteBuffer buffer) :
+            this(new ReadOnlyMemory<byte>(buffer.Array, buffer.Offset, buffer.Count))
         {
-            _buffers = new[] { new ByteBuffer(array, offset, count) };
-            _count = count;
+        }
+
+        private ByteString(byte[] array, int offset, int count) : this(new ReadOnlyMemory<byte>(array, offset, count))
+        {
+        }
+        
+        private ByteString(in ReadOnlyMemory<byte> memory)
+        {
+            _memory = memory;
         }
 
         /// <summary>
         /// Gets a total number of bytes stored inside this <see cref="ByteString"/>.
         /// </summary>
-        public int Count => _count;
+        public int Count => _memory.Length;
 
         /// <summary>
         /// Determines if current <see cref="ByteString"/> has compact representation.
         /// Compact byte strings represent bytes stored inside single, continuous
         /// block of memory.
         /// </summary>
-        /// <returns>TBD</returns>
-        public bool IsCompact => _buffers.Length == 1;
+        [Obsolete("This property will be removed in future versions of Akka.NET.")]
+        public bool IsCompact => true;
 
         /// <summary>
         /// Determines if current <see cref="ByteString"/> is empty.
         /// </summary>
-        public bool IsEmpty => _count == 0;
-
-        /// <summary>
-        /// Gets sequence of the buffers used underneat.
-        /// </summary>
-        internal IList<ByteBuffer> Buffers => _buffers;
+        public bool IsEmpty => Count == 0;
 
         /// <summary>
         /// Gets a byte stored under a provided <paramref name="index"/>.
@@ -296,11 +316,7 @@ namespace Akka.IO
         {
             get
             {
-                if (index >= _count) throw new IndexOutOfRangeException("Requested index is outside of the bounds of the ByteString");
-                int j;
-                var i = GetBufferFittingIndex(index, out j);
-                var buffer = _buffers[i];
-                return buffer.Array[buffer.Offset + j];
+                return _memory.Span[index];
             }
         }
 
@@ -308,13 +324,10 @@ namespace Akka.IO
         /// Compacts current <see cref="ByteString"/>, potentially copying its content underneat
         /// into new byte array.
         /// </summary>
-        /// <returns>TBD</returns>
+        [Obsolete("This method will be removed in future versions of Akka.NET.")]
         public ByteString Compact()
         {
-            if (IsCompact) return this;
-
-            var copy = this.ToArray();
-            return new ByteString(copy, 0, copy.Length);
+            return this;
         }
 
         /// <summary>
@@ -323,7 +336,7 @@ namespace Akka.IO
         /// operation.
         /// </summary>
         /// <param name="index">index inside current <see cref="ByteString"/>, from which slicing should start</param>
-        public ByteString Slice(int index) => Slice(index, _count - index);
+        public ByteString Slice(int index) => Slice(index, Count - index);
 
         /// <summary>
         /// Slices current <see cref="ByteString"/>, creating a new <see cref="ByteString"/>
@@ -335,75 +348,7 @@ namespace Akka.IO
         /// <exception cref="ArgumentOutOfRangeException">If index or count result in an invalid <see cref="ByteString"/>.</exception>
         public ByteString Slice(int index, int count)
         {
-            if(index < 0)
-                throw new ArgumentOutOfRangeException(nameof(index), "Index must be positive number");
-            if (count < 0)
-                throw new ArgumentOutOfRangeException(nameof(count), "Count must be positive number");
-            if (count == 0) return Empty;
-            if(index > _count)
-                throw new ArgumentOutOfRangeException(nameof(index), "Index is outside of the bounds of the ByteString");
-            if(index + count > _count)
-                throw new ArgumentOutOfRangeException(nameof(count), "Index + count is outside of the bounds of the ByteString");
-            
-            if (index == 0 && count == _count) return this;
-
-            var i = GetBufferFittingIndex(index, out var j);
-            var init = _buffers[i];
-
-            var copied = Math.Min(init.Count - j, count);
-            var newBuffers = new ByteBuffer[_buffers.Length - i];
-            newBuffers[0] = new ByteBuffer(init.Array, init.Offset + j, copied);
-
-            i++;
-            var k = 1;
-            for (; i < _buffers.Length; i++, k++)
-            {
-                if (copied >= count) break;
-
-                var buffer = _buffers[i];
-                var toCopy = Math.Min(buffer.Count, count - copied);
-                newBuffers[k] = new ByteBuffer(buffer.Array, buffer.Offset, toCopy);
-                copied += toCopy;
-            }
-
-            if (k < newBuffers.Length)
-                newBuffers = newBuffers.Take(k).ToArray();
-
-            return new ByteString(newBuffers, count);
-        }
-
-        /// <summary>
-        /// Given an <paramref name="index"/> in current <see cref="ByteString"/> tries to 
-        /// find which buffer will be used to contain that index and return its range.
-        /// An offset within the buffer itself will be stored in <paramref name="indexWithinBuffer"/>.
-        /// </summary>
-        /// <param name="index"></param>
-        /// <param name="indexWithinBuffer"></param>
-        /// <returns></returns>
-        private int GetBufferFittingIndex(int index, out int indexWithinBuffer)
-        {
-            if (index == 0)
-            {
-                indexWithinBuffer = 0;
-                return 0;
-            }
-
-            var j = index;
-            for (var i = 0; i < _buffers.Length; i++)
-            {
-                var buffer = _buffers[i];
-                if (j >= buffer.Count)
-                {
-                    j -= buffer.Count;
-                }
-                else
-                {
-                    indexWithinBuffer = j;
-                    return i;
-                }
-            }
-
-            throw new IndexOutOfRangeException($"Requested index [{index}] is outside of the bounds of current ByteString.");
+            return new ByteString(_memory.Slice(index, count));
         }
 
         /// <summary>
@@ -414,14 +359,7 @@ namespace Akka.IO
         /// <returns></returns>
         public int IndexOf(byte b)
         {
-            var idx = 0;
-            foreach (var x in this)
-            {
-                if (x == b) return idx;
-                idx++;
-            }
-
-            return -1;
+            return _memory.Span.IndexOf(b);
         }
 
         /// <summary>
@@ -431,22 +369,21 @@ namespace Akka.IO
         /// <returns></returns>
         public int IndexOf(byte b, int from)
         {
-            if (from >= _count) return -1;
+            var rValue = _memory.Span[from..].IndexOf(b);
+            return rValue == -1 ? -1 : rValue + from;
+        }
+        
+        public int IndexOf(ByteString other, int index = 0)
+        {
+            if (other.Count == 0) return index; // Empty spans are always "found".
+            if (index < 0 || index > Count) throw new ArgumentOutOfRangeException(nameof(index), "Start index is out of range.");
+            if (Count - index < other.Count) return -1; // Can't find if `toFind` is larger considering the start index.
+            
+            var span = _memory.Span;
+            var otherSpan = other._memory.Span;
 
-            int j;
-            var i = GetBufferFittingIndex(from, out j);
-            var idx = from;
-            for (; i < _buffers.Length; i++)
-            {
-                var buffer = _buffers[i];
-                for (; j < buffer.Count; j++, idx++)
-                {
-                    if (buffer.Array[buffer.Offset + j] == b) return idx;
-                }
-                j = 0;
-            }
-
-            return -1;
+            var indexOf = span.Slice(index).IndexOf(otherSpan);
+            return indexOf == -1 ? -1 : indexOf + index;
         }
 
         /// <summary>
@@ -459,53 +396,19 @@ namespace Akka.IO
         /// <returns></returns>
         public bool HasSubstring(ByteString other, int index)
         {
-            // quick check: if subsequence is longer than remaining size, return false
-            if (other.Count > _count - index) return false;
-
-            int thisIdx = 0, otherIdx = 0;
-            var i = GetBufferFittingIndex(index, out thisIdx);
-            var j = 0;
-            while (j < other._buffers.Length)
-            {
-                var buffer = _buffers[i];
-                var otherBuffer = other._buffers[j];
-
-                while (thisIdx < buffer.Count && otherIdx < otherBuffer.Count)
-                {
-                    if (buffer.Array[buffer.Offset + thisIdx] != otherBuffer.Array[otherBuffer.Offset + otherIdx])
-                        return false;
-
-                    thisIdx++;
-                    otherIdx++;
-                }
-
-                if (thisIdx >= buffer.Count)
-                {
-                    i++;
-                    thisIdx = 0;
-                }
-                if (otherIdx >= otherBuffer.Count)
-                {
-                    j++;
-                    otherIdx = 0;
-                }
-            }
-
-            return true;
+            return IndexOf(other, index) > -1;
         }
 
         /// <summary>
         /// Copies content of a current <see cref="ByteString"/> into a single byte array.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <remarks>
+        /// WARNING: this method allocates!
+        /// </remarks>
+        /// <returns>A new array of data</returns>
         public byte[] ToArray()
         {
-            if (_count == 0)
-                return Array.Empty<byte>();
-
-            var copy = new byte[_count];
-            CopyTo(copy, 0, _count);
-            return copy;
+            return _memory.ToArray();
         }
 
         /// <summary>
@@ -519,16 +422,14 @@ namespace Akka.IO
             if (other == null) throw new ArgumentNullException(nameof(other), "Cannot append null to ByteString.");
 
             if (other.IsEmpty) return this;
-            if (this.IsEmpty) return other;
+            if (IsEmpty) return other;
 
-            var count = _count + other._count;
-            var len1 = _buffers.Length;
-            var len2 = other._buffers.Length;
-            var array = new ByteBuffer[len1 + len2];
-            Array.Copy(this._buffers, 0, array, 0, len1);
-            Array.Copy(other._buffers, 0, array, len1, len2);
-
-            return new ByteString(array, count);
+            // combine the two ReadOnlyMemory<byte> instances
+            var array = new byte[_memory.Length + other._memory.Length];
+            _memory.Span.CopyTo(array);
+            other._memory.Span.CopyTo(array.AsSpan(_memory.Length));
+            
+            return new ByteString(array);
         }
 
         /// <summary>
@@ -544,20 +445,9 @@ namespace Akka.IO
             if (index < 0 || index >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(index), "Provided index is outside the bounds of the buffer to copy to.");
             if (count > buffer.Length - index) throw new ArgumentException("Provided number of bytes to copy won't fit into provided buffer", nameof(count));
 
-            count = Math.Min(count, _count);
-            var remaining = count;
-            var position = index;
-            foreach (var b in _buffers)
-            {
-                var toCopy = Math.Min(b.Count, remaining);
-                Array.Copy(b.Array, b.Offset, buffer, position, toCopy);
-                position += toCopy;
-                remaining -= toCopy;
-
-                if (remaining == 0) return count;
-            }
-
-            return 0;
+            count = Math.Min(count, Count);
+            _memory.Span.CopyTo(buffer.AsSpan(index, count));
+            return count;
         }
 
         /// <summary>
@@ -565,6 +455,7 @@ namespace Akka.IO
         /// <paramref name="buffer"/>
         /// </summary>
         /// <returns>The number of bytes copied</returns>
+        [Obsolete("This method will be removed in future versions of Akka.NET.")]
         public int CopyTo(ref Memory<byte> buffer)
             => CopyTo(ref buffer, 0, buffer.Length);
         
@@ -574,29 +465,16 @@ namespace Akka.IO
         /// buffer and copying a <paramref name="count"/> number of bytes.
         /// </summary>
         /// <returns>The number of bytes copied</returns>
+        [Obsolete("This method will be removed in future versions of Akka.NET.")]
         public int CopyTo(ref Memory<byte> buffer, int index, int count)
         {
             if(buffer.Length == 0 && count == 0) return 0; // edge case for no-copy
             if (index < 0 || index >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(index), "Provided index is outside the bounds of the buffer to copy to.");
             if (count > buffer.Length - index) throw new ArgumentException("Provided number of bytes to copy won't fit into provided buffer", nameof(count));
 
-            count = Math.Min(count, _count);
-            var remaining = count;
-            var position = index;
-            foreach (var b in _buffers)
-            {
-                var toCopy = Math.Min(b.Count, remaining);
-
-                var bufferSpan = buffer.Span.Slice(position, toCopy);
-                b.AsSpan().CopyTo(bufferSpan);
-                
-                position += toCopy;
-                remaining -= toCopy;
-
-                if (remaining == 0) return count;
-            }
-
-            return 0;
+            count = Math.Min(count, Count);
+            _memory.Span.Slice(0, count).CopyTo(buffer.Span.Slice(index));
+            return count;
         }
 
         /// <summary>
@@ -604,6 +482,7 @@ namespace Akka.IO
         /// <paramref name="buffer"/>.
         /// </summary>
         /// <returns>The number of bytes copied</returns>
+        [Obsolete("This method will be removed in future versions of Akka.NET.")]
         public int CopyTo(ref Span<byte> buffer)
             => CopyTo(ref buffer, 0, buffer.Length);
         
@@ -613,29 +492,16 @@ namespace Akka.IO
         /// buffer and copying a <paramref name="count"/> number of bytes.
         /// </summary>
         /// <returns>The number of bytes copied</returns>
+        [Obsolete("This method will be removed in future versions of Akka.NET.")]
         public int CopyTo(ref Span<byte> buffer, int index, int count)
         {
             if(buffer.Length == 0 && count == 0) return 0; // edge case for no-copy
             if (index < 0 || index >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(index), "Provided index is outside the bounds of the buffer to copy to.");
             if (count > buffer.Length - index) throw new ArgumentException("Provided number of bytes to copy won't fit into provided buffer", nameof(count));
 
-            count = Math.Min(count, _count);
-            var remaining = count;
-            var position = index;
-            foreach (var b in _buffers)
-            {
-                var toCopy = Math.Min(b.Count, remaining);
-
-                var bufferSpan = buffer.Slice(position, toCopy);
-                b.AsSpan().CopyTo(bufferSpan);
-                
-                position += toCopy;
-                remaining -= toCopy;
-
-                if (remaining == 0) return count;
-            }
-
-            return 0;
+            count = Math.Min(count, Count);
+            _memory.Span.Slice(0, count).CopyTo(buffer.Slice(index));
+            return count;
         }
 
         /// <summary>
@@ -643,14 +509,14 @@ namespace Akka.IO
         /// writeable <paramref name="stream"/>.
         /// </summary>
         /// <param name="stream"></param>
+        [Obsolete("This method will be removed in future versions of Akka.NET.")]
         public void WriteTo(Stream stream)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
-
-            foreach (var buffer in _buffers)
-            {
-                stream.Write(buffer.Array, buffer.Offset, buffer.Count);
-            }
+            
+            // TODO: remove this method in future versions of Akka.NET and use System.Memory APIs
+            var array = _memory.ToArray();
+            stream.Write(array, 0, array.Length);
         }
 
         /// <summary>
@@ -658,78 +524,50 @@ namespace Akka.IO
         /// to a provided writeable <paramref name="stream"/>.
         /// </summary>
         /// <param name="stream"></param>
-        public async Task WriteToAsync(Stream stream)
+        [Obsolete("This method will be removed in future versions of Akka.NET.")]
+        public Task WriteToAsync(Stream stream)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
 
-            foreach (var buffer in _buffers)
-            {
-                await stream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count);
-            }
+            // TODO: remove this method in future versions of Akka.NET and use System.Memory APIs
+            var array = _memory.ToArray();
+            return stream.WriteAsync(array, 0, array.Length);
         }
 
         public override bool Equals(object obj) => Equals(obj as ByteString);
 
         public override int GetHashCode()
         {
-            var hashCode = 0;
-            foreach (var b in this)
-            {
-                hashCode = (hashCode * 397) ^ b.GetHashCode();
-            }
-            return hashCode;
+            return _memory.GetHashCode();
         }
 
         public bool Equals(ByteString other)
         {
             if (ReferenceEquals(other, this)) return true;
             if (ReferenceEquals(other, null)) return false;
-            if (_count != other._count) return false;
-
-            using (var thisEnum = this.GetEnumerator())
-            using (var otherEnum = other.GetEnumerator())
-            {
-                while (thisEnum.MoveNext() && otherEnum.MoveNext())
-                {
-                    if (thisEnum.Current != otherEnum.Current) return false;
-                }
-            }
-
-            return true;
+            
+            return _memory.Span.SequenceEqual(other._memory.Span);
         }
-
-        public IEnumerator<byte> GetEnumerator()
-        {
-            foreach (var buffer in _buffers)
-            {
-                for (int i = buffer.Offset; i < buffer.Offset + buffer.Count; i++)
-                {
-                    yield return buffer.Array[i];
-                }
-            }
-        }
-
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         public override string ToString() => ToString(Encoding.UTF8);
 
         public string ToString(Encoding encoding)
         {
-            if (IsCompact)
-                return encoding.GetString(_buffers[0].Array, _buffers[0].Offset, _buffers[0].Count);
-
-            byte[] buffer = ToArray();
-
-            return encoding.GetString(buffer);
+            // get span as byte array
+            return encoding.GetString(_memory.Span.ToArray());
         }
 
         public static bool operator ==(ByteString x, ByteString y) => Equals(x, y);
 
         public static bool operator !=(ByteString x, ByteString y) => !Equals(x, y);
 
-        public static explicit operator ByteString(byte[] bytes) => ByteString.CopyFrom(bytes);
+        public static explicit operator ByteString(byte[] bytes) => CopyFrom(bytes);
         
         public static explicit operator byte[] (ByteString byteString) => byteString.ToArray();
+        
+        public static explicit operator ByteString(Memory<byte> memory) => CopyFrom(memory);
+
+        public static explicit operator ByteString(ReadOnlyMemory<byte> memory) => new(memory);
         
         public static ByteString operator +(ByteString x, ByteString y) => x.Concat(y);
     }

@@ -424,16 +424,18 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var publisherProbe = this.CreateManualPublisherProbe<ByteString>();
-                var subscriber = this.CreateManualSubscriberProbe<IEnumerable<byte>>();
+                var subscriber = this.CreateManualSubscriberProbe<ByteString>();
 
                 var firstGroup = (Source<IEnumerable<byte>, NotUsed>)Source.FromPublisher(publisherProbe)
                     .GroupBy(256, element => element[0])
+                    .Select(b => b.ToArray()) // have to convert to an array
                     .Select(b => b.Reverse())
                     .MergeSubstreams();
-                var secondGroup = (Source<IEnumerable<byte>, NotUsed>)firstGroup.GroupBy(256, bytes => bytes.First())
+                var secondGroup = (Source<ByteString, NotUsed>)firstGroup.GroupBy(256, bytes => bytes.First())
                     .Select(b => b.Reverse())
+                    .Select(b => ByteString.FromBytes(b.ToArray()))
                     .MergeSubstreams();
-                var publisher = secondGroup.RunWith(Sink.AsPublisher<IEnumerable<byte>>(false), Materializer);
+                var publisher = secondGroup.RunWith(Sink.AsPublisher<ByteString>(false), Materializer);
                 publisher.Subscribe(subscriber);
 
                 var upstreamSubscription = await publisherProbe.ExpectSubscriptionAsync();

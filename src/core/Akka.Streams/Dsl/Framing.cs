@@ -92,9 +92,9 @@ namespace Akka.Streams.Dsl
         /// </exception>
         /// <returns>TBD</returns>
         public static Flow<ByteString, ByteString, NotUsed> LengthField(
-            int fieldLength, 
+            int fieldLength,
             int fieldOffset,
-            int maximumFrameLength,             
+            int maximumFrameLength,
             ByteOrder byteOrder,
             Func<IReadOnlyList<byte>, int, int> computeFrameSize)
         {
@@ -102,7 +102,8 @@ namespace Akka.Streams.Dsl
                 throw new ArgumentException("Length field length must be 1,2,3 or 4", nameof(fieldLength));
 
             return Flow.Create<ByteString>()
-                .Via(new LengthFieldFramingStage(fieldLength, maximumFrameLength, fieldOffset, byteOrder, computeFrameSize))
+                .Via(new LengthFieldFramingStage(fieldLength, maximumFrameLength, fieldOffset, byteOrder,
+                    computeFrameSize))
                 .Named("LengthFieldFraming");
         }
 
@@ -122,7 +123,8 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="maximumMessageLength">Maximum length of allowed messages. If sent or received messages exceed the configured limit this BidiFlow will fail the stream. The header attached by this BidiFlow are not included in this limit.</param>
         /// <returns>TBD</returns>
-        public static BidiFlow<ByteString, ByteString, ByteString, ByteString, NotUsed> SimpleFramingProtocol(int maximumMessageLength)
+        public static BidiFlow<ByteString, ByteString, ByteString, ByteString, NotUsed> SimpleFramingProtocol(
+            int maximumMessageLength)
         {
             return BidiFlow.FromFlowsMat(SimpleFramingProtocolEncoder(maximumMessageLength),
                 SimpleFramingProtocolDecoder(maximumMessageLength), Keep.Left);
@@ -166,42 +168,65 @@ namespace Akka.Streams.Dsl
             /// </summary>
             /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
             /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-            protected FramingException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+            protected FramingException(SerializationInfo info, StreamingContext context) : base(info, context)
+            {
+            }
         }
 
-        private static readonly Func<IEnumerator<byte>, int, int> BigEndianDecoder = (enumerator, length) =>
+        private static readonly Func<ReadOnlyMemory<byte>, int, int> BigEndianDecoder = (byteData, length) =>
         {
-            var count = length;
-            var decoded = 0;
-            while (count > 0)
+            if (length < 1 || length > 4)
             {
+                throw new ArgumentOutOfRangeException(nameof(length), "Length must be between 1 and 4.");
+            }
+
+            if (byteData.Length < length)
+            {
+                throw new IndexOutOfRangeException("BigEndianDecoder does not have enough bytes to decode.");
+            }
+
+            var decoded = 0;
+            for (int i = 0; i < length; i++)
+            {
+                // Shift the previously accumulated value to the left, making space for the next byte
                 decoded <<= 8;
-                if (!enumerator.MoveNext()) throw new IndexOutOfRangeException("LittleEndianDecoder reached end of byte string");
-                decoded |= enumerator.Current & 0xFF;
-                count--;
+
+                // Read the next byte and add it to the result
+                decoded |= byteData.Span[i] & 0xFF;
             }
 
             return decoded;
         };
 
-        private static readonly Func<IEnumerator<byte>, int, int> LittleEndianDecoder = (enumerator, length) =>
+
+        private static readonly Func<ReadOnlyMemory<byte>, int, int> LittleEndianDecoder = (byteData, length) =>
         {
-            var highestOcted = (length - 1) << 3;
-            var mask = (int) (1L << (length << 3)) - 1;
-            var count = length;
+            if (length < 1 || length > 4)
+            {
+                throw new ArgumentOutOfRangeException(nameof(length), "Length must be between 1 and 4.");
+            }
+
+            var highestOctet = (length - 1) << 3;
+            var mask = (int)(1L << (length << 3)) - 1;
             var decoded = 0;
 
-            while (count > 0)
+            for (int i = 0; i < length; i++)
             {
-                // decoded >>>= 8 on the jvm
-                decoded = (int) ((uint) decoded >> 8);
-                if (!enumerator.MoveNext()) throw new IndexOutOfRangeException("LittleEndianDecoder reached end of byte string");
-                decoded += (enumerator.Current & 0xFF) << highestOcted;
-                count--;
+                if (i >= byteData.Length)
+                {
+                    throw new IndexOutOfRangeException("LittleEndianDecoder reached end of byte array.");
+                }
+
+                // Shift the previously processed bytes to the right, making space for the next byte
+                decoded = (int)((uint)decoded >> 8);
+
+                // Read the next byte and insert it into the correct position
+                decoded += (byteData.Span[i] & 0xFF) << highestOctet;
             }
 
             return decoded & mask;
         };
+
 
         private sealed class SimpleFramingProtocolEncoderStage : SimpleLinearGraphStage<ByteString>
         {
@@ -230,14 +255,11 @@ namespace Akka.Streams.Dsl
                     {
                         var header = ByteString.CopyFrom(new[]
                         {
-                            Convert.ToByte((messageSize >> 24) & 0xFF),
-                            Convert.ToByte((messageSize >> 16) & 0xFF),
-                            Convert.ToByte((messageSize >> 8) & 0xFF),
-                            Convert.ToByte(messageSize & 0xFF)
+                            Convert.ToByte((messageSize >> 24) & 0xFF), Convert.ToByte((messageSize >> 16) & 0xFF),
+                            Convert.ToByte((messageSize >> 8) & 0xFF), Convert.ToByte(messageSize & 0xFF)
                         });
                         Push(_stage.Outlet, header + message);
                     }
-
                 }
 
                 public override void OnPull() => Pull(_stage.Inlet);
@@ -266,7 +288,7 @@ namespace Akka.Streams.Dsl
                 private ByteString _buffer = ByteString.Empty;
                 private int _nextPossibleMatch;
 
-                public Logic(DelimiterFramingStage stage) : base (stage.Shape)
+                public Logic(DelimiterFramingStage stage) : base(stage.Shape)
                 {
                     _stage = stage;
                     _firstSeparatorByte = stage._separatorBytes[0];
@@ -304,60 +326,74 @@ namespace Akka.Streams.Dsl
                         else
                             FailStage(
                                 new FramingException(
-                                    "Stream finished but there was a truncated final frame in the buffer"));
+                                    $"Stream finished but there was a truncated final frame in the buffer + [{_buffer.ToString()}]"));
                     }
                     else
-                        Pull(_stage.Inlet);
+                    {
+                        // check to see if stage is already pulled - if not, Pull it
+                        if (!HasBeenPulled(_stage.Inlet))
+                        {
+                            // if we haven't already pulled, then pull
+                            Pull(_stage.Inlet);
+                        }
+                    }
                 }
 
                 private void DoParse()
                 {
-                    while (true)
+                    // check to see if the buffer is big enough to contain the separator
+                    if (_buffer.Count < _stage._separatorBytes.Count)
                     {
-                        var possibleMatchPosition = _buffer.IndexOf(_firstSeparatorByte, from: _nextPossibleMatch);
+                        TryPull();
 
-                        if (possibleMatchPosition > _stage._maximumLineBytes)
-                        {
-                            FailStage(new FramingException($"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
-                        }
-                        else if (possibleMatchPosition == -1)
-                        {
-                            if (_buffer.Count > _stage._maximumLineBytes)
-                                FailStage(new FramingException($"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
-                            else
-                            {
-                                // No matching character, we need to accumulate more bytes into the buffer 
-                                _nextPossibleMatch = _buffer.Count;
-                                TryPull();
-                            }
-                        }
-                        else if (possibleMatchPosition + _stage._separatorBytes.Count > _buffer.Count)
-                        {
-                            // We have found a possible match (we found the first character of the terminator 
-                            // sequence) but we don't have yet enough bytes. We remember the position to 
-                            // retry from next time.
-                            _nextPossibleMatch = possibleMatchPosition;
-                            TryPull();
-                        }
-                        else if (_buffer.HasSubstring(_stage._separatorBytes, possibleMatchPosition))
-                        {
-                            // Found a match
-                            var parsedFrame = _buffer.Slice(0, possibleMatchPosition).Compact();
-                            _buffer = _buffer.Slice(possibleMatchPosition + _stage._separatorBytes.Count).Compact();
-                            _nextPossibleMatch = 0;
-                            Push(_stage.Outlet, parsedFrame);
+                        return;
+                    }
 
-                            if (IsClosed(_stage.Inlet) && _buffer.IsEmpty)
-                                CompleteStage();
+                    // search for the separator within the buffer
+                    var definiteMatch = _buffer.IndexOf(_stage._separatorBytes, _nextPossibleMatch);
+                    if (definiteMatch > _stage._maximumLineBytes)
+                    {
+                        FailStage(
+                            new FramingException(
+                                $"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
+                        return;
+                    }
+
+                    if (definiteMatch == -1)
+                    {
+                        if (_buffer.Count > _stage._maximumLineBytes)
+                        {
+                            FailStage(
+                                new FramingException(
+                                    $"Read {_buffer.Count} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
                         }
                         else
                         {
-                            // possibleMatchPos was not actually a match 
-                            _nextPossibleMatch++;
-                            continue;
+                            // No matching character, we need to accumulate more bytes into the buffer 
+                            /*
+                             * NOTE: so this was a tad tricky to catch in the original code - this is a performance
+                             * optimization designed to avoid re-searching through a buffer that has already been
+                             * searched.
+                             *
+                             * However, if we don't find a match we need to remember the position we started searching
+                             * MINUS the length of the delimiter - just in case we only received a _partial_ delimiter
+                             * earlier. If we use just the _buffer.Count, we will end up missing and losing messages
+                             * eventually.
+                             */
+                            _nextPossibleMatch = _buffer.Count - _stage._separatorBytes.Count;
+                            TryPull();
                         }
+                    }
+                    else
+                    {
+                        // Found a match
+                        var parsedFrame = _buffer.Slice(0, definiteMatch);
+                        _buffer = _buffer.Slice(definiteMatch + _stage._separatorBytes.Count);
+                        _nextPossibleMatch = 0;
+                        Push(_stage.Outlet, parsedFrame);
 
-                        break;
+                        if (IsClosed(_stage.Inlet) && _buffer.IsEmpty)
+                            CompleteStage();
                     }
                 }
             }
@@ -368,7 +404,8 @@ namespace Akka.Streams.Dsl
             private readonly int _maximumLineBytes;
             private readonly bool _allowTruncation;
 
-            public DelimiterFramingStage(ByteString separatorBytes, int maximumLineBytes, bool allowTruncation) : base("DelimiterFraming")
+            public DelimiterFramingStage(ByteString separatorBytes, int maximumLineBytes, bool allowTruncation) : base(
+                "DelimiterFraming")
             {
                 _separatorBytes = separatorBytes;
                 _maximumLineBytes = maximumLineBytes;
@@ -440,11 +477,12 @@ namespace Akka.Streams.Dsl
                         PushFrame();
                     else if (bufferSize >= _stage._minimumChunkSize)
                     {
-                        var iterator = _buffer.Slice(_stage._lengthFieldOffset).GetEnumerator();
+                        var iterator = _buffer.Memory.Slice(_stage._lengthFieldOffset);
                         var parsedLength = _stage._intDecoder(iterator, _stage._lengthFieldLength);
 
                         _frameSize = _stage._computeFrameSize.HasValue
-                            ? _stage._computeFrameSize.Value(_buffer.Slice(0, _stage._lengthFieldOffset).ToArray(), parsedLength)
+                            ? _stage._computeFrameSize.Value(_buffer.Slice(0, _stage._lengthFieldOffset).ToArray(),
+                                parsedLength)
                             : parsedLength + _stage._minimumChunkSize;
 
                         if (_frameSize > _stage._maximumFramelength)
@@ -468,7 +506,8 @@ namespace Akka.Streams.Dsl
                 private void TryPull()
                 {
                     if (IsClosed(_stage.Inlet))
-                        FailStage(new FramingException("Stream finished but there was a truncated final frame in the buffer"));
+                        FailStage(new FramingException(
+                            "Stream finished but there was a truncated final frame in the buffer"));
                     else
                         Pull(_stage.Inlet);
                 }
@@ -480,19 +519,22 @@ namespace Akka.Streams.Dsl
             private readonly int _maximumFramelength;
             private readonly int _lengthFieldOffset;
             private readonly int _minimumChunkSize;
-            private readonly Func<IEnumerator<byte>, int, int> _intDecoder;
+            private readonly Func<ReadOnlyMemory<byte>, int, int> _intDecoder;
             private readonly Option<Func<IReadOnlyList<byte>, int, int>> _computeFrameSize;
 
             // For the sake of binary compatibility
-            public LengthFieldFramingStage(int lengthFieldLength, int maximumFramelength, int lengthFieldOffset, ByteOrder byteOrder) 
-                : this(lengthFieldLength, maximumFramelength, lengthFieldOffset, byteOrder, Option<Func<IReadOnlyList<byte>, int, int>>.None)
-            { }
+            public LengthFieldFramingStage(int lengthFieldLength, int maximumFramelength, int lengthFieldOffset,
+                ByteOrder byteOrder)
+                : this(lengthFieldLength, maximumFramelength, lengthFieldOffset, byteOrder,
+                    Option<Func<IReadOnlyList<byte>, int, int>>.None)
+            {
+            }
 
             public LengthFieldFramingStage(
                 int lengthFieldLength,
                 int maximumFrameLength,
                 int lengthFieldOffset,
-                ByteOrder byteOrder, 
+                ByteOrder byteOrder,
                 Option<Func<IReadOnlyList<byte>, int, int>> computeFrameSize) : base("LengthFieldFramingStage")
             {
                 _lengthFieldLength = lengthFieldLength;
