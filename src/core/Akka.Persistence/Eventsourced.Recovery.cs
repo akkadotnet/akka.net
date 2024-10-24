@@ -100,7 +100,7 @@ namespace Akka.Persistence
                                         Unhandled(offer);
                                     }
                                 }
-                                catch(Exception ex)
+                                catch (Exception ex)
                                 {
                                     try
                                     {
@@ -150,6 +150,7 @@ namespace Akka.Persistence
                 }
                 catch (Exception)
                 {
+                    timeoutCancelable.Cancel();
                     ReturnRecoveryPermit();
                     throw;
                 }
@@ -261,6 +262,7 @@ namespace Akka.Persistence
                 }
                 catch (Exception)
                 {
+                    timeoutCancelable.Cancel();
                     ReturnRecoveryPermit();
                     throw;
                 }
