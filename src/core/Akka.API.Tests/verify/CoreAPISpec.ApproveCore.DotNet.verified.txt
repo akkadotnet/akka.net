@@ -4495,10 +4495,18 @@ namespace Akka.Pattern
         public Akka.Pattern.CircuitBreaker OnHalfOpen(System.Action callback) { }
         public Akka.Pattern.CircuitBreaker OnOpen(System.Action callback) { }
         public void Succeed() { }
+        [System.ObsoleteAttribute("Use WithCircuitBreaker that takes a cancellation token in the body instead", true)]
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T>(System.Func<System.Threading.Tasks.Task<T>> body) { }
+        public System.Threading.Tasks.Task<T> WithCircuitBreaker<T>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> body) { }
+        [System.ObsoleteAttribute("Use WithCircuitBreaker that takes a cancellation token in the body instead", true)]
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T, TState>(TState state, System.Func<TState, System.Threading.Tasks.Task<T>> body) { }
+        public System.Threading.Tasks.Task<T> WithCircuitBreaker<T, TState>(TState state, System.Func<TState, System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> body) { }
+        [System.ObsoleteAttribute("Use WithCircuitBreaker that takes a cancellation token in the body instead", true)]
         public System.Threading.Tasks.Task WithCircuitBreaker(System.Func<System.Threading.Tasks.Task> body) { }
+        public System.Threading.Tasks.Task WithCircuitBreaker(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task> body) { }
+        [System.ObsoleteAttribute("Use WithCircuitBreaker that takes a cancellation token in the body instead", true)]
         public System.Threading.Tasks.Task WithCircuitBreaker<TState>(TState state, System.Func<TState, System.Threading.Tasks.Task> body) { }
+        public System.Threading.Tasks.Task WithCircuitBreaker<TState>(TState state, System.Func<TState, System.Threading.CancellationToken, System.Threading.Tasks.Task> body) { }
         public Akka.Pattern.CircuitBreaker WithExponentialBackoff(System.TimeSpan maxResetTimeout) { }
         public Akka.Pattern.CircuitBreaker WithRandomFactor(double randomFactor) { }
         public void WithSyncCircuitBreaker(System.Action body) { }

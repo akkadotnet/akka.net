@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
@@ -88,7 +89,7 @@ namespace Akka.Persistence.Journal
         public abstract Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback);
 
         /// <inheritdoc/>
-        public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
+        public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Plugin API: asynchronously writes a batch of persistent messages to the
@@ -161,8 +162,9 @@ namespace Akka.Persistence.Journal
         /// This call is protected with a circuit-breaker.
         /// </summary>
         /// <param name="messages">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected abstract Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages);
+        protected abstract Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Asynchronously deletes all persistent messages up to inclusive <paramref name="toSequenceNr"/>
@@ -170,8 +172,9 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="toSequenceNr">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected abstract Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr);
+        protected abstract Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Plugin API: Allows plugin implementers to use f.PipeTo(Self)
@@ -222,8 +225,8 @@ namespace Akka.Persistence.Journal
             {
                 try
                 {
-                    await _breaker.WithCircuitBreaker((message, awj: this), state =>
-                        state.awj.DeleteMessagesToAsync(state.message.PersistenceId, state.message.ToSequenceNr));
+                    await _breaker.WithCircuitBreaker((message, awj: this), (state, ct) =>
+                        state.awj.DeleteMessagesToAsync(state.message.PersistenceId, state.message.ToSequenceNr, ct));
 
                     message.PersistentActor.Tell(new DeleteMessagesSuccess(message.ToSequenceNr), self);
 
@@ -271,8 +274,8 @@ namespace Akka.Persistence.Journal
                 
                 try
                 {
-                    var highSequenceNr = await _breaker.WithCircuitBreaker((message, readHighestSequenceNrFrom, awj: this), state =>
-                        state.awj.ReadHighestSequenceNrAsync(state.message.PersistenceId, state.readHighestSequenceNrFrom));
+                    var highSequenceNr = await _breaker.WithCircuitBreaker((message, readHighestSequenceNrFrom, awj: this), (state, ct) =>
+                        state.awj.ReadHighestSequenceNrAsync(state.message.PersistenceId, state.readHighestSequenceNrFrom, ct));
                     var toSequenceNr = Math.Min(message.ToSequenceNr, highSequenceNr);
                     if (toSequenceNr <= 0L || message.FromSequenceNr > toSequenceNr)
                     {
@@ -357,7 +360,7 @@ namespace Akka.Persistence.Journal
                 try
                 {
                     var writeResult =
-                        await _breaker.WithCircuitBreaker((prepared, awj: this), state => state.awj.WriteMessagesAsync(state.prepared)).ConfigureAwait(false);
+                        await _breaker.WithCircuitBreaker((prepared, awj: this), (state, ct) => state.awj.WriteMessagesAsync(state.prepared, ct)).ConfigureAwait(false);
 
                     ProcessResults(writeResult, atomicWriteCount, message, _resequencer, resequencerCounter, self);
                 }

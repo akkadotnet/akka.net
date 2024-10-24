@@ -224,9 +224,22 @@ namespace Akka.Pattern
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/> containing the call result</returns>
+        [Obsolete("Use WithCircuitBreaker that takes a cancellation token in the body instead", true)]
         public Task<T> WithCircuitBreaker<T>(Func<Task<T>> body) => CurrentState.Invoke(body);
 
+        /// <summary>
+        /// Wraps invocation of asynchronous calls that need to be protected
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="body">Call needing protected</param>
+        /// <returns><see cref="Task"/> containing the call result</returns>
+        public Task<T> WithCircuitBreaker<T>(Func<CancellationToken, Task<T>> body) => CurrentState.Invoke(body);
+
+        [Obsolete("Use WithCircuitBreaker that takes a cancellation token in the body instead", true)]
         public Task<T> WithCircuitBreaker<T, TState>(TState state, Func<TState, Task<T>> body) => 
+            CurrentState.InvokeState(state, body);
+
+        public Task<T> WithCircuitBreaker<T, TState>(TState state, Func<TState, CancellationToken, Task<T>> body) => 
             CurrentState.InvokeState(state, body);
 
         /// <summary>
@@ -234,9 +247,21 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/></returns>
+        [Obsolete("Use WithCircuitBreaker that takes a cancellation token in the body instead", true)]
         public Task WithCircuitBreaker(Func<Task> body) => CurrentState.Invoke(body);
 
+        /// <summary>
+        /// Wraps invocation of asynchronous calls that need to be protected
+        /// </summary>
+        /// <param name="body">Call needing protected</param>
+        /// <returns><see cref="Task"/></returns>
+        public Task WithCircuitBreaker(Func<CancellationToken, Task> body) => CurrentState.Invoke(body);
+
+        [Obsolete("Use WithCircuitBreaker that takes a cancellation token in the body instead", true)]
         public Task WithCircuitBreaker<TState>(TState state, Func<TState, Task> body) => 
+            CurrentState.InvokeState(state, body);
+
+        public Task WithCircuitBreaker<TState>(TState state, Func<TState, CancellationToken, Task> body) => 
             CurrentState.InvokeState(state, body);
 
         /// <summary>
@@ -244,7 +269,7 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Call needing protected</param>
         public void WithSyncCircuitBreaker(Action body) =>
-            WithCircuitBreaker(body, b => Task.Run(b)).GetAwaiter().GetResult();
+            WithCircuitBreaker(body, (b, ct) => Task.Run(b, ct)).GetAwaiter().GetResult();
 
         /// <summary>
         /// Wraps invocations of asynchronous calls that need to be protected.
@@ -252,7 +277,7 @@ namespace Akka.Pattern
         /// <param name="body">Call needing protected</param>
         /// <returns>The result of the call</returns>
         public T WithSyncCircuitBreaker<T>(Func<T> body) =>
-            WithCircuitBreaker(body, b => Task.Run(b)).Result;
+            WithCircuitBreaker(body, (b, ct) => Task.Run(b, ct)).GetAwaiter().GetResult();
 
         /// <summary>
         /// Mark a successful call through CircuitBreaker. Sometimes the callee of CircuitBreaker sends back a message to the

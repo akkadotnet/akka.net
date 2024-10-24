@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 
@@ -62,7 +63,8 @@ namespace Akka.Persistence.Journal
         /// <param name="fromSequenceNr">Hint where to start searching for the highest sequence number.
         /// When a persistent actor is recovering this <paramref name="fromSequenceNr"/> will the sequence
         /// number of the used snapshot, or `0L` if no snapshot is used.</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
+        Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken = default);
     }
 }

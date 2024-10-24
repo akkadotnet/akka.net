@@ -273,12 +273,13 @@ namespace Akka.Persistence.Custom.Journal
         // <ReadHighestSequenceNrAsync>
         public sealed override async Task<long> ReadHighestSequenceNrAsync(
             string persistenceId,
-            long fromSequenceNr)
+            long fromSequenceNr,
+            CancellationToken cancellationToken = default)
         {
             // Create a new DbConnection instance
             using (var connection = new SqliteConnection(_connectionString))
             using (var cts = CancellationTokenSource
-                       .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                       .CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))
             {
                 await connection.OpenAsync(cts.Token);
                 // Create new DbCommand instance
@@ -299,7 +300,8 @@ namespace Akka.Persistence.Custom.Journal
 
         // <WriteMessagesAsync>
         protected sealed override async Task<IImmutableList<Exception>> WriteMessagesAsync(
-            IEnumerable<AtomicWrite> messages)
+            IEnumerable<AtomicWrite> messages,
+            CancellationToken cancellationToken = default)
         {
             // For each of the atomic write request, create an async Task 
             var writeTasks = messages.Select(async message =>
@@ -307,7 +309,7 @@ namespace Akka.Persistence.Custom.Journal
                 // Create a new DbConnection instance
                 using (var connection = new SqliteConnection(_connectionString))
                 using (var cts = CancellationTokenSource
-                           .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                           .CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))
                 {
                     await connection.OpenAsync(cts.Token);
                     
@@ -384,7 +386,7 @@ namespace Akka.Persistence.Custom.Journal
                 .ContinueWhenAll(writeTasks,
                     tasks => tasks.Select(t => t.IsFaulted 
                         ? TryUnwrapException(t.Exception) 
-                        : null).ToImmutableList());
+                        : null).ToImmutableList(), cancellationToken);
 
             return result;
         }
@@ -393,15 +395,16 @@ namespace Akka.Persistence.Custom.Journal
         //<DeleteMessagesToAsync>
         protected sealed override async Task DeleteMessagesToAsync(
             string persistenceId,
-            long toSequenceNr)
+            long toSequenceNr,
+            CancellationToken cancellationToken = default)
         {
             // Create a new DbConnection instance
             using (var connection = new SqliteConnection(_connectionString))
             {
-                await connection.OpenAsync();
+                await connection.OpenAsync(cancellationToken);
                 
                 using (var cts = CancellationTokenSource
-                           .CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                           .CreateLinkedTokenSource(cancellationToken, _pendingRequestsCancellation.Token))
                 {
                     // We will be using two DbCommands to complete this process
                     using (var deleteCommand = GetCommand(connection, DeleteBatchSql, _timeout))

@@ -17,6 +17,7 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
+using static FluentAssertions.FluentActions;
 
 namespace Akka.Tests.Pattern
 {
@@ -199,38 +200,45 @@ namespace Akka.Tests.Pattern
         public async Task Must_allow_calls_through()
         {
             var breaker = LongCallTimeoutCb();
-            var result = await breaker.Instance.WithCircuitBreaker(() => Task.Run(SayHi)).WaitAsync(AwaitTimeout);
-            Assert.Equal("hi", result);
+            var result = await breaker.Instance.WithCircuitBreaker(SayHiAsync).WaitAsync(AwaitTimeout);
+            result.Should().Be("hi");
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is closed must increment failure count on exception")]
         public async Task Must_increment_failure_count_on_exception()
         {
             var breaker = LongCallTimeoutCb();
-            await InterceptException<TestException>(() =>
-                breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException)).WaitAsync(AwaitTimeout));
-            Assert.True(CheckLatch(breaker.OpenLatch));
-            breaker.Instance.CurrentFailureCount.ShouldBe(1);
+            await InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
+
+            CheckLatch(breaker.OpenLatch).Should().BeTrue();
+            breaker.Instance.CurrentFailureCount.Should().Be(1);
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is closed must increment failure count on async failure")]
-        public void Must_increment_failure_count_on_async_failure()
+        public async Task Must_increment_failure_count_on_async_failure()
         {
             var breaker = LongCallTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
-            Assert.True(CheckLatch(breaker.OpenLatch));
-            breaker.Instance.CurrentFailureCount.ShouldBe(1);
+            await InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
+
+            CheckLatch(breaker.OpenLatch).Should().BeTrue();
+            breaker.Instance.CurrentFailureCount.Should().Be(1);
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is closed must reset failure count after success")]
         public async Task Must_reset_failure_count_after_success()
         {
             var breaker = MultiFailureCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(SayHi));
-            Enumerable.Range(1, 4).ForEach(_ => breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException)));
-            await AwaitAssertAsync(() => breaker.Instance.CurrentFailureCount.ShouldBe(4), AwaitTimeout);
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(SayHi));
-            await AwaitAssertAsync(() => breaker.Instance.CurrentFailureCount.ShouldBe(0), AwaitTimeout);
+            _ = await breaker.Instance.WithCircuitBreaker(SayHiAsync).WaitAsync(AwaitTimeout);
+
+            await Task.WhenAll(Enumerable.Range(1, 4)
+                .Select(_ 
+                    => InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync))));
+
+            breaker.Instance.CurrentFailureCount.Should().Be(4);
+            
+            var result = await breaker.Instance.WithCircuitBreaker(SayHiAsync).WaitAsync(AwaitTimeout);
+            result.Should().Be("hi");
+            breaker.Instance.CurrentFailureCount.ShouldBe(0);
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is closed must increment failure count on callTimeout")]
@@ -238,26 +246,41 @@ namespace Akka.Tests.Pattern
         {
             var breaker = ShortCallTimeoutCb();
 
-            var future = breaker.Instance.WithCircuitBreaker(async () =>
+            Task innerFuture = null;
+            var future = breaker.Instance.WithCircuitBreaker(ct =>
             {
-                await Task.Delay(150);
-                ThrowException();
+                innerFuture = SlowThrowing(ct);
+                return innerFuture;
             });
 
-            Assert.True(CheckLatch(breaker.OpenLatch));
-            breaker.Instance.CurrentFailureCount.ShouldBe(1);
+            CheckLatch(breaker.OpenLatch).Should().BeTrue();
+            breaker.Instance.CurrentFailureCount.Should().Be(1);
 
             // Since the timeout should have happened before the inner code finishes
             // we expect a timeout, not TestException
-            await InterceptException<TimeoutException>(() => future.WaitAsync(AwaitTimeout));
+            await InterceptException<TimeoutException>(() => future);
+            
+            // Issue https://github.com/akkadotnet/akka.net/issues/7358
+            // In the bug, TestException was thrown out-of-band with no handler because inner Task is detached
+            // after a timeout and NOT protected when it SHOULD be cancelled/stopped.
+            innerFuture.IsCompleted.Should().BeTrue();
+            innerFuture.IsCanceled.Should().BeTrue();
+            
+            return;
+            
+            async Task SlowThrowing(CancellationToken ct)
+            {
+                await Task.Delay(500, ct);
+                await ThrowExceptionAsync(ct);
+            }
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is closed must invoke onOpen if call fails and breaker transits to open state")]
-        public void Must_invoke_onOpen_if_call_fails_and_breaker_transits_to_open_state()
+        public async Task Must_invoke_onOpen_if_call_fails_and_breaker_transits_to_open_state()
         {
             var breaker = ShortCallTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
+            CheckLatch(breaker.OpenLatch).Should().BeTrue();
         }
     }
 
@@ -267,35 +290,36 @@ namespace Akka.Tests.Pattern
         public async Task Must_pass_through_next_call_and_close_on_success()
         {
             var breaker = ShortResetTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
-            Assert.True(CheckLatch(breaker.HalfOpenLatch));
-            var result = await breaker.Instance.WithCircuitBreaker(() => Task.Run(SayHi)).WaitAsync(AwaitTimeout);
-            Assert.Equal("hi", result);
-            Assert.True(CheckLatch(breaker.ClosedLatch));
+            await InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
+            CheckLatch(breaker.HalfOpenLatch).Should().BeTrue();
+
+            var result = await breaker.Instance.WithCircuitBreaker(SayHiAsync).WaitAsync(AwaitTimeout);
+            result.Should().Be("hi");
+            CheckLatch(breaker.ClosedLatch).Should().BeTrue();
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is half open must re-open on exception in call")]
         public async Task Must_reopen_on_exception_in_call()
         {
             var breaker = ShortResetTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
-            Assert.True(CheckLatch(breaker.HalfOpenLatch));
+            await InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
+            CheckLatch(breaker.HalfOpenLatch).Should().BeTrue();
+            
             breaker.OpenLatch.Reset();
-            await InterceptException<TestException>(() =>
-                breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException)).WaitAsync(AwaitTimeout));
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
+            CheckLatch(breaker.OpenLatch).Should().BeTrue();
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is half open must re-open on async failure")]
-        public void Must_reopen_on_async_failure()
+        public async Task Must_reopen_on_async_failure()
         {
             var breaker = ShortResetTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
-            Assert.True(CheckLatch(breaker.HalfOpenLatch));
+            await InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
+            CheckLatch(breaker.HalfOpenLatch).Should().BeTrue();
 
             breaker.OpenLatch.Reset();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
+            CheckLatch(breaker.OpenLatch).Should().BeTrue();
         }
     }
 
@@ -305,43 +329,40 @@ namespace Akka.Tests.Pattern
         public async Task Must_throw_exceptions_when_called_before_reset_timeout()
         {
             var breaker = LongResetTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
+            await InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
+            CheckLatch(breaker.OpenLatch).Should().BeTrue();
 
-            Assert.True(CheckLatch(breaker.OpenLatch));
-
-            await InterceptException<OpenCircuitException>(
-                () => breaker.Instance.WithCircuitBreaker(() => Task.Run(SayHi)).WaitAsync(AwaitTimeout));
+            await InterceptException<OpenCircuitException>(() => breaker.Instance.WithCircuitBreaker(SayHiAsync));
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is open must transition to half-open on reset timeout")]
-        public void Must_transition_to_half_open_on_reset_timeout()
+        public async Task Must_transition_to_half_open_on_reset_timeout()
         {
             var breaker = ShortResetTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
-            Assert.True(CheckLatch(breaker.HalfOpenLatch));
+            await InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
+            CheckLatch(breaker.HalfOpenLatch).Should().BeTrue();
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is open must increase the reset timeout after it transits to open again")]
         public async Task Must_increase_reset_timeout_after_it_transits_to_open_again()
         {
             var breaker = NonOneFactorCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
+            _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
+            CheckLatch(breaker.OpenLatch).Should().BeTrue();
 
-            var e1 = await InterceptException<OpenCircuitException>(
-                () => breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException)));
+            var e1 = await InterceptException<OpenCircuitException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
             var shortRemainingDuration = e1.RemainingDuration;
 
             await Task.Delay(Dilated(TimeSpan.FromMilliseconds(1000)));
-            Assert.True(CheckLatch(breaker.HalfOpenLatch));
+            CheckLatch(breaker.HalfOpenLatch).Should().BeTrue();
 
             // transit to open again
             breaker.OpenLatch.Reset();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await InterceptException<TestException>(() => breaker.Instance.WithCircuitBreaker(ThrowExceptionAsync));
+            CheckLatch(breaker.OpenLatch).Should().BeTrue();
 
-            var e2 = await InterceptException<OpenCircuitException>(() =>
-                breaker.Instance.WithCircuitBreaker(() => Task.FromResult(SayHi())));
+            var e2 = await InterceptException<OpenCircuitException>(() => breaker.Instance.WithCircuitBreaker(SayHiAsync));
             var longRemainingDuration = e2.RemainingDuration;
 
             shortRemainingDuration.ShouldBeLessThan(longRemainingDuration);
@@ -357,15 +378,29 @@ namespace Akka.Tests.Pattern
         [DebuggerStepThrough]
         public static void ThrowException() => throw new TestException("Test Exception");
 
+        [DebuggerStepThrough]
+        public static async Task ThrowExceptionAsync(CancellationToken ct)
+        {
+            await Task.Yield();
+            throw new TestException("Test Exception");
+        }
+
         public static string SayHi() => "hi";
 
-        protected T InterceptException<T>(Action actionThatThrows) where T : Exception =>
-            Intercept<T>(actionThatThrows);
+        public static async Task<string> SayHiAsync(CancellationToken ct)
+        {
+            await Task.Yield();
+            return "hi";
+        }
 
-        protected static async Task<T> InterceptException<T>(Func<Task> actionThatThrows)
+        protected static T InterceptException<T>(Action actionThatThrows) where T : Exception =>
+            actionThatThrows.Should().Throw<T>().And;
+
+        protected async Task<T> InterceptException<T>(Func<Task> actionThatThrows)
             where T : Exception
         {
-            return (await actionThatThrows.Should().ThrowExactlyAsync<T>()).And;
+            return (await Awaiting(() => actionThatThrows().WaitAsync(AwaitTimeout))
+                .Should().ThrowExactlyAsync<T>()).And;
         }
 
         public TestBreaker ShortCallTimeoutCb() =>

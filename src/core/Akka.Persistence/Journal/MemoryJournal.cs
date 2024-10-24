@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -81,8 +82,9 @@ namespace Akka.Persistence.Journal
         /// TBD
         /// </summary>
         /// <param name="messages">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken = default)
         {
             foreach (var w in messages)
             {
@@ -91,7 +93,7 @@ namespace Akka.Persistence.Journal
                     var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
                     Add(persistentRepresentation);
                     _allMessages.AddLast(persistentRepresentation);
-                    if (!(p.Payload is Tagged tagged)) continue;
+                    if (p.Payload is not Tagged tagged) continue;
                     
                     foreach (var tag in tagged.Tags)
                     {
@@ -115,8 +117,9 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="fromSequenceNr">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.TryGetValue(persistenceId, out long metaSeqNr) ? metaSeqNr : 0L));
         }
@@ -145,8 +148,9 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="toSequenceNr">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken = default)
         {
             var highestSeqNr = HighestSequenceNr(persistenceId);
             var toSeqNr = Math.Min(toSequenceNr, highestSeqNr);

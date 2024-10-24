@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Akka.Util.Internal
@@ -76,16 +77,18 @@ namespace Akka.Util.Internal
         /// </summary>
         /// <param name="task"><see cref="Task"/> Implementation of the call</param>
         /// <returns><see cref="Task"/> containing the result of the call</returns>
-        public async Task<T> CallThrough<T>(Func<Task<T>> task)
+        public async Task<T> CallThrough<T>(Func<CancellationToken, Task<T>> task)
         {
             var result = default(T);
+            using var cts = new CancellationTokenSource();
             try
             {
-                result = await task().WaitAsync(_callTimeout).ConfigureAwait(false);
+                result = await task(cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
                 CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel();
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
@@ -94,16 +97,18 @@ namespace Akka.Util.Internal
             return result;
         }
 
-        public async Task<T> CallThrough<T, TState>(TState state, Func<TState, Task<T>> task)
+        public async Task<T> CallThrough<T, TState>(TState state, Func<TState, CancellationToken, Task<T>> task)
         {
             var result = default(T);
+            using var cts = new CancellationTokenSource(_callTimeout);
             try
             {
-                result = await task(state).WaitAsync(_callTimeout).ConfigureAwait(false);
+                result = await task(state, cts.Token).WaitAsync(_callTimeout, cts.Token).ConfigureAwait(false);
                 CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel();
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
@@ -118,30 +123,34 @@ namespace Akka.Util.Internal
         /// </summary>
         /// <param name="task"><see cref="Task"/> Implementation of the call</param>
         /// <returns><see cref="Task"/> containing the result of the call</returns>
-        public async Task CallThrough(Func<Task> task)
+        public async Task CallThrough(Func<CancellationToken, Task> task)
         {
+            using var cts = new CancellationTokenSource();
             try
             {
-                await task().WaitAsync(_callTimeout).ConfigureAwait(false);
+                await task(cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
                 CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel();
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
             }
         }
 
-        public async Task CallThrough<TState>(TState state, Func<TState, Task> task)
+        public async Task CallThrough<TState>(TState state, Func<TState, CancellationToken, Task> task)
         {
+            using var cts = new CancellationTokenSource();
             try
             {
-                await task(state).WaitAsync(_callTimeout).ConfigureAwait(false);
+                await task(state, cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
                 CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel();
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
@@ -154,18 +163,41 @@ namespace Akka.Util.Internal
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
+        [Obsolete("Use Invoke that takes a cancellation token in the body instead", true)]
         public abstract Task<T> Invoke<T>(Func<Task<T>> body);
 
+        /// <summary>
+        /// Abstract entry point for all states
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public abstract Task<T> Invoke<T>(Func<CancellationToken, Task<T>> body);
+
+        [Obsolete("Use InvokeState that takes a cancellation token in the body instead", true)]
         public abstract Task<T> InvokeState<T, TState>(TState state, Func<TState, Task<T>> body);
+
+        public abstract Task<T> InvokeState<T, TState>(TState state, Func<TState, CancellationToken, Task<T>> body);
 
         /// <summary>
         /// Abstract entry point for all states
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
+        [Obsolete("Use Invoke that takes a cancellation token in the body instead", true)]
         public abstract Task Invoke(Func<Task> body);
 
+        /// <summary>
+        /// Abstract entry point for all states
+        /// </summary>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public abstract Task Invoke(Func<CancellationToken, Task> body);
+
+        [Obsolete("Use InvokeState that takes a cancellation token in the body instead", true)]
         public abstract Task InvokeState<TState>(TState state, Func<TState, Task> body);
+
+        public abstract Task InvokeState<TState>(TState state, Func<TState, CancellationToken, Task> body);
 
         /// <summary>
         /// Invoked when call fails

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -67,7 +68,7 @@ namespace Akka.Persistence.Snapshot
                 }
                 else
                 {
-                    _breaker.WithCircuitBreaker(() => LoadAsync(loadSnapshot.PersistenceId, loadSnapshot.Criteria.Limit(loadSnapshot.ToSequenceNr)))
+                    _breaker.WithCircuitBreaker(ct => LoadAsync(loadSnapshot.PersistenceId, loadSnapshot.Criteria.Limit(loadSnapshot.ToSequenceNr), ct))
                         .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
                             ? new LoadSnapshotResult(t.Result, loadSnapshot.ToSequenceNr) as ISnapshotResponse
                             : new LoadSnapshotFailed(t.IsFaulted
@@ -81,7 +82,7 @@ namespace Akka.Persistence.Snapshot
             {
                 var metadata = new SnapshotMetadata(saveSnapshot.Metadata.PersistenceId, saveSnapshot.Metadata.SequenceNr, saveSnapshot.Metadata.Timestamp == DateTime.MinValue ? DateTime.UtcNow : saveSnapshot.Metadata.Timestamp);
 
-                _breaker.WithCircuitBreaker(() => SaveAsync(metadata, saveSnapshot.Snapshot))
+                _breaker.WithCircuitBreaker(ct => SaveAsync(metadata, saveSnapshot.Snapshot, ct))
                     .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
                         ? new SaveSnapshotSuccess(metadata) as ISnapshotResponse
                         : new SaveSnapshotFailure(saveSnapshot.Metadata,
@@ -107,7 +108,7 @@ namespace Akka.Persistence.Snapshot
                 try
                 {
                     ReceivePluginInternal(message);
-                    _breaker.WithCircuitBreaker(() => DeleteAsync(saveSnapshotFailure.Metadata))
+                    _breaker.WithCircuitBreaker(ct => DeleteAsync(saveSnapshotFailure.Metadata, ct))
                         .ContinueWith(t =>
                         {
                             if(t.IsFaulted)
@@ -126,7 +127,7 @@ namespace Akka.Persistence.Snapshot
             else if (message is DeleteSnapshot deleteSnapshot)
             {
                 var eventStream = Context.System.EventStream;
-                _breaker.WithCircuitBreaker(() => DeleteAsync(deleteSnapshot.Metadata))
+                _breaker.WithCircuitBreaker(ct => DeleteAsync(deleteSnapshot.Metadata, ct))
                     .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
                                 ? new DeleteSnapshotSuccess(deleteSnapshot.Metadata) as ISnapshotResponse
                                 : new DeleteSnapshotFailure(deleteSnapshot.Metadata,
@@ -166,7 +167,7 @@ namespace Akka.Persistence.Snapshot
             else if (message is DeleteSnapshots deleteSnapshots)
             {
                 var eventStream = Context.System.EventStream;
-                _breaker.WithCircuitBreaker(() => DeleteAsync(deleteSnapshots.PersistenceId, deleteSnapshots.Criteria))
+                _breaker.WithCircuitBreaker(ct => DeleteAsync(deleteSnapshots.PersistenceId, deleteSnapshots.Criteria, ct))
                     .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
                                 ? new DeleteSnapshotsSuccess(deleteSnapshots.Criteria) as ISnapshotResponse
                                 : new DeleteSnapshotsFailure(deleteSnapshots.Criteria,
@@ -225,8 +226,9 @@ namespace Akka.Persistence.Snapshot
         /// </summary>
         /// <param name="persistenceId">Id of the persistent actor.</param>
         /// <param name="criteria">Selection criteria for loading.</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected abstract Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria);
+        protected abstract Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Plugin API: Asynchronously saves a snapshot.
@@ -235,8 +237,9 @@ namespace Akka.Persistence.Snapshot
         /// </summary>
         /// <param name="metadata">Snapshot metadata.</param>
         /// <param name="snapshot">Snapshot.</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected abstract Task SaveAsync(SnapshotMetadata metadata, object snapshot);
+        protected abstract Task SaveAsync(SnapshotMetadata metadata, object snapshot, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Plugin API: Deletes the snapshot identified by <paramref name="metadata"/>.
@@ -244,8 +247,9 @@ namespace Akka.Persistence.Snapshot
         /// This call is protected with a circuit-breaker
         /// </summary>
         /// <param name="metadata">Snapshot metadata.</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected abstract Task DeleteAsync(SnapshotMetadata metadata);
+        protected abstract Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Plugin API: Deletes all snapshots matching provided <paramref name="criteria"/>.
@@ -254,8 +258,9 @@ namespace Akka.Persistence.Snapshot
         /// </summary>
         /// <param name="persistenceId">Id of the persistent actor.</param>
         /// <param name="criteria">Selection criteria for deleting.</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <returns>TBD</returns>
-        protected abstract Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria);
+        protected abstract Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Plugin API: Allows plugin implementers to use f.PipeTo(Self)

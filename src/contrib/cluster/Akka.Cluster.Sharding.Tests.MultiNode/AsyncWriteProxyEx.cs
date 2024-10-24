@@ -162,18 +162,19 @@ namespace Akka.Cluster.Sharding.Tests
         /// TBD
         /// </summary>
         /// <param name="messages">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <exception cref="TimeoutException">
         /// This exception is thrown when the store has not been initialized.
         /// </exception>
         /// <returns>TBD</returns>
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken = default)
         {
             var trueMsgs = messages.ToArray();
             
             if (_store == null)
                 return StoreNotInitialized<IImmutableList<Exception>>();
 
-            return _store.Ask<object>(sender => new WriteMessages(trueMsgs, sender, 1), Timeout, CancellationToken.None)
+            return _store.Ask<object>(sender => new WriteMessages(trueMsgs, sender, 1), Timeout, cancellationToken)
                 .ContinueWith(r =>
                 {
                     if (r.IsCanceled)
@@ -195,18 +196,19 @@ namespace Akka.Cluster.Sharding.Tests
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="toSequenceNr">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <exception cref="TimeoutException">
         /// This exception is thrown when the store has not been initialized.
         /// </exception>
         /// <returns>TBD</returns>
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken = default)
         {
             if (_store == null)
                 return StoreNotInitialized<object>();
 
             var result = new TaskCompletionSource<object>();
 
-            _store.Ask<object>(sender => new DeleteMessagesTo(persistenceId, toSequenceNr, sender), Timeout, CancellationToken.None).ContinueWith(r =>
+            _store.Ask<object>(sender => new DeleteMessagesTo(persistenceId, toSequenceNr, sender), Timeout, cancellationToken).ContinueWith(r =>
             {
                 if (r.IsFaulted)
                     result.TrySetException(r.Exception);
@@ -250,18 +252,19 @@ namespace Akka.Cluster.Sharding.Tests
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="fromSequenceNr">TBD</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> to stop async operation</param>
         /// <exception cref="TimeoutException">
         /// This exception is thrown when the store has not been initialized.
         /// </exception>
         /// <returns>TBD</returns>
-        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken = default)
         {
             if (_store == null)
                 return StoreNotInitialized<long>();
 
             var result = new TaskCompletionSource<long>();
 
-            _store.Ask<object>(sender => new ReplayMessages(0, 0, 0, persistenceId, sender), Timeout, CancellationToken.None)
+            _store.Ask<object>(sender => new ReplayMessages(0, 0, 0, persistenceId, sender), Timeout, cancellationToken)
                 .ContinueWith(t =>
                 {
                     if (t.IsFaulted)

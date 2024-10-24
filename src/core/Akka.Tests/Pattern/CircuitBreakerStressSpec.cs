@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
@@ -94,9 +95,9 @@ namespace Akka.Tests.Pattern
                 }
             }
 
-            private static async Task<JobDone> Job()
+            private static async Task<JobDone> Job(CancellationToken ct)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(ThreadLocalRandom.Current.Next(300)));
+                await Task.Delay(TimeSpan.FromMilliseconds(ThreadLocalRandom.Current.Next(300)), ct);
                 return JobDone.Instance;
             }
         }

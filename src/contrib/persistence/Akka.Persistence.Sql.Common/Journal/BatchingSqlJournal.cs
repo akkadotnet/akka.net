@@ -16,6 +16,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -941,18 +942,20 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 var (chunk, isWrite) = DequeueChunk(_remainingOperations);
                 var context = Context;
-                _circuitBreaker.WithCircuitBreaker(() => ExecuteChunk(chunk, context, isWrite))
+                _circuitBreaker.WithCircuitBreaker(ct => ExecuteChunk(chunk, context, isWrite, ct))
                     .PipeTo(Self, failure: ex => new ChunkExecutionFailure(ex, chunk.Requests, chunk.ChunkId));
             }
         }
 
-        private async Task<BatchComplete> ExecuteChunk(RequestChunk chunk, IActorContext context, bool isWriteOperation)
+        private async Task<BatchComplete> ExecuteChunk(RequestChunk chunk, IActorContext context, bool isWriteOperation, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            
             var writeResults = new Queue<WriteMessagesResult>();
             var stopwatch = new Stopwatch();
             using (var connection = CreateConnection(Setup.ConnectionString))
             {
-                await connection.OpenAsync();
+                await connection.OpenAsync(cancellationToken);
 
                 // In the grand scheme of thing, using a transaction in an all read batch operation
                 // should not hurt performance by much, because it is done only once at the start.
@@ -971,22 +974,22 @@ namespace Akka.Persistence.Sql.Common.Journal
                             switch (req)
                             {
                                 case WriteMessages msg:
-                                    writeResults.Enqueue(await HandleWriteMessages(msg, command)); 
+                                    writeResults.Enqueue(await HandleWriteMessages(msg, command, cancellationToken)); 
                                     break;
                                 case DeleteMessagesTo msg:
-                                    await HandleDeleteMessagesTo(msg, command);
+                                    await HandleDeleteMessagesTo(msg, command, cancellationToken);
                                     break;
                                 case ReplayMessages msg:
-                                    await HandleReplayMessages(msg, command, context);
+                                    await HandleReplayMessages(msg, command, context, cancellationToken);
                                     break;
                                 case ReplayTaggedMessages msg:
-                                    await HandleReplayTaggedMessages(msg, command);
+                                    await HandleReplayTaggedMessages(msg, command, cancellationToken);
                                     break;
                                 case ReplayAllEvents msg:
-                                    await HandleReplayAllMessages(msg, command);
+                                    await HandleReplayAllMessages(msg, command, cancellationToken);
                                     break;
                                 case SelectCurrentPersistenceIds msg:
-                                    await HandleSelectCurrentPersistenceIds(msg, command);
+                                    await HandleSelectCurrentPersistenceIds(msg, command, cancellationToken);
                                     break;
                                 default:
                                     Unhandled(req);
@@ -1043,8 +1046,10 @@ namespace Akka.Persistence.Sql.Common.Journal
             return new BatchComplete(chunk.ChunkId, chunk.Requests.Length, stopwatch.Elapsed);
         }
 
-        protected virtual async Task HandleDeleteMessagesTo(DeleteMessagesTo req, TCommand command)
+        protected virtual async Task HandleDeleteMessagesTo(DeleteMessagesTo req, TCommand command, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            
             var toSequenceNr = req.ToSequenceNr;
             var persistenceId = req.PersistenceId;
 
@@ -1055,7 +1060,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
             AddParameter(command, "@ToSequenceNr", DbType.Int64, toSequenceNr);
 
-            await command.ExecuteNonQueryAsync();
+            await command.ExecuteNonQueryAsync(cancellationToken);
 
             if (highestSequenceNr <= toSequenceNr)
             {
@@ -1065,44 +1070,50 @@ namespace Akka.Persistence.Sql.Common.Journal
                 AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
                 AddParameter(command, "@SequenceNr", DbType.Int64, highestSequenceNr);
 
-                await command.ExecuteNonQueryAsync();
+                await command.ExecuteNonQueryAsync(cancellationToken);
             }
         }
 
-        protected virtual async Task<long> ReadHighestSequenceNr(string persistenceId, TCommand command)
+        protected virtual async Task<long> ReadHighestSequenceNr(string persistenceId, TCommand command, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            
             command.CommandText = HighestSequenceNrSql;
 
             command.Parameters.Clear();
             AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
 
-            var result = await command.ExecuteScalarAsync();
+            var result = await command.ExecuteScalarAsync(cancellationToken);
             var highestSequenceNr = result is long ? Convert.ToInt64(result) : 0L;
             return highestSequenceNr;
         }
 
-        protected virtual async Task<long> ReadHighestSequenceNr(TCommand command)
+        protected virtual async Task<long> ReadHighestSequenceNr(TCommand command, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            
             command.CommandText = HighestOrderingSql;
             command.Parameters.Clear();
 
-            var result = await command.ExecuteScalarAsync();
+            var result = await command.ExecuteScalarAsync(cancellationToken);
             var highestSequenceNr = result is long ? Convert.ToInt64(result) : 0L;
             return highestSequenceNr;
         }
 
-        protected virtual async Task HandleSelectCurrentPersistenceIds(SelectCurrentPersistenceIds message, TCommand command)
+        protected virtual async Task HandleSelectCurrentPersistenceIds(SelectCurrentPersistenceIds message, TCommand command, CancellationToken cancellationToken = default)
         {
-            long highestOrderingNumber = await ReadHighestSequenceNr(command);
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            long highestOrderingNumber = await ReadHighestSequenceNr(command, cancellationToken);
 
             var result = new List<string>(256);
             command.CommandText = AllPersistenceIdsSql;
             command.Parameters.Clear();
             AddParameter(command, "@Ordering", DbType.Int64, message.Offset);
 
-            using (var reader = await command.ExecuteReaderAsync())
+            using (var reader = await command.ExecuteReaderAsync(cancellationToken))
             {
-                while (await reader.ReadAsync())
+                while (await reader.ReadAsync(cancellationToken))
                 {
                     result.Add(reader.GetString(0));
                 }
@@ -1111,8 +1122,10 @@ namespace Akka.Persistence.Sql.Common.Journal
             message.ReplyTo.Tell(new CurrentPersistenceIds(result, highestOrderingNumber));
         }
 
-        protected virtual async Task HandleReplayTaggedMessages(ReplayTaggedMessages req, TCommand command)
+        protected virtual async Task HandleReplayTaggedMessages(ReplayTaggedMessages req, TCommand command, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            
             var replyTo = req.ReplyTo;
 
             try
@@ -1130,9 +1143,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                 AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
                 AddParameter(command, "@Take", DbType.Int64, take);
 
-                using (var reader = await command.ExecuteReaderAsync())
+                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                 {
-                    while (await reader.ReadAsync())
+                    while (await reader.ReadAsync(cancellationToken))
                     {
                         var persistent = ReadEvent(reader);
                         var ordering = reader.GetInt64(OrderingIndex);
@@ -1153,8 +1166,10 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        protected virtual async Task HandleReplayAllMessages(ReplayAllEvents req, TCommand command)
+        protected virtual async Task HandleReplayAllMessages(ReplayAllEvents req, TCommand command, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            
             var replyTo = req.ReplyTo;
 
             try
@@ -1168,7 +1183,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 command.CommandText = HighestOrderingSql;
                 command.Parameters.Clear();
 
-                var maxOrdering = (await command.ExecuteScalarAsync()) as long? ?? 0L;
+                var maxOrdering = (await command.ExecuteScalarAsync(cancellationToken)) as long? ?? 0L;
 
                 command.CommandText = AllEventsSql;
                 command.Parameters.Clear();
@@ -1176,9 +1191,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                 AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
                 AddParameter(command, "@Take", DbType.Int64, take);
 
-                using (var reader = await command.ExecuteReaderAsync())
+                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                 {
-                    while (await reader.ReadAsync())
+                    while (await reader.ReadAsync(cancellationToken))
                     {
                         var persistent = ReadEvent(reader);
                         var ordering = reader.GetInt64(OrderingIndex);
@@ -1198,8 +1213,10 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        protected virtual async Task HandleReplayMessages(ReplayMessages req, TCommand command, IActorContext context)
+        protected virtual async Task HandleReplayMessages(ReplayMessages req, TCommand command, IActorContext context, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            
             var replaySettings = Setup.ReplayFilterSettings;
             var replyTo = replaySettings.IsEnabled
                 ? context.ActorOf(ReplayFilter.Props(
@@ -1213,7 +1230,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             try
             {
-                var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command);
+                var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command, cancellationToken);
                 var toSequenceNr = Math.Min(req.ToSequenceNr, highestSequenceNr);
 
                 command.CommandText = ByPersistenceIdSql;
@@ -1223,10 +1240,10 @@ namespace Akka.Persistence.Sql.Common.Journal
                 AddParameter(command, "@FromSequenceNr", DbType.Int64, req.FromSequenceNr);
                 AddParameter(command, "@ToSequenceNr", DbType.Int64, toSequenceNr);
 
-                using (var reader = await command.ExecuteReaderAsync())
+                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                 {
                     var i = 0L;
-                    while ((i++) < req.Max && await reader.ReadAsync())
+                    while ((i++) < req.Max && await reader.ReadAsync(cancellationToken))
                     {
                         var persistent = ReadEvent(reader);
 
@@ -1250,7 +1267,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task<WriteMessagesResult> HandleWriteMessages(WriteMessages req, TCommand command)
+        private async Task<WriteMessagesResult> HandleWriteMessages(WriteMessages req, TCommand command, CancellationToken cancellationToken)
         {
             var tags = new HashSet<string>();
             var persistenceIds = new HashSet<string>();
@@ -1284,7 +1301,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                     WriteEvent(command, persistent.WithTimestamp(TimestampProvider.GenerateTimestamp(persistent)), tagBuilder.ToString());
 
-                    await command.ExecuteNonQueryAsync();
+                    await command.ExecuteNonQueryAsync(cancellationToken);
 
                     persistenceIds.Add(persistent.PersistenceId);
                 }

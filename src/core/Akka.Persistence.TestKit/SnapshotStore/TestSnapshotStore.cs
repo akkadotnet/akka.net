@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading;
+
 namespace Akka.Persistence.TestKit
 {
     using System.Threading.Tasks;
@@ -50,32 +52,32 @@ namespace Akka.Persistence.TestKit
             }
         }
 
-        protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot, CancellationToken cancellationToken = default)
         {
             await _connectionInterceptor.InterceptAsync();
             await _saveInterceptor.InterceptAsync(metadata.PersistenceId, ToSelectionCriteria(metadata));
-            await base.SaveAsync(metadata, snapshot);
+            await base.SaveAsync(metadata, snapshot, cancellationToken);
         }
 
-        protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default)
         {
             await _connectionInterceptor.InterceptAsync();
             await _loadInterceptor.InterceptAsync(persistenceId, criteria);
-            return await base.LoadAsync(persistenceId, criteria);
+            return await base.LoadAsync(persistenceId, criteria, cancellationToken);
         }
 
-        protected override async Task DeleteAsync(SnapshotMetadata metadata)
+        protected override async Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken = default)
         {
             await _connectionInterceptor.InterceptAsync();
             await _deleteInterceptor.InterceptAsync(metadata.PersistenceId, ToSelectionCriteria(metadata));
-            await base.DeleteAsync(metadata);
+            await base.DeleteAsync(metadata, cancellationToken);
         }
 
-        protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken = default)
         {
             await _connectionInterceptor.InterceptAsync();
             await _deleteInterceptor.InterceptAsync(persistenceId, criteria);
-            await base.DeleteAsync(persistenceId, criteria);
+            await base.DeleteAsync(persistenceId, criteria, cancellationToken);
         }
 
         static SnapshotSelectionCriteria ToSelectionCriteria(SnapshotMetadata metadata)

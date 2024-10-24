@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Persistence.Journal;
@@ -83,7 +84,7 @@ namespace Akka.Persistence.Tests.Journal
             return promise.Task;
         }
 
-        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken = default)
         {
             var promise = new TaskCompletionSource<long>();
             if (ChaosSupportExtensions.ShouldFail(_readHighestFailureRate))
@@ -93,7 +94,7 @@ namespace Akka.Persistence.Tests.Journal
             return promise.Task;
         }
 
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken = default)
         {
             var promise =
                 new TaskCompletionSource<IImmutableList<Exception>>();
@@ -120,7 +121,7 @@ namespace Akka.Persistence.Tests.Journal
             return promise.Task;
         }
 
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken = default)
         {
             TaskCompletionSource<object> promise = new TaskCompletionSource<object>();
             try
