@@ -20,7 +20,8 @@ jobs:
     
       - task: PowerShell@2
         inputs:
-          filepath: tools\test-aot-compatibility.ps1 net8.0
+          filepath: .\tools\test-aot-compatibility.ps1
+          arguments: net8.0
       - script: 'echo 1>&2'
         failOnStderr: true
         displayName: 'If above is partially succeeded, then fail'
