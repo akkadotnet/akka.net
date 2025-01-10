@@ -3,6 +3,7 @@ parameters:
   displayName: ''
   vmImage: ''
   run_if: true
+  timeoutInMinutes: 10
 
 jobs:
   - job: ${{ parameters.name }}
