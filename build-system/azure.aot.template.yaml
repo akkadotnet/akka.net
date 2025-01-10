@@ -20,8 +20,12 @@ jobs:
     
       - task: PowerShell@2
         inputs:
-          filepath: tools\test-aot-compatibility.ps1
+          filePath: ${{ format('{0}/tools/test-aot-compatibility.ps1', variables['Build.SourcesDirectory']) }}
           arguments: net8.0
+          pwsh: true # This ensures PowerShell Core is used on all platforms
+        env:
+          BUILD_SOURCESDIRECTORY: $(Build.SourcesDirectory)
+          
       - script: 'echo 1>&2'
         failOnStderr: true
         displayName: 'If above is partially succeeded, then fail'
