@@ -1,0 +1,26 @@
+parameters:
+  name: ''
+  displayName: ''
+  vmImage: ''
+  run_if: true
+
+jobs:
+  - job: ${{ parameters.name }}
+    condition: eq( ${{ parameters.run_if }}, true )
+    displayName: ${{ parameters.displayName }}
+    timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
+    pool:
+      vmImage: ${{ parameters.vmImage }}
+    steps:
+      - task: UseDotNet@2
+        displayName: 'Use .NET 8 SDK 8.0.402'
+        inputs:
+          version: 8.0.402
+    
+      - task: PowerShell@2
+        inputs:
+          filepath: .\tools\test-aot-compatibility.ps1 net8.0
+      - script: 'echo 1>&2'
+        failOnStderr: true
+        displayName: 'If above is partially succeeded, then fail'
+        condition: eq(variables['Agent.JobStatus'], 'SucceededWithIssues')
