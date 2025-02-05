@@ -22,6 +22,7 @@ using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
+using Debug = System.Diagnostics.Debug;
 using Decider = Akka.Streams.Supervision.Decider;
 using Directive = Akka.Streams.Supervision.Directive;
 
@@ -1943,6 +1944,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    #nullable enable
     [InternalApi]
     public sealed class Buffer<T> : SimpleLinearGraphStage<T>
     {
@@ -1952,7 +1954,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private readonly Buffer<T> _stage;
             private readonly Action<T> _enqueue;
-            private IBuffer<T> _buffer;
+            private IBuffer<T>? _buffer;
 
 
             public Logic(Buffer<T> stage) : base(stage.Shape)
@@ -1965,6 +1967,8 @@ namespace Akka.Streams.Implementation.Fusing
                     case OverflowStrategy.DropHead:
                         _enqueue = element =>
                         {
+                            Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                             if (_buffer.IsFull)
                                 _buffer.DropHead();
                             _buffer.Enqueue(element);
@@ -1974,6 +1978,8 @@ namespace Akka.Streams.Implementation.Fusing
                     case OverflowStrategy.DropTail:
                         _enqueue = element =>
                         {
+                            Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                             if (_buffer.IsFull)
                                 _buffer.DropTail();
                             _buffer.Enqueue(element);
@@ -1983,6 +1989,8 @@ namespace Akka.Streams.Implementation.Fusing
                     case OverflowStrategy.DropBuffer:
                         _enqueue = element =>
                         {
+                            Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                             if (_buffer.IsFull)
                                 _buffer.Clear();
                             _buffer.Enqueue(element);
@@ -1992,6 +2000,8 @@ namespace Akka.Streams.Implementation.Fusing
                     case OverflowStrategy.DropNew:
                         _enqueue = element =>
                         {
+                            Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                             if (!_buffer.IsFull)
                                 _buffer.Enqueue(element);
 
@@ -2001,6 +2011,8 @@ namespace Akka.Streams.Implementation.Fusing
                     case OverflowStrategy.Backpressure:
                         _enqueue = element =>
                         {
+                            Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                             _buffer.Enqueue(element);
 
                             if (!_buffer.IsFull)
@@ -2010,6 +2022,8 @@ namespace Akka.Streams.Implementation.Fusing
                     case OverflowStrategy.Fail:
                         _enqueue = element =>
                         {
+                            Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                             if (_buffer.IsFull)
                                 FailStage(new BufferOverflowException(
                                     $"Buffer overflow (max capacity was {_stage._count})"));
@@ -2052,6 +2066,8 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPull()
             {
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                 if (_buffer.NonEmpty)
                     Push(_stage.Outlet, _buffer.Dequeue());
                 if (IsClosed(_stage.Inlet))
@@ -2065,6 +2081,8 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnUpstreamFinish()
             {
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                 if (_buffer.IsEmpty)
                     CompleteStage();
             }
@@ -2091,6 +2109,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
+    #nullable restore
 
     /// <summary>
     /// INTERNAL API
@@ -2518,6 +2537,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut">TBD</typeparam>
+    #nullable enable
     [InternalApi]
     public sealed class SelectAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
@@ -2557,7 +2577,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private readonly SelectAsync<TIn, TOut> _stage;
             private readonly Decider _decider;
-            private IBuffer<Holder<TOut>> _buffer;
+            private IBuffer<Holder<TOut>>? _buffer;
             private readonly Action<Holder<TOut>> _taskCallback;
 
             public Logic(Attributes inheritedAttributes, SelectAsync<TIn, TOut> stage) : base(stage.Shape)
@@ -2574,6 +2594,8 @@ namespace Akka.Streams.Implementation.Fusing
             public override void OnPush()
             {
                 var message = Grab(_stage.In);
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                Debug.Assert(message != null, nameof(message) + " != null");
                 try
                 {
                     var task = _stage._mapFunc(message);
@@ -2621,12 +2643,22 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPull() => PushOne();
 
-            private int Todo => _buffer.Used;
+            private int Todo
+            {
+                get
+                {
+                    Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
+                    return _buffer.Used;
+                }
+            }
 
             public override void PreStart() => _buffer = Buffer.Create<Holder<TOut>>(_stage._parallelism, Materializer);
 
             private void PushOne()
             {
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                 var inlet = _stage.In;
                 while (true)
                 {
@@ -2637,7 +2669,7 @@ namespace Akka.Streams.Implementation.Fusing
                         else if (!HasBeenPulled(inlet))
                             Pull(inlet);
                     }
-                    else if (_buffer.Peek().Element == NotYetThere)
+                    else if (_buffer.Peek()!.Element == NotYetThere) // Shebang is fine, we checked that the buffer is not empty
                     {
                         if (Todo < _stage._parallelism && !HasBeenPulled(inlet))
                             TryPull(inlet);
@@ -2769,7 +2801,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private readonly SelectAsyncUnordered<TIn, TOut> _stage;
             private readonly Decider _decider;
-            private IBuffer<TOut> _buffer;
+            private IBuffer<TOut>? _buffer;
             private readonly Action<Result<TOut>> _taskCallback;
             private int _inFlight;
 
@@ -2816,6 +2848,8 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPull()
             {
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                 var inlet = _stage.In;
                 if (!_buffer.IsEmpty)
                     Push(_stage.Out, _buffer.Dequeue());
@@ -2828,6 +2862,8 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void TaskCompleted(Result<TOut> result)
             {
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                 _inFlight--;
                 if (result.IsSuccess && result.Value != null)
                 {
@@ -2854,7 +2890,15 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
 
-            private int Todo => _inFlight + _buffer.Used;
+            private int Todo
+            {
+                get
+                {
+                    Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                    
+                    return _inFlight + _buffer.Used;
+                }
+            }
 
             public override void PreStart() => _buffer = Buffer.Create<TOut>(_stage._parallelism, Materializer);
 
@@ -2904,6 +2948,7 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(inheritedAttributes, this);
     }
+    #nullable restore
 
     /// <summary>
     /// INTERNAL API
@@ -3287,6 +3332,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    #nullable enable
     [InternalApi]
     public sealed class Delay<T> : SimpleLinearGraphStage<T>
     {
@@ -3296,7 +3342,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private const string TimerName = "DelayedTimer";
             private readonly Delay<T> _stage;
-            private IBuffer<(long, T)> _buffer; // buffer has pairs timestamp with upstream element
+            private IBuffer<(long, T)>? _buffer; // buffer has pairs timestamp with upstream element
             private readonly int _size;
             private readonly Action _onPushWhenBufferFull;
 
@@ -3316,6 +3362,8 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnPush()
             {
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                 if (_buffer.IsFull)
                     _onPushWhenBufferFull();
                 else
@@ -3332,6 +3380,8 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnPull()
             {
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                 if (!IsTimerActive(TimerName) && !_buffer.IsEmpty && NextElementWaitTime < 0)
                     Push(_stage.Outlet, _buffer.Dequeue().Item2);
 
@@ -3343,18 +3393,30 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnDownstreamFinish(Exception cause) => InternalOnDownstreamFinish(cause);
 
-            private long NextElementWaitTime => (long)_stage._delay.TotalMilliseconds - (DateTime.UtcNow.Ticks - _buffer.Peek().Item1) * 1000 * 10;
+            private long NextElementWaitTime
+            {
+                get
+                {
+                    Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
+                    return (long)_stage._delay.TotalMilliseconds - (DateTime.UtcNow.Ticks - _buffer.Peek().Item1) * 1000 * 10;
+                }
+            }
 
             public override void PreStart() => _buffer = Buffer.Create<(long, T)>(_size, Materializer);
 
             private void CompleteIfReady()
             {
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                 if (IsClosed(_stage.Inlet) && _buffer.IsEmpty)
                     CompleteStage();
             }
 
             protected internal override void OnTimer(object timerKey)
             {
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                 if (IsAvailable(_stage.Outlet))
                     Push(_stage.Outlet, _buffer.Dequeue().Item2);
 
@@ -3368,11 +3430,20 @@ namespace Akka.Streams.Implementation.Fusing
                 CompleteIfReady();
             }
 
-            private bool PullCondition =>
-                _stage._strategy != DelayOverflowStrategy.Backpressure || _buffer.Used < _size;
+            private bool PullCondition
+            {
+                get
+                {
+                    Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                    
+                    return _stage._strategy != DelayOverflowStrategy.Backpressure || _buffer.Used < _size;
+                }
+            }
 
             private void GrabAndPull()
             {
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                 _buffer.Enqueue((DateTime.UtcNow.Ticks, Grab(_stage.Inlet)));
                 if (PullCondition)
                     Pull(_stage.Inlet);
@@ -3385,6 +3456,8 @@ namespace Akka.Streams.Implementation.Fusing
                     case DelayOverflowStrategy.EmitEarly:
                         return () =>
                         {
+                            Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                             if (!IsTimerActive(TimerName))
                                 Push(_stage.Outlet, _buffer.Dequeue().Item2);
                             else
@@ -3396,12 +3469,16 @@ namespace Akka.Streams.Implementation.Fusing
                     case DelayOverflowStrategy.DropHead:
                         return () =>
                         {
+                            Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                             _buffer.DropHead();
                             GrabAndPull();
                         };
                     case DelayOverflowStrategy.DropTail:
                         return () =>
                         {
+                            Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                             _buffer.DropTail();
                             GrabAndPull();
                         };
@@ -3415,6 +3492,8 @@ namespace Akka.Streams.Implementation.Fusing
                     case DelayOverflowStrategy.DropBuffer:
                         return () =>
                         {
+                            Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                             _buffer.Clear();
                             GrabAndPull();
                         };
@@ -3462,6 +3541,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </returns>
         public override string ToString() => "Delay";
     }
+    #nullable restore
 
     /// <summary>
     /// INTERNAL API
