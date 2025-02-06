@@ -1297,10 +1297,25 @@ namespace Akka.Streams.Stage
         {
             try
             {
-                if (cause == null)
-                    throw new ArgumentException("Cancellation cause must not be null", nameof(cause));
                 if (_lastCancellationCause != null)
                     throw new ArgumentException("OnDownstreamFinish must not be called recursively", nameof(cause));
+                
+                // Some stages might propagate null exceptions due to improper Task continuation handling
+                // (see https://github.com/akkadotnet/Akka.Persistence.Sql/issues/498)
+                // This is a stop gap solution to make sure that Akka.Streams doesn't behave improperly
+                // until we can fix all of those
+                if (cause is null)
+                {
+                    try
+                    {
+                        throw new DownstreamCompletedWithNoCauseException();
+                    }
+                    catch (DownstreamCompletedWithNoCauseException e)
+                    {
+                        cause = e;
+                    }
+                }
+                
                 _lastCancellationCause = cause;
                 CancelStage(_lastCancellationCause);
             }
