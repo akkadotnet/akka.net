@@ -171,7 +171,10 @@ namespace Akka.Actor
             }
             else if (message is Unwatch unwatch)
             {
-                
+                // we're not going to support Unwatch - watchers
+                // already have to handle scenarios where the Unwatch arrives too late
+                // anyway, so we're just going to treat this like that in order to keep
+                // state management as simple as possible
             }
             else
             {
