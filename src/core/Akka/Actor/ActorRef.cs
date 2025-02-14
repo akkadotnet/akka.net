@@ -72,8 +72,20 @@ namespace Akka.Actor
     {
         internal static async Task ScheduleDeathWatch(IInternalActorRef notifier, IActorRef self, Task completionTask)
         {
-            await completionTask;
-            notifier.SendSystemMessage(TerminatedFor(self));
+            try
+            {
+                await completionTask;
+            }
+            catch
+            {
+                // we don't do error handling for this - we do not care
+            }
+            finally
+            {
+                // regardless of whether we succeeded or failed, we notify watchers
+                notifier.SendSystemMessage(TerminatedFor(self));
+            }
+            
         }
 
         internal static DeathWatchNotification TerminatedFor(IActorRef self)
