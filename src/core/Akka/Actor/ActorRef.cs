@@ -66,6 +66,35 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    /// INTERNAL API - didn't want static helper methods declared inside generic class
+    /// </summary>
+    internal static class FutureActorRefDeathWatchSupport
+    {
+        internal static async Task ScheduleDeathWatch(IInternalActorRef notifier, IActorRef self, Task completionTask)
+        {
+            try
+            {
+                await completionTask;
+            }
+            catch
+            {
+                // we don't do error handling for this - we do not care
+            }
+            finally
+            {
+                // regardless of whether we succeeded or failed, we notify watchers
+                notifier.SendSystemMessage(TerminatedFor(self));
+            }
+            
+        }
+
+        internal static DeathWatchNotification TerminatedFor(IActorRef self)
+        {
+            return new DeathWatchNotification(self, true, false);
+        }
+    }
+
+    /// <summary>
     /// INTERNAL API.
     ///
     /// ActorRef implementation used for one-off tasks.
@@ -110,9 +139,6 @@ namespace Akka.Actor
             
             switch (message)
             {
-                case ISystemMessage msg:
-                    handled = _result.TrySetException(new InvalidOperationException($"system message of type '{msg.GetType().Name}' is invalid for {nameof(FutureActorRef<T>)}"));
-                    break;
                 case T t:
                     handled = _result.TrySetResult(t);
                     break;
@@ -140,7 +166,35 @@ namespace Akka.Actor
             if (!handled && !_result.Task.IsCanceled)
                 _provider.DeadLetters.Tell(message ?? default(T), this);            
         }
-        
+
+        public override void SendSystemMessage(ISystemMessage message)
+        {
+            if (message is Watch watch)
+            {
+                if (_result.Task.IsCompleted)
+                {
+                    watch.Watcher.SendSystemMessage(FutureActorRefDeathWatchSupport.TerminatedFor(this));
+                }
+                else
+                {
+                    _ = FutureActorRefDeathWatchSupport.ScheduleDeathWatch(watch.Watcher, watch.Watchee, _result.Task);
+                }
+                    
+            }
+            else if (message is Unwatch unwatch)
+            {
+                // we're not going to support Unwatch - watchers
+                // already have to handle scenarios where the Unwatch arrives too late
+                // anyway, so we're just going to treat this like that in order to keep
+                // state management as simple as possible
+            }
+            else
+            {
+                // TODO: blow up the caller here by just throwing the exception at the callsite?
+                _result.TrySetException(new InvalidOperationException($"system message of type '{message.GetType().Name}' is invalid for {nameof(FutureActorRef<T>)}"));
+            }
+        }
+
         public virtual void DeliverAsk(object message, ICanTell destination){
             destination.Tell(message, this);
         }

@@ -924,6 +924,7 @@ namespace Akka.Actor
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
         public virtual void DeliverAsk(object message, Akka.Actor.ICanTell destination) { }
+        public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
     public class static Futures
