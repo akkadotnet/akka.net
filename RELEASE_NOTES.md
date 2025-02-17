@@ -1,10 +1,28 @@
-#### 1.5.38 January 23rd 2025 ####
+#### 1.5.38 February 17th 2025 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.38 is a maintenance release with several bug fixes and minor quality of life API additions
+
+* [Core: Add `ByteString.ToReadOnlySpan()`](https://github.com/akkadotnet/akka.net/pull/7487)
+* [TestKit: Add `IntentionalRestart` auto received message to easily test actor restart behavior](https://github.com/akkadotnet/akka.net/pull/7493)
+* [Streams: Fix null exceptions being propagated upstream by downstream completion](https://github.com/akkadotnet/akka.net/pull/7497)
+* [Core: Add death watch support to `Ask()` `FutureActorRef` temporary actors to prevent memory leaks](https://github.com/akkadotnet/akka.net/pull/7502)
+* [Documentation: Add new AK1008 Akka.Analyzers rule](https://github.com/akkadotnet/akka.net/pull/7504)
+* [Core: Bump Akka.Analyzers version from 0.3.0 to 0.3.1](https://github.com/akkadotnet/akka.net/pull/7506)
+
+To [see the full set of changes in Akka.NET v1.5.38, click here](https://github.com/akkadotnet/akka.net/milestone/121?closed=1).
+
+4 contributors since release 1.5.37
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 5       | 110  | 9    | Gregorius Soedharmo |
+| 3       | 231  | 28   | Aaron Stannard      |
+| 1       | 81   | 0    | Lydon Chandra       |
+| 1       | 24   | 20   | Dmitriy Barbul      |
 
 #### 1.5.37 January 23rd 2025 ####
 
-Akka.NET v1.5.36 is a maintenance release that rolls back earlier changes made in Akka.NET v1.5.35 that have caused problems in some downstream Akka.NET plugins.
+Akka.NET v1.5.37 is a maintenance release that rolls back earlier changes made in Akka.NET v1.5.35 that have caused problems in some downstream Akka.NET plugins.
 
 * [Rollback to using 6.0 MSFT libraries](https://github.com/akkadotnet/akka.net/pull/7482) <- moving all of our BCL dependencies to 8.0 created issues for our .NET 6-9 users when adopting Akka.NET packages that only targeted .NET Standard, so for the time being we're normalizing everything back to 6.0
 * [Akka.Persistence: `Akka.Persistence.Journal.AsyncWriteJournal+Resequencer` is created as a top-level `/user` actor instead of a child of the journal](https://github.com/akkadotnet/akka.net/issues/7480)
