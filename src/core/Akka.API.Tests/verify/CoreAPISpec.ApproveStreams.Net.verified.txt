@@ -4102,6 +4102,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
     }
+    public class DownstreamCompletedWithNoCauseException : System.Exception
+    {
+        public DownstreamCompletedWithNoCauseException() { }
+    }
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class Expand<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
     {

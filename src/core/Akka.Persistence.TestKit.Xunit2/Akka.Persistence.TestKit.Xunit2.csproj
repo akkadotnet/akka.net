@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <Description>TestKit for writing tests for Akka.NET Persistance module using xUnit</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);testkit;persistance;xunit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>

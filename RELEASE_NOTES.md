@@ -1,6 +1,19 @@
-#### 1.5.37 January 22nd 2025 ####
+#### 1.5.38 January 23rd 2025 ####
 
 *Placeholder for nightlies*
+
+#### 1.5.37 January 23rd 2025 ####
+
+Akka.NET v1.5.36 is a maintenance release that rolls back earlier changes made in Akka.NET v1.5.35 that have caused problems in some downstream Akka.NET plugins.
+
+* [Rollback to using 6.0 MSFT libraries](https://github.com/akkadotnet/akka.net/pull/7482) <- moving all of our BCL dependencies to 8.0 created issues for our .NET 6-9 users when adopting Akka.NET packages that only targeted .NET Standard, so for the time being we're normalizing everything back to 6.0
+* [Akka.Persistence: `Akka.Persistence.Journal.AsyncWriteJournal+Resequencer` is created as a top-level `/user` actor instead of a child of the journal](https://github.com/akkadotnet/akka.net/issues/7480)
+
+To [see the full set of changes in Akka.NET v1.5.37, click here](https://github.com/akkadotnet/akka.net/milestone/120?closed=1).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 4 | 9 | 7 | Aaron Stannard |
 
 #### 1.5.36 January 22nd 2025 ####
 

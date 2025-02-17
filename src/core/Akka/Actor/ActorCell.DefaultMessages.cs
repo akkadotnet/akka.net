@@ -132,8 +132,17 @@ namespace Akka.Actor
 
             switch (message)
             {
+                case ActorSelectionMessage selectionMessage:
+                    ReceiveSelection(selectionMessage);
+                    break;
+                case Identify identify:
+                    HandleIdentity(identify);
+                    break;
                 case Terminated terminated:
                     ReceivedTerminated(terminated);
+                    break;
+                case PoisonPill _:
+                    HandlePoisonPill();
                     break;
                 case AddressTerminated terminated:
                     AddressTerminated(terminated.Address);
@@ -141,16 +150,18 @@ namespace Akka.Actor
                 case Kill _:
                     Kill();
                     break;
-                case PoisonPill _:
-                    HandlePoisonPill();
-                    break;
-                case ActorSelectionMessage selectionMessage:
-                    ReceiveSelection(selectionMessage);
-                    break;
-                case Identify identify:
-                    HandleIdentity(identify);
+                case Akka.Actor.IntentionalRestart:
+                    TriggerIntentionalRestart();
                     break;
             }
+        }
+
+        /// <summary>
+        /// Done in response to receiving a <see cref="IntentionalRestart"/> message.
+        /// </summary>
+        private static void TriggerIntentionalRestart()
+        {
+            throw new IntentionalActorRestartException();
         }
 
         /// <summary>
