@@ -78,7 +78,9 @@ namespace Akka.Cluster.Sharding
         }
 
         public override string? EntityId(object message) => (message as ShardingEnvelope)?.EntityId;
-        public override object? EntityMessage(object message) => (message as ShardingEnvelope)?.Message;
+        
+        // Due to https://github.com/akkadotnet/akka.net/issues/7470 we will want to return the underlying content too
+        public override object? EntityMessage(object message) => (message as ShardingEnvelope)?.Message ?? message;
 
         public override string ShardId(string entityId, object? messageHint = null)
         {
