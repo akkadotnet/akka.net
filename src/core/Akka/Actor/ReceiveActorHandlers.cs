@@ -37,6 +37,14 @@ internal class ReceiveActorHandlers
 
         var typedHandler = (TypeHandler<T>)typeHandlerInterface;
 
+        // If the last item added to the handlers has a predicate, then we can add a handler.
+        var handlerCount = typedHandler.Handlers.Count;
+        if (handlerCount > 0 && 
+            typedHandler.Handlers[handlerCount - 1].Predicate == null)
+        {
+            throw new InvalidOperationException("A handler with no predicate has already been added for this type. No more handlers can be added.");
+        }
+        
         var predicateHandler = new PredicateHandler<T>() { Predicate = shouldHandle, Handler = handler };
 
         typedHandler.Handlers.Add(predicateHandler);
@@ -49,9 +57,6 @@ internal class ReceiveActorHandlers
             throw new InvalidOperationException("A handler that catches all messages has been added. No handler can be added after that.");
         }
         
-        // Need to add cases here if more than one object type is passed in
-        // More of the tests from match handler need to be replicated.
-
         if (!TypedHandlers.TryGetValue(messageType, out var typeHandlerInterface))
         {
             typeHandlerInterface = new TypeHandler<object>();
@@ -59,6 +64,14 @@ internal class ReceiveActorHandlers
         }
 
         var typedHandler = (TypeHandler<object>)typeHandlerInterface;
+        
+        // If the last item added to the handlers has a predicate, then we can add a handler.
+        var handlerCount = typedHandler.Handlers.Count;
+        if (handlerCount > 0 && 
+            typedHandler.Handlers[handlerCount - 1].Predicate == null)
+        {
+            throw new InvalidOperationException("A handler with no predicate has already been added for this type. No more handlers can be added.");
+        }
 
         // Have to use object here as dont have the generic type information
         var predicateHandler = new PredicateHandler<object>() { Predicate = shouldHandle, Handler = handler };
@@ -66,6 +79,7 @@ internal class ReceiveActorHandlers
         typedHandler.Handlers.Add(predicateHandler);
     }
 
+    // TODO - Should receive any be treated like an object handler?
     public void AddReceiveAnyHandler(Action<object> handler)
     {
         if (HandleAny != null)
