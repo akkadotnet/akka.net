@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ReceiveActorHandlers.cs" company="Akka.NET Project">
 //      Copyright (C) 2009-2025 Lightbend Inc. <http://www.lightbend.com>
 //      Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -51,7 +51,6 @@ internal class ReceiveActorHandlers
         var typedHandler = (TypeHandler<T>)typeHandlerInterface;
 
         var predicateHandler = new PredicateHandler<T>(shouldHandlePredicate, handler);
-
         typedHandler.Handlers.Add(predicateHandler);
     }
 
@@ -88,13 +87,13 @@ internal class ReceiveActorHandlers
     public bool TryHandle(object message)
     {
         var messageType = message.GetType();
-        foreach (var (type, typedHandlers) in TypedHandlers)
+        foreach (var kvp in TypedHandlers)
         {
             // This is covering object types as well. There might be an ordering issue here
             // but this should probably be resolved with the logic around how handlers are ordered.
-            if (type.IsAssignableFrom(messageType))
+            if (kvp.Key.IsAssignableFrom(messageType))
             {
-                if (typedHandlers.TryHandle(message))
+                if (kvp.Value.TryHandle(message))
                 {
                     return true;
                 }
