@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
@@ -16,6 +17,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
+using Akka.Streams.Tests.TestHelpers;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Xunit2.Attributes;
@@ -66,7 +68,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public async void A_Flow_with_SelectAsync_must_produce_task_elements_in_order()
+        public async Task A_Flow_with_SelectAsync_must_produce_task_elements_in_order()
         {
             var c = this.CreateManualSubscriberProbe<int>();
             Source.From(Enumerable.Range(1, 50))
@@ -466,6 +468,37 @@ namespace Akka.Streams.Tests.Dsl
                     cancellation.Cancel(false);
                 }
             }, Materializer);
+        }
+        
+        [Theory(DisplayName = "SelectAsync with restart decider should restart")]
+        [ClassData(typeof(FailingTaskData<ImmutableList<int>>))]
+        public async Task SelectAsyncFailingTaskTest(Func<ImmutableList<int>, Task<NotUsed>> mapFunc)
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+        
+            var queue = Source
+                .Queue<int>(bufferSize: 5000, overflowStrategy: OverflowStrategy.DropNew)
+                .BatchWeighted(
+                    max: 100,
+                    costFunction: i => i,
+                    seed: r => ImmutableList.Create([r]),
+                    aggregate: (oldRows, i) => oldRows.Add(i))
+                .SelectAsync(
+                    parallelism: 3,
+                    asyncMapper: mapFunc)
+                .AddAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
+                .ToMaterialized(Sink.Ignore<NotUsed>(), Keep.Left)
+                .Run(materializer);
+
+            Assert.IsType<QueueOfferResult.Enqueued>(await queue.OfferAsync(1));
+
+            await Task.Delay(500.Milliseconds());
+            
+            // Materializer should stay alive
+            Assert.False(materializer.IsShutdown);
+        
+            // Stream should still work, it should not throw a `StreamDetachedException` 
+            Assert.IsType<QueueOfferResult.Enqueued>(await queue.OfferAsync(1));
         }
     }
 }
