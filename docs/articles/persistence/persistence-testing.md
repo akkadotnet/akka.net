@@ -271,14 +271,14 @@ Depending on your needs you can make this as complicated or simple as you want.
         //Journal also has OnRecovery and OnConnect options.
         Journal.OnWrite.SetInterceptorAsync(interceptor);
 
-        //perform testcode here
+        //perform test code here
 
         //assert at the end
         Assert.IsTrue(interceptor.HasEventsThatIExpect());
     }
 ```
 
-Should you run into race conditions, between executing your testcode and performing the assertions. Wrapping your assertion code in a `AwaitAssert` call would be a good way to manage that.
+Should you run into race conditions, between executing your test code and performing the assertions. Wrapping your assertion code in a `AwaitAssert` call would be a good way to manage that.
 
 ### Integration Testing
 
