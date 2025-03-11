@@ -219,7 +219,6 @@ When all mentioned above behaviors are not enough, it is always possible to impl
     }
 ```
 
-
 ### Built-in Snapshot Store Behaviors
 
 Snapshot store behaviors are following the same naming pattern as journal behaviors:
@@ -257,7 +256,7 @@ public interface ISnapshotStoreInterceptor
 }
 ```
 
-### More examples and common testing scenario's
+### More Examples and Common Testing Scenario's
 
 Sometimes you might want to verify more complex scenario's for your persistent actor. For example, your actor might persist events only under certain conditions and you want to test that.
 An easy way to do that is by implementing a custom interceptor, either a Journal or a Snapshot interceptor depending on your needs.
@@ -281,7 +280,6 @@ Depending on your needs you can make this as complicated or simple as you want.
 
 Should you run into race conditions, between executing your testcode and performing the assertions. Wrapping your assertion code in a `AwaitAssert` call would be a good way to manage that.
 
-### Integration testing
+### Integration Testing
 
 Lets say you need more then just the InMemory persistence model. There is a bootcamp and corresponding video on those subjects that are well worth checking out. [Integration testing with Akka.Hosting](https://petabridge.com/bootcamp/lessons/unit-1/akka-hosting-testkit/)
-
