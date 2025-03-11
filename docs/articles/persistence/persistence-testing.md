@@ -213,7 +213,7 @@ When all mentioned above behaviors are not enough, it is always possible to impl
     {
         WithJournalWrite(write => write.SetInterceptorAsync(new myCustomInterceptor()), () =>
         {
-            //testcode here
+            //test code here
             
         });
     }
