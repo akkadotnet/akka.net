@@ -252,7 +252,16 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.FromSubscriber(c), _materializer);
 
             var error = c.ExpectSubscriptionAndError();
-            error.Message.Should().Be("Booming for 1!");
+            if (error is AggregateException aggregateException) // happens if we hit the fast path and don't await
+            {
+                aggregateException.Flatten()
+                    .InnerException!.Message.Should().Be("Booming for 1!");
+            }
+            else
+            {
+                error.Message.Should().Be("Booming for 1!");
+            }
+            
             return Task.CompletedTask;
         }, _materializer);
 
