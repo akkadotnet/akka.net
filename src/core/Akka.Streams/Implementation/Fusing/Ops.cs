@@ -2571,7 +2571,7 @@ namespace Akka.Streams.Implementation.Fusing
                     // We dispatch the task if it's ready to optimize away
                     // scheduling it to an execution context
                     if (task.IsCompleted)
-                    {;
+                    {
                         HolderCompleted(holder, Result.FromTask(task));
                     }
                     else
