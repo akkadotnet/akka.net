@@ -19,27 +19,24 @@ namespace Akka.Util
         /// <summary>
         /// <c>true</c> if the result is successful, <c>false</c> otherwise.
         /// </summary>
-        public bool IsSuccess { get; }
-        
+        public readonly bool IsSuccess;
+
         /// <summary>
         /// <c>null</c> when <see cref="IsSuccess"/> is <c>false</c>.
         /// </summary>
-        public T? Value { get; }
-        
+        public readonly T? Value;
+
         /// <summary>
         /// <c>null</c> when <see cref="IsSuccess"/> is <c>true</c>.
         /// </summary>
-        public Exception? Exception { get; }
+        public readonly Exception? Exception;
         
         public Result(T value) : this()
         {
             IsSuccess = true;
             Value = value;
         }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="exception">TBD</param>
+
         public Result(Exception exception) : this()
         {
             IsSuccess = false;
