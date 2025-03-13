@@ -5505,13 +5505,13 @@ namespace Akka.Util
     }
     public struct Result<[System.Runtime.CompilerServices.NullableAttribute(2)]  T> : System.IEquatable<Akka.Util.Result<T>>
     {
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        public readonly System.Exception Exception;
+        public readonly bool IsSuccess;
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        public readonly T Value;
         public Result(T value) { }
         public Result(System.Exception exception) { }
-        [System.Runtime.CompilerServices.NullableAttribute(2)]
-        public System.Exception Exception { get; }
-        public bool IsSuccess { get; }
-        [System.Runtime.CompilerServices.NullableAttribute(2)]
-        public T Value { get; }
         public override string ToString() { }
     }
     public class Right<T>
