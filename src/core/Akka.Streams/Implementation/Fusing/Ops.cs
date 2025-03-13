@@ -2664,7 +2664,7 @@ namespace Akka.Streams.Implementation.Fusing
                                     break;
                         
                                 default:
-                                    throw new ArgumentOutOfRangeException($"Unknown SupervisionStrategy directive: {strategy}");
+                                    throw new ArgumentOutOfRangeException($"Unknown SupervisionStrategy directive: {strategy}", result.Exception);
                             }
                             continue;
                         }
@@ -2705,7 +2705,7 @@ namespace Akka.Streams.Implementation.Fusing
                         break;
                     
                     default:
-                        throw new ArgumentOutOfRangeException($"Unknown SupervisionStrategy directive: {strategy}", exception ?? new Exception("Null exception"));
+                        throw new ArgumentOutOfRangeException($"Unknown SupervisionStrategy directive: {strategy}", exception);
                 }
             }
 
