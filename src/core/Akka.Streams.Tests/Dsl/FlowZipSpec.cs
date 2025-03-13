@@ -40,18 +40,18 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(1, 4))
                     .Zip(Source.From(new[] { "A", "B", "C", "D", "E", "F" }))
                     .RunWith(Sink.FromSubscriber(probe), Materializer);
-                var subscription = await probe.ExpectSubscriptionAsync();
+                var subscription = await probe.ExpectSubscriptionAsync().ConfigureAwait(false);
 
                 subscription.Request(2);
-                await probe.ExpectNextAsync((1, "A"));
-                await probe.ExpectNextAsync((2, "B"));
+                await probe.ExpectNextAsync((1, "A")).ConfigureAwait(false);
+                await probe.ExpectNextAsync((2, "B")).ConfigureAwait(false);
 
                 subscription.Request(1);
-                await probe.ExpectNextAsync((3, "C"));
+                await probe.ExpectNextAsync((3, "C")).ConfigureAwait(false);
                 subscription.Request(1);
-                await probe.ExpectNextAsync((4, "D"));
+                await probe.ExpectNextAsync((4, "D")).ConfigureAwait(false);
 
-                await probe.ExpectCompleteAsync();
+                await probe.ExpectCompleteAsync().ConfigureAwait(false);
             }, Materializer);
         }
 
@@ -59,20 +59,20 @@ namespace Akka.Streams.Tests.Dsl
         public async Task A_Zip_for_Flow_must_work_with_one_immediately_completed_and_one_nonempty_publisher()
         {
             var subscriber1 = Setup(CompletedPublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-            await subscriber1.ExpectSubscriptionAndCompleteAsync();
+            await subscriber1.ExpectSubscriptionAndCompleteAsync().ConfigureAwait(false);
 
             var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), CompletedPublisher<int>());
-            await subscriber2.ExpectSubscriptionAndCompleteAsync();
+            await subscriber2.ExpectSubscriptionAndCompleteAsync().ConfigureAwait(false);
         }
 
         [Fact]
         public async Task A_Zip_for_Flow_must_work_with_one_delayed_completed_and_one_nonempty_publisher()
         {
             var subscriber1 = Setup(SoonToCompletePublisher<int>(), NonEmptyPublisher(Enumerable.Range(1, 4)));
-            await subscriber1.ExpectSubscriptionAndCompleteAsync();
+            await subscriber1.ExpectSubscriptionAndCompleteAsync().ConfigureAwait(false);
 
             var subscriber2 = Setup(NonEmptyPublisher(Enumerable.Range(1, 4)), SoonToCompletePublisher<int>());
-            await subscriber2.ExpectSubscriptionAndCompleteAsync();
+            await subscriber2.ExpectSubscriptionAndCompleteAsync().ConfigureAwait(false);
         }
 
         [Fact]
