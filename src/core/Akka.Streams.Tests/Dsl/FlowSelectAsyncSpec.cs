@@ -171,10 +171,10 @@ namespace Akka.Streams.Tests.Dsl
                 
                 var exception = await probe.AsyncBuilder()
                     .Request(10)
-                    .ExpectNextN(new[]{1, 2})
+                    .ExpectNextN([1, 2])
                     .ExpectErrorAsync()
                     .ShouldCompleteWithin(RemainingOrDefault);
-                exception.InnerException!.Message.Should().Be("err1");
+                exception.Message.Should().Be("err1");
             }, Materializer);
         }
         
@@ -232,7 +232,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FromSubscriber(c), Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(10);
-                c.ExpectError().Message.Should().Be("err2");
+                (await c.ExpectErrorAsync()).Message.Should().Be("err2");
             }, Materializer);
         }
 
@@ -258,7 +258,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 await probe.AsyncBuilder()
                     .Request(10)
-                    .ExpectNextN(new[] { 1, 2 })
+                    .ExpectNextN([1, 2])
                     .ExpectErrorAsync();
 
                 invoked.Should().BeTrue();
@@ -358,21 +358,21 @@ namespace Akka.Streams.Tests.Dsl
         {
             var c = this.CreateManualSubscriberProbe<string>();
 
-            Source.From(new[] {"a", "b"})
-                .SelectAsync(4, _ => Task.FromResult(null as string))
+            Source.From(["a", "b"])
+                .SelectAsync(4, _ => Task.FromResult<string>(null))
                 .To(Sink.FromSubscriber(c)).Run(Materializer);
 
             var sub = await c.ExpectSubscriptionAsync();
             sub.Request(10);
-            c.ExpectError().Message.Should().StartWith(ReactiveStreamsCompliance.ElementMustNotBeNullMsg);
+            (await c.ExpectErrorAsync()).Message.Should().StartWith(ReactiveStreamsCompliance.ElementMustNotBeNullMsg);
         }
 
         [Fact]
         public async Task A_Flow_with_SelectAsync_must_resume_when_task_is_completed_with_null()
         {
             var c = this.CreateManualSubscriberProbe<string>();
-            Source.From(new[] { "a", "b", "c" })
-                .SelectAsync(4, s => s.Equals("b") ? Task.FromResult(null as string) : Task.FromResult(s))
+            Source.From(["a", "b", "c"])
+                .SelectAsync(4, s => s.Equals("b") ? Task.FromResult<string>(null) : Task.FromResult(s))
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .To(Sink.FromSubscriber(c)).Run(Materializer);
             var sub = await c.ExpectSubscriptionAsync();
@@ -438,21 +438,6 @@ namespace Akka.Streams.Tests.Dsl
                 }, cancellation.Token);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
-                Task<int> Deferred()
-                {
-                    var promise = new TaskCompletionSource<int>();
-                    if (counter.IncrementAndGet() > parallelism)
-                        promise.SetException(new Exception("parallelism exceeded"));
-                    else
-                    {
-                        var wrote = queue.Writer.TryWrite((promise, DateTime.Now.Ticks));
-                        if (!wrote)
-                            promise.SetException(new Exception("Failed to write to queue"));
-                    }
-                        
-                    return promise.Task;
-                }
-
                 try
                 {
                     const int n = 10000;
@@ -466,6 +451,23 @@ namespace Akka.Streams.Tests.Dsl
                 finally
                 {
                     cancellation.Cancel(false);
+                }
+
+                return;
+
+                Task<int> Deferred()
+                {
+                    var promise = new TaskCompletionSource<int>();
+                    if (counter.IncrementAndGet() > parallelism)
+                        promise.SetException(new Exception("parallelism exceeded"));
+                    else
+                    {
+                        var wrote = queue.Writer.TryWrite((promise, DateTime.Now.Ticks));
+                        if (!wrote)
+                            promise.SetException(new Exception("Failed to write to queue"));
+                    }
+                        
+                    return promise.Task;
                 }
             }, Materializer);
         }
