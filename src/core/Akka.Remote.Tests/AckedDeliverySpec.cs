@@ -393,7 +393,7 @@ namespace Akka.Remote.Tests
                 global::System.Diagnostics.Debug.WriteLine(string.Join(Environment.NewLine, log));
                 global::System.Diagnostics.Debug.WriteLine("Received: ");
                 global::System.Diagnostics.Debug.WriteLine(string.Join(Environment.NewLine, received.Select(x => x.ToString())));
-                Assert.True(false,"Not all messages were received");
+                Assert.Fail("Not all messages were received");
             }
 
             global::System.Diagnostics.Debug.WriteLine("All messages have been successfully delivered");

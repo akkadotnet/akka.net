@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             return () =>
             {
-                Assert.True(false, "Must not call fallback function");
+                Assert.Fail("Must not call fallback function");
                 return default(TMat);
             };
         }
