@@ -2526,9 +2526,9 @@ namespace Akka.Streams.Implementation.Fusing
 
         private sealed class Logic : InAndOutGraphStageLogic
         {
-            private sealed class Holder<T>(object message, Result<T> element)
+            private sealed class Holder<T>(object? message, Result<T> element)
             {
-                public object Message { get; private set; } = message;
+                public object? Message { get; private set; } = message;
                 
                 public Result<T> Element { get; private set; } = element;
 
@@ -2564,8 +2564,7 @@ namespace Akka.Streams.Implementation.Fusing
                 try
                 {
                     var task = _stage._mapFunc(message);
-                    Debug.Assert(message != null, nameof(message) + " != null");
-                    var holder = new Holder<TOut>(message!, NotYetThere);
+                    var holder = new Holder<TOut>(message, NotYetThere);
                     _buffer.Enqueue(holder);
 
                     // We dispatch the task if it's ready to optimize away
