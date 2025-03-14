@@ -1604,10 +1604,7 @@ namespace Akka.Remote
                     if (!SendDelegate(_buffer.First!.Value)) return false;
                     _buffer.RemoveFirst();
                     _writeCount += 1;
-                    count = count - 1;
-                    continue;
-
-                    break;
+                    count -= 1;
                 }
             }
 
