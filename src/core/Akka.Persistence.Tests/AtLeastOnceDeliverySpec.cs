@@ -15,7 +15,6 @@ using Akka.TestKit.Xunit2.Attributes;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
-#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
 
 namespace Akka.Persistence.Tests
 {
@@ -217,25 +216,17 @@ namespace Akka.Persistence.Tests
         }
         
         [Serializable]
-        sealed class ReqAck
+        sealed record ReqAck
         {
             public static readonly ReqAck Instance = new();
             private ReqAck() { }
-            public override bool Equals(object obj)
-            {
-                return obj is ReqAck;
-            }
         }
 
         [Serializable]
-        sealed class InvalidReq
+        sealed record InvalidReq
         {
             public static readonly InvalidReq Instance = new();
             private InvalidReq() { }
-            public override bool Equals(object obj)
-            {
-                return obj is InvalidReq;
-            }
         }
 
         interface IEvt { }
@@ -271,19 +262,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Serializable]
-        sealed class ReqDone : IEvt, IEquatable<ReqDone>
-        {
-            public ReqDone(long id)
-            {
-                Id = id;
-            }
-
-            public long Id { get; private set; }
-            public bool Equals(ReqDone other)
-            {
-                return other != null && other.Id == Id;
-            }
-        }
+        sealed record ReqDone(long Id) : IEvt;
 
         [Serializable]
         sealed class Action : IEquatable<Action>
@@ -318,19 +297,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Serializable]
-        sealed class ActionAck : IEquatable<ActionAck>
-        {
-            public ActionAck(long id)
-            {
-                Id = id;
-            }
-
-            public long Id { get; private set; }
-            public bool Equals(ActionAck other)
-            {
-                return other != null && other.Id == Id;
-            }
-        }
+        sealed record ActionAck(long Id);
 
         [Serializable]
         sealed class Boom { public static readonly Boom Instance = new(); }

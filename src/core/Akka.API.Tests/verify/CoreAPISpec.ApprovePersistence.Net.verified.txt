@@ -931,6 +931,7 @@ namespace Akka.Persistence.Journal
         public System.Collections.Generic.IEnumerable<object> Events { get; }
         public bool Equals(Akka.Persistence.Journal.IEventSequence other) { }
         public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
     }
     public class EventAdapters
     {
@@ -952,6 +953,7 @@ namespace Akka.Persistence.Journal
         public System.Collections.Generic.IEnumerable<object> Events { get; }
         public bool Equals(Akka.Persistence.Journal.IEventSequence other) { }
         public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
     }
     public interface IAsyncRecovery
     {
@@ -1121,6 +1123,7 @@ namespace Akka.Persistence.Journal
         public System.Collections.Generic.IEnumerable<object> Events { get; }
         public bool Equals(Akka.Persistence.Journal.IEventSequence other) { }
         public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
     }
     public struct Tagged
     {
