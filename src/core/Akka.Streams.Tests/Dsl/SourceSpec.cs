@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
+using Akka.Streams.Tests.Util;
 using Akka.Streams.Util;
 using Akka.TestKit.Extensions;
 using Akka.TestKit;
@@ -374,6 +375,24 @@ namespace Akka.Streams.Tests.Dsl
                     return Task.FromResult(Option<((int, int), int)>.None);
                 
                 return Task.FromResult(((b, a + b), a).AsOption());
+            }).RunAggregate(new LinkedList<int>(), (ints, i) =>
+            {
+                ints.AddFirst(i);
+                return ints;
+            }, Materializer).Result.Should().Equal(Expected);
+        }
+        
+        [Fact]
+        public void UnfoldValueTask_Source_must_generate_a_finite_fibonacci_sequence_asynchronously()
+        {
+            Source.UnfoldValueTaskAsync((0, 1), tuple =>
+            {
+                var a = tuple.Item1;
+                var b = tuple.Item2;
+                if (a > 10000000)
+                    return Task.FromResult(Option<((int, int), int)>.None).ToValueTask();
+                
+                return Task.FromResult(((b, a + b), a).AsOption()).ToValueTask();
             }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);

@@ -257,6 +257,7 @@ namespace Akka.Streams.Implementation.Stages
         /// TBD
         /// </summary>
         public static readonly Attributes UnfoldAsync = Attributes.CreateName("unfoldAsync");
+        public static readonly Attributes UnfoldValueTaskAsync = Attributes.CreateName("unfoldValueTaskAsync");
         /// <summary>
         /// TBD
         /// </summary>
@@ -269,6 +270,11 @@ namespace Akka.Streams.Implementation.Stages
         /// TBD
         /// </summary>
         public static readonly Attributes UnfoldResourceSourceAsync = Attributes.CreateName("unfoldResourceSourceAsync").And(IODispatcher);
+        /// <summary>
+        /// This, unlike normal UnfoldResourceSource,
+        /// does -not- use IODispatcher. 
+        /// </summary>
+        public static readonly Attributes UnfoldResourceSourceValueTaskAsync = Attributes.CreateName("unfoldResourceSourceValueTaskAsync");
         /// <summary>
         /// TBD
         /// </summary>

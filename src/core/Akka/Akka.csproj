@@ -25,6 +25,9 @@
     <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
     <PackageReference Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
   </ItemGroup>
+  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="$(SystemThreadingTasksExtensionsVersion)"/>
+  </ItemGroup>
   
   <ItemGroup Label="PublicAnalyzers">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" />
