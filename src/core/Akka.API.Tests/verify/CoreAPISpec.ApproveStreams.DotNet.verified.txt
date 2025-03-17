@@ -4430,7 +4430,12 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class SelectAsyncUnordered<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1,
+            1,
+            1})]
+    public sealed class SelectAsyncUnordered<[System.Runtime.CompilerServices.NullableAttribute(2)]  TIn, [System.Runtime.CompilerServices.NullableAttribute(2)]  TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
     {
         public readonly Akka.Streams.Inlet<TIn> In;
         public readonly Akka.Streams.Outlet<TOut> Out;
@@ -4440,7 +4445,12 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class SelectAsync<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1,
+            1,
+            1})]
+    public sealed class SelectAsync<[System.Runtime.CompilerServices.NullableAttribute(2)]  TIn, [System.Runtime.CompilerServices.NullableAttribute(2)]  TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
     {
         public readonly Akka.Streams.Inlet<TIn> In;
         public readonly Akka.Streams.Outlet<TOut> Out;
