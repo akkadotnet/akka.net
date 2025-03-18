@@ -22,6 +22,7 @@ using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
+using Debug = System.Diagnostics.Debug;
 using Decider = Akka.Streams.Supervision.Decider;
 using Directive = Akka.Streams.Supervision.Directive;
 
@@ -2512,12 +2513,12 @@ namespace Akka.Streams.Implementation.Fusing
         /// </returns>
         public override string ToString() => "Expand";
     }
+    
+    #nullable enable
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
     [InternalApi]
     public sealed class SelectAsync<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
@@ -2525,31 +2526,17 @@ namespace Akka.Streams.Implementation.Fusing
 
         private sealed class Logic : InAndOutGraphStageLogic
         {
-            private class Holder<T>
+            private sealed class Holder<T>(object? message, Result<T> element)
             {
-                private readonly Action<Holder<T>> _callback;
-
-                public Holder(object message, Result<T> element, Action<Holder<T>> callback)
-                {
-                    _callback = callback;
-                    Message = message;
-                    Element = element;
-                }
-
-                public Result<T> Element { get; private set; }
-                public object Message { get; }
+                public object? Message { get; private set; } = message;
+                
+                public Result<T> Element { get; private set; } = element;
 
                 public void SetElement(Result<T> result)
                 {
                     Element = result.IsSuccess && result.Value == null
                         ? Result.Failure<T>(ReactiveStreamsCompliance.ElementMustNotBeNullException)
                         : result;
-                }
-
-                public void Invoke(Result<T> result)
-                {
-                    SetElement(result);
-                    _callback(this);
                 }
             }
 
@@ -2558,15 +2545,15 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly SelectAsync<TIn, TOut> _stage;
             private readonly Decider _decider;
             private IBuffer<Holder<TOut>> _buffer;
-            private readonly Action<Holder<TOut>> _taskCallback;
+            private readonly Action<(Holder<TOut>, Result<TOut>)> _taskCallback;
 
             public Logic(Attributes inheritedAttributes, SelectAsync<TIn, TOut> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>();
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                _taskCallback = GetAsyncCallback<Holder<TOut>>(HolderCompleted);
+                _taskCallback = GetAsyncCallback<(Holder<TOut> holder, Result<TOut> result)>(t => HolderCompleted(t.holder, t.result));
 
                 SetHandlers(stage.In, stage.Out, this);
             }
@@ -2577,19 +2564,33 @@ namespace Akka.Streams.Implementation.Fusing
                 try
                 {
                     var task = _stage._mapFunc(message);
-                    var holder = new Holder<TOut>(message, NotYetThere, _taskCallback);
+                    var holder = new Holder<TOut>(message, NotYetThere);
                     _buffer.Enqueue(holder);
 
                     // We dispatch the task if it's ready to optimize away
                     // scheduling it to an execution context
                     if (task.IsCompleted)
                     {
-                        holder.SetElement(Result.FromTask(task));
-                        HolderCompleted(holder);
+                        HolderCompleted(holder, Result.FromTask(task));
                     }
                     else
-                        task.ContinueWith(t => holder.Invoke(Result.FromTask(t)),
-                            TaskContinuationOptions.ExecuteSynchronously);
+                    {
+                        async Task WaitForTask()
+                        {
+                            try
+                            {
+                                var result = Result.Success(await task);
+                                _taskCallback((holder, result));
+                            }
+                            catch(Exception ex){
+                                var result = Result.Failure<TOut>(ex);
+                                _taskCallback((holder, result));
+                            }   
+                        }
+                        
+                        _ = WaitForTask();
+                    }
+                       
                 }
                 catch (Exception e)
                 {
@@ -2606,7 +2607,7 @@ namespace Akka.Streams.Implementation.Fusing
                             break;
                         
                         default:
-                            throw new AggregateException($"Unknown SupervisionStrategy directive: {strategy}", e);
+                            throw new ArgumentOutOfRangeException($"Unknown SupervisionStrategy directive: {strategy}", e);
                     }
                 }
                 if (Todo < _stage._parallelism && !HasBeenPulled(_stage.In))
@@ -2663,12 +2664,12 @@ namespace Akka.Streams.Implementation.Fusing
                                     break;
                         
                                 default:
-                                    throw new AggregateException($"Unknown SupervisionStrategy directive: {strategy}", result.Exception);
+                                    throw new ArgumentOutOfRangeException($"Unknown SupervisionStrategy directive: {strategy}", result.Exception);
                             }
                             continue;
                         }
 
-                        Push(_stage.Out, result.Value);
+                        Push(_stage.Out!, result.Value);
                         if (Todo < _stage._parallelism && !HasBeenPulled(inlet))
                             TryPull(inlet);
                     }
@@ -2677,17 +2678,18 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
 
-            private void HolderCompleted(Holder<TOut> holder)
+            private void HolderCompleted(Holder<TOut> holder, Result<TOut> result)
             {
-                var element = holder.Element;
-                if (element.IsSuccess)
+                // we may not be at the front of the line right now, so save the result for later
+                holder.SetElement(result);
+                if (result.IsSuccess)
                 {
                     if (IsAvailable(_stage.Out))
                         PushOne();
                     return;
                 }
                 
-                var exception = element.Exception;
+                var exception = result.Exception;
                 var strategy = _decider(exception);
                 Log.Error(exception, "An exception occured inside SelectAsync while executing Task. Supervision strategy: {0}", strategy);
                 switch (strategy)
@@ -2703,7 +2705,7 @@ namespace Akka.Streams.Implementation.Fusing
                         break;
                     
                     default:
-                        throw new AggregateException($"Unknown SupervisionStrategy directive: {strategy}", exception);
+                        throw new ArgumentOutOfRangeException($"Unknown SupervisionStrategy directive: {strategy}", exception);
                 }
             }
 
@@ -2758,8 +2760,6 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
     [InternalApi]
     public sealed class SelectAsyncUnordered<TIn, TOut> : GraphStage<FlowShape<TIn, TOut>>
     {
@@ -2904,6 +2904,8 @@ namespace Akka.Streams.Implementation.Fusing
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(inheritedAttributes, this);
     }
+    
+    #nullable disable
 
     /// <summary>
     /// INTERNAL API
