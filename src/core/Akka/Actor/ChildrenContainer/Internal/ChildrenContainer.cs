@@ -11,7 +11,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace Akka.Actor.Internal
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     public interface IChildrenContainer
     {

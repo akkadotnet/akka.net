@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Akka.Annotations;
 
+#nullable enable
 namespace Akka.Streams.Implementation
 {
     /// <summary>
@@ -54,7 +55,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        T Peek();
+        T? Peek();
         /// <summary>
         /// TBD
         /// </summary>
@@ -161,7 +162,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         protected long WriteIndex;
 
-        private readonly T[] _buffer;
+        private readonly T?[] _buffer;
 
         /// <summary>
         /// TBD
@@ -222,14 +223,20 @@ namespace Akka.Streams.Implementation
         /// <param name="element">TBD</param>
         /// <param name="maintenance">TBD</param>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public void Put(long index, T element, bool maintenance) => _buffer[ToOffset(index, maintenance)] = element;
+        public void Put(long index, T? element, bool maintenance) => _buffer[ToOffset(index, maintenance)] = element;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="index">TBD</param>
         /// <returns>TBD</returns>
-        public T Get(long index) => _buffer[ToOffset(index, false)];
+        public T Get(long index)
+        {
+            var elem = _buffer[ToOffset(index, false)];
+            if(elem == null)
+                throw new IndexOutOfRangeException($"Invalid buffer element at index {index}, element is null");
+            return elem;
+        }
 
         /// <summary>
         /// TBD
@@ -354,7 +361,7 @@ namespace Akka.Streams.Implementation
             private const int Size = 16;
             private const int Mask = 15;
             
-            private readonly T[] _queue = new T[Size];
+            private readonly T?[] _queue = new T[Size];
             private readonly BoundedBuffer<T> _boundedBuffer;
             private int _head;
             private int _tail;
@@ -373,6 +380,9 @@ namespace Akka.Streams.Implementation
 
             public void Enqueue(T element)
             {
+                if(element is null)
+                    throw new ArgumentNullException(nameof(element));
+                
                 if (_tail - _head == Size)
                 {
                     var queue = new DynamicQueue(Capacity);
@@ -392,12 +402,15 @@ namespace Akka.Streams.Implementation
             {
                 var pos = _head & Mask;
                 var ret = _queue[pos];
+                if(ret is null)
+                    throw new IndexOutOfRangeException();
+                
                 _queue[pos] = default(T);
                 _head += 1;
                 return ret;
             }
 
-            public T Peek() => _tail == _head ? default(T) : _queue[_head & Mask];
+            public T? Peek() => _tail == _head ? default(T) : _queue[_head & Mask];
 
             public void Clear()
             {
@@ -431,12 +444,15 @@ namespace Akka.Streams.Implementation
 
             public T Dequeue()
             {
+                if(First is null)
+                    throw new IndexOutOfRangeException();
+                
                 var result = First.Value;
                 RemoveFirst();
                 return result;
             }
 
-            public T Peek() => First.Value;
+            public T? Peek() => First is null ? default : First.Value;
 
             public void DropHead() => RemoveFirst();
 
@@ -498,7 +514,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public T Peek() => _q.Peek();
+        public T? Peek() => _q.Peek();
 
         /// <summary>
         /// TBD

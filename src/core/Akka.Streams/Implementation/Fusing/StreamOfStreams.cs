@@ -17,6 +17,7 @@ using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Util;
 using Akka.Util.Internal;
+using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Streams.Implementation.Fusing
 {
@@ -26,6 +27,7 @@ namespace Akka.Streams.Implementation.Fusing
     /// <typeparam name="TGraph">TBD</typeparam>
     /// <typeparam name="T">TBD</typeparam>
     /// <typeparam name="TMat">TBD</typeparam>
+    #nullable enable
     internal sealed class FlattenMerge<TGraph, T, TMat> : GraphStage<FlowShape<TGraph, T>> where TGraph : IGraph<SourceShape<T>, TMat>
     {
         #region internal classes
@@ -35,7 +37,7 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly FlattenMerge<TGraph, T, TMat> _stage;
             private readonly Attributes _enclosingAttributes;
             private readonly HashSet<SubSinkInlet<T>> _sources = new();
-            private IBuffer<SubSinkInlet<T>> _q;
+            private IBuffer<SubSinkInlet<T>>? _q;
             private readonly Action _outHandler;
 
             public Logic(FlattenMerge<TGraph, T, TMat> stage, Attributes enclosingAttributes) : base(stage.Shape)
@@ -44,6 +46,8 @@ namespace Akka.Streams.Implementation.Fusing
                 _enclosingAttributes = enclosingAttributes;
                 _outHandler = () =>
                 {
+                    Debug.Assert(_q != null, nameof(_q) + " != null");
+                    
                     // could be unavailable due to async input having been executed before this notification
                     if (_q.NonEmpty && IsAvailable(_stage._out))
                         PushOut();
@@ -80,6 +84,8 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void PushOut()
             {
+                Debug.Assert(_q != null, nameof(_q) + " != null");
+
                 var src = _q.Dequeue();
                 Push(_stage._out, src.Grab());
                 if (!src.IsClosed)
@@ -105,6 +111,8 @@ namespace Akka.Streams.Implementation.Fusing
                 sinkIn.SetHandler(new LambdaInHandler(
                     onPush: () =>
                     {
+                        Debug.Assert(_q != null, nameof(_q) + " != null");
+                        
                         if (IsAvailable(_stage._out))
                         {
                             Push(_stage._out, sinkIn.Grab());
@@ -172,6 +180,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <returns>TBD</returns>
         public override string ToString() => $"FlattenMerge({_breadth})";
     }
+    #nullable restore
 
     /// <summary>
     /// INTERNAL API
