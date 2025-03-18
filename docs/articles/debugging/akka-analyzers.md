@@ -23,6 +23,7 @@ Akka.Analyzer is a [Roslyn Analysis and Code Fix](https://learn.microsoft.com/en
 | [AK1008](xref:AK1008) | Creating actors using `ActorSystem.ActorOf()` inside an actor | Warning  | Actor Design |
 | [AK2000](xref:AK2000) | Do not use `Ask` with `TimeSpan.Zero` for timeout.                                                                      | Error    | API Usage    |
 | [AK2001](xref:AK2001) | Do not use automatically handled messages in inside `Akka.Cluster.Sharding.IMessageExtractor`s.                         | Warning  | API Usage    |
+| [AK2002](xref:AK2002) | `Context.Materializer()` should not be invoked multiple times, use a cached value instead.                              | Warning  | API Usage    |
 
 ## Deprecated Rules
 
