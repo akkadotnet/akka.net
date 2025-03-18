@@ -2565,7 +2565,7 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly Decider _decider;
 
             private IBuffer<Holder<TOut>>? _buffer;
-            private readonly Action<Holder<TOut>> _taskCallback;
+            private readonly Action<(Holder<TOut> holder, Result<TOut> result)> _taskCallback;
 
             public Logic(Attributes inheritedAttributes, SelectAsync<TIn, TOut> stage) : base(stage.Shape)
             {
