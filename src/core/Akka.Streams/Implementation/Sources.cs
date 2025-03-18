@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Pattern;
@@ -23,6 +24,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
+    #nullable enable
     [InternalApi]
     public sealed class QueueSource<TOut> : GraphStageWithMaterializedValue<SourceShape<TOut>, ISourceQueueWithComplete<TOut>>
     {
@@ -102,8 +104,8 @@ namespace Akka.Streams.Implementation
         {
             private readonly TaskCompletionSource<object> _completion;
             private readonly QueueSource<TOut> _stage;
-            private IBuffer<TOut> _buffer;
-            private Offer<TOut> _pendingOffer;
+            private IBuffer<TOut>? _buffer;
+            private Offer<TOut>? _pendingOffer;
             private bool _terminating;
 
             public Logic(QueueSource<TOut> stage, TaskCompletionSource<object> completion) : base(stage.Shape)
@@ -116,7 +118,7 @@ namespace Akka.Streams.Implementation
 
             public void OnPull()
             {
-                if (_stage._maxBuffer == 0)
+                if (_buffer is null)
                 {
                     if (_pendingOffer != null)
                     {
@@ -130,20 +132,22 @@ namespace Akka.Streams.Implementation
                         }
                     }
                 }
-                else if (_buffer.NonEmpty)
+                else
                 {
-                    Push(_stage.Out, _buffer.Dequeue());
-                    if (_pendingOffer != null)
+                    if (_buffer.NonEmpty)
                     {
-                        EnqueueAndSuccess(_pendingOffer);
-                        _pendingOffer = null;
+                        Push(_stage.Out, _buffer.Dequeue());
+                        if (_pendingOffer != null)
+                        {
+                            EnqueueAndSuccess(_pendingOffer);
+                            _pendingOffer = null;
+                        }
                     }
-                }
-
-                if (_terminating && _buffer.IsEmpty)
-                {
-                    _completion.SetResult(new object());
-                    CompleteStage();
+                    if (_terminating && _buffer.IsEmpty)
+                    {
+                        _completion.SetResult(new object());
+                        CompleteStage();
+                    }
                 }
             }
 
@@ -179,12 +183,16 @@ namespace Akka.Streams.Implementation
 
             private void EnqueueAndSuccess(Offer<TOut> offer)
             {
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                 _buffer.Enqueue(offer.Element);
                 offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Enqueued.Instance);
             }
 
             private void BufferElement(Offer<TOut> offer)
             {
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                 if (!_buffer.IsFull)
                     EnqueueAndSuccess(offer);
                 else
@@ -221,6 +229,8 @@ namespace Akka.Streams.Implementation
                             else
                                 _pendingOffer = offer;
                             break;
+                        default:
+                            throw new IndexOutOfRangeException($"Unknown {nameof(OverflowStrategy)}: {_stage._overflowStrategy}");
                     }
                 }
             }
@@ -230,10 +240,9 @@ namespace Akka.Streams.Implementation
                 return GetAsyncCallback<IInput>(
                     input =>
                     {
-                        var offer = input as Offer<TOut>;
-                        if (offer != null)
+                        if (input is Offer<TOut> offer)
                         {
-                            if (_stage._maxBuffer != 0)
+                            if (_buffer is not null)
                             {
                                 BufferElement(offer);
                                 if (IsAvailable(_stage.Out))
@@ -278,10 +287,9 @@ namespace Akka.Streams.Implementation
                             }
                         }
 
-                        var completion = input as Completion;
-                        if (completion != null)
+                        if (input is Completion)
                         {
-                            if (_stage._maxBuffer != 0 && _buffer.NonEmpty || _pendingOffer != null)
+                            if (_buffer is not null && _buffer.NonEmpty || _pendingOffer != null)
                                 _terminating = true;
                             else
                             {
@@ -290,8 +298,7 @@ namespace Akka.Streams.Implementation
                             }
                         }
 
-                        var failure = input as Failure;
-                        if (failure != null)
+                        if (input is Failure failure)
                         {
                             _completion.SetException(failure.Ex);
                             FailStage(failure.Ex);
@@ -388,6 +395,7 @@ namespace Akka.Streams.Implementation
             return new LogicAndMaterializedValue<ISourceQueueWithComplete<TOut>>(logic, new Materialized(t => logic.Invoke(t), completion));
         }
     }
+    #nullable restore
 
     /// <summary>
     /// INTERNAL API

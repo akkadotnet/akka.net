@@ -18,6 +18,7 @@ using Akka.Streams.Serialization.Proto.Msg;
 using Akka.Streams.Stage;
 using Akka.Util;
 using Google.Protobuf.WellKnownTypes;
+using Debug = System.Diagnostics.Debug;
 using Type = System.Type;
 
 namespace Akka.Streams.Implementation.StreamRef
@@ -64,6 +65,7 @@ namespace Akka.Streams.Implementation.StreamRef
     /// If initialPartnerRef is set, then the remote side is already set up.
     /// If it is none, then we are the side creating the ref.
     /// </summary>
+    #nullable enable
     [InternalApi]
     internal sealed class SourceRefStageImpl<TOut> : GraphStageWithMaterializedValue<SourceShape<TOut>, Task<ISinkRef<TOut>>>
     {
@@ -80,20 +82,27 @@ namespace Akka.Streams.Implementation.StreamRef
             private readonly TaskCompletionSource<ISinkRef<TOut>> _promise;
             private readonly Attributes _inheritedAttributes;
 
-            private StreamRefsMaster _streamRefsMaster;
-            private StreamRefSettings _settings;
-            private StreamRefAttributes.SubscriptionTimeout _subscriptionTimeout;
-            private string _stageActorName;
+            private StreamRefsMaster? _streamRefsMaster;
+            private StreamRefSettings? _settings;
+            private StreamRefAttributes.SubscriptionTimeout? _subscriptionTimeout;
+            private string? _stageActorName;
 
-            private StageActor _stageActor;
-            private IActorRef _partnerRef = null;
+            private StageActor? _stageActor;
+            private IActorRef? _partnerRef;
 
             private StreamRefsMaster StreamRefsMaster => _streamRefsMaster ??= StreamRefsMaster.Get(ActorMaterializerHelper.Downcast(Materializer).System);
             private StreamRefSettings Settings => _settings ??= ActorMaterializerHelper.Downcast(Materializer).Settings.StreamRefSettings;
             private StreamRefAttributes.SubscriptionTimeout SubscriptionTimeout => _subscriptionTimeout ??= _inheritedAttributes.GetAttribute(new StreamRefAttributes.SubscriptionTimeout(Settings.SubscriptionTimeout));
             protected override string StageActorName => _stageActorName ??= StreamRefsMaster.NextSourceRefName();
 
-            public IActorRef Self => _stageActor.Ref;
+            public IActorRef Self
+            {
+                get
+                {
+                    Debug.Assert(_stageActor != null, nameof(_stageActor) + " != null");
+                    return _stageActor.Ref;
+                }
+            }
             public IActorRef PartnerRef
             {
                 get
@@ -109,8 +118,8 @@ namespace Akka.Streams.Implementation.StreamRef
             private long _expectingSeqNr = 0L;
             private long _localCumulativeDemand = 0L;
             private long _localRemainingRequested = 0L;
-            private FixedSizeBuffer<TOut> _receiveBuffer; // initialized in preStart since depends on settings
-            private IRequestStrategy _requestStrategy; // initialized in preStart since depends on receiveBuffer's size
+            private FixedSizeBuffer<TOut>? _receiveBuffer; // initialized in preStart since depends on settings
+            private IRequestStrategy? _requestStrategy; // initialized in preStart since depends on receiveBuffer's size
             #endregion
 
             public Logic(SourceRefStageImpl<TOut> stage, TaskCompletionSource<ISinkRef<TOut>> promise, Attributes inheritedAttributes) : base(stage.Shape)
@@ -153,6 +162,9 @@ namespace Akka.Streams.Implementation.StreamRef
 
             private void TriggerCumulativeDemand()
             {
+                Debug.Assert(_receiveBuffer != null, nameof(_receiveBuffer) + " != null");
+                Debug.Assert(_requestStrategy != null, nameof(_requestStrategy) + " != null");
+                
                 var i = _receiveBuffer.RemainingCapacity - _localRemainingRequested;
                 if (_partnerRef != null && i > 0)
                 {
@@ -201,12 +213,14 @@ namespace Akka.Streams.Implementation.StreamRef
 
             private void InitialReceive((IActorRef, object) args)
             {
+                Debug.Assert(_stageActor != null, nameof(_stageActor) + " != null");
+                
                 var sender = args.Item1;
                 var message = args.Item2;
 
                 switch (message)
                 {
-                    case OnSubscribeHandshake handshake:
+                    case OnSubscribeHandshake:
                         CancelTimer(SubscriptionTimeoutKey);
                         ObserveAndValidateSender(sender, "Illegal sender in OnSubscribeHandshake");
                         Log.Debug("[{0}] Received handshake {1} from {2}", StageActorName, message, sender);
@@ -249,12 +263,16 @@ namespace Akka.Streams.Implementation.StreamRef
 
             private void TryPush()
             {
+                Debug.Assert(_receiveBuffer != null, nameof(_receiveBuffer) + " != null");
+                
                 if (!_receiveBuffer.IsEmpty && IsAvailable(_stage.Outlet)) Push(_stage.Outlet, _receiveBuffer.Dequeue());
                 else if (_receiveBuffer.IsEmpty && _completed) CompleteStage();
             }
 
             private void OnReceiveElement(object payload)
             {
+                Debug.Assert(_receiveBuffer != null, nameof(_receiveBuffer) + " != null");
+                
                 var outlet = _stage.Outlet;
                 _localRemainingRequested--;
                 if (_receiveBuffer.IsEmpty && IsAvailable(outlet))
@@ -271,6 +289,8 @@ namespace Akka.Streams.Implementation.StreamRef
             /// <exception cref="InvalidPartnerActorException"> Thrown when <paramref name="partner"/> is invalid</exception>
             private void ObserveAndValidateSender(IActorRef partner, string failureMessage)
             {
+                Debug.Assert(_stageActor != null, nameof(_stageActor) + " != null");
+                
                 if (_partnerRef == null)
                 {
                     Log.Debug("Received first message from {0}, assuming it to be the remote partner for this stage", partner);
@@ -296,9 +316,9 @@ namespace Akka.Streams.Implementation.StreamRef
 
         #endregion
 
-        private readonly IActorRef _initialPartnerRef;
+        private readonly IActorRef? _initialPartnerRef;
 
-        public SourceRefStageImpl(IActorRef initialPartnerRef)
+        public SourceRefStageImpl(IActorRef? initialPartnerRef)
         {
             _initialPartnerRef = initialPartnerRef;
 

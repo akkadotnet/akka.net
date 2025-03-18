@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Akka.Event;
@@ -325,8 +326,11 @@ namespace Akka.Streams
         /// <typeparam name="TAttr">TBD</typeparam>
         /// <param name="defaultIfNotFound">TBD</param>
         /// <returns>TBD</returns>
-        public TAttr GetAttribute<TAttr>(TAttr defaultIfNotFound) where TAttr : class, IAttribute
+        #nullable enable
+        [return: NotNullIfNotNull("defaultIfNotFound")]
+        public TAttr? GetAttribute<TAttr>(TAttr? defaultIfNotFound) where TAttr : class, IAttribute
             => GetAttribute<TAttr>() ?? defaultIfNotFound;
+        #nullable restore
 
         /// <summary>
         /// Get the first (least specific) attribute of a given type or subtype thereof.

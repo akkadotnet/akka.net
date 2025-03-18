@@ -182,7 +182,8 @@ namespace Akka.Streams
         public static Akka.Streams.Attributes CreateLogLevels(Akka.Event.LogLevel onElement = 0, Akka.Event.LogLevel onFinish = 0, Akka.Event.LogLevel onError = 3) { }
         public static Akka.Streams.Attributes CreateName(string name) { }
         public static string ExtractName(Akka.Streams.Implementation.IModule module, string defaultIfNotFound) { }
-        public TAttr GetAttribute<TAttr>(TAttr defaultIfNotFound)
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
+        public TAttr GetAttribute<TAttr>([System.Runtime.CompilerServices.NullableAttribute(2)] TAttr defaultIfNotFound)
             where TAttr :  class, Akka.Streams.Attributes.IAttribute { }
         public TAttr GetAttribute<TAttr>()
             where TAttr :  class, Akka.Streams.Attributes.IAttribute { }
@@ -3490,7 +3491,13 @@ namespace Akka.Streams.Implementation
         public override Akka.Streams.Implementation.IModule WithAttributes(Akka.Streams.Attributes attributes) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class QueueSink<T> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SinkShape<T>, Akka.Streams.ISinkQueue<T>>
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1,
+            1,
+            1,
+            1})]
+    public sealed class QueueSink<[System.Runtime.CompilerServices.NullableAttribute(2)]  T> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SinkShape<T>, Akka.Streams.ISinkQueue<T>>
     {
         public readonly Akka.Streams.Inlet<T> In;
         public QueueSink() { }
@@ -3500,16 +3507,26 @@ namespace Akka.Streams.Implementation
         public override string ToString() { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class QueueSource<TOut> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SourceShape<TOut>, Akka.Streams.ISourceQueueWithComplete<TOut>>
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1,
+            1,
+            1,
+            1})]
+    public sealed class QueueSource<[System.Runtime.CompilerServices.NullableAttribute(2)]  TOut> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SourceShape<TOut>, Akka.Streams.ISourceQueueWithComplete<TOut>>
     {
         public QueueSource(int maxBuffer, Akka.Streams.OverflowStrategy overflowStrategy) { }
         public Akka.Streams.Outlet<TOut> Out { get; }
         public override Akka.Streams.SourceShape<TOut> Shape { get; }
         public override Akka.Streams.Stage.ILogicAndMaterializedValue<Akka.Streams.ISourceQueueWithComplete<TOut>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
-        public interface IInput<TOut> { }
-        public sealed class Materialized<TOut> : Akka.Streams.ISourceQueueWithComplete<TOut>, Akka.Streams.ISourceQueue<TOut>
+        public interface IInput<[System.Runtime.CompilerServices.NullableAttribute(2)]  TOut> { }
+        [System.Runtime.CompilerServices.NullableAttribute(0)]
+        public sealed class Materialized<[System.Runtime.CompilerServices.NullableAttribute(2)]  TOut> : Akka.Streams.ISourceQueueWithComplete<TOut>, Akka.Streams.ISourceQueue<TOut>
         {
-            public Materialized(System.Action<Akka.Streams.Implementation.QueueSource<TOut>.IInput> invokeLogic, System.Threading.Tasks.TaskCompletionSource<object> completion) { }
+            public Materialized([System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                    1,
+                    1,
+                    0})] System.Action<Akka.Streams.Implementation.QueueSource<TOut>.IInput> invokeLogic, System.Threading.Tasks.TaskCompletionSource<object> completion) { }
             public void Complete() { }
             public void Fail(System.Exception ex) { }
             public System.Threading.Tasks.Task<Akka.Streams.IQueueOfferResult> OfferAsync(TOut element) { }
@@ -4068,7 +4085,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class Buffer<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1})]
+    public sealed class Buffer<[System.Runtime.CompilerServices.NullableAttribute(2)]  T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
     {
         public Buffer(int count, Akka.Streams.OverflowStrategy overflowStrategy) { }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
@@ -4087,7 +4107,10 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class Delay<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1})]
+    public sealed class Delay<[System.Runtime.CompilerServices.NullableAttribute(2)]  T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
     {
         public Delay(System.TimeSpan delay, Akka.Streams.DelayOverflowStrategy strategy) { }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
