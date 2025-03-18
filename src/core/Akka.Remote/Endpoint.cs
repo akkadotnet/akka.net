@@ -1009,18 +1009,6 @@ namespace Akka.Remote
     /// </summary>
     internal sealed class EndpointWriter : EndpointActor
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="handleOrActive">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="refuseUid">TBD</param>
-        /// <param name="transport">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="codec">TBD</param>
-        /// <param name="receiveBuffers">TBD</param>
-        /// <param name="reliableDeliverySupervisor">TBD</param>
         public EndpointWriter(
                     AkkaProtocolHandle handleOrActive,
                     Address localAddress,
@@ -1088,11 +1076,7 @@ namespace Akka.Remote
         private readonly IRemoteMetrics _remoteMetrics;
 
         #region ActorBase methods
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return new OneForOneStrategy(ex =>
@@ -1101,20 +1085,12 @@ namespace Akka.Remote
                 return Directive.Escalate;
             });
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="reason">TBD</param>
-        /// <exception cref="IllegalActorStateException">TBD</exception>
+        
         protected override void PostRestart(Exception reason)
         {
             throw new IllegalActorStateException("EndpointWriter must not be restarted");
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override void PreStart()
         {
             if (_handle == null)
@@ -1142,10 +1118,7 @@ namespace Akka.Remote
                 return new Status.Failure(e.InnerException ?? e);
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override void PostStop()
         {
             _ackIdleTimerCancelable.CancelIfNotNull();
@@ -1185,6 +1158,7 @@ namespace Akka.Remote
 
                 PublishAndThrow(new InvalidAssociation($"Association failed with {RemoteAddress}", LocalAddress, RemoteAddress, failure.Cause), LogLevel.WarningLevel);
             });
+            
             Receive<Handle>(handle =>
             {
                 // Assert handle == None?
@@ -1341,7 +1315,7 @@ namespace Akka.Remote
                         EndpointReader.ReaderProps(LocalAddress, RemoteAddress, Transport, Settings, _codec, _msgDispatcher,
                             Inbound, (int)handle.HandshakeInfo.Uid, _receiveBuffers, _reliableDeliverySupervisor)
                             .WithDeploy(Deploy.Local)),
-                    string.Format("endpointReader-{0}-{1}", AddressUrlEncoder.Encode(RemoteAddress), _readerId.Next()));
+                    $"endpointReader-{AddressUrlEncoder.Encode(RemoteAddress)}-{_readerId.Next()}");
             Context.Watch(newReader);
             handle.ReadHandlerSource.SetResult(new ActorHandleEventListener(newReader));
             return newReader;
@@ -1431,10 +1405,9 @@ namespace Akka.Remote
         private void EnqueueInBuffer(object message)
         {
             var send = message as EndpointManager.Send;
-            if (send != null && send.Message is IPriorityMessage)
+            if (send is { Message: IPriorityMessage })
                 _prioBuffer.AddLast(send);
-            else if (send != null && send.Message is ActorSelectionMessage actorSelectionMessage &&
-                     actorSelectionMessage.Message is IPriorityMessage)
+            else if (send is { Message: ActorSelectionMessage { Message: IPriorityMessage } })
             {
                 _prioBuffer.AddLast(send);
             }
@@ -1469,6 +1442,10 @@ namespace Akka.Remote
         {
             if (failedMsg is IWrappedMessage wrappedMessage)
             {
+                var builder = new StringBuilder();
+                LogWrapped(builder, wrappedMessage);
+                return builder.ToString();
+
                 static void LogWrapped(StringBuilder builder, IWrappedMessage nextMsg)
                 {
                     builder.Append($"{nextMsg.GetType()}-->");
@@ -1483,10 +1460,6 @@ namespace Akka.Remote
                         builder.Append(nextMsg.Message.GetType());
                     }
                 }
-                
-                var builder = new StringBuilder();
-                LogWrapped(builder, wrappedMessage);
-                return builder.ToString();
             }
 
             return failedMsg.GetType().ToString();
@@ -1565,50 +1538,6 @@ namespace Akka.Remote
 
         private void SendBufferedMessages()
         {
-            bool SendDelegate(object msg)
-            {
-                switch (msg)
-                {
-                    case EndpointManager.Send s:
-                        return WriteSend(s);
-                    case FlushAndStop f:
-                        DoFlushAndStop();
-                        return false;
-                    case StopReading stop:
-                        _reader?.Tell(stop, stop.ReplyTo);
-                        return true;
-                    default:
-                        return true;
-                }
-            }
-
-            bool WriteLoop(int count)
-            {
-                if (count > 0 && _buffer.Any())
-                {
-                    if (SendDelegate(_buffer.First.Value))
-                    {
-                        _buffer.RemoveFirst();
-                        _writeCount += 1;
-                        return WriteLoop(count - 1);
-                    }
-                    return false;
-                }
-
-                return true;
-            }
-
-            bool WritePrioLoop()
-            {
-                if (!_prioBuffer.Any()) return true;
-                if (WriteSend(_prioBuffer.First.Value))
-                {
-                    _prioBuffer.RemoveFirst();
-                    return WritePrioLoop();
-                }
-                return false;
-            }
-
             var size = _buffer.Count;
 
             var ok = WritePrioLoop() && WriteLoop(SendBufferBatchSize);
@@ -1648,6 +1577,52 @@ namespace Akka.Remote
 
             AdjustAdaptiveBackup();
             ScheduleBackoffTimer();
+            return;
+
+            bool SendDelegate(object msg)
+            {
+                switch (msg)
+                {
+                    case EndpointManager.Send s:
+                        return WriteSend(s);
+                    case FlushAndStop f:
+                        DoFlushAndStop();
+                        return false;
+                    case StopReading stop:
+                        _reader?.Tell(stop, stop.ReplyTo);
+                        return true;
+                    default:
+                        return true;
+                }
+            }
+
+            bool WriteLoop(int count)
+            {
+                while (true)
+                {
+                    if (count <= 0 || !_buffer.Any()) return true;
+                    if (!SendDelegate(_buffer.First!.Value)) return false;
+                    _buffer.RemoveFirst();
+                    _writeCount += 1;
+                    count -= 1;
+                }
+            }
+
+            bool WritePrioLoop()
+            {
+                while (true)
+                {
+                    if (!_prioBuffer.Any()) return true;
+                    if (WriteSend(_prioBuffer.First!.Value))
+                    {
+                        _prioBuffer.RemoveFirst();
+                        continue;
+                    }
+
+                    return false;
+                    break;
+                }
+            }
         }
 
         #endregion
@@ -1660,20 +1635,7 @@ namespace Akka.Remote
         private const long MaxAdaptiveBackoffNanos = 2000000L; // 2 ms
         private const long LogBufferSizeInterval = 5000000000L; // 5 s, in nanoseconds
         private const int MaxWriteCount = 50;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="handleOrActive">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="refuseUid">TBD</param>
-        /// <param name="transport">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="codec">TBD</param>
-        /// <param name="receiveBuffers">TBD</param>
-        /// <param name="reliableDeliverySupervisor">TBD</param>
-        /// <returns>TBD</returns>
+        
         public static Props EndpointWriterProps(AkkaProtocolHandle handleOrActive, Address localAddress,
                     Address remoteAddress, int? refuseUid, AkkaProtocolTransport transport, RemoteSettings settings,
                     AkkaPduCodec codec, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers, IActorRef reliableDeliverySupervisor = null)
@@ -1696,72 +1658,43 @@ namespace Akka.Remote
             /// Create a new TakeOver command
             /// </summary>
             /// <param name="protocolHandle">The handle of the new association</param>
-            /// <param name="replyTo">TBD</param>
+            /// <param name="replyTo">The local actor to reply to once the takeover is complete</param>
             public TakeOver(AkkaProtocolHandle protocolHandle, IActorRef replyTo)
             {
                 ProtocolHandle = protocolHandle;
                 ReplyTo = replyTo;
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public AkkaProtocolHandle ProtocolHandle { get; private set; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public IActorRef ReplyTo { get; private set; }
+            
+            public AkkaProtocolHandle ProtocolHandle { get; }
+            
+            public IActorRef ReplyTo { get; }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public sealed class TookOver : INoSerializationVerificationNeeded
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="writer">TBD</param>
-            /// <param name="protocolHandle">TBD</param>
             public TookOver(IActorRef writer, AkkaProtocolHandle protocolHandle)
             {
                 ProtocolHandle = protocolHandle;
                 Writer = writer;
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public IActorRef Writer { get; private set; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public AkkaProtocolHandle ProtocolHandle { get; private set; }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public sealed class BackoffTimer
         {
             private BackoffTimer() { }
             public static BackoffTimer Instance { get; } = new();
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public sealed class FlushAndStop
         {
             private FlushAndStop() { }
             public static FlushAndStop Instance { get; } = new();
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public sealed class AckIdleCheckTimer
         {
             private AckIdleCheckTimer() { }
@@ -1773,98 +1706,53 @@ namespace Akka.Remote
             private FlushAndStopTimeout() { }
             public static FlushAndStopTimeout Instance { get; } = new();
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public sealed class Handle : INoSerializationVerificationNeeded
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="protocolHandle">TBD</param>
             public Handle(AkkaProtocolHandle protocolHandle)
             {
                 ProtocolHandle = protocolHandle;
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public AkkaProtocolHandle ProtocolHandle { get; private set; }
+            
+            public AkkaProtocolHandle ProtocolHandle { get; }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public sealed class StopReading
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="writer">TBD</param>
-            /// <param name="replyTo">TBD</param>
             public StopReading(IActorRef writer, IActorRef replyTo)
             {
                 Writer = writer;
                 ReplyTo = replyTo;
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public IActorRef Writer { get; private set; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public IActorRef ReplyTo { get; private set; }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public sealed class StoppedReading
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="writer">TBD</param>
             public StoppedReading(IActorRef writer)
             {
                 Writer = writer;
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public IActorRef Writer { get; private set; }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public sealed class OutboundAck
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="ack">TBD</param>
             public OutboundAck(Ack ack)
             {
                 Ack = ack;
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public Ack Ack { get; private set; }
         }
 
         private const string AckIdleTimerName = "AckIdleTimer";
 
         #endregion
-
     }
 
     /// <summary>
@@ -1872,19 +1760,6 @@ namespace Akka.Remote
     /// </summary>
     internal sealed class EndpointReader : EndpointActor
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="transport">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="codec">TBD</param>
-        /// <param name="msgDispatch">TBD</param>
-        /// <param name="inbound">TBD</param>
-        /// <param name="uid">TBD</param>
-        /// <param name="receiveBuffers">TBD</param>
-        /// <param name="reliableDeliverySupervisor">TBD</param>
         public EndpointReader(
                     Address localAddress,
                     Address remoteAddress,
@@ -1919,10 +1794,7 @@ namespace Akka.Remote
         private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new();
 
         #region ActorBase overrides
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override void PreStart()
         {
             if (_receiveBuffers.TryGetValue(new EndpointManager.Link(LocalAddress, RemoteAddress), out var resendState))
@@ -1934,10 +1806,7 @@ namespace Akka.Remote
                 }
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override void PostStop()
         {
             SaveState();
@@ -1952,9 +1821,7 @@ namespace Akka.Remote
                 if (payload.Length > Transport.MaximumPayloadBytes)
                 {
                     var reason = new OversizedPayloadException(
-                        string.Format("Discarding oversized payload received: max allowed size {0} bytes, actual size {1} bytes.",
-                            Transport.MaximumPayloadBytes,
-                            payload.Length));
+                        $"Discarding oversized payload received: max allowed size {Transport.MaximumPayloadBytes} bytes, actual size {payload.Length} bytes.");
                     _log.Error(reason, "Transient error while reading from association (association remains live)");
                 }
                 else
@@ -2028,33 +1895,40 @@ namespace Akka.Remote
 
         private void SaveState()
         {
+            var k = new EndpointManager.Link(LocalAddress, RemoteAddress);
+            UpdateSavedState(k, _receiveBuffers.GetValueOrDefault(k));
+            return;
+
+            void UpdateSavedState(EndpointManager.Link key, EndpointManager.ResendState expectedState)
+            {
+                while (true)
+                {
+                    if (expectedState == null)
+                    {
+                        if (!_receiveBuffers.TryAdd(key, new EndpointManager.ResendState(_uid, _ackedReceiveBuffer)))
+                        {
+                            _receiveBuffers.TryGetValue(key, out var prevValue);
+                            expectedState = prevValue;
+                            continue;
+                        }
+                    }
+                    else if (!_receiveBuffers.TryUpdate(key, Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState), expectedState))
+                    {
+                        _receiveBuffers.TryGetValue(key, out var prevValue);
+                        expectedState = prevValue;
+                        continue;
+                    }
+
+                    break;
+                }
+            }
+
             EndpointManager.ResendState Merge(EndpointManager.ResendState current,
                 EndpointManager.ResendState oldState)
             {
                 if (current.Uid == oldState.Uid) return new EndpointManager.ResendState(_uid, oldState.Buffer.MergeFrom(current.Buffer));
                 return current;
             }
-
-            void UpdateSavedState(EndpointManager.Link key, EndpointManager.ResendState expectedState)
-            {
-                if (expectedState == null)
-                {
-                    if (!_receiveBuffers.TryAdd(key, new EndpointManager.ResendState(_uid, _ackedReceiveBuffer)))
-                    {
-                        _receiveBuffers.TryGetValue(key, out var prevValue);
-                        UpdateSavedState(key, prevValue);
-                    }
-                }
-                else if (!_receiveBuffers.TryUpdate(key,
-                    Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState), expectedState))
-                {
-                    _receiveBuffers.TryGetValue(key, out var prevValue);
-                    UpdateSavedState(key, prevValue);
-                }
-            }
-
-            var k = new EndpointManager.Link(LocalAddress, RemoteAddress);
-            UpdateSavedState(k, !_receiveBuffers.TryGetValue(k, out var previousValue) ? null : previousValue);
         }
 
         private void HandleDisassociated(DisassociateInfo info)
@@ -2098,21 +1972,7 @@ namespace Akka.Remote
         #endregion
 
         #region Static members
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="transport">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="codec">TBD</param>
-        /// <param name="dispatcher">TBD</param>
-        /// <param name="inbound">TBD</param>
-        /// <param name="uid">TBD</param>
-        /// <param name="receiveBuffers">TBD</param>
-        /// <param name="reliableDeliverySupervisor">TBD</param>
-        /// <returns>TBD</returns>
+        
         public static Props ReaderProps(
                     Address localAddress,
                     Address remoteAddress,
