@@ -5494,26 +5494,37 @@ namespace Akka.Util
         public static Akka.Util.Option<T> op_Implicit(T value) { }
         public static bool !=(Akka.Util.Option<T> left, Akka.Util.Option<T> right) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class static Result
     {
-        public static Akka.Util.Result<T> Failure<T>(System.Exception exception) { }
-        public static Akka.Util.Result<T> From<T>(System.Func<T> func) { }
-        public static Akka.Util.Result<T> FromTask<T>(System.Threading.Tasks.Task<T> task) { }
-        public static Akka.Util.Result<T> Success<T>(T value) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                0,
+                1})]
+        public static Akka.Util.Result<T> Failure<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Exception exception) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                0,
+                1})]
+        public static Akka.Util.Result<T> From<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Func<T> func) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                0,
+                1})]
+        public static Akka.Util.Result<T> FromTask<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Threading.Tasks.Task<T> task) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                0,
+                1})]
+        public static Akka.Util.Result<T> Success<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(T value) { }
     }
-    public struct Result<T> : System.IEquatable<Akka.Util.Result<T>>
+    [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
+    public struct Result<[System.Runtime.CompilerServices.NullableAttribute(2)]  T> : System.IEquatable<Akka.Util.Result<T>>
     {
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
         public readonly System.Exception Exception;
         public readonly bool IsSuccess;
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
         public readonly T Value;
         public Result(T value) { }
         public Result(System.Exception exception) { }
-        public bool Equals(Akka.Util.Result<T> other) { }
-        public override bool Equals(object obj) { }
-        public override int GetHashCode() { }
         public override string ToString() { }
-        public static bool ==(Akka.Util.Result<T> left, Akka.Util.Result<T> right) { }
-        public static bool !=(Akka.Util.Result<T> left, Akka.Util.Result<T> right) { }
     }
     public class Right<T>
     {

@@ -1,3 +1,25 @@
+#### 1.5.40 March 17th, 2025 ####
+
+*Placeholder for nightlies*
+
+#### 1.5.39 March 14th, 2025 ####
+
+Akka.NET v1.5.39 contains a mission-critical bugfix for most Akka.Streams users.
+
+* [Akka.Cluster.Sharding: recursively unpack `ShardingEnvelope` contents inside `IMessageExtract.EntityMessage`](https://github.com/akkadotnet/akka.net/issues/7470) - fixed a small edge case bug that could cause the `ShardingEnvelope` to be delivered to actors rather than the content inside the envelope.
+* [Akka.Util: improve `Result<T>`](https://github.com/akkadotnet/akka.net/pull/7520) - small set of API changes here aimed at making Akka.Streams easier to reason about.
+* [Akka.Streams: Fixed race conditions + unsafe struct assignment in `SelectAsync`](https://github.com/akkadotnet/akka.net/pull/7521) - this is a bug that's popped up in [Akka.Persistence.Sql](https://github.com/akkadotnet/Akka.Persistence.Sql), [Akka.Streams.Kafka](https://github.com/akkadotnet/Akka.Streams.Kafka), and many other places where `SelectAsync` is used: https://github.com/akkadotnet/akka.net/issues/7518 
+
+3 contributors since release 1.5.38
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 6 | 242 | 251 | Aaron Stannard |
+| 1 | 42 | 2 | Arjen Smits |
+| 1 | 107 | 1 | Gregorius Soedharmo |
+
+To [see the full set of changes in Akka.NET v1.5.39, click here](https://github.com/akkadotnet/akka.net/milestone/122).
+
 #### 1.5.38 February 17th 2025 ####
 
 Akka.NET v1.5.38 is a maintenance release with several bug fixes and minor quality of life API additions
