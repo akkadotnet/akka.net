@@ -2808,7 +2808,7 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(Attributes inheritedAttributes, SelectAsyncUnordered<TIn, TOut> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>();
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
                 _taskCallback = GetAsyncCallback<Result<TOut>>(TaskCompleted);
@@ -2827,8 +2827,10 @@ namespace Akka.Streams.Implementation.Fusing
                     if (task.IsCompleted)
                         TaskCompleted(Result.FromTask(task));
                     else
-                        task.ContinueWith(t => _taskCallback(Result.FromTask(t)),
-                            TaskContinuationOptions.ExecuteSynchronously);
+                    {
+                        // use an async local function to await the task and then run the task callback
+                        _ = RunTask(task);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -2838,6 +2840,20 @@ namespace Akka.Streams.Implementation.Fusing
 
                 if (Todo < _stage._parallelism && !HasBeenPulled(_stage.In))
                     TryPull(_stage.In);
+                return;
+
+                async Task RunTask(Task<TOut> tt)
+                {
+                    try
+                    {
+                        var result = Result.Success(await tt);
+                        _taskCallback(result);
+                    }
+                    catch (Exception ex)
+                    {
+                        _taskCallback(Result.Failure<TOut>(ex));
+                    }
+                }
             }
 
             public override void OnUpstreamFinish()
@@ -2909,42 +2925,22 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly int _parallelism;
         private readonly Func<TIn, Task<TOut>> _mapFunc;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Inlet<TIn> In = new("SelectAsyncUnordered.in");
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Outlet<TOut> Out = new("SelectAsyncUnordered.out");
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="parallelism">TBD</param>
-        /// <param name="mapFunc">TBD</param>
+        public readonly Inlet<TIn> In = new("SelectAsyncUnordered.in");
+
+        public readonly Outlet<TOut> Out = new("SelectAsyncUnordered.out");
+        
         public SelectAsyncUnordered(int parallelism, Func<TIn, Task<TOut>> mapFunc)
         {
             _parallelism = parallelism;
             _mapFunc = mapFunc;
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override Attributes InitialAttributes { get; } = Attributes.CreateName("selectAsyncUnordered");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public override FlowShape<TIn, TOut> Shape { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <returns>TBD</returns>
+        
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
             => new Logic(inheritedAttributes, this);
     }

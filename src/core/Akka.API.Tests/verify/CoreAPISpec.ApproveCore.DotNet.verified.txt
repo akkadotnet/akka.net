@@ -2078,7 +2078,6 @@ namespace Akka.Actor.Internal
         public virtual bool IsTerminating { get; }
         public System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> Stats { get; }
         public abstract Akka.Actor.Internal.IChildrenContainer Add(string name, Akka.Actor.Internal.ChildRestartStats stats);
-        protected static void ChildStatsAppender(System.Text.StringBuilder sb, System.Collections.Generic.KeyValuePair<string, Akka.Actor.Internal.IChildStats> kvp, int index) { }
         public bool Contains(Akka.Actor.IActorRef actor) { }
         public abstract Akka.Actor.Internal.IChildrenContainer Remove(Akka.Actor.IActorRef child);
         public abstract Akka.Actor.Internal.IChildrenContainer Reserve(string name);
@@ -5032,6 +5031,7 @@ namespace Akka.Routing
         public abstract Akka.Actor.ActorBase CreateRouterActor();
         public bool Equals(Akka.Routing.RouterConfig other) { }
         public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public virtual bool IsManagementMessage(object message) { }
         public virtual Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
         public abstract Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system);

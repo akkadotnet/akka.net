@@ -88,7 +88,7 @@ namespace Akka.Streams.Tests.Dsl
             sub.Request(1000);
             foreach (var n in Enumerable.Range(1, 50))
                 await c.ExpectNextAsync(n);
-            //Enumerable.Range(1, 50).ForEach(n => c.ExpectNext(n));
+           
             await c.ExpectCompleteAsync();
         }
 

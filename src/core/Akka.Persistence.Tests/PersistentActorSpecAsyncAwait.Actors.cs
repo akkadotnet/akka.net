@@ -597,11 +597,12 @@ namespace Akka.Persistence.Tests
                             await Task.Delay(100);
 
                             Sender.Tell(cmd.Data);
+                            var events = new List<Evt>();
                             for (int i = 1; i <= 3; i++)
                             {
-                                PersistAsync(new Evt(cmd.Data.ToString() + "-" + (++_counter)),
-                                    evt => { Sender.Tell("a" + evt.Data.ToString().Substring(1)); });
+                                events.Add(new Evt(cmd.Data.ToString() + "-" + (++_counter)));
                             }
+                            PersistAllAsync(events, evt => { Sender.Tell("a" + evt.Data.ToString().Substring(1)); });
                         });
 
                         return true;
