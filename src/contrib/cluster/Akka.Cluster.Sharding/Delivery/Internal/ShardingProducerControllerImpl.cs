@@ -350,10 +350,10 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
             {
                 switch (c)
                 {
-                    case (_, _, { IsEmpty: true }): // no reply
+                    case (_, outSeqNr, { IsEmpty: true }): // no reply
                         break;
-                    case (_, _, { IsEmpty: false } replyTo):
-                        replyTo.Value.Tell(Done.Instance);
+                    case (_, outSeqNr, { IsEmpty: false } replyTo):
+                        replyTo.Value.Tell(outSeqNr);  // Send the sequence number instead of Done.Instance
                         break;
                 }
             }
