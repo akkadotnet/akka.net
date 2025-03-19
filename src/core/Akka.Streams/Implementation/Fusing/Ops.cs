@@ -2674,7 +2674,6 @@ namespace Akka.Streams.Implementation.Fusing
                             // this could happen if we are looping in PushOne and end up on a failed Task before the
                             // HolderCompleted callback has run
                             var strategy = _decider(result.Exception);
-                            Log.Error(result.Exception, "An exception occured inside SelectAsync while processing message [{0}]. Supervision strategy: {1}", holder.Message, strategy);
                             switch (strategy)
                             {
                                 case Directive.Stop:
