@@ -67,34 +67,63 @@ namespace Akka.TestKit.Tests.TestKitBaseTests
         [Fact]
         public async Task WithinAsync_timeout_should_propagate_to_EventFilter()
         {
-            // Create a test event filter with a relatively long default timeout
+            // This test passes if:
+            // 1. The test fails quickly due to the short WithinAsync timeout (expected)
+            // 2. The timeoutOccurred flag remains false - meaning our short timeout was respected
+            //
+            // This test will fail if:
+            // 1. The EventFilter ignores the WithinAsync timeout and uses its own longer default timeout
+            // 2. The timeoutOccurred flag will be set to true in that case
+            
             var testEvent = "test-event-" + Guid.NewGuid().ToString("N");
             var filter = EventFilter.Info(contains: testEvent);
             
-            // Use a short WithinAsync timeout (250ms)
-            var shortTimeout = 250.Milliseconds();
-            var longTimeout = 10.Seconds();
+            // Use a very short timeout for WithinAsync - something that would definitely
+            // fail if the EventFilter is using its own longer default timeout
+            var shortTimeout = 200.Milliseconds();
             
-            // Set up timing - EventFilter's default timeout would be much longer than our WithinAsync timeout
-            var task = WithinAsync(shortTimeout, async () =>
-            {
-                // This should timeout quickly (inheriting the short timeout from WithinAsync)
-                // rather than waiting for the default EventFilter timeout
-                await filter.ExpectOneAsync(async () =>
+            // Create a custom timeout tracker for precise measurement
+            var timeoutOccurred = false;
+            var timerCts = new System.Threading.CancellationTokenSource();
+            var timerTask = Task.Run(async () => {
+                try 
                 {
-                    // We never log the expected message, so this should time out
-                    await Task.Delay(100);
-                });
+                    // Wait slightly longer than the short timeout
+                    await Task.Delay(shortTimeout.Add(300.Milliseconds()), timerCts.Token);
+                    // If we get here, the test is taking too long
+                    timeoutOccurred = true;
+                }
+                catch (System.Threading.Tasks.TaskCanceledException)
+                {
+                    // This is expected if the test completes in time
+                }
             });
             
-            // Measure the time it takes - should be close to the short timeout, not the long one
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            await Awaiting(() => task).Should().ThrowAsync<Exception>();
-            stopwatch.Stop();
-            
-            // The failure should happen within a timeframe closer to the short timeout
-            // Add some buffer for test execution overhead
-            stopwatch.ElapsedMilliseconds.Should().BeLessThan((long)shortTimeout.TotalMilliseconds + 500);
+            try
+            {
+                // This should fail quickly with the short timeout
+                // The timeout error is wrapped in an AggregateException when using our fix
+                await Assert.ThrowsAsync<AggregateException>(async () =>
+                {
+                    await WithinAsync(shortTimeout, async () =>
+                    {
+                        // This won't receive any messages and should inherit the short timeout
+                        await filter.ExpectOneAsync(() => Task.CompletedTask);
+                    });
+                });
+                
+                // Cancel the timeout tracker since we've already completed
+                timerCts.Cancel();
+                await Task.WhenAny(timerTask);
+                
+                // Verify the test completed before our manual timeout
+                Assert.False(timeoutOccurred, 
+                    "The test took longer than expected. EventFilter likely did not inherit WithinAsync timeout.");
+            }
+            finally
+            {
+                timerCts.Cancel();
+            }
         }
     }
 }

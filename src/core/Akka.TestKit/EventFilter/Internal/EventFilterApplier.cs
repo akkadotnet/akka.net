@@ -386,17 +386,20 @@ namespace Akka.TestKit.Internal
             var leeway = system.HasExtension<TestKitSettings>()
                 ? TestKitExtension.For(system).TestEventFilterLeeway
                 : _testkit.TestKitSettings.TestEventFilterLeeway;
-
-            // Calculate the timeout based on explicit timeout, TestKit state, and default leeway
-            var timeoutValue = timeout.HasValue ? _testkit.Dilated(timeout.Value) : leeway;
             
-            // Use the remaining time in a WithinAsync block if it's set and less than our current timeout
-            // var remaining = _testkit.Remaining;
-            // if (remaining < timeoutValue)
-            // {
-            //     timeoutValue = remaining;
-            // }
-            //
+            // Calculate timeout - if an explicit timeout is provided, use that (after dilating)
+            // Otherwise, if we're in a WithinAsync block use its remaining time
+            // Otherwise use the default leeway
+            TimeSpan timeoutValue;
+            if (timeout.HasValue)
+            {
+                timeoutValue = _testkit.Dilated(timeout.Value);
+            }
+            else
+            {
+                timeoutValue = _testkit.RemainingOrDefault;
+            }
+   
             
             matchedEventHandler ??= new MatchedEventHandler();
             system.EventStream.Publish(new Mute(_filters));
