@@ -2547,7 +2547,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private sealed class Holder<T>(object? message, Result<T> element)
             {
-                public object? Message { get; private set; } = message;
+                public object? Message { get; } = message;
                 
                 public Result<T> Element { get; private set; } = element;
 
@@ -2607,7 +2607,7 @@ namespace Akka.Streams.Implementation.Fusing
                             catch(Exception ex){
                                 var result = Result.Failure<TOut>(ex);
                                 _taskCallback((holder, result));
-                            }   
+                            }
                         }
                         
                         _ = WaitForTask();
@@ -2632,8 +2632,7 @@ namespace Akka.Streams.Implementation.Fusing
                             throw new ArgumentOutOfRangeException($"Unknown SupervisionStrategy directive: {strategy}", e);
                     }
                 }
-                if (Todo < _stage._parallelism && !HasBeenPulled(_stage.In))
-                    TryPull(_stage.In);
+                PullIfNeeded();
             }
 
             public override void OnUpstreamFinish()
@@ -2660,22 +2659,13 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                var inlet = _stage.In;
                 while (true)
                 {
                     if (_buffer.IsEmpty)
-                    {
-                        if (IsClosed(inlet))
-                            CompleteStage();
-                        else if (!HasBeenPulled(inlet))
-                            Pull(inlet);
-                    }
+                        PullIfNeeded();
                     else if (_buffer.Peek()!.Element == NotYetThere) // Shebang is fine, we checked that the buffer is not empty
-                    {
-                        if (Todo < _stage._parallelism && !HasBeenPulled(inlet))
-                            TryPull(inlet);
-                    }
-                    else
+                        PullIfNeeded(); // ahead of line blocking to keep order
+                    else if(IsAvailable(_stage.Out))
                     {
                         var holder = _buffer.Dequeue();
                         var result = holder.Element;
@@ -2684,7 +2674,6 @@ namespace Akka.Streams.Implementation.Fusing
                             // this could happen if we are looping in PushOne and end up on a failed Task before the
                             // HolderCompleted callback has run
                             var strategy = _decider(result.Exception);
-                            Log.Error(result.Exception, "An exception occured inside SelectAsync while processing message [{0}]. Supervision strategy: {1}", holder.Message, strategy);
                             switch (strategy)
                             {
                                 case Directive.Stop:
@@ -2702,12 +2691,20 @@ namespace Akka.Streams.Implementation.Fusing
                         }
 
                         Push(_stage.Out!, result.Value);
-                        if (Todo < _stage._parallelism && !HasBeenPulled(inlet))
-                            TryPull(inlet);
+                        PullIfNeeded();
                     }
 
                     break;
                 }
+            }
+
+            private void PullIfNeeded()
+            {
+                if(IsClosed(_stage.In) && _buffer!.IsEmpty)
+                    CompleteStage();
+                else if(_buffer!.Used < _stage._parallelism && !HasBeenPulled(_stage.In))
+                    TryPull(_stage.In);
+                // else already pulled and waiting for next element
             }
 
             private void HolderCompleted(Holder<TOut> holder, Result<TOut> result)
