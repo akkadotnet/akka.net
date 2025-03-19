@@ -95,12 +95,12 @@ public static class ShardingProducerController
         /// <returns>A task that will complete once the message has been successfully persisted by the <see cref="ProducerController"/>.</returns>
         public Task<long> AskNextTo(EntityId entityId, T msg, CancellationToken cancellationToken = default)
         {
+            return AskNextToRef.Ask<long>(Wrapper, cancellationToken: cancellationToken, timeout: null);
+
             MessageWithConfirmation<T> Wrapper(IActorRef r)
             {
                 return new MessageWithConfirmation<T>(entityId, msg, r);
             }
-
-            return AskNextToRef.Ask<long>(Wrapper, cancellationToken: cancellationToken, timeout: null);
         }
 
         /// <summary>
