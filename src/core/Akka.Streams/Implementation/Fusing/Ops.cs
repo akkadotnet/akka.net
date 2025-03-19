@@ -2547,8 +2547,6 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private sealed class Holder<T>(object? message, Result<T> element)
             {
-                private Directive? _cachedDirective = null;
-                
                 public object? Message { get; } = message;
                 
                 public Result<T> Element { get; private set; } = element;
@@ -2558,12 +2556,6 @@ namespace Akka.Streams.Implementation.Fusing
                     Element = result.IsSuccess && result.Value == null
                         ? Result.Failure<T>(ReactiveStreamsCompliance.ElementMustNotBeNullException)
                         : result;
-                }
-
-                public Directive SupervisionDirectiveFor(Decider decider, Exception ex)
-                {
-                    _cachedDirective ??= decider(ex);
-                    return _cachedDirective.Value;
                 }
             }
 
@@ -2681,7 +2673,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             // this could happen if we are looping in PushOne and end up on a failed Task before the
                             // HolderCompleted callback has run
-                            var strategy = holder.SupervisionDirectiveFor(_decider, result.Exception!);
+                            var strategy = _decider(result.Exception);
                             Log.Error(result.Exception, "An exception occured inside SelectAsync while processing message [{0}]. Supervision strategy: {1}", holder.Message, strategy);
                             switch (strategy)
                             {
@@ -2728,7 +2720,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 
                 var exception = result.Exception;
-                var strategy = holder.SupervisionDirectiveFor(_decider, exception!);
+                var strategy = _decider(exception);
                 Log.Error(exception, "An exception occured inside SelectAsync while executing Task. Supervision strategy: {0}", strategy);
                 switch (strategy)
                 {
