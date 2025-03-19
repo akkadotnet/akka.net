@@ -788,16 +788,18 @@ namespace Akka.Streams.Tests.Dsl
         {
             var failCount = new AtomicCounter(0);
             var result = await Source.From(new[]{true, false})
-                .SelectAsync(1, elem => Task.Run(() =>
-                    {
-                        if (elem)
-                            throw new TestException("this has gone too far");
-                        return elem;
-                    }))
+                .SelectAsync(1, async elem =>
+                {
+                    await Task.Yield();
+                    if (elem)
+                        throw new TestException("this has gone too far");
+                    return elem;
+                })
                 .AddAttributes(ActorAttributes.CreateSupervisionStrategy(cause =>
                 {
                     switch (cause)
                     {
+                        case TestException:
                         case AggregateException { InnerException: TestException }:
                             failCount.IncrementAndGet();
                             return Directive.Resume;
