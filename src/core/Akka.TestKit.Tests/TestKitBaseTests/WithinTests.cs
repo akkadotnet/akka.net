@@ -63,5 +63,38 @@ namespace Akka.TestKit.Tests.TestKitBaseTests
                     0.1.Seconds());
             }).Should().ThrowAsync<XunitException>();
         }
+
+        [Fact]
+        public async Task WithinAsync_timeout_should_propagate_to_EventFilter()
+        {
+            // Create a test event filter with a relatively long default timeout
+            var testEvent = "test-event-" + Guid.NewGuid().ToString("N");
+            var filter = EventFilter.Info(contains: testEvent);
+            
+            // Use a short WithinAsync timeout (250ms)
+            var shortTimeout = 250.Milliseconds();
+            var longTimeout = 10.Seconds();
+            
+            // Set up timing - EventFilter's default timeout would be much longer than our WithinAsync timeout
+            var task = WithinAsync(shortTimeout, async () =>
+            {
+                // This should timeout quickly (inheriting the short timeout from WithinAsync)
+                // rather than waiting for the default EventFilter timeout
+                await filter.ExpectOneAsync(async () =>
+                {
+                    // We never log the expected message, so this should time out
+                    await Task.Delay(100);
+                });
+            });
+            
+            // Measure the time it takes - should be close to the short timeout, not the long one
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            await Awaiting(() => task).Should().ThrowAsync<Exception>();
+            stopwatch.Stop();
+            
+            // The failure should happen within a timeframe closer to the short timeout
+            // Add some buffer for test execution overhead
+            stopwatch.ElapsedMilliseconds.Should().BeLessThan((long)shortTimeout.TotalMilliseconds + 500);
+        }
     }
 }
