@@ -2670,7 +2670,7 @@ namespace Akka.Streams.Implementation.Fusing
                         else if (!HasBeenPulled(inlet))
                             Pull(inlet);
                     }
-                    else if (_buffer.Peek()!.Element == NotYetThere) // Shebang is fine, we checked that the buffer is not empty
+                    else if (ReferenceEquals(_buffer.Peek()!.Element, NotYetThere)) // Shebang is fine, we checked that the buffer is not empty
                     {
                         if (Todo < _stage._parallelism && !HasBeenPulled(inlet))
                             TryPull(inlet);
