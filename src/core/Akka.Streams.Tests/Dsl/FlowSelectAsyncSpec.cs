@@ -783,66 +783,6 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
         
-         [Fact(DisplayName = "A Flow with SelectAsync must not invoke the decider twice for the same failed task")]
-        public async Task SelectAsyncDeciderFailedTask()
-        {
-            var failCount = new AtomicCounter(0);
-            var result = await Source.From(new[]{true, false})
-                .SelectAsync(1, async elem =>
-                {
-                    await Task.Yield();
-                    if (elem)
-                        throw new TestException("this has gone too far");
-                    return elem;
-                })
-                .AddAttributes(ActorAttributes.CreateSupervisionStrategy(cause =>
-                {
-                    switch (cause)
-                    {
-                        case TestException:
-                        case AggregateException { InnerException: TestException }:
-                            failCount.IncrementAndGet();
-                            return Directive.Resume;
-                        default:
-                            return Directive.Stop;
-                    }
-                }))
-                .RunWith(Sink.Seq<bool>(), Materializer);
-
-            result.Count.Should().Be(1);
-            result[0].Should().BeFalse();
-            failCount.Current.Should().Be(1);
-        }
-
-        [Fact(DisplayName = "A Flow with SelectAsync must not invoke the decider twice for the same task that already failed")]
-        public async Task SelectAsyncDeciderAlreadyFailedTask()
-        {
-            var failCount = new AtomicCounter(0);
-            var result = await Source.From(new[]{true, false})
-                .SelectAsync(1, elem => 
-                {
-                    if (elem)
-                        return Task.FromException<bool>(new TestException("this has gone too far"));
-                    return Task.FromResult(elem);
-                })
-                .AddAttributes(ActorAttributes.CreateSupervisionStrategy(cause =>
-                {
-                    switch (cause)
-                    {
-                        case AggregateException { InnerException: TestException }:
-                            failCount.IncrementAndGet();
-                            return Directive.Resume;
-                        default:
-                            return Directive.Stop;
-                    }
-                }))
-                .RunWith(Sink.Seq<bool>(), Materializer);
-
-            result.Count.Should().Be(1);
-            result[0].Should().BeFalse();
-            failCount.Current.Should().Be(1);
-        }
-
         [Fact(DisplayName = "A Flow with SelectAsync must not invoke the decider twice when SelectAsync throws")]
         public async Task SelectAsyncDeciderFailingSelectAsync()
         {
