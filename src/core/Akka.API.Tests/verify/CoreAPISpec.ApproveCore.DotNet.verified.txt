@@ -5605,6 +5605,7 @@ namespace Akka.Util
         public bool IsSuccess { get; }
         public Akka.Util.Option<T> Success { get; }
         public static Akka.Util.Try<T> From(System.Func<T> func) { }
+        public static Akka.Util.Try<T> FromTask(System.Threading.Tasks.Task<T> task) { }
         public T Get() { }
         public Akka.Util.Try<T> GetOrElse(System.Func<T> fallback) { }
         public Akka.Util.Try<T> OrElse(Akka.Util.Try<T> @default) { }
