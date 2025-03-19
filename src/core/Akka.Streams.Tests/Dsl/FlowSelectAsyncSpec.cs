@@ -150,7 +150,7 @@ namespace Akka.Streams.Tests.Dsl
                 sub.Request(10);
 
                 var exception = await c.ExpectErrorAsync();
-                exception.InnerException!.Message.Should().Be("err1");
+                exception.Message.Should().Be("err1");
             }, Materializer).ShouldCompleteWithin(RemainingOrDefault);
         }
 

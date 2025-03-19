@@ -2545,27 +2545,27 @@ namespace Akka.Streams.Implementation.Fusing
 
         private sealed class Logic : InAndOutGraphStageLogic
         {
-            private sealed class Holder<T>(object? message, Result<T> element)
+            private sealed class Holder<T>(object? message, Try<T> element)
             {
-                public object? Message { get; private set; } = message;
+                public object? Message { get; } = message;
                 
-                public Result<T> Element { get; private set; } = element;
+                public Try<T> Element { get; private set; } = element;
 
-                public void SetElement(Result<T> result)
+                public void SetElement(Try<T> result)
                 {
-                    Element = result.IsSuccess && result.Value == null
-                        ? Result.Failure<T>(ReactiveStreamsCompliance.ElementMustNotBeNullException)
+                    Element = result is { IsSuccess: true, Success.Value: null }
+                        ? new Try<T>(ReactiveStreamsCompliance.ElementMustNotBeNullException)
                         : result;
                 }
             }
 
-            private static readonly Result<TOut> NotYetThere = Result.Failure<TOut>(new Exception());
+            private static readonly Try<TOut> NotYetThere = new (new Exception());
 
             private readonly SelectAsync<TIn, TOut> _stage;
             private readonly Decider _decider;
 
             private IBuffer<Holder<TOut>>? _buffer;
-            private readonly Action<(Holder<TOut> holder, Result<TOut> result)> _taskCallback;
+            private readonly Action<(Holder<TOut> holder, Try<TOut> result)> _taskCallback;
 
             public Logic(Attributes inheritedAttributes, SelectAsync<TIn, TOut> stage) : base(stage.Shape)
             {
@@ -2573,7 +2573,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>();
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                _taskCallback = GetAsyncCallback<(Holder<TOut> holder, Result<TOut> result)>(t => HolderCompleted(t.holder, t.result));
+                _taskCallback = GetAsyncCallback<(Holder<TOut> holder, Try<TOut> result)>(t => HolderCompleted(t.holder, t.result));
 
                 SetHandlers(stage.In, stage.Out, this);
             }
@@ -2593,7 +2593,7 @@ namespace Akka.Streams.Implementation.Fusing
                     // scheduling it to an execution context
                     if (task.IsCompleted)
                     {
-                        HolderCompleted(holder, Result.FromTask(task));
+                        HolderCompleted(holder, Try<TOut>.FromTask(task));
                     }
                     else
                     {
@@ -2601,11 +2601,11 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             try
                             {
-                                var result = Result.Success(await task);
+                                var result = new Try<TOut>(await task);
                                 _taskCallback((holder, result));
                             }
                             catch(Exception ex){
-                                var result = Result.Failure<TOut>(ex);
+                                var result = new Try<TOut>(ex);
                                 _taskCallback((holder, result));
                             }   
                         }
@@ -2683,12 +2683,12 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             // this could happen if we are looping in PushOne and end up on a failed Task before the
                             // HolderCompleted callback has run
-                            var strategy = _decider(result.Exception);
-                            Log.Error(result.Exception, "An exception occured inside SelectAsync while processing message [{0}]. Supervision strategy: {1}", holder.Message, strategy);
+                            var strategy = _decider(result.Failure.Value);
+                            Log.Error(result.Failure.Value, "An exception occured inside SelectAsync while processing message [{0}]. Supervision strategy: {1}", holder.Message, strategy);
                             switch (strategy)
                             {
                                 case Directive.Stop:
-                                    FailStage(result.Exception);
+                                    FailStage(result.Failure.Value);
                                     return;
                         
                                 case Directive.Resume:
@@ -2696,12 +2696,12 @@ namespace Akka.Streams.Implementation.Fusing
                                     break;
                         
                                 default:
-                                    throw new ArgumentOutOfRangeException($"Unknown SupervisionStrategy directive: {strategy}", result.Exception);
+                                    throw new ArgumentOutOfRangeException($"Unknown SupervisionStrategy directive: {strategy}", result.Failure.Value);
                             }
                             continue;
                         }
 
-                        Push(_stage.Out!, result.Value);
+                        Push(_stage.Out, result.Success.Value);
                         if (Todo < _stage._parallelism && !HasBeenPulled(inlet))
                             TryPull(inlet);
                     }
@@ -2710,7 +2710,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
 
-            private void HolderCompleted(Holder<TOut> holder, Result<TOut> result)
+            private void HolderCompleted(Holder<TOut> holder, Try<TOut> result)
             {
                 // we may not be at the front of the line right now, so save the result for later
                 holder.SetElement(result);
@@ -2721,7 +2721,7 @@ namespace Akka.Streams.Implementation.Fusing
                     return;
                 }
                 
-                var exception = result.Exception;
+                var exception = result.Failure.Value;
                 var strategy = _decider(exception);
                 Log.Error(exception, "An exception occured inside SelectAsync while executing Task. Supervision strategy: {0}", strategy);
                 switch (strategy)

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 
 namespace Akka.Util
 {
@@ -21,6 +22,7 @@ namespace Akka.Util
         public Try(T success)
         {
             Success = success;
+            IsSuccess = true;
         }
 
         /// <summary>
@@ -39,7 +41,7 @@ namespace Akka.Util
         /// <summary>
         /// Shows if this is Success
         /// </summary>
-        public bool IsSuccess => Success.HasValue;
+        public bool IsSuccess { get; }
         
         /// <summary>
         /// If set, contains successfull execution result
@@ -99,6 +101,20 @@ namespace Akka.Util
             try
             {
                 return new Try<T>(func());
+            }
+            catch (Exception ex)
+            {
+                return new Try<T>(ex);
+            }
+        }
+
+        public static Try<T> FromTask(Task<T> task)
+        {
+            if(!task.IsCompleted)
+                throw new ArgumentException("Task is not completed. Try.FromTask only accepts completed tasks.", nameof(task));
+            try
+            {
+                return new Try<T>(task.GetAwaiter().GetResult());
             }
             catch (Exception ex)
             {
