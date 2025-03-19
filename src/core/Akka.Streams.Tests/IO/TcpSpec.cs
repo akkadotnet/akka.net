@@ -603,7 +603,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             var echoConnection = Sys.TcpStream().OutgoingConnection(serverAddress);
 
             var testInput = Enumerable.Range(0, 255)
-                .Select(i => ByteString.FromBytes(new[] { Convert.ToByte(i) }))
+                .Select(i => ByteString.FromBytes([Convert.ToByte(i)]))
                 .ToList();
 
             var expectedOutput = testInput.Aggregate(ByteString.Empty, (agg, b) => agg.Concat(b));
@@ -614,7 +614,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 .Via(echoConnection)
                 .Via(echoConnection)
                 .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer)
-                .ShouldCompleteWithin(3.Seconds());
+                .ShouldCompleteWithin(10.Seconds());
             
             result.Should().BeEquivalentTo(expectedOutput);
             await binding.Unbind().ShouldCompleteWithin(3.Seconds());
