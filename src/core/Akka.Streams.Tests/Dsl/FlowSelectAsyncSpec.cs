@@ -416,7 +416,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_Flow_with_SelectAsync_must_resume_after_multiple_failures()
         {
-            await this.AssertAllStagesStoppedAsync(async () => {
+            await this.AssertAllStagesStoppedAsync(() => {
                 var futures = new[]
                 {
                     Task.Run(() => { throw new TestException("failure1"); return "";}),
@@ -434,7 +434,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 t.Result.Should().Be("happy");
-                return Task.CompletedTask;
+                return Task.FromResult(Task.CompletedTask);
             }, Materializer);
         }
 
