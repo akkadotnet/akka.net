@@ -667,7 +667,11 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
             var newInterval = Interval == MaxBackoff
                 ? MaxBackoff
                 : MaxBackoff.Min(TimeSpan.FromSeconds(Interval.TotalSeconds * 1.5));
-            if (newInterval != Interval) Timers.StartPeriodicTimer(Retry.Instance, Retry.Instance, newInterval);
+            if (newInterval != Interval)
+            {
+                Interval = newInterval;  // Store the new interval
+                Timers.StartPeriodicTimer(Retry.Instance, Retry.Instance, newInterval);
+            }
         }
 
         public void Reset()
