@@ -253,7 +253,7 @@ namespace Akka.Streams.Dsl
                 }
             }
             
-            private Flow<T, T, NotUsed> DelayCancellation<T>(TimeSpan duration) => Flow.FromGraph(new DelayCancellationStage<T>(duration, null));
+            private static Flow<T, T, NotUsed> DelayCancellation<T>(TimeSpan duration) => Flow.FromGraph(new DelayCancellationStage<T>(duration, null));
         }
     }
 
