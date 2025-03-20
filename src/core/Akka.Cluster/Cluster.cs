@@ -78,7 +78,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Debug setting for internal purposes.
         /// </summary>
         internal static bool IsAssertInvariantsEnabled
         {
