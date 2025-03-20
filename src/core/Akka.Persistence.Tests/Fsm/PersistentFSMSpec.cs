@@ -297,27 +297,27 @@ namespace Akka.Persistence.Tests.Fsm
         }
 
         [Fact]
-        public void PersistentFSM_must_not_trigger_onTransition_for_stay()
+        public async Task PersistentFSM_must_not_trigger_onTransition_for_stay()
         {
             var probe = CreateTestProbe(Sys);
             var fsmRef = Sys.ActorOf(SimpleTransitionFSM.Props(Name, probe.Ref));
 
-            probe.ExpectMsg("LookingAround -> LookingAround", 3.Seconds()); // caused by initialize(), OK
+            await probe.ExpectMsgAsync("LookingAround -> LookingAround", 3.Seconds()); // caused by initialize(), OK
 
             fsmRef.Tell("goto(the same state)"); // causes goto()
-            probe.ExpectMsg("LookingAround -> LookingAround", 3.Seconds());
+            await probe.ExpectMsgAsync("LookingAround -> LookingAround", 3.Seconds());
 
             fsmRef.Tell("stay");
-            probe.ExpectNoMsg(3.Seconds());
+            await probe.ExpectNoMsgAsync(3.Seconds());
         }
 
         [Fact]
-        public void PersistentFSM_must_not_persist_state_change_event_when_staying_in_the_same_state()
+        public async Task PersistentFSM_must_not_persist_state_change_event_when_staying_in_the_same_state()
         {
             var dummyReportActorRef = CreateTestProbe().Ref;
 
             var fsmRef = Sys.ActorOf(WebStoreCustomerFSM.Props(Name, dummyReportActorRef));
-            Watch(fsmRef);
+            await WatchAsync(fsmRef);
 
             var shirt = new Item("1", "Shirt", 59.99F);
             var shoes = new Item("2", "Shoes", 89.99F);
@@ -331,38 +331,38 @@ namespace Akka.Persistence.Tests.Fsm
             fsmRef.Tell(new AddItem(coat));
             fsmRef.Tell(new GetCurrentCart());
 
-            ExpectMsg<EmptyShoppingCart>();
+            await ExpectMsgAsync<EmptyShoppingCart>();
 
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt);
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt, shoes);
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt, shoes, coat);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt, shoes);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt, shoes, coat);
 
             fsmRef.Tell(PoisonPill.Instance);
-            ExpectTerminated(fsmRef);
+            await ExpectTerminatedAsync(fsmRef);
 
             var persistentEventsStreamer = Sys.ActorOf(PersistentEventsStreamer.Props(Name, TestActor));
 
-            ExpectMsg<ItemAdded>().Item.Should().Be(shirt);
-            ExpectMsg<PersistentFSM.StateChangeEvent>();
+            (await ExpectMsgAsync<ItemAdded>()).Item.Should().Be(shirt);
+            await ExpectMsgAsync<PersistentFSM.StateChangeEvent>();
 
-            ExpectMsg<ItemAdded>().Item.Should().Be(shoes);
-            ExpectMsg<PersistentFSM.StateChangeEvent>();
+            (await ExpectMsgAsync<ItemAdded>()).Item.Should().Be(shoes);
+            await ExpectMsgAsync<PersistentFSM.StateChangeEvent>();
+            
+            (await ExpectMsgAsync<ItemAdded>()).Item.Should().Be(coat);
+            await ExpectMsgAsync<PersistentFSM.StateChangeEvent>();
 
-            ExpectMsg<ItemAdded>().Item.Should().Be(coat);
-            ExpectMsg<PersistentFSM.StateChangeEvent>();
-
-            Watch(persistentEventsStreamer);
+            await WatchAsync(persistentEventsStreamer);
             persistentEventsStreamer.Tell(PoisonPill.Instance);
-            ExpectTerminated(persistentEventsStreamer);
+            await ExpectTerminatedAsync(persistentEventsStreamer);
         }
 
         [Fact]
-        public void PersistentFSM_must_persist_snapshot()
+        public async Task PersistentFSM_must_persist_snapshot()
         {
             var dummyReportActorRef = CreateTestProbe().Ref;
 
             var fsmRef = Sys.ActorOf(WebStoreCustomerFSM.Props(Name, dummyReportActorRef));
-            Watch(fsmRef);
+            await WatchAsync(fsmRef);
 
             var shirt = new Item("1", "Shirt", 59.99F);
             var shoes = new Item("2", "Shoes", 89.99F);
@@ -378,37 +378,37 @@ namespace Akka.Persistence.Tests.Fsm
             fsmRef.Tell(new Buy());
             fsmRef.Tell(new GetCurrentCart());
 
-            ExpectMsg<EmptyShoppingCart>();
+            await ExpectMsgAsync<EmptyShoppingCart>();
 
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt);
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt, shoes);
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt, shoes, coat);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt, shoes);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt, shoes, coat);
 
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt, shoes, coat);
-            ExpectNoMsg(1.Seconds());
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt, shoes, coat);
+            await ExpectNoMsgAsync(1.Seconds());
 
             fsmRef.Tell(PoisonPill.Instance);
-            ExpectTerminated(fsmRef);
+            await ExpectTerminatedAsync(fsmRef);
 
             var recoveredFsmRef = Sys.ActorOf(WebStoreCustomerFSM.Props(Name, dummyReportActorRef));
             recoveredFsmRef.Tell(new GetCurrentCart());
             ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt, shoes, coat);
 
-            Watch(recoveredFsmRef);
+            await WatchAsync(recoveredFsmRef);
             recoveredFsmRef.Tell(PoisonPill.Instance);
-            ExpectTerminated(recoveredFsmRef);
+            await ExpectTerminatedAsync(recoveredFsmRef);
 
             var persistentEventsStreamer = Sys.ActorOf(PersistentEventsStreamer.Props(Name, TestActor));
 
-            ExpectMsg<SnapshotOffer>();
+            await ExpectMsgAsync<SnapshotOffer>();
 
-            Watch(persistentEventsStreamer);
+            await WatchAsync(persistentEventsStreamer);
             persistentEventsStreamer.Tell(PoisonPill.Instance);
-            ExpectTerminated(persistentEventsStreamer);
+            await ExpectTerminatedAsync(persistentEventsStreamer);
         }
 
         [Fact]
-        public void PersistentFSM_must_allow_cancelling_stateTimeout_by_issuing_forMax_null()
+        public async Task PersistentFSM_must_allow_cancelling_stateTimeout_by_issuing_forMax_null()
         {
             var probe = CreateTestProbe();
 
@@ -416,12 +416,12 @@ namespace Akka.Persistence.Tests.Fsm
             probe.ExpectMsg<StateTimeout>();
 
             fsm.Tell(TimeoutFsm.OverrideTimeoutToInf.Instance);
-            probe.ExpectMsg<TimeoutFsm.OverrideTimeoutToInf>();
-            probe.ExpectNoMsg(1.Seconds());
+            await probe.ExpectMsgAsync<TimeoutFsm.OverrideTimeoutToInf>();
+            await probe.ExpectNoMsgAsync(1.Seconds());
         }
 
         [Fact]
-        public void PersistentFSM_must_save_periodical_snapshots_if_enablesnapshotafter()
+        public async Task PersistentFSM_must_save_periodical_snapshots_if_enablesnapshotafter()
         {
             var sys2 = ActorSystem.Create("PersistentFsmSpec2", ConfigurationFactory.ParseString(@"
                 akka.persistence.fsm.snapshot-after = 3
@@ -437,14 +437,14 @@ namespace Akka.Persistence.Tests.Fsm
                 fsmRef.Tell(3);
                 // Needs to wait with expectMsg, before sending the next message to fsmRef.
                 // Otherwise, stateData sent to this probe is already updated
-                probe.ExpectMsg("SeqNo=3, StateData=List(3, 2, 1)");
+                await probe.ExpectMsgAsync("SeqNo=3, StateData=List(3, 2, 1)");
 
                 fsmRef.Tell("4x"); //changes the state to Persist4xAtOnce, also updates SeqNo although nothing is persisted
                 fsmRef.Tell(10); //Persist4xAtOnce = persist 10, 4x times
                 // snapshot-after = 3, but the SeqNo is not multiple of 3,
                 // as saveStateSnapshot() is called at the end of persistent event "batch" = 4x of 10's.
             
-                probe.ExpectMsg("SeqNo=8, StateData=List(10, 10, 10, 10, 3, 2, 1)");
+                await probe.ExpectMsgAsync("SeqNo=8, StateData=List(10, 10, 10, 10, 3, 2, 1)");
             }
             finally
             {
