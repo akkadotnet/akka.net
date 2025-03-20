@@ -73,13 +73,13 @@ namespace Akka.Persistence.Query.InMemory
         {
             switch (message)
             {
-                case EventsByPersistenceIdPublisher.Continue _:
+                case EventsByPersistenceIdPublisher.Continue:
                     // no-op
                     return true;
-                case Request _:
+                case Request:
                     Replay();
                     return true;
-                case Cancel _:
+                case Cancel:
                     Context.Stop(Self);
                     return true;
                 default:
