@@ -7,20 +7,21 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Akka.Actor;
 #nullable enable
-internal class ReceiveActorHandlers
+internal sealed class ReceiveActorHandlers
 {
     private bool _hadObjectHandlerWithNoPredicate;
 
     public ReceiveActorHandlers()
     {
-        TypedHandlers = new Dictionary<Type, ITypeHandler>();
+        TypedHandlers = new List<ITypeHandler>();
         HandleAny = null;
     }
 
-    private Dictionary<Type, ITypeHandler> TypedHandlers { get; }
+    private List<ITypeHandler> TypedHandlers { get; }
 
     private Action<object>? HandleAny { get; set; }
 
@@ -37,37 +38,39 @@ internal class ReceiveActorHandlers
         }
     }
     
+    private static ITypeHandler CreateTypeHandler<T>(Predicate<T>? shouldHandlePredicate, Func<T, bool> handler)
+    {
+        if (shouldHandlePredicate == null)
+        {
+            return new TypeHandler<T>(handler);
+        }
+
+        return new PredicateHandler<T>(shouldHandlePredicate, handler);
+    }
+    
+    private static ITypeHandler CreateTypeHandler(Type t, Predicate<object>? shouldHandlePredicate, Func<object, bool> handler)
+    {
+        if (shouldHandlePredicate == null)
+        {
+            return new WeaklyTypedHandler(t, handler);
+        }
+
+        return new WeaklyTypedPredicateHandler(t, shouldHandlePredicate, handler);
+    }
+    
     public void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandlePredicate, Func<T, bool> handler)
     {
         CanAddMoreHandlers();
-
-        var genericType = typeof(T);
-        if (!TypedHandlers.TryGetValue(genericType, out var typeHandlerInterface))
-        {
-            typeHandlerInterface = new TypeHandler<T>();
-            TypedHandlers[genericType] = typeHandlerInterface;
-        }
-
-        var typedHandler = (TypeHandler<T>)typeHandlerInterface;
-
-        var predicateHandler = new PredicateHandler<T>(shouldHandlePredicate, handler);
-        typedHandler.Handlers.Add(predicateHandler);
+        
+        TypedHandlers.Add(CreateTypeHandler(shouldHandlePredicate, handler));
     }
+    
 
     public void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandlePredicate, Func<object, bool> handler)
     {
         CanAddMoreHandlers();
-        if (!TypedHandlers.TryGetValue(messageType, out var typeHandlerInterface))
-        {
-            typeHandlerInterface = new TypeHandler<object>();
-            TypedHandlers[messageType] = typeHandlerInterface;
-        }
-
-        var typedHandler = (TypeHandler<object>)typeHandlerInterface;
-
-        // Have to use object here as dont have the generic type information
-        var predicateHandler = new PredicateHandler<object>(shouldHandlePredicate, handler);
-        typedHandler.Handlers.Add(predicateHandler);
+        
+        TypedHandlers.Add(CreateTypeHandler(messageType, shouldHandlePredicate, handler));
 
         // If the message type is object, then we need to track that we have added a handler with no predicate.
         if (messageType == typeof(object) && 
@@ -84,79 +87,114 @@ internal class ReceiveActorHandlers
         HandleAny = handler;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryHandle(object message)
     {
         var messageType = message.GetType();
-        foreach (var kvp in TypedHandlers)
+        foreach (var handler in TypedHandlers)
         {
             // This is covering object types as well. There might be an ordering issue here
             // but this should probably be resolved with the logic around how handlers are ordered.
-            if (kvp.Key.IsAssignableFrom(messageType))
-            {
-                if (kvp.Value.TryHandle(message))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (HandleAny != null)
-        {
-            HandleAny(message);
-            return true;
-        }
-
-        return false;
-    }
-}
-
-internal interface ITypeHandler
-{
-    bool TryHandle(object message);
-}
-
-internal class TypeHandler<T> : ITypeHandler
-{
-    public TypeHandler()
-    {
-        Handlers = new List<PredicateHandler<T>>();
-    }
-
-    public List<PredicateHandler<T>> Handlers { get; }
-
-    public bool TryHandle(object message)
-    {
-        var typedMessage = (T)message;
-        foreach (var predicateHandler in Handlers)
-        {
-            if (predicateHandler.TryHandle(typedMessage))
+            if (!handler.TargetType.IsAssignableFrom(messageType)) continue;
+            if (handler.TryHandle(message))
             {
                 return true;
             }
         }
 
-        return false;
+        if (HandleAny == null) return false;
+        HandleAny(message);
+        return true;
+
     }
 }
 
-internal class PredicateHandler<T>
+internal interface ITypeHandler
 {
-    public PredicateHandler(Predicate<T>? predicate, Func<T, bool> handler)
+    Type TargetType { get; }
+    
+    bool TryHandle(object message);
+}
+
+internal sealed class WeaklyTypedPredicateHandler : ITypeHandler
+{
+    public WeaklyTypedPredicateHandler(Type t, Predicate<object> predicate, Func<object, bool> handler)
     {
         Predicate = predicate;
         Handler = handler;
+        TargetType = t;
     }
 
-    public Predicate<T>? Predicate { get; }
+    public Predicate<object> Predicate { get; }
+    public Func<object, bool> Handler { get; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryHandle(object message)
+    {
+        return Predicate(message) && Handler(message);
+    }
+
+    public Type TargetType { get; }
+}
+
+internal sealed class WeaklyTypedHandler : ITypeHandler
+{
+    public WeaklyTypedHandler(Type t, Func<object, bool> handler)
+    {
+        Handler = handler;
+        TargetType = t;
+    }
+
+    public Type TargetType { get; }
+    
+    public Func<object, bool> Handler { get;  }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryHandle(object message)
+    {
+        return Handler(message);
+    }
+}
+
+internal sealed class TypeHandler<T> : ITypeHandler
+{
+    
+    public TypeHandler(Func<T, bool> handler)
+    {
+        Handler = handler;
+        TargetType = typeof(T);
+    }
+
+    public Type TargetType { get; }
+    
+    public Func<T, bool> Handler { get;  }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryHandle(object message)
+    {
+        var typedMessage = (T)message;
+        return Handler(typedMessage);
+    }
+}
+
+internal sealed class PredicateHandler<T> : ITypeHandler
+{
+    public PredicateHandler(Predicate<T> predicate, Func<T, bool> handler)
+    {
+        Predicate = predicate;
+        Handler = handler;
+        TargetType = typeof(T);
+    }
+
+    public Predicate<T> Predicate { get; }
     public Func<T, bool> Handler { get; }
 
-    public bool TryHandle(T typedMessage)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryHandle(object typedMessage)
     {
-        if (Predicate == null || Predicate(typedMessage))
-        {
-            return Handler(typedMessage);
-        }
-
-        return false;
+        var message = (T)typedMessage;
+        return Predicate(message) && Handler(message);
     }
+
+    public Type TargetType { get; }
 }

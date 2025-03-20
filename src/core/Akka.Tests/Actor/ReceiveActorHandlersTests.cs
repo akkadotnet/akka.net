@@ -137,4 +137,73 @@ public class ReceiveActorHandlersTests
      * Receive<Bar>
      */
     
+    private interface IFoo { }
+    private class Bar : IFoo { }
+    private class Baz : IFoo { }
+    
+    private static readonly Predicate<IFoo> FooPredicate = _ => true;
+    private static readonly Predicate<Baz> BazPredicate = _ => true;
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Given_TypedReceiveHandler_can_match_interface_on_ConcreteTypes(bool usePredicate)
+    {
+        var handlers1 = new ReceiveActorHandlers();
+
+        var setBaz = false;
+        Func<Baz, bool> bazHandler = _ =>
+        {
+            setBaz = true;
+            return true;
+        }; 
+        
+        var setInterface = false;
+        var interfaceHandler = new Func<IFoo, bool>(_ =>
+        {
+            setInterface = true;
+            return true;
+        });
+        
+        // ensure that the interface handler is called when a concrete type is passed
+        handlers1.AddGenericReceiveHandler(usePredicate ? FooPredicate : null, interfaceHandler);
+
+        handlers1.TryHandle(new Bar());
+        Assert.True(setInterface);
+        
+        // now add the Baz handler
+        setInterface = false; // reset
+        handlers1.AddGenericReceiveHandler(usePredicate ? BazPredicate : null, bazHandler);
+        
+        // demonstrate the matcher ordering is preserved - interface handler should still be called
+        handlers1.TryHandle(new Baz());
+        Assert.False(setBaz);
+        Assert.True(setInterface);
+        
+        // reset
+        setInterface = false;
+        
+        // create a new match handler
+        var handlers2 = new ReceiveActorHandlers();
+        
+        // set in a "correct" / non-greedy order
+        handlers2.AddGenericReceiveHandler(usePredicate ? BazPredicate : null, bazHandler);
+        handlers2.AddGenericReceiveHandler(usePredicate ? FooPredicate : null, interfaceHandler);
+        
+        // demonstrate the matcher ordering is preserved - Baz handler should be called
+        handlers2.TryHandle(new Baz());
+        
+        Assert.True(setBaz);
+        Assert.False(setInterface);
+        
+        // reset
+        setBaz = false;
+        
+        // handle Bar
+        handlers2.TryHandle(new Bar());
+        
+        // demonstrate the matcher ordering is preserved - interface handler should still be called
+        Assert.True(setInterface);
+        Assert.False(setBaz); // just a sanity check
+    }
 }
