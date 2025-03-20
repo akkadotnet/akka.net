@@ -197,7 +197,7 @@ namespace Akka.Streams.Dsl
             private readonly RestartWithBackoffFlow<TIn, TOut, TMat> _stage;
             private readonly Attributes _inheritedAttributes;
             private Tuple<SubSourceOutlet<TIn>, SubSinkInlet<TOut>> _activeOutIn;
-            private TimeSpan _delay;
+            private readonly TimeSpan _delay;
             
             public Logic(RestartWithBackoffFlow<TIn, TOut, TMat> stage, Attributes inheritedAttributes, string name)
                 : base(name, stage.Shape, stage.In, stage.Out, stage.Settings, stage.OnlyOnFailures)
@@ -214,7 +214,7 @@ namespace Akka.Streams.Dsl
                 var sinkIn = CreateSubInlet(_stage.Out);
                 
                 var graph = Source.FromGraph(sourceOut.Source)
-                    //temp fix becaues the proper fix would be to have a concept of cause of cancellation. See https://github.com/akka/akka/pull/23909
+                    //temp fix because the proper fix would be to have a concept of cause of cancellation. See https://github.com/akka/akka/pull/23909
                     //TODO register issue to track this
                     .Via(DelayCancellation<TIn>(_delay))
                     .Via(_stage.FlowFactory())
@@ -301,25 +301,36 @@ namespace Akka.Streams.Dsl
         protected SubSinkInlet<TOut> CreateSubInlet(Outlet<TOut> outlet)
         {
             var sinkIn = new SubSinkInlet<TOut>(this, $"RestartWithBackoff{_name}.subIn");
-
             sinkIn.SetHandler(new LambdaInHandler(
-                onPush: () => Push(Out, sinkIn.Grab()),
+                onPush: () =>
+                {
+                    if (IsAvailable(Out))
+                        Push(Out, sinkIn.Grab());
+                },
                 onUpstreamFinish: () =>
                 {
-                    if (_finishing || MaxRestartsReached() || _onlyOnFailures)
+                    if (_finishing || (_onlyOnFailures && !MaxRestartsReached()))
+                    {
                         Complete(Out);
+                    }
+                    else if (MaxRestartsReached())
+                    {
+                        Log.Debug("Terminating restart flow due to max restarts being reached on upstream finish");
+                        _finishing = true;
+                        Complete(Out);
+                    }
                     else
                     {
                         ScheduleRestartTimer();
                     }
                 },
-                /*
-                 * upstream in this context is the wrapped stage
-                 */
                 onUpstreamFailure: ex =>
                 {
                     if (_finishing || MaxRestartsReached())
+                    {
+                        _finishing = true;
                         Fail(Out, ex);
+                    }
                     else
                     {
                         Log.Warning(ex, "Restarting graph due to failure.");
@@ -328,7 +339,11 @@ namespace Akka.Streams.Dsl
                 }));
 
             SetHandler(Out,
-                onPull: () => sinkIn.Pull(),
+                onPull: () =>
+                {
+                    if (!sinkIn.IsClosed)
+                        sinkIn.Pull();
+                },
                 onDownstreamFinish: cause =>
                 {
                     _finishing = true;
