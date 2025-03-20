@@ -11,7 +11,6 @@ using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
-using Akka.Tools.MatchHandler;
 using System.Threading.Tasks;
 
 namespace Akka.Persistence
@@ -209,11 +208,6 @@ namespace Akka.Persistence
     /// </summary>
     public interface IStashOverflowStrategyConfigurator
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
         IStashOverflowStrategy Create(Config config);
     }
 
