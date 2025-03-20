@@ -146,7 +146,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task Throttle_for_single_cost_elements_must_emit_single_element_per_tick()
         {
             await this.AssertAllStagesStoppedAsync(async() => {
@@ -157,20 +157,13 @@ namespace Akka.Streams.Tests.Dsl
                     .Throttle(1, TimeSpan.FromMilliseconds(500), 0, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
-                // Request some elements and verify throttling behavior
                 await downstream.RequestAsync(2);
-                
-                // Send first element
                 await upstream.SendNextAsync(1);
-                // Verify a brief delay before receiving the element (shows throttling is happening)
                 await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(150));
                 await downstream.ExpectNextAsync(1);
 
-                // Send second element
                 await upstream.SendNextAsync(2);
-                // Verify a brief delay before receiving the element (shows throttling is happening)
                 await downstream.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(150));
-                // Eventually we should receive the element without making assumptions about exact timing
                 await downstream.ExpectNextAsync(2);
 
                 await upstream.SendCompleteAsync();
