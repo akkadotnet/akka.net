@@ -304,8 +304,6 @@ namespace Akka.Streams.Dsl
             sinkIn.SetHandler(new LambdaInHandler(
                 onPush: () =>
                 {
-                    if (IsAvailable(Out))
-                        Push(Out, sinkIn.Grab());
                     Push(Out, sinkIn.Grab());
                 },
                 onUpstreamFinish: () =>
@@ -342,8 +340,6 @@ namespace Akka.Streams.Dsl
             SetHandler(Out,
                 onPull: () =>
                 {
-                    if (!sinkIn.IsClosed)
-                        sinkIn.Pull();
                     sinkIn.Pull();
                 },
                 onDownstreamFinish: cause =>
