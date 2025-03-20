@@ -966,14 +966,6 @@ namespace Akka.Persistence.Journal
     {
         System.Collections.Generic.IEnumerable<object> Events { get; }
     }
-    public interface IMemoryMessages
-    {
-        System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Add(Akka.Persistence.IPersistentRepresentation persistent);
-        System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Delete(string pid, long seqNr);
-        long HighestSequenceNr(string pid);
-        System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max);
-        System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Update(string pid, long seqNr, System.Func<Akka.Persistence.IPersistentRepresentation, Akka.Persistence.IPersistentRepresentation> updater);
-    }
     public interface IReadEventAdapter
     {
         Akka.Persistence.Journal.IEventSequence FromJournal(object evt, string manifest);

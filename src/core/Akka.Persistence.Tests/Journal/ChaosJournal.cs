@@ -36,7 +36,7 @@ namespace Akka.Persistence.Tests.Journal
         public ReadHighestFailedException() : base("recovery failed when reading the highest sequence number") { }
     }
 
-    public class ChaosJournal : AsyncWriteJournal, IMemoryMessages
+    public class ChaosJournal : AsyncWriteJournal
     {
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new();
 
