@@ -2559,12 +2559,13 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
 
-            private static readonly Result<TOut> NotYetThere = Result.Failure<TOut>(new Exception());
+            private static readonly Exception NotYetThereException = new Exception();
+            private static readonly Result<TOut> NotYetThere = Result.Failure<TOut>(NotYetThereException);
 
             private readonly SelectAsync<TIn, TOut> _stage;
             private readonly Decider _decider;
 
-            private IBuffer<Holder<TOut>>? _buffer;
+            private IBuffer<Holder<TOut>> _buffer = null!; // gets initialized in PreStart
             private readonly Action<(Holder<TOut> holder, Result<TOut> result)> _taskCallback;
 
             public Logic(Attributes inheritedAttributes, SelectAsync<TIn, TOut> stage) : base(stage.Shape)
@@ -2587,7 +2588,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     var task = _stage._mapFunc(message);
                     var holder = new Holder<TOut>(message, NotYetThere);
-                    _buffer.Enqueue(holder);
+                    _buffer!.Enqueue(holder);
 
                     // We dispatch the task if it's ready to optimize away
                     // scheduling it to an execution context
@@ -2649,7 +2650,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                    return _buffer.Used;
+                    return _buffer!.Used;
                 }
             }
 
@@ -2661,9 +2662,9 @@ namespace Akka.Streams.Implementation.Fusing
                 
                 while (true)
                 {
-                    if (_buffer.IsEmpty)
+                    if (_buffer!.IsEmpty)
                         PullIfNeeded();
-                    else if (_buffer.Peek()!.Element == NotYetThere) // Shebang is fine, we checked that the buffer is not empty
+                    else if (_buffer.Peek()!.Element.Exception == NotYetThereException) // Shebang is fine, we checked that the buffer is not empty
                         PullIfNeeded(); // ahead of line blocking to keep order
                     else if(IsAvailable(_stage.Out))
                     {
@@ -2745,21 +2746,11 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly int _parallelism;
         private readonly Func<TIn, Task<TOut>> _mapFunc;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public readonly Inlet<TIn> In = new("SelectAsync.in");
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly Outlet<TOut> Out = new("SelectAsync.out");
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="parallelism">TBD</param>
-        /// <param name="mapFunc">TBD</param>
+        public readonly Outlet<TOut> Out = new("SelectAsync.out");
+        
         public SelectAsync(int parallelism, Func<TIn, Task<TOut>> mapFunc)
         {
             _parallelism = parallelism;

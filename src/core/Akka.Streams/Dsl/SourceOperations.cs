@@ -138,7 +138,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        /// <param name="flow">TBD</param>
+        /// <param name="flow">The upstream stage</param>
         /// <param name="selector">Receives the failure cause and returns the new cause, return the original exception if no other should be applied</param>
         public static Source<TOut, TMat> SelectError<TOut, TMat>(this Source<TOut, TMat> flow, Func<Exception, Exception> selector)
         {
@@ -159,12 +159,6 @@ namespace Akka.Streams.Dsl
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapper">TBD</param>
-        /// <returns>TBD</returns>
         public static Source<TOut, TMat> Select<TIn, TOut, TMat>(this Source<TIn, TMat> flow, Func<TIn, TOut> mapper)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Select(flow, mapper);
@@ -191,12 +185,6 @@ namespace Akka.Streams.Dsl
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapConcater">TBD</param>
-        /// <returns>TBD</returns>
         public static Source<TOut2, TMat> SelectMany<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, IEnumerable<TOut2>> mapConcater)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.SelectMany(flow, mapConcater);
@@ -228,12 +216,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// See also <see cref="SelectMany{TIn,TOut,TMat}"/>
         /// </summary>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapConcaterFactory">TBD</param>
-        /// <returns>TBD</returns>
         public static Source<TOut2, TMat> StatefulSelectMany<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow,
             Func<Func<TOut1, IEnumerable<TOut2>>> mapConcaterFactory)
         {
@@ -270,13 +252,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// </summary>
         /// <seealso cref="SelectAsyncUnordered{TIn,TOut,TMat}"/>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="parallelism">TBD</param>
-        /// <param name="asyncMapper">TBD</param>
-        /// <returns>TBD</returns>
         public static Source<TOut, TMat> SelectAsync<TIn, TOut, TMat>(this Source<TIn, TMat> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.SelectAsync(flow, parallelism, asyncMapper);
@@ -312,13 +287,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// </summary>
         /// <seealso cref="SelectAsync{TIn,TOut,TMat}"/>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="parallelism">TBD</param>
-        /// <param name="asyncMapper">TBD</param>
-        /// <returns>TBD</returns>
         public static Source<TOut, TMat> SelectAsyncUnordered<TIn, TOut, TMat>(this Source<TIn, TMat> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.SelectAsyncUnordered(flow, parallelism, asyncMapper);
@@ -337,11 +305,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
         public static Source<TOut, TMat> Where<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.Where(flow, predicate);
@@ -360,11 +323,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
         public static Source<TOut, TMat> WhereNot<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.WhereNot(flow, predicate);
@@ -392,12 +350,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// <seealso cref="Limit{T, TMat}(Source{T, TMat}, long)"/> <seealso cref="LimitWeighted{T, TMat}(Source{T, TMat}, long, Func{T, long})"/>
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <param name="inclusive">TBD</param>
-        /// <returns>TBD</returns>
         public static Source<TOut, TMat> TakeWhile<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate, bool inclusive = false)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.TakeWhile(flow, predicate, inclusive);
@@ -415,11 +367,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
         public static Source<TOut, TMat> SkipWhile<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
         {
             return (Source<TOut, TMat>)InternalFlowOperations.SkipWhile(flow, predicate);
@@ -438,12 +385,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="collector">TBD</param>
-        /// <returns>TBD</returns>
         [Obsolete("Deprecated. Please use Collect(isDefined, collector) instead")]
         public static Source<TOut2, TMat> Collect<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, TOut2> collector)
         {
@@ -463,13 +404,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="isDefined">TBD</param>
-        /// <param name="collector">TBD</param>
-        /// <returns>TBD</returns>
         public static Source<TOut2, TMat> Collect<TOut1, TOut2, TMat>(
             this Source<TOut1, TMat> flow,
             Func<TOut1, bool> isDefined,

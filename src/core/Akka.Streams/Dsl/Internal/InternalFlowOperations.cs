@@ -163,7 +163,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        /// <param name="flow">TBD</param>
+        /// <param name="flow">The upstream stage</param>
         /// <param name="selector">Receives the failure cause and returns the new cause, return the original exception if no other should be applied</param>
         public static IFlow<TOut, TMat> SelectError<TOut, TMat>(this IFlow<TOut, TMat> flow, Func<Exception, Exception> selector)
         {
@@ -184,12 +184,6 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapper">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> Select<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> mapper)
         {
             return flow.Via(new Fusing.Select<TIn, TOut>(mapper));
@@ -217,11 +211,6 @@ namespace Akka.Streams.Dsl.Internal
         /// <para>Completes when upstream completes</para>
         /// <para>Cancels when downstream cancels</para>
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> WireTap<TOut, TMat>(this IFlow<TOut, TMat> flow, Action<TOut> action) =>
             //flow.WireTap(Sink.ForEach(action)); // should be this, but can't be due to type constraints
             flow.WireTapMaterialized(Sink.ForEach(action), Keep.Left);
@@ -247,12 +236,6 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapConcater">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> SelectMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<TIn, IEnumerable<TOut>> mapConcater)
         {
@@ -285,12 +268,6 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// See also <see cref="SelectMany{TIn,TOut,TMat}"/>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapConcaterFactory">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> StatefulSelectMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<Func<TIn, IEnumerable<TOut>>> mapConcaterFactory)
         {
@@ -327,13 +304,6 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// </summary>
         /// <seealso cref="SelectAsyncUnordered{TIn,TOut,TMat}"/>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="parallelism">TBD</param>
-        /// <param name="asyncMapper">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> SelectAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
             Func<TIn, Task<TOut>> asyncMapper)
         {
