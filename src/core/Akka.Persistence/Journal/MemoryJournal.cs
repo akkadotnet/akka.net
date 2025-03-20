@@ -91,13 +91,13 @@ namespace Akka.Persistence.Journal
                     var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
                     Add(persistentRepresentation);
                     _allMessages.AddLast(persistentRepresentation);
-                    if (!(p.Payload is Tagged tagged)) continue;
+                    if (p.Payload is not Tagged tagged) continue;
                     
                     foreach (var tag in tagged.Tags)
                     {
                         _tagsToMessagesMapping.AddOrUpdate(
                             tag,
-                            (_) => new LinkedList<IPersistentRepresentation>(new[] { persistentRepresentation }),
+                            (_) => new LinkedList<IPersistentRepresentation>([persistentRepresentation]),
                             (_, v) =>
                             {
                                 v.AddLast(persistentRepresentation);
@@ -107,7 +107,7 @@ namespace Akka.Persistence.Journal
                 }
             }
             
-            return Task.FromResult((IImmutableList<Exception>) null); // all good
+            return Task.FromResult<IImmutableList<Exception>>(null); // all good
         }
 
         /// <summary>
@@ -118,7 +118,7 @@ namespace Akka.Persistence.Journal
         /// <returns>TBD</returns>
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
-            return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.TryGetValue(persistenceId, out long metaSeqNr) ? metaSeqNr : 0L));
+            return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.GetValueOrDefault(persistenceId, 0L)));
         }
 
         /// <summary>
@@ -264,46 +264,23 @@ namespace Akka.Persistence.Journal
                 HighestOrderingNumber = highestOrderingNumber;
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         [Serializable]
         public sealed class ReplayTaggedMessages : IJournalRequest
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public readonly int FromOffset;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public readonly int ToOffset;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public readonly int Max;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public readonly string Tag;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public readonly IActorRef ReplyTo;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="ReplayTaggedMessages"/> class.
             /// </summary>
-            /// <param name="fromOffset">TBD</param>
-            /// <param name="toOffset">TBD</param>
-            /// <param name="max">TBD</param>
-            /// <param name="tag">TBD</param>
-            /// <param name="replyTo">TBD</param>
             /// <exception cref="ArgumentException">
             /// This exception is thrown for a number of reasons. These include the following:
             /// <ul>
@@ -334,32 +311,17 @@ namespace Akka.Persistence.Journal
                 ReplyTo = replyTo;
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         [Serializable]
         public sealed class ReplayedTaggedMessage : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly IPersistentRepresentation Persistent;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly string Tag;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly int Offset;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="persistent">TBD</param>
-            /// <param name="tag">TBD</param>
-            /// <param name="offset">TBD</param>
+            public readonly IPersistentRepresentation Persistent;
+
+            public readonly string Tag;
+
+            public readonly int Offset;
+            
             public ReplayedTaggedMessage(IPersistentRepresentation persistent, string tag, int offset)
             {
                 Persistent = persistent;
@@ -368,36 +330,20 @@ namespace Akka.Persistence.Journal
             }
         }
         
-        /// <summary>
-        /// TBD
-        /// </summary>
         [Serializable]
         public sealed class ReplayAllEvents : IJournalRequest
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public readonly int FromOffset;
-            /// <summary>
-            /// TBD
-            /// </summary>
+
             public readonly int ToOffset;
-            /// <summary>
-            /// TBD
-            /// </summary>
+
             public readonly long Max;
-            /// <summary>
-            /// TBD
-            /// </summary>
+
             public readonly IActorRef ReplyTo;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="ReplayAllEvents"/> class.
             /// </summary>
-            /// <param name="fromOffset">TBD</param>
-            /// <param name="toOffset">TBD</param>
-            /// <param name="max">TBD</param>
-            /// <param name="replyTo">TBD</param>
             /// <exception cref="ArgumentException">
             /// This exception is thrown for a number of reasons. These include the following:
             /// <ul>
@@ -419,36 +365,22 @@ namespace Akka.Persistence.Journal
             }
         }
         
-        /// <summary>
-        /// TBD
-        /// </summary>
+
         [Serializable]
         public sealed class ReplayedEvent : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly IPersistentRepresentation Persistent;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly int Offset;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="persistent">TBD</param>
-            /// <param name="offset">TBD</param>
+            public readonly IPersistentRepresentation Persistent;
+
+            public readonly int Offset;
+            
             public ReplayedEvent(IPersistentRepresentation persistent, int offset)
             {
                 Persistent = persistent;
                 Offset = offset;
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         [Serializable]
         public sealed class ReplayTaggedMessagesSuccess
         {
@@ -463,9 +395,6 @@ namespace Akka.Persistence.Journal
             public int HighestSequenceNr { get; }
         }
         
-        /// <summary>
-        /// TBD
-        /// </summary>
         [Serializable]
         public sealed class EventReplaySuccess
         {
@@ -521,8 +450,7 @@ namespace Akka.Persistence.Journal
         
             public override bool Equals(object obj)
             {
-                if (!(obj is EventReplayFailure f)) return false;
-                return Equals(f);
+                return obj is EventReplayFailure f && Equals(f);
             }
 
         
@@ -633,17 +561,11 @@ namespace Akka.Persistence.Journal
 
         #endregion
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     public class SharedMemoryJournal : MemoryJournal
     {
         private static readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> SharedMessages = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return SharedMessages; } }
     }
 }
