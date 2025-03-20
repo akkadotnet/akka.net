@@ -25,12 +25,12 @@ namespace Akka.Persistence.Tests.Fsm
         }
 
         [Fact]
-        public void PersistentFSM_must_has_function_as_regular_fsm()
+        public async Task PersistentFSM_must_has_function_as_regular_fsm()
         {
             var dummyReportActorRef = CreateTestProbe().Ref;
             var fsmRef = Sys.ActorOf(WebStoreCustomerFSM.Props(Name, dummyReportActorRef));
 
-            Watch(fsmRef);
+            await WatchAsync(fsmRef);
             fsmRef.Tell(new SubscribeTransitionCallBack(TestActor));
 
             var shirt = new Item("1", "Shirt", 59.99F);
@@ -48,66 +48,66 @@ namespace Akka.Persistence.Tests.Fsm
             fsmRef.Tell(new GetCurrentCart());
             fsmRef.Tell(new Leave());
 
-            var userState = ExpectMsg<CurrentState<IUserState>>();
+            var userState = await ExpectMsgAsync<CurrentState<IUserState>>();
             userState.FsmRef.Should().Be(fsmRef);
             userState.State.Should().Be(LookingAround.Instance);
-            ExpectMsg<EmptyShoppingCart>();
+            await ExpectMsgAsync<EmptyShoppingCart>();
 
-            var transition1 = ExpectMsg<Transition<IUserState>>();
+            var transition1 = await ExpectMsgAsync<Transition<IUserState>>();
             transition1.FsmRef.Should().Be(fsmRef);
             transition1.From.Should().Be(LookingAround.Instance);
             transition1.To.Should().Be(Shopping.Instance);
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt);
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt, shoes);
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt, shoes, coat);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt, shoes);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt, shoes, coat);
 
-            var transition2 = ExpectMsg<Transition<IUserState>>();
+            var transition2 = await ExpectMsgAsync<Transition<IUserState>>();
             transition2.FsmRef.Should().Be(fsmRef);
             transition2.From.Should().Be(Shopping.Instance);
             transition2.To.Should().Be(Paid.Instance);
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt, shoes, coat);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt, shoes, coat);
 
-            ExpectTerminated(fsmRef);
+            await ExpectTerminatedAsync(fsmRef);
         }
 
         [Fact]
-        public void PersistentFSM_must_has_function_as_regular_fsm_on_state_timeout()
+        public async Task PersistentFSM_must_has_function_as_regular_fsm_on_state_timeout()
         {
             var dummyReportActorRef = CreateTestProbe().Ref;
             var fsmRef = Sys.ActorOf(WebStoreCustomerFSM.Props(Name, dummyReportActorRef));
 
-            Watch(fsmRef);
+            await WatchAsync(fsmRef);
             fsmRef.Tell(new SubscribeTransitionCallBack(TestActor));
 
             var shirt = new Item("1", "Shirt", 59.99F);
 
             fsmRef.Tell(new AddItem(shirt));
 
-            var userState = ExpectMsg<CurrentState<IUserState>>();
+            var userState = await ExpectMsgAsync<CurrentState<IUserState>>();
             userState.FsmRef.Should().Be(fsmRef);
             userState.State.Should().Be(LookingAround.Instance);
 
-            var transition1 = ExpectMsg<Transition<IUserState>>();
+            var transition1 = await ExpectMsgAsync<Transition<IUserState>>();
             transition1.FsmRef.Should().Be(fsmRef);
             transition1.From.Should().Be(LookingAround.Instance);
             transition1.To.Should().Be(Shopping.Instance);
 
             // Wait for the transition to Inactive state, which should happen due to timeout
-            var transition2 = ExpectMsg<Transition<IUserState>>();
+            var transition2 = await ExpectMsgAsync<Transition<IUserState>>();
             transition2.FsmRef.Should().Be(fsmRef);
             transition2.From.Should().Be(Shopping.Instance);
             transition2.To.Should().Be(Inactive.Instance);
 
-            ExpectTerminated(fsmRef);
+            await ExpectTerminatedAsync(fsmRef);
         }
 
         [Fact]
-        public void PersistentFSM_must_recover_successfully_with_correct_state_data()
+        public async Task PersistentFSM_must_recover_successfully_with_correct_state_data()
         {
             var dummyReportActorRef = CreateTestProbe().Ref;
             var fsmRef = Sys.ActorOf(WebStoreCustomerFSM.Props(Name, dummyReportActorRef));
 
-            Watch(fsmRef);
+            await WatchAsync(fsmRef);
             fsmRef.Tell(new SubscribeTransitionCallBack(TestActor));
 
             var shirt = new Item("1", "Shirt", 59.99F);
@@ -120,23 +120,23 @@ namespace Akka.Persistence.Tests.Fsm
             fsmRef.Tell(new AddItem(shoes));
             fsmRef.Tell(new GetCurrentCart());
 
-            var userState1 = ExpectMsg<CurrentState<IUserState>>();
+            var userState1 = await ExpectMsgAsync<CurrentState<IUserState>>();
             userState1.FsmRef.Should().Be(fsmRef);
             userState1.State.Should().Be(LookingAround.Instance);
-            ExpectMsg<EmptyShoppingCart>();
+            await ExpectMsgAsync<EmptyShoppingCart>();
 
-            var transition1 = ExpectMsg<Transition<IUserState>>();
+            var transition1 = await ExpectMsgAsync<Transition<IUserState>>();
             transition1.FsmRef.Should().Be(fsmRef);
             transition1.From.Should().Be(LookingAround.Instance);
             transition1.To.Should().Be(Shopping.Instance);
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt);
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt, shoes);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt, shoes);
 
             fsmRef.Tell(PoisonPill.Instance);
-            ExpectTerminated(fsmRef);
+            await ExpectTerminatedAsync(fsmRef);
 
             var recoveredFsmRef = Sys.ActorOf(Props.Create(() => new WebStoreCustomerFSM(Name, dummyReportActorRef)));
-            Watch(recoveredFsmRef);
+            await WatchAsync(recoveredFsmRef);
             recoveredFsmRef.Tell(new SubscribeTransitionCallBack(TestActor));
 
             recoveredFsmRef.Tell(new GetCurrentCart());
@@ -148,29 +148,29 @@ namespace Akka.Persistence.Tests.Fsm
             recoveredFsmRef.Tell(new GetCurrentCart());
             recoveredFsmRef.Tell(new Leave());
 
-            var userState2 = ExpectMsg<CurrentState<IUserState>>();
+            var userState2 = await ExpectMsgAsync<CurrentState<IUserState>>();
             userState2.FsmRef.Should().Be(recoveredFsmRef);
             userState2.State.Should().Be(Shopping.Instance);
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt, shoes);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt, shoes);
 
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt, shoes, coat);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt, shoes, coat);
 
-            var transition2 = ExpectMsg<Transition<IUserState>>();
+            var transition2 = await ExpectMsgAsync<Transition<IUserState>>();
             transition2.FsmRef.Should().Be(recoveredFsmRef);
             transition2.From.Should().Be(Shopping.Instance);
             transition2.To.Should().Be(Paid.Instance);
-            ExpectMsg<NonEmptyShoppingCart>().Items.Should().ContainInOrder(shirt, shoes, coat);
+            (await ExpectMsgAsync<NonEmptyShoppingCart>()).Items.Should().ContainInOrder(shirt, shoes, coat);
 
-            ExpectTerminated(recoveredFsmRef);
+            await ExpectTerminatedAsync(recoveredFsmRef);
         }
 
         [Fact]
-        public void PersistentFSM_must_execute_the_defined_actions_following_successful_persistence_of_state_change()
+        public async Task PersistentFSM_must_execute_the_defined_actions_following_successful_persistence_of_state_change()
         {
             var reportActorProbe = CreateTestProbe(Sys);
             var fsmRef = Sys.ActorOf(WebStoreCustomerFSM.Props(Name, reportActorProbe.Ref));
 
-            Watch(fsmRef);
+            await WatchAsync(fsmRef);
             fsmRef.Tell(new SubscribeTransitionCallBack(TestActor));
 
             var shirt = new Item("1", "Shirt", 59.99F);
@@ -183,32 +183,32 @@ namespace Akka.Persistence.Tests.Fsm
             fsmRef.Tell(new Buy());
             fsmRef.Tell(new Leave());
 
-            var userState = ExpectMsg<CurrentState<IUserState>>();
+            var userState = await ExpectMsgAsync<CurrentState<IUserState>>();
             userState.FsmRef.Should().Be(fsmRef);
             userState.State.Should().Be(LookingAround.Instance);
 
-            var transition1 = ExpectMsg<Transition<IUserState>>();
+            var transition1 = await ExpectMsgAsync<Transition<IUserState>>();
             transition1.FsmRef.Should().Be(fsmRef);
             transition1.From.Should().Be(LookingAround.Instance);
             transition1.To.Should().Be(Shopping.Instance);
 
-            var transition2 = ExpectMsg<Transition<IUserState>>();
+            var transition2 = await ExpectMsgAsync<Transition<IUserState>>();
             transition2.FsmRef.Should().Be(fsmRef);
             transition2.From.Should().Be(Shopping.Instance);
             transition2.To.Should().Be(Paid.Instance);
 
-            reportActorProbe.ExpectMsg<PurchaseWasMade>().Items.Should().ContainInOrder(shirt, shoes, coat);
+            (await reportActorProbe.ExpectMsgAsync<PurchaseWasMade>()).Items.Should().ContainInOrder(shirt, shoes, coat);
 
-            ExpectTerminated(fsmRef);
+            await ExpectTerminatedAsync(fsmRef);
         }
 
         [Fact]
-        public void PersistentFSM_must_execute_the_defined_actions_following_successful_persistence_of_FSM_stop()
+        public async Task PersistentFSM_must_execute_the_defined_actions_following_successful_persistence_of_FSM_stop()
         {
             var reportActorProbe = CreateTestProbe(Sys);
             var fsmRef = Sys.ActorOf(WebStoreCustomerFSM.Props(Name, reportActorProbe.Ref));
 
-            Watch(fsmRef);
+            await WatchAsync(fsmRef);
             fsmRef.Tell(new SubscribeTransitionCallBack(TestActor));
 
             var shirt = new Item("1", "Shirt", 59.99F);
@@ -220,52 +220,52 @@ namespace Akka.Persistence.Tests.Fsm
             fsmRef.Tell(new AddItem(coat));
             fsmRef.Tell(new Leave());
 
-            var userState = ExpectMsg<CurrentState<IUserState>>();
+            var userState = await ExpectMsgAsync<CurrentState<IUserState>>();
             userState.FsmRef.Should().Be(fsmRef);
             userState.State.Should().Be(LookingAround.Instance);
 
-            var transition = ExpectMsg<Transition<IUserState>>();
+            var transition = await ExpectMsgAsync<Transition<IUserState>>();
             transition.FsmRef.Should().Be(fsmRef);
             transition.From.Should().Be(LookingAround.Instance);
             transition.To.Should().Be(Shopping.Instance);
 
-            reportActorProbe.ExpectMsg<ShoppingCardDiscarded>();
+            await reportActorProbe.ExpectMsgAsync<ShoppingCardDiscarded>();
 
-            ExpectTerminated(fsmRef);
+            await ExpectTerminatedAsync(fsmRef);
         }
 
         [Fact]
-        public void PersistentFSM_must_recover_successfully_with_correct_state_timeout()
+        public async Task PersistentFSM_must_recover_successfully_with_correct_state_timeout()
         {
             var dummyReportActorRef = CreateTestProbe().Ref;
             var fsmRef = Sys.ActorOf(WebStoreCustomerFSM.Props(Name, dummyReportActorRef));
 
-            Watch(fsmRef);
+            await WatchAsync(fsmRef);
             fsmRef.Tell(new SubscribeTransitionCallBack(TestActor));
 
             var shirt = new Item("1", "Shirt", 59.99F);
 
             fsmRef.Tell(new AddItem(shirt));
 
-            var userState1 = ExpectMsg<CurrentState<IUserState>>();
+            var userState1 = await ExpectMsgAsync<CurrentState<IUserState>>();
             userState1.FsmRef.Should().Be(fsmRef);
             userState1.State.Should().Be(LookingAround.Instance);
 
-            var transition1 = ExpectMsg<Transition<IUserState>>();
+            var transition1 = await ExpectMsgAsync<Transition<IUserState>>();
             transition1.FsmRef.Should().Be(fsmRef);
             transition1.From.Should().Be(LookingAround.Instance);
             transition1.To.Should().Be(Shopping.Instance);
 
-            ExpectNoMsg(TimeSpan.FromSeconds(0.6)); // arbitrarily chosen delay, less than the timeout, before stopping the FSM
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.6)); // arbitrarily chosen delay, less than the timeout, before stopping the FSM
             fsmRef.Tell(PoisonPill.Instance);
-            ExpectTerminated(fsmRef);
+            await ExpectTerminatedAsync(fsmRef);
 
             var recoveredFsmRef = Sys.ActorOf(Props.Create(() => new WebStoreCustomerFSM(Name, dummyReportActorRef)));
-            Watch(recoveredFsmRef);
+            await WatchAsync(recoveredFsmRef);
             recoveredFsmRef.Tell(new SubscribeTransitionCallBack(TestActor));
 
             // We should get either Shopping state (if we're fast enough) or a direct Inactive state
-            var userState2 = ExpectMsg<CurrentState<IUserState>>();
+            var userState2 = await ExpectMsgAsync<CurrentState<IUserState>>();
             userState2.FsmRef.Should().Be(recoveredFsmRef);
             
             if (userState2.State.Equals(Shopping.Instance))
@@ -282,18 +282,18 @@ namespace Akka.Persistence.Tests.Fsm
                 userState2.State.Should().Be(Inactive.Instance);
             }
 
-            ExpectNoMsg(TimeSpan.FromSeconds(0.6)); // arbitrarily chosen delay, less than the timeout, before stopping the FSM
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.6)); // arbitrarily chosen delay, less than the timeout, before stopping the FSM
             recoveredFsmRef.Tell(PoisonPill.Instance);
-            ExpectTerminated(recoveredFsmRef);
+            await ExpectTerminatedAsync(recoveredFsmRef);
 
             var recoveredFsmRef2 = Sys.ActorOf(Props.Create(() => new WebStoreCustomerFSM(Name, dummyReportActorRef)));
-            Watch(recoveredFsmRef2);
+            await WatchAsync(recoveredFsmRef2);
             recoveredFsmRef2.Tell(new SubscribeTransitionCallBack(TestActor));
 
-            var userState3 = ExpectMsg<CurrentState<IUserState>>();
+            var userState3 = await ExpectMsgAsync<CurrentState<IUserState>>();
             userState3.FsmRef.Should().Be(recoveredFsmRef2);
             userState3.State.Should().Be(Inactive.Instance);
-            ExpectTerminated(recoveredFsmRef2);
+            await ExpectTerminatedAsync(recoveredFsmRef2);
         }
 
         [Fact]
