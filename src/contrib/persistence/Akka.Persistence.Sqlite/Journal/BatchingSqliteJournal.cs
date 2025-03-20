@@ -19,8 +19,9 @@ using Akka.Persistence.Sql.Common.Journal;
 namespace Akka.Persistence.Sqlite.Journal
 {
     /// <summary>
-    /// TBD
+    /// Setup for configuring <see cref="BatchingSqliteJournal"/>.
     /// </summary>
+    [Obsolete("Getting removed in v1.6")]
     public sealed class BatchingSqliteJournalSetup : BatchingSqlJournalSetup
     {
         /// <summary>
@@ -163,10 +164,7 @@ namespace Akka.Persistence.Sqlite.Journal
         {
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="setup">TBD</param>
+        [Obsolete("Getting removed in v1.6")]
         public BatchingSqliteJournal(BatchingSqliteJournalSetup setup) : base(setup)
         {
             var conventions = Setup.NamingConventions;

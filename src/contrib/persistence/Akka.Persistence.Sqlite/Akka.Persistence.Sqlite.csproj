@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <EmbeddedResource Include="sqlite.conf"/>
+        <ProjectReference Include="..\..\..\core\Akka.Persistence.Query\Akka.Persistence.Query.csproj" />
         <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj"/>
         <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj"/>
     </ItemGroup>

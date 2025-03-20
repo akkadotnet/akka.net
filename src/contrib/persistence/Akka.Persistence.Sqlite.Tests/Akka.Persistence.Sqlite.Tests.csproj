@@ -7,11 +7,11 @@
   </PropertyGroup>
  
   <ItemGroup>
+    <ProjectReference Include="..\..\..\core\Akka.Persistence.TCK\Akka.Persistence.TCK.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Streams\Akka.Streams.csproj" />
+    <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj" />
-    <ProjectReference Include="..\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />
-    <ProjectReference Include="..\Akka.Persistence.Sql.TestKit\Akka.Persistence.Sql.TestKit.csproj" />
   </ItemGroup>
 
   <ItemGroup>

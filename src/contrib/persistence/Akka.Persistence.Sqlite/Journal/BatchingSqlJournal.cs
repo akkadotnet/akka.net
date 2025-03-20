@@ -172,6 +172,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// All settings that can be used by implementations of 
     /// <see cref="BatchingSqlJournal{TConnection,TCommand}"/>.
     /// </summary>
+    [Obsolete("Getting removed in v1.6")]
     public abstract class BatchingSqlJournalSetup
     {
         /// <summary>
@@ -431,6 +432,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// </summary>
     /// <typeparam name="TConnection">A concrete implementation of <see cref="DbConnection"/> for targeted database provider.</typeparam>
     /// <typeparam name="TCommand">A concrete implementation of <see cref="DbCommand"/> for targeted database provider.</typeparam>
+    [Obsolete("Getting removed in v1.6")]
     public abstract class BatchingSqlJournal<TConnection, TCommand> : WriteJournalBase
         where TConnection : DbConnection
         where TCommand : DbCommand
