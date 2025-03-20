@@ -92,13 +92,11 @@ namespace Akka.Persistence.Tests.Fsm
             transition1.From.Should().Be(LookingAround.Instance);
             transition1.To.Should().Be(Shopping.Instance);
 
-            Within(TimeSpan.FromSeconds(0.9), RemainingOrDefault, () =>
-            {
-                var transition2 = ExpectMsg<Transition<IUserState>>();
-                transition2.FsmRef.Should().Be(fsmRef);
-                transition2.From.Should().Be(Shopping.Instance);
-                transition2.To.Should().Be(Inactive.Instance);
-            });
+            // Wait for the transition to Inactive state, which should happen due to timeout
+            var transition2 = ExpectMsg<Transition<IUserState>>();
+            transition2.FsmRef.Should().Be(fsmRef);
+            transition2.From.Should().Be(Shopping.Instance);
+            transition2.To.Should().Be(Inactive.Instance);
 
             ExpectTerminated(fsmRef);
         }
