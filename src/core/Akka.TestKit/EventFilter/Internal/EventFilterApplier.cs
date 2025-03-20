@@ -389,7 +389,8 @@ namespace Akka.TestKit.Internal
             
             // Calculate timeout - if an explicit timeout is provided, use that (after dilating)
             // Otherwise, if we're in a WithinAsync block use its remaining time
-            // Otherwise use the default leeway
+            // NOTE: the leeway value is really supposed to be the WithinAsync block's epsilon value
+            // But the design of the testkit doesn't make it feasible to pass that value back currently
             TimeSpan timeoutValue;
             if (timeout.HasValue)
             {
