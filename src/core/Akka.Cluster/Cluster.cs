@@ -282,7 +282,7 @@ namespace Akka.Cluster
 
             var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            if (token != CancellationToken.None)
+            if (token != default)
             {
                 token.Register(() =>
                 {
@@ -358,7 +358,7 @@ namespace Akka.Cluster
             var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
             var nodes = seedNodes.ToList();
 
-            if (token != CancellationToken.None)
+            if (token != default)
             {
                 token.Register(() =>
                 {
