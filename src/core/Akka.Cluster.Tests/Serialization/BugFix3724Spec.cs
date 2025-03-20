@@ -40,6 +40,7 @@ namespace Akka.Cluster.Tests.Serialization
                 typeof(ClusterEvent.MemberUp));
             Within(TimeSpan.FromSeconds(10), () =>
             {
+                // Expect 0 means we have to wait for the full duration
                 EventFilter.Exception<Exception>().Expect(0, () =>
                 {
                     // wait for a singleton cluster to fully form and publish a member up event
