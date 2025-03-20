@@ -93,8 +93,6 @@ internal sealed class ReceiveActorHandlers
         var messageType = message.GetType();
         foreach (var handler in TypedHandlers)
         {
-            // This is covering object types as well. There might be an ordering issue here
-            // but this should probably be resolved with the logic around how handlers are ordered.
             if (!handler.TargetType.IsAssignableFrom(messageType)) continue;
             if (handler.TryHandle(message))
             {
