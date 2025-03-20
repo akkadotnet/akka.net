@@ -137,7 +137,7 @@ namespace Akka.Persistence.Journal
             var highest = HighestSequenceNr(persistenceId);
             if (highest != 0L && max != 0L)
                 Read(persistenceId, fromSequenceNr, Math.Min(toSequenceNr, highest), max).ForEach(recoveryCallback);
-            return Task.FromResult(new object());
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -154,7 +154,7 @@ namespace Akka.Persistence.Journal
                 _meta.AddOrUpdate(persistenceId, highestSeqNr, (_, _) => highestSeqNr);
             for (var snr = 1L; snr <= toSeqNr; snr++)
                 Delete(persistenceId, snr);
-            return Task.FromResult(new object());
+            return Task.CompletedTask;
         }
 
         protected override bool ReceivePluginInternal(object message)
@@ -202,8 +202,7 @@ namespace Akka.Persistence.Journal
                          .Skip(replay.FromOffset)
                          .Take(replay.ToOffset))
             {
-                var payload = (Tagged)persistence.Payload;
-                replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence.WithPayload(payload.Payload), replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
+                replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
                 index++;
             }
 
@@ -318,6 +317,7 @@ namespace Akka.Persistence.Journal
 
             public readonly IPersistentRepresentation Persistent;
 
+            [Obsolete("If there are tags, they will be stored in the PersistentRepresentation")]
             public readonly string Tag;
 
             public readonly int Offset;
@@ -325,7 +325,9 @@ namespace Akka.Persistence.Journal
             public ReplayedTaggedMessage(IPersistentRepresentation persistent, string tag, int offset)
             {
                 Persistent = persistent;
+#pragma warning disable CS0618 // Type or member is obsolete
                 Tag = tag;
+#pragma warning restore CS0618 // Type or member is obsolete
                 Offset = offset;
             }
         }
@@ -463,29 +465,17 @@ namespace Akka.Persistence.Journal
         #endregion
         
         #region IMemoryMessages implementation
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistent">TBD</param>
-        /// <returns>TBD</returns>
+        
         public Messages Add(IPersistentRepresentation persistent)
         {
             var list = Messages.GetOrAdd(persistent.PersistenceId, _ => new LinkedList<IPersistentRepresentation>());
             list.AddLast(persistent);
             return Messages;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <param name="seqNr">TBD</param>
-        /// <param name="updater">TBD</param>
-        /// <returns>TBD</returns>
+        
         public Messages Update(string pid, long seqNr, Func<IPersistentRepresentation, IPersistentRepresentation> updater)
         {
-            if (Messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
+            if (Messages.TryGetValue(pid, out var persistents))
             {
                 var node = persistents.First;
                 while (node != null)
@@ -499,16 +489,10 @@ namespace Akka.Persistence.Journal
 
             return Messages;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <param name="seqNr">TBD</param>
-        /// <returns>TBD</returns>
+        
         public Messages Delete(string pid, long seqNr)
         {
-            if (Messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
+            if (Messages.TryGetValue(pid, out var persistents))
             {
                 var node = persistents.First;
                 while (node != null)
@@ -522,35 +506,22 @@ namespace Akka.Persistence.Journal
 
             return Messages;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <param name="fromSeqNr">TBD</param>
-        /// <param name="toSeqNr">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <returns>TBD</returns>
+        
         public IEnumerable<IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max)
         {
-            if (Messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
+            if (Messages.TryGetValue(pid, out var persistents))
             {
                 return persistents
                     .Where(x => x.SequenceNr >= fromSeqNr && x.SequenceNr <= toSeqNr)
                     .Take(max > int.MaxValue ? int.MaxValue : (int)max);
             }
 
-            return Enumerable.Empty<IPersistentRepresentation>();
+            return [];
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <returns>TBD</returns>
+        
         public long HighestSequenceNr(string pid)
         {
-            if (Messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
+            if (Messages.TryGetValue(pid, out var persistents))
             {
                 var last = persistents.LastOrDefault();
                 return last?.SequenceNr ?? 0L;
