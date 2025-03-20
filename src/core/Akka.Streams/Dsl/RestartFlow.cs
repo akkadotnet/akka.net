@@ -306,6 +306,7 @@ namespace Akka.Streams.Dsl
                 {
                     if (IsAvailable(Out))
                         Push(Out, sinkIn.Grab());
+                    Push(Out, sinkIn.Grab());
                 },
                 onUpstreamFinish: () =>
                 {
@@ -343,6 +344,7 @@ namespace Akka.Streams.Dsl
                 {
                     if (!sinkIn.IsClosed)
                         sinkIn.Pull();
+                    sinkIn.Pull();
                 },
                 onDownstreamFinish: cause =>
                 {
