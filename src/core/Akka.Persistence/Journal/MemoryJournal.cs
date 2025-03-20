@@ -18,50 +18,7 @@ using Akka.Util.Internal;
 namespace Akka.Persistence.Journal
 {
     using Messages = IDictionary<string, LinkedList<IPersistentRepresentation>>;
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    public interface IMemoryMessages
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistent">TBD</param>
-        /// <returns>TBD</returns>
-        Messages Add(IPersistentRepresentation persistent);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <param name="seqNr">TBD</param>
-        /// <param name="updater">TBD</param>
-        /// <returns>TBD</returns>
-        Messages Update(string pid, long seqNr, Func<IPersistentRepresentation, IPersistentRepresentation> updater);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <param name="seqNr">TBD</param>
-        /// <returns>TBD</returns>
-        Messages Delete(string pid, long seqNr);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <param name="fromSeqNr">TBD</param>
-        /// <param name="toSeqNr">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <returns>TBD</returns>
-        IEnumerable<IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <returns>TBD</returns>
-        long HighestSequenceNr(string pid);
-    }
-
+    
     /// <summary>
     /// In-memory journal for testing purposes.
     /// </summary>
@@ -72,16 +29,8 @@ namespace Akka.Persistence.Journal
         private readonly ConcurrentDictionary<string, long> _meta = new();
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new();
         
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return _messages; } }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="messages">TBD</param>
-        /// <returns>TBD</returns>
+        
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
         {
             foreach (var w in messages)
@@ -109,28 +58,12 @@ namespace Akka.Persistence.Journal
             
             return Task.FromResult<IImmutableList<Exception>>(null); // all good
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="fromSequenceNr">TBD</param>
-        /// <returns>TBD</returns>
+        
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
             return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.GetValueOrDefault(persistenceId, 0L)));
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="fromSequenceNr">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="recoveryCallback">TBD</param>
-        /// <returns>TBD</returns>
+        
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
@@ -139,13 +72,7 @@ namespace Akka.Persistence.Journal
                 Read(persistenceId, fromSequenceNr, Math.Min(toSequenceNr, highest), max).ForEach(recoveryCallback);
             return Task.FromResult(new object());
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <returns>TBD</returns>
+        
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
         {
             var highestSeqNr = HighestSequenceNr(persistenceId);
@@ -190,14 +117,12 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// Replays all events with given tag withing provided boundaries from memory.
         /// </summary>
-        /// <param name="replay">TBD</param>
-        /// <returns>TBD</returns>
         private Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
             if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
                 return Task.FromResult(0);
 
-            int index = 0;
+            var index = 0;
             foreach (var persistence in _tagsToMessagesMapping[replay.Tag]
                          .Skip(replay.FromOffset)
                          .Take(replay.ToOffset))
@@ -212,7 +137,7 @@ namespace Akka.Persistence.Journal
         
         private Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
-            int index = 0;
+            var index = 0;
             var replayed = _allMessages
                 .Skip(replay.FromOffset)
                 .Take(replay.ToOffset - replay.FromOffset)
