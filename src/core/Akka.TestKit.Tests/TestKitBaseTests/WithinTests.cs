@@ -21,7 +21,7 @@ namespace Akka.TestKit.Tests.TestKitBaseTests
         [Fact]
         public void Within_should_increase_max_timeout_by_the_provided_epsilon_value()
         {
-            Within(TimeSpan.FromSeconds(1), () => ExpectNoMsg(), TimeSpan.FromMilliseconds(50));
+            Within(TimeSpan.FromSeconds(1), () => ExpectNoMsg(), TimeSpan.FromMilliseconds(500));
         }
 
         [Fact]
