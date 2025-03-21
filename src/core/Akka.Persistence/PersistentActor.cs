@@ -438,7 +438,11 @@ namespace Akka.Persistence
         
         private void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandle, Func<T, bool> handler, bool isRecover)
         {
-            EnsureMayConfigureRecoverHandlers();
+            if(isRecover)
+                EnsureMayConfigureRecoverHandlers();
+            else
+                EnsureMayConfigureCommandHandlers();
+            
             var handlerSet = isRecover ? _matchRecoverBuilders.Peek() : _matchCommandBuilders.Peek();
 
             handlerSet.AddGenericReceiveHandler<T>(shouldHandle, handler);
