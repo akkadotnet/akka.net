@@ -205,6 +205,7 @@ namespace Akka.Persistence
         public DiscardConfigurator() { }
         public Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class DiscardToDeadLetterStrategy : Akka.Persistence.IStashOverflowStrategy
     {
         public static Akka.Persistence.DiscardToDeadLetterStrategy Instance { get; }
@@ -444,34 +445,44 @@ namespace Akka.Persistence
         protected PersistentActor() { }
         protected override bool Receive(object message) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public abstract class ReceivePersistentActor : Akka.Persistence.UntypedPersistentActor, Akka.Actor.Internal.IInitializableActor
     {
         protected ReceivePersistentActor() { }
         protected void Become(System.Action configure) { }
         protected void BecomeStacked(System.Action configure) { }
-        protected void Command<T>(System.Action<T> handler, System.Predicate<T> shouldHandle = null) { }
-        protected void Command<T>(System.Predicate<T> shouldHandle, System.Action<T> handler) { }
-        protected void Command(System.Type messageType, System.Action<object> handler, System.Predicate<object> shouldHandle = null) { }
+        protected void Command<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Action<T> handler, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Predicate<T> shouldHandle = null) { }
+        protected void Command<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Predicate<T> shouldHandle, System.Action<T> handler) { }
+        protected void Command(System.Type messageType, System.Action<object> handler, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Predicate<object> shouldHandle = null) { }
         protected void Command(System.Type messageType, System.Predicate<object> shouldHandle, System.Action<object> handler) { }
-        protected void Command<T>(System.Func<T, bool> handler) { }
+        protected void Command<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Func<T, bool> handler) { }
         protected void Command(System.Type messageType, System.Func<object, bool> handler) { }
         protected void Command(System.Action<object> handler) { }
         protected void CommandAny(System.Action<object> handler) { }
         protected void CommandAnyAsync(System.Func<object, System.Threading.Tasks.Task> handler) { }
-        protected void CommandAsync<T>(System.Func<T, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null) { }
-        protected void CommandAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, System.Threading.Tasks.Task> handler) { }
+        protected void CommandAsync<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Func<T, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null) { }
+        protected void CommandAsync<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Predicate<T> shouldHandle, System.Func<T, System.Threading.Tasks.Task> handler) { }
         protected void CommandAsync(System.Type messageType, System.Func<object, System.Threading.Tasks.Task> handler, System.Predicate<object> shouldHandle = null) { }
         protected void CommandAsync(System.Type messageType, System.Predicate<object> shouldHandle, System.Func<object, System.Threading.Tasks.Task> handler) { }
         protected virtual void OnCommand(object message) { }
         protected virtual void OnRecover(object message) { }
-        protected void Recover<T>(System.Action<T> handler, System.Predicate<T> shouldHandle = null) { }
-        protected void Recover<T>(System.Predicate<T> shouldHandle, System.Action<T> handler) { }
-        protected void Recover(System.Type messageType, System.Action<object> handler, System.Predicate<object> shouldHandle = null) { }
+        protected void Recover<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Action<T> handler, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Predicate<T> shouldHandle = null) { }
+        protected void Recover<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Predicate<T> shouldHandle, System.Action<T> handler) { }
+        protected void Recover(System.Type messageType, System.Action<object> handler, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Predicate<object> shouldHandle = null) { }
         protected void Recover(System.Type messageType, System.Predicate<object> shouldHandle, System.Action<object> handler) { }
-        protected void Recover<T>(System.Func<T, bool> handler) { }
+        protected void Recover<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Func<T, bool> handler) { }
         protected void Recover(System.Type messageType, System.Func<object, bool> handler) { }
         protected void RecoverAny(System.Action<object> handler) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class Recovery
     {
         public Recovery() { }
@@ -484,6 +495,7 @@ namespace Akka.Persistence
         public long ReplayMax { get; }
         public long ToSequenceNr { get; }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class RecoveryCompleted
     {
         public static readonly Akka.Persistence.RecoveryCompleted Instance;
@@ -504,10 +516,11 @@ namespace Akka.Persistence
         public RecoveryTick(bool snapshot) { }
         public bool Snapshot { get; }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class RecoveryTimedOutException : Akka.Actor.AkkaException
     {
         public RecoveryTimedOutException() { }
-        public RecoveryTimedOutException(string message, System.Exception cause = null) { }
+        public RecoveryTimedOutException(string message, [System.Runtime.CompilerServices.NullableAttribute(2)] System.Exception cause = null) { }
         public RecoveryTimedOutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class ReplayMessages : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayMessages>
@@ -541,6 +554,7 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class ReplyToStrategy : Akka.Persistence.IStashOverflowStrategy
     {
         public ReplyToStrategy(object response) { }
@@ -638,6 +652,7 @@ namespace Akka.Persistence
         public ThrowExceptionConfigurator() { }
         public Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class ThrowOverflowExceptionStrategy : Akka.Persistence.IStashOverflowStrategy
     {
         public static Akka.Persistence.ThrowOverflowExceptionStrategy Instance { get; }
@@ -662,6 +677,7 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public abstract class UntypedPersistentActor : Akka.Persistence.Eventsourced
     {
         protected UntypedPersistentActor() { }

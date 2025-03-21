@@ -1538,22 +1538,27 @@ namespace Akka.Actor
         }
     }
     public delegate bool Receive(object message);
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public abstract class ReceiveActor : Akka.Actor.UntypedActor, Akka.Actor.Internal.IInitializableActor
     {
         protected ReceiveActor() { }
         protected void Become(System.Action configure) { }
         protected void BecomeStacked(System.Action configure) { }
         protected virtual void OnReceive(object message) { }
-        protected void Receive<T>(System.Action<T> handler, System.Predicate<T> shouldHandle = null) { }
-        protected void Receive<T>(System.Predicate<T> shouldHandle, System.Action<T> handler) { }
-        protected void Receive(System.Type messageType, System.Action<object> handler, System.Predicate<object> shouldHandle = null) { }
+        protected void Receive<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Action<T> handler, System.Predicate<T> shouldHandle = null) { }
+        protected void Receive<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Predicate<T> shouldHandle, System.Action<T> handler) { }
+        protected void Receive(System.Type messageType, System.Action<object> handler, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Predicate<object> shouldHandle = null) { }
         protected void Receive(System.Type messageType, System.Predicate<object> shouldHandle, System.Action<object> handler) { }
-        protected void Receive<T>(System.Func<T, bool> handler) { }
+        protected void Receive<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Func<T, bool> handler) { }
         protected void Receive(System.Type messageType, System.Func<object, bool> handler) { }
         protected void ReceiveAny(System.Action<object> handler) { }
         protected void ReceiveAnyAsync(System.Func<object, System.Threading.Tasks.Task> handler) { }
-        protected void ReceiveAsync<T>(System.Func<T, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null) { }
-        protected void ReceiveAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, System.Threading.Tasks.Task> handler) { }
+        protected void ReceiveAsync<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Func<T, System.Threading.Tasks.Task> handler, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Predicate<T> shouldHandle = null) { }
+        protected void ReceiveAsync<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Predicate<T> shouldHandle, System.Func<T, System.Threading.Tasks.Task> handler) { }
         protected void ReceiveAsync(System.Type messageType, System.Func<object, System.Threading.Tasks.Task> handler, System.Predicate<object> shouldHandle = null) { }
         protected void ReceiveAsync(System.Type messageType, System.Predicate<object> shouldHandle, System.Func<object, System.Threading.Tasks.Task> handler) { }
     }
