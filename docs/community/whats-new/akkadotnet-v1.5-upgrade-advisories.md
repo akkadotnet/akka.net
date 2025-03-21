@@ -21,13 +21,13 @@ we're deprecating `Akka.Persistence.Sql.Common` and `Akka.Persistence.Query.Sql`
 
 To assist with the migration, please refer to the following resources:
 
-- **Migration Guide:**  
+* **Migration Guide:**  
   Learn the necessary steps to upgrade by following the [Migration Guide](https://github.com/akkadotnet/Akka.Persistence.Sql/blob/dev/docs/articles/migration.md).
 
-- **Migration Walkthrough:**  
+* **Migration Walkthrough:**  
   For a step-by-step walkthrough, check out our [Migration Walkthrough](https://github.com/akkadotnet/Akka.Persistence.Sql/blob/dev/docs/articles/migration-walkthrough.md).
 
-- **Migration Guide Video:**  
+* **Migration Guide Video:**  
   Watch the [Migration Guide Video](https://www.youtube.com/watch?v=gSmqUrVHPq8) on YouTube for a detailed explanation of the migration process.
 
 ## Upgrading to Akka.NET v1.5.32
