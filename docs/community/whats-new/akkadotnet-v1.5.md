@@ -25,6 +25,7 @@ A summary of our major changes include:
 Scaling Akka.Persistence.Query to 100k+ Concurrent Queries for Large-Scale CQRS](https://petabridge.com/blog/largescale-cqrs-akkadotnet-v1.5/)" for details.
 * **Fully Asynchronous TestKit APIs** - the entire [Akka.TestKit](xref:testing-actor-systems) now supports `async` methods for 100% of its capabilities. The old synchronous implementations still exist, but they're now built on top of the `async` ones. This should improve the developer experience for writing tests and reduce the completion time of your test suite.
 * **Akka.Streams Improvements** - Akka.Streams now uses tremendously less memory than it did in Akka.NET v1.4 and many individual stream stages have been improved, made more robust, or extended to support new behaviors in Akka.NET v1.5.
+* **Akka.Persistence.Sql.Common and Akka.Persistence.Query.Sql Deprecation** - Since v1.5.40, we're deprecating `Akka.Persistence.Sql.Common` and `Akka.Persistence.Query.Sql` packages and all `Akka.Persistence` plugins based on them. For continual support, we strongly recommend that you migrate to the new [`Akka.Persistence.Sql` or the `Akka.Persistence.Sql.Hosting`](https://github.com/akkadotnet/Akka.Persistence.Sql) package.
 
 We have many more features planned over the v1.5 lifecycle - such as:
 
