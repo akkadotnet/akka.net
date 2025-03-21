@@ -42,7 +42,7 @@ namespace Akka.Persistence.Sqlite.Tests
             Assert.Equal("event_journal", config.GetString("table-name"));
             Assert.Equal("journal_metadata", config.GetString("metadata-table-name"));
             Assert.False(config.GetBoolean("auto-initialize"));
-            Assert.Equal("Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common", config.GetString("timestamp-provider"));
+            Assert.Equal("Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sqlite", config.GetString("timestamp-provider"));
             Assert.Equal("unspecified", config.GetString("read-isolation-level"));
             Assert.Equal("unspecified", config.GetString("write-isolation-level"));
             Assert.False(config.HasPath("schema-name"));
@@ -61,7 +61,7 @@ namespace Akka.Persistence.Sqlite.Tests
             settings.JournalTableName.Should().Be("event_journal");
             settings.SchemaName.Should().BeNull();
             settings.MetaTableName.Should().Be("journal_metadata");
-            settings.TimestampProvider.Should().Be("Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common");
+            settings.TimestampProvider.Should().Be("Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sqlite");
             settings.ReadIsolationLevel.Should().Be(IsolationLevel.Unspecified);
             settings.WriteIsolationLevel.Should().Be(IsolationLevel.Unspecified);
             settings.AutoInitialize.Should().BeFalse();

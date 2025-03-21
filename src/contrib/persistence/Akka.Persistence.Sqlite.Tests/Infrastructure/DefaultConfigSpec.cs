@@ -28,7 +28,7 @@ namespace Akka.Persistence.Sql.TestKit
             var config = Sys.Settings.Config.GetConfig("akka.persistence.query.journal.sql");
 
             config.IsNullOrEmpty().Should().BeFalse();
-            config.GetString("class", null).Should().Be("Akka.Persistence.Query.Sql.SqlReadJournalProvider, Akka.Persistence.Query.Sql");
+            config.GetString("class", null).Should().Be("Akka.Persistence.Query.Sql.SqlReadJournalProvider, Akka.Persistence.Sqlite");
             config.GetTimeSpan("refresh-interval", TimeSpan.MinValue).Should().Be(TimeSpan.FromSeconds(3));
             config.GetInt("max-buffer-size", 0).Should().Be(100);
         }

@@ -34,7 +34,7 @@ namespace Akka.Persistence.Query.Sql
         /// <returns></returns>
         public static Config DefaultConfiguration()
         {
-            return ConfigurationFactory.FromResource<SqlReadJournal>("Akka.Persistence.Query.Sql.reference.conf");
+            return ConfigurationFactory.FromResource<SqlReadJournal>("Akka.Persistence.Sqlite.query.conf");
         }
 
         private readonly TimeSpan _refreshInterval;
