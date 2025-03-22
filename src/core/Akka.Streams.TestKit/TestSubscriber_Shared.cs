@@ -50,7 +50,7 @@ namespace Akka.Streams.TestKit
                 
                 var e = await probe.ExpectNextNAsync(len, timeout, cancellationToken)
                     .ToListAsync(cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
                 AssertEquals(e.Count, len, "expected to get {0} events, but got {1}", len, e.Count);
                 for (var i = 0; i < elems.Length; i++)
                 {
@@ -62,7 +62,7 @@ namespace Akka.Streams.TestKit
             {
                 var len = elems.Length;
                 var e = await probe.ExpectNextNAsync(len, timeout, cancellationToken)
-                    .ToListAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+                    .ToListAsync(cancellationToken: cancellationToken);
                 AssertEquals(e.Count, len, "expected to get {0} events, but got {1}", len, e.Count);
 
                 var expectedSet = new HashSet<T>(elems);
@@ -77,7 +77,7 @@ namespace Akka.Streams.TestKit
                 CancellationToken cancellationToken)
             {
                 var next = await probe.ExpectMsgAsync<OnNext<T>>(cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
                 if(!elems.Contains(next.Element))
                     Assert(false, "unexpected elements [{0}] found in the result", next.Element);
                 elems.Remove(next.Element);
@@ -122,13 +122,13 @@ namespace Akka.Streams.TestKit
                 CancellationToken cancellationToken)
             {
                 var sub = await probe.ExpectSubscriptionAsync(cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
                 
                 if (signalDemand)
                     sub.Request(1);
 
                 await ExpectCompleteTask(probe.TestProbe, null, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
             }
 
             internal static async Task ExpectNextOrErrorTask(
@@ -169,7 +169,7 @@ namespace Akka.Streams.TestKit
                 CancellationToken cancellationToken = default)
             {
                 var msg = await probe.TestProbe.ExpectMsgAsync<OnSubscribe>(cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
                 probe.Subscription = msg.Subscription;
                 return msg.Subscription;
             }
@@ -179,7 +179,7 @@ namespace Akka.Streams.TestKit
                 TimeSpan? max,
                 CancellationToken cancellationToken = default) 
                 => await probe.ExpectMsgAsync<ISubscriberEvent>(max, cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             internal static async Task<T> ExpectNextTask(
                 TestProbe probe,
@@ -372,7 +372,7 @@ namespace Akka.Streams.TestKit
                 CancellationToken cancellationToken = default)
             {
                 probe.Subscription ??= await ExpectSubscriptionTask(probe, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
             }
             
             #endregion
@@ -401,7 +401,7 @@ namespace Akka.Streams.TestKit
                 CancellationToken cancellationToken = default)
             {
                 probe.Subscription ??= await ExpectSubscriptionTask(probe, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
             }
         }
     }

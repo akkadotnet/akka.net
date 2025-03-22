@@ -121,35 +121,35 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public ISubscription ExpectSubscription(CancellationToken cancellationToken = default)
                 => ExpectSubscriptionTask(this, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Expects and returns Reactive.Streams.ISubscription/>.
             /// </summary>
             public async Task<ISubscription> ExpectSubscriptionAsync(CancellationToken cancellationToken = default)
                 => await ExpectSubscriptionTask(this, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Expect and return <see cref="ISubscriberEvent"/> (any of: <see cref="OnSubscribe"/>, <see cref="OnNext"/>, <see cref="OnError"/> or <see cref="OnComplete"/>).
             /// </summary>
             public ISubscriberEvent ExpectEvent(CancellationToken cancellationToken = default)
                 => ExpectEventTask(TestProbe, (TimeSpan?)null, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Expect and return <see cref="ISubscriberEvent"/> (any of: <see cref="OnSubscribe"/>, <see cref="OnNext"/>, <see cref="OnError"/> or <see cref="OnComplete"/>).
             /// </summary>
             public async Task<ISubscriberEvent> ExpectEventAsync(CancellationToken cancellationToken = default)
                 => await ExpectEventTask(TestProbe, (TimeSpan?)null, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Expect and return <see cref="ISubscriberEvent"/> (any of: <see cref="OnSubscribe"/>, <see cref="OnNext"/>, <see cref="OnError"/> or <see cref="OnComplete"/>).
             /// </summary>
             public ISubscriberEvent ExpectEvent(TimeSpan max, CancellationToken cancellationToken = default)
                 => ExpectEventTask(TestProbe, max, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Expect and return <see cref="ISubscriberEvent"/> (any of: <see cref="OnSubscribe"/>, <see cref="OnNext"/>, <see cref="OnError"/> or <see cref="OnComplete"/>).
@@ -158,39 +158,39 @@ namespace Akka.Streams.TestKit
                 TimeSpan? max,
                 CancellationToken cancellationToken = default) 
                 => await ExpectEventTask(TestProbe, max, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Expect and return a stream element.
             /// </summary>
             public T ExpectNext(CancellationToken cancellationToken = default)
                 => ExpectNextTask(TestProbe, null, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Expect and return a stream element during specified time or timeout.
             /// </summary>
             public T ExpectNext(TimeSpan? timeout, CancellationToken cancellationToken = default)
                 => ExpectNextTask(TestProbe, timeout, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Expect and return a stream element.
             /// </summary>
             public async Task<T> ExpectNextAsync(CancellationToken cancellationToken = default)
                 => await ExpectNextTask(TestProbe, null, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Expect and return a stream element during specified time or timeout.
             /// </summary>
             public async Task<T> ExpectNextAsync(TimeSpan? timeout, CancellationToken cancellationToken = default)
                 => await ExpectNextTask(TestProbe, timeout, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             public async Task ExpectNextAsync(T element, CancellationToken cancellationToken = default)
                 => await ExpectNextTask(probe: TestProbe, element: element, timeout: null, cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
             
             /// <summary>
             /// Expect a stream element.
@@ -198,7 +198,7 @@ namespace Akka.Streams.TestKit
             public async Task ExpectNextAsync(T element, TimeSpan timeout, CancellationToken cancellationToken = default)
             {
                 await ExpectNextTask(TestProbe, element, timeout, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
             }
             
             /// <summary>
@@ -209,7 +209,7 @@ namespace Akka.Streams.TestKit
                 TimeSpan? timeout = null,
                 CancellationToken cancellationToken = default)
                 => ExpectNextNTask(TestProbe, n, timeout, cancellationToken)
-                    .ToListAsync(cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+                    .ToListAsync(cancellationToken).GetAwaiter().GetResult();
 
             /// <summary>
             /// Expect and return the next <paramref name="n"/> stream elements.
@@ -226,7 +226,7 @@ namespace Akka.Streams.TestKit
             public async Task ExpectNextNAsync(IEnumerable<T> all, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
             {
                 await ExpectNextNTask(TestProbe, all, timeout, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
             }
             
             /// <summary>
@@ -235,7 +235,7 @@ namespace Akka.Streams.TestKit
             public async Task ExpectNoMsgAsync(TimeSpan remaining, CancellationToken cancellationToken = default)
             {
                 await TestProbe.ExpectNoMsgAsync(remaining, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
             }
             
             /// <summary>
@@ -243,14 +243,14 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public Exception ExpectError(CancellationToken cancellationToken = default)
                 => ExpectErrorTask(TestProbe, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Expect and return the signalled System.Exception/>.
             /// </summary>
             public async Task<Exception> ExpectErrorAsync(CancellationToken cancellationToken = default)
                 => await ExpectErrorTask(TestProbe, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Expect subscription to be followed immediately by an error signal. By default single demand will be signaled in order to wake up a possibly lazy upstream. 
@@ -258,7 +258,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public Exception ExpectSubscriptionAndError(CancellationToken cancellationToken = default) 
                 => ExpectSubscriptionAndErrorTask(this, true, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Expect subscription to be followed immediately by an error signal. By default single demand will be signaled in order to wake up a possibly lazy upstream. 
@@ -266,7 +266,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public async Task<Exception> ExpectSubscriptionAndErrorAsync(CancellationToken cancellationToken = default) 
                 => await ExpectSubscriptionAndErrorTask(this, true, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Expect subscription to be followed immediately by an error signal. Depending on the `signalDemand` parameter demand may be signaled 
@@ -277,7 +277,7 @@ namespace Akka.Streams.TestKit
                 bool signalDemand,
                 CancellationToken cancellationToken = default)
                 => ExpectSubscriptionAndErrorTask(this, signalDemand, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Expect subscription to be followed immediately by an error signal. Depending on the `signalDemand` parameter demand may be signaled 
@@ -288,14 +288,14 @@ namespace Akka.Streams.TestKit
                 bool signalDemand,
                 CancellationToken cancellationToken = default)
                 => await ExpectSubscriptionAndErrorTask(this, signalDemand, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             public async Task ExpectSubscriptionAndCompleteAsync(
                 bool signalDemand = true,
                 CancellationToken cancellationToken = default)
             {
                 await ExpectSubscriptionAndCompleteTask(this, signalDemand, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
             }
             
             /// <summary>
@@ -303,28 +303,28 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public object ExpectNextOrError(CancellationToken cancellationToken = default)
                 => ExpectNextOrErrorTask(TestProbe, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Expect given next element or error signal, returning whichever was signaled.
             /// </summary>
             public async Task<object> ExpectNextOrErrorAsync(CancellationToken cancellationToken = default)
                 => await ExpectNextOrErrorTask(TestProbe, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Expect given next element or stream completion, returning whichever was signaled.
             /// </summary>
             public object ExpectNextOrComplete(CancellationToken cancellationToken = default)
                 => ExpectNextOrCompleteTask(TestProbe, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Expect given next element or stream completion, returning whichever was signaled.
             /// </summary>
             public async Task<object> ExpectNextOrCompleteAsync(CancellationToken cancellationToken = default)
                 => await ExpectNextOrCompleteTask(TestProbe, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Expect next element and test it with the <paramref name="predicate"/>
@@ -335,7 +335,7 @@ namespace Akka.Streams.TestKit
             /// <returns>The next element</returns>
             public TOther ExpectNext<TOther>(Predicate<TOther> predicate, CancellationToken cancellationToken = default)
                 => ExpectNextTask(TestProbe, predicate, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Expect next element and test it with the <paramref name="predicate"/>
@@ -348,19 +348,19 @@ namespace Akka.Streams.TestKit
                 Predicate<TOther> predicate,
                 CancellationToken cancellationToken = default)
                 => await ExpectNextTask(TestProbe, predicate, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             public TOther ExpectEvent<TOther>(
                 Func<ISubscriberEvent, TOther> func,
                 CancellationToken cancellationToken = default)
                 => ExpectEventTask(TestProbe, func, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             public async Task<TOther> ExpectEventAsync<TOther>(
                 Func<ISubscriberEvent, TOther> func,
                 CancellationToken cancellationToken = default)
                 => await ExpectEventTask(TestProbe, func, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Receive messages for a given duration or until one does not match a given partial function.
@@ -372,7 +372,7 @@ namespace Akka.Streams.TestKit
                 int msgs = int.MaxValue,
                 CancellationToken cancellationToken = default)
                 => ReceiveWhileAsync(max, idle, filter, msgs, cancellationToken)
-                    .ToListAsync(cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+                    .ToListAsync(cancellationToken).GetAwaiter().GetResult();
 
             /// <summary>
             /// Receive messages for a given duration or until one does not match a given partial function.
@@ -391,7 +391,7 @@ namespace Akka.Streams.TestKit
             public IEnumerable<TOther> ReceiveWithin<TOther>(TimeSpan? max, int messages = int.MaxValue,
                 CancellationToken cancellationToken = default)
                 => ReceiveWithinTask<TOther>(TestProbe, max, messages, cancellationToken)
-                    .ToListAsync(cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
+                    .ToListAsync(cancellationToken).GetAwaiter().GetResult();
 
             /// <summary>
             /// Drains a given number of messages
@@ -431,7 +431,7 @@ namespace Akka.Streams.TestKit
 
             public async Task<TOther> WithinAsync<TOther>(TimeSpan min, TimeSpan max, Func<Task<TOther>> execute, CancellationToken cancellationToken = default) => 
                 await TestProbe.WithinAsync(min, max, execute, cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Sane as calling Within(TimeSpan.Zero, max, function).
@@ -444,7 +444,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<Task<TOther>> execute, CancellationToken cancellationToken = default) => 
                 await TestProbe.WithinAsync(max, execute, cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             public async Task WithinAsync(
                 TimeSpan max,
@@ -452,7 +452,7 @@ namespace Akka.Streams.TestKit
                 TimeSpan? epsilonValue = null,
                 CancellationToken cancellationToken = default)
                 => await TestProbe.WithinAsync(max, actionAsync, epsilonValue, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Attempt to drain the stream into a strict collection (by requesting long.MaxValue elements).
@@ -462,7 +462,7 @@ namespace Akka.Streams.TestKit
             /// </remarks>
             public IList<T> ToStrict(TimeSpan atMost, CancellationToken cancellationToken = default)
                 => ToStrictTask(this, atMost, cancellationToken).ToListAsync(cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Attempt to drain the stream into a strict collection (by requesting long.MaxValue elements).
@@ -491,7 +491,7 @@ namespace Akka.Streams.TestKit
             public Probe<T> EnsureSubscription(CancellationToken cancellationToken = default)
             {
                 EnsureSubscriptionTask(this, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             } 
 
@@ -500,7 +500,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public async Task EnsureSubscriptionAsync(CancellationToken cancellationToken = default)
                 => await EnsureSubscriptionTask(this, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             public async Task RequestAsync(long n)
             {

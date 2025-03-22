@@ -37,7 +37,7 @@ namespace Akka.Streams.TestKit
                 CancellationToken cancellationToken = default)
             {
                 ExpectEventTask(TestProbe, e, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -47,7 +47,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNext(T element, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
             {
                 ExpectNextTask(TestProbe, element, timeout, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -58,7 +58,7 @@ namespace Akka.Streams.TestKit
             {
                 //=> new SubscriberFluentBuilder<T>(this).ExpectNext(element, timeout, cancellationToken);
                 ExpectNextTask(TestProbe, element, timeout, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -68,7 +68,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNext(params T[] elems)
             {
                 ExpectNextTask(this, null, default, elems)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -78,7 +78,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNext(CancellationToken cancellationToken, params T[] elems)
             {
                 ExpectNextTask(this, null, cancellationToken, elems)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -89,7 +89,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNext(TimeSpan? timeout, params T[] elems)
             {
                 ExpectNextTask(this, timeout, default, elems)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -99,7 +99,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNext(TimeSpan? timeout, CancellationToken cancellationToken, params T[] elems)
             {
                 ExpectNextTask(this, timeout, cancellationToken, elems)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -109,7 +109,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNextUnordered(params T[] elems)
             {
                 ExpectNextUnorderedTask(this, null, default, elems)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -119,7 +119,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNextUnordered(CancellationToken cancellationToken, params T[] elems)
             {
                 ExpectNextUnorderedTask(this, null, cancellationToken, elems)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -130,7 +130,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNextUnordered(TimeSpan? timeout, params T[] elems)
             {
                 ExpectNextUnorderedTask(this, timeout, default, elems)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -140,7 +140,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNextUnordered(TimeSpan? timeout, CancellationToken cancellationToken, params T[] elems)
             {
                 ExpectNextUnorderedTask(this, timeout, cancellationToken, elems)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -151,7 +151,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNextWithinSet(ICollection<T> elems, CancellationToken cancellationToken = default)
             {
                 ExpectNextWithinSetTask(TestProbe, elems, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -161,7 +161,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNextN(IEnumerable<T> all, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
             {
                 ExpectNextNTask(TestProbe, all, timeout, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
             
@@ -171,7 +171,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNextUnorderedN(IEnumerable<T> all, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
             {
                 ExpectNextUnorderedNTask(this, all, timeout, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -181,7 +181,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectComplete(CancellationToken cancellationToken = default)
             {
                 ExpectCompleteTask(TestProbe, null, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
             
@@ -194,7 +194,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectComplete(TimeSpan? timeout, CancellationToken cancellationToken = default)
             {
                 ExpectCompleteTask(TestProbe, timeout, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -205,7 +205,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectSubscriptionAndComplete(CancellationToken cancellationToken = default)
             {
                 ExpectSubscriptionAndCompleteTask(this, true, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -218,7 +218,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectSubscriptionAndComplete(bool signalDemand, CancellationToken cancellationToken = default)
             {
                 ExpectSubscriptionAndCompleteTask(this, signalDemand, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -228,7 +228,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNextOrError(T element, Exception cause, CancellationToken cancellationToken = default)
             {
                 ExpectNextOrErrorTask(TestProbe, element, cause, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
             
@@ -238,7 +238,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNextOrComplete(T element, CancellationToken cancellationToken = default)
             {
                 ExpectNextOrCompleteTask(TestProbe, element, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -248,7 +248,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNoMsg(CancellationToken cancellationToken = default)
             {
                 TestProbe.ExpectNoMsgAsync(cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
             
@@ -258,7 +258,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNoMsg(TimeSpan remaining, CancellationToken cancellationToken = default)
             {
                 TestProbe.ExpectNoMsgAsync(remaining, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;                
             }
 
@@ -272,7 +272,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> MatchNext<TOther>(Predicate<TOther> predicate, CancellationToken cancellationToken = default)
             {
                 MatchNextTask(TestProbe, predicate, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;                
             }
         }
