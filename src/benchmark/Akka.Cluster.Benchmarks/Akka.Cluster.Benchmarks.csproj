@@ -11,7 +11,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
-      <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj" />
     </ItemGroup>
 
     <ItemGroup>

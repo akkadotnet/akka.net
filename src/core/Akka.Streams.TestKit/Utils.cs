@@ -37,7 +37,7 @@ namespace Akka.Streams.TestKit
                     block();
                     return Task.FromResult(NotUsed.Instance);
                 }, materializer, timeout, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
 
         public static T AssertAllStagesStopped<T>(
             this TestKitBase spec,
@@ -46,7 +46,7 @@ namespace Akka.Streams.TestKit
             TimeSpan? timeout = null,
             CancellationToken cancellationToken = default)
             => AssertAllStagesStoppedAsync(spec, () => Task.FromResult(block()), materializer, timeout, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
 
         public static async Task AssertAllStagesStoppedAsync(
             this TestKitBase spec,
@@ -58,8 +58,7 @@ namespace Akka.Streams.TestKit
                 {
                     await block();
                     return NotUsed.Instance;
-                }, materializer, timeout, cancellationToken)
-                .ConfigureAwait(false);
+                }, materializer, timeout, cancellationToken);
         
         public static async Task<T> AssertAllStagesStoppedAsync<T>(
             this TestKitBase spec,

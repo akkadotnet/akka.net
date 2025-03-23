@@ -121,8 +121,7 @@ namespace Akka.Streams.Tests.Dsl
                 (await probe.ReceiveNAsync(9).ToListAsync()).Should().BeEquivalentTo(Enumerable.Range(12, 9));
                 await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
-                foreach (var n in Enumerable.Range(1, 13))
-                    await c.ExpectNextAsync(n);
+                await c.ExpectNextNAsync(Enumerable.Range(1, 13));
             
                 await c.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
             }, Materializer).ShouldCompleteWithin(RemainingOrDefault);

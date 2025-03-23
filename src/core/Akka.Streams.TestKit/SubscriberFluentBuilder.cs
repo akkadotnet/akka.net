@@ -29,9 +29,9 @@ namespace Akka.Streams.TestKit
         public async Task<ISubscription> ExpectSubscriptionAsync(CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await ManualProbe<T>.ExpectSubscriptionTask(Probe, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -42,9 +42,9 @@ namespace Akka.Streams.TestKit
         public async Task<ISubscriberEvent> ExpectEventAsync(CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await ManualProbe<T>.ExpectEventTask(Probe.TestProbe, (TimeSpan?)null, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
         
         /// <summary>
@@ -57,9 +57,9 @@ namespace Akka.Streams.TestKit
             CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await ManualProbe<T>.ExpectEventTask(Probe.TestProbe, max, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
         
         /// <summary>
@@ -69,9 +69,9 @@ namespace Akka.Streams.TestKit
         public async Task<T> ExpectNextAsync(CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await ManualProbe<T>.ExpectNextTask(Probe.TestProbe, null, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
         
         /// <summary>
@@ -81,9 +81,9 @@ namespace Akka.Streams.TestKit
         public async Task<T> ExpectNextAsync(TimeSpan? timeout, CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await ManualProbe<T>.ExpectNextTask(Probe.TestProbe, timeout, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
         
         /// <summary>
@@ -96,7 +96,7 @@ namespace Akka.Streams.TestKit
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             await foreach (var item in ManualProbe<T>.ExpectNextNTask(Probe.TestProbe, n, timeout, cancellationToken))
             {
                 yield return item;
@@ -110,9 +110,9 @@ namespace Akka.Streams.TestKit
         public async Task<Exception> ExpectErrorAsync(CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await ManualProbe<T>.ExpectErrorTask(Probe.TestProbe, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
         
         /// <summary>
@@ -124,9 +124,9 @@ namespace Akka.Streams.TestKit
         public async Task<Exception> ExpectSubscriptionAndErrorAsync(CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await ManualProbe<T>.ExpectSubscriptionAndErrorTask(Probe, true, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -142,9 +142,9 @@ namespace Akka.Streams.TestKit
             CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await ManualProbe<T>.ExpectSubscriptionAndErrorTask(Probe, signalDemand, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
         
         /// <summary>
@@ -154,9 +154,9 @@ namespace Akka.Streams.TestKit
         public async Task<object> ExpectNextOrErrorAsync(CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await ManualProbe<T>.ExpectNextOrErrorTask(Probe.TestProbe, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -166,9 +166,9 @@ namespace Akka.Streams.TestKit
         public async Task<object> ExpectNextOrCompleteAsync(CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await ManualProbe<T>.ExpectNextOrCompleteTask(Probe.TestProbe, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -184,9 +184,9 @@ namespace Akka.Streams.TestKit
             CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await ManualProbe<T>.ExpectNextTask(Probe.TestProbe, predicate, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         public async Task<TOther> ExpectEventAsync<TOther>(
@@ -194,9 +194,9 @@ namespace Akka.Streams.TestKit
             CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await ManualProbe<T>.ExpectEventTask(Probe.TestProbe, func, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -211,7 +211,7 @@ namespace Akka.Streams.TestKit
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             await foreach (var item in Probe.TestProbe.ReceiveWhileAsync(max, idle, filter, msgs, cancellationToken))
             {
                 yield return item;
@@ -228,7 +228,7 @@ namespace Akka.Streams.TestKit
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             await foreach (var item in ManualProbe<T>.ReceiveWithinTask<TOther>(Probe.TestProbe, max, messages, cancellationToken))
             {
                 yield return item;
@@ -260,9 +260,9 @@ namespace Akka.Streams.TestKit
             CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await Probe.TestProbe.WithinAsync(min, max, asyncFunction, hint, epsilonValue, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
         
         /// <summary>
@@ -284,9 +284,9 @@ namespace Akka.Streams.TestKit
             CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             return await Probe.TestProbe.WithinAsync(max, actionAsync, epsilonValue, cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
         
         /// <summary>
@@ -298,7 +298,7 @@ namespace Akka.Streams.TestKit
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             await ExecuteAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
             await foreach (var item in ManualProbe<T>.ToStrictTask(Probe, atMost, cancellationToken))
             {
                 yield return item;
@@ -332,12 +332,12 @@ namespace Akka.Streams.TestKit
             foreach (var func in _tasks)
             {
                 await func(cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
             }
 
             if (asyncAction != null)
                 await asyncAction()
-                    .ConfigureAwait(false);
+                    ;
         }
         
         #region Probe<T> wrapper

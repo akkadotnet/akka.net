@@ -1,6 +1,22 @@
-#### 1.5.40 March 17th, 2025 ####
+#### 1.5.40 March 21st, 2025 ####
 
-*Placeholder for nightlies*
+* [Remote: `Endpoint` actor cleanup](https://github.com/akkadotnet/akka.net/issues/7524)
+* [Streams: Implement nullability in `Buffer`](https://github.com/akkadotnet/akka.net/issues/7496)
+* [Streams: Refactor `SelectAsyncUnordered` `ContinueWith` to local function](https://github.com/akkadotnet/akka.net/issues/7531)
+* [Core: Cleanup build warnings](https://github.com/akkadotnet/akka.net/issues/7522)
+* [Streams: Make `SelectAsync` check equality by reference instead of by struct value](https://github.com/akkadotnet/akka.net/issues/7543)
+* [Query.InMemory: Properly unwrap tagged messages in all queries](https://github.com/akkadotnet/akka.net/issues/7548)
+* [Resolve Akka.Delivery and Akka.Cluster.Sharding.Delivery issues](https://github.com/akkadotnet/akka.net/issues/7538)
+* [Persistence: Remove Akka.Persistence.Sql.Common and Akka.Persistence.Query.Sql packages](https://github.com/akkadotnet/akka.net/issues/7551)
+
+2 contributors since release 1.5.39
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 17      | 710  | 1901 | Aaron Stannard      |
+| 3       | 736  | 104  | Gregorius Soedharmo |
+
+To [see the full set of changes in Akka.NET v1.5.40, click here](https://github.com/akkadotnet/akka.net/milestone/123).
 
 #### 1.5.39 March 14th, 2025 ####
 
