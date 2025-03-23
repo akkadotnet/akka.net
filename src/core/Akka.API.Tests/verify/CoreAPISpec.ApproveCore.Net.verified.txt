@@ -295,7 +295,7 @@ namespace Akka.Actor
     }
     public class static ActorRefExtensions
     {
-        public static Akka.Actor.IActorRef GetOrElse(this Akka.Actor.IActorRef actorRef, System.Func<Akka.Actor.IActorRef> elseValue) { }
+        public static Akka.Actor.IActorRef GetOrElse([System.Runtime.CompilerServices.NullableAttribute(2)] this Akka.Actor.IActorRef actorRef, System.Func<Akka.Actor.IActorRef> elseValue) { }
         public static bool IsNobody(this Akka.Actor.IActorRef actorRef) { }
     }
     public class static ActorRefFactoryExtensions
