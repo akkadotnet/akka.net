@@ -21,21 +21,16 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     internal static class SystemMessageList
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static readonly LatestFirstSystemMessageList LNil = new(null);
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public static readonly EarliestFirstSystemMessageList ENil = new(null);
-
+        
         /// <summary>
-        /// TBD
+        /// Computes the size of the list. This operation has a cost of O(N) in the number of elements.
         /// </summary>
-        /// <param name="head">TBD</param>
-        /// <param name="acc">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="head">Start of the list</param>
+        /// <param name="acc">The initial accumulation value</param>
+        /// <returns>The computed size of the list</returns>
         internal static int SizeInner(SystemMessage head, int acc)
         {
             while (true)
@@ -45,13 +40,7 @@ namespace Akka.Dispatch.SysMsg
                 acc = acc + 1;
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="head">TBD</param>
-        /// <param name="acc">TBD</param>
-        /// <returns>TBD</returns>
+        
         internal static SystemMessage ReverseInner(SystemMessage head, SystemMessage acc)
         {
             while (true)
@@ -71,7 +60,7 @@ namespace Akka.Dispatch.SysMsg
     /// INTERNAL API
     ///
     /// Value type supporting list operations on system messages. The `next` field of <see cref="SystemMessage"/>
-    /// is hidden, and can only accessed through the value classes <see cref="LatestFirstSystemMessageList"/> and
+    /// is hidden and only accessed through the value classes <see cref="LatestFirstSystemMessageList"/> and
     /// <see cref="EarliestFirstSystemMessageList"/>, abstracting over the fact that system messages are the
     /// list nodes themselves. If used properly, this stays a compile time construct without any allocation overhead.
     ///
@@ -260,12 +249,9 @@ namespace Akka.Dispatch.SysMsg
     internal interface IStashWhenFailed { }
 
     // public API
-
-    //@SerialVersionUID(1L)
-    //private[akka] case class Create(failure: Option[ActorInitializationException]) extends ISystemMessage // sent to self from Dispatcher.register
-
+    
     /// <summary>
-    ///     Class ISystemMessage.
+    /// Markter interface for all system messages.
     /// </summary>
     public interface ISystemMessage : INoSerializationVerificationNeeded
     {
@@ -311,7 +297,7 @@ namespace Akka.Dispatch.SysMsg
     }
 
     /// <summary>
-    ///     Class DeathWatchNotification.
+    /// Notification that a watched actor has died.
     /// </summary>
     public sealed class DeathWatchNotification : SystemMessage, IDeadLetterSuppression
     {
@@ -328,23 +314,21 @@ namespace Akka.Dispatch.SysMsg
             AddressTerminated = addressTerminated;
         }
 
-        /// <summary>
-        ///     Gets the actor.
-        /// </summary>
-        /// <value>The actor.</value>
-        public IActorRef Actor { get; private set; }
+        public IActorRef Actor { get; }
 
         /// <summary>
-        ///     Gets a value indicating whether [existence confirmed].
+        /// If this is true, the actor we received the notification for was definitely alive at some point in the past.
+        ///
+        /// If it is false, the actor may have never been deployed or created.
         /// </summary>
-        /// <value><c>true</c> if [existence confirmed]; otherwise, <c>false</c>.</value>
-        public bool ExistenceConfirmed { get; private set; }
+        public bool ExistenceConfirmed { get; }
 
         /// <summary>
-        ///     Gets a value indicating whether [address terminated].
+        /// If this value is true, we're getting this death watch notification because the actor's remote node has been
+        /// terminated before the individual actors could proceed with their shutdown process. This can happen in the
+        /// event of an ungraceful process termination or a node being downed in Akka.Cluster.
         /// </summary>
-        /// <value><c>true</c> if [address terminated]; otherwise, <c>false</c>.</value>
-        public bool AddressTerminated { get; private set; }
+        public bool AddressTerminated { get; }
 
         
         public override string ToString()
