@@ -347,7 +347,7 @@ namespace Akka.Cluster.Sharding
         {
             _system = system;
             _system.Settings.InjectTopLevelFallback(DefaultConfig());
-            _system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
+            _system.Settings.InjectTopLevelFallback(ClusterSingleton.DefaultConfig());
             _system.Settings.InjectTopLevelFallback(DistributedData.DistributedData.DefaultConfig());
             _cluster = Cluster.Get(_system);
             Settings = ClusterShardingSettings.Create(system);

@@ -46,7 +46,7 @@ namespace Akka.Cluster.Sharding.Tests.Internal
                 akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
                 akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
             ")
-            .WithFallback(ClusterSingletonManager.DefaultConfig())
+            .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSharding.DefaultConfig())
             .WithFallback(DistributedData.DistributedData.DefaultConfig());
 

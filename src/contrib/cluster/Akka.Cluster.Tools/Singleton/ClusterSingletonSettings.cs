@@ -83,7 +83,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// </summary>
         public static ClusterSingletonSettings Create(ActorSystem system)
         {
-            system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
+            system.Settings.InjectTopLevelFallback(ClusterSingleton.DefaultConfig());
             return Create(system.Settings.Config.GetConfig("akka.cluster"));
         }
 
