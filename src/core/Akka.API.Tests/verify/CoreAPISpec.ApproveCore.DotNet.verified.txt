@@ -1409,15 +1409,10 @@ namespace Akka.Actor
     }
     public sealed class Nobody : Akka.Actor.MinimalActorRef
     {
-        public static Akka.Actor.Nobody Instance;
+        public static readonly Akka.Actor.Nobody Instance;
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public class NobodySurrogate : Akka.Util.ISurrogate
-        {
-            public NobodySurrogate() { }
-            public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
-        }
     }
     public class OneForOneStrategy : Akka.Actor.SupervisorStrategy, System.IEquatable<Akka.Actor.OneForOneStrategy>
     {

@@ -33,7 +33,7 @@ namespace Akka.Actor
         /// or <see cref="DeadLetterActorRef"/>. Otherwise return the result of evaluating `elseValue`.
         /// </summary>
         /// <param name="actorRef">The actor that is being tested.</param>
-        /// <param name="elseValue">The value we'll return if <see cref="actorRef"/> isn't a valid actor.</param>
+        /// <param name="elseValue">The value we'll return if <paramref name="actorRef"/> isn't a valid actor.</param>
         public static IActorRef GetOrElse(this IActorRef? actorRef, Func<IActorRef> elseValue)
         {
             return actorRef.IsNobody() ? elseValue() : actorRef!;
