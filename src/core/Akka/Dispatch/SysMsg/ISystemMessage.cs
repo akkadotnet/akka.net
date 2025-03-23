@@ -359,47 +359,31 @@ namespace Akka.Dispatch.SysMsg
     [InternalApi]
     public sealed class Failed : SystemMessage, IStashWhenFailed
     {
-        private readonly long _uid;
-        private readonly Exception _cause;
-        private readonly IActorRef _child;
-
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="Failed" /> class.
-        /// </summary>
-        /// <param name="child">The child.</param>
-        /// <param name="cause">The cause.</param>
-        /// <param name="uid">The uid</param>
         public Failed(IActorRef child, Exception cause, long uid)
         {
-            _uid = uid;
-            _child = child;
-            _cause = cause;
+            Uid = uid;
+            Child = child;
+            Cause = cause;
         }
-
+        
         /// <summary>
-        ///     Gets the child.
+        /// The child actor who failed.
         /// </summary>
-        /// <value>The child.</value>
-        public IActorRef Child { get { return _child; } }
-
+        public IActorRef Child { get; }
+        
         /// <summary>
-        ///     Gets the cause.
+        /// Exception thrown during failure.
         /// </summary>
-        /// <value>The cause.</value>
-        public Exception Cause { get { return _cause; } }
-
+        public Exception Cause { get; }
+        
         /// <summary>
-        /// TBD
+        /// The unique identifier for this child <see cref="IActorRef"/>.
         /// </summary>
-        public long Uid { get { return _uid; } }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        public long Uid { get; }
+        
         public override string ToString()
         {
-            return "<Failed>: " + _child + " (" + _uid + ") " + (_cause != null ? ", Cause=" + _cause : "");
+            return "<Failed>: " + Child + " (" + Uid + ") " + (Cause != null ? ", Cause=" + Cause : "");
         }
     }
 
@@ -423,18 +407,14 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets a value indicating whether this <see cref="Supervise" /> is asynchronous.
         /// </summary>
         /// <value><c>true</c> if asynchronous; otherwise, <c>false</c>.</value>
-        public bool Async { get; private set; }
+        public bool Async { get; }
 
         /// <summary>
         ///     Gets the child.
         /// </summary>
         /// <value>The child.</value>
-        public IActorRef Child { get; private set; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        public IActorRef Child { get; }
+        
         public override string ToString()
         {
             return "<Supervise>: " + Child + ", Async=" + Async;
@@ -493,11 +473,7 @@ namespace Akka.Dispatch.SysMsg
                 return ((Watchee?.GetHashCode() ?? 0) * 397) ^ (Watcher?.GetHashCode() ?? 0);
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         public override string ToString()
         {
             return $"<Watch>: {Watcher} wants to watch {Watchee}";
@@ -551,11 +527,7 @@ namespace Akka.Dispatch.SysMsg
                 return ((Watchee?.GetHashCode() ?? 0) * 397) ^ (Watcher?.GetHashCode() ?? 0);
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         public override string ToString()
         {
             return $"<Unwatch>: {Watcher} wants to unwatch {Watchee}";
@@ -582,9 +554,9 @@ namespace Akka.Dispatch.SysMsg
         /// <value>The task.</value>
         public Task Task { get; private set; }
     }
-
+    
     /// <summary>
-    /// TBD
+    /// Represents a <see cref="Task"/> completion that will be executed inside the actor's context.
     /// </summary>
     internal sealed class ActorTaskSchedulerMessage : SystemMessage
     {
@@ -594,9 +566,6 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorTaskSchedulerMessage" /> class.
         /// </summary>
-        /// <param name="scheduler">TBD</param>
-        /// <param name="task">TBD</param>
-        /// <param name="message">TBD</param>
         public ActorTaskSchedulerMessage(ActorTaskScheduler scheduler, Task task, object message)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
@@ -614,28 +583,16 @@ namespace Akka.Dispatch.SysMsg
             Exception = exception ?? throw new ArgumentNullException(nameof(exception));
             Message = message;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public Exception Exception { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public object Message { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         public void ExecuteTask()
         {
             _scheduler.ExecuteTask(_task);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         public override string ToString()
         {
             return "<ActorTaskSchedulerMessage>";
