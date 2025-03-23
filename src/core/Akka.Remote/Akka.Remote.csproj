@@ -1,9 +1,17 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <Description>Remoting support for Akka.NET. Allows actors to communicate over the network.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);network</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- 
+        Suppressing AK1004 warnings in Akka.Remote because this project requires fine-grained control over timer scheduling
+        for network-related operations. The standard IWithTimers pattern doesn't support the advanced scheduling patterns
+        needed for reliable remote messaging, especially in cases where we need multiple concurrent timers of the same type
+        or need to manage timer cancellation explicitly for network protocol handling.
+        -->
+        <NoWarn>$(NoWarn);AK1004</NoWarn>
     </PropertyGroup>
     <ItemGroup>
         <EmbeddedResource Include="Configuration\Remote.conf" />

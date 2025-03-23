@@ -1,10 +1,18 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <Description>Clustering support for Akka.NET actors. Used to build highly-available, distributed applications.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);network;cluster</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- 
+        Suppressing AK1004 warnings in Akka.Cluster because this project requires precise control over timer scheduling
+        for cluster coordination and gossip protocols. The standard IWithTimers pattern is too restrictive for the complex
+        timing requirements of cluster membership, failure detection, and leader election protocols where multiple concurrent
+        timers and explicit timer management are essential for correct distributed behavior.
+        -->
+        <NoWarn>$(NoWarn);AK1004</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
