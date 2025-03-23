@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Text;
 using Akka.Actor;
@@ -21,7 +21,7 @@ namespace Akka.Remote.Serialization
         private readonly WrappedPayloadSupport _payloadSupport;
         private ExceptionSupport _exceptionSupport;
 
-        private static readonly byte[] EmptyBytes = {};
+        private static readonly byte[] EmptyBytes = [];
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SystemMessageSerializer" /> class.

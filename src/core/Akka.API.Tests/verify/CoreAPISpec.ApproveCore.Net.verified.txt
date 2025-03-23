@@ -3162,19 +3162,23 @@ namespace Akka.Dispatch.MessageQueues
 }
 namespace Akka.Dispatch.SysMsg
 {
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class ActorTask : Akka.Dispatch.SysMsg.SystemMessage
     {
         public ActorTask(System.Threading.Tasks.Task task) { }
         public System.Threading.Tasks.Task Task { get; }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class Create : Akka.Dispatch.SysMsg.SystemMessage
     {
         public Create(Akka.Actor.ActorInitializationException failure = null) { }
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
         public Akka.Actor.ActorInitializationException Failure { get; }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class DeathWatchNotification : Akka.Dispatch.SysMsg.SystemMessage, Akka.Event.IDeadLetterSuppression
     {
         public DeathWatchNotification(Akka.Actor.IActorRef actor, bool existenceConfirmed, bool addressTerminated) { }
@@ -3183,6 +3187,7 @@ namespace Akka.Dispatch.SysMsg
         public bool ExistenceConfirmed { get; }
         public override string ToString() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class Escalate : Akka.Dispatch.SysMsg.SystemMessage
     {
         public Escalate(System.Exception reason) { }
@@ -3190,6 +3195,7 @@ namespace Akka.Dispatch.SysMsg
         public override string ToString() { }
     }
     [Akka.Annotations.InternalApiAttribute()]
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class Failed : Akka.Dispatch.SysMsg.SystemMessage
     {
         public Failed(Akka.Actor.IActorRef child, System.Exception cause, long uid) { }
@@ -3204,17 +3210,20 @@ namespace Akka.Dispatch.SysMsg
         public NoMessage() { }
         public override string ToString() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class Recreate : Akka.Dispatch.SysMsg.SystemMessage
     {
         public Recreate(System.Exception cause) { }
         public System.Exception Cause { get; }
         public override string ToString() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class RegisterTerminationHook
     {
         public static Akka.Dispatch.SysMsg.RegisterTerminationHook Instance { get; }
         public override string ToString() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class Resume : Akka.Dispatch.SysMsg.SystemMessage
     {
         public Resume(System.Exception causedByFailure) { }
@@ -3226,12 +3235,14 @@ namespace Akka.Dispatch.SysMsg
         public Stop() { }
         public override string ToString() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class StopChild
     {
         public StopChild(Akka.Actor.IActorRef child) { }
         public Akka.Actor.IActorRef Child { get; }
         public override string ToString() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class Supervise : Akka.Dispatch.SysMsg.SystemMessage
     {
         public Supervise(Akka.Actor.IActorRef child, bool async) { }
@@ -3256,16 +3267,19 @@ namespace Akka.Dispatch.SysMsg
         public Terminate() { }
         public override string ToString() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class TerminationHook
     {
         public static Akka.Dispatch.SysMsg.TerminationHook Instance { get; }
         public override string ToString() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class TerminationHookDone
     {
         public static Akka.Dispatch.SysMsg.TerminationHookDone Instance { get; }
         public override string ToString() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class Unwatch : Akka.Dispatch.SysMsg.SystemMessage
     {
         public Unwatch(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
@@ -3275,12 +3289,13 @@ namespace Akka.Dispatch.SysMsg
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public class Watch : Akka.Dispatch.SysMsg.SystemMessage
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class Watch : Akka.Dispatch.SysMsg.SystemMessage
     {
         public Watch(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
         public Akka.Actor.IInternalActorRef Watchee { get; }
         public Akka.Actor.IInternalActorRef Watcher { get; }
-        protected bool Equals(Akka.Dispatch.SysMsg.Watch other) { }
+        public bool Equals(Akka.Dispatch.SysMsg.Watch other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }

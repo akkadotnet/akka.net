@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -31,7 +31,7 @@ namespace Akka.Dispatch.SysMsg
         /// <param name="head">Start of the list</param>
         /// <param name="acc">The initial accumulation value</param>
         /// <returns>The computed size of the list</returns>
-        internal static int SizeInner(SystemMessage head, int acc)
+        internal static int SizeInner(SystemMessage? head, int acc)
         {
             while (true)
             {
@@ -41,7 +41,7 @@ namespace Akka.Dispatch.SysMsg
             }
         }
         
-        internal static SystemMessage ReverseInner(SystemMessage head, SystemMessage acc)
+        internal static SystemMessage ReverseInner(SystemMessage? head, SystemMessage? acc)
         {
             while (true)
             {
@@ -74,13 +74,13 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         /// The front of the list.
         /// </summary>
-        public SystemMessage Head;
+        public SystemMessage? Head;
 
         /// <summary>
         /// Creates a new message list.
         /// </summary>
         /// <param name="head">The current head item.</param>
-        public LatestFirstSystemMessageList(SystemMessage head)
+        public LatestFirstSystemMessageList(SystemMessage? head)
         {
             Head = head;
         }
@@ -148,13 +148,13 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         /// The front of the list.
         /// </summary>
-        public SystemMessage Head;
+        public SystemMessage? Head;
 
         /// <summary>
         /// Creates a new message list.
         /// </summary>
         /// <param name="head">The current head item.</param>
-        public EarliestFirstSystemMessageList(SystemMessage head)
+        public EarliestFirstSystemMessageList(SystemMessage? head)
         {
             Head = head;
         }
@@ -272,7 +272,7 @@ namespace Akka.Dispatch.SysMsg
         /// Next fields are only modifiable via the <see cref="SystemMessageList"/> class.
         /// </summary>
         [NonSerialized]
-        internal SystemMessage Next;
+        internal SystemMessage? Next;
 
         /// <summary>
         /// Unlinks this message from the linked list.
@@ -412,7 +412,7 @@ namespace Akka.Dispatch.SysMsg
     /// is stopped. In the case of a remote actor references, a <see cref="Terminated"/> may also be produced in
     /// the event that the association between the two remote actor systems fails.
     /// </summary>
-    public class Watch : SystemMessage
+    public sealed class Watch : SystemMessage
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Watch" /> class.
@@ -437,16 +437,16 @@ namespace Akka.Dispatch.SysMsg
         /// <value>The watcher.</value>
         public IInternalActorRef Watcher { get; }
 
-        protected bool Equals(Watch other)
+        public bool Equals(Watch other)
         {
             return Equals(Watchee, other.Watchee) && Equals(Watcher, other.Watcher);
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((Watch)obj);
         }
 
@@ -454,7 +454,7 @@ namespace Akka.Dispatch.SysMsg
         {
             unchecked
             {
-                return ((Watchee?.GetHashCode() ?? 0) * 397) ^ (Watcher?.GetHashCode() ?? 0);
+                return ((Watchee.GetHashCode()) * 397) ^ Watcher.GetHashCode();
             }
         }
         
@@ -497,7 +497,7 @@ namespace Akka.Dispatch.SysMsg
             return Equals(Watchee, other.Watchee) && Equals(Watcher, other.Watcher);
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
@@ -568,7 +568,7 @@ namespace Akka.Dispatch.SysMsg
             Message = message;
         }
         
-        public Exception Exception { get; }
+        public Exception? Exception { get; }
         
         public object Message { get; }
 
@@ -601,12 +601,8 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the cause.
         /// </summary>
         /// <value>The cause.</value>
-        public Exception Cause { get; private set; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        public Exception Cause { get; }
+        
         public override string ToString()
         {
             return "<Recreate>" + (Cause == null ? "" : " Cause: " + Cause);

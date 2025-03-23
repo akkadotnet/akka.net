@@ -455,6 +455,7 @@ namespace Akka.Remote.Serialization
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class SystemMessageSerializer : Akka.Serialization.Serializer
     {
         public SystemMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
