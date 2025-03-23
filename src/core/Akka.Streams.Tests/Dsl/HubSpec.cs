@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HubSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,6 +24,7 @@ using Akka.Util.Internal;
 using FluentAssertions.Extensions;
 using Xunit.Abstractions;
 using static FluentAssertions.FluentActions;
+using Akka.Streams.Implementation;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -272,6 +273,36 @@ namespace Akka.Streams.Tests.Dsl
                         var result = await task.ShouldCompleteWithin(3.Seconds());
                         result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
                     });
+                });
+            }, Materializer);
+        }
+
+        [Fact]
+        public async Task MergeHub_must_not_log_normal_shutdown_exception()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var (sink, task) = MergeHub.Source<int>(16).Take(10).ToMaterialized(Sink.Seq<int>(), Keep.Both)
+                    .Run(Materializer);
+
+                await WithinAsync(10.Seconds(), async () =>
+                {
+                    await EventFilter
+                        .Custom((e) =>
+                        {
+                            if (e.Cause?.InnerException is NormalShutdownException nse &&
+                                nse == ActorPublisher.NormalShutdownReason)
+                                return true;
+                            else
+                                return false;
+                        })
+                        .ExpectAsync(0, async () =>
+                        {
+                            Source.Failed<int>(ActorPublisher.NormalShutdownReason).RunWith(sink, Materializer);
+                            Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
+                            var result = await task.ShouldCompleteWithin(3.Seconds());
+                            result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                        });
                 });
             }, Materializer);
         }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -312,14 +312,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// </summary>
         /// <seealso cref="SelectAsyncUnordered{T,TIn,TOut,TMat}"/>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="parallelism">TBD</param>
-        /// <param name="asyncMapper">TBD</param>
-        /// <returns>TBD</returns>
         public static Flow<T, TOut, TMat> SelectAsync<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
         {
             return (Flow<T, TOut, TMat>)InternalFlowOperations.SelectAsync(flow, parallelism, asyncMapper);
@@ -357,14 +349,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// </summary>
         /// <seealso cref="SelectAsync{T,TIn,TOut,TMat}"/>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="parallelism">TBD</param>
-        /// <param name="asyncMapper">TBD</param>
-        /// <returns>TBD</returns>
         public static Flow<T, TOut, TMat> SelectAsyncUnordered<T, TIn, TOut, TMat>(this Flow<T, TIn, TMat> flow, int parallelism, Func<TIn, Task<TOut>> asyncMapper)
         {
             return (Flow<T, TOut, TMat>)InternalFlowOperations.SelectAsyncUnordered(flow, parallelism, asyncMapper);
@@ -386,12 +370,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> Where<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Where(flow, predicate);
@@ -413,12 +391,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> WhereNot<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.WhereNot(flow, predicate);
@@ -446,13 +418,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// <seealso cref="Limit{TIn,TOut,TMat}"/> <seealso cref="LimitWeighted{TIn,TOut,TMat}"/> 
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <param name="inclusive">TBD</param>
-        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> TakeWhile<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate, bool inclusive = false)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.TakeWhile(flow, predicate, inclusive);
@@ -470,12 +435,6 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
         public static Flow<TIn, TOut, TMat> SkipWhile<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, Predicate<TOut> predicate)
         {
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.SkipWhile(flow, predicate);
@@ -2106,17 +2065,17 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="name">TBD</param>
-        /// <param name="extract">TBD</param>
-        /// <param name="log">TBD</param>
-        /// <returns>TBD</returns>
-        public static Flow<TIn, TOut, TMat> Log<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, string name, Func<TOut, object> extract = null, ILoggingAdapter log = null)
+        /// <typeparam name="TIn">The input type</typeparam>
+        /// <typeparam name="TOut">The output type</typeparam>
+        /// <typeparam name="TMat">The materialized type</typeparam>
+        /// <param name="flow">The underlying graph</param>
+        /// <param name="name">The name of the <see cref="LogSource"/></param>
+        /// <param name="extract">Optional. Extract the content that will be captured by the logger</param>
+        /// <param name="log">Optional. Use an external logging adapter</param>
+        /// <param name="logLevel">Optional. The log level being logged. Defaults to <see cref="LogLevel.DebugLevel"/></param>
+        public static Flow<TIn, TOut, TMat> Log<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, string name, Func<TOut, object> extract = null, ILoggingAdapter log = null, LogLevel logLevel = LogLevel.DebugLevel)
         {
-            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Log(flow, name, extract, log);
+            return (Flow<TIn, TOut, TMat>)InternalFlowOperations.Log(flow, name, extract, log, logLevel);
         }
 
         /// <summary>

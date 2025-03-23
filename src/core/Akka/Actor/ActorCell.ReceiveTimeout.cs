@@ -1,10 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.ReceiveTimeout.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 
 namespace Akka.Actor
@@ -19,12 +19,15 @@ namespace Akka.Actor
     public partial class ActorCell
     {
         private TimeSpan? _receiveTimeoutDuration;
-        private ICancelable _pendingReceiveTimeout;
+        private ICancelable? _pendingReceiveTimeout;
 
         /// <summary>
-        /// TBD
+        /// Sets the receive timeout for this actor - which will trigger a <see cref="ReceiveTimeout"/> message
+        /// to be delivered into the actor's mailbox when time is up.
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The timeframe. If <c>null</c> is passed here it will cancel any pending receive
+        /// timeouts. If set to a value greater than <see cref="TimeSpan.Zero"/> then that will become the new
+        /// receive timeout value.</param>
         public void SetReceiveTimeout(TimeSpan? timeout = null)
         {
             _receiveTimeoutDuration = timeout;

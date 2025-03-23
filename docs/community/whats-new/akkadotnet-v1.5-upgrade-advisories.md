@@ -11,6 +11,25 @@ This document contains specific upgrade suggestions, warnings, and notices that 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/-UPestlIw4k" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 <!-- markdownlint-enable MD033 -->
 
+## Upgrading to Akka.NET v1.5.40
+
+### Akka.Persistence.Sql.Common and Akka.Persistence.Query.Sql Deprecation
+
+we're deprecating `Akka.Persistence.Sql.Common` and `Akka.Persistence.Query.Sql` packages and all `Akka.Persistence` plugins based on them. For continual support, we strongly recommend that you migrate to the new [`Akka.Persistence.Sql` or the `Akka.Persistence.Sql.Hosting`](https://github.com/akkadotnet/Akka.Persistence.Sql) package.
+
+#### Migration Resources
+
+To assist with the migration, please refer to the following resources:
+
+* **Migration Guide:**  
+  Learn the necessary steps to upgrade by following the [Migration Guide](https://github.com/akkadotnet/Akka.Persistence.Sql/blob/dev/docs/articles/migration.md).
+
+* **Migration Walkthrough:**  
+  For a step-by-step walkthrough, check out our [Migration Walkthrough](https://github.com/akkadotnet/Akka.Persistence.Sql/blob/dev/docs/articles/migration-walkthrough.md).
+
+* **Migration Guide Video:**  
+  Watch the [Migration Guide Video](https://www.youtube.com/watch?v=gSmqUrVHPq8) on YouTube for a detailed explanation of the migration process.
+
 ## Upgrading to Akka.NET v1.5.32
 
 ### Future Breaking Change in `Akka.Cluster.Tools`

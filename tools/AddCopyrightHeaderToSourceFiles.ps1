@@ -1,7 +1,7 @@
 ﻿$lineBreak = "`r`n"
 $currentYear = get-date -Format yyyy
 $copyRightBoundary = "//-----------------------------------------------------------------------"
-$noticeTemplate = "$copyRightBoundary$lineBreak// <copyright file=`"[FileName]`" company=`"Akka.NET Project`">$lineBreak//     Copyright (C) 2009-$currentYear Lightbend Inc. <http://www.lightbend.com>$lineBreak//     Copyright (C) 2013-$currentYear .NET Foundation <https://github.com/akkadotnet/akka.net>$lineBreak// </copyright>$lineBreak$copyRightBoundary$lineBreak$lineBreak"
+$noticeTemplate = "$copyRightBoundary$lineBreak// <copyright file=`"[FileName]`" company=`"Akka.NET Project`">$lineBreak//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>$lineBreak//     Copyright (C) 2013-$currentYear .NET Foundation <https://github.com/akkadotnet/akka.net>$lineBreak// </copyright>$lineBreak$copyRightBoundary$lineBreak$lineBreak"
 $tokenToReplace = [regex]::Escape("[FileName]")
 $copyrightSnippet = [regex]::Escape("<copyright")
 

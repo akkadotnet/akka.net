@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.Lifecycle.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,7 +27,7 @@ namespace Akka.Persistence
 
         private void RequestRecoveryPermit()
         {
-            Extension.RecoveryPermitter().Tell(Akka.Persistence.RequestRecoveryPermit.Instance, Self);
+            RecoveryPermitter.Tell(Akka.Persistence.RequestRecoveryPermit.Instance, Self);
             ChangeState(WaitingRecoveryPermit(Recovery));
         }
 
@@ -46,6 +46,7 @@ namespace Akka.Persistence
             // Fail fast on missing plugins.
             var j = Journal;
             var s = SnapshotStore;
+            var r = RecoveryPermitter;
             RequestRecoveryPermit();
             base.AroundPreStart();
         }

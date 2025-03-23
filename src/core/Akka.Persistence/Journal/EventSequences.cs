@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventSequences.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -56,6 +56,17 @@ namespace Akka.Persistence.Journal
         {
             return Equals(obj as IEventSequence);
         }
+
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.
+        /// </returns>
+        public override int GetHashCode()
+        {
+            return typeof(EmptyEventSequence).GetHashCode();
+        }
     }
 
     /// <summary>
@@ -90,6 +101,25 @@ namespace Akka.Persistence.Journal
         public override bool Equals(object obj)
         {
             return Equals(obj as IEventSequence);
+        }
+
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.
+        /// </returns>
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                foreach (var item in _events)
+                {
+                    hash = hash * 23 + (item?.GetHashCode() ?? 0);
+                }
+                return hash;
+            }
         }
     }
 
@@ -126,6 +156,17 @@ namespace Akka.Persistence.Journal
         public override bool Equals(object obj)
         {
             return Equals(obj as IEventSequence);
+        }
+
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.
+        /// </returns>
+        public override int GetHashCode()
+        {
+            return _events[0]?.GetHashCode() ?? 0;
         }
     }
 

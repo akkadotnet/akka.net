@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalFlowOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -163,7 +163,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        /// <param name="flow">TBD</param>
+        /// <param name="flow">The upstream stage</param>
         /// <param name="selector">Receives the failure cause and returns the new cause, return the original exception if no other should be applied</param>
         public static IFlow<TOut, TMat> SelectError<TOut, TMat>(this IFlow<TOut, TMat> flow, Func<Exception, Exception> selector)
         {
@@ -184,12 +184,6 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapper">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> Select<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> mapper)
         {
             return flow.Via(new Fusing.Select<TIn, TOut>(mapper));
@@ -217,11 +211,6 @@ namespace Akka.Streams.Dsl.Internal
         /// <para>Completes when upstream completes</para>
         /// <para>Cancels when downstream cancels</para>
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> WireTap<TOut, TMat>(this IFlow<TOut, TMat> flow, Action<TOut> action) =>
             //flow.WireTap(Sink.ForEach(action)); // should be this, but can't be due to type constraints
             flow.WireTapMaterialized(Sink.ForEach(action), Keep.Left);
@@ -247,12 +236,6 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapConcater">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> SelectMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<TIn, IEnumerable<TOut>> mapConcater)
         {
@@ -285,12 +268,6 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// See also <see cref="SelectMany{TIn,TOut,TMat}"/>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapConcaterFactory">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> StatefulSelectMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<Func<TIn, IEnumerable<TOut>>> mapConcaterFactory)
         {
@@ -327,13 +304,6 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// </summary>
         /// <seealso cref="SelectAsyncUnordered{TIn,TOut,TMat}"/>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="parallelism">TBD</param>
-        /// <param name="asyncMapper">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> SelectAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
             Func<TIn, Task<TOut>> asyncMapper)
         {
@@ -369,13 +339,6 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// </summary>
         /// <seealso cref="SelectAsync{TIn,TOut,TMat}"/>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="parallelism">TBD</param>
-        /// <param name="asyncMapper">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> SelectAsyncUnordered<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
             Func<TIn, Task<TOut>> asyncMapper)
         {
@@ -395,11 +358,6 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<T, TMat> Where<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
             return flow.Via(new Fusing.Where<T>(predicate));
@@ -418,11 +376,6 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<T, TMat> WhereNot<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
             return flow.Via(new Fusing.Where<T>(e => !predicate(e)));
@@ -451,12 +404,6 @@ namespace Akka.Streams.Dsl.Internal
         /// <seealso cref="Limit{T, TMat}(IFlow{T, TMat}, long)"/>
         /// <seealso cref="LimitWeighted{T, TMat}(IFlow{T, TMat}, long, Func{T, long})"/>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <param name="inclusive">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<T, TMat> TakeWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate, bool inclusive)
         {
             return flow.Via(new Fusing.TakeWhile<T>(predicate, inclusive));
@@ -2017,17 +1964,17 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="name">TBD</param>
-        /// <param name="extract">TBD</param>
-        /// <param name="log">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The output type</typeparam>
+        /// <typeparam name="TMat">The materialized type</typeparam>
+        /// <param name="flow">The underlying graph</param>
+        /// <param name="name">The name of the <see cref="LogSource"/></param>
+        /// <param name="extract">Optional. Extract the content that will be captured by the logger</param>
+        /// <param name="log">Optional. Use an external logging adapter</param>
+        /// <param name="logLevel">Optional. The log level being logged. Defaults to <see cref="LogLevel.DebugLevel"/></param>
         public static IFlow<T, TMat> Log<T, TMat>(this IFlow<T, TMat> flow, string name, Func<T, object> extract = null,
-            ILoggingAdapter log = null)
+            ILoggingAdapter log = null, LogLevel logLevel = LogLevel.DebugLevel)
         {
-            return flow.Via(new Fusing.Log<T>(name, extract ?? Identity<T>(), log));
+            return flow.Via(new Fusing.Log<T>(name, extract ?? Identity<T>(), log, logLevel));
         }
 
         /// <summary>

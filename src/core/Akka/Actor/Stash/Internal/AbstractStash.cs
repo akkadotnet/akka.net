@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AbstractStash.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -74,9 +74,11 @@ namespace Akka.Actor.Internal
         {
             var currMsg = _actorCell.CurrentMessage;
             var sender = _actorCell.Sender;
-
+            
             if (_actorCell.CurrentEnvelopeId == _currentEnvelopeId)
             {
+                if(currMsg is null)
+                    throw new InvalidOperationException("There is no message to stash right now. Stash() must be called inside an actor's Receive methods.");
                 throw new IllegalActorStateException($"Can't stash the same message {currMsg} more than once");
             }
             _currentEnvelopeId = _actorCell.CurrentEnvelopeId;

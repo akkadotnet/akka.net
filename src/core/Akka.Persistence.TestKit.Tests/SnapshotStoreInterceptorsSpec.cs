@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotStoreInterceptorsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -57,20 +57,41 @@ namespace Akka.Persistence.TestKit.Tests
             var totalDuration = 400.Milliseconds();
             var delayDuration = 200.Milliseconds();
             var epsilon = TimeSpan.FromMilliseconds(50);
+            
             using var cts = new CancellationTokenSource();
+            var synchronizationTcs = new TaskCompletionSource<bool>();
+            
+            // Custom interceptor that signals when it's called
             var probe = new InterceptorProbe();
+            probe.InterceptAsyncFunc = (persistenceId, criteria) =>
+            {
+                synchronizationTcs.TrySetResult(true);
+                return Task.CompletedTask;
+            };
+            
             var delay = new SnapshotStoreInterceptors.CancelableDelay(totalDuration, probe, cts.Token);
 
             var startedAt = DateTime.Now;
             var task = delay.InterceptAsync(null, null);
-            await Task.Delay(delayDuration - epsilon);
-
-            probe.WasCalled.Should().BeFalse();
+            
+            // Wait less than the full delay time
+            await Task.Delay(delayDuration);
+            
+            // Ensure the probe hasn't been called yet (not using probe.WasCalled since it might have race conditions)
+            synchronizationTcs.Task.IsCompleted.Should().BeFalse();
+            
+            // Cancel the delay
             cts.Cancel();
-            await task;
-
+            
+            // Wait for the probe to be called
+            await synchronizationTcs.Task;
+            
+            // Now we can safely check that the probe was called
             probe.WasCalled.Should().BeTrue();
             probe.CalledAt.Should().BeOnOrAfter(startedAt + delayDuration - epsilon);
+            
+            // Wait for the original task to complete
+            await task;
         }
         
         [Fact]
@@ -123,6 +144,7 @@ namespace Akka.Persistence.TestKit.Tests
             public DateTime CalledAt { get; private set; }
             public string PersistenceId { get; private set; }
             public SnapshotSelectionCriteria Criteria { get; private set; }
+            public Func<string, SnapshotSelectionCriteria, Task> InterceptAsyncFunc { get; set; }
 
             public Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria)
             {
@@ -131,6 +153,9 @@ namespace Akka.Persistence.TestKit.Tests
                 PersistenceId = persistenceId;
                 Criteria = criteria;
 
+                if (InterceptAsyncFunc != null)
+                    return InterceptAsyncFunc(persistenceId, criteria);
+            
                 return Task.CompletedTask;
             }
         }

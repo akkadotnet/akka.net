@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConsumerControllerImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -667,7 +667,11 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
             var newInterval = Interval == MaxBackoff
                 ? MaxBackoff
                 : MaxBackoff.Min(TimeSpan.FromSeconds(Interval.TotalSeconds * 1.5));
-            if (newInterval != Interval) Timers.StartPeriodicTimer(Retry.Instance, Retry.Instance, newInterval);
+            if (newInterval != Interval)
+            {
+                Interval = newInterval;  // Store the new interval
+                Timers.StartPeriodicTimer(Retry.Instance, Retry.Instance, newInterval);
+            }
         }
 
         public void Reset()

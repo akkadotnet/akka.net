@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup>
-    <Copyright>Copyright © 2013-2023 Akka.NET Team</Copyright>
+    <Copyright>Copyright © 2013-2025 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.5.27.1</VersionPrefix>
+    <VersionPrefix>1.5.34</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
@@ -10,12 +10,12 @@
       xUnit1031 is a temporary fix, we will need to pay this technical debt 
       and make everything fully async in the future 
     -->
-    <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632</NoWarn>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <!-- Set the language version for C# if we're not inside an F# project -->
   <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
-    <LangVersion>11.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.8.1</XunitVersion>
@@ -40,20 +40,14 @@
     <MultiNodeAdapterVersion>1.5.25</MultiNodeAdapterVersion>
     <MicrosoftLibVersion>[6.0.*,)</MicrosoftLibVersion>
     <MsExtVersion>[6.0.*,)</MsExtVersion>
-    <AkkaAnalyzerVersion>0.3.0</AkkaAnalyzerVersion>
+    <AkkaAnalyzerVersion>0.3.1</AkkaAnalyzerVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET v1.5.27.1 is a minor patch to fix a race condition between the logging and remoting system.
-[Akka: Fix Remoting-Logging DefaultAddress race condition](https://github.com/akkadotnet/akka.net/pull/7305)
-To [see the full set of changes in Akka.NET v1.5.27.1, click here](https://github.com/akkadotnet/akka.net/milestone/110).
-| COMMITS | LOC+ | LOC- | AUTHOR              |
-|---------|------|------|---------------------|
-| 1       | 4    | 0    | Aaron Stannard      |
-| 1       | 10   | 3    | Gregorius Soedharmo |</PackageReleaseNotes>
+    <PackageReleaseNotes>Placeholder for nightlies*</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />

@@ -31,6 +31,7 @@ h2:before{
     <div class="jumbotron">   
       <img src="images/mainlogo.png" class="main-logo" />
       <h1 class="title">Try <strong>Akka.NET</strong> now!</h1>
+      <iframe width="560" height="315" src="https://www.youtube.com/embed/2Orp1ohI61o?si=HwBAn55QjSHqkE5S" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
       <h1 class="title"><small class="subtitle">Follow our tutorial and build your first Akka.NET application today.</small></h1>
       <div class="options">
         <a class="btn btn-lg btn-primary" href="community/whats-new/akkadotnet-v1.5.md">OUT NOW: Akka.NET v1.5</a>

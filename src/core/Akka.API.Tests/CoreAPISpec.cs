@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CoreAPISpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,8 +17,6 @@ using static PublicApiGenerator.ApiGenerator;
 using Akka.Cluster.Sharding;
 using Akka.Cluster.Metrics;
 using Akka.Persistence.Query.InMemory;
-using Akka.Persistence.Query.Sql;
-using Akka.Persistence.Sql.Common.Journal;
 using Akka.Streams;
 using Akka.TestKit;
 using VerifyXunit;
@@ -54,18 +52,6 @@ namespace Akka.API.Tests
         public Task ApprovePersistenceQuery()
         {
             return VerifyAssembly<PersistenceQuery>();
-        }
-
-        [Fact]
-        public Task ApprovePersistenceSqlCommon()
-        {
-            return VerifyAssembly<SqlJournal>();
-        }
-
-        [Fact]
-        public Task ApprovePersistenceSqlCommonQuery()
-        {
-            return VerifyAssembly<SqlReadJournal>();
         }
 
         [Fact]

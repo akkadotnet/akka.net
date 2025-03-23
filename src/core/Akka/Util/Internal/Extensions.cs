@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Extensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -111,12 +111,10 @@ namespace Akka.Util.Internal
         /// <param name="hash">TBD</param>
         /// <param name="key">TBD</param>
         /// <param name="value">TBD</param>
+        [Obsolete("Use the dictionary setter directly")]
         public static void AddOrSet<TKey, TValue>(this IDictionary<TKey, TValue> hash, TKey key, TValue value)
         {
-            if (hash.ContainsKey(key))
-                hash[key] = value;
-            else
-                hash.Add(key,value);
+            hash[key] = value;
         }
 
         /// <summary>
@@ -146,7 +144,7 @@ namespace Akka.Util.Internal
         /// <returns>TBD</returns>
         public static IDictionary<TKey, TValue> AddAndReturn<TKey, TValue>(this IDictionary<TKey, TValue> hash, TKey key, TValue value)
         {
-            hash.AddOrSet(key, value);
+            hash[key] = value;
             return hash;
         }
 
@@ -179,13 +177,15 @@ namespace Akka.Util.Internal
         /// <param name="enumerable">TBD</param>
         /// <param name="item">TBD</param>
         /// <returns>TBD</returns>
-        public static IEnumerable<T> Concat<T>(this IEnumerable<T> enumerable, T item)
+        #nullable enable
+        public static IEnumerable<T> Concat<T>(this IEnumerable<T>? enumerable, T item)
         {
             var itemInArray = new[] {item};
             if (enumerable == null)
                 return itemInArray;
             return enumerable.Concat(itemInArray);
         }
+        #nullable restore
 
         /// <summary>
         /// Applies a delegate <paramref name="action" /> to all elements of this enumerable.

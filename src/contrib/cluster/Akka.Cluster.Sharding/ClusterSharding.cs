@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSharding.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,6 +16,7 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -75,7 +76,7 @@ namespace Akka.Cluster.Sharding
         {
             return message switch
             {
-                ShardingEnvelope se => se.Message,
+                ShardingEnvelope se => _underlying.EntityMessage(se.Message),
                 _ => _underlying.EntityMessage(message)
             };
         }
@@ -366,6 +367,9 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public ClusterShardingSettings Settings { get; }
 
+        [InternalApi]
+        public IShardingBufferMessageAdapter BufferMessageAdapter { get; private set; } = EmptyBufferMessageAdapter.Instance;
+        
         /// <summary>
         /// Default HOCON settings for cluster sharding.
         /// </summary>
@@ -376,6 +380,12 @@ namespace Akka.Cluster.Sharding
                 .WithFallback(DistributedData.DistributedData.DefaultConfig());
         }
 
+        [InternalApi]
+        public void SetShardingBufferMessageAdapter(IShardingBufferMessageAdapter? bufferMessageAdapter)
+        {
+            BufferMessageAdapter = bufferMessageAdapter ?? EmptyBufferMessageAdapter.Instance;
+        }
+        
         /// <summary>
         /// Register a named entity type by defining the <see cref="Actor.Props"/> of the entity actor
         /// and functions to extract entity and shard identifier from messages. The <see cref="Sharding.ShardRegion"/> actor

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BuiltInActors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -197,6 +197,18 @@ namespace Akka.Actor
             }
             return message;
         }
+
+        internal static bool IsDeadLetterSuppressedAnywhere(object message)
+        {
+            var isSuppressed = message is IDeadLetterSuppression;
+            while(!isSuppressed && message is IWrappedMessage wm)
+            {
+                message = wm.Message;
+                isSuppressed = message is IDeadLetterSuppression;
+            }
+            
+            return isSuppressed;
+        }
     }
 
     /// <summary>
@@ -226,19 +238,20 @@ namespace Akka.Actor
         /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if (message == null) throw new InvalidMessageException("Message is null");
-            var i = message as Identify;
-            if (i != null)
+            switch (message)
             {
-                sender.Tell(new ActorIdentity(i.MessageId, ActorRefs.Nobody));
-                return;
+                case null:
+                    throw new InvalidMessageException("Message is null");
+                case Identify i:
+                    sender.Tell(new ActorIdentity(i.MessageId, ActorRefs.Nobody));
+                    return;
+                case DeadLetter d:
+                {
+                    if (!SpecialHandle(d.Message, d.Sender)) { _eventStream.Publish(d); }
+                    return;
+                }
             }
-            var d = message as DeadLetter;
-            if (d != null)
-            {
-                if (!SpecialHandle(d.Message, d.Sender)) { _eventStream.Publish(d); }
-                return;
-            }
+
             if (!SpecialHandle(message, sender)) { _eventStream.Publish(new DeadLetter(message, sender.IsNobody() ? Provider.DeadLetters : sender, this)); }
         }
 

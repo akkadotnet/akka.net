@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="XunitAssertions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="args">An optional object array that contains zero or more objects to format.</param>
         public void Fail(string format = "", params object[] args)
         {
-            Assert.Fail(string.Format(format, args));
+            Assert.Fail(AkkaEqualException.BuildAssertionMessage(format, args));
         }
 
         /// <summary>
@@ -34,7 +34,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="args">An optional object array that contains zero or more objects to format.</param>
         public void AssertTrue(bool condition, string format = "", params object[] args)
         {
-            Assert.True(condition, string.Format(format, args));
+            Assert.True(condition, AkkaEqualException.BuildAssertionMessage(format, args));
         }
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="args">An optional object array that contains zero or more objects to format.</param>
         public void AssertFalse(bool condition, string format = "", params object[] args)
         {
-            Assert.False(condition, string.Format(format, args));
+            Assert.False(condition, AkkaEqualException.BuildAssertionMessage(format, args));
         }
 
         /// <summary>

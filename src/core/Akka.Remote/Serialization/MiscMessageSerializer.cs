@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MiscMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,6 +28,7 @@ namespace Akka.Remote.Serialization
         private const string ActorRefManifest = "AR";
         private const string PoisonPillManifest = "PP";
         private const string KillManifest = "K";
+        private const string IntentionalRestartManifest = "IR";
         private const string RemoteWatcherHearthbeatManifest = "RWHB";
         private const string RemoteWatcherHearthbeatRspManifest = "RWHR";
         private const string LocalScopeManifest = "LS";
@@ -74,6 +75,7 @@ namespace Akka.Remote.Serialization
                 case PoisonPill _:
                 case Kill _:
                 case RemoteWatcher.Heartbeat _:
+                case IntentionalRestart _:
                     return EmptyBytes;
                 case RemoteWatcher.HeartbeatRsp heartbeatRsp:
                     return HeartbeatRspToProto(heartbeatRsp);
@@ -125,6 +127,8 @@ namespace Akka.Remote.Serialization
                     return PoisonPillManifest;
                 case Kill _:
                     return KillManifest;
+                case IntentionalRestart _:
+                    return IntentionalRestartManifest;
                 case RemoteWatcher.Heartbeat _:
                     return RemoteWatcherHearthbeatManifest;
                 case RemoteWatcher.HeartbeatRsp _:
@@ -177,6 +181,8 @@ namespace Akka.Remote.Serialization
                     return PoisonPill.Instance;
                 case KillManifest:
                     return Kill.Instance;
+                case IntentionalRestartManifest:
+                    return IntentionalRestart.Instance;
                 case RemoteWatcherHearthbeatManifest:
                     return RemoteWatcher.Heartbeat.Instance;
                 case RemoteWatcherHearthbeatRspManifest:

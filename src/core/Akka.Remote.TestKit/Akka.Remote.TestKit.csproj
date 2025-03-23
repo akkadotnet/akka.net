@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <Description>TestKit for Testing Distributed Akka.NET Applications</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);network;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>

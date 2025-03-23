@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Mailbox.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -85,14 +85,14 @@ namespace Akka.Dispatch
          * ANOTHER THING, IMPORTANT:
          *
          * ActorCell.start() publishes actorCell & self to the dispatcher, which
-         * means that messages may be processed theoretically before self’s constructor
+         * means that messages may be processed theoretically before self's constructor
          * ends. The JMM guarantees visibility for final fields only after the end
          * of the constructor, so safe publication requires that THIS WRITE BELOW
          * stay as it is.
          */
         private volatile ActorCell _actor = null;
         private volatile SystemMessage _systemQueueDoNotCallMeDirectly = null; // null by default
-        private volatile int _statusDotNotCallMeDirectly; //0 by default
+        private int _statusDotNotCallMeDirectly; //0 by default
 
         /// <summary>
         /// The queue used for user-defined messages inside this mailbox
@@ -272,7 +272,7 @@ namespace Akka.Dispatch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetStatus(int newStatus)
         {
-            _statusDotNotCallMeDirectly = newStatus;
+            Volatile.Write(ref _statusDotNotCallMeDirectly, newStatus);
         }
 
         /// <summary>

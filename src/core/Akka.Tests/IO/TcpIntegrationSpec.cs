@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpIntegrationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -341,7 +341,7 @@ namespace Akka.Tests.IO
                 var clients = indexRange.Select(i => (Index: i, Probe: CreateTestProbe($"test-client-{i}"))).ToArray();
                 Parallel.ForEach(clients, client =>
                 {
-                    var msg = ByteString.FromBytes(new byte[1]);
+                    var msg = ByteString.FromBytes(new byte[] {(byte) 0});
                     client.Probe.Send(actors.ClientConnection, Tcp.Write.Create(msg, AckWithValue.Create(client.Index)));
                 });
                 
@@ -519,7 +519,7 @@ namespace Akka.Tests.IO
 
         private async Task ChitChat(TestSetup.ConnectionDetail actors, int rounds = 100)
         {
-            var testData = ByteString.FromBytes(new[] {(byte) 0});
+            var testData = ByteString.FromBytes(new byte[] {(byte) 0});
             for (int i = 0; i < rounds; i++)
             {
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));

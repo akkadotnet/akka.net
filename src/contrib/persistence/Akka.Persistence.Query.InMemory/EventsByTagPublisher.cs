@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventsByTagPublisher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence.Journal;
 using Akka.Streams.Actors;
+using static Akka.Persistence.Query.InMemory.MemoryQueryJournalHelpers;
 
 namespace Akka.Persistence.Query.InMemory
 {
@@ -115,14 +116,9 @@ namespace Akka.Persistence.Query.InMemory
                 switch (message)
                 {
                     case MemoryJournal.ReplayedTaggedMessage replayed:
-                        Buffer.Add(new EventEnvelope(
-                            offset: new Sequence(replayed.Offset),
-                            persistenceId: replayed.Persistent.PersistenceId,
-                            sequenceNr: replayed.Persistent.SequenceNr,
-                            @event: replayed.Persistent.Payload,
-                            timestamp: replayed.Persistent.Timestamp,
-                            tags: new [] { replayed.Tag }));
-
+                        var e = PrepareEnventEnvelope(replayed.Persistent, new Sequence(replayed.Offset));
+                        
+                        Buffer.Add(e);
                         CurrentOffset = replayed.Offset + 1;
                         Buffer.DeliverBuffer(TotalDemand);
                         return true;

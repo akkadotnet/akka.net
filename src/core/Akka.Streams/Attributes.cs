@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Attributes.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Akka.Event;
@@ -325,8 +326,11 @@ namespace Akka.Streams
         /// <typeparam name="TAttr">TBD</typeparam>
         /// <param name="defaultIfNotFound">TBD</param>
         /// <returns>TBD</returns>
-        public TAttr GetAttribute<TAttr>(TAttr defaultIfNotFound) where TAttr : class, IAttribute
+        #nullable enable
+        [return: NotNullIfNotNull("defaultIfNotFound")]
+        public TAttr? GetAttribute<TAttr>(TAttr? defaultIfNotFound) where TAttr : class, IAttribute
             => GetAttribute<TAttr>() ?? defaultIfNotFound;
+        #nullable restore
 
         /// <summary>
         /// Get the first (least specific) attribute of a given type or subtype thereof.
@@ -430,8 +434,11 @@ namespace Akka.Streams
         /// <typeparam name="TAttr">TBD</typeparam>
         /// <param name="attribute">TBD</param>
         /// <returns>TBD</returns>
-        public bool Contains<TAttr>(TAttr attribute) where TAttr : IAttribute => _attributes.Contains(attribute);
+        [Obsolete("Use GetAttribute<TAttr>() instead")]
+        public bool Contains<TAttr>(TAttr attribute) where TAttr : IAttribute => _attributes.Any(a => a is TAttr);
 
+        public bool Contains<TAttr>() where TAttr : IAttribute => _attributes.Any(a => a is TAttr);
+        
         /// <summary>
         /// Specifies the name of the operation.
         /// If the name is null or empty the name is ignored, i.e. <see cref="None"/> is returned.

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadLetterMailbox.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -46,9 +46,13 @@ namespace Akka.Actor
         /// <param name="envelope">TBD</param>
         public void Enqueue(IActorRef receiver, Envelope envelope)
         {
-            if (envelope.Message is DeadLetter)
+            if (envelope.Message is AllDeadLetters)
             {
-                // actor subscribing to DeadLetter. Drop it.
+                /*  We're receiving a DeadLetter sent to us by someone else (which is not normal - usually only happens
+                 *  if we were explicitly subscribed to DeadLetters on the EventStream).
+                 *   
+                 *  Have to terminate here in order to prevent a stack overflow.
+                 */ 
                 return;
             }
 

@@ -51,6 +51,17 @@ persistent actors should use the `deleteSnapshots` method. Depending on the jour
 best practice to do specific deletes with `deleteSnapshot` or to include a `minSequenceNr` as well as a `maxSequenceNr`
 for the `SnapshotSelectionCriteria`.
 
+## Optional Snapshots
+
+By default, the persistent actor will unconditionally be stopped if the snapshot can't be loaded in the recovery.
+It is possible to make snapshot loading optional. This can be useful when it is alright to ignore snapshot in case
+of for example deserialization errors. When snapshot loading fails it will instead recover by replaying all events.
+
+Enable this feature by setting `snapshot-is-optional = true` in the snapshot store configuration.
+
+> [!WARNING]
+>Don't set `snapshot-is-optional = true` if events have been deleted because that would result in wrong recovered state if snapshot load fails.
+
 ## Snapshot Status Handling
 
 Saving or deleting snapshots can either succeed or fail – this information is reported back to the persistent actor via status messages as illustrated in the following table.

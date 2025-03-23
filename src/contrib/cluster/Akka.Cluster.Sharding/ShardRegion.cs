@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardRegion.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -430,6 +430,7 @@ namespace Akka.Cluster.Sharding
 
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
         private readonly TaskCompletionSource<Done> _gracefulShutdownProgress = new();
+        private readonly IShardingBufferMessageAdapter _bufferMessageAdapter;
 
         /// <summary>
         /// TBD
@@ -464,6 +465,8 @@ namespace Akka.Cluster.Sharding
             _initRegistrationDelay = TimeSpan.FromMilliseconds(100).Max(new TimeSpan(_retryInterval.Ticks / 2 / 2 / 2));
             _nextRegistrationDelay = _initRegistrationDelay;
 
+            _bufferMessageAdapter = ClusterSharding.Get(Context.System).BufferMessageAdapter;
+            
             SetupCoordinatedShutdown();
         }
 
@@ -812,7 +815,7 @@ namespace Akka.Cluster.Sharding
             }
             else
             {
-                _shardBuffers.Append(shardId, message, sender);
+                _shardBuffers.Append(shardId, _bufferMessageAdapter.Apply(message, Context), sender);
 
                 // log some insight to how buffers are filled up every 10% of the buffer capacity
                 var total = totalBufferSize + 1;
@@ -1267,7 +1270,7 @@ namespace Akka.Cluster.Sharding
 
                 foreach (var (Message, Ref) in buffer)
                 {
-                    if (Message is RestartShard && !receiver.Equals(Self))
+                    if (WrappedMessage.Unwrap(Message) is RestartShard && !receiver.Equals(Self))
                     {
                         _log.Debug(
                             "{0}: Dropping buffered message {1}, these are only processed by a local ShardRegion.",
@@ -1307,7 +1310,8 @@ namespace Akka.Cluster.Sharding
                     _settings,
                     _messageExtractor,
                     _handOffStopMessage,
-                    _rememberEntitiesProvider)
+                    _rememberEntitiesProvider, 
+                    _bufferMessageAdapter)
                 .WithDispatcher(Context.Props.Dispatcher), name));
 
             _shardsByRef = _shardsByRef.SetItem(shardRef, id);
