@@ -391,7 +391,7 @@ namespace Akka.Actor
             return new ActorRestarted(Self, Props.Type, cause);
         }
 
-        private void HandleFailed(Failed f) //Called handleFailure in Akka JVM
+        private void HandleFailed(Failed f)
         {
             CurrentMessage = f;
             var failedChild = f.Child;
