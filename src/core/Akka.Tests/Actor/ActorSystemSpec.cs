@@ -468,9 +468,12 @@ namespace Akka.Tests.Actor
             {
                 _master = Sender;
 
-                for (int i = 0; i < n; i++)
+                for (var i = 0; i < n; i++)
                 {
+                    // we are intentionally creating top-level actors here
+#pragma warning disable AK1008
                     var man = Context.Watch(Context.System.ActorOf(Props.Create<Terminater>()));
+#pragma warning restore AK1008
                     man.Tell("run");
                     _terminaters.Add(man);
                 }

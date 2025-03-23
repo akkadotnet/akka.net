@@ -111,13 +111,13 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public async Task An_ActoRef_should_return_EmptyLocalActorRef_on_deserialize_if_not_present_in_actor_hierarchy_and_remoting_is_not_enabled()
+        public async Task An_ActorRef_should_return_EmptyLocalActorRef_on_deserialize_if_not_present_in_actor_hierarchy_and_remoting_is_not_enabled()
         {
             var aref = ActorOf<BlackHoleActor>("non-existing");
             var aserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
             var binary = aserializer.ToBinary(aref);
 
-            Watch(aref);
+            await WatchAsync(aref);
 
             aref.Tell(PoisonPill.Instance);
 
@@ -194,28 +194,28 @@ namespace Akka.Tests.Actor
             var i = Sys.ActorOf(Props.Create(() => new InnerActor()));
             var a = Sys.ActorOf(Props.Create(() => new OuterActor(i)));
 
-            Func<Task> t1 = async () =>
+            var t1 = async () =>
             {
                 var inner = await a.Ask("innerself");
                 ((IActorRef)inner).Should().NotBe(a);
             };
             await t1.Should().CompleteWithinAsync(3.Seconds());
 
-            Func<Task> t2 = async () =>
+            var t2 = async () =>
             {
                 var self = await a.Ask(a);
                 ((IActorRef)self).ShouldBe(a);
             };
             await t2.Should().CompleteWithinAsync(3.Seconds());
 
-            Func<Task> t3 = async () =>
+            var t3 = async () =>
             {
                 var self2 = await a.Ask("self");
                 ((IActorRef)self2).ShouldBe(a);
             };
             await t3.Should().CompleteWithinAsync(3.Seconds());
 
-            Func<Task> t4 = async () =>
+            var t4 = async () =>
             {
                 var msg = await a.Ask("msg");
                 ((string)msg).ShouldBe("msg");
@@ -284,14 +284,14 @@ namespace Akka.Tests.Actor
             var timeout = TimeSpan.FromSeconds(3);
             var parent = Sys.ActorOf(Props.Create(() => new ChildAwareActor("child")));
 
-            Func<Task> t1 = async () =>
+            var t1 = async () =>
             {
                 var result = await parent.Ask("child");
                 ((bool)result).Should().BeTrue();
             };
             await t1.Should().CompleteWithinAsync(timeout);
 
-            Func<Task> t2 = async () =>
+            var t2 = async () =>
             {
                 var result = await parent.Ask("what");
                 ((bool)result).Should().BeFalse();
@@ -307,7 +307,7 @@ namespace Akka.Tests.Actor
             await EventFilter.DeadLetter<object>().ExpectOneAsync(() => { actor.Tell(new object(), null); return Task.CompletedTask; });
 
             // will throw an exception if there's a bug
-            await ExpectNoMsgAsync(default);
+            await ExpectNoMsgAsync(CancellationToken.None);
         }
 
         [Fact]
@@ -360,16 +360,19 @@ namespace Akka.Tests.Actor
 
         private class NestingActor : ActorBase
         {
-            internal readonly IActorRef Nested;
+            private readonly IActorRef _nested;
 
             public NestingActor(ActorSystem system)
             {
-                Nested = system.ActorOf<BlackHoleActor>();
+                // we are intentionally creating top-level actors here
+#pragma warning disable AK1008
+                _nested = system.ActorOf<BlackHoleActor>();
+#pragma warning restore AK1008
             }
 
             protected override bool Receive(object message)
             {
-                Sender.Tell(Nested);
+                Sender.Tell(_nested);
                 return true;
             }
         }
@@ -452,7 +455,7 @@ namespace Akka.Tests.Actor
                 });
             }
 
-            private void Work()
+            private static void Work()
             {
                 Thread.Sleep(1000);
             }
@@ -460,8 +463,8 @@ namespace Akka.Tests.Actor
 
         private class SenderActor : ActorBase
         {
-            private IActorRef _replyTo;
-            private TestLatch _latch;
+            private readonly IActorRef _replyTo;
+            private readonly TestLatch _latch;
 
             public SenderActor(IActorRef replyTo, TestLatch latch)
             {
@@ -589,14 +592,12 @@ namespace Akka.Tests.Actor
 
         private class EqualTestActorRef : ActorRefBase
         {
-            private ActorPath _path;
-
             public EqualTestActorRef(ActorPath path)
             {
-                _path = path;
+                Path = path;
             }
 
-            public override ActorPath Path { get { return _path; } }
+            public override ActorPath Path { get; }
 
             protected override void TellInternal(object message, IActorRef sender)
             {

@@ -507,7 +507,7 @@ namespace Akka.Tests.IO
                         var buffer = new byte[1024];
                         return Task.FromResult(accept.Receive(buffer) == 0);
                     }
-                    catch (SocketException ex)
+                    catch (SocketException)
                     {
                         return Task.FromResult(true);
                     }
