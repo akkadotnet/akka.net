@@ -60,7 +60,7 @@ namespace Akka.Cluster
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class ClusterHeartbeatSender : ReceiveActor, IWithTimers
+    internal class ClusterHeartbeatSender : ReceiveActor
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly Cluster _cluster;
@@ -215,7 +215,13 @@ namespace Akka.Cluster
 
                     // schedule the expected first heartbeat for later, which will give the
                     // other side a chance to reply, and also trigger some resends if needed
-                    Timers.StartSingleTimer(to.Address, new ExpectedFirstHeartbeat(to), _cluster.Settings.HeartbeatExpectedResponseAfter);
+#pragma warning disable AK1004
+                    Context.System.Scheduler.ScheduleTellOnce(
+                        _cluster.Settings.HeartbeatExpectedResponseAfter,
+                        Self,
+                        new ExpectedFirstHeartbeat(to),
+                        Self);
+#pragma warning restore AK1004
                 }
                 HeartbeatReceiver(to.Address).Tell(SelfHeartbeat());
             }
@@ -378,8 +384,7 @@ namespace Akka.Cluster
         }
 
         #endregion
-
-        public ITimerScheduler Timers { get; set; }
+        
     }
 
     /// <summary>
