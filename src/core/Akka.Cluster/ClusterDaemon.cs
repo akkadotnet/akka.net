@@ -917,7 +917,7 @@ namespace Akka.Cluster
     ///
     /// Actor used to power the guts of the Akka.Cluster membership and gossip protocols.
     /// </summary>
-    internal sealed class ClusterCoreDaemon : UntypedActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>, IWithTimers
+    internal sealed class ClusterCoreDaemon : UntypedActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly Cluster _cluster;
         /// <summary>
@@ -1976,9 +1976,12 @@ namespace Akka.Cluster
             SendGossip();
             if (IsGossipSpeedupNeeded())
             {
-                var utcNowTicks = DateTime.UtcNow.Ticks;
-                Timers.StartSingleTimer("gossip-speedup-1-"+utcNowTicks, InternalClusterAction.GossipSpeedupTick.Instance, new TimeSpan(_cluster.Settings.GossipInterval.Ticks / 3));
-                Timers.StartSingleTimer("gossip-speedup-2-"+utcNowTicks, InternalClusterAction.GossipSpeedupTick.Instance, new TimeSpan(_cluster.Settings.GossipInterval.Ticks * 2 / 3));
+#pragma warning disable AK1004
+                _cluster.Scheduler.ScheduleTellOnce(new TimeSpan(_cluster.Settings.GossipInterval.Ticks / 3), Self,
+                    InternalClusterAction.GossipSpeedupTick.Instance, ActorRefs.NoSender);
+                _cluster.Scheduler.ScheduleTellOnce(new TimeSpan(_cluster.Settings.GossipInterval.Ticks * 2 / 3), Self,
+                    InternalClusterAction.GossipSpeedupTick.Instance, ActorRefs.NoSender);
+#pragma warning restore AK1004
             }
         }
         
@@ -2600,7 +2603,6 @@ namespace Akka.Cluster
         }
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        public ITimerScheduler Timers { get; set; }
     }
 
     /// <summary>
