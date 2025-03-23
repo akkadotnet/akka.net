@@ -34,7 +34,7 @@ namespace Akka.Cluster.Sharding.Tests
         private IActorRef regionProxy2;
 
         private static Config SpecConfig =>
-            ClusterSingletonManager.DefaultConfig().WithFallback(ClusterSharding.DefaultConfig()).WithFallback(ClusterConfigFactory.Default());
+            ClusterSingleton.DefaultConfig().WithFallback(ClusterSharding.DefaultConfig()).WithFallback(ClusterConfigFactory.Default());
 
         public ClusterShardingMessageSerializerSpec() : base(SpecConfig)
         {

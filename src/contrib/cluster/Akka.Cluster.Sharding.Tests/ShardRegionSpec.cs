@@ -72,8 +72,8 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.cluster.sharding.verbose-debug-logging = on
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
                 akka.cluster.sharding.distributed-data.durable.keys = []")
-                .WithFallback(ClusterSingletonManager.DefaultConfig()
-                .WithFallback(ClusterSharding.DefaultConfig()));
+                .WithFallback(ClusterSingleton.DefaultConfig())
+                .WithFallback(ClusterSharding.DefaultConfig());
 
 
         private ActorSystem sysA;

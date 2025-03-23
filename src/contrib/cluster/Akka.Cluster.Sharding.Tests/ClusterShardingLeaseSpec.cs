@@ -79,7 +79,7 @@ namespace Akka.Cluster.Sharding.Tests
                 }
                 ")
                 .WithFallback(ClusterSharding.DefaultConfig())
-                .WithFallback(ClusterSingletonManager.DefaultConfig())
+                .WithFallback(ClusterSingleton.DefaultConfig())
                 .WithFallback(TestLease.Configuration);
 
         TimeSpan shortDuration = TimeSpan.FromMilliseconds(200);

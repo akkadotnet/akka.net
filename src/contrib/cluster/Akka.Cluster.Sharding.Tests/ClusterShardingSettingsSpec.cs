@@ -20,7 +20,7 @@ namespace Akka.Cluster.Sharding.Tests
             ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0")
                 .WithFallback(ClusterSharding.DefaultConfig())
-                .WithFallback(ClusterSingletonManager.DefaultConfig());
+                .WithFallback(ClusterSingleton.DefaultConfig());
 
         public ClusterShardingSettingsSpec(ITestOutputHelper helper)
             : base(SpecConfig, helper)
