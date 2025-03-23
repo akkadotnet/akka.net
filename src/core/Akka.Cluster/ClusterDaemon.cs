@@ -1976,23 +1976,17 @@ namespace Akka.Cluster
             SendGossip();
             if (IsGossipSpeedupNeeded())
             {
-                
-                Timers.StartSingleTimer("gossip-speedup-1", InternalClusterAction.GossipSpeedupTick.Instance, new TimeSpan(_cluster.Settings.GossipInterval.Ticks / 3));
-                Timers.StartSingleTimer("gossip-speedup-2", InternalClusterAction.GossipSpeedupTick.Instance, new TimeSpan(_cluster.Settings.GossipInterval.Ticks * 2 / 3));
+                var utcNowTicks = DateTime.UtcNow.Ticks;
+                Timers.StartSingleTimer("gossip-speedup-1-"+utcNowTicks, InternalClusterAction.GossipSpeedupTick.Instance, new TimeSpan(_cluster.Settings.GossipInterval.Ticks / 3));
+                Timers.StartSingleTimer("gossip-speedup-2-"+utcNowTicks, InternalClusterAction.GossipSpeedupTick.Instance, new TimeSpan(_cluster.Settings.GossipInterval.Ticks * 2 / 3));
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public void GossipSpeedupTick()
         {
             if (IsGossipSpeedupNeeded()) SendGossip();
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public bool IsGossipSpeedupNeeded()
         {
             return LatestGossip.Members.Any(m => m.Status == MemberStatus.Down) ||

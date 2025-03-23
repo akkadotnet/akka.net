@@ -30,10 +30,7 @@ namespace Akka.Cluster
         private readonly Cluster _cluster;
 
         public bool VerboseHeartbeat => _cluster.Settings.VerboseHeartbeatLogging;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public ClusterHeartbeatReceiver(Cluster cluster)
         {
             _cluster = cluster;
@@ -113,18 +110,12 @@ namespace Akka.Cluster
             _seqNo += 1;
             return new Heartbeat(_cluster.SelfAddress, _seqNo, MonotonicClock.GetNanos());
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override void PreStart()
         {
-            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.IReachabilityEvent) });
+            _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.IReachabilityEvent));
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override void PostStop()
         {
             foreach (var receiver in _state.ActiveReceivers)
