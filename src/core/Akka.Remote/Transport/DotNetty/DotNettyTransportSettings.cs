@@ -257,9 +257,11 @@ namespace Akka.Remote.Transport.DotNetty
             {
                 return Create(config);
             }
-            catch(Exception e)
+            catch(Exception)
             {
-                return @default ?? throw e;
+                if (@default != null)
+                    return @default;
+                throw;
             }
         }
 
