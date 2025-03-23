@@ -258,13 +258,12 @@ namespace Akka.Streams
     internal static class ActorMaterializerHelper
     {
         /// <summary>
-        /// TBD
+        /// Converts an <see cref="IMaterializer"/> to an <see cref="ActorMaterializer"/>.
         /// </summary>
-        /// <param name="materializer">TBD</param>
+        /// <param name="materializer">The original materializer.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="materializer"/> is not of type <see cref="ActorMaterializer"/>.
         /// </exception>
-        /// <returns>TBD</returns>
         internal static ActorMaterializer Downcast(IMaterializer materializer)
         {
             //FIXME this method is going to cause trouble for other Materializer implementations
