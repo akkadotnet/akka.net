@@ -659,14 +659,10 @@ namespace Akka.Dispatch.SysMsg
     }
 
     /// <summary>
-    ///     Class Stop.
+    /// Immediately stops the actor who receives this message
     /// </summary>
     public sealed class Stop : SystemMessage
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Stop>";
@@ -674,30 +670,17 @@ namespace Akka.Dispatch.SysMsg
     }
 
     /// <summary>
-    ///     INTERNAL
+    ///     INTERNAL API
     /// </summary>
     public sealed class StopChild   //StopChild is NOT a ISystemMessage
     {
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="StopChild" /> class.
-        /// </summary>
-        /// <param name="child">The child.</param>
         public StopChild(IActorRef child)
         {
             Child = child;
         }
-
-        /// <summary>
-        ///     Gets the child.
-        /// </summary>
-        /// <value>The child.</value>
-        public IActorRef Child { get; private set; }
-
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
+        public IActorRef Child { get; }
+        
         public override string ToString()
         {
             return "<StopChild> " + Child;
@@ -705,30 +688,17 @@ namespace Akka.Dispatch.SysMsg
     }
 
     /// <summary>
-    ///     Class Escalate.
+    /// Used when the <see cref="Directive.Escalate"/> is issued by a supervisor to its own parent.
     /// </summary>
     public sealed class Escalate : SystemMessage
     {
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="Escalate" /> class.
-        /// </summary>
-        /// <param name="reason">The reason.</param>
         public Escalate(Exception reason)
         {
             Reason = reason;
         }
-
-        /// <summary>
-        ///     Gets the reason.
-        /// </summary>
-        /// <value>The reason.</value>
-        public Exception Reason { get; private set; }
-
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
+        public Exception Reason { get; }
+        
         public override string ToString()
         {
             return "<Escalate>" + (Reason == null ? "" : " Reason: " + Reason);
@@ -737,14 +707,12 @@ namespace Akka.Dispatch.SysMsg
 
 
     /// <summary>
-    ///     Class Terminate.
+    /// INTERNAL API 
+    
+    /// Used to complete an actor's termination sequence.
     /// </summary>
     public sealed class Terminate : SystemMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Terminate>";
@@ -759,16 +727,13 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         /// Initializes a new instance of the <see cref="Create" /> class.
         /// </summary>
-        /// <param name="failure">TBD</param>
+        /// <param name="failure">An optional initialization failure.</param>
         public Create(ActorInitializationException failure = null)
         {
             Failure = failure;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public ActorInitializationException Failure { get; }
+        
+        public ActorInitializationException? Failure { get; }
 
         private bool Equals(Create other)
         {
@@ -786,65 +751,39 @@ namespace Akka.Dispatch.SysMsg
         {
             return Failure?.GetHashCode() ?? 0;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         public override string ToString()
         {
             return $"<Create>{(Failure == null ? "" : " Failure: " + Failure)}";
         }
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     public sealed class RegisterTerminationHook
     {
         private RegisterTerminationHook() { }
         public static RegisterTerminationHook Instance { get; } = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         public override string ToString()
         {
             return "<RegisterTerminationHook>";
         }
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     public sealed class TerminationHook
     {
         private TerminationHook() { }
         public static TerminationHook Instance { get; } = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<TerminationHook>";
         }
     }
-
-    /// <summary>
-    ///     Class Terminate.
-    /// </summary>
+    
     public sealed class TerminationHookDone
     {
         private TerminationHookDone() { }
         public static TerminationHookDone Instance { get; } = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         public override string ToString()
         {
             return "<TerminationHookDone>";
