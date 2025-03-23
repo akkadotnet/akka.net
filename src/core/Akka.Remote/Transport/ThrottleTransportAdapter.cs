@@ -299,7 +299,7 @@ namespace Akka.Remote.Transport
                     /*
                      * NOTE: Important difference between Akka.NET and Akka here.
                      * In canonical Akka, ThrottleHandlers are never removed from
-                     * the _handleTable. The reason is because Ask-ing a terminated ActorRef
+                     * the _handleTable. The reason is that Ask-ing a terminated ActorRef
                      * doesn't cause any exceptions to be thrown upstream - it just times out
                      * and propagates a failed Future.
                      *
@@ -329,7 +329,7 @@ namespace Akka.Remote.Transport
                     /*
                      * NOTE: Important difference between Akka.NET and Akka here.
                      * In canonical Akka, ThrottleHandlers are never removed from
-                     * the _handleTable. The reason is because Ask-ing a terminated ActorRef
+                     * the _handleTable. The reason is that Ask-ing a terminated ActorRef
                      * doesn't cause any exceptions to be thrown upstream - it just times out
                      * and propagates a failed Future.
                      * 
@@ -511,14 +511,7 @@ namespace Akka.Remote.Transport
         readonly double _tokensPerSecond;
         readonly long _nanoTimeOfLastSend;
         readonly int _availableTokens;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="capacity">TBD</param>
-        /// <param name="tokensPerSecond">TBD</param>
-        /// <param name="nanoTimeOfLastSend">TBD</param>
-        /// <param name="availableTokens">TBD</param>
+        
         public TokenBucket(int capacity, double tokensPerSecond, long nanoTimeOfLastSend, int availableTokens)
         {
             _capacity = capacity;
@@ -527,7 +520,7 @@ namespace Akka.Remote.Transport
             _availableTokens = availableTokens;
         }
 
-        bool IsAvailable(long nanoTimeOfSend, int tokens)
+        private bool IsAvailable(long nanoTimeOfSend, int tokens)
         {
             if (tokens > _capacity && _availableTokens > 0)
                 return true; // Allow messages larger than capacity through, it will be recorded as negative tokens
@@ -621,26 +614,24 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// Applies a throttle to the underlying conneciton
+    /// Applies a throttle to the underlying connection
     /// </summary>
     public sealed class SetThrottle
     {
-        readonly Address _address;
         /// <summary>
         /// The address of the remote node we'll be throttling
         /// </summary>
-        public Address Address { get { return _address; } }
+        public Address Address { get; }
 
-        readonly ThrottleTransportAdapter.Direction _direction;
         /// <summary>
         /// The direction of the throttle
         /// </summary>
-        public ThrottleTransportAdapter.Direction Direction { get { return _direction; } }
-        readonly ThrottleMode _mode;
+        public ThrottleTransportAdapter.Direction Direction { get; }
+
         /// <summary>
         /// The mode of the throttle
         /// </summary>
-        public ThrottleMode Mode { get { return _mode; } }
+        public ThrottleMode Mode { get; }
 
         /// <summary>
         /// Creates a new SetThrottle message.
@@ -650,14 +641,14 @@ namespace Akka.Remote.Transport
         /// <param name="mode">The mode of the throttle.</param>
         public SetThrottle(Address address, ThrottleTransportAdapter.Direction direction, ThrottleMode mode)
         {
-            _address = address;
-            _direction = direction;
-            _mode = mode;
+            Address = address;
+            Direction = direction;
+            Mode = mode;
         }
 
         private bool Equals(SetThrottle other)
         {
-            return Equals(_address, other._address) && _direction == other._direction && Equals(_mode, other._mode);
+            return Equals(Address, other.Address) && Direction == other.Direction && Equals(Mode, other.Mode);
         }
 
        
@@ -673,9 +664,9 @@ namespace Akka.Remote.Transport
         {
             unchecked
             {
-                var hashCode = (_address != null ? _address.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (int)_direction;
-                hashCode = (hashCode * 397) ^ (_mode != null ? _mode.GetHashCode() : 0);
+                var hashCode = (Address != null ? Address.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (int)Direction;
+                hashCode = (hashCode * 397) ^ (Mode != null ? Mode.GetHashCode() : 0);
                 return hashCode;
             }
         }
@@ -720,13 +711,8 @@ namespace Akka.Remote.Transport
 
         internal readonly IActorRef ThrottlerActor;
 
-        internal AtomicReference<ThrottleMode> OutboundThrottleMode = new(Unthrottled.Instance);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="wrappedHandle">TBD</param>
-        /// <param name="throttlerActor">TBD</param>
+        internal readonly AtomicReference<ThrottleMode> OutboundThrottleMode = new(Unthrottled.Instance);
+        
         public ThrottlerHandle(AssociationHandle wrappedHandle, IActorRef throttlerActor) : base(wrappedHandle, ThrottleTransportAdapter.Scheme)
         {
             ThrottlerActor = throttlerActor;
@@ -736,26 +722,25 @@ namespace Akka.Remote.Transport
         public override bool Write(ByteString payload)
         {
             var tokens = payload.Length;
-            //need to declare recursive delegates first before they can self-reference
-            //might want to consider making this consumer function strongly typed: http://blogs.msdn.com/b/wesdyer/archive/2007/02/02/anonymous-recursion-in-c.aspx
-            bool TryConsume(ThrottleMode currentBucket)
-            {
-                var timeOfSend = MonotonicClock.GetNanos();
-                var res = currentBucket.TryConsumeTokens(timeOfSend, tokens);
-                var newBucket = res.Item1;
-                var allow = res.Item2;
-                if (allow)
-                {
-                    return OutboundThrottleMode.CompareAndSet(currentBucket, newBucket) || TryConsume(OutboundThrottleMode.Value);
-                }
-                return false;
-            }
 
             var throttleMode = OutboundThrottleMode.Value;
             if (throttleMode is Blackhole) return true;
 
             var success = TryConsume(OutboundThrottleMode.Value);
             return success && WrappedHandle.Write(payload);
+
+            //need to declare recursive delegates first before they can self-reference
+            //might want to consider making this consumer function strongly typed: http://blogs.msdn.com/b/wesdyer/archive/2007/02/02/anonymous-recursion-in-c.aspx
+            bool TryConsume(ThrottleMode currentBucket)
+            {
+                var timeOfSend = MonotonicClock.GetNanos();
+                var (newBucket, allow) = currentBucket.TryConsumeTokens(timeOfSend, tokens);
+                if (allow)
+                {
+                    return OutboundThrottleMode.CompareAndSet(currentBucket, newBucket) || TryConsume(OutboundThrottleMode.Value);
+                }
+                return false;
+            }
         }
 
         /// <inheritdoc/>

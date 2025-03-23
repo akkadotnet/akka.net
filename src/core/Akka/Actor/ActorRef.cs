@@ -99,6 +99,8 @@ namespace Akka.Actor
     ///
     /// ActorRef implementation used for one-off tasks.
     /// </summary>
+    // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
+    // Phobos inherits from this class
     public class FutureActorRef<T> : MinimalActorRef
     {
         private readonly TaskCompletionSource<T> _result;
