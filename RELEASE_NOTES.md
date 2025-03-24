@@ -14,8 +14,8 @@
 
 | COMMITS | LOC+ | LOC- | AUTHOR              |
 |---------|------|------|---------------------|
-| 17      | 710  | 1901 | Aaron Stannard      |
-| 3       | 736  | 104  | Gregorius Soedharmo |
+| 28      | 1177 | 2458 | Aaron Stannard      |
+| 7       | 788  | 9534 | Gregorius Soedharmo |
 
 To [see the full set of changes in Akka.NET v1.5.40, click here](https://github.com/akkadotnet/akka.net/milestone/123).
 
