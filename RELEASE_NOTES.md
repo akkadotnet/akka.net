@@ -1,4 +1,4 @@
-#### 1.5.40 March 21st, 2025 ####
+#### 1.5.40 March 24th, 2025 ####
 
 * [Remote: `Endpoint` actor cleanup](https://github.com/akkadotnet/akka.net/issues/7524)
 * [Streams: Implement nullability in `Buffer`](https://github.com/akkadotnet/akka.net/issues/7496)
