@@ -8,6 +8,7 @@
 * [Query.InMemory: Properly unwrap tagged messages in all queries](https://github.com/akkadotnet/akka.net/issues/7548)
 * [Resolve Akka.Delivery and Akka.Cluster.Sharding.Delivery issues](https://github.com/akkadotnet/akka.net/issues/7538)
 * [Persistence: Remove Akka.Persistence.Sql.Common and Akka.Persistence.Query.Sql packages](https://github.com/akkadotnet/akka.net/issues/7551)
+* [Persistence: Remove Akka.Persistence.Sqlite](https://github.com/akkadotnet/akka.net/issues/7559)
 
 2 contributors since release 1.5.39
 
