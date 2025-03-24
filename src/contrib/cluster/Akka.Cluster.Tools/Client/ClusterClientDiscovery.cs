@@ -361,7 +361,7 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
         // Setup cluster client initial contacts
         var currentSettings = _settings.WithInitialContacts(contacts.ToImmutableHashSet());
         
-        var clusterClient = Context.System.ActorOf(Props.Create(() => new ClusterClient(currentSettings)).WithDeploy(Deploy.Local));
+        var clusterClient = Context.ActorOf(Props.Create(() => new ClusterClient(currentSettings)).WithDeploy(Deploy.Local));
         Context.Watch(clusterClient);
         Stash.UnstashAll();
 
