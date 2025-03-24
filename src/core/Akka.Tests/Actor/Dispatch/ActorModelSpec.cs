@@ -587,15 +587,7 @@ namespace Akka.Tests.Actor.Dispatch
                         keepAliveLatch.Wait(waitTime);
                     });
                     boss.Tell("run");
-                    try
-                    {
-                        AssertCountdown(cachedMessage.Latch, waitTime, "Counting down from " + num);
-                    }
-                    catch (Exception ex)
-                    {
-                        // TODO balancing dispatcher
-                        throw;
-                    }
+                    AssertCountdown(cachedMessage.Latch, waitTime, "Counting down from " + num);
                     AssertCountdown(stopLatch, waitTime, "Expected all children to stop.");
                 }
                 finally
@@ -687,7 +679,7 @@ namespace Akka.Tests.Actor.Dispatch
         protected override string DispatcherType => "Dispatcher";
 
         [Fact]
-        public void A_dispatcher_must_process_messages_in_parallel()
+        public async Task A_dispatcher_must_process_messages_in_parallel()
         {
             var dispatcher = InterceptedDispatcher();
             var aStart = new CountdownEvent(1);
@@ -707,13 +699,11 @@ namespace Akka.Tests.Actor.Dispatch
             Sys.Stop(a);
             Sys.Stop(b);
 
-            SpinWait.SpinUntil(() => a.AsInstanceOf<IInternalActorRef>().IsTerminated && b.AsInstanceOf<IInternalActorRef>().IsTerminated);
+            await Task.WhenAll(a.WatchAsync(), b.WatchAsync()).WaitAsync(RemainingOrDefault);
 
             AssertRefDefaultZero(a, dispatcher, registers:1, unregisters:1, msgsReceived:1, msgsProcessed:1);
             AssertRefDefaultZero(b, dispatcher, registers: 1, unregisters: 1, msgsReceived: 1, msgsProcessed: 1);
         }
     }
-
-    // TODO: add support for balancing dispatcher
 }
 

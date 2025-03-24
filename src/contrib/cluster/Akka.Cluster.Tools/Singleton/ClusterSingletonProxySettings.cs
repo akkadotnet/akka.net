@@ -27,7 +27,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <returns>TBD</returns>
         public static ClusterSingletonProxySettings Create(ActorSystem system)
         {
-            system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
+            system.Settings.InjectTopLevelFallback(ClusterSingleton.DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton-proxy");
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ClusterSingletonProxySettings>("akka.cluster.singleton-proxy");

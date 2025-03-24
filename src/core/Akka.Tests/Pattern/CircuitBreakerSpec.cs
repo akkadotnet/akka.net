@@ -414,10 +414,5 @@ namespace Akka.Tests.Pattern
             : base(message, innerException)
         {
         }
-
-        protected TestException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
     }
 }

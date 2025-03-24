@@ -107,7 +107,8 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void ORDictionary_must_be_able_to_have_its_entries_correctly_merged_with_another_ORDictionary_with_other_entries()
+        public void
+            ORDictionary_must_be_able_to_have_its_entries_correctly_merged_with_another_ORDictionary_with_other_entries()
         {
             var m1 = ORDictionary<string, GSet<string>>.Empty
                 .SetItem(_node1, "a", GSet.Create("A"))
@@ -129,7 +130,8 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void ORDictionary_must_be_able_to_have_its_entries_correctly_merged_with_another_ORDictionary_with_overlaping_entries()
+        public void
+            ORDictionary_must_be_able_to_have_its_entries_correctly_merged_with_another_ORDictionary_with_overlaping_entries()
         {
             var m1 = ORDictionary<string, GSet<string>>.Empty
                 .SetItem(_node1, "a", GSet.Create("A1"))
@@ -184,16 +186,16 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void ORDictionary_must_do_not_have_divergence_in_dot_versions_between_the_underlying_map_and_ORDictionary_delta()
+        public void
+            ORDictionary_must_do_not_have_divergence_in_dot_versions_between_the_underlying_map_and_ORDictionary_delta()
         {
             var m1 = ORDictionary<string, GSet<string>>.Empty.SetItem(_node1, "a", GSet.Create("A"));
 
             var deltaVersion = default(long?);
-            var delta = m1.Delta as ORDictionary<string, GSet<string>>.PutDeltaOperation;
-            if (delta != null)
+            if (m1.Delta is ORDictionary<string, GSet<string>>.PutDeltaOperation delta)
             {
-                var addDelta = delta.Underlying as ORSet<string>.AddDeltaOperation;
-                if (addDelta != null && addDelta.Underlying.ElementsMap.TryGetValue("a", out var v))
+                if (delta.Underlying is ORSet<string>.AddDeltaOperation addDelta &&
+                    addDelta.Underlying.ElementsMap.TryGetValue("a", out var v))
                     deltaVersion = v.VersionAt(_node1);
             }
 
@@ -233,13 +235,15 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void ORDictionary_must_not_have_anomalies_for_remove_with_update_scenario_and_deltas_2()
         {
-            var m1 = ORDictionary.Create(_node1, "a", ORSet.Create(_node1, "A")).SetItem(_node1, "b", ORSet.Create(_node1, "B"));
+            var m1 = ORDictionary.Create(_node1, "a", ORSet.Create(_node1, "A"))
+                .SetItem(_node1, "b", ORSet.Create(_node1, "B"));
             var m2 = ORDictionary.Create(_node2, "c", ORSet.Create(_node2, "C"));
 
             var merged1 = m1.Merge(m2);
 
             var m3 = merged1.ResetDelta().Remove(_node1, "b");
-            var m4 = merged1.ResetDelta().Remove(_node1, "b").AddOrUpdate(_node1, "b", ORSet<string>.Empty, x => x.Add(_node1, "B2"));
+            var m4 = merged1.ResetDelta().Remove(_node1, "b")
+                .AddOrUpdate(_node1, "b", ORSet<string>.Empty, x => x.Add(_node1, "B2"));
 
             var merged2 = m3.Merge(m4);
 
@@ -259,13 +263,15 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void ORDictionary_must_not_have_anomalies_for_remove_with_update_scenario_and_deltas_3()
         {
-            var m1 = ORDictionary.Create(_node1, "a", ORSet.Create(_node1, "A")).SetItem(_node1, "b", ORSet.Create(_node1, "B"));
+            var m1 = ORDictionary.Create(_node1, "a", ORSet.Create(_node1, "A"))
+                .SetItem(_node1, "b", ORSet.Create(_node1, "B"));
             var m2 = ORDictionary.Create(_node2, "c", ORSet.Create(_node2, "C"));
 
             var merged1 = m1.Merge(m2);
 
             var m3 = merged1.ResetDelta().Remove(_node1, "b");
-            var m4 = merged1.ResetDelta().Remove(_node2, "b").AddOrUpdate(_node2, "b", ORSet<string>.Empty, x => x.Add(_node2, "B2"));
+            var m4 = merged1.ResetDelta().Remove(_node2, "b")
+                .AddOrUpdate(_node2, "b", ORSet<string>.Empty, x => x.Add(_node2, "B2"));
 
             var merged2 = m3.Merge(m4);
 
@@ -285,7 +291,8 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void ORDictionary_must_not_have_anomalies_for_remove_with_update_scenario_and_deltas_4()
         {
-            var m1 = ORDictionary.Create(_node1, "a", ORSet.Create(_node1, "A")).SetItem(_node1, "b", ORSet.Create(_node1, "B"));
+            var m1 = ORDictionary.Create(_node1, "a", ORSet.Create(_node1, "A"))
+                .SetItem(_node1, "b", ORSet.Create(_node1, "B"));
             var m2 = ORDictionary.Create(_node2, "c", ORSet.Create(_node2, "C"));
 
             var merged1 = m1.Merge(m2);
@@ -337,7 +344,8 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void ORDictionary_must_not_have_anomalies_for_remove_with_update_scenario_and_deltas_6()
         {
-            var m1 = ORDictionary.Create(_node1, "a", ORSet.Create(_node1, "A")).SetItem(_node1, "b", ORSet.Create(_node1, "B"));
+            var m1 = ORDictionary.Create(_node1, "a", ORSet.Create(_node1, "A"))
+                .SetItem(_node1, "b", ORSet.Create(_node1, "B"));
             var m2 = ORDictionary.Create(_node2, "b", ORSet.Create(_node2, "B3"));
 
             var merged1 = m1.Merge(m2);
@@ -476,7 +484,8 @@ namespace Akka.DistributedData.Tests
             // please note that the current ORMultiMap has the same anomaly
             // because the condition of keeping global vvector is violated
             // by removal of the whole entry for the removed key "b" which results in removal of it's value's vvector
-            var m1 = ORDictionary.Create(_node1, "a", ORSet.Create(_node1, "A")).SetItem(_node1, "b", ORSet.Create(_node1, "B"));
+            var m1 = ORDictionary.Create(_node1, "a", ORSet.Create(_node1, "A"))
+                .SetItem(_node1, "b", ORSet.Create(_node1, "B"));
             var m2 = ORDictionary.Create(_node2, "c", ORSet.Create(_node2, "C"));
 
             // m1 - node1 gets the update from m2
@@ -720,15 +729,15 @@ namespace Akka.DistributedData.Tests
             var m3 = merged1.Remove(_node1, "b").SetItem(_node1, "b", ORSet.Create(_node1, "B2"));
 
             var merged2 = merged1.Merge(m3);
-            Assert.Equal(ImmutableHashSet.Create("A01", "A02", "A03"), merged2["a"].Elements);
-            Assert.Equal(ImmutableHashSet.Create("B2"), merged2["b"].Elements);
-            Assert.Equal(ImmutableHashSet.Create("C"), merged2["c"].Elements);
+            merged2["a"].Elements.Should().BeEquivalentTo(ImmutableHashSet.Create("A01", "A02", "A03"));
+            merged2["b"].Elements.Should().BeEquivalentTo(ImmutableHashSet.Create("B2"));
+            merged2["c"].Elements.Should().BeEquivalentTo(ImmutableHashSet.Create("C"));
 
             var m4 = merged1.AddOrUpdate(_node2, "b", ORSet<string>.Empty, old => old.Add(_node2, "B3"));
             var merged3 = m3.Merge(m4);
-            Assert.Equal(ImmutableHashSet.Create("A01", "A02", "A03"), merged3["a"].Elements);
-            Assert.Equal(ImmutableHashSet.Create("B2", "B3"), merged3["b"].Elements);
-            Assert.Equal(ImmutableHashSet.Create("C"), merged3["c"].Elements);
+            merged3["a"].Elements.Should().BeEquivalentTo(ImmutableHashSet.Create("A01", "A02", "A03"));
+            merged3["b"].Elements.Should().BeEquivalentTo(ImmutableHashSet.Create("B2", "B3"));
+            merged3["c"].Elements.Should().BeEquivalentTo(ImmutableHashSet.Create("C"));
         }
 
         [Fact]
@@ -746,18 +755,18 @@ namespace Akka.DistributedData.Tests
             var m3 = merged1.Remove(_node1, "b");
 
             var merged2 = merged1.Merge(m3);
-            Assert.Equal(ImmutableHashSet.Create("A"), merged2["a"].Elements);
+            merged2["a"].Elements.Should().BeEquivalentTo(ImmutableHashSet.Create("A"));
             Assert.DoesNotContain("b", merged2.Entries.Keys);
-            Assert.Equal(ImmutableHashSet.Create("C"), merged2["c"].Elements);
+            merged2["c"].Elements.Should().BeEquivalentTo(ImmutableHashSet.Create("C"));
 
             var m4 = merged2.SetItem(_node1, "b", ORSet.Create(_node1, "B2"));
             var m5 = merged2.AddOrUpdate(_node2, "c", ORSet<string>.Empty, old => old.Add(_node2, "C2"))
                 .SetItem(_node2, "b", ORSet.Create(_node2, "B3"));
 
             var merged3 = m5.Merge(m4);
-            Assert.Equal(ImmutableHashSet.Create("A"), merged3["a"].Elements);
-            Assert.Equal(ImmutableHashSet.Create("B2", "B3"), merged3["b"].Elements);
-            Assert.Equal(ImmutableHashSet.Create("C", "C2"), merged3["c"].Elements);
+            merged3["a"].Elements.Should().BeEquivalentTo(ImmutableHashSet.Create("A"));
+            merged3["b"].Elements.Should().BeEquivalentTo(ImmutableHashSet.Create("B2", "B3"));
+            merged3["c"].Elements.Should().BeEquivalentTo(ImmutableHashSet.Create("C", "C2"));
         }
     }
 }

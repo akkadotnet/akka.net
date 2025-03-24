@@ -1,4 +1,4 @@
-#### 1.5.40 March 21st, 2025 ####
+#### 1.5.40 March 24th, 2025 ####
 
 * [Remote: `Endpoint` actor cleanup](https://github.com/akkadotnet/akka.net/issues/7524)
 * [Streams: Implement nullability in `Buffer`](https://github.com/akkadotnet/akka.net/issues/7496)
@@ -8,13 +8,14 @@
 * [Query.InMemory: Properly unwrap tagged messages in all queries](https://github.com/akkadotnet/akka.net/issues/7548)
 * [Resolve Akka.Delivery and Akka.Cluster.Sharding.Delivery issues](https://github.com/akkadotnet/akka.net/issues/7538)
 * [Persistence: Remove Akka.Persistence.Sql.Common and Akka.Persistence.Query.Sql packages](https://github.com/akkadotnet/akka.net/issues/7551)
+* [Persistence: Remove Akka.Persistence.Sqlite](https://github.com/akkadotnet/akka.net/issues/7559)
 
 2 contributors since release 1.5.39
 
 | COMMITS | LOC+ | LOC- | AUTHOR              |
 |---------|------|------|---------------------|
-| 17      | 710  | 1901 | Aaron Stannard      |
-| 3       | 736  | 104  | Gregorius Soedharmo |
+| 28      | 1177 | 2458 | Aaron Stannard      |
+| 7       | 788  | 9534 | Gregorius Soedharmo |
 
 To [see the full set of changes in Akka.NET v1.5.40, click here](https://github.com/akkadotnet/akka.net/milestone/123).
 

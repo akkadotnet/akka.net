@@ -47,8 +47,10 @@ public class Bugfix7145Spec : AkkaSpec
         var actor = Sys.ActorOf(Props.Create(() => new BuggyActor()));
         var probe = CreateTestProbe();
         actor.Tell("hello", probe);
+#pragma warning disable xUnit1030
         var response1 = await probe.ExpectMsgAsync<string>().ConfigureAwait(false);
         var response2 = await probe.ExpectMsgAsync<string>().ConfigureAwait(false);
+#pragma warning restore xUnit1030
         response1.Should().Be("hello1");
         response2.Should().Be("hello2");
     }

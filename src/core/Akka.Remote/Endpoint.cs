@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#pragma warning disable AK1004
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -447,13 +447,13 @@ namespace Akka.Remote
         /// Creates a new instance of the <see cref="ReliableDeliverySupervisor"/> class.
         /// </summary>
         /// <param name="handleOrActive">The Akka.Remote protocol handle for sending messages</param>
-        /// <param name="localAddress">Our local address per the <see cref="transport"/></param>
+        /// <param name="localAddress">Our local address per the <paramref name="transport"/></param>
         /// <param name="remoteAddress">The remote address we're communicating with</param>
-        /// <param name="refuseUid">Optional - the quarantined UID for the <see cref="remoteAddress"/>, if we've previously quarantined it.</param>
+        /// <param name="refuseUid">Optional - the quarantined UID for the <paramref name="remoteAddress"/>, if we've previously quarantined it.</param>
         /// <param name="transport">The underlying transport.</param>
         /// <param name="settings">The general Akka.Remote transport settings.</param>
         /// <param name="codec">The Akka.Remote protocol codec for encoding and decoding messages.</param>
-        /// <param name="receiveBuffers">The set of receive buffers for resending messages in the event that the connection to <see cref="remoteAddress"/> is disrupted.</param>
+        /// <param name="receiveBuffers">The set of receive buffers for resending messages in the event that the connection to <paramref name="remoteAddress"/> is disrupted.</param>
         public ReliableDeliverySupervisor(
                     AkkaProtocolHandle handleOrActive,
                     Address localAddress,
@@ -1178,6 +1178,7 @@ namespace Akka.Remote
             Receive<FlushAndStop>(stop =>
             {
                 _buffer.AddLast(stop); //Flushing is postponed after the pending writes
+
                 Context.System.Scheduler.ScheduleTellOnce(Settings.FlushWait, Self, FlushAndStopTimeout.Instance, Self);
             });
             Receive<FlushAndStopTimeout>(_ =>
@@ -1620,7 +1621,6 @@ namespace Akka.Remote
                     }
 
                     return false;
-                    break;
                 }
             }
         }

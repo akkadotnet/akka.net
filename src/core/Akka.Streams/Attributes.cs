@@ -180,9 +180,6 @@ namespace Akka.Streams
         /// </summary>
         public sealed class AsyncBoundary : IAttribute, IEquatable<AsyncBoundary>
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static readonly AsyncBoundary Instance = new();
             private AsyncBoundary() { }
             public bool Equals(AsyncBoundary other) => other is AsyncBoundary;
@@ -270,21 +267,14 @@ namespace Akka.Streams
                 }
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public static readonly Attributes None = new();
 
         private readonly IAttribute[] _attributes;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="attributes">TBD</param>
+        
         public Attributes(params IAttribute[] attributes)
         {
-            _attributes = attributes ?? Array.Empty<IAttribute>();
+            _attributes = attributes ?? [];
         }
 
         /// <summary>
@@ -314,18 +304,13 @@ namespace Akka.Streams
         /// 
         /// The list is ordered with the most specific attribute first, least specific last.
         /// </summary>
-        /// <typeparam name="TAttr">TBD</typeparam>
-        /// <returns>TBD</returns>
         public IEnumerable<TAttr> GetAttributeList<TAttr>() where TAttr : IAttribute
-            => _attributes.Length == 0 ? Enumerable.Empty<TAttr>() : _attributes.Where(a => a is TAttr).Cast<TAttr>();
+            => _attributes.Length == 0 ? [] : _attributes.Where(a => a is TAttr).Cast<TAttr>();
 
         /// <summary>
         /// Get the last (most specific) attribute of a given type or subtype thereof.
         /// If no such attribute exists the default value is returned.
         /// </summary>
-        /// <typeparam name="TAttr">TBD</typeparam>
-        /// <param name="defaultIfNotFound">TBD</param>
-        /// <returns>TBD</returns>
         #nullable enable
         [return: NotNullIfNotNull("defaultIfNotFound")]
         public TAttr? GetAttribute<TAttr>(TAttr? defaultIfNotFound) where TAttr : class, IAttribute
@@ -336,9 +321,6 @@ namespace Akka.Streams
         /// Get the first (least specific) attribute of a given type or subtype thereof.
         /// If no such attribute exists the default value is returned.
         /// </summary>
-        /// <typeparam name="TAttr">TBD</typeparam>
-        /// <param name="defaultIfNotFound">TBD</param>
-        /// <returns>TBD</returns>
         [Obsolete("Attributes should always be most specific, use GetAttribute<TAttr>()")]
         public TAttr GetFirstAttribute<TAttr>(TAttr defaultIfNotFound) where TAttr : class, IAttribute
             => GetFirstAttribute<TAttr>() ?? defaultIfNotFound;
@@ -346,16 +328,12 @@ namespace Akka.Streams
         /// <summary>
         /// Get the last (most specific) attribute of a given type or subtype thereof.
         /// </summary>
-        /// <typeparam name="TAttr">TBD</typeparam>
-        /// <returns>TBD</returns>
         public TAttr GetAttribute<TAttr>() where TAttr : class, IAttribute
             => _attributes.LastOrDefault(attr => attr is TAttr) as TAttr;
 
         /// <summary>
         /// Get the first (least specific) attribute of a given type or subtype thereof.
         /// </summary>
-        /// <typeparam name="TAttr">TBD</typeparam>
-        /// <returns>TBD</returns>
         [Obsolete("Attributes should always be most specific, use GetAttribute<TAttr>()")]
         public TAttr GetFirstAttribute<TAttr>() where TAttr : class, IAttribute
             => _attributes.FirstOrDefault(attr => attr is TAttr) as TAttr;
@@ -364,8 +342,6 @@ namespace Akka.Streams
         /// Get the most specific of one of the mandatory attributes. Mandatory attributes are guaranteed
         /// to always be among the attributes when the attributes are coming from a materialization.
         /// </summary>
-        /// <typeparam name="TAttr"></typeparam>
-        /// <returns></returns>
         public TAttr GetMandatoryAttribute<TAttr>() where TAttr : class, IMandatoryAttribute
         {
             if (!(_attributes.First(attr => attr is TAttr) is TAttr result))
@@ -376,8 +352,6 @@ namespace Akka.Streams
         /// <summary>
         /// Adds given attributes to the end of these attributes.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
         public Attributes And(Attributes other)
         {
             if (_attributes.Length == 0)
@@ -390,21 +364,13 @@ namespace Akka.Streams
         /// <summary>
         /// Adds given attribute to the end of these attributes.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
-        public Attributes And(IAttribute other) => new(_attributes.Concat(new[] { other }).ToArray());
+        public Attributes And(IAttribute other) => new(_attributes.Concat([other]).ToArray());
 
         /// <summary>
         /// Extracts Name attributes and concatenates them.
         /// </summary>
-        /// <returns>TBD</returns>
         public string GetNameLifted() => GetNameOrDefault(null);
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="defaultIfNotFound">TBD</param>
-        /// <returns>TBD</returns>
+        
         public string GetNameOrDefault(string defaultIfNotFound = "unknown-operation")
         {
             if (_attributes.Length == 0)
@@ -431,9 +397,6 @@ namespace Akka.Streams
         /// Note that operators in general should not inspect the whole hierarchy but instead use
         /// `get` to get the most specific attribute value.
         /// </summary>
-        /// <typeparam name="TAttr">TBD</typeparam>
-        /// <param name="attribute">TBD</param>
-        /// <returns>TBD</returns>
         [Obsolete("Use GetAttribute<TAttr>() instead")]
         public bool Contains<TAttr>(TAttr attribute) where TAttr : IAttribute => _attributes.Any(a => a is TAttr);
 
@@ -447,12 +410,10 @@ namespace Akka.Streams
         /// the name is sometimes used as part of actor name. If that is not desired
         /// the name can be added in it's raw format using `.And(new Attributes(new Name(name)))`.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
         public static Attributes CreateName(string name)
             => string.IsNullOrEmpty(name) ?
                 None :
-                new Attributes(new Name(Uri.EscapeUriString(name)));
+                new Attributes(new Name(Uri.EscapeDataString(name)));
 
         /// <summary>
         /// Each asynchronous piece of a materialized stream topology is executed by one Actor

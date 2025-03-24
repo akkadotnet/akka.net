@@ -206,8 +206,6 @@ namespace Akka.Remote.Transport.DotNetty
 
     /// <summary>
     /// INTERNAL API.
-    ///
-    /// Configuration object for <see cref="BatchWriter"/>
     /// </summary>
     internal sealed class BatchWriterSettings
     {
