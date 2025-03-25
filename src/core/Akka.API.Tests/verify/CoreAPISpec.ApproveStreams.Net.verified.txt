@@ -4890,7 +4890,7 @@ namespace Akka.Streams.Stage
         public void FailStage(System.Exception reason) { }
         protected System.Action<T> GetAsyncCallback<T>(System.Action<T> handler) { }
         protected System.Action GetAsyncCallback(System.Action handler) { }
-        protected System.Func<T, System.Threading.Tasks.Task<Akka.Done>> GetAsyncCallbackAsync<T>(System.Action<T> handler) { }
+        protected System.Func<T, System.Threading.Tasks.Task> GetAsyncCallbackAsync<T>(System.Action<T> handler) { }
         protected System.Func<System.Threading.Tasks.Task> GetAsyncCallbackAsync(System.Action handler) { }
         protected Akka.Streams.Stage.IInHandler GetHandler<T>(Akka.Streams.Inlet<T> inlet) { }
         protected Akka.Streams.Stage.IOutHandler GetHandler<T>(Akka.Streams.Outlet<T> outlet) { }
