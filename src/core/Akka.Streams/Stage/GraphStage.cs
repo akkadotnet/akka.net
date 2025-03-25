@@ -6,11 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Dispatch.SysMsg;
@@ -423,6 +425,16 @@ namespace Akka.Streams.Stage
     /// </summary>
     public abstract class GraphStageLogic : IStageLogging
     {
+        private List<Func<object, Task>>? CallbacksWaitingForInterpreter = null;
+        private AtomicReference<List<TaskCompletionSource<Done>>?> AsyncCallbacksInProgress = new(new List<TaskCompletionSource<Done>>());
+        public static readonly TaskCompletionSource<Done> NoPromise;
+
+        static GraphStageLogic()
+        {
+            NoPromise = new TaskCompletionSource<Done>();
+            NoPromise.SetResult(Done.Instance);
+        }
+        
         #region internal classes
 
         private sealed class Reading<T> : InHandler
@@ -1669,7 +1681,7 @@ namespace Akka.Streams.Stage
         /// <param name="handler">TBD</param>
         /// <returns>TBD</returns>
         protected Action<T> GetAsyncCallback<T>(Action<T> handler)
-            => @event => Interpreter.OnAsyncInput(this, @event, x => handler((T)x));
+            => @event => Interpreter.OnAsyncInput(this, @event, NoPromise, x => handler((T)x));
 
         /// <summary>
         /// Obtain a callback object that can be used asynchronously to re-enter the
@@ -1683,8 +1695,55 @@ namespace Akka.Streams.Stage
         /// <param name="handler">TBD</param>
         /// <returns>TBD</returns>
         protected Action GetAsyncCallback(Action handler)
-            => () => Interpreter.OnAsyncInput(this, NotUsed.Instance, _ => handler());
+            => () => Interpreter.OnAsyncInput(this, NotUsed.Instance, NoPromise, _ => handler());
 
+        protected Func<T, Task> GetAsyncCallbackAsync<T>(Action<T> handler)
+        {
+            var promise = new TaskCompletionSource<Done>();
+            if (AddToWaiting(promise))
+            {
+                return @event =>
+                {
+                    Interpreter.OnAsyncInput(this, @event, promise, x => handler((T)x));
+                    return promise.Task;
+                };
+            }
+            
+            throw new StreamDetachedException($"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
+        }
+
+        protected Func<Task> GetAsyncCallbackAsync(Action handler)
+        {
+            var promise = new TaskCompletionSource<Done>();
+            if (AddToWaiting(promise))
+            {
+                return () =>
+                {
+                    Interpreter.OnAsyncInput(this, NotUsed.Instance, promise, _ => handler());
+                    return promise.Task;
+                };
+            }
+            
+            throw new StreamDetachedException($"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
+        }
+
+        private bool AddToWaiting(TaskCompletionSource<Done> promise)
+        {
+            var previous = AsyncCallbacksInProgress.Value;
+            if (previous is not null)
+            {
+                previous.Add(promise);
+                
+                // Need to read that again to make sure the stage hasn't been stopped in the meantime and the cleanup
+                // process is already running.
+                // If the cleanup process is already running (ref eq null) the promise needs to be dropped
+                return AsyncCallbacksInProgress.Value is not null;
+            }
+            
+            // else logic was already stopped
+            return false;
+        }
+        
         /// <summary>
         /// Initialize a <see cref="StageActorRef"/> which can be used to interact with from the outside world "as-if" an actor.
         /// The messages are looped through the <see cref="GetAsyncCallback{T}"/> mechanism of <see cref="GraphStage{TShape}"/> so they are safe to modify
@@ -1746,6 +1805,35 @@ namespace Akka.Streams.Stage
                 _stageActor.Stop();
                 _stageActor = null;
             }
+
+            var inProgress = AsyncCallbacksInProgress.GetAndSet(null);
+            if (inProgress is not null && inProgress.Count > 0)
+            {
+                try
+                {
+                    throw new StreamDetachedException($"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
+                }
+                catch (Exception ex)
+                {
+                    foreach (var tcs in inProgress)
+                    {
+                        tcs.TrySetException(ex);
+                    }
+                }
+            }
+        }
+
+        internal void OnFeedbackDispatched(TaskCompletionSource<Done> p)
+        {
+            switch (AsyncCallbacksInProgress.Value)
+            {
+                case null:
+                    // already finished, nothing to do here
+                    break;
+                case var x:
+                    x.Remove(p);
+                    break;
+            } 
         }
 
         /// <summary>
