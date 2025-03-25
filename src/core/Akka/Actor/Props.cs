@@ -346,34 +346,21 @@ namespace Akka.Actor
         ///     Creates an actor using the given arguments.
         /// </summary>
         /// <typeparam name="TActor">The type of the actor to create.</typeparam>
+        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
+        public static Props Create<TActor>() where TActor : ActorBase, new()
+        {
+            return new Props(new FactoryProducer<TActor>(() => new TActor()), DefaultDeploy, NoArgs);
+        }
+
+        /// <summary>
+        ///     Creates an actor using the given arguments.
+        /// </summary>
+        /// <typeparam name="TActor">The type of the actor to create.</typeparam>
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         public static Props Create<TActor>(params object[] args) where TActor : ActorBase
         {
             return new Props(new ActivatorProducer(typeof(TActor), args), DefaultDeploy, args);
-        }
-
-        /// <summary>
-        ///     Creates an actor using a specified actor producer.
-        /// </summary>
-        /// <typeparam name="TProducer">The type of producer used to create the actor.</typeparam>
-        /// <param name="args">The arguments needed to create the actor.</param>
-        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
-        [Obsolete("Do not use this method. Call CreateBy(IIndirectActorProducer, params object[] args) instead")]
-        public static Props CreateBy<TProducer>(params object[] args) where TProducer : class, IIndirectActorProducer
-        {
-            return new Props(typeof(TProducer), args);
-        }
-
-        /// <summary>
-        ///     Creates an actor using a specified actor producer.
-        /// </summary>
-        /// <param name="producer">The actor producer that will be used to create the underlying actor..</param>
-        /// <param name="args">The arguments needed to create the actor.</param>
-        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
-        public static Props CreateBy(IIndirectActorProducer producer, params object[] args)
-        {
-            return new Props(producer, DefaultDeploy, args);
         }
 
         /// <summary>
@@ -400,6 +387,29 @@ namespace Akka.Actor
                 throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
 
             return new Props(type, args);
+        }
+
+        /// <summary>
+        ///     Creates an actor using a specified actor producer.
+        /// </summary>
+        /// <typeparam name="TProducer">The type of producer used to create the actor.</typeparam>
+        /// <param name="args">The arguments needed to create the actor.</param>
+        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
+        [Obsolete("Do not use this method. Call CreateBy(IIndirectActorProducer, params object[] args) instead")]
+        public static Props CreateBy<TProducer>(params object[] args) where TProducer : class, IIndirectActorProducer
+        {
+            return new Props(typeof(TProducer), args);
+        }
+
+        /// <summary>
+        ///     Creates an actor using a specified actor producer.
+        /// </summary>
+        /// <param name="producer">The actor producer that will be used to create the underlying actor..</param>
+        /// <param name="args">The arguments needed to create the actor.</param>
+        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
+        public static Props CreateBy(IIndirectActorProducer producer, params object[] args)
+        {
+            return new Props(producer, DefaultDeploy, args);
         }
 
         /// <summary>
