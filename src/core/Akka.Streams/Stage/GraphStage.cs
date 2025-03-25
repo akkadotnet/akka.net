@@ -1697,7 +1697,7 @@ namespace Akka.Streams.Stage
         protected Action GetAsyncCallback(Action handler)
             => () => Interpreter.OnAsyncInput(this, NotUsed.Instance, NoPromise, _ => handler());
 
-        protected Func<T, Task> GetAsyncCallbackAsync<T>(Action<T> handler)
+        protected Func<T, Task<Done>> GetAsyncCallbackAsync<T>(Action<T> handler)
         {
             var promise = new TaskCompletionSource<Done>();
             if (AddToWaiting(promise))

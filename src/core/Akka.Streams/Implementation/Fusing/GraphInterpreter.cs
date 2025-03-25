@@ -823,10 +823,7 @@ namespace Akka.Streams.Implementation.Fusing
                     catch (Exception e)
                     {
                         if (!ReferenceEquals(promise, GraphStageLogic.NoPromise))
-                        {
                             promise.TrySetException(e);
-                            logic.OnFeedbackDispatched(promise);
-                        }
                         logic.FailStage(e);
                     }
                     AfterStageHasRun(logic);
