@@ -3964,7 +3964,8 @@ namespace Akka.Streams.Implementation.Fusing
             public readonly object Event;
             public readonly System.Action<object> Handler;
             public readonly Akka.Streams.Stage.GraphStageLogic Logic;
-            public AsyncInput(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, Akka.Streams.Stage.GraphStageLogic logic, object @event, System.Action<object> handler) { }
+            public readonly System.Threading.Tasks.TaskCompletionSource<Akka.Done> Promise;
+            public AsyncInput(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, Akka.Streams.Stage.GraphStageLogic logic, object @event, System.Threading.Tasks.TaskCompletionSource<Akka.Done> promise, System.Action<object> handler) { }
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
         public class BatchingActorInputBoundary : Akka.Streams.Implementation.Fusing.GraphInterpreter.UpstreamBoundaryStageLogic
@@ -4199,7 +4200,7 @@ namespace Akka.Streams.Implementation.Fusing
         public readonly Akka.Streams.Stage.GraphStageLogic[] Logics;
         public readonly Akka.Streams.IMaterializer Materializer;
         public const Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection NoEvent = null;
-        public readonly System.Action<Akka.Streams.Stage.GraphStageLogic, object, System.Action<object>> OnAsyncInput;
+        public readonly System.Action<Akka.Streams.Stage.GraphStageLogic, object, System.Threading.Tasks.TaskCompletionSource<Akka.Done>, System.Action<object>> OnAsyncInput;
         public const int OutClosed = 32;
         public const int OutReady = 8;
         public const int PullEndFlip = 10;
@@ -4210,7 +4211,7 @@ namespace Akka.Streams.Implementation.Fusing
         public const int Pushing = 4;
         public int RunningStagesCount;
         public static readonly Akka.Streams.Attributes[] SingleNoAttribute;
-        public GraphInterpreter(Akka.Streams.Implementation.Fusing.GraphAssembly assembly, Akka.Streams.IMaterializer materializer, Akka.Event.ILoggingAdapter log, Akka.Streams.Stage.GraphStageLogic[] logics, Connection[] connections, System.Action<Akka.Streams.Stage.GraphStageLogic, object, System.Action<object>> onAsyncInput, bool fuzzingMode, Akka.Actor.IActorRef context) { }
+        public GraphInterpreter(Akka.Streams.Implementation.Fusing.GraphAssembly assembly, Akka.Streams.IMaterializer materializer, Akka.Event.ILoggingAdapter log, Akka.Streams.Stage.GraphStageLogic[] logics, Connection[] connections, System.Action<Akka.Streams.Stage.GraphStageLogic, object, System.Threading.Tasks.TaskCompletionSource<Akka.Done>, System.Action<object>> onAsyncInput, bool fuzzingMode, Akka.Actor.IActorRef context) { }
         public Akka.Actor.IActorRef Context { get; }
         public static Akka.Streams.Implementation.Fusing.GraphInterpreter Current { get; }
         public static Akka.Streams.Implementation.Fusing.GraphInterpreter CurrentInterpreterOrNull { get; }
@@ -4225,7 +4226,7 @@ namespace Akka.Streams.Implementation.Fusing
         public int Execute(int eventLimit) { }
         public void Finish() { }
         public void Init(Akka.Streams.IMaterializer subMaterializer) { }
-        public void RunAsyncInput(Akka.Streams.Stage.GraphStageLogic logic, object evt, System.Action<object> handler) { }
+        public void RunAsyncInput(Akka.Streams.Stage.GraphStageLogic logic, object evt, System.Threading.Tasks.TaskCompletionSource<Akka.Done> promise, System.Action<object> handler) { }
         public void SetHandler(Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection connection, Akka.Streams.Stage.IInHandler handler) { }
         public void SetHandler(Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection connection, Akka.Streams.Stage.IOutHandler handler) { }
         public override string ToString() { }
@@ -4881,6 +4882,7 @@ namespace Akka.Streams.Stage
         public static readonly Akka.Streams.Stage.InHandler IgnoreTerminateInput;
         public static readonly Akka.Streams.Stage.OutHandler IgnoreTerminateOutput;
         public readonly int InCount;
+        public static readonly System.Threading.Tasks.TaskCompletionSource<Akka.Done> NoPromise;
         public readonly int OutCount;
         public static readonly Akka.Streams.Stage.InHandler TotallyIgnorantInput;
         protected GraphStageLogic(int inCount, int outCount) { }
@@ -4915,6 +4917,8 @@ namespace Akka.Streams.Stage
         public void FailStage(System.Exception reason) { }
         protected System.Action<T> GetAsyncCallback<T>(System.Action<T> handler) { }
         protected System.Action GetAsyncCallback(System.Action handler) { }
+        protected System.Func<T, System.Threading.Tasks.Task<Akka.Done>> GetAsyncCallbackAsync<T>(System.Action<T> handler) { }
+        protected System.Func<System.Threading.Tasks.Task> GetAsyncCallbackAsync(System.Action handler) { }
         protected Akka.Streams.Stage.IInHandler GetHandler<T>(Akka.Streams.Inlet<T> inlet) { }
         protected Akka.Streams.Stage.IOutHandler GetHandler<T>(Akka.Streams.Outlet<T> outlet) { }
         [Akka.Annotations.ApiMayChangeAttribute()]
