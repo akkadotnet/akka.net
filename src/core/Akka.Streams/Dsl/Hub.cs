@@ -670,7 +670,6 @@ namespace Akka.Streams.Dsl
                             _activeConsumer++;
                             AddConsumer(consumer, startFrom);
                             
-                            // c.Callback(new Initialize(startFrom));
                             // in case the consumer is already stopped we need to undo registration
                             consumer.Callback(new Initialize(startFrom))
                                 .ContinueWith(t =>
