@@ -623,26 +623,6 @@ namespace Akka.Actor
             }
         }
 
-        private class DefaultProducer : IIndirectActorProducer
-        {
-            private DefaultProducer(){}
-
-            public static readonly DefaultProducer Instance = new();
-
-            public ActorBase Produce()
-            {
-                throw new InvalidOperationException("No actor producer specified!");
-            }
-
-            public Type ActorType => typeof(ActorBase);
-
-
-            public void Release(ActorBase actor)
-            {
-                actor = null;
-            }
-        }
-
         private class ActivatorProducer : IIndirectActorProducer
         {
             private readonly object[] _args;
@@ -717,7 +697,7 @@ namespace Akka.Actor
     /// <typeparam name="TActor">The type of the actor to create.</typeparam>
     internal class DynamicProps<TActor> : Props where TActor : ActorBase
     {
-        private readonly Func<TActor> invoker;
+        private readonly Func<TActor> _invoker;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="DynamicProps{TActor}" /> class.
@@ -726,7 +706,7 @@ namespace Akka.Actor
         public DynamicProps(Func<TActor> invoker)
             : base(typeof(TActor))
         {
-            this.invoker = invoker;
+            this._invoker = invoker;
         }
 
         /// <summary>
@@ -735,7 +715,7 @@ namespace Akka.Actor
         /// <returns>The actor created using the factory method.</returns>
         public override ActorBase NewActor()
         {
-            return invoker.Invoke();
+            return _invoker.Invoke();
         }
 
         #region Copy methods
@@ -743,7 +723,7 @@ namespace Akka.Actor
         private DynamicProps(Props copy, Func<TActor> invoker)
             : base(copy)
         {
-            this.invoker = invoker;
+            this._invoker = invoker;
         }
 
         /// <summary>
@@ -753,7 +733,7 @@ namespace Akka.Actor
         protected override Props Copy()
         {
             var initialCopy = base.Copy();
-            var invokerCopy = (Func<TActor>)invoker.Clone();
+            var invokerCopy = (Func<TActor>)_invoker.Clone();
             return new DynamicProps<TActor>(initialCopy, invokerCopy);
         }
 
