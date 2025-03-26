@@ -32,6 +32,8 @@ public class AsyncCallbackSpec: AkkaSpec
     }
 
     internal sealed record Elem(int N);
+
+    internal sealed record ThrowException(string Message);
     
     internal sealed class Stopped
     {
@@ -89,8 +91,8 @@ public class AsyncCallbackSpec: AkkaSpec
             {
                 switch (whatever)
                 {
-                    case Exception t:
-                        throw t;
+                    case ThrowException t:
+                        throw new TestException(t.Message);
                     case "fail-the-stage":
                         FailStage(new Exception("failing the stage"));
                         break;
@@ -298,10 +300,10 @@ public class AsyncCallbackSpec: AkkaSpec
             .Run(Materializer);
 
         await probe.ExpectMsgAsync<Started>();
-        //(await callback("happy-case")).Should().Be(Done.Instance);
-        //await probe.ExpectMsgAsync("happy-case");
+        (await callback("happy-case")).Should().Be(Done.Instance);
+        await probe.ExpectMsgAsync("happy-case");
 
-        var feedback = callback(new TestException("oh my gosh, whale of a wash!"));
+        var feedback = callback(new ThrowException("oh my gosh, whale of a wash!"));
         await Awaiting(async () => await feedback)
             .Should().ThrowAsync<TestException>()
             .WithMessage("oh my gosh, whale of a wash!");

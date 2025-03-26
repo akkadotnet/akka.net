@@ -1699,32 +1699,54 @@ namespace Akka.Streams.Stage
 
         protected Func<T, Task<Done>> GetAsyncCallbackAsync<T>(Action<T> handler)
         {
-            var promise = new TaskCompletionSource<Done>();
-            if (AddToWaiting(promise))
+            return @event =>
             {
-                return @event =>
+                var promise = new TaskCompletionSource<Done>();
+                if (AddToWaiting(promise))
                 {
                     Interpreter.OnAsyncInput(this, @event, promise, x => handler((T)x));
-                    return promise.Task;
-                };
-            }
+                }
+                else
+                {
+                    try
+                    {
+                        throw new StreamDetachedException(
+                            $"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
+                    }
+                    catch (StreamDetachedException e)
+                    {
+                        promise.TrySetException(e);
+                    }
+                }
             
-            throw new StreamDetachedException($"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
+                return promise.Task;
+            };
         }
 
         protected Func<Task> GetAsyncCallbackAsync(Action handler)
         {
-            var promise = new TaskCompletionSource<Done>();
-            if (AddToWaiting(promise))
+            return () =>
             {
-                return () =>
+                var promise = new TaskCompletionSource<Done>();
+                if (AddToWaiting(promise))
                 {
                     Interpreter.OnAsyncInput(this, NotUsed.Instance, promise, _ => handler());
-                    return promise.Task;
-                };
-            }
+                }
+                else
+                {
+                    try
+                    {
+                        throw new StreamDetachedException(
+                            $"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
+                    }
+                    catch (StreamDetachedException e)
+                    {
+                        promise.TrySetException(e);
+                    }
+                }
             
-            throw new StreamDetachedException($"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
+                return promise.Task;
+            };
         }
 
         private bool AddToWaiting(TaskCompletionSource<Done> promise)
