@@ -1863,6 +1863,23 @@ namespace Akka.Streams.Stage
                 _stageActor = null;
             }
 
+            if (_callbacksWaitingForInterpreter.Count > 0)
+            {
+                try
+                {
+                    throw new StreamDetachedException($"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
+                }
+                catch (Exception ex)
+                {
+                    while (_callbacksWaitingForInterpreter.Count > 0)
+                    {
+                        var input = _callbacksWaitingForInterpreter.Dequeue();
+                        if (!ReferenceEquals(input.Promise, NoPromise))
+                            input.Promise.TrySetException(ex);
+                    }
+                }
+            }
+            
             var inProgress = _asyncCallbacksInProgress.GetAndSet(null);
             if (inProgress is not null && inProgress.Count > 0)
             {
@@ -1874,7 +1891,8 @@ namespace Akka.Streams.Stage
                 {
                     foreach (var tcs in inProgress)
                     {
-                        tcs.TrySetException(ex);
+                        if (!ReferenceEquals(tcs, NoPromise))
+                            tcs.TrySetException(ex);
                     }
                 }
             }
