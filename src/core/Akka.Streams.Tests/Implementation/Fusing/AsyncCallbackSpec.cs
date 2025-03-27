@@ -210,7 +210,7 @@ public class AsyncCallbackSpec: AkkaSpec
             .Should().Throw<StreamDetachedException>();
     }
     
-    [Fact(DisplayName = "The support for async callbacks must invoke early", Skip = "Early invocation isn't implemented yet")]
+    [Fact(DisplayName = "The support for async callbacks must invoke early")]
     public async Task InvokeEarlyTest()
     {
         var probe = CreateTestProbe();
@@ -233,7 +233,7 @@ public class AsyncCallbackSpec: AkkaSpec
         probe.ExpectMsg<Stopped>();
     }
 
-    [Fact(DisplayName = "The support for async callbacks must invoke with feedback early", Skip = "Early invocation isn't implemented yet")]
+    [Fact(DisplayName = "The support for async callbacks must invoke with feedback early")]
     public async Task InvokeFeedbackEarlyTest()
     {
         var probe = CreateTestProbe();

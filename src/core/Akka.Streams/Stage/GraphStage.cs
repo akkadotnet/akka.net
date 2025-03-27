@@ -425,8 +425,8 @@ namespace Akka.Streams.Stage
     /// </summary>
     public abstract class GraphStageLogic : IStageLogging
     {
-        private List<Func<object, Task>>? CallbacksWaitingForInterpreter = null;
-        private AtomicReference<List<TaskCompletionSource<Done>>?> AsyncCallbacksInProgress = new(new List<TaskCompletionSource<Done>>());
+        private readonly Queue<ActorGraphInterpreter.AsyncInput> _callbacksWaitingForInterpreter = new();
+        private readonly AtomicReference<List<TaskCompletionSource<Done>>?> _asyncCallbacksInProgress = new(new List<TaskCompletionSource<Done>>());
         public static readonly TaskCompletionSource<Done> NoPromise;
 
         static GraphStageLogic()
@@ -830,7 +830,15 @@ namespace Akka.Streams.Stage
                         "To access materializer use Source/Flow/Sink.Setup factory");
                 return _interpreter;
             }
-            set => _interpreter = value;
+            set
+            {
+                _interpreter = value;
+                while (_callbacksWaitingForInterpreter.Count > 0)
+                {
+                    var input = _callbacksWaitingForInterpreter.Dequeue();
+                    _interpreter.OnAsyncInput(this, input.Event, input.Promise, input.Handler);
+                }
+            }
         }
 
         /// <summary>
@@ -1681,7 +1689,14 @@ namespace Akka.Streams.Stage
         /// <param name="handler">TBD</param>
         /// <returns>TBD</returns>
         protected Action<T> GetAsyncCallback<T>(Action<T> handler)
-            => @event => Interpreter.OnAsyncInput(this, @event, NoPromise, x => handler((T)x));
+            => @event =>
+            {
+                if(_interpreter == null)
+                    _callbacksWaitingForInterpreter.Enqueue(
+                        new ActorGraphInterpreter.AsyncInput(null, null, @event, NoPromise, x => handler((T)x)));
+                else
+                    Interpreter.OnAsyncInput(this, @event, NoPromise, x => handler((T)x));
+            };
 
         /// <summary>
         /// Obtain a callback object that can be used asynchronously to re-enter the
@@ -1695,13 +1710,27 @@ namespace Akka.Streams.Stage
         /// <param name="handler">TBD</param>
         /// <returns>TBD</returns>
         protected Action GetAsyncCallback(Action handler)
-            => () => Interpreter.OnAsyncInput(this, NotUsed.Instance, NoPromise, _ => handler());
+            => () =>
+            {
+                if(_interpreter == null)
+                    _callbacksWaitingForInterpreter.Enqueue(
+                        new ActorGraphInterpreter.AsyncInput(null, null, NotUsed.Instance, NoPromise, _ => handler()));
+                else
+                    Interpreter.OnAsyncInput(this, NotUsed.Instance, NoPromise, _ => handler());
+            };
 
         protected Func<T, Task<Done>> GetAsyncCallbackAsync<T>(Action<T> handler)
         {
             return @event =>
             {
                 var promise = new TaskCompletionSource<Done>();
+                if(_interpreter == null)
+                {
+                    _callbacksWaitingForInterpreter.Enqueue(
+                        new ActorGraphInterpreter.AsyncInput(null, null, @event, promise, x => handler((T)x)));
+                    return promise.Task;
+                }
+                
                 if (AddToWaiting(promise))
                 {
                     Interpreter.OnAsyncInput(this, @event, promise, x => handler((T)x));
@@ -1728,6 +1757,12 @@ namespace Akka.Streams.Stage
             return () =>
             {
                 var promise = new TaskCompletionSource<Done>();
+                if(_interpreter == null)
+                {
+                    _callbacksWaitingForInterpreter.Enqueue(
+                        new ActorGraphInterpreter.AsyncInput(null, null, NotUsed.Instance, promise, _ => handler()));
+                }
+                
                 if (AddToWaiting(promise))
                 {
                     Interpreter.OnAsyncInput(this, NotUsed.Instance, promise, _ => handler());
@@ -1751,7 +1786,7 @@ namespace Akka.Streams.Stage
 
         private bool AddToWaiting(TaskCompletionSource<Done> promise)
         {
-            var previous = AsyncCallbacksInProgress.Value;
+            var previous = _asyncCallbacksInProgress.Value;
             if (previous is not null)
             {
                 previous.Add(promise);
@@ -1759,7 +1794,7 @@ namespace Akka.Streams.Stage
                 // Need to read that again to make sure the stage hasn't been stopped in the meantime and the cleanup
                 // process is already running.
                 // If the cleanup process is already running (ref eq null) the promise needs to be dropped
-                return AsyncCallbacksInProgress.Value is not null;
+                return _asyncCallbacksInProgress.Value is not null;
             }
             
             // else logic was already stopped
@@ -1828,7 +1863,7 @@ namespace Akka.Streams.Stage
                 _stageActor = null;
             }
 
-            var inProgress = AsyncCallbacksInProgress.GetAndSet(null);
+            var inProgress = _asyncCallbacksInProgress.GetAndSet(null);
             if (inProgress is not null && inProgress.Count > 0)
             {
                 try
@@ -1847,7 +1882,7 @@ namespace Akka.Streams.Stage
 
         internal void OnFeedbackDispatched(TaskCompletionSource<Done> p)
         {
-            switch (AsyncCallbacksInProgress.Value)
+            switch (_asyncCallbacksInProgress.Value)
             {
                 case null:
                     // already finished, nothing to do here
