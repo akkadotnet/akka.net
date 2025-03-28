@@ -932,7 +932,7 @@ namespace Akka.Streams.Dsl
 
                 public override void PreStart()
                 {
-                    var callback = GetAsyncCallbackAsync<IConsumerEvent>(OnCommand);
+                    var callback = GetAsyncCallbackWithTask<IConsumerEvent>(OnCommand);
 
                     void OnHubReady(Result<Action<IHubEvent>> result)
                     {

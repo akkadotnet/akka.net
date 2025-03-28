@@ -1,6 +1,6 @@
 ﻿// -----------------------------------------------------------------------
 //  <copyright file="AsyncCallbackSpec.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2025 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //      Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -57,7 +57,7 @@ public class AsyncCallbackSpec: AkkaSpec
             {
                 _stage = stage;
                 AsyncCallback = GetAsyncCallback<object>(Callback);
-                AsyncCallbackAsync = GetAsyncCallbackAsync<object>(Callback);
+                AsyncCallbackAsync = GetAsyncCallbackWithTask<object>(Callback);
                 if (_stage._early.HasValue)
                     _stage._early.Value(AsyncCallbackAsync);
                 SetHandlers(_stage.In, _stage.Out, this);
@@ -222,6 +222,7 @@ public class AsyncCallbackSpec: AkkaSpec
             .To(Sink.Ignore<int>())
             .Run(Materializer);
 
+        await Task.Delay(100);
         // and deliver in order
         callback("later");
         
@@ -251,6 +252,7 @@ public class AsyncCallbackSpec: AkkaSpec
             .To(Sink.Ignore<int>())
             .Run(Materializer);
 
+        await Task.Delay(100);
         // and deliver in order
         var laterFeedback = callback("later");
         

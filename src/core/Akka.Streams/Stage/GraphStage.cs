@@ -1719,7 +1719,7 @@ namespace Akka.Streams.Stage
                     Interpreter.OnAsyncInput(this, NotUsed.Instance, NoPromise, _ => handler());
             };
 
-        protected Func<T, Task<Done>> GetAsyncCallbackAsync<T>(Action<T> handler)
+        protected Func<T, Task<Done>> GetAsyncCallbackWithTask<T>(Action<T> handler)
         {
             return @event =>
             {
@@ -1752,7 +1752,7 @@ namespace Akka.Streams.Stage
             };
         }
 
-        protected Func<Task> GetAsyncCallbackAsync(Action handler)
+        protected Func<Task> GetAsyncCallbackWithTask(Action handler)
         {
             return () =>
             {
@@ -1790,10 +1790,10 @@ namespace Akka.Streams.Stage
             if (previous is not null)
             {
                 previous.Add(promise);
-                
-                // Need to read that again to make sure the stage hasn't been stopped in the meantime and the cleanup
-                // process is already running.
-                // If the cleanup process is already running (ref eq null) the promise needs to be dropped
+                    
+                    // Need to read that again to make sure the stage hasn't been stopped in the meantime and the cleanup
+                    // process is already running.
+                    // If the cleanup process is already running (ref eq null) the promise needs to be dropped
                 return _asyncCallbacksInProgress.Value is not null;
             }
             
@@ -1903,7 +1903,7 @@ namespace Akka.Streams.Stage
             switch (_asyncCallbacksInProgress.Value)
             {
                 case null:
-                    // already finished, nothing to do here
+                // already finished, nothing to do here
                     break;
                 case var x:
                     x.Remove(p);
