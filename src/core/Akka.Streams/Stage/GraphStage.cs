@@ -426,8 +426,9 @@ namespace Akka.Streams.Stage
     public abstract class GraphStageLogic : IStageLogging
     {
         private readonly Queue<ActorGraphInterpreter.AsyncInput> _callbacksWaitingForInterpreter = new();
-        private readonly AtomicReference<List<TaskCompletionSource<Done>>?> _asyncCallbacksInProgress = new(new List<TaskCompletionSource<Done>>());
+        private List<TaskCompletionSource<Done>>? _asyncCallbacksInProgress = new();
         public static readonly TaskCompletionSource<Done> NoPromise;
+        private readonly object _lock = new ();
 
         static GraphStageLogic()
         {
@@ -1788,15 +1789,10 @@ namespace Akka.Streams.Stage
         {
             lock (_lock)
             {
-                var previous = _asyncCallbacksInProgress.Value;
-                if (previous is not null)
+                if (_asyncCallbacksInProgress is not null)
                 {
-                    previous.Add(promise);
-                    
-                    // Need to read that again to make sure the stage hasn't been stopped in the meantime and the cleanup
-                    // process is already running.
-                    // If the cleanup process is already running (ref eq null) the promise needs to be dropped
-                    return _asyncCallbacksInProgress.Value is not null;
+                    _asyncCallbacksInProgress.Add(promise);
+                    return true;
                 }
             
                 // else logic was already stopped
@@ -1882,39 +1878,38 @@ namespace Akka.Streams.Stage
                     }
                 }
             }
-            
-            var inProgress = _asyncCallbacksInProgress.GetAndSet(null);
-            if (inProgress is not null && inProgress.Count > 0)
+
+            lock (_lock)
             {
-                try
+                var inProgress = _asyncCallbacksInProgress;
+                _asyncCallbacksInProgress = null;
+                if (inProgress is not null && inProgress.Count > 0)
                 {
-                    throw new StreamDetachedException($"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
-                }
-                catch (Exception ex)
-                {
-                    foreach (var tcs in inProgress)
+                    try
                     {
-                        if (!ReferenceEquals(tcs, NoPromise))
-                            tcs.TrySetException(ex);
+                        throw new StreamDetachedException($"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
+                    }
+                    catch (Exception ex)
+                    {
+                        foreach (var tcs in inProgress)
+                        {
+                            if (!ReferenceEquals(tcs, NoPromise))
+                                tcs.TrySetException(ex);
+                        }
                     }
                 }
             }
         }
 
-        private object _lock = new ();
+        private ConcurrentBag<TaskCompletionSource<Done>> _bag = new();
         internal void OnFeedbackDispatched(TaskCompletionSource<Done> p)
         {
             lock (_lock)
             {
-                switch (_asyncCallbacksInProgress.Value)
-                {
-                    case null:
-                        // already finished, nothing to do here
-                        break;
-                    case var x:
-                        x.Remove(p);
-                        break;
-                } 
+                if (_asyncCallbacksInProgress is null)
+                    // already finished, nothing to do here
+                    return;
+                _asyncCallbacksInProgress.Remove(p);
             }
         }
         
