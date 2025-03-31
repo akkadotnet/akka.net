@@ -171,9 +171,9 @@ public class AsyncCallbackSpec: AkkaSpec
             .To(Sink.FromSubscriber(downstream))
             .Run(Materializer);
 
-        await downstream.EnsureSubscriptionAsync();
-        
         await probe.ExpectMsgAsync<Started>();
+        
+        await downstream.EnsureSubscriptionAsync();
         await downstream.RequestAsync(1);
         await upstream.ExpectRequestAsync();
 
@@ -277,10 +277,11 @@ public class AsyncCallbackSpec: AkkaSpec
             .To(Sink.Ignore<int>())
             .Run(Materializer);
 
+        await probe.ExpectMsgAsync<Started>();
+        
         var feedbacks = Enumerable.Range(1, 100)
             .Select(n => callback(n.ToString()));
         
-        await probe.ExpectMsgAsync<Started>();
         var cbResults = await Task.WhenAll(feedbacks);
         cbResults.Length.Should().Be(100);
         Enumerable.Range(1, 100)

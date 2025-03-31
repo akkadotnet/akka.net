@@ -1903,7 +1903,7 @@ namespace Akka.Streams.Stage
             switch (_asyncCallbacksInProgress.Value)
             {
                 case null:
-                // already finished, nothing to do here
+                    // already finished, nothing to do here
                     break;
                 case var x:
                     x.Remove(p);
