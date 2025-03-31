@@ -1786,19 +1786,22 @@ namespace Akka.Streams.Stage
 
         private bool AddToWaiting(TaskCompletionSource<Done> promise)
         {
-            var previous = _asyncCallbacksInProgress.Value;
-            if (previous is not null)
+            lock (_lock)
             {
-                previous.Add(promise);
+                var previous = _asyncCallbacksInProgress.Value;
+                if (previous is not null)
+                {
+                    previous.Add(promise);
                     
                     // Need to read that again to make sure the stage hasn't been stopped in the meantime and the cleanup
                     // process is already running.
                     // If the cleanup process is already running (ref eq null) the promise needs to be dropped
-                return _asyncCallbacksInProgress.Value is not null;
-            }
+                    return _asyncCallbacksInProgress.Value is not null;
+                }
             
-            // else logic was already stopped
-            return false;
+                // else logic was already stopped
+                return false;
+            }
         }
         
         /// <summary>
@@ -1898,17 +1901,21 @@ namespace Akka.Streams.Stage
             }
         }
 
+        private object _lock = new ();
         internal void OnFeedbackDispatched(TaskCompletionSource<Done> p)
         {
-            switch (_asyncCallbacksInProgress.Value)
+            lock (_lock)
             {
-                case null:
-                    // already finished, nothing to do here
-                    break;
-                case var x:
-                    x.Remove(p);
-                    break;
-            } 
+                switch (_asyncCallbacksInProgress.Value)
+                {
+                    case null:
+                        // already finished, nothing to do here
+                        break;
+                    case var x:
+                        x.Remove(p);
+                        break;
+                } 
+            }
         }
         
 
