@@ -182,6 +182,7 @@ public class AsyncCallbackSpec: AkkaSpec
             var msg = $"whatever{n}";
             var feedback = callback(msg);
             await probe.ExpectMsgAsync(msg);
+            await feedback;
             feedback.IsCompleted.Should().BeTrue();
             feedback.Result.Should().Be(Done.Instance);
         }
