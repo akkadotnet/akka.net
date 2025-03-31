@@ -425,7 +425,7 @@ namespace Akka.Streams.Stage
     /// </summary>
     public abstract class GraphStageLogic : IStageLogging
     {
-        private readonly Queue<ActorGraphInterpreter.AsyncInput> _callbacksWaitingForInterpreter = new();
+        private Queue<ActorGraphInterpreter.AsyncInput>? _callbacksWaitingForInterpreter = new();
         private List<TaskCompletionSource<Done>>? _asyncCallbacksInProgress = new();
         public static readonly TaskCompletionSource<Done> NoPromise;
         private readonly object _lock = new ();
@@ -834,10 +834,18 @@ namespace Akka.Streams.Stage
             set
             {
                 _interpreter = value;
-                while (_callbacksWaitingForInterpreter.Count > 0)
+                if (_callbacksWaitingForInterpreter is null)
+                    return;
+                
+                lock (_lock)
                 {
-                    var input = _callbacksWaitingForInterpreter.Dequeue();
-                    _interpreter.OnAsyncInput(this, input.Event, input.Promise, input.Handler);
+                    while (_callbacksWaitingForInterpreter.Count > 0)
+                    {
+                        var input = _callbacksWaitingForInterpreter.Dequeue();
+                        _interpreter.OnAsyncInput(this, input.Event, input.Promise, input.Handler);
+                    }
+
+                    _callbacksWaitingForInterpreter = null;
                 }
             }
         }
@@ -1693,8 +1701,14 @@ namespace Akka.Streams.Stage
             => @event =>
             {
                 if(_interpreter == null)
+                {
+                    if(_callbacksWaitingForInterpreter is null)
+                        throw new StreamDetachedException(
+                            $"Stage with GraphStageLogic [{this}] stopped before interpreter is initialized.");
+
                     _callbacksWaitingForInterpreter.Enqueue(
                         new ActorGraphInterpreter.AsyncInput(null, null, @event, NoPromise, x => handler((T)x)));
+                }
                 else
                     Interpreter.OnAsyncInput(this, @event, NoPromise, x => handler((T)x));
             };
@@ -1714,8 +1728,14 @@ namespace Akka.Streams.Stage
             => () =>
             {
                 if(_interpreter == null)
+                {
+                    if(_callbacksWaitingForInterpreter is null)
+                        throw new StreamDetachedException(
+                            $"Stage with GraphStageLogic [{this}] stopped before interpreter is initialized.");
+
                     _callbacksWaitingForInterpreter.Enqueue(
                         new ActorGraphInterpreter.AsyncInput(null, null, NotUsed.Instance, NoPromise, _ => handler()));
+                }
                 else
                     Interpreter.OnAsyncInput(this, NotUsed.Instance, NoPromise, _ => handler());
             };
@@ -1727,6 +1747,10 @@ namespace Akka.Streams.Stage
                 var promise = new TaskCompletionSource<Done>();
                 if(_interpreter == null)
                 {
+                    if(_callbacksWaitingForInterpreter is null)
+                        throw new StreamDetachedException(
+                            $"Stage with GraphStageLogic [{this}] stopped before interpreter is initialized.");
+
                     _callbacksWaitingForInterpreter.Enqueue(
                         new ActorGraphInterpreter.AsyncInput(null, null, @event, promise, x => handler((T)x)));
                     return promise.Task;
@@ -1760,6 +1784,10 @@ namespace Akka.Streams.Stage
                 var promise = new TaskCompletionSource<Done>();
                 if(_interpreter == null)
                 {
+                    if(_callbacksWaitingForInterpreter is null)
+                        throw new StreamDetachedException(
+                            $"Stage with GraphStageLogic [{this}] stopped before interpreter is initialized.");
+
                     _callbacksWaitingForInterpreter.Enqueue(
                         new ActorGraphInterpreter.AsyncInput(null, null, NotUsed.Instance, promise, _ => handler()));
                 }
@@ -1862,25 +1890,25 @@ namespace Akka.Streams.Stage
                 _stageActor = null;
             }
 
-            if (_callbacksWaitingForInterpreter.Count > 0)
-            {
-                try
-                {
-                    throw new StreamDetachedException($"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
-                }
-                catch (Exception ex)
-                {
-                    while (_callbacksWaitingForInterpreter.Count > 0)
-                    {
-                        var input = _callbacksWaitingForInterpreter.Dequeue();
-                        if (!ReferenceEquals(input.Promise, NoPromise))
-                            input.Promise.TrySetException(ex);
-                    }
-                }
-            }
-
             lock (_lock)
             {
+                if (_callbacksWaitingForInterpreter is not null && _callbacksWaitingForInterpreter.Count > 0)
+                {
+                    try
+                    {
+                        throw new StreamDetachedException($"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
+                    }
+                    catch (Exception ex)
+                    {
+                        while (_callbacksWaitingForInterpreter.Count > 0)
+                        {
+                            var input = _callbacksWaitingForInterpreter.Dequeue();
+                            if (!ReferenceEquals(input.Promise, NoPromise))
+                                input.Promise.TrySetException(ex);
+                        }
+                    }
+                }
+
                 var inProgress = _asyncCallbacksInProgress;
                 _asyncCallbacksInProgress = null;
                 if (inProgress is not null && inProgress.Count > 0)
@@ -1901,7 +1929,6 @@ namespace Akka.Streams.Stage
             }
         }
 
-        private ConcurrentBag<TaskCompletionSource<Done>> _bag = new();
         internal void OnFeedbackDispatched(TaskCompletionSource<Done> p)
         {
             lock (_lock)
