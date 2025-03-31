@@ -1910,6 +1910,7 @@ namespace Akka.Streams.Stage
                     break;
             } 
         }
+        
 
         /// <summary>
         /// Invoked before any external events are processed, at the startup of the stage.
