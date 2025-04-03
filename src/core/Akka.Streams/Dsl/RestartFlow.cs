@@ -310,6 +310,7 @@ namespace Akka.Streams.Dsl
                         Complete(Out);
                     else
                     {
+                        Log.Info("Restarting graph due to completion.");
                         ScheduleRestartTimer();
                     }
                 },

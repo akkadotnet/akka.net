@@ -1,3 +1,7 @@
+#### 1.5.41 April 3rd, 2025 ####
+
+*Placeholder for nightlies*
+
 #### 1.5.40 March 24th, 2025 ####
 
 * [Remote: `Endpoint` actor cleanup](https://github.com/akkadotnet/akka.net/issues/7524)
