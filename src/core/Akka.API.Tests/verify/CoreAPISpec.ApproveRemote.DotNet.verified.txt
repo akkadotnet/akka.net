@@ -129,6 +129,8 @@ namespace Akka.Remote
         void Reset();
     }
     [Akka.Annotations.InternalApiAttribute()]
+    public interface IInternalRemotingMessage { }
+    [Akka.Annotations.InternalApiAttribute()]
     public interface IRemoteActorRefProvider : Akka.Actor.IActorRefProvider
     {
         Akka.Actor.IInternalActorRef RemoteDaemon { get; }
