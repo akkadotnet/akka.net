@@ -54,58 +54,12 @@ jobs:
         inputs:
           script: 'markdownlint "docs/**/*.md" --rules "markdownlint-rule-titlecase"'
 
-  - job: WindowsBuild
-    displayName: Windows Build
-    pool:
-      vmImage: windows-latest
-    steps:
-      - checkout: self # self represents the repo where the initial Pipelines YAML file was found
-        clean: false # whether to fetch clean each time
-        submodules: recursive # set to 'true' for a single level of submodules or 'recursive' to get submodules of submodules
-        persistCredentials: true
-    
-      - task: UseDotNet@2
-        displayName: 'Use .NET'
-        inputs:
-          packageType: 'sdk'
-          useGlobalJson: true
-          
-      - script: dotnet tool restore
-        displayName: 'Restore dotnet tools'
-
-      - pwsh: |
-          . ./scripts/Create-DirectoryTree.ps1 # Source the script
-          Ensure-DirectoryPath -Path "bin/output"
-
-      - script: dotnet incrementalist run -- build -c Release
-        displayName: 'Windows Build'
-        continueOnError: true # Allow continuation even if tests fail
-        condition: eq( variables['Agent.OS'], 'Windows_NT' )
-
-      - task: CopyFiles@2
-        displayName: "Copy Build Output"
-        inputs:
-          sourceFolder: bin
-          contents: "*"
-          targetFolder: $(Build.ArtifactStagingDirectory)
-          continueOnError: boolean # 'true' if future steps should run even if this step fails; defaults to 'false'
-
-      - task: PublishBuildArtifacts@1
-        inputs:
-          pathtoPublish: $(Build.ArtifactStagingDirectory)
-          artifactName: "incrementalistOutput-$(Build.BuildId)"
-
-      - script: "echo 1>&2"
-        failOnStderr: true
-        displayName: "If above is partially succeeded, then fail"
-        condition: eq(variables['Agent.JobStatus'], 'SucceededWithIssues')
-
   - template: azure-pipeline.template.yaml
     parameters:
       name: "netfx_tests_windows"
       displayName: ".NET Framework Unit Tests (Windows)"
       vmImage: "windows-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json -- test -c Release --framework net48 --logger:trx --results-directory TestResults"
+      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json -- test -c Release --no-build --framework net48 --logger:trx --results-directory TestResults"
       outputDirectory: "TestResults"
       artifactName: "netfx_tests_windows-$(Build.BuildId)"
 
@@ -114,8 +68,8 @@ jobs:
       name: "docfx_test"
       displayName: "DocFX warning check"
       vmImage: "windows-latest"
-      #command: "dotnet build -c Release ./src/Akka.sln && dotnet docfx build ./docs/docfx.json --warningsAsErrors"
-      command: "dotnet build -c Release ./src/Akka.sln && dotnet docfx build ./docs/docfx.json" # haven't resolved all build warnings yet
+      #command: "dotnet docfx build ./docs/docfx.json --warningsAsErrors"
+      command: "dotnet docfx build ./docs/docfx.json" # haven't resolved all build warnings yet
       outputDirectory: "TestResults"
       artifactName: "docfx_test-$(Build.BuildId)"
       run_if: eq(variables['Build.Reason'], 'PullRequest')
@@ -125,7 +79,7 @@ jobs:
       name: "net_tests_windows"
       displayName: ".NET Unit Tests (Windows)"
       vmImage: "windows-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json -- test -c Release --framework net8.0 --logger:trx --results-directory TestResults"
+      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json -- test -c Release --no-build --framework net8.0 --logger:trx --results-directory TestResults"
       outputDirectory: "TestResults"
       artifactName: "net_tests_windows-$(Build.BuildId)"
 
@@ -134,7 +88,7 @@ jobs:
       name: "net_tests_linux"
       displayName: ".NET Unit Tests (Linux)"
       vmImage: "ubuntu-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json -- test -c Release --framework net8.0 --logger:trx --results-directory TestResults"
+      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json -- test -c Release --no-build --framework net8.0 --logger:trx --results-directory TestResults"
       outputDirectory: "TestResults"
       artifactName: "net_tests_linux-$(Build.BuildId)"
 
@@ -143,7 +97,7 @@ jobs:
       name: "net_mntr_windows"
       displayName: ".NET Multi-Node Tests (Windows)"
       vmImage: "windows-latest"
-      command: "dotnet incrementalist run --config .incrementalist/mutliNodeOnly.json -- test -c Release --framework net8.0 --logger:trx --results-directory TestResults/multinode"
+      command: "dotnet incrementalist run --config .incrementalist/mutliNodeOnly.json -- test -c Release --no-build --framework net8.0 --logger:trx --results-directory TestResults/multinode"
       outputDirectory: "TestResults"
       artifactName: "net_mntr_windows-$(Build.BuildId)"
       mntrFailuresDir: 'TestResults\\multinode'
