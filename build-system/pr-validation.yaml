@@ -73,6 +73,9 @@ jobs:
       - script: dotnet tool restore
         displayName: 'Restore dotnet tools'
 
+      - pwsh: |
+          . ./scripts/Create-DirectoryTree.ps1 # Source the script
+          Ensure-DirectoryPath -Path "bin/output"
 
       - script: dotnet incrementalist run -- build -c Release
         displayName: 'Windows Build'
