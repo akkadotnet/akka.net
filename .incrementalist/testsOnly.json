@@ -9,5 +9,9 @@
   "skip": [
     "**/.Tests.MultiNode.csproj"
   ],
-  "target": []
+  "target": [
+    "**/*.Tests.csproj",
+    "**/**/Akka.Streams.Tests.TCK.csproj",
+    "**/.Tests.fsproj"
+  ]
 }
