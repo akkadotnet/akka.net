@@ -29,7 +29,7 @@ function Ensure-DirectoryPath {
         try {
             # Create the directory. The -Force switch creates parent directories if they don't exist.
             $null = New-Item -ItemType Directory -Path $NormalizedPath -Force -ErrorAction Stop
-            Write-Verbose "Successfully created directory structure: $NormalizedPath"
+            Write-Host "Created directory structure: $NormalizedPath"
         }
         catch {
             Write-Error "Failed to create directory structure '$NormalizedPath': $_"
@@ -38,7 +38,7 @@ function Ensure-DirectoryPath {
         }
     }
     else {
-        Write-Verbose "Directory already exists: $NormalizedPath"
+        Write-Host "Directory already exists: $NormalizedPath"
     }
 }
 

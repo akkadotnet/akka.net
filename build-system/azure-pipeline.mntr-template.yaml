@@ -26,7 +26,7 @@ jobs:
 
       - pwsh: |
           . ./scripts/Create-DirectoryTree.ps1 # Source the script
-          Ensure-DirectoryPath -Path "${{ parameters.outputDirectory }}"
+          Ensure-DirectoryPath -Path "${{ parameters.outputDirectory }}/multinode/FAILED_SPECS_LOGS"
           Ensure-DirectoryPath -Path "bin/output"
         displayName: 'Ensure output directories'
 
