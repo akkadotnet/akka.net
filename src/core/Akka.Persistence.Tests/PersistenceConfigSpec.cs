@@ -101,7 +101,9 @@ namespace Akka.Persistence.Tests
         }
 
         /// <summary>
-        /// Verify that the journal config contains the expected default
+        /// Verify that the journal config contains the expected default from our fallback configs
+        /// No spec for when the user overrides that because its not the goal to test the hocon config system.
+        /// Merely that the plugin system here properly applies the fallback config for this config value. 
         /// </summary>
         [Fact]
         public void Journal_has_supervision_strategy_configured()
@@ -114,7 +116,9 @@ namespace Akka.Persistence.Tests
         }
 
         /// <summary>
-        /// Verify that the snapshot config contains the expected default
+        /// Verify that the snapshot config contains the expected default from our fallback configs
+        /// No spec for when the user overrides that because its not the goal to test the hocon config system.
+        /// Merely that the plugin system here properly applies the fallback config for this config value. 
         /// </summary>
         [Fact]
         public void Snapshot_has_supervision_strategy_configured()
@@ -124,6 +128,21 @@ namespace Akka.Persistence.Tests
             var config = persistence.JournalConfigFor("akka.persistence.snapshot-store.test1");
             var defaultstrategy = config.GetString("supervisor-strategy");
             defaultstrategy.ShouldBe(typeof(Akka.Actor.DefaultSupervisorStrategy).FullName);
+        }
+
+        [Fact]
+        public void Journal_has_custom_supervision_strategy_applied()
+        {
+            var persistence = Persistence.Instance.Apply(Sys);
+            var journal = persistence.JournalFor(""); // get the default journal
+            
+            //waves magic wand
+            var magicref = journal as ActorRefWithCell;
+            var appliedStrat = magicref.Underlying.Props.SupervisorStrategy;
+            //because the default value for our supervisor strategy is: Akka.Actor.DefaultSupervisorStrategy
+            //we verify that the strat returned is the same as currently applied
+            //for completeness we should also test with a custom strategy
+            appliedStrat.ShouldBe(SupervisorStrategy.DefaultStrategy);
         }
 
         [Fact]
