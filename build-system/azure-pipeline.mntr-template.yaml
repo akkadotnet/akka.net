@@ -24,9 +24,14 @@ jobs:
       - script: dotnet tool restore
         displayName: 'Restore dotnet tools'
 
+      - pwsh: |
+          New-Item -Name TestResults -Type Directory
+          New-Item -Name ${{ parameters.outputDirectory }} -Type Directory
+        displayName: 'Ensure output directory'
+
       - script: ${{ parameters.command }}
         continueOnError: true
-        
+
       - task: PublishTestResults@2
         inputs:
           testRunner: VSTest
