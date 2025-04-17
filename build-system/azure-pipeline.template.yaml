@@ -31,7 +31,7 @@ jobs:
       - script: dotnet tool restore
         displayName: 'Restore dotnet tools'
 
-      - pwsh: New-Item -Name ${{ outputDirectory }} -Type Directory
+      - pwsh: New-Item -Name ${{ parameters.outputDirectory }} -Type Directory
         displayName: 'Ensure output directory'
 
       - script: ${{ parameters.command }}
