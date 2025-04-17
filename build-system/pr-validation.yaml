@@ -111,8 +111,7 @@ jobs:
       name: "docfx_test"
       displayName: "DocFX warning check"
       vmImage: "windows-latest"
-      scriptFileName: build.cmd
-      scriptArgs: docfx
+      command: "dotnet build -c Release && dotnet docfx build ./docs/docfx.json --warningsAsErrors"
       outputDirectory: "TestResults"
       artifactName: "docfx_test-$(Build.BuildId)"
       run_if: eq(variables['Build.Reason'], 'PullRequest')
