@@ -34,6 +34,7 @@ jobs:
       - task: CmdLine@2
         inputs:
           script: 'cspell --config ./docs/cSpell.json "docs/**/*.md"'
+
   - job: DocsMarkdownLinting
     displayName: "Docs: Markdown Linting"
     pool:
@@ -52,6 +53,7 @@ jobs:
       - task: CmdLine@2
         inputs:
           script: 'markdownlint "docs/**/*.md" --rules "markdownlint-rule-titlecase"'
+
   - job: WindowsBuild
     displayName: Windows Build
     pool:
@@ -61,17 +63,22 @@ jobs:
         clean: false # whether to fetch clean each time
         submodules: recursive # set to 'true' for a single level of submodules or 'recursive' to get submodules of submodules
         persistCredentials: true
+    
       - task: UseDotNet@2
-        displayName: "Use .NET 8 SDK 8.0.402"
+        displayName: 'Use .NET'
         inputs:
-          version: 8.0.402
-      - task: BatchScript@1
-        displayName: Windows Build
-        inputs:
-          filename: build.cmd
-          arguments: "buildRelease incremental" # Run an incremental build
-        continueOnError: true
+          packageType: 'sdk'
+          useGlobalJson: true
+          
+      - script: dotnet tool restore
+        displayName: 'Restore dotnet tools'
+
+
+      - script: dotnet incrementalist run -- build -c Release
+        displayName: 'Windows Build'
+        continueOnError: true # Allow continuation even if tests fail
         condition: eq( variables['Agent.OS'], 'Windows_NT' )
+
       - task: CopyFiles@2
         displayName: "Copy Build Output"
         inputs:
@@ -95,8 +102,7 @@ jobs:
       name: "netfx_tests_windows"
       displayName: ".NET Framework Unit Tests (Windows)"
       vmImage: "windows-latest"
-      scriptFileName: build.cmd
-      scriptArgs: runTests incremental
+      command: "dotnet incrementalist run -c .incrementalist/testsOnly.json -- test -c Release --framework net48 --logger:trx --results-directory TestResults"
       outputDirectory: "TestResults"
       artifactName: "netfx_tests_windows-$(Build.BuildId)"
 
@@ -116,8 +122,7 @@ jobs:
       name: "net_tests_windows"
       displayName: ".NET Unit Tests (Windows)"
       vmImage: "windows-latest"
-      scriptFileName: build.cmd
-      scriptArgs: runTestsNet incremental
+      command: "dotnet incrementalist run -c .incrementalist/testsOnly.json -- test -c Release --framework net8 --logger:trx --results-directory TestResults"
       outputDirectory: "TestResults"
       artifactName: "net_tests_windows-$(Build.BuildId)"
 
@@ -126,8 +131,7 @@ jobs:
       name: "net_tests_linux"
       displayName: ".NET Unit Tests (Linux)"
       vmImage: "ubuntu-latest"
-      scriptFileName: "./build.sh"
-      scriptArgs: runTestsNet incremental
+      command: "dotnet incrementalist run -c .incrementalist/testsOnly.json -- test -c Release --framework net8 --logger:trx --results-directory TestResults"
       outputDirectory: "TestResults"
       artifactName: "net_tests_linux-$(Build.BuildId)"
 
@@ -136,8 +140,7 @@ jobs:
       name: "net_mntr_windows"
       displayName: ".NET Multi-Node Tests (Windows)"
       vmImage: "windows-latest"
-      scriptFileName: "build.cmd"
-      scriptArgs: MultiNodeTestsNet incremental
+      command: "dotnet incrementalist run -c .incrementalist/mutliNodeOnly.json -- test -c Release --framework net8 --logger:trx --results-directory TestResults/multinode"
       outputDirectory: "TestResults"
       artifactName: "net_mntr_windows-$(Build.BuildId)"
       mntrFailuresDir: 'TestResults\\multinode'
@@ -148,7 +151,6 @@ jobs:
       name: "nuget_pack"
       displayName: "NuGet Pack"
       vmImage: "windows-latest"
-      scriptFileName: build.cmd
-      scriptArgs: CreateNuget nugetprerelease=dev incremental
+      command: "dotnet pack -c Release -o bin/nuget"
       outputDirectory: "bin/nuget"
       artifactName: "nuget_pack-$(Build.BuildId)"

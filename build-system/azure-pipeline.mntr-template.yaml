@@ -4,8 +4,7 @@ parameters:
   vmImage: ''
   dependsOn: 'WindowsBuild'
   artifactName: 'akkaBuild'
-  scriptFileName: ''
-  scriptArgs: 'all'
+  command: ''
   outputDirectory: ''
   timeoutInMinutes: 120
 
@@ -17,24 +16,17 @@ jobs:
       vmImage: ${{ parameters.vmImage }}
     steps:
       - task: UseDotNet@2
-        displayName: 'Use .NET 8 SDK 8.0.402'
+        displayName: 'Use .NET'
         inputs:
-          version: 8.0.402
-      - task: Bash@3 
-        displayName: Linux / OSX Build
-        inputs:
-          filePath: ${{ parameters.scriptFileName }}
-          arguments: ${{ parameters.scriptArgs }}
+          packageType: 'sdk'
+          useGlobalJson: true
+
+      - script: dotnet tool restore
+        displayName: 'Restore dotnet tools'
+
+      - script: ${{ parameters.command }}
         continueOnError: true
-        condition: in( variables['Agent.OS'], 'Linux', 'Darwin' )
-      # Windows
-      - task: BatchScript@1
-        displayName: Windows Build
-        inputs:
-          filename: ${{ parameters.scriptFileName }}
-          arguments: ${{ parameters.scriptArgs }}
-        continueOnError: true
-        condition: eq( variables['Agent.OS'], 'Windows_NT' )
+        
       - task: PublishTestResults@2
         inputs:
           testRunner: VSTest
