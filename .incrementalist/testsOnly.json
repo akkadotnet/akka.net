@@ -1,0 +1,16 @@
+{
+  "outputFile": "bin/output/incrementalist.txt",
+  "gitBranch": "dev",
+  "verbose": false,
+  "timeoutMinutes": 10,
+  "continueOnError": true,
+  "runInParallel": false,
+  "failOnNoProjects": false,
+  "skip": [
+    "**/.Tests.MultiNode.csproj"
+  ],
+  "target": [
+    "**/.Tests.csproj",
+    "**/.Tests.fsproj"
+  ]
+}
