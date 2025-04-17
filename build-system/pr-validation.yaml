@@ -111,7 +111,7 @@ jobs:
       name: "docfx_test"
       displayName: "DocFX warning check"
       vmImage: "windows-latest"
-      command: "dotnet build -c Release && dotnet docfx build ./docs/docfx.json --warningsAsErrors"
+      command: "dotnet build -c Release ./src/Akka.sln && dotnet docfx build ./docs/docfx.json --warningsAsErrors"
       outputDirectory: "TestResults"
       artifactName: "docfx_test-$(Build.BuildId)"
       run_if: eq(variables['Build.Reason'], 'PullRequest')
@@ -121,7 +121,7 @@ jobs:
       name: "net_tests_windows"
       displayName: ".NET Unit Tests (Windows)"
       vmImage: "windows-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json -- test -c Release --framework net8 --logger:trx --results-directory TestResults"
+      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json -- test -c Release --framework net8.0 --logger:trx --results-directory TestResults"
       outputDirectory: "TestResults"
       artifactName: "net_tests_windows-$(Build.BuildId)"
 
@@ -130,7 +130,7 @@ jobs:
       name: "net_tests_linux"
       displayName: ".NET Unit Tests (Linux)"
       vmImage: "ubuntu-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json -- test -c Release --framework net8 --logger:trx --results-directory TestResults"
+      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json -- test -c Release --framework net8.0 --logger:trx --results-directory TestResults"
       outputDirectory: "TestResults"
       artifactName: "net_tests_linux-$(Build.BuildId)"
 
@@ -139,7 +139,7 @@ jobs:
       name: "net_mntr_windows"
       displayName: ".NET Multi-Node Tests (Windows)"
       vmImage: "windows-latest"
-      command: "dotnet incrementalist run --config .incrementalist/mutliNodeOnly.json -- test -c Release --framework net8 --logger:trx --results-directory TestResults/multinode"
+      command: "dotnet incrementalist run --config .incrementalist/mutliNodeOnly.json -- test -c Release --framework net8.0 --logger:trx --results-directory TestResults/multinode"
       outputDirectory: "TestResults"
       artifactName: "net_mntr_windows-$(Build.BuildId)"
       mntrFailuresDir: 'TestResults\\multinode'
