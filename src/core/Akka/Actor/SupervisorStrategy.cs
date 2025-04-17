@@ -1020,30 +1020,20 @@ namespace Akka.Actor
         }
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
+  
     public class DefaultSupervisorStrategy : SupervisorStrategyConfigurator
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+      
         public override SupervisorStrategy Create()
         {
             return SupervisorStrategy.DefaultStrategy;
         }
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
+   
     public class StoppingSupervisorStrategy : SupervisorStrategyConfigurator
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+       
         public override SupervisorStrategy Create()
         {
             return SupervisorStrategy.StoppingStrategy;

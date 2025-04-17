@@ -411,9 +411,9 @@ akka.persistence.snapshot-store-plugin-fallback {
   # Dispatcher for the plugin actor.
   plugin-dispatcher = "akka.persistence.dispatchers.default-plugin-dispatcher"
 
-  # journal supervisor strategy used. 
+  # snapshot-store supervisor strategy used. 
   # It needs to be a subclass of Akka.Actor.SupervisorStrategyConfigurator. And have a parameterless constructor
-  # by default it restarts the journal on crash
+  # by default it restarts the snapshot-store on crash
   supervisor-strategy = "Akka.Actor.DefaultSupervisorStrategy"
   
   # Default serializer used as manifest serializer when applicable 

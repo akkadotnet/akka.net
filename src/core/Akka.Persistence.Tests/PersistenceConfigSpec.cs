@@ -100,6 +100,32 @@ namespace Akka.Persistence.Tests
         {
         }
 
+        /// <summary>
+        /// Verify that the journal config contains the expected default
+        /// </summary>
+        [Fact]
+        public void Journal_has_supervision_strategy_configured()
+        {
+            var persistence = Persistence.Instance.Apply(Sys);
+            
+            var config = persistence.JournalConfigFor("akka.persistence.journal.test1");
+            var defaultstrategy = config.GetString("supervisor-strategy");
+            defaultstrategy.ShouldBe(typeof(Akka.Actor.DefaultSupervisorStrategy).FullName);
+        }
+
+        /// <summary>
+        /// Verify that the snapshot config contains the expected default
+        /// </summary>
+        [Fact]
+        public void Snapshot_has_supervision_strategy_configured()
+        {
+            var persistence = Persistence.Instance.Apply(Sys);
+            
+            var config = persistence.JournalConfigFor("akka.persistence.snapshot-store.test1");
+            var defaultstrategy = config.GetString("supervisor-strategy");
+            defaultstrategy.ShouldBe(typeof(Akka.Actor.DefaultSupervisorStrategy).FullName);
+        }
+
         [Fact]
         public void Persistence_should_use_inmem_journal_by_default()
         {
