@@ -8,6 +8,6 @@
   "failOnNoProjects": false,
   "skip": [],
   "target": [
-    "**/.Tests.MultiNode.csproj"
+    "**/*.Tests.MultiNode.csproj"
   ]
 }
