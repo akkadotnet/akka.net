@@ -8,6 +8,13 @@
         "docfx"
       ],
       "rollForward": true
+    },
+    "incrementalist.cmd": {
+      "version": "1.0.0-rc5",
+      "commands": [
+        "incrementalist"
+      ],
+      "rollForward": true
     }
   }
 }
