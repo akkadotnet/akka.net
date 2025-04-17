@@ -10,8 +10,8 @@
     "**/.Tests.MultiNode.csproj"
   ],
   "target": [
-    "**/.Tests.csproj",
-    "**/Akka.Streams.Tests.TCK.csproj",
+    "**/*.Tests.csproj",
+    "**/**/Akka.Streams.Tests.TCK.csproj",
     "**/.Tests.fsproj"
   ]
 }

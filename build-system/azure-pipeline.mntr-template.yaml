@@ -25,9 +25,10 @@ jobs:
         displayName: 'Restore dotnet tools'
 
       - pwsh: |
-          New-Item -Name TestResults -Type Directory
-          New-Item -Name ${{ parameters.outputDirectory }} -Type Directory
-        displayName: 'Ensure output directory'
+          . ./scripts/Create-DirectoryTree.ps1 # Source the script
+          Ensure-DirectoryPath -Path "${{ parameters.outputDirectory }}"
+          Ensure-DirectoryPath -Path "bin/output"
+        displayName: 'Ensure output directories'
 
       - script: ${{ parameters.command }}
         continueOnError: true
