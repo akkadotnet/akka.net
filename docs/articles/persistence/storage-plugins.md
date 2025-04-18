@@ -67,7 +67,7 @@ One such case could be to detect and handle misconfigured application settings d
 
 An example of what this could look like is this:
 
-```
+```csharp
 
   public class MyCustomSupervisorConfigurator : SupervisorStrategyConfigurator
         {
