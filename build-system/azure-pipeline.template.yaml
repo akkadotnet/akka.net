@@ -37,6 +37,11 @@ jobs:
           Ensure-DirectoryPath -Path "bin/output"
         displayName: 'Ensure output directories'
 
+      - pwsh: |
+          .\build.ps1
+        displayName: 'Update Release Notes'
+        continueOnError: false
+
       - script: dotnet build -c Release
         displayName: "Compile"
         continueOnError: false
