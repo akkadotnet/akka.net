@@ -108,6 +108,6 @@ jobs:
       name: "nuget_pack"
       displayName: "NuGet Pack"
       vmImage: "windows-latest"
-      command: "dotnet pack ./src/Akka.sln -c Release -o bin/nuget"
+      command: "dotnet pack -c Release -o bin/nuget"
       outputDirectory: "bin/nuget"
       artifactName: "nuget_pack-$(Build.BuildId)"
