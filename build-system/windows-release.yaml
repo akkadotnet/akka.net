@@ -45,4 +45,4 @@ steps:
       title: '$(projectName) v$(Build.SourceBranchName)'
       releaseNotesFile: 'RELEASE_NOTES.md'
       assets: |
-        bin\nuget\*.nupkg
+        $(Build.ArtifactStagingDirectory)/nuget/*.nupkg
