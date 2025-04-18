@@ -23,21 +23,26 @@ variables:
     value: akkadotnet/akka.net
 steps:
 - task: UseDotNet@2
-  displayName: 'Use .NET 8 SDK 8.0.402'
-  inputs:
-    version: 8.0.402
-- task: BatchScript@1
-  displayName: 'FAKE Build'
-  inputs:
-    filename: build.cmd
-    arguments: 'nuget nugetpublishurl=https://api.nuget.org/v3/index.json nugetkey=$(nugetKey)'
+    displayName: 'Use .NET SDK from global.json'
+    inputs:
+      useGlobalJson: true
+      
+  - powershell: ./build.ps1
+    displayName: 'Update Release Notes'
 
-- task: GitHubRelease@0
-  displayName: 'GitHub release (create)'
-  inputs:
-    gitHubConnection: $(githubConnectionName)
-    repositoryName: $(githubRepositoryName)
-    title: '$(projectName) v$(Build.SourceBranchName)'
-    releaseNotesFile: 'RELEASE_NOTES.md'
-    assets: |
-     bin\nuget\*.nupkg
+  # Pack without version suffix for release
+  - script: dotnet pack -c Release -o $(Build.ArtifactStagingDirectory)/nuget
+    displayName: 'Create packages'
+
+  - script: dotnet nuget push "$(Build.ArtifactStagingDirectory)\nuget\*.nupkg" --api-key $(nugetKey) --source https://api.nuget.org/v3/index.json --skip-duplicate
+    displayName: 'Publish to NuGet.org'
+    
+  - task: GitHubRelease@0
+    displayName: 'GitHub release (create)'
+    inputs:
+      gitHubConnection: $(githubConnectionName)
+      repositoryName: $(githubRepositoryName)
+      title: '$(projectName) v$(Build.SourceBranchName)'
+      releaseNotesFile: 'RELEASE_NOTES.md'
+      assets: |
+        $(Build.ArtifactStagingDirectory)/nuget/*.nupkg

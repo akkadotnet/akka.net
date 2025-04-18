@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
@@ -22,8 +23,15 @@ namespace Akka.Remote
 {
     /// <summary>
     /// INTERNAL API
+    /// Used to mark that a message is meant as a system call and should not be traced
     /// </summary>
-    internal interface IDaemonMsg { }
+    [InternalApi]
+    public interface IInternalRemotingMessage { }
+    
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal interface IDaemonMsg:IInternalRemotingMessage { }
 
     /// <summary>
     ///  INTERNAL API
