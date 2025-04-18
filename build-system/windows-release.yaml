@@ -22,7 +22,7 @@ variables:
   - name: githubRepositoryName
     value: akkadotnet/akka.net
 steps:
-- task: UseDotNet@2
+  - task: UseDotNet@2
     displayName: 'Use .NET SDK from global.json'
     inputs:
       useGlobalJson: true
