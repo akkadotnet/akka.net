@@ -304,8 +304,7 @@ namespace Akka.Persistence
             object[] pluginActorArgs = pluginType.GetConstructor(new[] { typeof(Config) }) != null ? new object[] { pluginConfig } : null;
             
             //todo wrap in backoffsupervisor ?
-            //todo provide docs with examples on how to use this and possibly make decisions on crashes. With explanations of intended scenarios
-
+            
             //supervisor-strategy is defined by default in the fallback configs. So we always expect to get a value here even if the user has not explicitly defined anything
             var configurator = SupervisorStrategyConfigurator.CreateConfigurator(pluginConfig.GetString("supervisor-strategy"));
             
