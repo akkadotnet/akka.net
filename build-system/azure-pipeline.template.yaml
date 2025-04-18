@@ -37,7 +37,7 @@ jobs:
           Ensure-DirectoryPath -Path "bin/output"
         displayName: 'Ensure output directories'
 
-      - script: dotnet build -c Release ./src/Akka.sln
+      - script: dotnet build -c Release
         displayName: "Compile"
         continueOnError: false
 
