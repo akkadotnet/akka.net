@@ -266,13 +266,14 @@ namespace Akka.Streams.Tests.Dsl
 
                 await WithinAsync(10.Seconds(), async () =>
                 {
-                    await EventFilter.Error(contains: "Upstream producer failed with exception").ExpectOneAsync(async () =>
-                    {
-                        Source.Failed<int>(new TestException("failing")).RunWith(sink, Materializer);
-                        Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
-                        var result = await task.ShouldCompleteWithin(3.Seconds());
-                        result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                    });
+                    await EventFilter.Error(contains: "Upstream producer failed with exception")
+                        .ExpectOneAsync(async () =>
+                        {
+                            Source.Failed<int>(new TestException("failing")).RunWith(sink, Materializer);
+                            Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
+                            var result = await task.ShouldCompleteWithin(3.Seconds());
+                            result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                        });
                 });
             }, Materializer);
         }
