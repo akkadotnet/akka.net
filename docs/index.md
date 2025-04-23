@@ -119,7 +119,7 @@ h2:before{
           Everything in Akka.NET is designed to work in a distributed setting: all interactions of actors use purely message passing and everything is asynchronous.
         </p>
         <p>This effort has been undertaken to ensure that all functions are available equally when running within a single process or on a cluster of hundreds of machines. The key for enabling this is to go from remote to local by way of optimization instead of trying to go from local to remote by way of generalization. See this classic paper for a detailed discussion on why the second approach is bound to fail.</p>
-        <p><a href="/articles/Remoting">Read more</a></p>
+        <p><a href="/articles/remoting/index.html">Read more</a></p>
       </div>
       <div class="col-md-6 text-center">
         <img class="img-responsive img-rounded appear-animation" data-animation="fadeIn" style="border:2px solid white;width:100%;border-radius:10px" src="/images/network.png" alt="" />
