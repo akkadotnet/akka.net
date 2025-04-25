@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -23,8 +24,10 @@ namespace Akka.Cluster.Tests.Serialization
     public class BugFix3724Spec : AkkaSpec
     {
         public BugFix3724Spec(ITestOutputHelper helper)
-            : base(@"akka.actor.provider = cluster
-                     akka.actor.serialize-messages = on", helper)
+            : base("""
+                   akka.actor.provider = cluster
+                    akka.actor.serialize-messages = on
+                   """, helper)
         {
             _cluster = Cluster.Get(Sys);
             _selfAddress = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
@@ -34,17 +37,18 @@ namespace Akka.Cluster.Tests.Serialization
         private readonly Cluster _cluster;
 
         [Fact(DisplayName = "Should be able to use 'akka.actor.serialize-messages' while running Akka.Cluster")]
-        public void Should_serialize_all_AkkaCluster_messages()
+        public async Task Should_serialize_all_AkkaCluster_messages()
         {
             _cluster.Subscribe(TestActor, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents,
                 typeof(ClusterEvent.MemberUp));
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                EventFilter.Exception<Exception>().Expect(0, () =>
+                // Expect 0 means we have to wait for the full duration
+                await EventFilter.Exception<Exception>().ExpectAsync(0, async () =>
                 {
                     // wait for a singleton cluster to fully form and publish a member up event
-                    _cluster.Join(_selfAddress);
-                    var up = ExpectMsg<ClusterEvent.MemberUp>();
+                    await _cluster.JoinAsync(_selfAddress);
+                    var up = await ExpectMsgAsync<ClusterEvent.MemberUp>();
                     up.Member.Address.Should().Be(_selfAddress);
                 });
             });
