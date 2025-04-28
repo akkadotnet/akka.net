@@ -377,7 +377,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(DisplayName = "GroupBy must not have substream limit when maxSubStream is set to -1")]
+        [Fact(DisplayName = "GroupBy must not have substream limit when maxSubStream is set to negative numbers")]
         public async Task GroupBy_UnlimitedSubstreamTest()
         {
             await this.AssertAllStagesStoppedAsync(async () =>

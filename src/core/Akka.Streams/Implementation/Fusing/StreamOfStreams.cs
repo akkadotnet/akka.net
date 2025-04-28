@@ -645,9 +645,6 @@ namespace Akka.Streams.Implementation.Fusing
         /// <param name="allowClosedSubstreamRecreation">Enables recreation of already closed substreams if elements with their corresponding keys arrive after completion</param>
         public GroupBy(int maxSubstreams, Func<T, TKey> keyFor, bool allowClosedSubstreamRecreation = false)
         {
-            if (maxSubstreams < -1)
-                throw new ArgumentException("maxSubstreams must be greater or equals to -1.", nameof(maxSubstreams));
-            
             _maxSubstreams = maxSubstreams;
             _keyFor = keyFor;
             _allowClosedSubstreamRecreation = allowClosedSubstreamRecreation;
