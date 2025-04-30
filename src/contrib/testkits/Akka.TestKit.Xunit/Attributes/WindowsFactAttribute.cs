@@ -5,10 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Xunit;
+using System;
 using Xunit.v3;
 
-namespace Akka.TestKit.Xunit3.Attributes
+namespace Akka.TestKit.Xunit.Attributes
 {
     /// <summary>
     /// <para>

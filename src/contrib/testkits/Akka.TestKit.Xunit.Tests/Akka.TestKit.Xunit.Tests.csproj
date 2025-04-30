@@ -21,7 +21,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <ProjectReference Include="..\Akka.TestKit.Xunit3\Akka.TestKit.Xunit3.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
   </ItemGroup>
 
 </Project>
