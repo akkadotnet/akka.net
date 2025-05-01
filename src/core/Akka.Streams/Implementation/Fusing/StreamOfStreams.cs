@@ -419,9 +419,9 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                     else
                     {
-                        if (_activeSubstreams.Count + _closedSubstreams.Count == _stage._maxSubstreams)
+                        if (_stage._maxSubstreams > -1 && _activeSubstreams.Count + _closedSubstreams.Count == _stage._maxSubstreams)
                             throw new TooManySubstreamsOpenException();
-                        else if (_closedSubstreams.Contains(key) && !HasBeenPulled(_stage.In))
+                        if (_closedSubstreams.Contains(key) && !HasBeenPulled(_stage.In))
                             Pull(_stage.In);
                         else
                             RunSubstream(key, element);
@@ -640,9 +640,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="maxSubstreams">TBD</param>
-        /// <param name="keyFor">TBD</param>
-        /// <param name="allowClosedSubstreamRecreation">TBD</param>
+        /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails. Set to -1 for infinite substreams.</param>
+        /// <param name="keyFor">Computes the key for each element</param>
+        /// <param name="allowClosedSubstreamRecreation">Enables recreation of already closed substreams if elements with their corresponding keys arrive after completion</param>
         public GroupBy(int maxSubstreams, Func<T, TKey> keyFor, bool allowClosedSubstreamRecreation = false)
         {
             _maxSubstreams = maxSubstreams;
