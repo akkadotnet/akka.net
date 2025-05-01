@@ -258,7 +258,7 @@ namespace Akka.Streams.Stage
         /// The handling of the returned <see cref="Task"/> incurs slight overhead, so in cases where you don't
         /// need an explicit reply please use <see cref="Invoke"/> instead.
         /// </remarks>
-        Task InvokeWithFeedback(T input);
+        Task<Done> InvokeWithFeedback(T input);
     }
 
     /// <summary>
@@ -897,7 +897,7 @@ namespace Akka.Streams.Stage
             /// Called from the owning <see cref="GraphStage{TShape}"/>.
             /// </summary>
             /// <exception cref="IllegalStateException"></exception>
-            internal void OnStart()
+            public void OnStart()
             {
                 while (true)
                 {
@@ -940,7 +940,7 @@ namespace Akka.Streams.Stage
             }
 
             // External call
-            public Task InvokeWithFeedback(T input)
+            public Task<Done> InvokeWithFeedback(T input)
             {
                 var promise = new TaskCompletionSource<Done>();
 
@@ -950,7 +950,7 @@ namespace Akka.Streams.Stage
                     return promise.Task;
                 }
 
-                return Task.FromException<StreamDetachedException>(_ownedStage.StreamDetachedException);
+                return Task.FromException<Done>(_ownedStage.StreamDetachedException);
 
                 /*
                  * Add this task completion source to the owning logic, so it can be completed `AfterPostStop`
@@ -1080,7 +1080,7 @@ namespace Akka.Streams.Stage
         private GraphInterpreter _interpreter;
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API: The <see cref="GraphInterpreter"/> that is running this stage.
         /// </summary>
         /// <exception cref="IllegalStateException">
         /// This exception is thrown when the class is not initialized.
@@ -1098,19 +1098,6 @@ namespace Akka.Streams.Stage
             set
             {
                 _interpreter = value;
-                if (_callbacksWaitingForInterpreter is null)
-                    return;
-
-                lock (_lock)
-                {
-                    while (_callbacksWaitingForInterpreter.Count > 0)
-                    {
-                        var input = _callbacksWaitingForInterpreter.Dequeue();
-                        _interpreter.OnAsyncInput(this, input.Event, input.Promise, input.Handler);
-                    }
-
-                    _callbacksWaitingForInterpreter = null;
-                }
             }
         }
 
@@ -1982,7 +1969,7 @@ namespace Akka.Streams.Stage
         protected Action<T> GetAsyncCallback<T>(Action<T> handler)
         {
             // backwards compat
-            return GetAsyncCallBackWithHandle(handler).Invoke;
+            return GetTypedAsyncCallback(handler).Invoke;
         }
         
         /// <summary>
@@ -2002,7 +1989,7 @@ namespace Akka.Streams.Stage
         /// 
         /// This object can be cached and reused within the same <see cref="GraphStageLogic"/>.
         /// </summary>
-        protected IAsyncCallback<T> GetAsyncCallBackWithHandle<T>(Action<T> handler)
+        protected IAsyncCallback<T> GetTypedAsyncCallback<T>(Action<T> handler)
         {
             var callback = new ConcurrentAsyncCallback<T>(handler, this);
             if (_interpreter != null) callback.OnStart();
@@ -2021,110 +2008,11 @@ namespace Akka.Streams.Stage
         /// 
         /// This object can be cached and reused within the same <see cref="GraphStageLogic"/>.
         /// </summary>
-        /// <param name="handler">TBD</param>
-        /// <returns>TBD</returns>
         protected Action GetAsyncCallback(Action handler)
-            => () =>
-            {
-                if (_interpreter == null)
-                {
-                    if (_callbacksWaitingForInterpreter is null)
-                        throw new StreamDetachedException(
-                            $"Stage with GraphStageLogic [{this}] stopped before interpreter is initialized.");
-
-                    _callbacksWaitingForInterpreter.Enqueue(
-                        new ActorGraphInterpreter.AsyncInput(null, null, NotUsed.Instance, NoPromise, _ => handler()));
-                }
-                else
-                    Interpreter.OnAsyncInput(this, NotUsed.Instance, NoPromise, _ => handler());
-            };
-
-        protected Func<T, Task<Done>> GetAsyncCallbackWithTask<T>(Action<T> handler)
         {
-            return @event =>
-            {
-                var promise = new TaskCompletionSource<Done>();
-                if (_interpreter == null)
-                {
-                    if (_callbacksWaitingForInterpreter is null)
-                        throw new StreamDetachedException(
-                            $"Stage with GraphStageLogic [{this}] stopped before interpreter is initialized.");
-
-                    _callbacksWaitingForInterpreter.Enqueue(
-                        new ActorGraphInterpreter.AsyncInput(null, null, @event, promise, x => handler((T)x)));
-                    return promise.Task;
-                }
-
-                if (AddToWaiting(promise))
-                {
-                    Interpreter.OnAsyncInput(this, @event, promise, x => handler((T)x));
-                }
-                else
-                {
-                    try
-                    {
-                        throw new StreamDetachedException(
-                            $"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
-                    }
-                    catch (StreamDetachedException e)
-                    {
-                        promise.TrySetException(e);
-                    }
-                }
-
-                return promise.Task;
-            };
-        }
-
-        protected Func<Task> GetAsyncCallbackWithTask(Action handler)
-        {
-            return () =>
-            {
-                var promise = new TaskCompletionSource<Done>();
-                if (_interpreter == null)
-                {
-                    if (_callbacksWaitingForInterpreter is null)
-                        throw new StreamDetachedException(
-                            $"Stage with GraphStageLogic [{this}] stopped before interpreter is initialized.");
-
-                    _callbacksWaitingForInterpreter.Enqueue(
-                        new ActorGraphInterpreter.AsyncInput(null, null, NotUsed.Instance, promise, _ => handler()));
-                }
-
-                if (AddToWaiting(promise))
-                {
-                    Interpreter.OnAsyncInput(this, NotUsed.Instance, promise, _ => handler());
-                }
-                else
-                {
-                    try
-                    {
-                        throw new StreamDetachedException(
-                            $"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
-                    }
-                    catch (StreamDetachedException e)
-                    {
-                        promise.TrySetException(e);
-                    }
-                }
-
-                return promise.Task;
-            };
-        }
-
-        private bool AddToWaiting(TaskCompletionSource<Done> promise)
-        {
-            lock (_lock)
-            {
-                if (_asyncCallbacksInProgress is not null)
-                {
-                    _asyncCallbacksInProgress.Add(promise);
-                    return true;
-                }
-
-                // else logic was already stopped
-                return false;
-            }
+            // ugly
+            var callback = GetTypedAsyncCallback<NotUsed>(_ => handler());
+            return () => callback.Invoke(NotUsed.Instance);
         }
 
         /// <summary>

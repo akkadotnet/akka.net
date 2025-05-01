@@ -41,7 +41,7 @@ public class AsyncCallbackSpec: AkkaSpec
         private Stopped() { }
     }
     
-    internal sealed record Callbacks(Action<object> Callback, Func<object, Task<Done>> CallbackAsync);
+    internal sealed record Callbacks(Action<object> Callback, IAsyncCallback<object> CallbackAsync);
     
     internal sealed class AsyncCallbackGraphStage: GraphStageWithMaterializedValue<FlowShape<int, int>, Callbacks>
     {
@@ -51,13 +51,13 @@ public class AsyncCallbackSpec: AkkaSpec
         {
             private readonly AsyncCallbackGraphStage _stage;
             public readonly Action<object> AsyncCallback;
-            public readonly Func<object, Task<Done>> AsyncCallbackAsync;
+            public readonly IAsyncCallback<object> AsyncCallbackAsync;
 
             public Logic(AsyncCallbackGraphStage stage, Shape shape) : base(shape)
             {
                 _stage = stage;
                 AsyncCallback = GetAsyncCallback<object>(Callback);
-                AsyncCallbackAsync = GetAsyncCallbackWithTask<object>(Callback);
+                AsyncCallbackAsync = GetTypedAsyncCallback<object>(Callback);
                 if (_stage._early.HasValue)
                     _stage._early.Value(AsyncCallbackAsync);
                 SetHandlers(_stage.In, _stage.Out, this);
@@ -105,13 +105,13 @@ public class AsyncCallbackSpec: AkkaSpec
 
         #endregion
         private readonly IActorRef _probe;
-        private readonly Option<Action<Func<object, Task<Done>>>> _early;
+        private readonly Option<Action<IAsyncCallback<object>>> _early;
 
-        public AsyncCallbackGraphStage(IActorRef probe, Option<Action<Func<object, Task<Done>>>>? early = null)
+        public AsyncCallbackGraphStage(IActorRef probe, Option<Action<IAsyncCallback<object>>>? early = null)
         {
             Shape = new FlowShape<int, int>(In, Out);
             _probe = probe;
-            _early = early ?? Option<Action<Func<object, Task<Done>>>>.None;
+            _early = early ?? Option<Action<IAsyncCallback<object>>>.None;
         }
         
         public Inlet<int> In { get; } = new("In");
@@ -180,7 +180,7 @@ public class AsyncCallbackSpec: AkkaSpec
         foreach (var n in Enumerable.Range(0, 10))
         {
             var msg = $"whatever{n}";
-            var feedback = callback(msg);
+            var feedback = callback.InvokeWithFeedback(msg);
             await probe.ExpectMsgAsync(msg);
             await feedback;
             feedback.IsCompleted.Should().BeTrue();
@@ -205,7 +205,7 @@ public class AsyncCallbackSpec: AkkaSpec
         await probe.ExpectMsgAsync<Started>();
         await probe.ExpectMsgAsync<Stopped>();
 
-        var feedback = callback("whatever");
+        var feedback = callback.InvokeWithFeedback("whatever");
 
         Invoking(() => feedback.GetAwaiter().GetResult())
             .Should().Throw<StreamDetachedException>();
@@ -219,7 +219,7 @@ public class AsyncCallbackSpec: AkkaSpec
         var (callback, _) = Source.FromPublisher(upstream)
             .ViaMaterialized(new AsyncCallbackGraphStage(
                 probe.Ref,
-                Option<Action<Func<object, Task<Done>>>>.Create(asyncCb => asyncCb("early"))), Keep.Right)
+                Option<Action<IAsyncCallback<object>>>.Create(asyncCb => asyncCb.InvokeWithFeedback("early"))), Keep.Right)
             .To(Sink.Ignore<int>())
             .Run(Materializer);
 
@@ -244,9 +244,9 @@ public class AsyncCallbackSpec: AkkaSpec
         var (_, callback) = Source.FromPublisher(upstream)
             .ViaMaterialized(new AsyncCallbackGraphStage(
                 probe.Ref,
-                Option<Action<Func<object, Task<Done>>>>.Create(asyncCb =>
+                Option<Action<IAsyncCallback<object>>>.Create(asyncCb =>
                 {
-                    asyncCb("early");
+                    asyncCb.InvokeWithFeedback("early");
                     earlyFeedback.SetResult(Done.Instance);
                 })
                 ), Keep.Right)
@@ -255,7 +255,7 @@ public class AsyncCallbackSpec: AkkaSpec
 
         await Task.Delay(100);
         // and deliver in order
-        var laterFeedback = callback("later");
+        var laterFeedback = callback.InvokeWithFeedback("later");
         
         await probe.ExpectMsgAsync<Started>();
         await probe.ExpectMsgAsync("early");
@@ -281,7 +281,7 @@ public class AsyncCallbackSpec: AkkaSpec
         await probe.ExpectMsgAsync<Started>();
         
         var feedbacks = Enumerable.Range(1, 100)
-            .Select(n => callback(n.ToString()));
+            .Select(n => callback.InvokeWithFeedback(n.ToString()));
         
         var cbResults = await Task.WhenAll(feedbacks);
         cbResults.Length.Should().Be(100);
@@ -304,10 +304,10 @@ public class AsyncCallbackSpec: AkkaSpec
             .Run(Materializer);
 
         await probe.ExpectMsgAsync<Started>();
-        (await callback("happy-case")).Should().Be(Done.Instance);
+        (await callback.InvokeWithFeedback("happy-case")).Should().Be(Done.Instance);
         await probe.ExpectMsgAsync("happy-case");
 
-        var feedback = callback(new ThrowException("oh my gosh, whale of a wash!"));
+        var feedback = callback.InvokeWithFeedback(new ThrowException("oh my gosh, whale of a wash!"));
         await Awaiting(async () => await feedback)
             .Should().ThrowAsync<TestException>()
             .WithMessage("oh my gosh, whale of a wash!");
@@ -327,7 +327,7 @@ public class AsyncCallbackSpec: AkkaSpec
         await probe.ExpectMsgAsync<Started>();
         await probe.ExpectMsgAsync<Stopped>();
         
-        var feedback = callback("fail-the-stage");
+        var feedback = callback.InvokeWithFeedback("fail-the-stage");
         await Awaiting(async () => await feedback)
             .Should().ThrowAsync<StreamDetachedException>();
     }

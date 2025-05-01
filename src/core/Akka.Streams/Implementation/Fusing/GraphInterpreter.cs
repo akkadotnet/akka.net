@@ -817,7 +817,7 @@ namespace Akka.Streams.Implementation.Fusing
                         if (!ReferenceEquals(promise, GraphStageLogic.NoPromise))
                         {
                             promise.TrySetResult(Done.Instance);
-                            logic.OnFeedbackDispatched(promise);
+                            logic.OnFeedbackDispatched();
                         }
                     }
                     catch (Exception e)
@@ -825,7 +825,7 @@ namespace Akka.Streams.Implementation.Fusing
                         if (!ReferenceEquals(promise, GraphStageLogic.NoPromise))
                         {
                             promise.TrySetException(e);
-                            logic.OnFeedbackDispatched(promise);
+                            logic.OnFeedbackDispatched();
                         }
                         logic.FailStage(e);
                     }

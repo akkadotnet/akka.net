@@ -551,7 +551,7 @@ namespace Akka.Streams.Dsl
 
         private sealed record NeedWakeup(long Id, int PreviousOffset, int CurrentOffset) : IHubEvent;
 
-        private sealed record Consumer(long Id, Func<IConsumerEvent, Task> Callback);
+        private sealed record Consumer(long Id, IAsyncCallback<IConsumerEvent> Callback);
 
 
         private sealed class Completed
@@ -669,35 +669,35 @@ namespace Akka.Streams.Dsl
                             var startFrom = _head;
                             _activeConsumer++;
                             AddConsumer(consumer, startFrom);
-                            
-                            // in case the consumer is already stopped we need to undo registration
-                            consumer.Callback(new Initialize(startFrom))
-                                .ContinueWith(t =>
+
+                            _ = ProcessConsumerRegistration();
+                            continue;
+
+                            async Task ProcessConsumerRegistration()
+                            {
+                                // in case the consumer is already stopped we need to undo registration
+                                try
                                 {
-                                    try
+                                    await consumer.Callback.InvokeWithFeedback(new Initialize(startFrom));
+                                }
+                                catch (StreamDetachedException) // stopped
+                                {
+                                    var task = _callbackCompletion.Task;
+                                    if (task.IsCompleted)
                                     {
-                                        t.GetAwaiter().GetResult();
-                                    }
-                                    catch (StreamDetachedException)
-                                    {
-                                        var task = _callbackCompletion.Task;
-                                        if (task.IsCompleted)
+                                        try
                                         {
-                                            try
-                                            {
-                                                // Make sure that the task completed successfully
-                                                var result = task.Result;
-                                                result(new UnRegister(consumer.Id, startFrom, startFrom));
-                                            }
-                                            catch
-                                            {
-                                                // no-op
-                                            }
+                                            // Make sure that the task completed successfully
+                                            var result = await task;
+                                            result(new UnRegister(consumer.Id, startFrom, startFrom));
                                         }
-                                        // TODO: Do we need to re-throw?
-                                        // throw;
+                                        catch
+                                        {
+                                            // no-op
+                                        }
                                     }
-                                }, TaskContinuationOptions.ExecuteSynchronously);
+                                }
+                            }
                         }
 
                         return;
@@ -748,7 +748,7 @@ namespace Akka.Streams.Dsl
 
                         // Also check if the consumer is now unblocked since we published an element since it went asleep.
                         if (wakeup.CurrentOffset != _tail)
-                            consumer.Callback(Wakeup.Instance);
+                            consumer.Callback.Invoke(Wakeup.Instance);
                         CheckUnblock(wakeup.PreviousOffset);
                         return;
                     }
@@ -766,10 +766,10 @@ namespace Akka.Streams.Dsl
 
                 // Notify pending consumers and set tombstone
                 var open = (Open)State.GetAndSet(new Closed(e));
-                open.Registrations.ForEach(c => c.Callback(failMessage));
+                open.Registrations.ForEach(c => c.Callback.Invoke(failMessage));
 
                 // Notify registered consumers
-                _consumerWheel.SelectMany(x => x).ForEach(c => c.Callback(failMessage));
+                _consumerWheel.SelectMany(x => x).ForEach(c => c.Callback.Invoke(failMessage));
 
                 FailStage(e);
             }
@@ -847,7 +847,7 @@ namespace Akka.Streams.Dsl
             /// </summary>
             /// <param name="index">TBD</param>
             private void WakeupIndex(int index)
-                => _consumerWheel[index].ForEach(c => c.Callback(Wakeup.Instance));
+                => _consumerWheel[index].ForEach(c => c.Callback.Invoke(Wakeup.Instance));
 
             private void Complete()
             {
@@ -874,7 +874,7 @@ namespace Akka.Streams.Dsl
                         {
                             var completedMessage = new HubCompleted();
                             foreach (var consumer in open.Registrations)
-                                consumer.Callback(completedMessage);
+                                consumer.Callback.Invoke(completedMessage);
                         }
                         else
                             continue;
@@ -932,20 +932,7 @@ namespace Akka.Streams.Dsl
 
                 public override void PreStart()
                 {
-                    var callback = GetAsyncCallbackWithTask<IConsumerEvent>(OnCommand);
-
-                    void OnHubReady(Result<Action<IHubEvent>> result)
-                    {
-                        if (result.IsSuccess)
-                        {
-                            _hubCallback = result.Value;
-                            if (IsAvailable(_stage.Out) && _offsetInitialized)
-                                OnPull();
-                            _hubCallback(RegistrationPending.Instance);
-                        }
-                        else
-                            FailStage(result.Exception);
-                    }
+                    var callback = GetTypedAsyncCallback<IConsumerEvent>(OnCommand);
 
                     /*
                      * Note that there is a potential race here. First we add ourselves to the pending registrations, then
@@ -981,6 +968,21 @@ namespace Akka.Streams.Dsl
                         }
 
                         break;
+                    }
+
+                    return;
+
+                    void OnHubReady(Result<Action<IHubEvent>> result)
+                    {
+                        if (result.IsSuccess)
+                        {
+                            _hubCallback = result.Value;
+                            if (IsAvailable(_stage.Out) && _offsetInitialized)
+                                OnPull();
+                            _hubCallback!(RegistrationPending.Instance);
+                        }
+                        else
+                            FailStage(result.Exception);
                     }
                 }
 
