@@ -485,7 +485,7 @@ namespace Akka.Streams.Stage
     /// </summary>
     public abstract class GraphStageLogic : IStageLogging
     {
-        private Queue<ActorGraphInterpreter.AsyncInput>? _callbacksWaitingForInterpreter = new();
+        private ImmutableList<IConcurrentAsyncCallback> _callbacksWaitingForInterpreter = ImmutableList<IConcurrentAsyncCallback>.Empty;
 
         // needs to be accessible via the ConcurrentAsyncCallback
         private AtomicReference<ImmutableList<TaskCompletionSource<Done>>?> _asyncCallbacksInProgress =
@@ -850,6 +850,16 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
+        /// Used by the <see cref="GraphStageLogic"/> to invoke all queue events
+        /// once the interpreter is started.
+        /// </summary>
+        private interface IConcurrentAsyncCallback
+        {
+            void OnStart();
+        }
+
+
+        /// <summary>
         /// ConcurrentAsyncCallback allows to send events to a stream from multiple threads regardless of
         /// the initialization / materialization state of the stream in a thread-safe manner.
         ///
@@ -859,11 +869,9 @@ namespace Akka.Streams.Stage
         /// Specifically, calls to this class can be made:
         ///  - From the owning <see cref="GraphStage{TShape}"/>, TO 
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        internal sealed class ConcurrentAsyncCallback<T> : IAsyncCallback<T>
+        /// <typeparam name="T">The type of input argument accepted</typeparam>
+        internal sealed class ConcurrentAsyncCallback<T> : IAsyncCallback<T>, IConcurrentAsyncCallback
         {
-            private readonly Action<T> _handler;
-
             // need this to make the GraphInterpreter happy
             private readonly Action<object> _wrappedHandler;
             private readonly GraphStageLogic _ownedStage;
@@ -873,12 +881,12 @@ namespace Akka.Streams.Stage
 
             public ConcurrentAsyncCallback(Action<T> handler, GraphStageLogic ownedStage)
             {
-                _handler = handler;
+                var handler1 = handler;
                 _ownedStage = ownedStage;
                 _wrappedHandler = obj =>
                 {
                     if (obj is T e)
-                        _handler(e);
+                        handler1(e);
                     else
                         throw new ArgumentException(
                             $"Expected {nameof(obj)} to be of type {typeof(T)}, but was {obj.GetType()}");
@@ -1960,27 +1968,49 @@ namespace Akka.Streams.Stage
         /// is safe to be called from other threads and it will in the background thread-safely
         /// delegate to the passed callback function. I.e. it will be called by the external world and
         /// the passed handler will be invoked eventually in a thread-safe way by the execution environment.
+        ///
+        /// In case the stream is not yet materialized, the callback will buffer events until the stream is available.
+        ///
+        /// <see cref="IAsyncCallback{T}.InvokeWithFeedback"/> has an internal <see cref="TaskCompletionSource{TResult}"/>
+        /// that will be failed if the event cannot be processed due to stream completion.
+        ///
+        /// To be thread safe this method must only be called from either the constructor of the graph operator during
+        /// materialization or one of the methods invoked by the graph operator machinery, such as `OnPush` and `OnPull`.
         /// 
         /// This object can be cached and reused within the same <see cref="GraphStageLogic"/>.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="handler">TBD</param>
-        /// <returns>TBD</returns>
         protected Action<T> GetAsyncCallback<T>(Action<T> handler)
-            => @event =>
-            {
-                if (_interpreter == null)
-                {
-                    if (_callbacksWaitingForInterpreter is null)
-                        throw new StreamDetachedException(
-                            $"Stage with GraphStageLogic [{this}] stopped before interpreter is initialized.");
-
-                    _callbacksWaitingForInterpreter.Enqueue(
-                        new ActorGraphInterpreter.AsyncInput(null, null, @event, NoPromise, x => handler((T)x)));
-                }
-                else
-                    Interpreter.OnAsyncInput(this, @event, NoPromise, x => handler((T)x));
-            };
+        {
+            // backwards compat
+            return GetAsyncCallBackWithHandle(handler).Invoke;
+        }
+        
+        /// <summary>
+        /// Obtain a callback object that can be used asynchronously to re-enter the
+        /// current <see cref="GraphStage{TShape}"/> with an asynchronous notification. The delegate returned 
+        /// is safe to be called from other threads and it will in the background thread-safely
+        /// delegate to the passed callback function. I.e. it will be called by the external world and
+        /// the passed handler will be invoked eventually in a thread-safe way by the execution environment.
+        ///
+        /// In case the stream is not yet materialized, the callback will buffer events until the stream is available.
+        ///
+        /// <see cref="IAsyncCallback{T}.InvokeWithFeedback"/> has an internal <see cref="TaskCompletionSource{TResult}"/>
+        /// that will be failed if the event cannot be processed due to stream completion.
+        ///
+        /// To be thread safe this method must only be called from either the constructor of the graph operator during
+        /// materialization or one of the methods invoked by the graph operator machinery, such as `OnPush` and `OnPull`.
+        /// 
+        /// This object can be cached and reused within the same <see cref="GraphStageLogic"/>.
+        /// </summary>
+        protected IAsyncCallback<T> GetAsyncCallBackWithHandle<T>(Action<T> handler)
+        {
+            var callback = new ConcurrentAsyncCallback<T>(handler, this);
+            if (_interpreter != null) callback.OnStart();
+            else _callbacksWaitingForInterpreter = _callbacksWaitingForInterpreter.Insert(0, callback);
+            
+            // backwards compatibility
+            return callback;
+        }
 
         /// <summary>
         /// Obtain a callback object that can be used asynchronously to re-enter the
@@ -2145,6 +2175,11 @@ namespace Akka.Streams.Stage
 
         protected internal virtual void BeforePreStart()
         {
+            foreach(var cb in _callbacksWaitingForInterpreter)
+            {
+                cb.OnStart();
+            }
+            _callbacksWaitingForInterpreter = _callbacksWaitingForInterpreter.Clear();
         }
 
         protected internal virtual void AfterPostStop()
@@ -2154,56 +2189,50 @@ namespace Akka.Streams.Stage
                 _stageActor.Stop();
                 _stageActor = null;
             }
-
-            lock (_lock)
+            
+            // make sure any InvokeWithFeedback after this fails fast
+            var inProgress = _asyncCallbacksInProgress.GetAndSet(null);
+            if (inProgress is { Count: > 0 })
             {
-                if (_callbacksWaitingForInterpreter is not null && _callbacksWaitingForInterpreter.Count > 0)
+                var ex = StreamDetachedException;
+                foreach (var tcs in inProgress)
                 {
-                    try
-                    {
-                        throw new StreamDetachedException(
-                            $"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
-                    }
-                    catch (Exception ex)
-                    {
-                        while (_callbacksWaitingForInterpreter.Count > 0)
-                        {
-                            var input = _callbacksWaitingForInterpreter.Dequeue();
-                            if (!ReferenceEquals(input.Promise, NoPromise))
-                                input.Promise.TrySetException(ex);
-                        }
-                    }
-                }
-
-                var inProgress = _asyncCallbacksInProgress;
-                _asyncCallbacksInProgress = null;
-                if (inProgress is not null && inProgress.Count > 0)
-                {
-                    try
-                    {
-                        throw new StreamDetachedException(
-                            $"Stage with GraphStageLogic [{this}] stopped before async invocation was processed");
-                    }
-                    catch (Exception ex)
-                    {
-                        foreach (var tcs in inProgress)
-                        {
-                            if (!ReferenceEquals(tcs, NoPromise))
-                                tcs.TrySetException(ex);
-                        }
-                    }
+                    tcs.TrySetException(ex);
                 }
             }
+            // TODO: cleanUpSubstreams
         }
 
-        internal void OnFeedbackDispatched(TaskCompletionSource<Done> p)
+        private long _asyncCleanupCounter = 0;
+
+        /// <summary>
+        /// Called from interpreter thread by <see cref="ActorGraphInterpreter.AsyncInput"/>
+        /// </summary>
+        internal void OnFeedbackDispatched()
         {
-            lock (_lock)
+            _asyncCleanupCounter++;
+            
+            // 256 seemed to be a sweet spot in JVM benchmarks
+            // It means that at most 255 completed promises are retained per logic that
+            // uses invokeWithFeedback callbacks.
+            if(_asyncCleanupCounter % 256 == 0)
             {
-                if (_asyncCallbacksInProgress is null)
-                    // already finished, nothing to do here
-                    return;
-                _asyncCallbacksInProgress.Remove(p);
+                void Cleanup()
+                {
+                    while (true)
+                    {
+                        var previous = _asyncCallbacksInProgress.Value;
+                        if (previous is not null)
+                        {
+                            var updated = previous.Where(c => !c.Task.IsCompleted).ToImmutableList();
+                            if (!_asyncCallbacksInProgress.CompareAndSet(previous, updated)) continue;
+                        }
+
+                        break;
+                    }
+                }
+                
+                Cleanup();
             }
         }
 
