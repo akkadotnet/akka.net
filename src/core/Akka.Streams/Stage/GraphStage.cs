@@ -908,7 +908,7 @@ namespace Akka.Streams.Stage
                         case ConcurrentAsyncCallbackState.Pending<T> pending:
                             if (pending.PendingEvents.Count > 0)
                             {
-                                foreach (var (evt, promise) in pending.PendingEvents.Reverse())
+                                foreach (var (evt, promise) in pending.PendingEvents)
                                 {
                                     OnAsyncInput(evt, promise);
                                 }
@@ -964,7 +964,7 @@ namespace Akka.Streams.Stage
                         if (previous != null) // not stopped
                         {
                             // prepend to front of list
-                            var updated = previous.Insert(0, promise);
+                            var updated = previous.Add(promise);
                             if (!_ownedStage._asyncCallbacksInProgress.CompareAndSet(previous, updated))
                                 continue;
                             return true;
@@ -978,23 +978,27 @@ namespace Akka.Streams.Stage
 
             private void InvokeWithPromise(T evt, TaskCompletionSource<Done> promise)
             {
-                var state = _state.Value;
-                switch (state)
+                while (true)
                 {
-                    case ConcurrentAsyncCallbackState.Initialized<T>:
-                        // started - can just dispatch async message to interpreter
-                        OnAsyncInput(evt, promise);
-                        break;
-
-                    case ConcurrentAsyncCallbackState.Pending<T> list:
+                    var state = _state.Value;
+                    switch (state)
                     {
-                        // not started yet - queue the event
-                        var e = new ConcurrentAsyncCallbackState.Event<T>(evt, promise);
-                        var newList = list.PendingEvents.Insert(0, e);
-                        if (!_state.CompareAndSet(list, new ConcurrentAsyncCallbackState.Pending<T>(newList)))
-                            InvokeWithPromise(evt, promise);
-                        break;
+                        case ConcurrentAsyncCallbackState.Initialized<T>:
+                            // started - can just dispatch async message to interpreter
+                            OnAsyncInput(evt, promise);
+                            break;
+
+                        case ConcurrentAsyncCallbackState.Pending<T> list:
+                        {
+                            // not started yet - queue the event
+                            var e = new ConcurrentAsyncCallbackState.Event<T>(evt, promise);
+                            var newList = list.PendingEvents.Add(e);
+                            if (!_state.CompareAndSet(list, new ConcurrentAsyncCallbackState.Pending<T>(newList))) continue;
+                            break;
+                        }
                     }
+
+                    break;
                 }
             }
         }
@@ -1993,7 +1997,7 @@ namespace Akka.Streams.Stage
         {
             var callback = new ConcurrentAsyncCallback<T>(handler, this);
             if (_interpreter != null) callback.OnStart();
-            else _callbacksWaitingForInterpreter = _callbacksWaitingForInterpreter.Insert(0, callback);
+            else _callbacksWaitingForInterpreter = _callbacksWaitingForInterpreter.Add(callback);
             
             // backwards compatibility
             return callback;
