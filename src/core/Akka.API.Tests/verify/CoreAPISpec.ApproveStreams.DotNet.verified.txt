@@ -4876,7 +4876,7 @@ namespace Akka.Streams.Stage
     }
     public abstract class GraphStageLogic : Akka.Streams.Stage.IStageLogging
     {
-        public static System.Action DoNothing;
+        public static readonly System.Action DoNothing;
         public static readonly Akka.Streams.Stage.InHandler EagerTerminateInput;
         public static readonly Akka.Streams.Stage.OutHandler EagerTerminateOutput;
         public static readonly Akka.Streams.Stage.InHandler IgnoreTerminateInput;
@@ -4917,12 +4917,11 @@ namespace Akka.Streams.Stage
         public void FailStage(System.Exception reason) { }
         protected System.Action<T> GetAsyncCallback<T>(System.Action<T> handler) { }
         protected System.Action GetAsyncCallback(System.Action handler) { }
-        protected System.Func<T, System.Threading.Tasks.Task<Akka.Done>> GetAsyncCallbackWithTask<T>(System.Action<T> handler) { }
-        protected System.Func<System.Threading.Tasks.Task> GetAsyncCallbackWithTask(System.Action handler) { }
         protected Akka.Streams.Stage.IInHandler GetHandler<T>(Akka.Streams.Inlet<T> inlet) { }
         protected Akka.Streams.Stage.IOutHandler GetHandler<T>(Akka.Streams.Outlet<T> outlet) { }
         [Akka.Annotations.ApiMayChangeAttribute()]
         protected Akka.Streams.Stage.StageActor GetStageActor(Akka.Streams.Stage.StageActorRef.Receive receive) { }
+        protected Akka.Streams.Stage.IAsyncCallback<T> GetTypedAsyncCallback<T>(System.Action<T> handler) { }
         protected T Grab<T>(Akka.Streams.Inlet<T> inlet) { }
         protected bool HasBeenPulled<T>(Akka.Streams.Inlet<T> inlet) { }
         [Akka.Annotations.InternalApiAttribute()]
@@ -5010,6 +5009,11 @@ namespace Akka.Streams.Stage
         protected GraphStage() { }
         protected abstract Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes);
         public virtual Akka.Streams.Stage.ILogicAndMaterializedValue<Akka.NotUsed> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
+    }
+    public interface IAsyncCallback<in T>
+    {
+        void Invoke(T input);
+        System.Threading.Tasks.Task<Akka.Done> InvokeWithFeedback(T input);
     }
     public interface IAsyncContext : Akka.Streams.Stage.IContext, Akka.Streams.Stage.IDetachedContext, Akka.Streams.Stage.ILifecycleContext
     {
