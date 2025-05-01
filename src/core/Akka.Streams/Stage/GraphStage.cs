@@ -1989,54 +1989,50 @@ namespace Akka.Streams.Stage
                         {
                             _elem = (T)next.Element;
                             _pulled = false;
-                            _handler.OnPush();
+                            _handler!.OnPush();
                         }
                         else if (msg is OnComplete)
                         {
                             _closed = true;
-                            _handler.OnUpstreamFinish();
+                            _handler!.OnUpstreamFinish();
                         }
                         else if (msg is OnError error)
                         {
                             _closed = true;
-                            _handler.OnUpstreamFailure(error.Cause);
+                            _handler!.OnUpstreamFailure(error.Cause);
                         }
                     }));
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public IGraph<SinkShape<T>, NotUsed> Sink => _sink;
 
             /// <summary>
-            /// TBD
+            /// Sets the input handler.
             /// </summary>
-            /// <param name="handler">TBD</param>
             public void SetHandler(IInHandler handler) => _handler = handler;
 
             /// <summary>
-            /// TBD
+            /// Returns true if there is an element available to be grabbed.
             /// </summary>
             public bool IsAvailable => _elem.HasValue;
 
             /// <summary>
-            /// TBD
+            /// Returns true if this inlet is closed.
             /// </summary>
             public bool IsClosed => _closed;
 
             /// <summary>
-            /// TBD
+            /// Returns true if this inlet has been pulled and is not closed.
             /// </summary>
             public bool HasBeenPulled => _pulled && !IsClosed;
 
             /// <summary>
-            /// TBD
+            /// Grab the most recent element from this inlet.
             /// </summary>
             /// <exception cref="IllegalStateException">
             /// This exception is thrown when this inlet is empty.
             /// </exception>
-            /// <returns>TBD</returns>
+            /// <returns>The element</returns>
             public T Grab()
             {
                 if (!_elem.HasValue)
@@ -2048,7 +2044,7 @@ namespace Akka.Streams.Stage
             }
 
             /// <summary>
-            /// TBD
+            /// Pull data from upstream.
             /// </summary>
             /// <exception cref="IllegalStateException">
             /// This exception is thrown when this inlet is closed or already pulled.
@@ -2065,29 +2061,22 @@ namespace Akka.Streams.Stage
             }
 
             /// <summary>
-            /// TBD
+            /// Cancel this graph stage using a default reason.
             /// </summary>
             public void Cancel() => Cancel(SubscriptionWithCancelException.NoMoreElementsNeeded.Instance);
             
             /// <summary>
-            /// TBD
+            /// Cancel this graph stage with a specific reason.
             /// </summary>
             public void Cancel(Exception cause)
             {
                 _closed = true;
                 _sink.CancelSubstream(cause);
             }
-
-            /// <inheritdoc/>
+            
             public override string ToString() => $"SubSinkInlet{_name}";
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        
         protected SubSinkInlet<T> CreateSubSinkInlet<T>(string name) => new(this, name);
 
         /// <summary>
@@ -2101,7 +2090,6 @@ namespace Akka.Streams.Stage
         /// Outlet in case the corresponding Source is not materialized within a
         /// given time limit, see e.g. ActorMaterializerSettings.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
         [InternalApi]
         protected class SubSourceOutlet<T>
         {
@@ -2110,12 +2098,7 @@ namespace Akka.Streams.Stage
             private IOutHandler _handler;
             private bool _available;
             private bool _closed;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="logic">TBD</param>
-            /// <param name="name">TBD</param>
+            
             public SubSourceOutlet(GraphStageLogic logic, string name)
             {
                 _name = name;
@@ -2127,7 +2110,7 @@ namespace Akka.Streams.Stage
                         if (!_closed)
                         {
                             _available = true;
-                            _handler.OnPull();
+                            _handler!.OnPull();
                         }
                     }
                     else if (command is SubSink.Cancel cancel)
@@ -2136,7 +2119,7 @@ namespace Akka.Streams.Stage
                         {
                             _available = false;
                             _closed = true;
-                            _handler.OnDownstreamFinish(SubscriptionWithCancelException.StageWasCompleted.Instance);
+                            _handler!.OnDownstreamFinish(SubscriptionWithCancelException.StageWasCompleted.Instance);
                         }
                     }
                 }));
@@ -2174,13 +2157,12 @@ namespace Akka.Streams.Stage
             /// Set OutHandler for this dynamic output port; this needs to be done before
             /// the first substream callback can arrive.
             /// </summary>
-            /// <param name="handler">TBD</param>
             public void SetHandler(IOutHandler handler) => _handler = handler;
 
             /// <summary>
             /// Push to this output port.
             /// </summary>
-            /// <param name="elem">TBD</param>
+            /// <param name="elem">The element to be processed</param>
             public void Push(T elem)
             {
                 _available = false;
@@ -2200,7 +2182,6 @@ namespace Akka.Streams.Stage
             /// <summary>
             /// Fail this output port.
             /// </summary>
-            /// <param name="ex">TBD</param>
             public void Fail(Exception ex)
             {
                 _available = false;
