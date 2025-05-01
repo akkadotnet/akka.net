@@ -1606,7 +1606,7 @@ namespace Akka.Streams.Stage
         /// Emit an element through the given outlet and continue with the given thunk
         /// afterwards, suspending execution if necessary.
         /// This action replaces the <see cref="OutHandler"/> for the given outlet if suspension
-        /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>
+        /// is needed and re-installs the current handler upon receiving an <see cref="OutHandler.OnPull"/>
         /// signal (before invoking the <paramref name="andThen"/> function).
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
@@ -1628,7 +1628,7 @@ namespace Akka.Streams.Stage
         /// Emit an element through the given outlet and continue with the given thunk
         /// afterwards, suspending execution if necessary.
         /// This action replaces the <see cref="OutHandler"/> for the given outlet if suspension
-        /// is needed and reinstalls the current handler upon receiving an <see cref="OutHandler.OnPull"/>.
+        /// is needed and re-installs the current handler upon receiving an <see cref="OutHandler.OnPull"/>.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="outlet">TBD</param>
@@ -1874,15 +1874,9 @@ namespace Akka.Streams.Stage
         /// </summary>
         [ApiMayChange]
         protected virtual string StageActorName => "";
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected internal virtual void BeforePreStart() { }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected internal virtual void AfterPostStop()
         {
             if (_stageActor != null)
@@ -1960,7 +1954,6 @@ namespace Akka.Streams.Stage
         /// the <see cref="SubFusingMaterializer"/>). Care needs to be taken to cancel this Inlet
         /// when the stage shuts down lest the corresponding Sink be left hanging.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
         [InternalApi]
         protected class SubSinkInlet<T>
         {
@@ -1970,12 +1963,7 @@ namespace Akka.Streams.Stage
             private bool _closed;
             private bool _pulled;
             private readonly SubSink<T> _sink;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="logic">TBD</param>
-            /// <param name="name">TBD</param>
+            
             public SubSinkInlet(GraphStageLogic logic, string name)
             {
                 _name = name;
