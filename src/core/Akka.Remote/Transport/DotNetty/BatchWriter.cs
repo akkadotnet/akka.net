@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BatchWriter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -206,8 +206,6 @@ namespace Akka.Remote.Transport.DotNetty
 
     /// <summary>
     /// INTERNAL API.
-    ///
-    /// Configuration object for <see cref="BatchWriter"/>
     /// </summary>
     internal sealed class BatchWriterSettings
     {

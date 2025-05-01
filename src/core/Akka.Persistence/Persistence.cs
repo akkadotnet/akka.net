@@ -1,14 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Persistence.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using Akka.Actor;
 using Akka.Annotations;
@@ -21,11 +20,12 @@ namespace Akka.Persistence
 {
     internal struct PluginHolder
     {
-        public PluginHolder(IActorRef @ref, EventAdapters adapters, Config config)
+        public PluginHolder(IActorRef @ref, EventAdapters adapters, Config config, IActorRef recoveryPermitter)
         {
             Ref = @ref;
             Adapters = adapters;
             Config = config;
+            RecoveryPermitter = recoveryPermitter;
         }
 
         public IActorRef Ref { get; }
@@ -33,6 +33,8 @@ namespace Akka.Persistence
         public EventAdapters Adapters { get; }
 
         public Config Config { get; }
+        
+        public IActorRef RecoveryPermitter { get; }
     }
 
     /// <summary>
@@ -50,7 +52,6 @@ namespace Akka.Persistence
         private readonly Lazy<string> _defaultJournalPluginId;
         private readonly Lazy<string> _defaultSnapshotPluginId;
         private readonly Lazy<IStashOverflowStrategy> _defaultInternalStashOverflowStrategy;
-        private readonly Lazy<IActorRef> _recoveryPermitter;
 
         private readonly ConcurrentDictionary<string, Lazy<PluginHolder>> _pluginExtensionIds = new();
 
@@ -120,12 +121,6 @@ namespace Akka.Persistence
                     _log.Info("Auto-starting snapshot store `{0}`", id);
                 SnapshotStoreFor(id);
             });
-
-            _recoveryPermitter = new Lazy<IActorRef>(() =>
-            {
-                var maxPermits = _config.GetInt("max-concurrent-recoveries", 0);
-                return _system.SystemActorOf(Akka.Persistence.RecoveryPermitter.Props(maxPermits), "recoveryPermitter");
-            });
         }
 
         /// <summary>
@@ -152,9 +147,10 @@ namespace Akka.Persistence
         /// INTERNAL API: When starting many persistent actors at the same time the journal its data store is protected 
         /// from being overloaded by limiting number of recoveries that can be in progress at the same time.
         /// </summary>
-        internal IActorRef RecoveryPermitter()
+        internal IActorRef RecoveryPermitterFor(string journalPluginId)
         {
-            return _recoveryPermitter.Value;
+            var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
+            return PluginHolderFor(configPath, JournalFallbackConfigPath).RecoveryPermitter;
         }
 
         /// <summary>
@@ -201,6 +197,22 @@ namespace Akka.Persistence
         {
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
             return PluginHolderFor(configPath, JournalFallbackConfigPath).Config;
+        }
+        
+        /// <summary>
+        /// Returns the plugin config identified by <paramref name="snapshotPluginId"/>.
+        /// When empty, looks in `akka.persistence.snapshot-store.plugin` to find configuration entry path.
+        /// When configured, uses <paramref name="snapshotPluginId"/> as absolute path to the journal configuration entry.
+        /// </summary>
+        /// <param name="snapshotPluginId">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when either the plugin class name is undefined or the configuration path is missing.
+        /// </exception>
+        /// <returns>TBD</returns>
+        internal Config SnapshotStoreConfigFor(string snapshotPluginId)
+        {
+            var configPath = string.IsNullOrEmpty(snapshotPluginId) ? _defaultSnapshotPluginId.Value : snapshotPluginId;
+            return PluginHolderFor(configPath, SnapshotStoreFallbackConfigPath).Config;
         }
 
         /// <summary>
@@ -270,6 +282,17 @@ namespace Akka.Persistence
             return pluginContainer.Value;
         }
 
+        private static IActorRef CreateRecoveryPermitter(ExtendedActorSystem system, string configPath, Config pluginConfig)
+        {
+            // backward compatibility
+            // get the setting from the plugin path, if not found, default to the one defined in "akka.persistence"
+            var maxPermits = pluginConfig.HasPath("max-concurrent-recoveries") 
+                ? pluginConfig.GetInt("max-concurrent-recoveries")
+                : system.Settings.Config.GetInt("akka.persistence.max-concurrent-recoveries");
+
+            return system.SystemActorOf(RecoveryPermitter.Props(maxPermits), $"recoveryPermitter-{configPath}");
+        }
+
         private static IActorRef CreatePlugin(ExtendedActorSystem system, string configPath, Config pluginConfig)
         {
             var pluginActorName = configPath;
@@ -303,8 +326,9 @@ namespace Akka.Persistence
             var config = system.Settings.Config.GetConfig(configPath).WithFallback(system.Settings.Config.GetConfig(fallbackPath));
             var plugin = CreatePlugin(system, configPath, config);
             var adapters = CreateAdapters(system, configPath);
+            var recoveryPermitter = CreateRecoveryPermitter(system, configPath, config);
 
-            return new PluginHolder(plugin, adapters, config);
+            return new PluginHolder(plugin, adapters, config, recoveryPermitter);
         }
     }
 

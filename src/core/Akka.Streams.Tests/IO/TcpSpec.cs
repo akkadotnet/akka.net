@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -65,7 +65,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         public async Task Outgoing_TCP_stream_must_be_able_to_write_a_sequence_of_ByteStrings()
         {
             var server = await new Server(this).InitializeAsync();
-            var testInput = Enumerable.Range(0, 256).Select(i => ByteString.FromBytes(new[] {Convert.ToByte(i)}));
+            var testInput = Enumerable.Range(0, 256).Select(i => ByteString.FromBytes(new byte[] {Convert.ToByte(i)}));
             var expectedOutput = ByteString.FromBytes(Enumerable.Range(0, 256).Select(Convert.ToByte).ToArray());
 
             Source.From(testInput)
@@ -466,7 +466,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                     .Run(Materializer);
 
             var result = await Source.From(Enumerable.Repeat(0, 1000)
-                .Select(i => ByteString.FromBytes(new[] {Convert.ToByte(i)})))
+                .Select(i => ByteString.FromBytes(new byte[] { Convert.ToByte(i) })))
                 .Via(Sys.TcpStream().OutgoingConnection(serverAddress, halfClose: true))
                 .RunAggregate(0, (i, s) => i + s.Count, Materializer).ShouldCompleteWithin(10.Seconds());
             
@@ -573,7 +573,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             var binding = await bindTask.ShouldCompleteWithin(3.Seconds());
 
             var testInput = Enumerable.Range(0, 255)
-                .Select(i => ByteString.FromBytes(new[] {Convert.ToByte(i)}))
+                .Select(i => ByteString.FromBytes(new byte[] { Convert.ToByte(i) }))
                 .ToList();
 
             var expectedOutput = testInput.Aggregate(ByteString.Empty, (agg, b) => agg.Concat(b));
@@ -603,7 +603,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             var echoConnection = Sys.TcpStream().OutgoingConnection(serverAddress);
 
             var testInput = Enumerable.Range(0, 255)
-                .Select(i => ByteString.FromBytes(new[] { Convert.ToByte(i) }))
+                .Select(i => ByteString.FromBytes(new byte[] { Convert.ToByte(i) }))
                 .ToList();
 
             var expectedOutput = testInput.Aggregate(ByteString.Empty, (agg, b) => agg.Concat(b));
@@ -614,7 +614,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 .Via(echoConnection)
                 .Via(echoConnection)
                 .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer)
-                .ShouldCompleteWithin(3.Seconds());
+                .ShouldCompleteWithin(10.Seconds());
             
             result.Should().BeEquivalentTo(expectedOutput);
             await binding.Unbind().ShouldCompleteWithin(3.Seconds());

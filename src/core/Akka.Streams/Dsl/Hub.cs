@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Hub.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -380,8 +380,12 @@ namespace Akka.Streams.Dsl
                 // Make some noise
                 public override void OnUpstreamFailure(Exception e)
                 {
-                    throw new MergeHub.ProducerFailed(
-                        "Upstream producer failed with exception, removing from MergeHub now", e);
+                    if(e is Implementation.NormalShutdownException)
+                        CompleteStage();
+                    else {
+                        throw new MergeHub.ProducerFailed(
+                            "Upstream producer failed with exception, removing from MergeHub now", e);
+                    }
                 }
 
                 private void OnDemand(long moreDemand)

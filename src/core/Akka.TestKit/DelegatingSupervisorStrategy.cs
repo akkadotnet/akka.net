@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DelegatingSupervisorStrategy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Util;
@@ -21,7 +22,19 @@ namespace Akka.TestKit
         
         protected override Directive Handle(IActorRef child, Exception exception)
         {
-            throw new NotImplementedException();
+            if(Delegates.TryGetValue(child, out var childDelegate))
+            {
+                var handleMethod = typeof(SupervisorStrategy).GetMethod(
+                    name: "Handle", 
+                    bindingAttr: BindingFlags.Instance | BindingFlags.NonPublic, 
+                    binder: Type.DefaultBinder,
+                    types: new[] {typeof(IActorRef), typeof(Exception)}, 
+                    modifiers: null);
+                var result = (Directive) handleMethod.Invoke(childDelegate, new object[]{ child, exception });
+                return result;
+            }
+
+            return DefaultDecider.Decide(exception);
         }
         
         public override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats,

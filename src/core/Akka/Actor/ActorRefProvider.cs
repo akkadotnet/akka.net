@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -479,11 +479,14 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to resolve a local actor reference using the provided <paramref name="actorRef"/> and <paramref name="pathElements"/>.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <param name="pathElements">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">The parent / root actor</param>
+        /// <param name="pathElements">The child path elements</param>
+        /// <remarks>
+        /// This method is most commonly used in <see cref="ActorSelection"/> resolution.
+        /// </remarks>
+        /// <returns>A valid <see cref="IActorRef"/> if one was found, <see cref="EmptyLocalActorRef"/> otherwise</returns>
         internal IInternalActorRef ResolveActorRef(IInternalActorRef actorRef, IReadOnlyList<string> pathElements)
         {
             if (pathElements.Count == 0)

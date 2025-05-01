@@ -1,10 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EndpointManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#pragma warning disable AK1004
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -515,10 +515,9 @@ namespace Akka.Remote
 
         private void HandleStashedInbound(IActorRef endpoint, bool writerIsIdle)
         {
-            var stashed = _stashedInbound.GetOrElse(endpoint, new List<InboundAssociation>());
-            _stashedInbound.Remove(endpoint);
-            foreach (var ia in stashed)
-                HandleInboundAssociation(ia, writerIsIdle);
+            if (_stashedInbound.Remove(endpoint, out var value))
+                foreach (var ia in value)
+                    HandleInboundAssociation(ia, writerIsIdle);
         }
 
         private void KeepQuarantinedOr(Address remoteAddress, Action body)

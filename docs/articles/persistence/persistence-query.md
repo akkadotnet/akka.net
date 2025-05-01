@@ -350,8 +350,4 @@ public class TheOneWhoWritesToQueryJournal(id: String) : ActorBase
 
 ## Configuration
 
-Configuration settings can be defined in the configuration section with the absolute path corresponding to the identifier, which is `Akka.Persistence.Query.Journal.Sqlite` for the default `SqlReadJournal.Identifier`.
-
-It can be configured with the following properties:
-
-[!code-json[Main](../../../src/contrib/persistence/Akka.Persistence.Query.Sql/reference.conf)]
+Configuration settings can be defined in the configuration section with the absolute path corresponding to the identifier.

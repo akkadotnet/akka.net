@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientDiscovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -361,7 +361,7 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
         // Setup cluster client initial contacts
         var currentSettings = _settings.WithInitialContacts(contacts.ToImmutableHashSet());
         
-        var clusterClient = Context.System.ActorOf(Props.Create(() => new ClusterClient(currentSettings)).WithDeploy(Deploy.Local));
+        var clusterClient = Context.ActorOf(Props.Create(() => new ClusterClient(currentSettings)).WithDeploy(Deploy.Local));
         Context.Watch(clusterClient);
         Stash.UnstashAll();
 

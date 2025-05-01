@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DotNettyTransportSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -257,9 +257,11 @@ namespace Akka.Remote.Transport.DotNetty
             {
                 return Create(config);
             }
-            catch(Exception e)
+            catch(Exception)
             {
-                return @default ?? throw e;
+                if (@default != null)
+                    return @default;
+                throw;
             }
         }
 

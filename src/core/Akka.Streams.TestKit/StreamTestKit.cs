@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamTestKit.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -81,7 +81,7 @@ namespace Akka.Streams.TestKit
             public void ExpectRequest(long n, CancellationToken cancellationToken = default)
             {
                 ExpectRequestAsync(n, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
             }
 
             public async Task ExpectRequestAsync(long n, CancellationToken cancellationToken = default)
@@ -89,13 +89,13 @@ namespace Akka.Streams.TestKit
                 await PublisherProbe.ExpectMsgAsync<TestPublisher.RequestMore>(
                     isMessage: x => x.NrOfElements == n && Equals(x.Subscription, this), 
                     cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
             }
 
             public long ExpectRequest(CancellationToken cancellationToken = default)
             {
                 return ExpectRequestAsync(cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
             }
 
             public async Task<long> ExpectRequestAsync(CancellationToken cancellationToken = default)
@@ -103,14 +103,14 @@ namespace Akka.Streams.TestKit
                 var msg = await PublisherProbe.ExpectMsgAsync<TestPublisher.RequestMore>(
                     isMessage: x => Equals(this, x.Subscription), 
                     cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
                 return msg.NrOfElements;
             }
             
             public void ExpectCancellation(CancellationToken cancellationToken = default)
             {
                 ExpectCancellationAsync(cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
             }
 
             public async Task ExpectCancellationAsync(CancellationToken cancellationToken = default)
@@ -126,7 +126,7 @@ namespace Akka.Streams.TestKit
                         };
                     }, 
                     cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
             }
             
             public void SendNext(T element) => Subscriber.OnNext(element);

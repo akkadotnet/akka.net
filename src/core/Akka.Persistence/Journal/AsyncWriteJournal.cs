@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncWriteJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,7 +47,7 @@ namespace Akka.Persistence.Journal
             var extension = Persistence.Instance.Apply(Context.System);
             if (extension == null)
             {
-                throw new ArgumentException("Couldn't initialize SyncWriteJournal instance, because associated Persistence extension has not been used in current actor system context.");
+                throw new ArgumentException("Couldn't initialize AsyncWriteJournal instance, because associated Persistence extension has not been used in current actor system context.");
             }
 
             CanPublish = extension.Settings.Internal.PublishPluginCommands;
@@ -81,7 +81,7 @@ namespace Akka.Persistence.Journal
             _replayFilterMaxOldWriters = config.GetInt("replay-filter.max-old-writers", 0);
             _replayDebugEnabled = config.GetBoolean("replay-filter.debug", false);
 
-            _resequencer = Context.System.ActorOf(Props.Create(() => new Resequencer()));
+            _resequencer = Context.ActorOf(Props.Create(() => new Resequencer()), "resequencer");
         }
 
         /// <inheritdoc/>

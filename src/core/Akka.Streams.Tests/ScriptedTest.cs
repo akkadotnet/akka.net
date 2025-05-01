@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ScriptedTest.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -312,17 +312,6 @@ namespace Akka.Streams.Tests
         {
         }
 
-        [Obsolete("Will be removed after async_testkit conversion is done. Use RunScriptAsync instead")]
-        protected void RunScript<TIn2, TOut2, TMat2>(
-            Script<TIn2, TOut2> script, 
-            ActorMaterializerSettings settings,
-            Func<Flow<TIn2, TIn2, NotUsed>, Flow<TIn2, TOut2, TMat2>> op,
-            int maximumOverrun = 3,
-            int maximumRequest = 3,
-            int maximumBuffer = 3)
-            => RunScriptAsync(script, settings, op, maximumOverrun, maximumRequest, maximumBuffer)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-        
         protected async Task RunScriptAsync<TIn2, TOut2, TMat2>(
             Script<TIn2, TOut2> script, 
             ActorMaterializerSettings settings,
