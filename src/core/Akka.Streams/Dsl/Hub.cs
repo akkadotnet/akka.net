@@ -682,19 +682,15 @@ namespace Akka.Streams.Dsl
                                 }
                                 catch (StreamDetachedException) // stopped
                                 {
-                                    var task = _callbackCompletion.Task;
-                                    if (task.IsCompleted)
+                                    try
                                     {
-                                        try
-                                        {
-                                            // Make sure that the task completed successfully
-                                            var result = await task;
-                                            result(new UnRegister(consumer.Id, startFrom, startFrom));
-                                        }
-                                        catch
-                                        {
-                                            // no-op
-                                        }
+                                        // Make sure that the task completed successfully
+                                        var result = await _callbackCompletion.Task;
+                                        result(new UnRegister(consumer.Id, startFrom, startFrom));
+                                    }
+                                    catch
+                                    {
+                                        // no-op
                                     }
                                 }
                             }
