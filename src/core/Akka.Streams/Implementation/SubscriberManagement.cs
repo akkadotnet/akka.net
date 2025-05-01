@@ -265,14 +265,10 @@ namespace Akka.Streams.Implementation
                         goOn = true;
                     }
                     catch (Exception e)
+                        when (e is ISpecViolation)
                     {
-                        if (e is ISpecViolation)
-                        {
-                            UnregisterSubscriptionInternal(subscription);
-                            goOn = false;
-                        }
-                        else
-                            throw;
+                        UnregisterSubscriptionInternal(subscription);
+                        goOn = false;
                     }
 
                     if (!goOn)
