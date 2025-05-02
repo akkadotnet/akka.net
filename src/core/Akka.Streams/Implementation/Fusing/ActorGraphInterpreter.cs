@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -98,11 +99,37 @@ namespace Akka.Streams.Implementation.Fusing
     [InternalApi]
     public sealed class GraphInterpreterShell
     {
+        internal sealed class
+            BoxedBoundaryEvent<T> : ActorGraphInterpreter.IBoundaryEvent 
+            where T : struct, ActorGraphInterpreter.IBoundaryEvent
+        {
+            public T Boxed { get; private set; }
+            public BoxedBoundaryEvent()
+            {
+                
+            }
+            public BoxedBoundaryEvent<T> SetBox(T value)
+            {
+                Boxed = value;
+                return this;
+            }
+
+            public GraphInterpreterShell Shell => Boxed.Shell;
+        }
+        
         private readonly GraphAssembly _assembly;
         private readonly Connection[] _connections;
         private readonly GraphStageLogic[] _logics;
         private readonly Shape _shape;
         private readonly ActorMaterializerSettings _settings;
+
+        private readonly ObjectPoolStuff.ObjectPoolV2<BoxedBoundaryEvent<ActorGraphInterpreter.OnNext>> _onNextPool =
+            new (Environment.ProcessorCount*2);
+        private readonly ObjectPoolStuff.ObjectPoolV2<BoxedBoundaryEvent<ActorGraphInterpreter.RequestMore>> _requestMorePool =
+            new (Environment.ProcessorCount*2);
+        private readonly ObjectPoolStuff.ObjectPoolV2<BoxedBoundaryEvent<ActorGraphInterpreter.AsyncInput>>
+            _asyncInputPool = new (Environment.ProcessorCount*2);
+        private readonly ActorGraphInterpreter.Resume _resume;
         /// <summary>
         /// TBD
         /// </summary>
@@ -127,7 +154,6 @@ namespace Akka.Streams.Implementation.Fusing
         private readonly int _abortLimit;
         private readonly ActorGraphInterpreter.BatchingActorInputBoundary[] _inputs;
         private readonly ActorGraphInterpreter.IActorOutputBoundary[] _outputs;
-
         private ILoggingAdapter _log;
         private GraphInterpreter _interpreter;
         private int _subscribersPending;
@@ -136,8 +162,7 @@ namespace Akka.Streams.Implementation.Fusing
         private bool _waitingForShutdown;
         private Action<object> _enqueueToShortCircuit;
         private bool _interpreterCompleted;
-        private readonly ActorGraphInterpreter.Resume _resume;
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -156,8 +181,8 @@ namespace Akka.Streams.Implementation.Fusing
             _settings = settings;
             Materializer = materializer;
 
-            _inputs = new ActorGraphInterpreter.BatchingActorInputBoundary[shape.Inlets.Count()];
-            _outputs = new ActorGraphInterpreter.IActorOutputBoundary[shape.Outlets.Count()];
+            _inputs = new ActorGraphInterpreter.BatchingActorInputBoundary[shape.Inlets.Length];
+            _outputs = new ActorGraphInterpreter.IActorOutputBoundary[shape.Outlets.Length];
             _subscribersPending = _inputs.Length;
             _publishersPending = _outputs.Length;
             _shellEventLimit = settings.MaxInputBufferSize * (assembly.Inlets.Length + assembly.Outlets.Length);
@@ -264,30 +289,35 @@ namespace Akka.Streams.Implementation.Fusing
             // Cases that are most likely on the hot path, in decreasing order of frequency
             switch (e)
             {
-                case ActorGraphInterpreter.OnNext onNext:
-                    if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnNext {onNext.Event} id={onNext.Id}");
-                    _inputs[onNext.Id].OnNext(onNext.Event);
-                    return RunBatch(eventLimit);
+                case BoxedBoundaryEvent<ActorGraphInterpreter.OnNext> bOn:
+                    var asO = bOn.Boxed;
+                    _onNextPool.TryPush(bOn.SetBox(default));
+                    return RunOnNextMeth(asO);
+                    break;
+                // Case unused:
+                //case ActorGraphInterpreter.OnNext onNext:
+                //    return RunOnNextMeth(onNext);
 
-                case ActorGraphInterpreter.RequestMore requestMore:
-                    if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Request {requestMore.Demand} id={requestMore.Id}");
-                    _outputs[requestMore.Id].RequestMore(requestMore.Demand);
-                    return RunBatch(eventLimit);
-
+                //case ActorGraphInterpreter.RequestMore requestMore:
+                //    return RunRequestMore(requestMore);
+                case BoxedBoundaryEvent<ActorGraphInterpreter.RequestMore> bRm:
+                    var asR = bRm.Boxed;
+                    _requestMorePool.TryPush(bRm.SetBox(default));
+                    return RunRequestMore(asR);
+                
                 case ActorGraphInterpreter.Resume _:
                     if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Resume");
                     if (Interpreter.IsSuspended)
                         return RunBatch(eventLimit);
                     return eventLimit;
-
-                case ActorGraphInterpreter.AsyncInput asyncInput:
-                    Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Handler);
-                    if (eventLimit == 1 && _interpreter.IsSuspended)
-                    {
-                        SendResume(true);
-                        return 0;
-                    }
-                    return RunBatch(eventLimit - 1);
+                
+                case BoxedBoundaryEvent<ActorGraphInterpreter.AsyncInput> bAi:
+                    var asI = bAi.Boxed;
+                    _asyncInputPool.TryPush(bAi.SetBox(default));
+                    return RunAsyncInputMeth(asI); 
+                
+                //case ActorGraphInterpreter.AsyncInput asyncInput:
+                //    return RunAsyncInputMeth(asyncInput);
 
                 case ActorGraphInterpreter.OnError onError:
                     if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnError id={onError.Id}");
@@ -320,7 +350,32 @@ namespace Akka.Streams.Implementation.Fusing
                     return eventLimit;
             }
 
+            int RunRequestMore(ActorGraphInterpreter.RequestMore requestMore1)
+            {
+                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Request {requestMore1.Demand} id={requestMore1.Id}");
+                _outputs[requestMore1.Id].RequestMore(requestMore1.Demand);
+                return RunBatch(eventLimit);
+            }
+
+            int RunOnNextMeth(ActorGraphInterpreter.OnNext onNext1)
+            {
+                if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnNext {onNext1.Event} id={onNext1.Id}");
+                _inputs[onNext1.Id].OnNext(onNext1.Event);
+                return RunBatch(eventLimit);
+            }
+
             return eventLimit;
+
+            int RunAsyncInputMeth(ActorGraphInterpreter.AsyncInput asyncInput)
+            {
+                Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Handler);
+                if (eventLimit == 1 && _interpreter.IsSuspended)
+                {
+                    SendResume(true);
+                    return 0;
+                }
+                return RunBatch(eventLimit - 1);
+            }
         }
 #pragma warning restore CS0162
 
@@ -411,12 +466,25 @@ namespace Akka.Streams.Implementation.Fusing
             return new GraphInterpreter(_assembly, Materializer, Log, _logics, _connections,
                 (logic, @event, handler) =>
                 {
-                    var asyncInput = new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler);
+                    if (_asyncInputPool.TryPop(out var bAi) == false)
+                    {
+                        bAi = new();
+                    }
                     var currentInterpreter = CurrentInterpreterOrNull;
-                    if (currentInterpreter == null || !Equals(currentInterpreter.Context, Self))
-                        Self.Tell(new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler));
+                    if (currentInterpreter == null ||
+                        !Equals(currentInterpreter.Context, Self))
+                    {
+                        Self.Tell(bAi.SetBox(
+                            new ActorGraphInterpreter.AsyncInput(this,
+                                logic, @event, handler)));
+                        //Self.Tell(new ActorGraphInterpreter.AsyncInput(this,
+                        //    logic, @event, handler));
+                    }
                     else
-                        _enqueueToShortCircuit(asyncInput);
+                        _enqueueToShortCircuit(bAi.SetBox(
+                            new ActorGraphInterpreter.AsyncInput(this,
+                                logic, @event, handler)));
+                    //_enqueueToShortCircuit( new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler));
                 }, _settings.IsFuzzingMode, Self);
         }
 
@@ -430,6 +498,26 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <returns>TBD</returns>
         public override string ToString() => $"GraphInterpreterShell\n  {_assembly.ToString().Replace("\n", "\n  ")}";
+
+        internal BoxedBoundaryEvent<ActorGraphInterpreter.OnNext> GetNextBuffer()
+        {
+            if (_onNextPool.TryPop(out var rV) == false)
+            {
+                rV = new BoxedBoundaryEvent<ActorGraphInterpreter.OnNext>();
+            }
+
+            return rV;
+        }
+
+        internal BoxedBoundaryEvent<ActorGraphInterpreter.RequestMore> GetNextRequestMore()
+        {
+            if (_requestMorePool.TryPop(out var rV) == false)
+            {
+                rV = new();
+            }
+
+            return rV;
+        }
     }
 
     /// <summary>
@@ -736,7 +824,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly struct Resume : IBoundaryEvent
+        public class Resume : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -830,7 +918,12 @@ namespace Akka.Streams.Implementation.Fusing
             /// TBD
             /// </summary>
             /// <param name="elements">TBD</param>
-            public void Request(long elements) => _parent.Tell(new RequestMore(_shell, _id, elements));
+            public void Request(long elements)
+            {
+                var bRm = _shell.GetNextRequestMore();
+                _parent.Tell(bRm.SetBox(new RequestMore(_shell, _id, elements)));
+                //_parent.Tell(new RequestMore(_shell, _id, elements));   
+            }
 
             /// <summary>
             /// TBD
@@ -901,7 +994,8 @@ namespace Akka.Streams.Implementation.Fusing
             public void OnNext(T element)
             {
                 ReactiveStreamsCompliance.RequireNonNullElement(element);
-                _parent.Tell(new OnNext(_shell, _id, element));
+                _parent.Tell(_shell.GetNextBuffer().SetBox(new OnNext(_shell, _id, element)));
+                //_parent.Tell(new OnNext(_shell, _id, element));
             }
         }
 
@@ -1490,9 +1584,9 @@ namespace Akka.Streams.Implementation.Fusing
         {
             switch (message)
             {
-                case IBoundaryEvent _:
+                case IBoundaryEvent ba:
                     _currentLimit = _eventLimit;
-                    ProcessEvent((IBoundaryEvent)message);
+                    ProcessEvent(ba);
                     if (_shortCircuitBuffer != null)
                         ShortCircuitBatch();
                     return true;
