@@ -43,30 +43,19 @@ namespace Akka.TestKit
     public class CallingThreadDispatcher : MessageDispatcher
     {
         /// <summary>
-        /// TBD 
+        /// HOCON id of the CallingThreadDispatcher
         /// </summary>
-        public static string Id = "akka.test.calling-thread-dispatcher";
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="configurator">TBD</param>
+        public new static string Id = "akka.test.calling-thread-dispatcher";
+        
         public CallingThreadDispatcher(MessageDispatcherConfigurator configurator) : base(configurator)
         {
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="run">TBD</param>
+        
         protected override void ExecuteTask(IRunnable run)
         {
             run.Run();
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override void Shutdown()
         {
             // do nothing

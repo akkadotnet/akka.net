@@ -48,7 +48,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                 .WithFallback(DistributedData.DistributedData.DefaultConfig())
-                .WithFallback(ClusterSingletonManager.DefaultConfig());
+                .WithFallback(ClusterSingleton.DefaultConfig());
 
         ClusterSharding clusterSharding;
 

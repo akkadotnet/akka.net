@@ -215,7 +215,7 @@ namespace Akka.Remote.Transport
         /// <see cref="ByteString"/>.
         /// </summary>
         /// <param name="raw">Encoded raw byte representation of an Akka PDU</param>
-        /// <returns>Class representation of a PDU that can be used in a <see cref="PatternMatch"/>.</returns>
+        /// <returns>Class representation of a PDU.</returns>
         public abstract IAkkaPdu DecodePdu(ByteString raw);
 
         /// <summary>

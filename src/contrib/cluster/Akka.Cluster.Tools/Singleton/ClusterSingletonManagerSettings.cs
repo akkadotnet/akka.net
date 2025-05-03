@@ -27,7 +27,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <returns>The requested settings.</returns>
         public static ClusterSingletonManagerSettings Create(ActorSystem system)
         {
-            system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
+            system.Settings.InjectTopLevelFallback(ClusterSingleton.DefaultConfig());
 
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton");
             if (config.IsNullOrEmpty())

@@ -68,11 +68,7 @@ namespace Akka.Persistence.TestKit
                     exceptions.Add(rejected);
                     continue;
                 }
-                catch (TestJournalFailureException)
-                {
-                    // i.e. data-store problems: network, invalid credentials, etc.
-                    throw;
-                }
+
                 exceptions.Add(null);
             }
 
@@ -88,17 +84,8 @@ namespace Akka.Persistence.TestKit
                 var messages = Read(persistenceId, fromSequenceNr, Math.Min(toSequenceNr, highest), max);
                 foreach (var p in messages)
                 {
-                    try
-                    {
-                        await _recoveryInterceptor.InterceptAsync(p);
-                        recoveryCallback(p);
-                    }
-                    catch (TestJournalFailureException)
-                    {
-                        // i.e. problems with data: corrupted data-set, problems in serialization
-                        // i.e. data-store problems: network, invalid credentials, etc.
-                        throw;
-                    }
+                    await _recoveryInterceptor.InterceptAsync(p);
+                    recoveryCallback(p);
                 }
             }
         }

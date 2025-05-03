@@ -57,7 +57,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                     use-lease = ""test-lease""
                 }
             ")
-            .WithFallback(ClusterSingletonManager.DefaultConfig())
+            .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSingletonProxy.DefaultConfig())
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 

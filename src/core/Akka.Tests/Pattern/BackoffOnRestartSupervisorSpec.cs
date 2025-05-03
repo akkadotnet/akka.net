@@ -42,12 +42,12 @@ namespace Akka.Tests.Pattern
             }
         }
 
-        public class TestActor : ReceiveActor
+        public class RestartTestActor : ReceiveActor
         {
             private readonly IActorRef _probe;
 
 #pragma warning disable CS0162 // Disabled because without the return, the compiler complains about ambigious reference between Receive<T>(Action<T>,Predicate<T>) and Receive<T>(Predicate<T>,Action<T>)
-            public TestActor(IActorRef probe)
+            public RestartTestActor(IActorRef probe)
             {
                 _probe = probe;
 
@@ -78,7 +78,7 @@ namespace Akka.Tests.Pattern
 
             public static Props Props(IActorRef probe)
             {
-                return Akka.Actor.Props.Create(() => new TestActor(probe));
+                return Akka.Actor.Props.Create(() => new RestartTestActor(probe));
             }
         }
 
@@ -136,7 +136,7 @@ namespace Akka.Tests.Pattern
 
         private Props SupervisorProps(IActorRef probeRef)
         {
-            var options = Backoff.OnFailure(TestActor.Props(probeRef), "someChildName", 200.Milliseconds(), 10.Seconds(), 0.0, -1)
+            var options = Backoff.OnFailure(RestartTestActor.Props(probeRef), "someChildName", 200.Milliseconds(), 10.Seconds(), 0.0, -1)
                 .WithManualReset()
                 .WithSupervisorStrategy(new OneForOneStrategy(4, TimeSpan.FromSeconds(30), ex => ex is StoppingException 
                     ? Directive.Stop 
@@ -294,7 +294,7 @@ namespace Akka.Tests.Pattern
             // withinTimeRange indicates the time range in which maxNrOfRetries will cause the child to
             // stop. IE: If we restart more than maxNrOfRetries in a time range longer than withinTimeRange
             // that is acceptable.
-            var options = Backoff.OnFailure(TestActor.Props(probe.Ref), "someChildName", 100.Milliseconds(), 10.Seconds(), 0.0, -1)
+            var options = Backoff.OnFailure(RestartTestActor.Props(probe.Ref), "someChildName", 100.Milliseconds(), 10.Seconds(), 0.0, -1)
                 .WithSupervisorStrategy(new OneForOneStrategy(3, 2.Seconds(), ex => ex is StoppingException 
                     ? Directive.Stop 
                     : SupervisorStrategy.DefaultStrategy.Decider.Decide(ex)));

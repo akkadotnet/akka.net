@@ -63,8 +63,8 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0
                 akka.cluster.sharding.verbose-debug-logging = on")
-                .WithFallback(ClusterSingletonManager.DefaultConfig()
-                .WithFallback(ClusterSharding.DefaultConfig()));
+                .WithFallback(ClusterSingleton.DefaultConfig())
+                .WithFallback(ClusterSharding.DefaultConfig());
 
         public CoordinatedShutdownShardingSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
         {

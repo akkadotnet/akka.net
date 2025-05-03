@@ -27,7 +27,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly TimeSpan timeout;
 
         private static Config SpecConfig =>
-            ClusterSingletonManager.DefaultConfig()
+            ClusterSingleton.DefaultConfig()
             .WithFallback(ClusterSharding.DefaultConfig());
 
         public ShardingQueriesSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
