@@ -16,9 +16,11 @@ using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using Akka.Event;
 using Akka.IO;
+using Akka.Streams.Dsl;
 using Akka.Util.Internal;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
+using Tcp = Akka.IO.Tcp;
 
 namespace Akka.Benchmarks
 {
@@ -101,7 +103,7 @@ namespace Akka.Benchmarks
             }
         }
 
-        private class ClientCoordinator : ReceiveActor
+        private class ClientCoordinator : ReceiveActor, IWithTimers
         {
             private readonly HashSet<IActorRef> _waitingChildren = new();
             private IActorRef _requester;
@@ -128,24 +130,61 @@ namespace Akka.Benchmarks
                     if (_waitingChildren.Count == 0)
                         _requester.Tell(new CommunicationFinished());
                 });
+                
+                Receive<Status.Failure>(failure =>
+                {
+                    // blow up the benchmark
+                    _requester.Tell(failure);
+                    Context.Stop(Self);
+                });
             }
+            
+            protected override void PreStart()
+            {
+                Timers.StartSingleTimer("BenchmarkTimeout", new Status.Failure(new Exception("Benchmark timed out")), TimeSpan.FromSeconds(60));
+            }
+
+            public ITimerScheduler Timers { get; set; }
         }
         
-        private class Client : ReceiveActor
+        private class Client : ReceiveActor, IWithTimers
         {
+            private readonly ILoggingAdapter _log = Context.GetLogger();
             private int _receivedCount = 0;
             private IActorRef _connection;
 
+            private class RetryConnect
+            {
+                public static RetryConnect Instance { get; } = new();
+                private RetryConnect(){}
+            }
+
             public Client(DnsEndPoint endpoint, int messagesToSend, byte[] message)
             {
-                Context.System.Tcp().Tell(new Tcp.Connect(endpoint));
+                DoConnect(endpoint);
                 Receive<Tcp.Connected>(_ =>
                 {
                     Sender.Tell(new Tcp.Register(Self));
                     Sender.Tell(Tcp.Write.Create(ByteString.FromBytes(message)));
                     _connection = Sender;
                 });
-                Receive<Tcp.CommandFailed>(_ => throw new Exception("Connection failed"));
+                Receive<RetryConnect>(_ =>
+                {
+                    DoConnect(endpoint);
+                });
+                Receive<Tcp.CommandFailed>(f =>
+                {
+                    if (f.Cause.HasValue)
+                    {
+                        _log.Error(f.Cause.Value, "Command [{0}] failed with error [{1}]", f.Cmd, f.CauseString);
+                    }
+                    else
+                    {
+                        _log.Error("Command [{0}] failed with error [{1}]", f.Cmd, f.CauseString);
+                    }
+                    
+                    Timers.StartSingleTimer("RetryConnect", RetryConnect.Instance, TimeSpan.FromMilliseconds(20));
+                });
                 Receive<Tcp.Received>(_ =>
                 {
                     _receivedCount++;
@@ -163,6 +202,13 @@ namespace Akka.Benchmarks
                     Context.Parent.Tell(new ChildCommunicationFinished());
                 });
             }
+
+            private static void DoConnect(DnsEndPoint endpoint)
+            {
+                Context.System.Tcp().Tell(new Tcp.Connect(endpoint, timeout: TimeSpan.FromSeconds(5)));
+            }
+
+            public ITimerScheduler Timers { get; set; }
         }
         
         private static int GetFreeTcpPort()
