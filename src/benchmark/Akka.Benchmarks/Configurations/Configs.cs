@@ -86,19 +86,21 @@ namespace Akka.Benchmarks.Configurations
     {
         public MacroBenchmarkConfig()
         {
-            int processorCount = Environment.ProcessorCount;
-            IntPtr affinityMask = (IntPtr)((1 << processorCount) - 1);
-
-            
             AddExporter(MarkdownExporter.GitHub);
             AddColumn(new RequestsPerSecondColumn());
+            AddColumn(new CategoriesColumn());
+            AddLogger(ConsoleLogger.Default);
+            
+            int processorCount = Environment.ProcessorCount;
+            IntPtr affinityMask = (IntPtr)((1 << processorCount) - 1);
+            
             AddJob(Job.LongRun
                 .WithGcMode(new GcMode { Server = true, Concurrent = true })
                 .WithWarmupCount(25)
                 .WithIterationCount(50)
                 .RunOncePerIteration()
                 .WithStrategy(RunStrategy.Monitoring)
-                .WithAffinity(affinityMask)
+                // .WithAffinity(affinityMask) // Optional
             );
         }
     }
