@@ -103,23 +103,6 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
-        /// Dictionary helper that allows for idempotent updates. You don't need to care whether or not
-        /// this item is already in the collection in order to update it.
-        /// </summary>
-        /// <typeparam name="TKey">TBD</typeparam>
-        /// <typeparam name="TValue">TBD</typeparam>
-        /// <param name="hash">TBD</param>
-        /// <param name="key">TBD</param>
-        /// <param name="value">TBD</param>
-        public static void AddOrSet<TKey, TValue>(this IDictionary<TKey, TValue> hash, TKey key, TValue value)
-        {
-            if (hash.ContainsKey(key))
-                hash[key] = value;
-            else
-                hash.Add(key,value);
-        }
-
-        /// <summary>
         /// TBD
         /// </summary>
         /// <typeparam name="TKey">TBD</typeparam>
@@ -146,7 +129,7 @@ namespace Akka.Util.Internal
         /// <returns>TBD</returns>
         public static IDictionary<TKey, TValue> AddAndReturn<TKey, TValue>(this IDictionary<TKey, TValue> hash, TKey key, TValue value)
         {
-            hash.AddOrSet(key, value);
+            hash[key] = value;
             return hash;
         }
 
