@@ -1,3 +1,7 @@
+#### 1.5.42 May 6th, 2025 ####
+
+*Placeholder for nightlies*
+
 #### 1.5.41 May 6th, 2025 ####
 
 Akka.NET v1.5.41 contains several bug fixes and also adds new quality of life features to Akka.TestKit and Akka.Streams.
