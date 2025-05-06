@@ -18,89 +18,58 @@ using System.Threading.Tasks;
 
 namespace Akka.IO
 {
-    class TcpListener : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// TcpListener is an internal actor that binds to a local address and listens for incoming TCP connections.
+    /// </summary>
+    internal sealed class TcpListener : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
+        /// <summary>
+        /// In the event that someone specified something stupid like 0 or a negative number
+        /// for the accept limit, this is a reasonable default.
+        /// </summary>
+        public static readonly int DefaultAcceptLimit = Environment.ProcessorCount * 2;
+        
         private readonly TcpExt _tcp;
-        private readonly IActorRef _bindCommander;
+        private readonly IActorRef _bindCommander;  // forwarded destination for Connected
         private Tcp.Bind _bind;
         private Socket _socket;
         private readonly ILoggingAdapter _log = Context.GetLogger();
         private int _acceptLimit;
-        private SocketAsyncEventArgs[] _saeas;
+        private SocketAsyncEventArgs[]? _acceptPool;
         private bool _binding;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="tcp">TBD</param>
-        /// <param name="bindCommander">TBD</param>
-        /// <param name="bind">TBD</param>
+        private sealed record AcceptCompleted(SocketAsyncEventArgs EventArgs) : INoSerializationVerificationNeeded;
+
+        private sealed record RetryAccept(SocketAsyncEventArgs EventArgs) : INoSerializationVerificationNeeded;
+        
         public TcpListener(TcpExt tcp, IActorRef bindCommander,
             Tcp.Bind bind)
         {
             _tcp = tcp;
             _bindCommander = bindCommander;
             
-            Become(Initializing());
             Self.Tell(bind);
         }
-
-        private Receive Initializing() => message =>
-        {
-            switch (message)
-            {
-                case Tcp.Bind bind:
-                    if (_binding)
-                    {
-                        _log.Warning("Already trying to bind to TCP channel on endpoint [{0}]", _bind.LocalAddress);
-                        return true;
-                    }
-                    _binding = true;
-                    _bind = bind;
-                    _acceptLimit = bind.PullMode ? 0 : _tcp.Settings.BatchAcceptLimit;
-                    BindAsync().PipeTo(Self);
-                    return true;
-                
-                case Status.Failure fail:
-                    _bindCommander.Tell(_bind.FailureMessage.WithCause(fail.Cause));
-                    _log.Error(fail.Cause, "Bind failed for TCP channel on endpoint [{0}]", _bind.LocalAddress);
-                    Context.Stop(Self);
-                    _binding = false;
-                    return true;
-                
-                case Tcp.Bound bound:
-                    Context.Watch(_bind.Handler);
-                    _bindCommander.Tell(bound);
-                    Become(Bound());
-                    _binding = false;
-                    return true;
-                
-                default:
-                    return false;
-            }
-        };
 
         private Receive Bound() => message =>
         {
             switch (message)
             {
-                case SocketEvent evt:
-                    var saea = evt.Args;
-                    if (saea.SocketError == SocketError.Success)
-                        Context.ActorOf(Props.Create<TcpIncomingConnection>(_tcp, saea.AcceptSocket, _bind.Handler, _bind.Options, _bind.PullMode).WithDeploy(Deploy.Local));
-                    
-                    saea.AcceptSocket = null;
-                    if (!_socket.AcceptAsync(saea))
-                        Self.Tell(new SocketEvent(saea));
+                case AcceptCompleted accepted:
+                    HandleAccept(accepted.EventArgs);
+                    return true;
+                
+                case RetryAccept retry:
+                    StartAccept(retry.EventArgs);
                     return true;
 
-                case Tcp.ResumeAccepting resumeAccepting:
-                    _acceptLimit = resumeAccepting.BatchSize;
-                    // TODO: this is dangerous, previous async args are not disposed and there's no guarantee that they're not still receiving data
-                    _saeas = Accept(_acceptLimit).ToArray();
+                case Tcp.ResumeAccepting:
+                    // NO-OP - this is obsolete
                     return true;
 
-                case Tcp.Unbind _:
+                case Tcp.Unbind:
                     Become(Unbinding(Sender));
                     UnbindAsync().PipeTo(Self);
                     return true;
@@ -130,16 +99,48 @@ namespace Akka.IO
             }
         };
         
-        private IEnumerable<SocketAsyncEventArgs> Accept(int limit)
+        private void StartAccept(SocketAsyncEventArgs saea)
         {
-            for(var i = 0; i < limit; i++)
+
+            var pending = _socket.AcceptAsync(saea);
+            if (!pending)
+                Self.Tell(new AcceptCompleted(saea), Self); // synchronous completion ➔ mailbox
+        }
+
+        // closure
+        private IActorRef _safeSelf = Context.Self;
+
+        private void OnCompleted(object? sender, SocketAsyncEventArgs saea)
+        {
+            // Marshall back into the actor context – keeps user code off the IOCP thread.
+            _safeSelf.Tell(new AcceptCompleted(saea), ActorRefs.NoSender);
+        }
+        
+        private void HandleAccept(SocketAsyncEventArgs saea)
+        {
+            switch (saea.SocketError)
             {
-                var self = Self;
-                var saea = new SocketAsyncEventArgs();
-                saea.Completed += (_, e) => self.Tell(new SocketEvent(e));
-                if (!_socket.AcceptAsync(saea))
-                    Self.Tell(new SocketEvent(saea));
-                yield return saea;
+                case SocketError.Success:
+                    var accepted = saea.AcceptSocket!;
+                    saea.AcceptSocket = null;          // ready for re‑use
+                    Context.ActorOf(Props.Create<TcpIncomingConnection>(_tcp, accepted, _bind.Handler, _bind.Options, _bind.PullMode).WithDeploy(Deploy.Local));
+                    StartAccept(saea);                 // keep the pool full
+                    break;
+
+                case SocketError.ConnectionReset:
+                case SocketError.NoBufferSpaceAvailable:
+                case SocketError.TryAgain:
+                case SocketError.TimedOut:
+                case SocketError.WouldBlock:
+                    // transient – short back‑off then retry
+                    saea.AcceptSocket = null;
+                    Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(10), Self,
+                        new RetryAccept(saea), ActorRefs.NoSender);
+                    break;
+                default:
+                    _log.Error("Fatal socket error in TcpListener: {0}", saea.SocketError);
+                    Context.Stop(Self);
+                    break;
             }
         }
 
@@ -155,7 +156,18 @@ namespace Akka.IO
                 _bind.Options.ForEach(x => x.BeforeServerSocketBind(_socket));
                 _socket.Bind(_bind.LocalAddress);
                 _socket.Listen(_bind.Backlog);
-                _saeas = Accept(_acceptLimit).ToArray();
+                
+                _acceptPool = new SocketAsyncEventArgs[_acceptLimit];
+                for (var i = 0; i < _acceptPool.Length; i++)
+                {
+                    var saea = new SocketAsyncEventArgs();
+                    saea.Completed += OnCompleted;  // IOCP -> this actor
+                    _acceptPool[i] = saea;
+                }
+                
+                // start accepting connections
+                foreach (var saea in _acceptPool)
+                    StartAccept(saea);
 
                 return Task.FromResult(new Tcp.Bound(_socket.LocalEndPoint));
             }
@@ -186,32 +198,65 @@ namespace Akka.IO
 
         protected override bool Receive(object message)
         {
-            throw new NotImplementedException();
+            switch (message)
+            {
+                case Tcp.Bind bind:
+                    if (_binding)
+                    {
+                        _log.Warning("Already trying to bind to TCP channel on endpoint [{0}]", _bind.LocalAddress);
+                        return true;
+                    }
+                    _binding = true;
+                    _bind = bind;
+                    // not going to do pull mode
+                    _acceptLimit = _tcp.Settings.BatchAcceptLimit;
+                    if (_acceptLimit <= 0)
+                    {
+                        _log.Debug("Accept limit was set to {0}, which is unworkable. Using default value of {1} (logical CPUs * 2)", _acceptLimit, DefaultAcceptLimit);
+                        _acceptLimit = DefaultAcceptLimit;
+                    }
+                        
+                    
+                    _log.Info("Binding TCP channel on endpoint [{0}]", _bind.LocalAddress); 
+                    
+                    BindAsync().PipeTo(Self);
+                    return true;
+                
+                case Status.Failure fail:
+                    _bindCommander.Tell(_bind.FailureMessage.WithCause(fail.Cause));
+                    _log.Error(fail.Cause, "Bind failed for TCP channel on endpoint [{0}]", _bind.LocalAddress);
+                    Context.Stop(Self);
+                    _binding = false;
+                    return true;
+                
+                case Tcp.Bound bound:
+                    Context.Watch(_bind.Handler);
+                    _bindCommander.Tell(bound);
+                    Become(Bound());
+                    _binding = false;
+                    return true;
+                
+                default:
+                    return false;
+            }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override void PostStop()
         {
             try
             {
+                if(_acceptPool != null)
+                    foreach(var saea in _acceptPool)
+                    {
+                        // remove event handler
+                        saea.Completed -= OnCompleted;
+                        saea.Dispose();
+                    }
                 _socket?.Dispose();
-                _saeas?.ForEach(x => x.Dispose());
             }
             catch (Exception e)
             {
                 _log.Debug("Error closing ServerSocketChannel: {0}", e);
-            }
-        }
-
-        private readonly struct SocketEvent : INoSerializationVerificationNeeded
-        {
-            public readonly SocketAsyncEventArgs Args;
-
-            public SocketEvent(SocketAsyncEventArgs args)
-            {
-                Args = args;
             }
         }
     }
