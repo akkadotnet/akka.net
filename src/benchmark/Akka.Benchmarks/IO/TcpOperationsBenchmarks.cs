@@ -241,6 +241,7 @@ namespace Akka.Benchmarks
                     TimeSpan.FromSeconds(60));
                 
                 Context.WatchWith(_echoServer, ServerDied.Instance);
+                _echoServer.Tell(GetBindAddress.Instance);
             }
 
             public ITimerScheduler Timers { get; set; }
