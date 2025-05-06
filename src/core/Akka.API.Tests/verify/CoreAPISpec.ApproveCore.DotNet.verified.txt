@@ -3988,7 +3988,7 @@ namespace Akka.IO
             public static readonly Akka.IO.Tcp.Abort Instance;
             public override Akka.IO.Tcp.ConnectionClosed Event { get; }
         }
-        public class Aborted : Akka.IO.Tcp.ConnectionClosed
+        public sealed class Aborted : Akka.IO.Tcp.ConnectionClosed
         {
             public static readonly Akka.IO.Tcp.Aborted Instance;
             public override bool IsAborted { get; }
@@ -4003,13 +4003,13 @@ namespace Akka.IO
             public bool PullMode { get; }
             public override string ToString() { }
         }
-        public class Bound : Akka.IO.Tcp.Event
+        public sealed class Bound : Akka.IO.Tcp.Event
         {
             public Bound(System.Net.EndPoint localAddress) { }
             public System.Net.EndPoint LocalAddress { get; }
             public override string ToString() { }
         }
-        public class Close : Akka.IO.Tcp.CloseCommand
+        public sealed class Close : Akka.IO.Tcp.CloseCommand
         {
             public static readonly Akka.IO.Tcp.Close Instance;
             public override Akka.IO.Tcp.ConnectionClosed Event { get; }
@@ -4019,7 +4019,7 @@ namespace Akka.IO
             protected CloseCommand() { }
             public abstract Akka.IO.Tcp.ConnectionClosed Event { get; }
         }
-        public class Closed : Akka.IO.Tcp.ConnectionClosed
+        public sealed class Closed : Akka.IO.Tcp.ConnectionClosed
         {
             public static readonly Akka.IO.Tcp.Closed Instance;
         }
@@ -4040,7 +4040,7 @@ namespace Akka.IO
             [Akka.Annotations.InternalApiAttribute()]
             public Akka.IO.Tcp.CommandFailed WithCause(System.Exception cause) { }
         }
-        public class CompoundWrite : Akka.IO.Tcp.WriteCommand, System.Collections.Generic.IEnumerable<Akka.IO.Tcp.SimpleWriteCommand>, System.Collections.IEnumerable
+        public sealed class CompoundWrite : Akka.IO.Tcp.WriteCommand, System.Collections.Generic.IEnumerable<Akka.IO.Tcp.SimpleWriteCommand>, System.Collections.IEnumerable
         {
             public CompoundWrite(Akka.IO.Tcp.SimpleWriteCommand head, Akka.IO.Tcp.WriteCommand tailCommand) { }
             public Akka.IO.Tcp.SimpleWriteCommand Head { get; }
@@ -4048,17 +4048,17 @@ namespace Akka.IO
             public System.Collections.Generic.IEnumerator<Akka.IO.Tcp.SimpleWriteCommand> GetEnumerator() { }
             public override string ToString() { }
         }
-        public class ConfirmedClose : Akka.IO.Tcp.CloseCommand
+        public sealed class ConfirmedClose : Akka.IO.Tcp.CloseCommand
         {
             public static readonly Akka.IO.Tcp.ConfirmedClose Instance;
             public override Akka.IO.Tcp.ConnectionClosed Event { get; }
         }
-        public class ConfirmedClosed : Akka.IO.Tcp.ConnectionClosed
+        public sealed class ConfirmedClosed : Akka.IO.Tcp.ConnectionClosed
         {
             public static readonly Akka.IO.Tcp.ConfirmedClosed Instance;
             public override bool IsConfirmed { get; }
         }
-        public class Connect : Akka.IO.Tcp.Command
+        public sealed class Connect : Akka.IO.Tcp.Command
         {
             public Connect(System.Net.EndPoint remoteAddress, System.Net.EndPoint localAddress = null, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options = null, System.Nullable<System.TimeSpan> timeout = null, bool pullMode = False) { }
             public System.Net.EndPoint LocalAddress { get; }
@@ -4108,7 +4108,7 @@ namespace Akka.IO
             public object Token { get; }
             public override string ToString() { }
         }
-        public class PeerClosed : Akka.IO.Tcp.ConnectionClosed
+        public sealed class PeerClosed : Akka.IO.Tcp.ConnectionClosed
         {
             public static readonly Akka.IO.Tcp.PeerClosed Instance;
             public override bool IsPeerClosed { get; }
@@ -4127,17 +4127,17 @@ namespace Akka.IO
             public bool UseResumeWriting { get; }
             public override string ToString() { }
         }
-        public class ResumeAccepting : Akka.IO.Tcp.Command
+        public sealed class ResumeAccepting : Akka.IO.Tcp.Command
         {
             public ResumeAccepting(int batchSize) { }
             public int BatchSize { get; }
             public override string ToString() { }
         }
-        public class ResumeReading : Akka.IO.Tcp.Command
+        public sealed class ResumeReading : Akka.IO.Tcp.Command
         {
             public static readonly Akka.IO.Tcp.ResumeReading Instance;
         }
-        public class ResumeWriting : Akka.IO.Tcp.Command
+        public sealed class ResumeWriting : Akka.IO.Tcp.Command
         {
             public static readonly Akka.IO.Tcp.ResumeWriting Instance;
         }
@@ -4148,7 +4148,7 @@ namespace Akka.IO
             public bool WantsAck { get; }
             public Akka.IO.Tcp.CompoundWrite Append(Akka.IO.Tcp.WriteCommand that) { }
         }
-        public class SuspendReading : Akka.IO.Tcp.Command
+        public sealed class SuspendReading : Akka.IO.Tcp.Command
         {
             public static readonly Akka.IO.Tcp.SuspendReading Instance;
         }
@@ -4156,11 +4156,11 @@ namespace Akka.IO
         {
             public static readonly Akka.IO.Tcp.Unbind Instance;
         }
-        public class Unbound : Akka.IO.Tcp.Event
+        public sealed class Unbound : Akka.IO.Tcp.Event
         {
             public static readonly Akka.IO.Tcp.Unbound Instance;
         }
-        public class Write : Akka.IO.Tcp.SimpleWriteCommand
+        public sealed class Write : Akka.IO.Tcp.SimpleWriteCommand
         {
             public static readonly Akka.IO.Tcp.Write Empty;
             public override Akka.IO.Tcp.Event Ack { get; }
@@ -4177,7 +4177,7 @@ namespace Akka.IO
             public Akka.IO.Tcp.CompoundWrite Prepend(Akka.IO.Tcp.SimpleWriteCommand other) { }
             public Akka.IO.Tcp.WriteCommand Prepend(System.Collections.Generic.IEnumerable<Akka.IO.Tcp.WriteCommand> writes) { }
         }
-        public class WritingResumed : Akka.IO.Tcp.Event
+        public sealed class WritingResumed : Akka.IO.Tcp.Event
         {
             public static readonly Akka.IO.Tcp.WritingResumed Instance;
         }
