@@ -36,6 +36,11 @@ namespace Akka.IO
             return PluginInstance.Apply(system).Manager;
         }
         
+        public static TcpExt For(ActorSystem system)
+        {
+            return PluginInstance.Apply(system);
+        }
+        
         public override TcpExt CreateExtension(ExtendedActorSystem system)
         {
             return new TcpExt(system);
