@@ -270,6 +270,7 @@ namespace Akka.Benchmarks
             private readonly ILoggingAdapter _log = Context.GetLogger();
             private int _receivedCount = 0;
             private IActorRef _connection;
+            private int _connectAttemptsRemaining = 5;
 
             private class RetryConnect
             {
@@ -301,6 +302,18 @@ namespace Akka.Benchmarks
                         _log.Error("Command [{0}] failed with error [{1}]", f.Cmd, f.CauseString);
                     }
 
+                    if (_connectAttemptsRemaining > 0)
+                    {
+                        _connectAttemptsRemaining--;
+                        _log.Debug("Retrying connection to {0}", endpoint);
+                        DoConnect(endpoint);
+                    }
+                    else
+                    {
+                        // blow up the test
+                        _log.Error("Failed to connect to {0} after 5 attempts", endpoint);
+                        Context.Parent.Tell(new Status.Failure(new Exception("Failed to connect after 5 attempts")));
+                    }
                     Timers.StartSingleTimer("RetryConnect", RetryConnect.Instance, TimeSpan.FromMilliseconds(20));
                 });
                 Receive<Tcp.Received>(_ =>
