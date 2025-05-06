@@ -98,7 +98,7 @@ namespace Akka.Benchmarks
             
             public EchoServer()
             {
-                Context.System.Tcp().Tell(new Tcp.Bind(Self, new IPEndPoint(IPAddress.Any, 0)));
+                Context.System.Tcp().Tell(new Tcp.Bind(Self, new IPEndPoint(IPAddress.Loopback, 0)));
 
                 Receive<Tcp.Bound>(bound =>
                 {
