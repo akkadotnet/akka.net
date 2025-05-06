@@ -34,22 +34,24 @@ namespace Akka.Benchmarks
 
         [Params(100, 1000, 10000)]
         public int MessageCount { get; set; }
+
         [Params(10, 100)]
         public int MessageLength { get; set; }
+
         [Params(1, 3, 5, 7, 10, 20, 30, 40)]
         public int ClientsCount { get; set; }
-        
+
         [GlobalSetup]
         public void Setup()
         {
             _system = ActorSystem.Create("system");
             _message = new byte[MessageLength];
-
-            var port = GetFreeTcpPort();
-            _server = _system.ActorOf(Props.Create(() => new EchoServer(port)));
-            _clientCoordinator = _system.ActorOf(Props.Create(() => new ClientCoordinator("127.0.0.1", port, ClientsCount)));
+            
+            _server = _system.ActorOf(Props.Create(() => new EchoServer()));
+            _clientCoordinator =
+                _system.ActorOf(Props.Create(() => new ClientCoordinator(_server, ClientsCount)));
         }
-        
+
         [GlobalCleanup]
         public void Cleanup()
         {
@@ -73,80 +75,176 @@ namespace Akka.Benchmarks
             public int MessagesToSend { get; }
             public byte[] Message { get; }
         }
-        
-        public class CommunicationFinished { }
-        public class ChildCommunicationFinished { }
-        
-        private class EchoServer : ReceiveActor
+
+        public class CommunicationFinished
         {
-            public EchoServer(int port)
+        }
+
+        public class ChildCommunicationFinished
+        {
+        }
+        
+        public sealed class GetBindAddress
+        {
+            public static GetBindAddress Instance { get; } = new();
+            private GetBindAddress()
             {
-                Context.System.Tcp().Tell(new Tcp.Bind(Self, new IPEndPoint(IPAddress.Any, port)));
+            }
+        }
+
+        private class EchoServer : ReceiveActor, IWithStash
+        {
+            private EndPoint? _endpoint;
+            
+            public EchoServer()
+            {
+                Context.System.Tcp().Tell(new Tcp.Bind(Self, new IPEndPoint(IPAddress.Any, 0)));
+
+                Receive<Tcp.Bound>(bound =>
+                {
+                    _endpoint = bound.LocalAddress;
+                    Become(Bound);
+                    Stash!.UnstashAll();
+                });
                 
-                Receive<Tcp.Bound>(_ => { });
+                ReceiveAny(_ => Stash.Stash());
+            }
+
+            private void Bound()
+            {
                 Receive<Tcp.Connected>(_ =>
                 {
                     var connection = Context.ActorOf(Props.Create(() => new EchoConnection(Sender)));
                     Sender.Tell(new Tcp.Register(connection));
                 });
+                
+                Receive<Tcp.CommandFailed>(f =>
+                {
+                    // log a detailed error
+                    if (f.Cause.HasValue)
+                    {
+                        Context.System.Log.Error(f.Cause.Value, "Command [{0}] failed with error [{1}]", f.Cmd,
+                            f.CauseString);
+                    }
+                    else
+                    {
+                        Context.System.Log.Error("Command [{0}] failed with error [{1}]", f.Cmd, f.CauseString);
+                    }
+
+                    // blow up the benchmark
+                    Context.Stop(Self);
+                });
+                
+                Receive<GetBindAddress>(_ =>
+                {
+                    Sender.Tell(_endpoint);
+                });
             }
+
+            public IStash Stash { get; set; } = null!;
         }
-        
+
         private class EchoConnection : ReceiveActor
         {
             public EchoConnection(IActorRef connection)
             {
-                Receive<Tcp.Received>(received =>
-                {
-                    connection.Tell(Tcp.Write.Create(received.Data));
-                });
+                Receive<Tcp.Received>(received => { connection.Tell(Tcp.Write.Create(received.Data)); });
             }
         }
 
-        private class ClientCoordinator : ReceiveActor, IWithTimers
+        private class ClientCoordinator : ReceiveActor, IWithTimers, IWithStash
         {
+            private readonly IActorRef _echoServer;
             private readonly HashSet<IActorRef> _waitingChildren = new();
             private IActorRef _requester;
+            private readonly int _clientsCount;
+            private EndPoint? _endpoint;
             
-            public ClientCoordinator(string host, int port, int clientsCount)
+            private class ServerDied
             {
-                var endpoint = new DnsEndPoint(host, port);
+                public static ServerDied Instance { get; } = new();
+                private ServerDied()
+                {
+                }
+            }
+
+            public ClientCoordinator(IActorRef echoServer, int clientsCount)
+            {
+                _echoServer = echoServer;
+                _clientsCount = clientsCount;
+                
+                Receive<EndPoint>(endpoint =>
+                {
+                    _endpoint = endpoint;
+                    Become(Bound);
+                    Stash!.UnstashAll();
+                });
+                
+                ReceiveAny(_ =>
+                {
+                    // stash messages until we have the endpoint
+                    Stash.Stash();
+                });
+                
+                ServerDiedHandler();
+            }
+
+            private void ServerDiedHandler()
+            {
+                Receive<ServerDied>(_ =>
+                {
+                    // blow up the benchmark
+                    _requester.Tell(new Status.Failure(new Exception("Server died")));
+                    Context.Stop(Self);
+                });
+            }
+
+            private void Bound()
+            {
                 Receive<CommunicationRequest>(request =>
                 {
                     _requester = Sender;
-                    var messagesPerActor = request.MessagesToSend / clientsCount;
-                    for (var i = 0; i < clientsCount; ++i)
+                    var messagesPerActor = request.MessagesToSend / _clientsCount;
+                    for (var i = 0; i < _clientsCount; ++i)
                     {
-                        var child = Context.ActorOf(Props.Create(() => new Client(endpoint, messagesPerActor, request.Message)));
+                        var child = Context.ActorOf(Props.Create(() =>
+                            new Client(_endpoint!, messagesPerActor, request.Message)));
                         _waitingChildren.Add(child);
                     }
                 });
+                
                 Receive<ChildCommunicationFinished>(_ =>
                 {
                     Context.Stop(Sender);
-                    
+
                     _waitingChildren.Remove(Sender);
-                    
+
                     if (_waitingChildren.Count == 0)
                         _requester.Tell(new CommunicationFinished());
                 });
-                
+
                 Receive<Status.Failure>(failure =>
                 {
                     // blow up the benchmark
                     _requester.Tell(failure);
                     Context.Stop(Self);
                 });
+                
+                ServerDiedHandler();
             }
-            
+
             protected override void PreStart()
             {
-                Timers.StartSingleTimer("BenchmarkTimeout", new Status.Failure(new Exception("Benchmark timed out")), TimeSpan.FromSeconds(60));
+                Timers.StartSingleTimer("BenchmarkTimeout", new Status.Failure(new Exception("Benchmark timed out")),
+                    TimeSpan.FromSeconds(60));
+                
+                Context.WatchWith(_echoServer, ServerDied.Instance);
             }
 
             public ITimerScheduler Timers { get; set; }
+            public IStash Stash { get; set; }
         }
-        
+
         private class Client : ReceiveActor, IWithTimers
         {
             private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -156,10 +254,13 @@ namespace Akka.Benchmarks
             private class RetryConnect
             {
                 public static RetryConnect Instance { get; } = new();
-                private RetryConnect(){}
+
+                private RetryConnect()
+                {
+                }
             }
 
-            public Client(DnsEndPoint endpoint, int messagesToSend, byte[] message)
+            public Client(EndPoint endpoint, int messagesToSend, byte[] message)
             {
                 DoConnect(endpoint);
                 Receive<Tcp.Connected>(_ =>
@@ -168,10 +269,7 @@ namespace Akka.Benchmarks
                     Sender.Tell(Tcp.Write.Create(ByteString.FromBytes(message)));
                     _connection = Sender;
                 });
-                Receive<RetryConnect>(_ =>
-                {
-                    DoConnect(endpoint);
-                });
+                Receive<RetryConnect>(_ => { DoConnect(endpoint); });
                 Receive<Tcp.CommandFailed>(f =>
                 {
                     if (f.Cause.HasValue)
@@ -182,7 +280,7 @@ namespace Akka.Benchmarks
                     {
                         _log.Error("Command [{0}] failed with error [{1}]", f.Cmd, f.CauseString);
                     }
-                    
+
                     Timers.StartSingleTimer("RetryConnect", RetryConnect.Instance, TimeSpan.FromMilliseconds(20));
                 });
                 Receive<Tcp.Received>(_ =>
@@ -197,27 +295,15 @@ namespace Akka.Benchmarks
                         _connection.Tell(Tcp.Write.Create(ByteString.FromBytes(message)));
                     }
                 });
-                Receive<Tcp.Closed>(_ =>
-                {
-                    Context.Parent.Tell(new ChildCommunicationFinished());
-                });
+                Receive<Tcp.Closed>(_ => { Context.Parent.Tell(new ChildCommunicationFinished()); });
             }
 
-            private static void DoConnect(DnsEndPoint endpoint)
+            private static void DoConnect(EndPoint endpoint)
             {
                 Context.System.Tcp().Tell(new Tcp.Connect(endpoint, timeout: TimeSpan.FromSeconds(5)));
             }
 
             public ITimerScheduler Timers { get; set; }
-        }
-        
-        private static int GetFreeTcpPort()
-        {
-            var l = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
-            l.Start();
-            var port = ((IPEndPoint)l.LocalEndpoint).Port;
-            l.Stop();
-            return port;
         }
     }
 }
