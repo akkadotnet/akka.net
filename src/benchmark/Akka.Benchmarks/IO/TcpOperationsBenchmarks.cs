@@ -6,20 +6,14 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using Akka.Event;
 using Akka.IO;
-using Akka.Streams.Dsl;
-using Akka.Util.Internal;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Engines;
 using Tcp = Akka.IO.Tcp;
 
 namespace Akka.Benchmarks
@@ -31,9 +25,8 @@ namespace Akka.Benchmarks
         private byte[] _message;
         private IActorRef _server;
         private IActorRef _clientCoordinator;
-
-        [Params(100, 1000, 10000)]
-        public int MessageCount { get; set; }
+        
+        public int MessageCount { get; } = 10_000;
 
         [Params(10, 100)]
         public int MessageLength { get; set; }
@@ -58,7 +51,7 @@ namespace Akka.Benchmarks
             _system.Dispose();
         }
 
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = 10_000)]
         public async Task ClientServerCommunication()
         {
             await _clientCoordinator.Ask<CommunicationFinished>(new CommunicationRequest(MessageCount, _message));

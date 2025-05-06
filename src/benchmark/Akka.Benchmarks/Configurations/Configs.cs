@@ -96,8 +96,8 @@ namespace Akka.Benchmarks.Configurations
             
             AddJob(Job.LongRun
                 .WithGcMode(new GcMode { Server = true, Concurrent = true })
-                .WithWarmupCount(25)
-                .WithIterationCount(50)
+                .WithWarmupCount(3) // Reduced from 25
+                .WithIterationCount(10) // Reduced from 50
                 .RunOncePerIteration()
                 .WithStrategy(RunStrategy.Monitoring)
                 // .WithAffinity(affinityMask) // Optional
