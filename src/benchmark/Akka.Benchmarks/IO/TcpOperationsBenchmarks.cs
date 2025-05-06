@@ -180,13 +180,15 @@ namespace Akka.Benchmarks
                     Stash!.UnstashAll();
                 });
                 
+                ServerDiedHandler();
+                
                 ReceiveAny(_ =>
                 {
                     // stash messages until we have the endpoint
                     Stash.Stash();
                 });
                 
-                ServerDiedHandler();
+                
             }
 
             private void ServerDiedHandler()
