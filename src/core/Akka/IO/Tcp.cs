@@ -36,7 +36,7 @@ namespace Akka.IO
             return PluginInstance.Apply(system).Manager;
         }
         
-        public static TcpExt For(ActorSystem system)
+        internal static TcpExt For(ActorSystem system)
         {
             return PluginInstance.Apply(system);
         }
