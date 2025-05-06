@@ -1,6 +1,43 @@
-#### 1.5.41 April 3rd, 2025 ####
+#### 1.5.41 May 6th, 2025 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.41 contains several bug fixes and also adds new quality of life features to Akka.TestKit and Akka.Streams.
+
+* [TestKit: Ensure that `EventFilter` respects `WithinAsync` timeout blocks](https://github.com/akkadotnet/akka.net/pull/7541)
+* [TestKit: Add support to XUnit 3 to Akka.TestKit.Xunit](https://github.com/akkadotnet/akka.net/issues/7603)
+* [TestKit: Improve `ExpectNextNAsync()` error message clarity](https://github.com/akkadotnet/akka.net/pull/7616)
+* [Remoting: Mark `IDaemonMsg` with public interface marker](https://github.com/akkadotnet/akka.net/pull/7596)
+* [Streams: Fix cancelled sinks are blocking other `BroadcastHub` consumers](https://github.com/akkadotnet/akka.net/pull/7615)
+* [Streams: Allow `GroupBy` to use infinite output sub-streams](https://github.com/akkadotnet/akka.net/pull/7607)
+* [Analyzers: Bump Akka.Analyzers from 0.3.1 to 0.3.2](https://github.com/akkadotnet/akka.net/pull/7609)
+
+**XUnit V3 Support**
+
+We've added XUnit v3 support to Akka.TestKit.Xunit, please use this package if you're planning on using and/or migrating to the latest XUnit 3 platform.
+
+Note that due to XUnit v3 limitation, please make sure that you're following these minimum requirements:
+* Use net472 and above if you're targeting .NET Framework.
+* Use net8.0 and above if you're targeting .NET Core.
+* Reference the `xunit.v3.*` packages v2.0.2 and above.
+* Reference the `xunit.runner.visualstudio` package v3.1.0 and above.
+
+**Akka.Streams `GroupBy` API improvement**
+
+`Akka.Streams` `GroupBy` stage can now, and now by default, create an unlimited number of sub-streams. Simply omit the `maxSubstreams` parameter or change the `maxSubstreams` parameter to a negative value to enable this feature.
+
+> [!NOTE]
+> 
+> This can cause memory leak issue if you design your stream to be long-running, and it is designed to generate/process a very large number of sub-streams.
+
+4 contributors since release 1.5.40
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 9       | 1757 | 1690 | Aaron Stannard      |
+| 6       | 1089 | 542  | Gregorius Soedharmo |
+| 1       | 3    | 16   | Simon Cropp         |
+| 1       | 10   | 2    | JuYoung Kim         |
+
+To [see the full set of changes in Akka.NET v1.5.40, click here](https://github.com/akkadotnet/akka.net/milestone/124?closed=1).
 
 #### 1.5.40 March 24th, 2025 ####
 
@@ -21,7 +58,7 @@
 | 28      | 1177 | 2458 | Aaron Stannard      |
 | 7       | 788  | 9534 | Gregorius Soedharmo |
 
-To [see the full set of changes in Akka.NET v1.5.40, click here](https://github.com/akkadotnet/akka.net/milestone/123).
+To [see the full set of changes in Akka.NET v1.5.40, click here](https://github.com/akkadotnet/akka.net/milestone/123?closed=1).
 
 #### 1.5.39 March 14th, 2025 ####
 
