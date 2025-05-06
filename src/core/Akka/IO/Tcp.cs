@@ -23,28 +23,19 @@ namespace Akka.IO
     /// <summary>
     /// The set of TCP capabilities for Akka.IO are exposed via this extension.
     /// </summary>
-    public class Tcp : ExtensionIdProvider<TcpExt>
+    public sealed class Tcp : ExtensionIdProvider<TcpExt>
     {
+        // TODO: refactor this in v1.6 to use a `.For` method with the correct ExtensionId provider setup
+        private static readonly Tcp PluginInstance = new();
+        
         /// <summary>
-        /// TBD
+        /// Fetches the TCP manager actor for the given actor system.
         /// </summary>
-        public static readonly Tcp Instance = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
         public static IActorRef Manager(ActorSystem system)
         {
-            return Instance.Apply(system).Manager;
+            return PluginInstance.Apply(system).Manager;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        
         public override TcpExt CreateExtension(ExtendedActorSystem system)
         {
             return new TcpExt(system);
@@ -82,32 +73,24 @@ namespace Akka.IO
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Akka.IO Tcp messages are all derived from this class.
         /// </summary>
         public class Message : INoSerializationVerificationNeeded { }
 
         #region user commands
 
         // COMMANDS
+        
         /// <summary>
-        /// TBD
+        /// All Akka.IO.Tcp commands inherit from this class.
         /// </summary>
         public abstract class Command : Message
         {
-            private readonly CommandFailed _failureMessage;
-
             /// <summary>
-            /// TBD
+            /// A predefined failure message which can be used to indicate that a command
+            /// failed during processing.
             /// </summary>
-            protected Command()
-            {
-                _failureMessage = new CommandFailed(this);
-            }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public CommandFailed FailureMessage => _failureMessage;
+            public CommandFailed FailureMessage => new CommandFailed(this);
         }
 
         /// <summary>
@@ -134,7 +117,7 @@ namespace Akka.IO
             {
                 RemoteAddress = remoteAddress;
                 LocalAddress = localAddress;
-                Options = options ?? Enumerable.Empty<Inet.SocketOption>();
+                Options = options ?? [];
                 Timeout = timeout;
                 PullMode = pullMode;
             }
@@ -191,7 +174,7 @@ namespace Akka.IO
                 Handler = handler;
                 LocalAddress = localAddress;
                 Backlog = backlog;
-                Options = options ?? Enumerable.Empty<Inet.SocketOption>();
+                Options = options ?? [];
                 PullMode = pullMode;
             }
 
@@ -526,63 +509,7 @@ namespace Akka.IO
                 return new Write(data, ack);
             }
         }
-
-        /*
-        /// <summary>
-        /// Write `count` bytes starting at `position` from file at `filePath` to the connection.
-        /// The count must be &gt; 0. The connection actor will reply with a <see cref="CommandFailed"/>
-        /// message if the write could not be enqueued. If <see cref="SimpleWriteCommand.WantsAck"/>
-        /// returns true, the connection actor will reply with the supplied <see cref="SimpleWriteCommand.Ack"/>
-        /// token once the write has been successfully enqueued to the O/S kernel.
-        /// <b>Note that this does not in any way guarantee that the data will be
-        /// or have been sent!</b> Unfortunately there is no way to determine whether
-        /// a particular write has been sent by the O/S.
-        /// </summary>
-        public class WriteFile : SimpleWriteCommand
-        {
-            private readonly Event _ack;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="filePath">TBD</param>
-            /// <param name="position">TBD</param>
-            /// <param name="count">TBD</param>
-            /// <param name="ack">TBD</param>
-            /// <exception cref="ArgumentException">TBD</exception>
-            public WriteFile(string filePath, long position, long count, Event ack)
-            {
-                if (position < 0) throw new ArgumentException("WriteFile.position must be >= 0", nameof(position));
-                if (count <= 0) throw new ArgumentException("WriteFile.count must be > 0", nameof(count));
-
-                _ack = ack;
-                FilePath = filePath;
-                Position = position;
-                Count = count;
-            }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public string FilePath { get; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public long Position { get; }
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public long Count { get; }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public override Event Ack => _ack;
-
-            public override string ToString() =>
-                $"WriteFile(path: {FilePath}, position: {Position}, count: {Count}, ack: {Ack})";
-        }
-        */
+        
         /// <summary>
         /// A write command which aggregates two other write commands. Using this construct
         /// you can chain a number of <see cref="Akka.IO.Tcp.Write" /> commands together in a way
@@ -750,18 +677,11 @@ namespace Akka.IO
         /// </summary>
         public sealed class Received : Event
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="data">TBD</param>
             public Received(ByteString data)
             {
                 Data = data;
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public ByteString Data { get; }
 
             public override string ToString() =>
@@ -776,11 +696,6 @@ namespace Akka.IO
         /// </summary>
         public sealed class Connected : Event
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="remoteAddress">TBD</param>
-            /// <param name="localAddress">TBD</param>
             public Connected(EndPoint remoteAddress, EndPoint localAddress)
             {
                 RemoteAddress = remoteAddress;
@@ -788,11 +703,12 @@ namespace Akka.IO
             }
 
             /// <summary>
-            /// TBD
+            /// The remote endpoint of the connection.
             /// </summary>
             public EndPoint RemoteAddress { get; }
+            
             /// <summary>
-            /// TBD
+            /// The local endpoint of the connection.
             /// </summary>
             public EndPoint LocalAddress { get; }
 
@@ -806,21 +722,25 @@ namespace Akka.IO
         /// </summary>
         public sealed class CommandFailed : Event
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="cmd">TBD</param>
-            public CommandFailed(Command cmd) => Cmd = cmd;
+            public CommandFailed(Command cmd, Option<Exception> ex)
+            {
+                Cmd = cmd;
+                Cause = ex;
+            }
+
+            public CommandFailed(Command cmd) : this(cmd, Option<Exception>.None)
+            {
+            }
 
             /// <summary>
-            /// TBD
+            /// The original command which failed.
             /// </summary>
             public Command Cmd { get; }
 
             /// <summary>
             /// Optionally contains the cause why the command failed.
             /// </summary>
-            public Option<Exception> Cause { get; private set; } = Option<Exception>.None;
+            public Option<Exception> Cause { get; private set; }
 
             /// <summary>
             /// Creates a copy of this object with a new cause set.
@@ -847,9 +767,6 @@ namespace Akka.IO
         /// </summary>
         public class WritingResumed : Event
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static readonly WritingResumed Instance = new();
 
             private WritingResumed()
@@ -905,29 +822,29 @@ namespace Akka.IO
         public class ConnectionClosed : Event, IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Was the connection closed normally?
             /// </summary>
             public virtual bool IsAborted => false;
 
             /// <summary>
-            /// TBD
+            /// Can we confirm that the connection was open in the first place?
             /// </summary>
             public virtual bool IsConfirmed => false;
 
             /// <summary>
-            /// TBD
+            /// Is our remote peer closed too?
             /// </summary>
             public virtual bool IsPeerClosed => false;
 
             /// <summary>
-            /// TBD
+            /// Did the connection close due to an IO error?
             /// </summary>
             public virtual bool IsErrorClosed => false;
 
             /// <summary>
-            /// TBD
+            /// Was there a given cause for why the connection was closed?
             /// </summary>
-            public virtual string Cause => null;
+            public virtual string? Cause => null;
         }
 
         /// <summary>
@@ -935,9 +852,6 @@ namespace Akka.IO
         /// </summary>
         public class Closed : ConnectionClosed
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static readonly Closed Instance = new();
 
             private Closed()
@@ -950,18 +864,12 @@ namespace Akka.IO
         /// </summary>
         public class Aborted : ConnectionClosed
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static readonly Aborted Instance = new();
 
             private Aborted()
             {
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public override bool IsAborted => true;
         }
 
@@ -971,18 +879,12 @@ namespace Akka.IO
         /// </summary>
         public class ConfirmedClosed : ConnectionClosed
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static readonly ConfirmedClosed Instance = new();
 
             private ConfirmedClosed()
             {
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public override bool IsConfirmed => true;
         }
 
@@ -991,18 +893,12 @@ namespace Akka.IO
         /// </summary>
         public class PeerClosed : ConnectionClosed
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public static readonly PeerClosed Instance = new();
 
             private PeerClosed()
             {
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public override bool IsPeerClosed => true;
         }
 
@@ -1011,25 +907,14 @@ namespace Akka.IO
         /// </summary>
         public sealed class ErrorClosed : ConnectionClosed
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="cause">TBD</param>
             public ErrorClosed(string cause)
             {
                 Cause = cause;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
             public override bool IsErrorClosed => true;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <returns>TBD</returns>
-            public override string Cause { get; }
+            
+            public override string? Cause { get; }
 
             public override string ToString() =>
                 $"ErrorClosed('{Cause}')";
@@ -1061,7 +946,7 @@ namespace Akka.IO
     }
 
     /// <summary>
-    /// TBD
+    /// Akka.IO TCP extension - provides an actor-based API for TCP socket communication.
     /// </summary>
     public sealed class TcpExt : IOExtension
     {
@@ -1093,7 +978,7 @@ namespace Akka.IO
         public IBufferPool BufferPool { get; }
 
         /// <summary>
-        /// TBD
+        /// The settings used by this extension.
         /// </summary>
         public TcpSettings Settings { get; }
 
@@ -1126,21 +1011,20 @@ namespace Akka.IO
     }
 
     /// <summary>
-    /// TBD
+    /// Helpers for generating TCP messages.
     /// </summary>
-    public class TcpMessage
+    public static class TcpMessage
     {
         /// <summary>
-        /// TBD
+        /// Connect to a remote TCP endpoint.
         /// </summary>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="options">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="pullMode">TDB</param>
-        /// <returns>TBD</returns>
+        /// <param name="remoteAddress">The remote endpoint</param>
+        /// <param name="localAddress">An optional local endpoint address to bind to. Most users don't specify this.</param>
+        /// <param name="options">A set of socket options.</param>
+        /// <param name="timeout">An optional connect timeout. Will result in a <see cref="Tcp.CommandFailed"/> message being returned if we exceed this value.</param>
+        /// <param name="pullMode">Specifies whether we're running in "pull mode" or not.</param>
         public static Tcp.Command Connect(EndPoint remoteAddress,
-            EndPoint localAddress,
+            EndPoint? localAddress,
             IEnumerable<Inet.SocketOption> options,
             TimeSpan? timeout,
             bool pullMode)
@@ -1149,24 +1033,22 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Connect to a remote TCP endpoint.
         /// </summary>
-        /// <param name="remoteAddress">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="remoteAddress">The remote endpoint</param>
         public static Tcp.Command Connect(EndPoint remoteAddress)
         {
-            return Connect(remoteAddress, null, null, null, false);
+            return Connect(remoteAddress, null, [], null, false);
         }
 
         /// <summary>
-        /// TBD
+        /// Bind a TCP listener to a local endpoint.
         /// </summary>
-        /// <param name="handler">TBD</param>
-        /// <param name="endpoint">TBD</param>
-        /// <param name="backlog">TBD</param>
-        /// <param name="options">TBD</param>
-        /// <param name="pullMode">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="handler">The actor who will be handling the TCP listener.</param>
+        /// <param name="endpoint">The local endpoint we are binding to.</param>
+        /// <param name="backlog">TCP backlog - the number of pending connections that the queue will hold.</param>
+        /// <param name="options">A set of socket options.</param>
+        /// <param name="pullMode">Specifies whether we're running in "pull mode" or not for all subsequent client connections.</param>
         public static Tcp.Command Bind(IActorRef handler,
             EndPoint endpoint,
             int backlog,
@@ -1177,24 +1059,22 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Bind a TCP listener to a local endpoint.
         /// </summary>
-        /// <param name="handler">TBD</param>
-        /// <param name="endpoint">TBD</param>
-        /// <param name="backlog">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="handler">The actor who will be handling the TCP listener.</param>
+        /// <param name="endpoint">The local endpoint we are binding to.</param>
+        /// <param name="backlog">TCP backlog - the number of pending connections that the queue will hold.</param>
         public static Tcp.Command Bind(IActorRef handler, EndPoint endpoint, int backlog)
         {
             return new Tcp.Bind(handler, endpoint, backlog);
         }
 
         /// <summary>
-        /// TBD
+        /// Registers an actor to handle an outgoing or incoming TCP connection that has been established.
         /// </summary>
-        /// <param name="handler">TBD</param>
+        /// <param name="handler">The actor who will be handling the TCP communication.</param>
         /// <param name="keepOpenOnPeerClosed">TBD</param>
         /// <param name="useResumeWriting">TBD</param>
-        /// <returns>TBD</returns>
         public static Tcp.Command Register(IActorRef handler, bool keepOpenOnPeerClosed = false,
             bool useResumeWriting = true)
         {
@@ -1202,36 +1082,32 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Unbinds a previously bound TCP listener.
         /// </summary>
-        /// <returns>TBD</returns>
         public static Tcp.Command Unbind()
         {
             return Tcp.Unbind.Instance;
         }
 
         /// <summary>
-        /// TBD
+        /// Closes an open TCP connection.
         /// </summary>
-        /// <returns>TBD</returns>
         public static Tcp.Command Close()
         {
             return Tcp.Close.Instance;
         }
 
         /// <summary>
-        /// TBD
+        /// Closes a confirmed-to-have-been-previously-running TCP connection.
         /// </summary>
-        /// <returns>TBD</returns>
         public static Tcp.Command ConfirmedClose()
         {
             return Tcp.ConfirmedClose.Instance;
         }
 
         /// <summary>
-        /// TBD
+        /// Aborts a TCP connection without flushing pending writes.
         /// </summary>
-        /// <returns>TBD</returns>
         public static Tcp.Command Abort()
         {
             return Tcp.Abort.Instance;
@@ -1297,15 +1173,14 @@ namespace Akka.IO
     }
 
     /// <summary>
-    /// TBD
+    /// Convenience methods for using the Akka.IO.Tcp extension.
     /// </summary>
     public static class TcpExtensions
     {
         /// <summary>
-        /// TBD
+        /// Returns the <see cref="ActorSystem"/>-specific <see cref="Tcp"/> instance for TCP connectivity.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The current actor system.</param>
         public static IActorRef Tcp(this ActorSystem system)
         {
             return IO.Tcp.Manager(system);

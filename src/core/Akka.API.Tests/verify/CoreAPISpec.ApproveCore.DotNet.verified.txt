@@ -3977,10 +3977,9 @@ namespace Akka.IO
         protected override void PostStop() { }
         protected override bool Receive(object message) { }
     }
-    public class Tcp : Akka.Actor.ExtensionIdProvider<Akka.IO.TcpExt>
+    public sealed class Tcp : Akka.Actor.ExtensionIdProvider<Akka.IO.TcpExt>
     {
         public static readonly Akka.Actor.SupervisorStrategy ConnectionSupervisorStrategy;
-        public static readonly Akka.IO.Tcp Instance;
         public Tcp() { }
         public override Akka.IO.TcpExt CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
         public static Akka.Actor.IActorRef Manager(Akka.Actor.ActorSystem system) { }
@@ -4031,6 +4030,7 @@ namespace Akka.IO
         }
         public sealed class CommandFailed : Akka.IO.Tcp.Event
         {
+            public CommandFailed(Akka.IO.Tcp.Command cmd, Akka.Util.Option<System.Exception> ex) { }
             public CommandFailed(Akka.IO.Tcp.Command cmd) { }
             public Akka.Util.Option<System.Exception> Cause { get; }
             [Akka.Annotations.InternalApiAttribute()]
@@ -4078,6 +4078,7 @@ namespace Akka.IO
         public class ConnectionClosed : Akka.IO.Tcp.Event, Akka.Event.IDeadLetterSuppression
         {
             public ConnectionClosed() { }
+            [System.Runtime.CompilerServices.NullableAttribute(2)]
             public virtual string Cause { get; }
             public virtual bool IsAborted { get; }
             public virtual bool IsConfirmed { get; }
@@ -4087,6 +4088,7 @@ namespace Akka.IO
         public sealed class ErrorClosed : Akka.IO.Tcp.ConnectionClosed
         {
             public ErrorClosed(string cause) { }
+            [System.Runtime.CompilerServices.NullableAttribute(2)]
             public override string Cause { get; }
             public override bool IsErrorClosed { get; }
             public override string ToString() { }
@@ -4191,15 +4193,14 @@ namespace Akka.IO
     {
         public static Akka.Actor.IActorRef Tcp(this Akka.Actor.ActorSystem system) { }
     }
-    public class TcpMessage
+    public class static TcpMessage
     {
-        public TcpMessage() { }
         public static Akka.IO.Tcp.Command Abort() { }
         public static Akka.IO.Tcp.Command Bind(Akka.Actor.IActorRef handler, System.Net.EndPoint endpoint, int backlog, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options, bool pullMode) { }
         public static Akka.IO.Tcp.Command Bind(Akka.Actor.IActorRef handler, System.Net.EndPoint endpoint, int backlog) { }
         public static Akka.IO.Tcp.Command Close() { }
         public static Akka.IO.Tcp.Command ConfirmedClose() { }
-        public static Akka.IO.Tcp.Command Connect(System.Net.EndPoint remoteAddress, System.Net.EndPoint localAddress, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options, System.Nullable<System.TimeSpan> timeout, bool pullMode) { }
+        public static Akka.IO.Tcp.Command Connect(System.Net.EndPoint remoteAddress, [System.Runtime.CompilerServices.NullableAttribute(2)] System.Net.EndPoint localAddress, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options, System.Nullable<System.TimeSpan> timeout, bool pullMode) { }
         public static Akka.IO.Tcp.Command Connect(System.Net.EndPoint remoteAddress) { }
         public static Akka.IO.Tcp.NoAck NoAck(object token = null) { }
         public static Akka.IO.Tcp.Command Register(Akka.Actor.IActorRef handler, bool keepOpenOnPeerClosed = False, bool useResumeWriting = True) { }
