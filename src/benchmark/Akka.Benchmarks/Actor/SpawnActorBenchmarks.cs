@@ -10,12 +10,11 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Engines;
+using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks.Actor
 {
-    [Config(typeof(MicroBenchmarkConfig))]
-    [SimpleJob(RunStrategy.Throughput, warmupCount:5)]
+    [Config(typeof(MacroBenchmarkConfig))]
     public class SpawnActorBenchmarks
     {
         [Params(100_000)]
@@ -24,27 +23,28 @@ namespace Akka.Benchmarks.Actor
         [Params(true, false)]
         public bool EnableTelemetry { get; set; }
         
-        private ActorSystem system;
+        private ActorSystem _system;
 
         [IterationSetup]
         public void Setup()
         {
             if(EnableTelemetry) // need to measure the impact of publishing actor start / stop events
-                system = ActorSystem.Create("system", "akka.actor.telemetry.enabled = true");
+                _system = ActorSystem.Create("system", "akka.actor.telemetry.enabled = true");
             else
-                system = ActorSystem.Create("system");
+                _system = ActorSystem.Create("system");
         }
 
         [IterationCleanup]
         public void Cleanup()
         {
-           system.Terminate().Wait();
+           _system.Terminate().Wait();
         }
 
         [Benchmark]
+        [BenchmarkCategory(MacroBenchmark, ActorSpawningBenchmark)]
         public async Task Actor_spawn()
         {
-            var parent = system.ActorOf(Parent.Props);
+            var parent = _system.ActorOf(Parent.Props);
             
             // spawn a bunch of actors
             await parent.Ask<TestDone>(new StartTest(ActorCount), TimeSpan.FromMinutes(2)).ConfigureAwait(false);

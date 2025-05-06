@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
+using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks.Actor
 {
@@ -37,36 +38,42 @@ namespace Akka.Benchmarks.Actor
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public ActorPath ActorPath_Parse()
         {
             return ActorPath.Parse(_actorPathStr);
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public ActorPath ActorPath_Concat()
         {
             return x / "parent" / "child";
         }
         
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public bool ActorPath_Equals()
         {
             return x == y;
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public string ActorPath_ToString()
         {
             return _childPath.ToString();
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public string ActorPath_ToSerializationFormat()
         {
             return _childPath.ToSerializationFormat();
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public string ActorPath_ToSerializationFormatWithAddress()
         {
             return _childPath.ToSerializationFormatWithAddress(_otherAdr);

@@ -8,16 +8,16 @@
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
+using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks.EventStream
 {
     [Config(typeof(MicroBenchmarkConfig))]
     public class EventStreamBenchmarks
     {
-                
-        public const int NumOperations = 1_000_000;
-        
-        internal sealed class FakeActor : MinimalActorRef
+        private const int NumOperations = 1_000_000;
+
+        private sealed class FakeActor : MinimalActorRef
         {
             public override ActorPath Path { get; } = new RootActorPath(new Address("akka", "test")) / "fake";
             public override IActorRefProvider Provider => throw new System.NotImplementedException();
@@ -33,7 +33,7 @@ namespace Akka.Benchmarks.EventStream
         private FakeActor _fakeActor;
         private Akka.Event.EventStream _eventStream;
 
-        private const string _msg = "foo";
+        private const string Msg = "foo";
 
         
         [IterationSetup]
@@ -45,11 +45,12 @@ namespace Akka.Benchmarks.EventStream
         }
         
         [Benchmark(OperationsPerInvoke = NumOperations)]
+        [BenchmarkCategory(MicroBenchmark, AkkaEventBenchmark)]
         public object Publish()
         {
             for (var i = 0; i < NumOperations; i++)
             {
-                _eventStream.Publish(_msg);
+                _eventStream.Publish(Msg);
             }
             return _fakeActor.LastMessage;
         }
