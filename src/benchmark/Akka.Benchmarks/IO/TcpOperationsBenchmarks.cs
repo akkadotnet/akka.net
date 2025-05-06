@@ -107,6 +107,23 @@ namespace Akka.Benchmarks
                     Stash!.UnstashAll();
                 });
                 
+                Receive<Tcp.CommandFailed>(f =>
+                {
+                    // log a detailed error
+                    if (f.Cause.HasValue)
+                    {
+                        Context.System.Log.Error(f.Cause.Value, "Command [{0}] failed with error [{1}]", f.Cmd,
+                            f.CauseString);
+                    }
+                    else
+                    {
+                        Context.System.Log.Error("Command [{0}] failed with error [{1}]", f.Cmd, f.CauseString);
+                    }
+
+                    // blow up the benchmark
+                    Context.Stop(Self);
+                });
+                
                 ReceiveAny(_ => Stash.Stash());
             }
 
