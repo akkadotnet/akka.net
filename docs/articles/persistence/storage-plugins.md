@@ -39,10 +39,10 @@ akka {
 
 ### Controlling Journal or Snapshot Crash Behavior
 
-By default the base implementations upon which all journal or snapshot-store implementations are build upon provides out of the box behavior for dealing with errors that occur during the writing or reading of data from the underlying store. Errors that occur will be communicated with the persistentactor that is using them at that time.
-So in general once started succesfully the journal or snapshot-store will be ready and available for the duration of your application, and wont crash. However in the case they do crash, due to unforseen circumstances the default behavior is to immediatly restart them. This is generally the behavior you want.
+By default the base implementations upon which all journal or snapshot-store implementations are build upon provides out of the box behavior for dealing with errors that occur during the writing or reading of data from the underlying store. Errors that occur will be communicated with the persistent actor that is using them at that time.
+So in general once started successfully the journal or snapshot-store will be ready and available for the duration of your application, and won't crash. However in the case they do crash, due to unforeseen circumstances the default behavior is to immediately restart them. This is generally the behavior you want.
 But in case you do want to customize how the system handles the crashing of the journal or snapshot-store. You can specify your own supervision strategy using the `supervisor-strategy` property.
-This class needs to inherit from `Akka.Actor.SupervisorStrategyConfigurator` and have a parameterless constructor.
+This class needs to inherit from `Akka.Actor.SupervisorStrategyConfigurator` and have a parameter-less constructor.
 Configuration example:
 
 ```hocon
@@ -62,7 +62,7 @@ akka {
 }
 ```
 
-One such case could be to detect and handle misconfigured application settings during startup. For example if your using a SQL based journal and you misconfigured the connectionstring you might opt to return a supervisionstrategy that detects certain network connection errors, and after a few retries signals your application to shutdown instead of continue running with a journal or snapshot-store that in all likelyhood will never be able to recover, forever stuck in a restart loop while your application is running.
+One such case could be to detect and handle misconfigured application settings during startup. For example if your using a SQL based journal and you misconfigured the connection string you might opt to return a supervision strategy that detects certain network connection errors, and after a few retries signals your application to shutdown instead of continue running with a journal or snapshot-store that in all likelihood will never be able to recover, forever stuck in a restart loop while your application is running.
 
 An example of what this could look like is this:
 
