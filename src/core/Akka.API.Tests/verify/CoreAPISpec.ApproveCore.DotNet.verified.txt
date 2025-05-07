@@ -4085,6 +4085,7 @@ namespace Akka.IO
             public virtual bool IsErrorClosed { get; }
             public virtual bool IsPeerClosed { get; }
         }
+        [System.Runtime.CompilerServices.NullableAttribute(0)]
         public sealed class ErrorClosed : Akka.IO.Tcp.ConnectionClosed
         {
             public ErrorClosed(string cause) { }
