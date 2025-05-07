@@ -156,12 +156,12 @@ namespace Akka.IO
             /// </summary>
             /// <param name="handler">The actor who will be handling the TCP listener.</param>
             /// <param name="localAddress">The local endpoint we are binding to.</param>
-            /// <param name="backlog">TCP backlog - the number of pending connections that the queue will hold.</param>
+            /// <param name="backlog">TCP backlog - the number of pending connections that the queue will hold. Defaults to 1024.</param>
             /// <param name="options">A set of socket options.</param>
             /// <param name="pullMode">Specifies whether we're running in "pull mode" or not.</param>
             public Bind(IActorRef handler,
                 EndPoint localAddress,
-                int backlog = 100,
+                int backlog = 1024,
                 IEnumerable<Inet.SocketOption> options = null,
                 bool pullMode = false)
             {

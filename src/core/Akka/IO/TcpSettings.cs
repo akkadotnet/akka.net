@@ -75,7 +75,7 @@ namespace Akka.IO
             BufferPoolConfigPath = bufferPoolConfigPath;
             InitialSocketAsyncEventArgs = initialSocketAsyncEventArgs;
             TraceLogging = traceLogging;
-            BatchAcceptLimit = batchAcceptLimit;
+            // BatchAcceptLimit = batchAcceptLimit; // not used, remove this setting in v1.6
             RegisterTimeout = registerTimeout;
             ReceivedMessageSizeLimit = receivedMessageSizeLimit;
             ManagementDispatcher = managementDispatcher;
@@ -111,6 +111,7 @@ namespace Akka.IO
         /// numbers decrease latency, lower numbers increase fairness on the 
         /// worker-dispatcher
         /// </summary>
+        [Obsolete("This setting is deprecated and will be removed in a future version.")]
         public int BatchAcceptLimit { get; }
         
         /// <summary>

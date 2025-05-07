@@ -3985,7 +3985,7 @@ namespace Akka.IO
         }
         public class Bind : Akka.IO.Tcp.Command
         {
-            public Bind(Akka.Actor.IActorRef handler, System.Net.EndPoint localAddress, int backlog = 100, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options = null, bool pullMode = False) { }
+            public Bind(Akka.Actor.IActorRef handler, System.Net.EndPoint localAddress, int backlog = 1024, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options = null, bool pullMode = False) { }
             public int Backlog { get; }
             public Akka.Actor.IActorRef Handler { get; }
             public System.Net.EndPoint LocalAddress { get; }
@@ -4204,6 +4204,7 @@ namespace Akka.IO
     public class TcpSettings
     {
         public TcpSettings(string bufferPoolConfigPath, int initialSocketAsyncEventArgs, bool traceLogging, int batchAcceptLimit, System.Nullable<System.TimeSpan> registerTimeout, int receivedMessageSizeLimit, string managementDispatcher, string fileIoDispatcher, int transferToLimit, int finishConnectRetries, bool outgoingSocketForceIpv4, int writeCommandsQueueMaxSize) { }
+        [System.ObsoleteAttribute("This setting is deprecated and will be removed in a future version.")]
         public int BatchAcceptLimit { get; }
         public string BufferPoolConfigPath { get; }
         public string FileIODispatcher { get; }
