@@ -640,7 +640,7 @@ namespace Akka.IO
             /// <summary>
             /// Optionally contains the cause why the command failed.
             /// </summary>
-            public Option<Exception> Cause { get; private set; }
+            public Option<Exception> Cause { get; }
 
             /// <summary>
             /// Creates a copy of this object with a new cause set.
@@ -649,11 +649,11 @@ namespace Akka.IO
             public CommandFailed WithCause(Exception cause)
             {
                 // Needs to be added with a mutable property for compatibility reasons
-                return new CommandFailed(Cmd) { Cause = cause };
+                return new CommandFailed(Cmd, cause);
             }
 
             [InternalApi]
-            public string CauseString => Cause.HasValue ? $" because of {Cause.Value.Message}" : "";
+            public string CauseString => Cause.HasValue ? $" because of {Cause.Value.Message}" : string.Empty;
 
             public override string ToString() => $"CommandFailed({Cmd}){CauseString}";
         }
@@ -807,7 +807,7 @@ namespace Akka.IO
         /// </summary>
         public sealed class ErrorClosed : ConnectionClosed
         {
-            public ErrorClosed(string cause)
+            public ErrorClosed(string? cause)
             {
                 Cause = cause;
             }

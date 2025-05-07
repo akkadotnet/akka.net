@@ -4085,10 +4085,10 @@ namespace Akka.IO
             public virtual bool IsErrorClosed { get; }
             public virtual bool IsPeerClosed { get; }
         }
+        [System.Runtime.CompilerServices.NullableAttribute(0)]
         public sealed class ErrorClosed : Akka.IO.Tcp.ConnectionClosed
         {
             public ErrorClosed(string cause) { }
-            [System.Runtime.CompilerServices.NullableAttribute(2)]
             public override string Cause { get; }
             public override bool IsErrorClosed { get; }
             public override string ToString() { }
