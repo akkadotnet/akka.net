@@ -91,11 +91,19 @@ namespace Akka.Streams.TestKit
                 CancellationToken cancellationToken)
             {
                 var list = all.ToList();
+                int index = 0;
                 foreach (var x in list)
+                {
                     await probe.ExpectMsgAsync<OnNext<T>>(
-                        assert: y => AssertEquals(y.Element, x, "Expected one of ({0}), but got '{1}'", string.Join(", ", list), y.Element), 
-                        timeout: timeout, 
+                        assert: y => AssertEquals(
+                            y.Element,
+                            x,
+                            "Expected element at index {0} to be '{1}', but got '{2}'",
+                            index, x, y.Element),
+                        timeout: timeout,
                         cancellationToken: cancellationToken);
+                    index++;
+                }
             }
 
             internal static async Task ExpectNextUnorderedNTask(

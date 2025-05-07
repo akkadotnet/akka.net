@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
+using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks.Actor
 {
@@ -42,6 +43,7 @@ namespace Akka.Benchmarks.Actor
         }
 
         [Benchmark]
+        [BenchmarkCategory(ActorSpawningBenchmark, MicroBenchmark)]
         public void SpawnActor()
         {
             for(var i = 0; i < SpawnCount; i++)

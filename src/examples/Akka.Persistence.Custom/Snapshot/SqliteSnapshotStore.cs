@@ -315,7 +315,7 @@ namespace Akka.Persistence.Custom.Snapshot
                     : (DateTime?)null;
                 
                 var sql = timestamp.HasValue
-                    ? DeleteSnapshotRangeSql + " AND { Configuration.TimestampColumnName} = @Timestamp"
+                    ? DeleteSnapshotRangeSql + " AND timestamp = @Timestamp"
                     : DeleteSnapshotSql;
 
                 // Create new DbCommand instance

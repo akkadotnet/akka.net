@@ -1215,12 +1215,51 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">TBD</typeparam>
         /// <typeparam name="TKey">TBD</typeparam>
         /// <param name="flow">TBD</param>
-        /// <param name="maxSubstreams">TBD</param>
-        /// <param name="groupingFunc">TBD</param>
+        /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails. Set to -1 for infinite substreams.</param>
+        /// <param name="groupingFunc">Computes the key for each element</param>
         /// <returns>TBD</returns>
         public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> GroupBy<TOut, TMat, TKey>(this Source<TOut, TMat> flow, int maxSubstreams, Func<TOut, TKey> groupingFunc)
         {
             return flow.GroupBy(maxSubstreams, groupingFunc, (f, s) => ((Source<Source<TOut, NotUsed>, TMat>)f).To(s));
+        }
+
+        /// <summary>
+        /// This operation demultiplexes the incoming stream into separate output
+        /// streams, one for each element key. The key is computed for each element
+        /// using the given function. When a new key is encountered for the first time
+        /// it is emitted to the downstream subscriber together with a fresh
+        /// flow that will eventually produce all the elements of the substream
+        /// for that key. Not consuming the elements from the created streams will
+        /// stop this processor from processing more elements, therefore you must take
+        /// care to unblock (or cancel) all of the produced streams even if you want
+        /// to consume only one of them.
+        /// 
+        /// If the group by function <paramref name="groupingFunc"/> throws an exception and the supervision decision
+        /// is <see cref="Supervision.Directive.Stop"/> the stream and substreams will be completed
+        /// with failure.
+        /// 
+        /// If the group by <paramref name="groupingFunc"/> throws an exception and the supervision decision
+        /// is <see cref="Supervision.Directive.Resume"/> or <see cref="Supervision.Directive.Restart"/>
+        /// the element is dropped and the stream and substreams continue.
+        /// <para>
+        /// Emits when an element for which the grouping function returns a group that has not yet been created.
+        /// Emits the new group
+        /// </para>
+        /// Backpressures when there is an element pending for a group whose substream backpressures
+        /// <para>
+        /// Completes when upstream completes
+        /// </para>
+        /// Cancels when downstream cancels and all substreams cancel
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TKey">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="groupingFunc">Computes the key for each element</param>
+        /// <returns>TBD</returns>
+        public static SubFlow<TOut, TMat, IRunnableGraph<TMat>> GroupBy<TOut, TMat, TKey>(this Source<TOut, TMat> flow, Func<TOut, TKey> groupingFunc)
+        {
+            return flow.GroupBy(-1, groupingFunc, (f, s) => ((Source<Source<TOut, NotUsed>, TMat>)f).To(s));
         }
 
         /// <summary>

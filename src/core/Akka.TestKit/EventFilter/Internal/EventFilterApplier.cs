@@ -24,25 +24,14 @@ namespace Akka.TestKit.Internal
         private readonly IReadOnlyList<EventFilterBase> _filters;
         private readonly TestKitBase _testkit;
         private readonly ActorSystem _actorSystem;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="testkit">TBD</param>
-        /// <param name="system">TBD</param>
-        /// <param name="filters">TBD</param>
+        
         public InternalEventFilterApplier(TestKitBase testkit, ActorSystem system, IReadOnlyList<EventFilterBase> filters)
         {
             _filters = filters;
             _testkit = testkit;
             _actorSystem = system;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="action">TBD</param>
-        /// <param name="cancellationToken"></param>
+        
         public void ExpectOne(Action action, CancellationToken cancellationToken = default)
         {
             ExpectOneAsync(() => { action(); return Task.CompletedTask; }, cancellationToken)
@@ -73,8 +62,6 @@ namespace Akka.TestKit.Internal
         /// <summary>
         /// Async version of <see cref="ExpectOne(System.Action, CancellationToken)"/>
         /// </summary>
-        /// <param name="action"></param>
-        /// <param name="cancellationToken"></param>
         public async Task ExpectOneAsync(Func<Task> action, CancellationToken cancellationToken = default)
         {
             await InternalExpectAsync(
@@ -85,13 +72,7 @@ namespace Akka.TestKit.Internal
                     cancellationToken: cancellationToken)
                 ;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="timeout">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="cancellationToken"></param>
+        
         public void ExpectOne(
             TimeSpan timeout,
             Action action,
@@ -104,7 +85,6 @@ namespace Akka.TestKit.Internal
         /// <summary>
         /// Async version of <see cref="ExpectOne(System.TimeSpan,System.Action,CancellationToken) "/>
         /// </summary>
-        /// <returns></returns>
         public async Task ExpectOneAsync(
             TimeSpan timeout,
             Func<Task> action,
@@ -118,13 +98,7 @@ namespace Akka.TestKit.Internal
                     cancellationToken: cancellationToken)
                 ;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="expectedCount">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="cancellationToken"></param>
+        
         public void Expect(
             int expectedCount,
             Action action,
@@ -166,14 +140,7 @@ namespace Akka.TestKit.Internal
                     cancellationToken: cancellationToken)
                 ;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="expectedCount">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="cancellationToken"></param>
+        
         public void Expect(
             int expectedCount,
             TimeSpan timeout,
@@ -204,22 +171,16 @@ namespace Akka.TestKit.Internal
 
         public async Task ExpectAsync(int expectedCount, TimeSpan timeout, Action action, CancellationToken cancellationToken = default)
         {
+            await ExpectAsync(expectedCount, timeout, Wrapped, cancellationToken);
+            return;
+
             Task Wrapped()
             {
                 action();
                 return Task.CompletedTask;
             }
-
-            await ExpectAsync(expectedCount, timeout, Wrapped, cancellationToken);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="func">TBD</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        
         public T ExpectOne<T>(Func<T> func, CancellationToken cancellationToken = default)
         {
             return ExpectOneAsync(() => Task.FromResult(func()), cancellationToken)
@@ -240,15 +201,7 @@ namespace Akka.TestKit.Internal
                     expectedOccurrences: 1,
                     cancellationToken: cancellationToken);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="timeout">TBD</param>
-        /// <param name="func">TBD</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        
         public T ExpectOne<T>(
             TimeSpan timeout,
             Func<T> func,
@@ -274,15 +227,7 @@ namespace Akka.TestKit.Internal
                     matchedEventHandler: null,
                     cancellationToken: cancellationToken);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="expectedCount">TBD</param>
-        /// <param name="func">TBD</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        
         public T Expect<T>(
             int expectedCount,
             Func<T> func,
@@ -308,16 +253,7 @@ namespace Akka.TestKit.Internal
                     matchedEventHandler: null,
                     cancellationToken: cancellationToken);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="timeout">TBD</param>
-        /// <param name="expectedCount">TBD</param>
-        /// <param name="func">TBD</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        
         public T Expect<T>(
             int expectedCount,
             TimeSpan timeout,
@@ -346,14 +282,7 @@ namespace Akka.TestKit.Internal
                     matchedEventHandler: null,
                     cancellationToken: cancellationToken);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="func">TBD</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        
         public T Mute<T>(Func<T> func, CancellationToken cancellationToken = default)
         {
             return MuteAsync(() => Task.FromResult(func()), cancellationToken)
@@ -373,12 +302,7 @@ namespace Akka.TestKit.Internal
                     matchedEventHandler: null,
                     cancellationToken: cancellationToken);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="action">TBD</param>
-        /// <param name="cancellationToken"></param>
+        
         public void Mute(Action action, CancellationToken cancellationToken = default)
         {
             MuteAsync(() => { action(); return Task.CompletedTask; }, cancellationToken)
@@ -406,28 +330,22 @@ namespace Akka.TestKit.Internal
 
         public async Task MuteAsync(Action action, CancellationToken cancellationToken = default)
         {
+            await MuteAsync(Wrapped, cancellationToken);
+            return;
+
             Task Wrapped()
             {
                 action();
                 return Task.CompletedTask;
             }
-
-            await MuteAsync(Wrapped, cancellationToken);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         public IUnmutableFilter Mute()
         {
             _actorSystem.EventStream.Publish(new Mute(_filters));
             return new InternalUnmutableFilter(_filters, _actorSystem);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public EventFilterFactory And
         {
             get
@@ -435,18 +353,7 @@ namespace Akka.TestKit.Internal
                 return new EventFilterFactory(_testkit, _actorSystem, _filters);
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="func">TBD</param>
-        /// <param name="system">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="expectedOccurrences">TBD</param>
-        /// <param name="matchedEventHandler">TBD</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        
         protected T Intercept<T>(
             Func<T> func,
             ActorSystem system,
@@ -479,8 +386,22 @@ namespace Akka.TestKit.Internal
             var leeway = system.HasExtension<TestKitSettings>()
                 ? TestKitExtension.For(system).TestEventFilterLeeway
                 : _testkit.TestKitSettings.TestEventFilterLeeway;
-
-            var timeoutValue = timeout.HasValue ? _testkit.Dilated(timeout.Value) : leeway;
+            
+            // Calculate timeout - if an explicit timeout is provided, use that (after dilating)
+            // Otherwise, if we're in a WithinAsync block use its remaining time
+            // NOTE: the leeway value is really supposed to be the WithinAsync block's epsilon value
+            // But the design of the testkit doesn't make it feasible to pass that value back currently
+            TimeSpan timeoutValue;
+            if (timeout.HasValue)
+            {
+                timeoutValue = _testkit.Dilated(timeout.Value);
+            }
+            else
+            {
+                timeoutValue = _testkit.RemainingOrDefault;
+            }
+   
+            
             matchedEventHandler ??= new MatchedEventHandler();
             system.EventStream.Publish(new Mute(_filters));
             try
@@ -531,15 +452,7 @@ namespace Akka.TestKit.Internal
                 system.EventStream.Publish(new Unmute(_filters));
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="timeout">TBD</param>
-        /// <param name="expectedOccurrences">TBD</param>
-        /// <param name="matchedEventHandler">TBD</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>TBD</returns>
+        
         protected bool AwaitDone(
             TimeSpan timeout,
             int? expectedOccurrences,
@@ -576,12 +489,7 @@ namespace Akka.TestKit.Internal
             }
             return true;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="number">TBD</param>
-        /// <returns>TBD</returns>
+        
         protected static string GetMessageString(int number)
         {
             return number == 1 ? "message" : "messages";
@@ -603,51 +511,29 @@ namespace Akka.TestKit.Internal
                 ;
         }
         
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected class MatchedEventHandler
         {
             private int _receivedCount;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public int ReceivedCount { get { return _receivedCount; } }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="eventFilter">TBD</param>
-            /// <param name="logEvent">TBD</param>
+            
             public virtual void HandleEvent(EventFilterBase eventFilter, LogEvent logEvent)
             {
                 if(_receivedCount != int.MaxValue) Interlocked.Increment(ref _receivedCount);
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected class InternalUnmutableFilter : IUnmutableFilter
         {
             private IReadOnlyCollection<EventFilterBase> _filters;
             private readonly ActorSystem _system;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="filters">TBD</param>
-            /// <param name="system">TBD</param>
+            
             public InternalUnmutableFilter(IReadOnlyCollection<EventFilterBase> filters, ActorSystem system)
             {
                 _filters = filters;
                 _system = system;
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public void Unmute()
             {
                 var filters = _filters;
@@ -659,13 +545,7 @@ namespace Akka.TestKit.Internal
             }
 
             private bool _isDisposed; //Automatically initialized to false;
-
-            //Destructor:
-            //~InternalUnmutableFilter() 
-            //{
-            //    // Finalizer calls Dispose(false)
-            //    Dispose(false);
-            //}
+            
            
             public void Dispose()
             {

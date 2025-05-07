@@ -1314,7 +1314,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <typeparam name="TKey">TBD</typeparam>
         /// <typeparam name="TClosed">TBD</typeparam>
         /// <param name="flow">TBD</param>
-        /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails</param>
+        /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails. Set to -1 for infinite substreams.</param>
         /// <param name="groupingFunc">Computes the key for each element</param>
         /// <param name="toFunc">TBD</param>
         /// <param name="allowClosedSubstreamRecreation">Enables recreation of already closed substreams if elements with their corresponding keys arrive after completion</param>
@@ -1328,14 +1328,14 @@ namespace Akka.Streams.Dsl.Internal
         {
             var merge = new GroupByMergeBack<T, TMat, TKey>(flow, maxSubstreams, groupingFunc, allowClosedSubstreamRecreation);
 
-            TClosed finish(Sink<T, TMat> s)
+            return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, Finish);
+
+            TClosed Finish(Sink<T, TMat> s)
             {
                 return toFunc(
                     flow.Via(new Fusing.GroupBy<T, TKey>(maxSubstreams, groupingFunc, allowClosedSubstreamRecreation)),
                     Sink.ForEach<Source<T, NotUsed>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
             }
-
-            return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, finish);
         }
 
         /// <summary>
@@ -1354,8 +1354,8 @@ namespace Akka.Streams.Dsl.Internal
         /// <typeparam name="TKey"></typeparam>
         /// <typeparam name="TClosed"></typeparam>
         /// <param name="flow"></param>
-        /// <param name="maxSubstreams"></param>
-        /// <param name="groupingFunc"></param>
+        /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails. Set to -1 for infinite substreams.</param>
+        /// <param name="groupingFunc">Computes the key for each element</param>
         /// <param name="toFunc"></param>
         /// <returns></returns>
         public static SubFlow<T, TMat, TClosed> GroupBy<T, TMat, TKey, TClosed>(
@@ -1381,9 +1381,9 @@ namespace Akka.Streams.Dsl.Internal
             /// TBD
             /// </summary>
             /// <param name="self">TBD</param>
-            /// <param name="maxSubstreams">TBD</param>
-            /// <param name="groupingFunc">TBD</param>
-            /// <param name="allowClosedSubstreamRecreation">TBD</param>
+            /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails. Set to -1 for infinite substreams.</param>
+            /// <param name="groupingFunc">Computes the key for each element</param>
+            /// <param name="allowClosedSubstreamRecreation">Enables recreation of already closed substreams if elements with their corresponding keys arrive after completion</param>
             public GroupByMergeBack(IFlow<TOut, TMat> self, int maxSubstreams, Func<TOut, TKey> groupingFunc, bool allowClosedSubstreamRecreation = false)
             {
                 _self = self;
