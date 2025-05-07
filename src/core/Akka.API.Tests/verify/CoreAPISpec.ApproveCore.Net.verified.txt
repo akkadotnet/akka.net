@@ -4079,7 +4079,6 @@ namespace Akka.IO
         public sealed class ErrorClosed : Akka.IO.Tcp.ConnectionClosed
         {
             public ErrorClosed(string cause) { }
-            [System.Runtime.CompilerServices.NullableAttribute(2)]
             public override string Cause { get; }
             public override bool IsErrorClosed { get; }
             public override string ToString() { }
