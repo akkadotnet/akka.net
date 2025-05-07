@@ -75,7 +75,6 @@ namespace Akka.Tests.IO
             private readonly IActorRef _handlerRef;
             private readonly TestProbe _bindCommander;
             private readonly TestProbe _parent;
-            private readonly TestProbe _selectorRouter;
             private readonly TestActorRef<ListenerParent> _parentRef;
             
             public TestSetup(TestKitBase kit, bool pullMode)
@@ -87,7 +86,7 @@ namespace Akka.Tests.IO
                 _handlerRef = _handler.Ref;
                 _bindCommander = kit.CreateTestProbe();
                 _parent = kit.CreateTestProbe();
-                _selectorRouter = kit.CreateTestProbe();
+                SelectorRouter = kit.CreateTestProbe();
 
                 _parentRef = new TestActorRef<ListenerParent>(kit.Sys, Props.Create(() => new ListenerParent(this, pullMode)));
             }
@@ -115,10 +114,7 @@ namespace Akka.Tests.IO
 
             public IActorRef Listener { get { return _parentRef.UnderlyingActor.Listener; } }
 
-            public TestProbe SelectorRouter
-            {
-                get { return _selectorRouter; }
-            }
+            public TestProbe SelectorRouter { get; }
 
             public TestProbe BindCommander { get { return _bindCommander; } }
             public TestProbe Parent { get { return _parent; } }
@@ -128,7 +124,7 @@ namespace Akka.Tests.IO
             internal void AfterBind(Socket socket)
                 => LocalEndPoint = (IPEndPoint)socket.LocalEndPoint;
 
-            class ListenerParent : ActorBase
+            private class ListenerParent : ActorBase
             {
                 private readonly TestSetup _test;
                 private readonly bool _pullMode;

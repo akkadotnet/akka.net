@@ -40,18 +40,12 @@ namespace Akka.IO
     /// </summary>
     internal sealed class TcpListener : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
-        /// <summary>
-        /// In the event that someone specified something stupid like 0 or a negative number
-        /// for the accept limit, this is a reasonable default.
-        /// </summary>
-        public static readonly int DefaultAcceptLimit = Environment.ProcessorCount * 2;
-
         private readonly TcpExt _tcp;
         private readonly IActorRef _bindCommander; // forwarded destination for Connected
         private Tcp.Bind _bind;
         private Socket _socket;
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        private readonly int _acceptLimit = DefaultAcceptLimit;
+        private readonly int _acceptLimit;
         private SocketAsyncActorEventArgs[]? _acceptPool;
         private bool _binding;
         private static readonly EventHandler<SocketAsyncEventArgs> OnCompleted = OnIoCompleted;
@@ -64,6 +58,17 @@ namespace Akka.IO
             Tcp.Bind bind)
         {
             _tcp = tcp;
+            _acceptLimit = tcp.Settings.BatchAcceptLimit;
+
+            if (_acceptLimit <= 0)
+            {
+                _log.Warning("Batch accept limit is set to {0}, which is less than or equal to 0. " +
+                             "This value will HANG the listener.", _acceptLimit);;
+
+                _acceptLimit = TcpSettings.DefaultAcceptLimit;
+                _log.Warning("Using default value of {0} for batch accept limit", _acceptLimit);
+            }
+            
             _bindCommander = bindCommander;
 
             Self.Tell(bind);
