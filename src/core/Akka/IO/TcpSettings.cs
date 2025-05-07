@@ -88,7 +88,7 @@ namespace Akka.IO
 
         /// <summary>
         /// A config path to the section defining which byte buffer pool to use.
-        /// Buffer pools are used to mitigate GC-pressure made by potentiall allocation
+        /// Buffer pools are used to mitigate GC-pressure made by potential allocation
         /// and deallocation of byte buffers used for writing/receiving data from sockets.
         /// </summary>
         public string BufferPoolConfigPath { get; }
