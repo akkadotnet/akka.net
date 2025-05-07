@@ -143,7 +143,7 @@ namespace Akka.Tests.IO
 
                     _listener = Context.ActorOf(Props.Create(() =>
                         new TcpListener(
-                            Tcp.Instance.Apply(Context.System),
+                            Tcp.For(Context.System),
                             test._bindCommander.Ref,
                             new Tcp.Bind(
                                 _test._handler.Ref, 
