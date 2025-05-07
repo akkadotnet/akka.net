@@ -125,10 +125,10 @@ namespace Akka.Tests.Pattern
             {
                 stressActor.Tell(GetResult.Instance);
                 var result = ExpectMsg<Result>();
-                result.FailCount.ShouldBe(0);
-
                 Output.WriteLine("FailCount:{0}, DoneCount:{1}, CircCount:{2}, TimeoutCount:{3}", 
                     result.FailCount, result.DoneCount, result.CircCount, result.TimeoutCount);
+                
+                result.FailCount.ShouldBe(0);
             }
         }
     }

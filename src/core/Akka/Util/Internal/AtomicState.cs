@@ -87,6 +87,8 @@ namespace Akka.Util.Internal
             }
             catch (Exception ex)
             {
+                if (ex is TaskCanceledException)
+                    ex = new TimeoutException("Task was cancelled, probably because of a timeout", ex);
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
@@ -112,6 +114,8 @@ namespace Akka.Util.Internal
             }
             catch (Exception ex)
             {
+                if (ex is TaskCanceledException)
+                    ex = new TimeoutException("Task was cancelled, probably because of a timeout", ex);
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
@@ -130,6 +134,8 @@ namespace Akka.Util.Internal
             }
             catch (Exception ex)
             {
+                if (ex is TaskCanceledException)
+                    ex = new TimeoutException("Task was cancelled, probably because of a timeout", ex);
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
@@ -149,6 +155,8 @@ namespace Akka.Util.Internal
             }
             catch (Exception ex)
             {
+                if (ex is TaskCanceledException)
+                    ex = new TimeoutException("Task was cancelled, probably because of a timeout", ex);
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
@@ -172,6 +180,8 @@ namespace Akka.Util.Internal
             }
             catch (Exception ex)
             {
+                if (ex is TaskCanceledException)
+                    ex = new TimeoutException("Task was cancelled, probably because of a timeout", ex);
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
@@ -194,6 +204,8 @@ namespace Akka.Util.Internal
             }
             catch (Exception ex)
             {
+                if (ex is TaskCanceledException)
+                    ex = new TimeoutException("Task was cancelled, probably because of a timeout", ex);
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
@@ -209,6 +221,8 @@ namespace Akka.Util.Internal
             }
             catch (Exception ex)
             {
+                if (ex is TaskCanceledException)
+                    ex = new TimeoutException("Task was cancelled, probably because of a timeout", ex);
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
@@ -225,6 +239,8 @@ namespace Akka.Util.Internal
             }
             catch (Exception ex)
             {
+                if (ex is TaskCanceledException)
+                    ex = new TimeoutException("Task was cancelled, probably because of a timeout", ex);
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
