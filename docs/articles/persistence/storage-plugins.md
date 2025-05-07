@@ -37,8 +37,7 @@ akka {
 }
 ```
 
-
-### Controlling journal or snapshot crash behavior.
+### Controlling Journal or Snapshot Crash Behavior
 
 By default the base implementations upon which all journal or snapshot-store implementations are build upon provides out of the box behavior for dealing with errors that occur during the writing or reading of data from the underlying store. Errors that occur will be communicated with the persistentactor that is using them at that time.
 So in general once started succesfully the journal or snapshot-store will be ready and available for the duration of your application, and wont crash. However in the case they do crash, due to unforseen circumstances the default behavior is to immediatly restart them. This is generally the behavior you want.

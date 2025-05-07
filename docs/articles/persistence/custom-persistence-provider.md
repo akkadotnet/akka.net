@@ -221,7 +221,7 @@ akka.persistence.journal-plugin-fallback {
   # It needs to be a subclass of Akka.Actor.SupervisorStrategyConfigurator. And have a parameterless constructor
   # by default it restarts the journal on crash
   supervisor-strategy = "Akka.Actor.DefaultSupervisorStrategy"
-		
+
   # Default serializer used as manifest serializer when applicable 
   # and payload serializer when no specific binding overrides are specified
   serializer = "json"
