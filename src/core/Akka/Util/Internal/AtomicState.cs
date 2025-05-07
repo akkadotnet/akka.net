@@ -253,7 +253,7 @@ namespace Akka.Util.Internal
         /// <typeparam name="T">The <see cref="Type"/> returned by the invoked function</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        [Obsolete(message:"Use Invoke() that accepts functions with CancellationToken parameter")]
+        [Obsolete(message:"Use Invoke() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public abstract Task<T> Invoke<T>(Func<Task<T>> body);
 
         /// <summary>
@@ -272,7 +272,7 @@ namespace Akka.Util.Internal
         /// <param name="state">The state object will be passed into the protected function during invocation</param>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        [Obsolete(message:"Use InvokeState() that accepts functions with CancellationToken parameter")]
+        [Obsolete(message:"Use InvokeState() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public abstract Task<T> InvokeState<T, TState>(TState state, Func<TState, Task<T>> body);
 
         /// <summary>
@@ -290,7 +290,7 @@ namespace Akka.Util.Internal
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        [Obsolete(message:"Use Invoke() that accepts functions with CancellationToken parameter")]
+        [Obsolete(message:"Use Invoke() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public abstract Task Invoke(Func<Task> body);
 
         /// <summary>
@@ -307,7 +307,7 @@ namespace Akka.Util.Internal
         /// <param name="state">The state object will be passed into the protected function during invocation</param>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        [Obsolete(message:"Use InvokeState() that accepts functions with CancellationToken parameter")]
+        [Obsolete(message:"Use InvokeState() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public abstract Task InvokeState<TState>(TState state, Func<TState, Task> body);
 
         /// <summary>

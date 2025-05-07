@@ -223,7 +223,7 @@ namespace Akka.Pattern
         /// <typeparam name="T">The <see cref="Type"/> returned by the protected function</typeparam>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/> containing the call result</returns>
-        [Obsolete(message:"Use WithCircuitBreaker() that accepts functions with CancellationToken parameter")]
+        [Obsolete(message:"Use WithCircuitBreaker() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public Task<T> WithCircuitBreaker<T>(Func<Task<T>> body) => CurrentState.Invoke(body);
 
         /// <summary>
@@ -242,7 +242,7 @@ namespace Akka.Pattern
         /// <param name="state">The state object will be passed into the protected function during invocation</param>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/> containing the call result</returns>
-        [Obsolete(message:"Use WithCircuitBreaker() that accepts functions with CancellationToken parameter")]
+        [Obsolete(message:"Use WithCircuitBreaker() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public Task<T> WithCircuitBreaker<T, TState>(TState state, Func<TState, Task<T>> body) => 
             CurrentState.InvokeState(state, body);
 
@@ -262,7 +262,7 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/> containing the call result</returns>
-        [Obsolete(message:"Use WithCircuitBreaker() that accepts functions with CancellationToken parameter")]
+        [Obsolete(message:"Use WithCircuitBreaker() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public Task WithCircuitBreaker(Func<Task> body) => CurrentState.Invoke(body);
 
         /// <summary>
@@ -279,7 +279,7 @@ namespace Akka.Pattern
         /// <param name="state">The state object will be passed into the protected function during invocation</param>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/> containing the call result</returns>
-        [Obsolete(message:"Use WithCircuitBreaker() that accepts functions with CancellationToken parameter")]
+        [Obsolete(message:"Use WithCircuitBreaker() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public Task WithCircuitBreaker<TState>(TState state, Func<TState, Task> body) => 
             CurrentState.InvokeState(state, body);
 

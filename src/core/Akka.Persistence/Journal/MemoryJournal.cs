@@ -32,6 +32,9 @@ namespace Akka.Persistence.Journal
         
         protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return _messages; } }
         
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+            => WriteMessagesAsync(messages, CancellationToken.None);
+        
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
             foreach (var w in messages)
@@ -59,6 +62,9 @@ namespace Akka.Persistence.Journal
             
             return Task.FromResult<IImmutableList<Exception>>(null); // all good
         }
+
+        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+            => ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr, CancellationToken.None);
         
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken)
         {
@@ -73,6 +79,9 @@ namespace Akka.Persistence.Journal
                 Read(persistenceId, fromSequenceNr, Math.Min(toSequenceNr, highest), max).ForEach(recoveryCallback);
             return Task.CompletedTask;
         }
+        
+        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+            => DeleteMessagesToAsync(persistenceId, toSequenceNr, CancellationToken.None);
         
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken)
         {

@@ -61,9 +61,21 @@ namespace Akka.Persistence.Snapshot
             }
         }
 
+        [Obsolete("Use LoadAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
+        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        {
+            return Task.FromResult((SelectedSnapshot)null);
+        }
+
         protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
         {
             return Task.FromResult((SelectedSnapshot)null);
+        }
+
+        [Obsolete("Use SaveAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
+        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        {
+            return Flop();
         }
 
         /// <exception cref="NoSnapshotStoreException">
@@ -74,10 +86,22 @@ namespace Akka.Persistence.Snapshot
             return Flop();
         }
 
+        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
+        protected override Task DeleteAsync(SnapshotMetadata metadata)
+        {
+            return Flop();
+        }
+
         /// <exception cref="NoSnapshotStoreException">
         /// This exception is thrown when no snapshot store is configured.
         /// </exception>
         protected override Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken)
+        {
+            return Flop();
+        }
+
+        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
+        protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             return Flop();
         }

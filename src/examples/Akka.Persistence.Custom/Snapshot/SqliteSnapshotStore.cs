@@ -181,6 +181,10 @@ namespace Akka.Persistence.Custom.Snapshot
         }
         //</Startup>
         
+        [Obsolete("Use LoadAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
+        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+            => LoadAsync(persistenceId, criteria, CancellationToken.None);
+
         //<LoadAsync>
         protected sealed override async Task<SelectedSnapshot> LoadAsync(
             string persistenceId,
@@ -231,6 +235,10 @@ namespace Akka.Persistence.Custom.Snapshot
             }
         }
         //</LoadAsync>
+
+        [Obsolete("Use SaveAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
+        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+            => SaveAsync(metadata, snapshot, CancellationToken.None);
 
         //<SaveAsync>
         protected sealed override async Task SaveAsync(
@@ -303,6 +311,10 @@ namespace Akka.Persistence.Custom.Snapshot
         }
         //</SaveAsync>
 
+        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
+        protected override Task DeleteAsync(SnapshotMetadata metadata)
+            => DeleteAsync(metadata, CancellationToken.None);
+
         //<DeleteAsync>
         protected sealed override async Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken)
         {
@@ -344,6 +356,10 @@ namespace Akka.Persistence.Custom.Snapshot
             }
         }
         //</DeleteAsync>
+
+        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
+        protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+            => DeleteAsync(persistenceId, criteria, CancellationToken.None);
 
         //<DeleteAsync2>
         protected sealed override async Task DeleteAsync(

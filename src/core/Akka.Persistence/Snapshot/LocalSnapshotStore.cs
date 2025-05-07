@@ -67,6 +67,10 @@ namespace Akka.Persistence.Snapshot
 
         private readonly ILoggingAdapter _log;
 
+        [Obsolete("Use LoadAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
+        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+            => LoadAsync(persistenceId, criteria, CancellationToken.None);
+
         /// <inheritdoc/>
         protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
         {
@@ -81,6 +85,10 @@ namespace Akka.Persistence.Snapshot
             return RunWithStreamDispatcher(() => Load(metadata));
         }
 
+        [Obsolete("Use SaveAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
+        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+            => SaveAsync(metadata, snapshot, CancellationToken.None);
+
         /// <inheritdoc/>
         protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot, CancellationToken cancellationToken)
         {
@@ -91,6 +99,10 @@ namespace Akka.Persistence.Snapshot
                 return new object();
             });
         }
+
+        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
+        protected override Task DeleteAsync(SnapshotMetadata metadata)
+            => DeleteAsync(metadata, CancellationToken.None);
 
         /// <inheritdoc/>
         protected override Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken)
@@ -108,6 +120,10 @@ namespace Akka.Persistence.Snapshot
                 return new object();
             });
         }
+
+        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
+        protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+            => DeleteAsync(persistenceId, criteria, CancellationToken.None);
 
         /// <inheritdoc/>
         protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
