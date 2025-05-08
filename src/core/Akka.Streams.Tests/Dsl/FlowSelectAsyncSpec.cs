@@ -712,76 +712,65 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
+        [Fact]
         public async Task A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
         {
-            await this.AssertAllStagesStoppedAsync(async() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
-                var queue = Channel.CreateUnbounded<(TaskCompletionSource<int>, long)>();
+                var queue = Channel.CreateUnbounded<TaskCompletionSource<int>>();
                 var cancellation = new CancellationTokenSource();
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                Task.Run(async () =>
+
+                var processor = Task.Run(async () =>
                 {
-                    var delay = 500; // 50000 nanoseconds
-                    var count = 0;
-                    var cont = true;
-                    while (cont)
+                    try
                     {
-                        try
+                        while (false == cancellation.IsCancellationRequested)
                         {
-                            var t = await queue.Reader.ReadAsync(cancellation.Token);
-                            var promise = t.Item1;
-                            var enqueued = t.Item2;
-                            var wakeup = enqueued + delay;
-                            while (DateTime.Now.Ticks < wakeup) { }
+                            var promise = await queue.Reader.ReadAsync(cancellation.Token);
+                            await Task.Yield();
                             counter.Decrement();
-                            promise.SetResult(count);
-                            count++;
-                        }
-                        catch
-                        {
-                            cont = false;
+                            promise.TrySetResult(1);
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                    }
                 }, cancellation.Token);
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
                 try
                 {
                     const int n = 10000;
-                    var task = Source.From(Enumerable.Range(1, n))
-                        .SelectAsync(parallelism, _ => Deferred())
-                        .RunAggregate(0, (c, _) => c + 1, Materializer);
 
-                    var complete = await task.ShouldCompleteWithin(3.Seconds());
-                    complete.Should().Be(n);
+                    var result = await Source.From(Enumerable.Range(1, n))
+                        .SelectAsync(parallelism, _ =>
+                        {
+                            var promise = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                            if (counter.IncrementAndGet() > parallelism)
+                            {
+                                promise.TrySetException(new Exception("Parallelism exceeded"));
+                            }
+                            else if (false == queue.Writer.TryWrite(promise))
+                            {
+                                promise.TrySetException(new Exception("Failed to enqueue task"));
+                            }
+
+                            return promise.Task;
+                        })
+                        .RunAggregate(0, (acc, i) => acc + i, Materializer);
+
+                    result.Should().Be(n);
                 }
                 finally
                 {
-                    cancellation.Cancel(false);
-                }
-
-                return;
-
-                Task<int> Deferred()
-                {
-                    var promise = new TaskCompletionSource<int>();
-                    if (counter.IncrementAndGet() > parallelism)
-                        promise.SetException(new Exception("parallelism exceeded"));
-                    else
-                    {
-                        var wrote = queue.Writer.TryWrite((promise, DateTime.Now.Ticks));
-                        if (!wrote)
-                            promise.SetException(new Exception("Failed to write to queue"));
-                    }
-                        
-                    return promise.Task;
+                    cancellation.Cancel();
+                    await processor;
                 }
             }, Materializer);
         }
-        
+
         [Fact(DisplayName = "A Flow with SelectAsync must not invoke the decider twice when SelectAsync throws")]
         public async Task SelectAsyncDeciderFailingSelectAsync()
         {
