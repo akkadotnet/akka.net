@@ -4519,16 +4519,20 @@ namespace Akka.Pattern
         public Akka.Pattern.CircuitBreaker OnHalfOpen(System.Action callback) { }
         public Akka.Pattern.CircuitBreaker OnOpen(System.Action callback) { }
         public void Succeed() { }
-        [System.ObsoleteAttribute("Use WithCircuitBreaker() that accepts functions with CancellationToken parameter")]
+        [System.ObsoleteAttribute("Use WithCircuitBreaker() that accepts functions with CancellationToken parameter." +
+            " Since 1.5.42")]
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T>(System.Func<System.Threading.Tasks.Task<T>> body) { }
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> body) { }
-        [System.ObsoleteAttribute("Use WithCircuitBreaker() that accepts functions with CancellationToken parameter")]
+        [System.ObsoleteAttribute("Use WithCircuitBreaker() that accepts functions with CancellationToken parameter." +
+            " Since 1.5.42")]
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T, TState>(TState state, System.Func<TState, System.Threading.Tasks.Task<T>> body) { }
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T, TState>(TState state, System.Func<TState, System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> body) { }
-        [System.ObsoleteAttribute("Use WithCircuitBreaker() that accepts functions with CancellationToken parameter")]
+        [System.ObsoleteAttribute("Use WithCircuitBreaker() that accepts functions with CancellationToken parameter." +
+            " Since 1.5.42")]
         public System.Threading.Tasks.Task WithCircuitBreaker(System.Func<System.Threading.Tasks.Task> body) { }
         public System.Threading.Tasks.Task WithCircuitBreaker(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task> body) { }
-        [System.ObsoleteAttribute("Use WithCircuitBreaker() that accepts functions with CancellationToken parameter")]
+        [System.ObsoleteAttribute("Use WithCircuitBreaker() that accepts functions with CancellationToken parameter." +
+            " Since 1.5.42")]
         public System.Threading.Tasks.Task WithCircuitBreaker<TState>(TState state, System.Func<TState, System.Threading.Tasks.Task> body) { }
         public System.Threading.Tasks.Task WithCircuitBreaker<TState>(TState state, System.Func<TState, System.Threading.CancellationToken, System.Threading.Tasks.Task> body) { }
         public Akka.Pattern.CircuitBreaker WithExponentialBackoff(System.TimeSpan maxResetTimeout) { }
