@@ -25,7 +25,7 @@ namespace Akka.Persistence.Journal
         /// could not be replayed.
         /// 
         /// The <paramref name="toSequenceNr"/> is the lowest of what was returned by
-        /// <see cref="ReadHighestSequenceNrAsync"/> and what the user specified as recovery
+        /// <see cref="ReadHighestSequenceNrAsync(string, long, CancellationToken)"/> and what the user specified as recovery
         /// <see cref="Recovery"/> parameter.
         /// This does imply that this call is always preceded by reading the highest sequence number
         /// for the given <paramref name="persistenceId"/>.
