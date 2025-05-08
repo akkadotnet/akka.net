@@ -302,11 +302,17 @@ namespace Akka.Persistence
             var pluginType = Type.GetType(pluginTypeName, true);
             var pluginDispatcherId = pluginConfig.GetString("plugin-dispatcher", null);
             object[] pluginActorArgs = pluginType.GetConstructor(new[] { typeof(Config) }) != null ? new object[] { pluginConfig } : null;
-            var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId);
-
+            
+            //todo wrap in backoffsupervisor ?
+            
+            //supervisor-strategy is defined by default in the fallback configs. So we always expect to get a value here even if the user has not explicitly defined anything
+            var configurator = SupervisorStrategyConfigurator.CreateConfigurator(pluginConfig.GetString("supervisor-strategy"));
+            
+            var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId).WithSupervisorStrategy(configurator.Create());
+            
             return system.SystemActorOf(pluginActorProps, pluginActorName);
         }
-
+        
         private static EventAdapters CreateAdapters(ExtendedActorSystem system, string configPath)
         {
             var pluginConfig = system.Settings.Config.GetConfig(configPath);

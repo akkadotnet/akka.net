@@ -278,12 +278,7 @@ namespace Akka.Persistence.Journal
         {
             return ReceiveWriteJournal(message) || ReceivePluginInternal(message);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        
         protected bool ReceiveWriteJournal(object message)
         {
             switch (message)
