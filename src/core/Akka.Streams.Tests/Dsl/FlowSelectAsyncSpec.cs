@@ -718,61 +718,23 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 const int parallelism = 8;
+                const int n = 10000;
                 var counter = new AtomicCounter();
-                var queue = Channel.CreateUnbounded<TaskCompletionSource<int>>();
-                var cancellation = new CancellationTokenSource();
 
-                var processor = Task.Run(async () =>
-                {
-                    try
+                var result = await Source.From(Enumerable.Range(1, n))
+                    .SelectAsync(parallelism, async _ =>
                     {
-                        while (false == cancellation.IsCancellationRequested)
-                        {
-                            var promise = await queue.Reader.ReadAsync(cancellation.Token);
-                            await Task.Yield();
-                            counter.Decrement();
-                            promise.TrySetResult(1);
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // This is expected when the test finishes and cancels the processor loop
-                    }
-                }, cancellation.Token);
+                        if (counter.IncrementAndGet() > parallelism)
+                            throw new Exception("Parallelism exceeded");
 
-                try
-                {
-                    const int n = 10000;
+                        await Task.Delay(50_000.Nanoseconds());
+                        counter.Decrement();
+                        return 1;
+                    })
+                    .RunAggregate(0, (acc, i) => acc + i, Materializer)
+                    .ShouldCompleteWithin(3.Seconds());
 
-                    var result = await Source.From(Enumerable.Range(1, n))
-                        .SelectAsync(parallelism, _ =>
-                        {
-                            var promise = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-                            if (counter.IncrementAndGet() > parallelism)
-                            {
-                                promise.TrySetException(new Exception("Parallelism exceeded"));
-                            }
-                            else if (false == queue.Writer.TryWrite(promise))
-                            {
-                                promise.TrySetException(new Exception("Failed to enqueue task"));
-                            }
-
-                            return promise.Task;
-                        })
-                        .RunAggregate(0, (acc, i) => acc + i, Materializer);
-
-                    result.Should().Be(n);
-                }
-                finally
-                {
-                    while (counter.Current > 0)
-                    {
-                        await Task.Delay(1); // ensure all futures completed
-                    }
-                    cancellation.Cancel();
-                    await processor;
-                }
+                result.Should().Be(n);
             }, Materializer);
         }
 
