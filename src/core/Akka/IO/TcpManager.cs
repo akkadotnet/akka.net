@@ -57,7 +57,6 @@ namespace Akka.IO
         public TcpManager(TcpExt tcp)
         {
             _tcp = tcp;
-            Context.System.EventStream.Subscribe(Self, typeof(DeadLetter));
         }
         
         protected override bool Receive(object message)
@@ -74,14 +73,6 @@ namespace Akka.IO
                 {
                     var commander = Sender;
                     Context.ActorOf(Props.Create<TcpListener>(_tcp, commander, b).WithDeploy(Deploy.Local));
-                    return true;
-                }
-                case DeadLetter dl:
-                {
-                    if (dl.Message is SocketCompleted completed)
-                    {
-                        //TODO: release resources?
-                    }
                     return true;
                 }
                 default:

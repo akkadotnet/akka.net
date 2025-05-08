@@ -3985,7 +3985,7 @@ namespace Akka.IO
         }
         public class Bind : Akka.IO.Tcp.Command
         {
-            public Bind(Akka.Actor.IActorRef handler, System.Net.EndPoint localAddress, int backlog = 100, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options = null, bool pullMode = False) { }
+            public Bind(Akka.Actor.IActorRef handler, System.Net.EndPoint localAddress, int backlog = 1024, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options = null, bool pullMode = False) { }
             public int Backlog { get; }
             public Akka.Actor.IActorRef Handler { get; }
             public System.Net.EndPoint LocalAddress { get; }
