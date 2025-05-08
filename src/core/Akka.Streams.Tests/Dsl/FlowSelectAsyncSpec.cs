@@ -736,6 +736,7 @@ namespace Akka.Streams.Tests.Dsl
                     }
                     catch (OperationCanceledException)
                     {
+                        // This is expected when the test finishes and cancels the processor loop
                     }
                 }, cancellation.Token);
 
@@ -765,6 +766,10 @@ namespace Akka.Streams.Tests.Dsl
                 }
                 finally
                 {
+                    while (counter.Current > 0)
+                    {
+                        await Task.Delay(1); // ensure all futures completed
+                    }
                     cancellation.Cancel();
                     await processor;
                 }
