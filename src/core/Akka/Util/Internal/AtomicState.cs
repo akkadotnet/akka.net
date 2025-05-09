@@ -77,23 +77,9 @@ namespace Akka.Util.Internal
         /// </summary>
         /// <param name="task"><see cref="Task"/> Implementation of the call</param>
         /// <returns><see cref="Task"/> containing the result of the call</returns>
-        public async Task<T> CallThrough<T>(Func<Task<T>> task)
-        {
-            var result = default(T);
-            try
-            {
-                result = await task().WaitAsync(_callTimeout).ConfigureAwait(false);
-                CallSucceeds();
-            }
-            catch (Exception ex)
-            {
-                var capturedException = ExceptionDispatchInfo.Capture(ex);
-                CallFails(capturedException.SourceException);
-                capturedException.Throw();
-            }
-
-            return result;
-        }
+        [Obsolete("Use CallThrough that accepts delegate function with CancellationToken argument. Since 1.5.42")]
+        public Task<T> CallThrough<T>(Func<Task<T>> task)
+            => CallThrough(_ => task());
 
         /// <summary>
         /// Shared implementation of call across all states.  Thrown exception or execution of the call beyond the allowed
@@ -104,54 +90,50 @@ namespace Akka.Util.Internal
         public async Task<T> CallThrough<T>(Func<CancellationToken, Task<T>> task)
         {
             var result = default(T);
+            var cts = new CancellationTokenSource();
             try
             {
-                using(var cts = new CancellationTokenSource(_callTimeout))
-                    result = await task(cts.Token).WaitAsync(cts.Token).ConfigureAwait(false);
+                result = await task(cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
                 CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel(); // Signal the protected delegate that operation has been canceled
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
+            }
+            finally
+            {
+                cts.Dispose();
             }
 
             return result;
         }
 
-        public async Task<T> CallThrough<T, TState>(TState state, Func<TState, Task<T>> task)
-        {
-            var result = default(T);
-            try
-            {
-                result = await task(state).WaitAsync(_callTimeout).ConfigureAwait(false);
-                CallSucceeds();
-            }
-            catch (Exception ex)
-            {
-                var capturedException = ExceptionDispatchInfo.Capture(ex);
-                CallFails(capturedException.SourceException);
-                capturedException.Throw();
-            }
-
-            return result;
-        }
+        [Obsolete("Use CallThrough that accepts delegate function with CancellationToken argument. Since 1.5.42")]
+        public Task<T> CallThrough<T, TState>(TState state, Func<TState, Task<T>> task)
+            => CallThrough(state, (s, _) => task(s));
 
         public async Task<T> CallThrough<T, TState>(TState state, Func<TState, CancellationToken, Task<T>> task)
         {
             var result = default(T);
+            var cts = new CancellationTokenSource();
             try
             {
-                using(var cts = new CancellationTokenSource(_callTimeout))
-                    result = await task(state, cts.Token).WaitAsync(cts.Token).ConfigureAwait(false);
+                result = await task(state, cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
                 CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel(); // Signal the protected delegate that operation has been canceled
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
+            }
+            finally
+            {
+                cts.Dispose();
             }
 
             return result;
@@ -163,20 +145,9 @@ namespace Akka.Util.Internal
         /// </summary>
         /// <param name="task"><see cref="Task"/> Implementation of the call</param>
         /// <returns><see cref="Task"/> containing the result of the call</returns>
-        public async Task CallThrough(Func<Task> task)
-        {
-            try
-            {
-                await task().WaitAsync(_callTimeout).ConfigureAwait(false);
-                CallSucceeds();
-            }
-            catch (Exception ex)
-            {
-                var capturedException = ExceptionDispatchInfo.Capture(ex);
-                CallFails(capturedException.SourceException);
-                capturedException.Throw();
-            }
-        }
+        [Obsolete("Use CallThrough that accepts delegate function with CancellationToken argument. Since 1.5.42")]
+        public Task CallThrough(Func<Task> task)
+            => CallThrough(_ => task());
 
         /// <summary>
         /// Shared implementation of call across all states. Thrown exception or execution of the call beyond the allowed
@@ -186,48 +157,47 @@ namespace Akka.Util.Internal
         /// <returns><see cref="Task"/> containing the result of the call</returns>
         public async Task CallThrough(Func<CancellationToken, Task> task)
         {
+            var cts = new CancellationTokenSource();
             try
             {
-                using(var cts = new CancellationTokenSource(_callTimeout))
-                    await task(cts.Token).WaitAsync(cts.Token).ConfigureAwait(false);
+                await task(cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
                 CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel(); // Signal the protected delegate that operation has been canceled
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
+            }
+            finally
+            {
+                cts.Dispose();
             }
         }
 
-        public async Task CallThrough<TState>(TState state, Func<TState, Task> task)
-        {
-            try
-            {
-                await task(state).WaitAsync(_callTimeout).ConfigureAwait(false);
-                CallSucceeds();
-            }
-            catch (Exception ex)
-            {
-                var capturedException = ExceptionDispatchInfo.Capture(ex);
-                CallFails(capturedException.SourceException);
-                capturedException.Throw();
-            }
-        }
+        [Obsolete("Use CallThrough that accepts delegate function with CancellationToken argument. Since 1.5.42")]
+        public Task CallThrough<TState>(TState state, Func<TState, Task> task)
+            => CallThrough(state, (s, _) => task(s));
 
         public async Task CallThrough<TState>(TState state, Func<TState, CancellationToken, Task> task)
         {
+            var cts = new CancellationTokenSource();
             try
             {
-                using(var cts = new CancellationTokenSource(_callTimeout))
-                    await task(state, cts.Token).WaitAsync(cts.Token).ConfigureAwait(false);
+                await task(state, cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
                 CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel(); // Signal the protected delegate that operation has been canceled
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
+            }
+            finally
+            {
+                cts.Dispose();
             }
         }
 
