@@ -79,8 +79,8 @@ namespace Akka.Persistence.Journal
                     throw new ConfigurationException($"Invalid replay-filter.mode [{replayFilterMode}], supported values [off, repair-by-discard-old, fail, warn]");
             }
             _isReplayFilterEnabled = _replayFilterMode != ReplayFilterMode.Disabled;
-            _replayFilterWindowSize = config.GetInt("replay-filter.window-size", 0);
-            _replayFilterMaxOldWriters = config.GetInt("replay-filter.max-old-writers", 0);
+            _replayFilterWindowSize = config.GetInt("replay-filter.window-size", 100);
+            _replayFilterMaxOldWriters = config.GetInt("replay-filter.max-old-writers", 10);
             _replayDebugEnabled = config.GetBoolean("replay-filter.debug", false);
 
             _resequencer = Context.ActorOf(Props.Create(() => new Resequencer()), "resequencer");
@@ -88,10 +88,6 @@ namespace Akka.Persistence.Journal
 
         /// <inheritdoc/>
         public abstract Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback);
-
-        /// <inheritdoc/>
-        [Obsolete("Use ReadHighestSequenceNrAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
 
         /// <inheritdoc/>
         public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken);
@@ -167,91 +163,8 @@ namespace Akka.Persistence.Journal
         /// This call is protected with a circuit-breaker.
         /// </summary>
         /// <param name="messages">TBD</param>
-        [Obsolete("Use WriteMessagesAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected abstract Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages);
-
-        /// <summary>
-        /// Plugin API: asynchronously writes a batch of persistent messages to the
-        /// journal.
-        /// 
-        /// The batch is only for performance reasons, i.e. all messages don't have to be written
-        /// atomically. Higher throughput can typically be achieved by using batch inserts of many
-        /// records compared to inserting records one-by-one, but this aspect depends on the
-        /// underlying data store and a journal implementation can implement it as efficient as
-        /// possible. Journals should aim to persist events in-order for a given `persistenceId`
-        /// as otherwise in case of a failure, the persistent state may be end up being inconsistent.
-        /// 
-        /// Each <see cref="AtomicWrite"/> message contains the single <see cref="Persistent"/>
-        /// that corresponds to the event that was passed to the 
-        /// <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/> method of the
-        /// <see cref="PersistentActor" />, or it contains several <see cref="Persistent"/>
-        /// that correspond to the events that were passed to the
-        /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent})"/>
-        /// method of the <see cref="PersistentActor"/>. All <see cref="Persistent"/> of the
-        /// <see cref="AtomicWrite"/> must be written to the data store atomically, i.e. all or none must
-        /// be stored. If the journal (data store) cannot support atomic writes of multiple
-        /// events it should reject such writes with a <see cref="NotSupportedException"/>
-        /// describing the issue. This limitation should also be documented by the journal plugin.
-        /// 
-        /// If there are failures when storing any of the messages in the batch the returned
-        /// <see cref="Task"/> must be completed with failure. The <see cref="Task"/> must only be completed with
-        /// success when all messages in the batch have been confirmed to be stored successfully,
-        /// i.e. they will be readable, and visible, in a subsequent replay. If there is
-        /// uncertainty about if the messages were stored or not the <see cref="Task"/> must be completed
-        /// with failure.
-        /// 
-        /// Data store connection problems must be signaled by completing the <see cref="Task"/> with
-        /// failure.
-        /// 
-        /// The journal can also signal that it rejects individual messages (<see cref="AtomicWrite"/>) by
-        /// the returned <see cref="Task"/>. It is possible but not mandatory to reduce
-        /// number of allocations by returning null for the happy path,
-        /// i.e. when no messages are rejected. Otherwise the returned list must have as many elements
-        /// as the input <paramref name="messages"/>. Each result element signals if the corresponding
-        /// <see cref="AtomicWrite"/> is rejected or not, with an exception describing the problem. Rejecting
-        /// a message means it was not stored, i.e. it must not be included in a later replay.
-        /// Rejecting a message is typically done before attempting to store it, e.g. because of
-        /// serialization error.
-        /// 
-        /// Data store connection problems must not be signaled as rejections.
-        /// 
-        /// It is possible but not mandatory to reduce number of allocations by returning
-        /// null for the happy path, i.e. when no messages are rejected.
-        /// 
-        /// Calls to this method are serialized by the enclosing journal actor. If you spawn
-        /// work in asynchronous tasks it is alright that they complete the futures in any order,
-        /// but the actual writes for a specific persistenceId should be serialized to avoid
-        /// issues such as events of a later write are visible to consumers (query side, or replay)
-        /// before the events of an earlier write are visible.
-        /// A <see cref="PersistentActor"/> will not send a new <see cref="WriteMessages"/> request before
-        /// the previous one has been completed.
-        /// 
-        /// Please not that the <see cref="IPersistentRepresentation.Sender"/> of the contained
-        /// <see cref="Persistent"/> objects has been nulled out (i.e. set to <see cref="ActorRefs.NoSender"/>
-        /// in order to not use space in the journal for a sender reference that will likely be obsolete
-        /// during replay.
-        /// 
-        /// Please also note that requests for the highest sequence number may be made concurrently
-        /// to this call executing for the same `persistenceId`, in particular it is possible that
-        /// a restarting actor tries to recover before its outstanding writes have completed.
-        /// In the latter case it is highly desirable to defer reading the highest sequence number
-        /// until all outstanding writes have completed, otherwise the <see cref="PersistentActor"/>
-        /// may reuse sequence numbers.
-        /// 
-        /// This call is protected with a circuit-breaker.
-        /// </summary>
-        /// <param name="messages">TBD</param>
         /// <param name="cancellationToken"><see cref="CancellationToken"/> used to signal cancelled snapshot operation</param> 
         protected abstract Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken);
-
-        /// <summary>
-        /// Asynchronously deletes all persistent messages up to inclusive <paramref name="toSequenceNr"/>
-        /// bound.
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        [Obsolete("Use DeleteMessagesToAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected abstract Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr);
 
         /// <summary>
         /// Asynchronously deletes all persistent messages up to inclusive <paramref name="toSequenceNr"/>
@@ -355,9 +268,7 @@ namespace Akka.Persistence.Journal
                 
                 try
                 {
-                    var highSequenceNr = await _breaker.WithCircuitBreaker(
-                        (message, readHighestSequenceNrFrom, awj: this), 
-                        (state, ct) =>
+                    var highSequenceNr = await _breaker.WithCircuitBreaker((message, readHighestSequenceNrFrom, awj: this), (state, ct) =>
                             state.awj.ReadHighestSequenceNrAsync(state.message.PersistenceId, state.readHighestSequenceNrFrom, ct));
                     var toSequenceNr = Math.Min(message.ToSequenceNr, highSequenceNr);
                     if (toSequenceNr <= 0L || message.FromSequenceNr > toSequenceNr)
@@ -380,9 +291,9 @@ namespace Akka.Persistence.Journal
                                     }
                                 }
                             });
-                    }
                     
-                    CompleteHighSeqNo(highSequenceNr);
+                        CompleteHighSeqNo(highSequenceNr);
+                    }
                 }
                 catch (OperationCanceledException cx)
                 {
@@ -474,7 +385,7 @@ namespace Akka.Persistence.Journal
                 : new WriteMessageRejected(x, exception, writeMessage.ActorInstanceId), results, resequencerCounter, writeMessage, resequencer, writeJournal);
         }
         
-        private static void Resequence(Func<IPersistentRepresentation, Exception, object> mapper,
+        private void Resequence(Func<IPersistentRepresentation, Exception, object> mapper,
             IImmutableList<Exception> results, long resequencerCounter, WriteMessages msg, IActorRef resequencer, IActorRef writeJournal)
         {
             var i = 0;

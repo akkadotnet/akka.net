@@ -63,28 +63,6 @@ namespace Akka.Persistence.Journal
         /// <param name="fromSequenceNr">Hint where to start searching for the highest sequence number.
         /// When a persistent actor is recovering this <paramref name="fromSequenceNr"/> will the sequence
         /// number of the used snapshot, or `0L` if no snapshot is used.</param>
-        /// <returns>TBD</returns>
-        [Obsolete("Use ReadHighestSequenceNrAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
-
-        /// <summary>
-        /// Asynchronously reads the highest stored sequence number for provided <paramref name="persistenceId"/>.
-        /// The persistent actor will use the highest sequence number after recovery as the starting point when
-        /// persisting new events.
-        /// This sequence number is also used as `toSequenceNr` in subsequent calls to
-        /// <see cref="ReplayMessagesAsync"/> unless the user has specified a lower `toSequenceNr`.
-        /// Journal must maintain the highest sequence number and never decrease it.
-        /// 
-        /// This call is protected with a circuit-breaker.
-        /// 
-        /// Please also not that requests for the highest sequence number may be made concurrently
-        /// to writes executing for the same <paramref name="persistenceId"/>, in particular it is
-        /// possible that a restarting actor tries to recover before its outstanding writes have completed.
-        /// </summary>
-        /// <param name="persistenceId">Persistent actor identifier</param>
-        /// <param name="fromSequenceNr">Hint where to start searching for the highest sequence number.
-        /// When a persistent actor is recovering this <paramref name="fromSequenceNr"/> will the sequence
-        /// number of the used snapshot, or `0L` if no snapshot is used.</param>
         /// <param name="cancellationToken"><see cref="CancellationToken"/> used to signal cancelled recovery operation</param>
         /// <returns>TBD</returns>
         Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken);

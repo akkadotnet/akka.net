@@ -156,10 +156,6 @@ namespace Akka.Cluster.Sharding.Tests
             return true;
         }
 
-        [Obsolete("Use WriteMessagesAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
-            => WriteMessagesAsync(messages, CancellationToken.None);
-
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
             var trueMsgs = messages.ToArray();
@@ -184,10 +180,6 @@ namespace Akka.Cluster.Sharding.Tests
                 }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        [Obsolete("Use DeleteMessagesToAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
-            => DeleteMessagesToAsync(persistenceId, toSequenceNr, CancellationToken.None);
-        
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken)
         {
             if (_store == null)
@@ -195,16 +187,15 @@ namespace Akka.Cluster.Sharding.Tests
 
             var result = new TaskCompletionSource<object>();
 
-            _store.Ask<object>(sender => new DeleteMessagesTo(persistenceId, toSequenceNr, sender), Timeout, cancellationToken)
-                .ContinueWith(r =>
-                {
-                    if (r.IsFaulted)
-                        result.TrySetException(r.Exception);
-                    else if (r.IsCanceled)
-                        result.TrySetException(new TimeoutException());
-                    else
-                        result.TrySetResult(true);
-                }, TaskContinuationOptions.ExecuteSynchronously);
+            _store.Ask<object>(sender => new DeleteMessagesTo(persistenceId, toSequenceNr, sender), Timeout, cancellationToken).ContinueWith(r =>
+            {
+                if (r.IsFaulted)
+                    result.TrySetException(r.Exception);
+                else if (r.IsCanceled)
+                    result.TrySetException(new TimeoutException());
+                else
+                    result.TrySetResult(true);
+            }, TaskContinuationOptions.ExecuteSynchronously);
 
             return result.Task;
         }
@@ -235,10 +226,6 @@ namespace Akka.Cluster.Sharding.Tests
             return replayCompletionPromise.Task;
         }
 
-        [Obsolete("Use ReadHighestSequenceNrAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
-            => ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr, CancellationToken.None);
-        
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken)
         {
             if (_store == null)

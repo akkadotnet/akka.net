@@ -166,10 +166,6 @@ akka.actor.provider = cluster";
     {
         public static bool Working = false;
 
-        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task DeleteAsync(SnapshotMetadata metadata)
-            => DeleteAsync(metadata, CancellationToken.None);
-
         protected override Task DeleteAsync(
             SnapshotMetadata metadata, 
             CancellationToken cancellationToken)
@@ -181,10 +177,6 @@ akka.actor.provider = cluster";
 
             return Task.CompletedTask;
         }
-
-        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
-            => DeleteAsync(persistenceId, criteria, CancellationToken.None);
 
         protected override Task DeleteAsync(
             string persistenceId,
@@ -198,10 +190,6 @@ akka.actor.provider = cluster";
 
             return Task.CompletedTask;
         }
-
-        [Obsolete("Use LoadAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
-            => LoadAsync(persistenceId, criteria, CancellationToken.None);
 
         protected override async Task<SelectedSnapshot> LoadAsync(
             string persistenceId,
@@ -215,10 +203,6 @@ akka.actor.provider = cluster";
 
             return null;
         }
-
-        [Obsolete("Use SaveAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
-            => SaveAsync(metadata, snapshot, CancellationToken.None);
 
         protected override Task SaveAsync(
             SnapshotMetadata metadata,

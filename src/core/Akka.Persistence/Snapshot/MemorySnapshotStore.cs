@@ -27,10 +27,6 @@ namespace Akka.Persistence.Snapshot
         /// </summary>
         protected virtual List<SnapshotEntry> Snapshots { get; } = new();
 
-        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task DeleteAsync(SnapshotMetadata metadata)
-            => DeleteAsync(metadata, CancellationToken.None);
-
         protected override Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken)
         {
             bool Pred(SnapshotEntry x) => x.PersistenceId == metadata.PersistenceId && (metadata.SequenceNr <= 0 || metadata.SequenceNr == long.MaxValue || x.SequenceNr == metadata.SequenceNr)
@@ -42,10 +38,6 @@ namespace Akka.Persistence.Snapshot
             return TaskEx.Completed;
         }
 
-        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
-            => DeleteAsync(persistenceId, criteria, CancellationToken.None);
-
         protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
         {
             var filter = CreateRangeFilter(persistenceId, criteria);
@@ -53,10 +45,6 @@ namespace Akka.Persistence.Snapshot
             Snapshots.RemoveAll(x => filter(x));
             return TaskEx.Completed;
         }
-
-        [Obsolete("Use LoadAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
-            => LoadAsync(persistenceId, criteria, CancellationToken.None);
 
         protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
         {
@@ -66,10 +54,6 @@ namespace Akka.Persistence.Snapshot
             var snapshot = Snapshots.Where(filter).OrderByDescending(x => x.SequenceNr).Take(1).Select(x => ToSelectedSnapshot(x)).FirstOrDefault();
             return Task.FromResult(snapshot);
         }
-
-        [Obsolete("Use SaveAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
-            => SaveAsync(metadata, snapshot, CancellationToken.None);
 
         protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot, CancellationToken cancellationToken)
         {

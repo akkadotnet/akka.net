@@ -84,10 +84,6 @@ namespace Akka.Persistence.Tests.Journal
             return promise.Task;
         }
 
-        [Obsolete("Use ReadHighestSequenceNrAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
-            => ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr, CancellationToken.None);
-        
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken)
         {
             var promise = new TaskCompletionSource<long>();
@@ -98,10 +94,6 @@ namespace Akka.Persistence.Tests.Journal
             return promise.Task;
         }
 
-        [Obsolete("Use WriteMessagesAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
-            => WriteMessagesAsync(messages, CancellationToken.None);
-        
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
             var promise =
@@ -129,10 +121,6 @@ namespace Akka.Persistence.Tests.Journal
             return promise.Task;
         }
 
-        [Obsolete("Use DeleteMessagesToAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
-            => DeleteMessagesToAsync(persistenceId, toSequenceNr, CancellationToken.None);
-        
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken)
         {
             TaskCompletionSource<object> promise = new TaskCompletionSource<object>();

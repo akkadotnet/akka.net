@@ -32,10 +32,6 @@ namespace Akka.Persistence.Journal
         
         protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return _messages; } }
         
-        [Obsolete("Use WriteMessagesAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
-            => WriteMessagesAsync(messages, CancellationToken.None);
-        
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
             foreach (var w in messages)
@@ -64,10 +60,6 @@ namespace Akka.Persistence.Journal
             return Task.FromResult<IImmutableList<Exception>>(null); // all good
         }
 
-        [Obsolete("Use ReadHighestSequenceNrAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
-            => ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr, CancellationToken.None);
-        
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken)
         {
             return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.GetValueOrDefault(persistenceId, 0L)));
@@ -81,10 +73,6 @@ namespace Akka.Persistence.Journal
                 Read(persistenceId, fromSequenceNr, Math.Min(toSequenceNr, highest), max).ForEach(recoveryCallback);
             return Task.CompletedTask;
         }
-        
-        [Obsolete("Use DeleteMessagesToAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
-            => DeleteMessagesToAsync(persistenceId, toSequenceNr, CancellationToken.None);
         
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken)
         {

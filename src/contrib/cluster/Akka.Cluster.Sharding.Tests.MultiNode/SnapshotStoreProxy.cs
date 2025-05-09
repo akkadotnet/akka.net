@@ -90,10 +90,6 @@ namespace Akka.Cluster.Sharding.Tests
             return true;
         }
 
-        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task DeleteAsync(SnapshotMetadata metadata)
-            => DeleteAsync(metadata, CancellationToken.None);
-        
         protected override async Task DeleteAsync(
             SnapshotMetadata metadata, 
             CancellationToken cancellationToken)
@@ -114,10 +110,6 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
-            => DeleteAsync(persistenceId, criteria, CancellationToken.None);
-        
         protected override async Task DeleteAsync(
             string persistenceId, 
             SnapshotSelectionCriteria criteria, 
@@ -139,10 +131,6 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        [Obsolete("Use LoadAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
-            => LoadAsync(persistenceId, criteria, CancellationToken.None);
-        
         protected override async Task<SelectedSnapshot> LoadAsync(
             string persistenceId,
             SnapshotSelectionCriteria criteria, 
@@ -172,10 +160,6 @@ namespace Akka.Cluster.Sharding.Tests
             throw new TimeoutException();
         }
 
-        [Obsolete("Use SaveAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
-            => SaveAsync(metadata, snapshot, CancellationToken.None);
-        
         protected override async Task SaveAsync(
             SnapshotMetadata metadata,
             object snapshot, 

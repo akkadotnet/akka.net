@@ -270,10 +270,6 @@ namespace Akka.Persistence.Custom.Journal
         }
         // </ReplayMessagesAsync>
 
-        [Obsolete("Use ReadHighestSequenceNrAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        public sealed override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
-            => ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr, CancellationToken.None);
-        
         // <ReadHighestSequenceNrAsync>
         public sealed override async Task<long> ReadHighestSequenceNrAsync(
             string persistenceId,
@@ -302,10 +298,6 @@ namespace Akka.Persistence.Custom.Journal
         }
         // </ReadHighestSequenceNrAsync>
 
-        [Obsolete("Use WriteMessagesAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected sealed override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
-            => await WriteMessagesAsync(messages, CancellationToken.None);
-        
         // <WriteMessagesAsync>
         protected sealed override async Task<IImmutableList<Exception>> WriteMessagesAsync(
             IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
@@ -399,10 +391,6 @@ namespace Akka.Persistence.Custom.Journal
         }
         // </WriteMessagesAsync>
 
-        [Obsolete("Use DeleteMessagesToAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected sealed override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
-            => DeleteMessagesToAsync(persistenceId, toSequenceNr, CancellationToken.None);
-        
         //<DeleteMessagesToAsync>
         protected sealed override async Task DeleteMessagesToAsync(
             string persistenceId,

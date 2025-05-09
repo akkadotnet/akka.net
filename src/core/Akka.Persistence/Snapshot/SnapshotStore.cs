@@ -238,35 +238,11 @@ namespace Akka.Persistence.Snapshot
         /// </summary>
         /// <param name="persistenceId">Id of the persistent actor.</param>
         /// <param name="criteria">Selection criteria for loading.</param>
-        [Obsolete("Use LoadAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected abstract Task<SelectedSnapshot> LoadAsync(
-            string persistenceId, 
-            SnapshotSelectionCriteria criteria);
-
-        /// <summary>
-        /// Plugin API: Asynchronously loads a snapshot.
-        /// 
-        /// This call is protected with a circuit-breaker
-        /// </summary>
-        /// <param name="persistenceId">Id of the persistent actor.</param>
-        /// <param name="criteria">Selection criteria for loading.</param>
         /// <param name="cancellationToken"><see cref="CancellationToken"/> used to signal cancelled snapshot operation</param>
         protected abstract Task<SelectedSnapshot> LoadAsync(
             string persistenceId, 
             SnapshotSelectionCriteria criteria,
             CancellationToken cancellationToken);
-
-        /// <summary>
-        /// Plugin API: Asynchronously saves a snapshot.
-        /// 
-        /// This call is protected with a circuit-breaker
-        /// </summary>
-        /// <param name="metadata">Snapshot metadata.</param>
-        /// <param name="snapshot">Snapshot.</param>
-        [Obsolete("Use SaveAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected abstract Task SaveAsync(
-            SnapshotMetadata metadata,
-            object snapshot);
 
         /// <summary>
         /// Plugin API: Asynchronously saves a snapshot.
@@ -287,29 +263,8 @@ namespace Akka.Persistence.Snapshot
         /// This call is protected with a circuit-breaker
         /// </summary>
         /// <param name="metadata">Snapshot metadata.</param>
-        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected abstract Task DeleteAsync(SnapshotMetadata metadata);
-
-        /// <summary>
-        /// Plugin API: Deletes the snapshot identified by <paramref name="metadata"/>.
-        /// 
-        /// This call is protected with a circuit-breaker
-        /// </summary>
-        /// <param name="metadata">Snapshot metadata.</param>
         /// <param name="cancellationToken"><see cref="CancellationToken"/> used to signal cancelled snapshot operation</param>
         protected abstract Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken);
-
-        /// <summary>
-        /// Plugin API: Deletes all snapshots matching provided <paramref name="criteria"/>.
-        /// 
-        /// This call is protected with a circuit-breaker
-        /// </summary>
-        /// <param name="persistenceId">Id of the persistent actor.</param>
-        /// <param name="criteria">Selection criteria for deleting.</param>
-        [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]
-        protected abstract Task DeleteAsync(
-            string persistenceId, 
-            SnapshotSelectionCriteria criteria);
 
         /// <summary>
         /// Plugin API: Deletes all snapshots matching provided <paramref name="criteria"/>.
