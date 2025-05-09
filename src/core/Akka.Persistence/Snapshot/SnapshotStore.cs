@@ -68,26 +68,15 @@ namespace Akka.Persistence.Snapshot
                     break;
                 
                 case LoadSnapshot loadSnapshot:
-                    _breaker.WithCircuitBreaker(InvokeLoadAsync)
+                    _breaker.WithCircuitBreaker(ct => LoadAsync(loadSnapshot.PersistenceId, loadSnapshot.Criteria.Limit(loadSnapshot.ToSequenceNr), ct))
+                        .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
+                                ? new LoadSnapshotResult(t.Result, loadSnapshot.ToSequenceNr) as ISnapshotResponse
+                                : new LoadSnapshotFailed(t.IsFaulted
+                                    ? TryUnwrapException(t.Exception)
+                                    : new OperationCanceledException("LoadAsync canceled, possibly due to timing out.")),
+                            _continuationOptions)
                         .PipeTo(senderPersistentActor);
                     break;
-
-                    async Task<ISnapshotResponse> InvokeLoadAsync(CancellationToken cancellationToken)
-                    {
-                        try
-                        {
-                            return new LoadSnapshotResult(
-                                snapshot: await LoadAsync(
-                                    persistenceId: loadSnapshot.PersistenceId, 
-                                    criteria: loadSnapshot.Criteria.Limit(loadSnapshot.ToSequenceNr),
-                                    cancellationToken: cancellationToken), 
-                                toSequenceNr: loadSnapshot.ToSequenceNr);
-                        }
-                        catch (Exception e)
-                        {
-                            return new LoadSnapshotFailed(TryUnwrapException(e));
-                        }
-                    }
                 
                 case SaveSnapshot saveSnapshot:
                     var metadata = new SnapshotMetadata(
@@ -96,24 +85,16 @@ namespace Akka.Persistence.Snapshot
                         timestamp: saveSnapshot.Metadata.Timestamp == DateTime.MinValue 
                             ? DateTime.UtcNow 
                             : saveSnapshot.Metadata.Timestamp);
-
-                    _breaker.WithCircuitBreaker(InvokeSaveAsync)
+                    _breaker.WithCircuitBreaker(ct => SaveAsync(metadata, saveSnapshot.Snapshot, ct))
+                        .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
+                                ? new SaveSnapshotSuccess(metadata) as ISnapshotResponse
+                                : new SaveSnapshotFailure(saveSnapshot.Metadata,
+                                    t.IsFaulted
+                                        ? TryUnwrapException(t.Exception)
+                                        : new OperationCanceledException("SaveAsync canceled, possibly due to timing out.", TryUnwrapException(t.Exception))),
+                            _continuationOptions)
                         .PipeTo(self, senderPersistentActor);
-
                     break;
-
-                    async Task<ISnapshotResponse> InvokeSaveAsync(CancellationToken cancellationToken)
-                    {
-                        try
-                        {
-                            await SaveAsync(metadata, saveSnapshot.Snapshot, cancellationToken);
-                            return new SaveSnapshotSuccess(metadata);
-                        }
-                        catch (Exception e)
-                        {
-                            return new SaveSnapshotFailure(saveSnapshot.Metadata, TryUnwrapException(e));
-                        }
-                    }
                 
                 case SaveSnapshotSuccess:
                     try
@@ -124,59 +105,47 @@ namespace Akka.Persistence.Snapshot
                     {
                         senderPersistentActor.Tell(message);
                     }
-
                     break;
                 
                 case SaveSnapshotFailure saveSnapshotFailure:
                     try
                     {
                         ReceivePluginInternal(message);
-                        _breaker.WithCircuitBreaker(InvokeDeleteAsync);
-
-                        async Task InvokeDeleteAsync(CancellationToken cancellationToken)
-                        {
-                            try
+                        _breaker.WithCircuitBreaker(ct => DeleteAsync(saveSnapshotFailure.Metadata, ct))
+                            .ContinueWith(t =>
                             {
-                                await DeleteAsync(saveSnapshotFailure.Metadata, cancellationToken);
-                            }
-                            catch (Exception e)
-                            {
-                                _log.Error(TryUnwrapException(e), "DeleteAsync operation after SaveSnapshot failure failed.");
-                            }
-                        }
+                                if(t.IsFaulted)
+                                    _log.Error(t.Exception, "DeleteAsync operation after SaveSnapshot failure failed.");
+                                else if(t.IsCanceled)
+                                    _log.Error(t.Exception, t.Exception is not null
+                                        ? "DeleteAsync operation after SaveSnapshot failure canceled."
+                                        : "DeleteAsync operation after SaveSnapshot failure canceled, possibly due to timing out.");
+                            }, TaskContinuationOptions.ExecuteSynchronously);
                     }
                     finally
                     {
                         senderPersistentActor.Tell(message);
                     }
-
                     break;
                 
                 case DeleteSnapshot deleteSnapshot:
                 {
                     var eventStream = Context.System.EventStream;
-                    _breaker.WithCircuitBreaker(InvokeDeleteAsync)
+                    _breaker.WithCircuitBreaker(ct => DeleteAsync(deleteSnapshot.Metadata, ct))
+                        .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
+                                ? new DeleteSnapshotSuccess(deleteSnapshot.Metadata) as ISnapshotResponse
+                                : new DeleteSnapshotFailure(deleteSnapshot.Metadata,
+                                    t.IsFaulted
+                                        ? TryUnwrapException(t.Exception)
+                                        : new OperationCanceledException("DeleteAsync canceled, possibly due to timing out.")),
+                            _continuationOptions)
                         .PipeTo(self, senderPersistentActor)
                         .ContinueWith(_ =>
                         {
                             if (_publish)
                                 eventStream.Publish(message);
                         }, _continuationOptions);
-
                     break;
-
-                    async Task<ISnapshotResponse> InvokeDeleteAsync(CancellationToken cancellationToken)
-                    {
-                        try
-                        {
-                            await DeleteAsync(deleteSnapshot.Metadata, cancellationToken);
-                            return new DeleteSnapshotSuccess(deleteSnapshot.Metadata);
-                        }
-                        catch (Exception e)
-                        {
-                            return new DeleteSnapshotFailure(deleteSnapshot.Metadata, TryUnwrapException(e));
-                        }
-                    }
                 }
                 
                 case DeleteSnapshotSuccess:
@@ -188,7 +157,6 @@ namespace Akka.Persistence.Snapshot
                     {
                         senderPersistentActor.Tell(message);
                     }
-
                     break;
                 
                 case DeleteSnapshotFailure:
@@ -200,13 +168,19 @@ namespace Akka.Persistence.Snapshot
                     {
                         senderPersistentActor.Tell(message);
                     }
-
                     break;
                 
                 case DeleteSnapshots deleteSnapshots:
                 {
                     var eventStream = Context.System.EventStream;
-                    _breaker.WithCircuitBreaker(InvokeDeleteAsync)
+                    _breaker.WithCircuitBreaker(ct => DeleteAsync(deleteSnapshots.PersistenceId, deleteSnapshots.Criteria, ct))
+                        .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
+                                ? new DeleteSnapshotsSuccess(deleteSnapshots.Criteria) as ISnapshotResponse
+                                : new DeleteSnapshotsFailure(deleteSnapshots.Criteria,
+                                    t.IsFaulted
+                                        ? TryUnwrapException(t.Exception)
+                                        : new OperationCanceledException("DeleteAsync canceled, possibly due to timing out.")),
+                            _continuationOptions)
                         .PipeTo(self, senderPersistentActor)
                         .ContinueWith(_ =>
                         {
@@ -214,19 +188,6 @@ namespace Akka.Persistence.Snapshot
                                 eventStream.Publish(message);
                         }, _continuationOptions);
                     break;
-
-                    async Task<ISnapshotResponse> InvokeDeleteAsync(CancellationToken cancellationToken)
-                    {
-                        try
-                        {
-                            await DeleteAsync(deleteSnapshots.PersistenceId, deleteSnapshots.Criteria, cancellationToken);
-                            return new DeleteSnapshotsSuccess(deleteSnapshots.Criteria);
-                        }
-                        catch (Exception e)
-                        {
-                            return new DeleteSnapshotsFailure(deleteSnapshots.Criteria, TryUnwrapException(e));
-                        }
-                    }
                 }
                 
                 case DeleteSnapshotsSuccess:
@@ -238,7 +199,6 @@ namespace Akka.Persistence.Snapshot
                     {
                         senderPersistentActor.Tell(message);
                     }
-
                     break;
                 
                 case DeleteSnapshotsFailure:

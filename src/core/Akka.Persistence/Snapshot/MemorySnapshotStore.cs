@@ -33,15 +33,13 @@ namespace Akka.Persistence.Snapshot
 
         protected override Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken)
         {
+            bool Pred(SnapshotEntry x) => x.PersistenceId == metadata.PersistenceId && (metadata.SequenceNr <= 0 || metadata.SequenceNr == long.MaxValue || x.SequenceNr == metadata.SequenceNr)
+                                                                                    && (metadata.Timestamp == DateTime.MinValue || metadata.Timestamp == DateTime.MaxValue || x.Timestamp == metadata.Timestamp.Ticks);
+            
             var snapshot = Snapshots.FirstOrDefault(Pred);
             Snapshots.Remove(snapshot);
 
             return TaskEx.Completed;
-
-            bool Pred(SnapshotEntry x) => 
-                x.PersistenceId == metadata.PersistenceId 
-                && (metadata.SequenceNr <= 0 || metadata.SequenceNr == long.MaxValue || x.SequenceNr == metadata.SequenceNr)
-                && (metadata.Timestamp == DateTime.MinValue || metadata.Timestamp == DateTime.MaxValue || x.Timestamp == metadata.Timestamp.Ticks);
         }
 
         [Obsolete("Use DeleteAsync() that takes a CancellationToken argument instead. Since 1.5.42")]

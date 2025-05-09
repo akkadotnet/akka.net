@@ -102,9 +102,7 @@ namespace Akka.Cluster.Sharding.Tests
                 throw new TimeoutException("Store not initialized.");
             try
             {
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(Timeout);
-                var response = await _store.Ask(new DeleteSnapshot(metadata), cts.Token);
+                var response = await _store.Ask(new DeleteSnapshot(metadata), Timeout, cancellationToken);
                 if (response is DeleteSnapshotFailure f)
                 {
                     ExceptionDispatchInfo.Capture(f.Cause).Throw();
@@ -129,9 +127,7 @@ namespace Akka.Cluster.Sharding.Tests
                 throw new TimeoutException("Store not initialized.");
             try
             {
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(Timeout);
-                var response = await _store.Ask(new DeleteSnapshots(persistenceId, criteria), cts.Token);
+                var response = await _store.Ask(new DeleteSnapshots(persistenceId, criteria), Timeout, cancellationToken);
                 if (response is DeleteSnapshotsFailure f)
                 {
                     ExceptionDispatchInfo.Capture(f.Cause).Throw();
@@ -156,9 +152,7 @@ namespace Akka.Cluster.Sharding.Tests
                 throw new TimeoutException("Store not initialized.");
             try
             {
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(Timeout);
-                var response = await _store.Ask(new LoadSnapshot(persistenceId, criteria, criteria.MaxSequenceNr), cts.Token);
+                var response = await _store.Ask(new LoadSnapshot(persistenceId, criteria, criteria.MaxSequenceNr), Timeout, cancellationToken);
                 switch (response)
                 {
                     case LoadSnapshotResult ls:
@@ -191,9 +185,7 @@ namespace Akka.Cluster.Sharding.Tests
                 throw new TimeoutException("Store not initialized.");
             try
             {
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(Timeout);
-                var response = await _store.Ask(new SaveSnapshot(metadata, snapshot), cts.Token);
+                var response = await _store.Ask(new SaveSnapshot(metadata, snapshot), Timeout, cancellationToken);
                 if (response is SaveSnapshotFailure f)
                 {
                     ExceptionDispatchInfo.Capture(f.Cause).Throw();

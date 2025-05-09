@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using System.Runtime.Serialization;
@@ -330,16 +331,14 @@ namespace Akka.Persistence.Journal
         /// This exception is thrown when the store has not been initialized.
         /// </exception>
         /// <returns>TBD</returns>
-        protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(
             IEnumerable<AtomicWrite> messages,
             CancellationToken cancellationToken)
         {
             if (_store == null)
-                throw new TimeoutException("Store not initialized."); 
+                return StoreNotInitialized<IImmutableList<Exception>>(); 
 
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(Timeout);
-            return await _store.Ask<IImmutableList<Exception>>(new AsyncWriteTarget.WriteMessages(messages), cts.Token);
+            return _store.Ask<IImmutableList<Exception>>(new AsyncWriteTarget.WriteMessages(messages), Timeout, cancellationToken);
         }
 
         /// <summary>
@@ -352,17 +351,15 @@ namespace Akka.Persistence.Journal
         /// This exception is thrown when the store has not been initialized.
         /// </exception>
         /// <returns>TBD</returns>
-        protected override async Task DeleteMessagesToAsync(
+        protected override Task DeleteMessagesToAsync(
             string persistenceId,
             long toSequenceNr,
             CancellationToken cancellationToken)
         {
             if (_store == null)
-                throw new TimeoutException("Store not initialized."); 
+                return StoreNotInitialized<object>();
 
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(Timeout);
-            await _store.Ask(new AsyncWriteTarget.DeleteMessagesTo(persistenceId, toSequenceNr), cts.Token);
+            return _store.Ask(new AsyncWriteTarget.DeleteMessagesTo(persistenceId, toSequenceNr), Timeout, cancellationToken);
         }
 
         /// <summary>
@@ -401,20 +398,19 @@ namespace Akka.Persistence.Journal
         /// This exception is thrown when the store has not been initialized.
         /// </exception>
         /// <returns>TBD</returns>
-        public override async Task<long> ReadHighestSequenceNrAsync(
+        public override Task<long> ReadHighestSequenceNrAsync(
             string persistenceId,
             long fromSequenceNr,
             CancellationToken cancellationToken)
         {
             if (_store == null)
-                throw new TimeoutException("Store not initialized."); 
+                return StoreNotInitialized<long>(); 
 
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(Timeout);
-            return (await _store.Ask<AsyncWriteTarget.ReplaySuccess>(new AsyncWriteTarget.ReplayMessages(persistenceId, 0, 0, 0), cts.Token)).HighestSequenceNr;
+            return _store.Ask<AsyncWriteTarget.ReplaySuccess>(new AsyncWriteTarget.ReplayMessages(persistenceId, 0, 0, 0), Timeout, cancellationToken)
+                .ContinueWith(t => t.Result.HighestSequenceNr, TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
-        private Task<T> StoreNotInitialized<T>()
+        private static Task<T> StoreNotInitialized<T>()
         {
             var promise = new TaskCompletionSource<T>();
             promise.SetException(new TimeoutException("Store not initialized."));

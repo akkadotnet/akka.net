@@ -343,6 +343,16 @@ namespace Akka.Persistence.Journal
 
             async Task ExecuteHighestSequenceNr()
             {
+                void CompleteHighSeqNo(long highSeqNo)
+                {
+                    replyTo.Tell(new RecoverySuccess(highSeqNo));
+
+                    if (CanPublish)
+                    {
+                        eventStream.Publish(message);
+                    }
+                }
+                
                 try
                 {
                     var highSequenceNr = await _breaker.WithCircuitBreaker(
@@ -350,7 +360,11 @@ namespace Akka.Persistence.Journal
                         (state, ct) =>
                             state.awj.ReadHighestSequenceNrAsync(state.message.PersistenceId, state.readHighestSequenceNrFrom, ct));
                     var toSequenceNr = Math.Min(message.ToSequenceNr, highSequenceNr);
-                    if (toSequenceNr > 0L && message.FromSequenceNr <= toSequenceNr)
+                    if (toSequenceNr <= 0L || message.FromSequenceNr > toSequenceNr)
+                    {
+                        CompleteHighSeqNo(highSequenceNr);
+                    }
+                    else
                     {
                         // Send replayed messages and replay result to persistentActor directly. No need
                         // to resequence replayed messages relative to written and looped messages.
@@ -368,12 +382,7 @@ namespace Akka.Persistence.Journal
                             });
                     }
                     
-                    replyTo.Tell(new RecoverySuccess(highSequenceNr));
-
-                    if (CanPublish)
-                    {
-                        eventStream.Publish(message);
-                    }
+                    CompleteHighSeqNo(highSequenceNr);
                 }
                 catch (OperationCanceledException cx)
                 {
@@ -434,9 +443,7 @@ namespace Akka.Persistence.Journal
                 try
                 {
                     var writeResult =
-                        await _breaker.WithCircuitBreaker(
-                            state: (prepared, awj: this), 
-                            body: (state, ct) => state.awj.WriteMessagesAsync(state.prepared, ct)).ConfigureAwait(false);
+                        await _breaker.WithCircuitBreaker((prepared, awj: this), (state, ct) => state.awj.WriteMessagesAsync(state.prepared, ct)).ConfigureAwait(false);
 
                     ProcessResults(writeResult, atomicWriteCount, message, _resequencer, resequencerCounter, self);
                 }
@@ -467,51 +474,34 @@ namespace Akka.Persistence.Journal
                 : new WriteMessageRejected(x, exception, writeMessage.ActorInstanceId), results, resequencerCounter, writeMessage, resequencer, writeJournal);
         }
         
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void Resequence(
-            Func<IPersistentRepresentation, Exception, object> mapper,
-            IImmutableList<Exception> results,
-            long resequencerCounter,
-            WriteMessages msg,
-            IActorRef resequencer,
-            IActorRef writeJournal)
+        private static void Resequence(Func<IPersistentRepresentation, Exception, object> mapper,
+            IImmutableList<Exception> results, long resequencerCounter, WriteMessages msg, IActorRef resequencer, IActorRef writeJournal)
         {
             var i = 0;
             var enumerator = results?.GetEnumerator();
-            try
+            foreach (var resequencable in msg.Messages)
             {
-                foreach (var resequencable in msg.Messages)
+                if (resequencable is AtomicWrite aw)
                 {
-                    if (resequencable is AtomicWrite aw)
+                    Exception exception = null;
+                    if (enumerator != null)
                     {
-                        Exception exception = null;
-                        if (enumerator != null)
-                        {
-                            enumerator.MoveNext();
-                            exception = enumerator.Current;
-                        }
-
-                        foreach (var p in (IEnumerable<IPersistentRepresentation>)aw.Payload)
-                        {
-                            resequencer.Tell(
-                                new Desequenced(mapper(p, exception), resequencerCounter + i + 1, msg.PersistentActor,
-                                    p.Sender), writeJournal);
-                            i++;
-                        }
+                        enumerator.MoveNext();
+                        exception = enumerator.Current;
                     }
-                    else
+
+                    foreach (var p in (IEnumerable<IPersistentRepresentation>)aw.Payload)
                     {
-                        var loopMsg = new LoopMessageSuccess(resequencable.Payload, msg.ActorInstanceId);
-                        resequencer.Tell(
-                            new Desequenced(loopMsg, resequencerCounter + i + 1, msg.PersistentActor,
-                                resequencable.Sender), writeJournal);
+                        resequencer.Tell(new Desequenced(mapper(p, exception), resequencerCounter + i + 1, msg.PersistentActor, p.Sender), writeJournal);
                         i++;
                     }
                 }
-            }
-            finally
-            {
-                enumerator?.Dispose();
+                else
+                {
+                    var loopMsg = new LoopMessageSuccess(resequencable.Payload, msg.ActorInstanceId);
+                    resequencer.Tell(new Desequenced(loopMsg, resequencerCounter + i + 1, msg.PersistentActor, resequencable.Sender), writeJournal);
+                    i++;
+                }
             }
         }
 
