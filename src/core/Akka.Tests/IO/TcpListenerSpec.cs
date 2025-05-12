@@ -13,21 +13,24 @@ using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 using TcpListener = Akka.IO.TcpListener;
 
 namespace Akka.Tests.IO
 {
     public class TcpListenerSpec : AkkaSpec
     {
-        public TcpListenerSpec()
-            : base(@"
-                     akka.actor.serialize-creators = on
-                     akka.actor.serialize-messages = on
-                     akka.io.tcp.register-timeout = 500ms
-                     akka.io.tcp.max-received-message-size = 1024
-                     akka.io.tcp.direct-buffer-size = 512
-                     akka.actor.serialize-creators = on
-                     akka.io.tcp.batch-accept-limit = 2")
+        public TcpListenerSpec(ITestOutputHelper output)
+            : base("""
+
+                                        akka.actor.serialize-creators = on
+                                        akka.actor.serialize-messages = on
+                                        akka.io.tcp.register-timeout = 500ms
+                                        akka.io.tcp.max-received-message-size = 1024
+                                        akka.io.tcp.direct-buffer-size = 512
+                                        akka.actor.serialize-creators = on
+                                        akka.io.tcp.batch-accept-limit = 2
+                   """, output)
         {
         }
 
@@ -59,12 +62,27 @@ namespace Akka.Tests.IO
             {
                 await x.BindListener();
 
-                await x.AttemptConnectionToEndpoint();
+                var socket = await x.AttemptConnectionToEndpoint();
+                await x.Handler.ExpectMsgAsync<Tcp.Connected>();
+
                 var probe = CreateTestProbe();
                 x.Listener.Tell(new Tcp.SubscribeToTcpListenerStats(probe.Ref));
                 var metrics = await probe.ExpectMsgAsync<Tcp.TcpListenerStatistics>();
 
                 Assert.Equal(1, metrics.AcceptedIncomingConnections);
+                //
+                // // close the socket
+                // socket.Close();
+                // socket.Dispose();
+                //
+                // // wait for the connection to be closed
+                // await x.Handler.ExpectMsgAsync<Tcp.ConnectionClosed>();
+                //
+                // // force the listener to publish stats
+                // x.Listener.Tell(TcpListener.PublishStats.Instance);
+                // metrics = await probe.ExpectMsgAsync<Tcp.TcpListenerStatistics>();
+                // Assert.Equal(1, metrics.AcceptedIncomingConnections);
+                // Assert.Equal(1, metrics.IncomingConnectionsClosed);
             });
         }
 
@@ -121,10 +139,12 @@ namespace Akka.Tests.IO
                 LocalEndPoint = (IPEndPoint)bound.LocalAddress;
             }
 
-            public async Task AttemptConnectionToEndpoint()
+            public async Task<Socket> AttemptConnectionToEndpoint()
             {
-                await new Socket(LocalEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
+                var s = new Socket(LocalEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                await s
                     .ConnectAsync(LocalEndPoint);
+                return s;
             }
 
             public IActorRef Listener
@@ -136,6 +156,8 @@ namespace Akka.Tests.IO
 
             public TestProbe BindCommander { get; }
             public TestProbe Parent { get; }
+
+            public TestProbe Handler => _handler;
 
             public IPEndPoint LocalEndPoint { get; private set; }
 
