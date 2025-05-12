@@ -221,10 +221,6 @@ namespace Akka.IO
                     Context.Stop(Self);
                     return true;
 
-                case ConnectionTerminated:
-                    _closedCount++;
-                    return true;
-
                 case BindCommanderDied: // no-op
                     return true;
 
