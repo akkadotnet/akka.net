@@ -6,10 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
+using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks.Actor
 {
@@ -33,18 +33,21 @@ namespace Akka.Benchmarks.Actor
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public int ActorRefGetHashCode()
         {
             return _echo.GetHashCode();
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public bool ActorRefEqualsSelf()
         {
             return _echo.Equals(_echo);
         }
         
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public bool ActorRefEqualsSomeoneElse()
         {
             return _echo.Equals(_echo2);

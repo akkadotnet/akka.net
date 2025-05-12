@@ -7,17 +7,16 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using Akka.TestKit.Xunit2.Attributes;
-using Akka.Tests.Shared.Internals;
 using Akka.Util.Internal;
 using FluentAssertions;
 using FluentAssertions.Extensions;
@@ -30,16 +29,15 @@ namespace Akka.Streams.Tests.Dsl
     {
         private ActorMaterializer Materializer { get; }
 
-        private readonly TimeSpan _shortMinBackoff = TimeSpan.FromMilliseconds(10);
-        private readonly TimeSpan _shortMaxBackoff = TimeSpan.FromMilliseconds(20);
+        private readonly TimeSpan _shortMinBackoff = TimeSpan.FromMilliseconds(200);
+        private readonly TimeSpan _shortMaxBackoff = TimeSpan.FromMilliseconds(300);
         private readonly TimeSpan _minBackoff;
         private readonly TimeSpan _maxBackoff;
 
         private readonly RestartSettings _shortRestartSettings;
         private readonly RestartSettings _restartSettings;
 
-        public RestartSpec(ITestOutputHelper output)
-            : base("{}", output)
+        public RestartSpec(ITestOutputHelper output) : base("akka.loglevel = INFO", output)
         {
             Materializer = Sys.Materializer();
 
@@ -704,7 +702,10 @@ namespace Akka.Streams.Tests.Dsl
         /// <summary>
         /// Helps reuse all the SetupFlow code for both methods: WithBackoff, and OnlyOnFailuresWithBackoff
         /// </summary>
-        private static Flow<TIn, TOut, NotUsed> RestartFlowFactory<TIn, TOut, TMat>(Func<Flow<TIn, TOut, TMat>> flowFactory, bool onlyOnFailures, RestartSettings settings)
+        private static Flow<TIn, TOut, NotUsed> RestartFlowFactory<TIn, TOut>(
+            Func<Flow<TIn, TOut, NotUsed>> flowFactory,
+            bool onlyOnFailures,
+            RestartSettings settings)
         {
             // choose the correct backoff method
             return onlyOnFailures
@@ -712,14 +713,14 @@ namespace Akka.Streams.Tests.Dsl
                 : RestartFlow.WithBackoff(flowFactory, settings);
         }
 
-        private (AtomicCounter, TestPublisher.Probe<string>, TestSubscriber.Probe<string>, TestPublisher.Probe<string>, TestSubscriber.Probe<string>) SetupFlow(
+        private (AtomicCounter, TestPublisher.Probe<string>, TestProbe, TestPublisher.Probe<string>, TestSubscriber.Probe<string>) SetupFlow(
             TimeSpan minBackoff,
             TimeSpan maxBackoff,
             int maxRestarts = -1,
             bool onlyOnFailures = false)
         {
             var created = new AtomicCounter(0);
-            var (flowInSource, flowInProbe) = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
+            var flowInProbe = CreateTestProbe("in-probe");
             var (flowOutProbe, flowOutSource) = this.SourceProbe<string>().ToMaterialized(BroadcastHub.Sink<string>(), Keep.Both).Run(Materializer);
 
             // We can't just use ordinary probes here because we're expecting them to get started/restarted. Instead, we
@@ -727,35 +728,54 @@ namespace Akka.Streams.Tests.Dsl
             var (source, sink) = this.SourceProbe<string>().ViaMaterialized(RestartFlowFactory(() =>
                 {
                     created.IncrementAndGet();
-                    var snk = Flow.Create<string>()
-                        .TakeWhile(s => s != "cancel")
-                        .To(Sink.ForEach<string>(c => flowInSource.SendNext(c))
-                            .MapMaterializedValue(task => 
-                                task.ShouldCompleteWithin(10.Seconds()).ContinueWith(
-                                t1 =>
+                    return Flow.FromSinkAndSource(
+                        Flow.Create<string>()
+                            .TakeWhile(s => s != "cancel")
+                            .Select(s =>
+                            {
+                                return s switch
                                 {
-                                    if (t1.IsFaulted || t1.IsCanceled)
-                                        flowInSource.SendNext("in error");
+                                    "in error" => throw new TestException("in error"),
+                                    _ => s
+                                };
+                            })
+                            .To(Sink
+                                .ForEach<string>(msg => flowInProbe.Tell(msg))
+                                .MapMaterializedValue(task =>
+                                {
+                                    task.ContinueWith(t =>
+                                    {
+                                        if (t.IsFaulted || t.IsCanceled)
+                                            flowInProbe.Tell("in error");
+                                        else
+                                            flowInProbe.Tell("in complete");
+                                    });
+                                    return NotUsed.Instance;
+                                })),
+                        flowOutSource
+                            .TakeWhile(s => s != "complete")
+                            .Select(s =>
+                            {
+                                return s switch
+                                {
+                                    "error" => throw new TestException("error"),
+                                    _ => s
+                                };
+                            })
+                            .WatchTermination((notUsed, task) =>
+                            {
+                                task.ContinueWith(t =>
+                                {
+                                    if (t.IsFaulted || t.IsCanceled)
+                                    {
+                                        // no-op
+                                    }
                                     else
-                                        flowInSource.SendNext("in complete");
-                                })));
-
-                    var src = flowOutSource.TakeWhile(s => s != "complete").Select(c =>
-                    {
-                        if (c == "error")
-                            throw new ArgumentException("failed");
-                        return c;
-                    }).WatchTermination((s1, task) =>
-                    {
-                        task.ShouldCompleteWithin(10.Seconds()).ContinueWith(_ =>
-                        {
-                            flowInSource.SendNext("out complete");
-                            return NotUsed.Instance;
-                        }, TaskContinuationOptions.OnlyOnRanToCompletion);
-                        return s1;
-                    });
-
-                    return Flow.FromSinkAndSource(snk, src);
+                                        flowInProbe.Tell("out complete");
+                                });
+                                return notUsed;
+                            })
+                    );
                 }, onlyOnFailures, RestartSettings.Create(minBackoff, maxBackoff, 0).WithMaxRestarts(maxRestarts, minBackoff)), Keep.Left)
                 .ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
 
@@ -843,19 +863,17 @@ namespace Akka.Streams.Tests.Dsl
                 var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(_shortMinBackoff, _shortMaxBackoff);
 
                 await source.SendNextAsync("a");
-                await flowInProbe.RequestNextAsync("a");
+                await flowInProbe.ExpectMsgAsync("a");
                 await flowOutProbe.SendNextAsync("b");
                 await sink.RequestNextAsync("b");
 
                 await source.SendNextAsync("cancel");
                 // This will complete the flow in probe and cancel the flow out probe
-                await flowInProbe.RequestAsync(2);
-                (await flowInProbe.ExpectNextNAsync(2, 3.Seconds()).ToListAsync())
-                    .Should().Contain(new []{"in complete", "out complete"});
+                flowInProbe.ExpectMsgAllOf("in complete", "out complete");
 
                 // and it should restart
                 await source.SendNextAsync("c");
-                await flowInProbe.RequestNextAsync("c");
+                await flowInProbe.ExpectMsgAsync("c");
                 await flowOutProbe.SendNextAsync("d");
                 await sink.RequestNextAsync("d");
 
@@ -871,21 +889,21 @@ namespace Akka.Streams.Tests.Dsl
                 var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(_shortMinBackoff, _shortMaxBackoff);
 
                 await source.SendNextAsync("a");
-                await flowInProbe.RequestNextAsync("a");
+                await flowInProbe.ExpectMsgAsync("a");
                 await flowOutProbe.SendNextAsync("b");
                 await sink.RequestNextAsync("b");
 
-                await sink.RequestAsync(1);
-                await flowOutProbe.SendNextAsync("complete");
-
-                // This will complete the flow in probe and cancel the flow out probe
-                await flowInProbe.RequestAsync(2);
-                (await flowInProbe.ExpectNextNAsync(2, 3.Seconds()).ToListAsync())
-                    .Should().Contain(new []{"in complete", "out complete"});
+                await EventFilter.Info(start: "Restarting graph due to completion").ExpectOneAsync(async () =>
+                {
+                    await sink.RequestAsync(1);
+                    await flowOutProbe.SendNextAsync("complete");
+                    
+                    flowInProbe.ExpectMsgAllOf("in complete", "out complete");
+                });
 
                 // and it should restart
                 await source.SendNextAsync("c");
-                await flowInProbe.RequestNextAsync("c");
+                await flowInProbe.ExpectMsgAsync("c");
                 await flowOutProbe.SendNextAsync("d");
                 await sink.RequestNextAsync("d");
 
@@ -901,19 +919,22 @@ namespace Akka.Streams.Tests.Dsl
                 var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(_shortMinBackoff, _shortMaxBackoff);
 
                 await source.SendNextAsync("a");
-                await flowInProbe.RequestNextAsync("a");
+                await flowInProbe.ExpectMsgAsync("a");
                 await flowOutProbe.SendNextAsync("b");
                 await sink.RequestNextAsync("b");
 
-                await sink.RequestAsync(1);
-                await flowOutProbe.SendNextAsync("error");
-
-                // This should complete the in probe
-                await flowInProbe.RequestNextAsync("in complete");
+                await EventFilter.Warning(start: "Restarting graph due to failure").ExpectOneAsync(async () =>
+                {
+                    await sink.RequestAsync(1);
+                    await flowOutProbe.SendNextAsync("error");
+                    
+                    // This should complete the in probe
+                    await flowInProbe.ExpectMsgAsync("in complete");
+                });
 
                 // and it should restart
                 await source.SendNextAsync("c");
-                await flowInProbe.RequestNextAsync("c");
+                await flowInProbe.ExpectMsgAsync("c");
                 await flowOutProbe.SendNextAsync("d");
                 await sink.RequestNextAsync("d");
 
@@ -929,24 +950,20 @@ namespace Akka.Streams.Tests.Dsl
                 var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(_minBackoff, _maxBackoff);
 
                 await source.SendNextAsync("a");
-                await flowInProbe.RequestNextAsync("a");
+                await flowInProbe.ExpectMsgAsync("a");
                 await flowOutProbe.SendNextAsync("b");
                 await sink.RequestNextAsync("b");
 
                 // we need to start counting time before we issue the cancel signal,
                 // as starting the counter anywhere after the cancel signal, might not
-                // capture all of the time, that has been spent for the backoff.
+                // capture all the time, that has been spent for the backoff.
                 var deadline = _minBackoff.FromNow();
 
                 await source.SendNextAsync("cancel");
-                // This will complete the flow in probe and cancel the flow out probe
-                await flowInProbe.RequestAsync(2);
-                (await flowInProbe.ExpectNextNAsync(2, 3.Seconds()).ToListAsync())
-                    .Should().Contain(new []{"in complete", "out complete"});
+                flowInProbe.ExpectMsgAllOf("in complete", "out complete");
 
                 await source.SendNextAsync("c");
-                await flowInProbe.RequestAsync(1);
-                await flowInProbe.ExpectNextAsync("c");
+                await flowInProbe.ExpectMsgAsync("c");
                 deadline.IsOverdue.Should().BeTrue();
 
                 created.Current.Should().Be(2);
@@ -961,12 +978,12 @@ namespace Akka.Streams.Tests.Dsl
                 var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(_shortMinBackoff, _maxBackoff);
 
                 await source.SendNextAsync("a");
-                await flowInProbe.RequestNextAsync("a");
+                await flowInProbe.ExpectMsgAsync("a");
                 await flowOutProbe.SendNextAsync("b");
                 await sink.RequestNextAsync("b");
 
                 await source.SendCompleteAsync();
-                await flowInProbe.RequestNextAsync("in complete");
+                await flowInProbe.ExpectMsgAsync("in complete");
 
                 await flowOutProbe.SendNextAsync("c");
                 await sink.RequestNextAsync("c");
@@ -975,7 +992,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 await sink.RequestAsync(1);
                 await flowOutProbe.SendCompleteAsync();
-                await flowInProbe.RequestNextAsync("out complete");
+                await flowInProbe.ExpectMsgAsync("out complete");
                 await sink.ExpectCompleteAsync();
 
                 created.Current.Should().Be(1);
@@ -990,20 +1007,20 @@ namespace Akka.Streams.Tests.Dsl
                 var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(_shortMinBackoff, _maxBackoff);
 
                 await source.SendNextAsync("a");
-                await flowInProbe.RequestNextAsync("a");
+                await flowInProbe.ExpectMsgAsync("a");
                 await flowOutProbe.SendNextAsync("b");
                 await sink.RequestNextAsync("b");
 
                 await sink.CancelAsync();
-                await flowInProbe.RequestNextAsync("out complete");
+                await flowInProbe.ExpectMsgAsync("out complete");
 
                 await source.SendNextAsync("c");
-                await flowInProbe.RequestNextAsync("c");
+                await flowInProbe.ExpectMsgAsync("c");
                 await source.SendNextAsync("d");
-                await flowInProbe.RequestNextAsync("d");
+                await flowInProbe.ExpectMsgAsync("d");
 
                 await source.SendNextAsync("cancel");
-                await flowInProbe.RequestNextAsync("in complete");
+                await flowInProbe.ExpectMsgAsync("in complete");
                 await source.ExpectCancellationAsync();
 
                 created.Current.Should().Be(1);
@@ -1019,22 +1036,15 @@ namespace Akka.Streams.Tests.Dsl
 
                 await sink.RequestAsync(1);
                 await flowOutProbe.SendNextAsync("complete");
-
-                // This will complete the flow in probe and cancel the flow out probe
-                await flowInProbe.RequestAsync(2);
-                (await flowInProbe.ExpectNextNAsync(2, 3.Seconds()).ToListAsync())
-                    .Should().Contain(new []{"in complete", "out complete"});
-
+                flowInProbe.ExpectMsgAllOf("in complete", "out complete");
+                
                 // and it should restart
                 await sink.RequestAsync(1);
                 await flowOutProbe.SendNextAsync("complete");
 
                 // This will complete the flow in probe and cancel the flow out probe
-                await flowInProbe.AsyncBuilder()
-                    .Request(2)
-                    .ExpectNext("out complete")
-                    .ExpectNoMsg(TimeSpan.FromTicks(_shortMinBackoff.Ticks * 3))
-                    .ExecuteAsync();
+                await flowInProbe.ExpectMsgAsync("out complete");
+                await flowInProbe.ExpectNoMsgAsync(TimeSpan.FromTicks(_shortMinBackoff.Ticks * 3));
                 await sink.ExpectCompleteAsync();
 
                 created.Current.Should().Be(2);
@@ -1051,16 +1061,13 @@ namespace Akka.Streams.Tests.Dsl
                 var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(_shortMinBackoff, _shortMaxBackoff, -1, true);
 
                 await source.SendNextAsync("a");
-                await flowInProbe.RequestNextAsync("a");
+                await flowInProbe.ExpectMsgAsync("a");
                 await flowOutProbe.SendNextAsync("b");
                 await sink.RequestNextAsync("b");
 
                 await source.SendNextAsync("cancel");
                 // This will complete the flow in probe and cancel the flow out probe
-                await flowInProbe.AsyncBuilder()
-                    .Request(2)
-                    .ExpectNext("in complete")
-                    .ExecuteAsync();
+                await flowInProbe.ExpectMsgAsync("in complete");
 
                 await source.ExpectCancellationAsync();
 
@@ -1076,7 +1083,7 @@ namespace Akka.Streams.Tests.Dsl
                 var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(_shortMinBackoff, _shortMaxBackoff, -1, true);
 
                 await source.SendNextAsync("a");
-                await flowInProbe.RequestNextAsync("a");
+                await flowInProbe.ExpectMsgAsync("a");
                 await flowOutProbe.SendNextAsync("b");
                 await sink.RequestNextAsync("b");
 
@@ -1096,7 +1103,7 @@ namespace Akka.Streams.Tests.Dsl
                 var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(_shortMinBackoff, _shortMaxBackoff, -1, true);
 
                 await source.SendNextAsync("a");
-                await flowInProbe.RequestNextAsync("a");
+                await flowInProbe.ExpectMsgAsync("a");
                 await flowOutProbe.SendNextAsync("b");
                 await sink.RequestNextAsync("b");
 
@@ -1104,11 +1111,11 @@ namespace Akka.Streams.Tests.Dsl
                 await flowOutProbe.SendNextAsync("error");
 
                 // This should complete the in probe
-                await flowInProbe.RequestNextAsync("in complete");
+                await flowInProbe.ExpectMsgAsync("in complete");
 
                 // and it should restart
                 await source.SendNextAsync("c");
-                await flowInProbe.RequestNextAsync("c");
+                await flowInProbe.ExpectMsgAsync("c");
                 await flowOutProbe.SendNextAsync("d");
                 await sink.RequestNextAsync("d");
                 

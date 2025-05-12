@@ -6,10 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Immutable;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
+using FluentAssertions;
 
 namespace Akka.DistributedData.Tests
 {
@@ -46,13 +49,13 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
-        public void Updates_from_same_node_should_be_possible_to_do_from_two_actors()
+        public async Task Updates_from_same_node_should_be_possible_to_do_from_two_actors()
         {
             var updater1 = ActorOf(Props.Create<Updater>(), "updater1");
             var updater2 = ActorOf(Props.Create<Updater>(), "updater2");
 
             var b = ImmutableHashSet<string>.Empty.ToBuilder();
-            for (int i = 1; i <= 100; i++)
+            for (var i = 1; i <= 100; i++)
             {
                 var m1 = "a" + 1;
                 var m2 = "b" + 1;
@@ -64,12 +67,12 @@ namespace Akka.DistributedData.Tests
             }
 
             var expected = b.ToImmutable();
-            AwaitAssert(() =>
+            await AwaitAssertAsync(async () =>
             {
                 _replicator.Tell(Dsl.Get(Updater.Key, ReadLocal.Instance));
-                var msg = ExpectMsg<GetSuccess>();
+                var msg = await ExpectMsgAsync<GetSuccess>();
                 var elements = msg.Get(Updater.Key).Elements;
-                Assert.Equal(expected, elements);
+                elements.Should().BeEquivalentTo(expected);
             });
         }
     }

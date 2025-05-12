@@ -235,8 +235,9 @@ namespace Akka.Tests.Dispatch
                 //this is also safe, all tasks complete in the actor context
                 RunTask(async () =>
                 {
+                    var sender = Sender;
                     await Task.Delay(TimeSpan.FromSeconds(1))
-                        .ContinueWith(_ => { Sender.Tell("done"); });
+                        .ContinueWith(_ => { sender.Tell("done"); });
                 });
             });
         }

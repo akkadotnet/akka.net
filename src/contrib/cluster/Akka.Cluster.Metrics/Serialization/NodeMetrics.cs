@@ -19,7 +19,7 @@ namespace Akka.Cluster.Metrics.Serialization
         public static readonly NodeMetricsComparer Instance = new();
         
         private NodeMetricsComparer() { }
-        public bool Equals(NodeMetrics x, NodeMetrics y)
+        public bool Equals(NodeMetrics? x, NodeMetrics? y)
         {
             if (ReferenceEquals(x, y)) return true;
             if (ReferenceEquals(x, null)) return false;
@@ -114,7 +114,7 @@ namespace Akka.Cluster.Metrics.Serialization
          * just stip them from generated code and paste here, with adding Address property check
          */
 
-        public bool Equals(NodeMetrics other)
+        public bool Equals(NodeMetrics? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;

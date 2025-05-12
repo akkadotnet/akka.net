@@ -104,7 +104,7 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.cluster.sharding.verbose-debug-logging = on
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
                 akka.cluster.sharding.entity-restart-backoff = 250ms")
-                .WithFallback(ClusterSingletonManager.DefaultConfig())
+                .WithFallback(ClusterSingleton.DefaultConfig())
                 .WithFallback(ClusterSharding.DefaultConfig());
 
         public EntityTerminationSpec(ITestOutputHelper helper) : base(SpecConfig, helper)

@@ -90,7 +90,7 @@ namespace Akka.Cluster.Sharding.Tests
                                                      akka.cluster.roles = [shard]")
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                 .WithFallback(DistributedData.DistributedData.DefaultConfig())
-                .WithFallback(ClusterSingletonManager.DefaultConfig());
+                .WithFallback(ClusterSingleton.DefaultConfig());
         }
 
         /// <summary>

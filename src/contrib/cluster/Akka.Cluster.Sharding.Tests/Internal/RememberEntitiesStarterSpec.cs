@@ -44,7 +44,7 @@ namespace Akka.Cluster.Sharding.Tests.Internal
         private static Config SpecConfig =>
             ConfigurationFactory.ParseString("akka.loglevel = DEBUG")
             .WithFallback(
-                ClusterSingletonManager.DefaultConfig())
+                ClusterSingleton.DefaultConfig())
                 .WithFallback(ClusterSharding.DefaultConfig())
                 .WithFallback(DistributedData.DistributedData.DefaultConfig());
 

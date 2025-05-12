@@ -134,7 +134,7 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(10);
-                c.ExpectError().InnerException.Message.Should().Be("err1");
+                (await c.ExpectErrorAsync()).Message.Should().Be("err1");
                 latch.CountDown();
             }, Materializer);
         }
@@ -193,7 +193,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FromSubscriber(c), Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(10);
-                c.ExpectError().Message.Should().Be("err2");
+                (await c.ExpectErrorAsync()).Message.Should().Be("err2");
                 latch.CountDown();
             }, Materializer);
         }

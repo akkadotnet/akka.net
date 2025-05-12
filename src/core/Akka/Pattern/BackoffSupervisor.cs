@@ -56,7 +56,7 @@ namespace Akka.Pattern
         /// Send this message to the <see cref="BackoffSupervisor"/> and it will reset the back-off. This should be used in conjunction with `withManualReset` in <see cref="BackoffOptionsImpl"/>.
         /// </summary>
         [Serializable]
-        public sealed class Reset
+        public new sealed class Reset
         {
             public static readonly Reset Instance = new();
             private Reset() { }

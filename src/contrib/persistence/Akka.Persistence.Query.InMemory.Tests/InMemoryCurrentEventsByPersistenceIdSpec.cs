@@ -13,11 +13,8 @@ namespace Akka.Persistence.Query.InMemory.Tests
 {
     public class InMemoryCurrentEventsByPersistenceIdSpec : CurrentEventsByPersistenceIdSpec
     {
-        private static Config Config() => ConfigurationFactory.ParseString(@"
-            akka.loglevel = INFO
-            akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
-            akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""")
-            .WithFallback(InMemoryReadJournal.DefaultConfiguration());
+        private static Config Config() => ConfigurationFactory.ParseString("akka.loglevel = INFO")
+            .WithFallback(InMemoryPersistenceSpecConfig.Config);
 
         public InMemoryCurrentEventsByPersistenceIdSpec(ITestOutputHelper output) : 
             base(Config(), nameof(InMemoryCurrentPersistenceIdsSpec), output)

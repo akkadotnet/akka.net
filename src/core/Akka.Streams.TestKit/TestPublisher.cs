@@ -105,7 +105,7 @@ namespace Akka.Streams.TestKit
             public StreamTestKit.PublisherProbeSubscription<T> ExpectSubscription(
                 CancellationToken cancellationToken = default)
                 => ExpectSubscriptionTask(Probe, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Expect a subscription.
@@ -113,7 +113,7 @@ namespace Akka.Streams.TestKit
             public async Task<StreamTestKit.PublisherProbeSubscription<T>> ExpectSubscriptionAsync(
                 CancellationToken cancellationToken = default)
                 => await ExpectSubscriptionTask(Probe, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Expect demand from the given subscription.
@@ -123,21 +123,21 @@ namespace Akka.Streams.TestKit
                 int nrOfElements,
                 CancellationToken cancellationToken = default)
                 => await ExpectRequestTask(Probe, subscription, nrOfElements, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Expect no messages.
             /// </summary>
             public async Task ExpectNoMsgAsync(CancellationToken cancellationToken = default)
                 => await ExpectNoMsgTask(Probe, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Expect no messages for given duration.
             /// </summary>
             public async Task ExpectNoMsgAsync(TimeSpan duration, CancellationToken cancellationToken = default)
                 => await ExpectNoMsgTask(Probe, duration, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Receive messages for a given duration or until one does not match a given partial function.
@@ -149,7 +149,7 @@ namespace Akka.Streams.TestKit
                 int msgCount = int.MaxValue,
                 CancellationToken cancellationToken = default) where TOther : class
                 => ReceiveWhileTask(Probe, max, idle, filter, msgCount, cancellationToken).ToListAsync(cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Receive messages for a given duration or until one does not match a given partial function.
@@ -167,14 +167,14 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public IPublisherEvent ExpectEvent(CancellationToken cancellationToken = default)
                 => ExpectEventTask(Probe, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Expect a publisher event from the stream.
             /// </summary>
             public async Task<IPublisherEvent> ExpectEventAsync(CancellationToken cancellationToken = default)
                 => await ExpectEventTask(Probe, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Execute code block while bounding its execution time between <paramref name="min"/> and
@@ -206,7 +206,7 @@ namespace Akka.Streams.TestKit
                 Func<TOther> execute,
                 CancellationToken cancellationToken = default)
                 => WithinAsync(min, max, () => Task.FromResult(execute()), cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             /// <summary>
             /// Execute code block while bounding its execution time between <paramref name="min"/> and
@@ -238,21 +238,21 @@ namespace Akka.Streams.TestKit
                 Func<Task<TOther>> actionAsync,
                 CancellationToken cancellationToken = default)
                 => await Probe.WithinAsync(min, max, actionAsync, cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             /// <summary>
             /// Sane as calling Within(TimeSpan.Zero, max, function, cancellationToken).
             /// </summary>
             public TOther Within<TOther>(TimeSpan max, Func<TOther> execute, CancellationToken cancellationToken = default)
                 => WithinAsync(max, () => Task.FromResult(execute()), cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
             
             /// <summary>
             /// Sane as calling WithinAsync(TimeSpan.Zero, max, function, cancellationToken).
             /// </summary>
             public async Task<TOther> WithinAsync<TOther>(TimeSpan max, Func<Task<TOther>> execute, CancellationToken cancellationToken = default) 
                 => await Probe.WithinAsync(max, execute, cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
         }
 
         /// <summary>
@@ -278,39 +278,39 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public void EnsureSubscription(CancellationToken cancellationToken = default)
                 => EnsureSubscriptionTask(this, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             public async Task EnsureSubscriptionAsync(CancellationToken cancellationToken = default)
                 => await EnsureSubscriptionTask(this, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             public async Task SendNextAsync(T element, CancellationToken cancellationToken = default)
                 => await SendNextTask(this, element, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
             
             public async Task UnsafeSendNextAsync(T element, CancellationToken cancellationToken = default)
                 => await UnsafeSendNextTask(this, element, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             public async Task SendCompleteAsync(CancellationToken cancellationToken = default)
                 => await SendCompleteTask(this, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             public async Task SendErrorAsync(Exception e, CancellationToken cancellationToken = default)
                 => await SendErrorTask(this, e, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             public long ExpectRequest(CancellationToken cancellationToken = default)
                 => ExpectRequestTask(this, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
 
             public async Task<long> ExpectRequestAsync(CancellationToken cancellationToken = default)
                 => await ExpectRequestTask(this, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
 
             public async Task ExpectCancellationAsync(CancellationToken cancellationToken = default)
                 => await ExpectCancellationTask(this, cancellationToken)
-                    .ConfigureAwait(false);
+                    ;
         }
 
         internal sealed class LazyEmptyPublisher<T> : IPublisher<T>

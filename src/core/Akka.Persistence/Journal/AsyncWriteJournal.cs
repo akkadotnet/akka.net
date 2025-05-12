@@ -9,6 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
@@ -54,9 +56,9 @@ namespace Akka.Persistence.Journal
             var config = extension.ConfigFor(Self);
             _breaker = new CircuitBreaker(
                 Context.System.Scheduler,
-                config.GetInt("circuit-breaker.max-failures", 0),
-                config.GetTimeSpan("circuit-breaker.call-timeout", null),
-                config.GetTimeSpan("circuit-breaker.reset-timeout", null));
+                config.GetInt("circuit-breaker.max-failures", 10),
+                config.GetTimeSpan("circuit-breaker.call-timeout", TimeSpan.FromSeconds(10)),
+                config.GetTimeSpan("circuit-breaker.reset-timeout", TimeSpan.FromSeconds(30)));
 
             var replayFilterMode = config.GetString("replay-filter.mode", "").ToLowerInvariant();
             switch (replayFilterMode)
@@ -77,8 +79,8 @@ namespace Akka.Persistence.Journal
                     throw new ConfigurationException($"Invalid replay-filter.mode [{replayFilterMode}], supported values [off, repair-by-discard-old, fail, warn]");
             }
             _isReplayFilterEnabled = _replayFilterMode != ReplayFilterMode.Disabled;
-            _replayFilterWindowSize = config.GetInt("replay-filter.window-size", 0);
-            _replayFilterMaxOldWriters = config.GetInt("replay-filter.max-old-writers", 0);
+            _replayFilterWindowSize = config.GetInt("replay-filter.window-size", 100);
+            _replayFilterMaxOldWriters = config.GetInt("replay-filter.max-old-writers", 10);
             _replayDebugEnabled = config.GetBoolean("replay-filter.debug", false);
 
             _resequencer = Context.ActorOf(Props.Create(() => new Resequencer()), "resequencer");
@@ -88,7 +90,7 @@ namespace Akka.Persistence.Journal
         public abstract Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> recoveryCallback);
 
         /// <inheritdoc/>
-        public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
+        public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken);
 
         /// <summary>
         /// Plugin API: asynchronously writes a batch of persistent messages to the
@@ -161,8 +163,8 @@ namespace Akka.Persistence.Journal
         /// This call is protected with a circuit-breaker.
         /// </summary>
         /// <param name="messages">TBD</param>
-        /// <returns>TBD</returns>
-        protected abstract Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages);
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> used to signal cancelled snapshot operation</param> 
+        protected abstract Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken);
 
         /// <summary>
         /// Asynchronously deletes all persistent messages up to inclusive <paramref name="toSequenceNr"/>
@@ -170,8 +172,8 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="toSequenceNr">TBD</param>
-        /// <returns>TBD</returns>
-        protected abstract Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr);
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> used to signal cancelled snapshot operation</param> 
+        protected abstract Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken);
 
         /// <summary>
         /// Plugin API: Allows plugin implementers to use f.PipeTo(Self)
@@ -189,12 +191,7 @@ namespace Akka.Persistence.Journal
         {
             return ReceiveWriteJournal(message) || ReceivePluginInternal(message);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        
         protected bool ReceiveWriteJournal(object message)
         {
             switch (message)
@@ -222,8 +219,8 @@ namespace Akka.Persistence.Journal
             {
                 try
                 {
-                    await _breaker.WithCircuitBreaker((message, awj: this), state =>
-                        state.awj.DeleteMessagesToAsync(state.message.PersistenceId, state.message.ToSequenceNr));
+                    await _breaker.WithCircuitBreaker((message, awj: this), (state, ct) =>
+                        state.awj.DeleteMessagesToAsync(state.message.PersistenceId, state.message.ToSequenceNr, ct));
 
                     message.PersistentActor.Tell(new DeleteMessagesSuccess(message.ToSequenceNr), self);
 
@@ -271,8 +268,8 @@ namespace Akka.Persistence.Journal
                 
                 try
                 {
-                    var highSequenceNr = await _breaker.WithCircuitBreaker((message, readHighestSequenceNrFrom, awj: this), state =>
-                        state.awj.ReadHighestSequenceNrAsync(state.message.PersistenceId, state.readHighestSequenceNrFrom));
+                    var highSequenceNr = await _breaker.WithCircuitBreaker((message, readHighestSequenceNrFrom, awj: this), (state, ct) =>
+                            state.awj.ReadHighestSequenceNrAsync(state.message.PersistenceId, state.readHighestSequenceNrFrom, ct));
                     var toSequenceNr = Math.Min(message.ToSequenceNr, highSequenceNr);
                     if (toSequenceNr <= 0L || message.FromSequenceNr > toSequenceNr)
                     {
@@ -294,7 +291,7 @@ namespace Akka.Persistence.Journal
                                     }
                                 }
                             });
-
+                    
                         CompleteHighSeqNo(highSequenceNr);
                     }
                 }
@@ -357,7 +354,7 @@ namespace Akka.Persistence.Journal
                 try
                 {
                     var writeResult =
-                        await _breaker.WithCircuitBreaker((prepared, awj: this), state => state.awj.WriteMessagesAsync(state.prepared)).ConfigureAwait(false);
+                        await _breaker.WithCircuitBreaker((prepared, awj: this), (state, ct) => state.awj.WriteMessagesAsync(state.prepared, ct)).ConfigureAwait(false);
 
                     ProcessResults(writeResult, atomicWriteCount, message, _resequencer, resequencerCounter, self);
                 }

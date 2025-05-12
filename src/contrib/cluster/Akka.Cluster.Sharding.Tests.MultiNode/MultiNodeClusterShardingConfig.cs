@@ -81,7 +81,7 @@ namespace Akka.Cluster.Sharding.Tests
                     ")
                     .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                     .WithFallback(DistributedData.DistributedData.DefaultConfig())
-                    .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
+                    .WithFallback(Tools.Singleton.ClusterSingleton.DefaultConfig())
                     .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
             CommonConfig = (ConfigurationFactory.ParseString(additionalConfig).WithFallback(persistenceConfig).WithFallback(Common));

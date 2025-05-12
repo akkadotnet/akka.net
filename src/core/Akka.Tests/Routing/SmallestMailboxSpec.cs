@@ -34,7 +34,7 @@ namespace Akka.Tests.Routing
                         usedActors.TryAdd(0, Self.Path.ToString());
                         Self.Tell("another in busy mailbox");
                         receivedLatch.CountDown();
-                        busy.Ready(TestLatch.DefaultTimeout);
+                        busy.Ready(TimeSpan.FromSeconds(5));
                         break;
                     
                     case (int msg, TestLatch receivedLatch) _:

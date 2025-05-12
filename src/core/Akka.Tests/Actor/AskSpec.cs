@@ -54,7 +54,7 @@ namespace Akka.Tests.Actor
                             Sender.Tell(123);
                             break;
                         case "system":
-                            Sender.Tell(new DummySystemMessage());
+                            Sender.As<IInternalActorRef>().SendSystemMessage(new DummySystemMessage());
                             break;
                     }
                 

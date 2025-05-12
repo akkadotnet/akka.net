@@ -129,8 +129,8 @@ namespace Akka.Persistence.Query.InMemory
             Sequence seq;
             switch (offset)
             {
-                case NoOffset _:
-                case Sequence s when s.Value == 0:
+                case NoOffset:
+                case Sequence { Value: 0 }:
                     seq = new Sequence(0L);
                     break;
                 case Sequence s:

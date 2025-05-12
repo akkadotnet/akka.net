@@ -1,10 +1,112 @@
-#### 1.5.38 January 23rd 2025 ####
+#### 1.5.42 May 6th, 2025 ####
 
 *Placeholder for nightlies*
 
+#### 1.5.41 May 6th, 2025 ####
+
+Akka.NET v1.5.41 contains several bug fixes and also adds new quality of life features to Akka.TestKit and Akka.Streams.
+
+* [TestKit: Ensure that `EventFilter` respects `WithinAsync` timeout blocks](https://github.com/akkadotnet/akka.net/pull/7541)
+* [TestKit: Add support to XUnit 3 to Akka.TestKit.Xunit](https://github.com/akkadotnet/akka.net/issues/7603)
+* [TestKit: Improve `ExpectNextNAsync()` error message clarity](https://github.com/akkadotnet/akka.net/pull/7616)
+* [Remoting: Mark `IDaemonMsg` with public interface marker](https://github.com/akkadotnet/akka.net/pull/7596)
+* [Streams: Fix cancelled sinks are blocking other `BroadcastHub` consumers](https://github.com/akkadotnet/akka.net/pull/7615)
+* [Streams: Allow `GroupBy` to use infinite output sub-streams](https://github.com/akkadotnet/akka.net/pull/7607)
+* [Analyzers: Bump Akka.Analyzers from 0.3.1 to 0.3.2](https://github.com/akkadotnet/akka.net/pull/7609)
+
+**XUnit V3 Support**
+
+We've added XUnit v3 support to Akka.TestKit.Xunit, please use this package if you're planning on using and/or migrating to the latest XUnit 3 platform.
+
+Note that due to XUnit v3 limitation, please make sure that you're following these minimum requirements:
+* Use net472 and above if you're targeting .NET Framework.
+* Use net8.0 and above if you're targeting .NET Core.
+* Reference the `xunit.v3.*` packages v2.0.2 and above.
+* Reference the `xunit.runner.visualstudio` package v3.1.0 and above.
+
+**Akka.Streams `GroupBy` API improvement**
+
+`Akka.Streams` `GroupBy` stage can now, and now by default, create an unlimited number of sub-streams. Simply omit the `maxSubstreams` parameter or change the `maxSubstreams` parameter to a negative value to enable this feature.
+
+> [!NOTE]
+> 
+> This can cause memory leak issue if you design your stream to be long-running, and it is designed to generate/process a very large number of sub-streams.
+
+4 contributors since release 1.5.40
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 9       | 1757 | 1690 | Aaron Stannard      |
+| 6       | 1089 | 542  | Gregorius Soedharmo |
+| 1       | 3    | 16   | Simon Cropp         |
+| 1       | 10   | 2    | JuYoung Kim         |
+
+To [see the full set of changes in Akka.NET v1.5.40, click here](https://github.com/akkadotnet/akka.net/milestone/124?closed=1).
+
+#### 1.5.40 March 24th, 2025 ####
+
+* [Remote: `Endpoint` actor cleanup](https://github.com/akkadotnet/akka.net/issues/7524)
+* [Streams: Implement nullability in `Buffer`](https://github.com/akkadotnet/akka.net/issues/7496)
+* [Streams: Refactor `SelectAsyncUnordered` `ContinueWith` to local function](https://github.com/akkadotnet/akka.net/issues/7531)
+* [Core: Cleanup build warnings](https://github.com/akkadotnet/akka.net/issues/7522)
+* [Streams: Make `SelectAsync` check equality by reference instead of by struct value](https://github.com/akkadotnet/akka.net/issues/7543)
+* [Query.InMemory: Properly unwrap tagged messages in all queries](https://github.com/akkadotnet/akka.net/issues/7548)
+* [Resolve Akka.Delivery and Akka.Cluster.Sharding.Delivery issues](https://github.com/akkadotnet/akka.net/issues/7538)
+* [Persistence: Remove Akka.Persistence.Sql.Common and Akka.Persistence.Query.Sql packages](https://github.com/akkadotnet/akka.net/issues/7551)
+* [Persistence: Remove Akka.Persistence.Sqlite](https://github.com/akkadotnet/akka.net/issues/7559)
+
+2 contributors since release 1.5.39
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 28      | 1177 | 2458 | Aaron Stannard      |
+| 7       | 788  | 9534 | Gregorius Soedharmo |
+
+To [see the full set of changes in Akka.NET v1.5.40, click here](https://github.com/akkadotnet/akka.net/milestone/123?closed=1).
+
+#### 1.5.39 March 14th, 2025 ####
+
+Akka.NET v1.5.39 contains a mission-critical bugfix for most Akka.Streams users.
+
+* [Akka.Cluster.Sharding: recursively unpack `ShardingEnvelope` contents inside `IMessageExtract.EntityMessage`](https://github.com/akkadotnet/akka.net/issues/7470) - fixed a small edge case bug that could cause the `ShardingEnvelope` to be delivered to actors rather than the content inside the envelope.
+* [Akka.Util: improve `Result<T>`](https://github.com/akkadotnet/akka.net/pull/7520) - small set of API changes here aimed at making Akka.Streams easier to reason about.
+* [Akka.Streams: Fixed race conditions + unsafe struct assignment in `SelectAsync`](https://github.com/akkadotnet/akka.net/pull/7521) - this is a bug that's popped up in [Akka.Persistence.Sql](https://github.com/akkadotnet/Akka.Persistence.Sql), [Akka.Streams.Kafka](https://github.com/akkadotnet/Akka.Streams.Kafka), and many other places where `SelectAsync` is used: https://github.com/akkadotnet/akka.net/issues/7518 
+
+3 contributors since release 1.5.38
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 6 | 242 | 251 | Aaron Stannard |
+| 1 | 42 | 2 | Arjen Smits |
+| 1 | 107 | 1 | Gregorius Soedharmo |
+
+To [see the full set of changes in Akka.NET v1.5.39, click here](https://github.com/akkadotnet/akka.net/milestone/122).
+
+#### 1.5.38 February 17th 2025 ####
+
+Akka.NET v1.5.38 is a maintenance release with several bug fixes and minor quality of life API additions
+
+* [Core: Add `ByteString.ToReadOnlySpan()`](https://github.com/akkadotnet/akka.net/pull/7487)
+* [TestKit: Add `IntentionalRestart` auto received message to easily test actor restart behavior](https://github.com/akkadotnet/akka.net/pull/7493)
+* [Streams: Fix null exceptions being propagated upstream by downstream completion](https://github.com/akkadotnet/akka.net/pull/7497)
+* [Core: Add death watch support to `Ask()` `FutureActorRef` temporary actors to prevent memory leaks](https://github.com/akkadotnet/akka.net/pull/7502)
+* [Documentation: Add new AK1008 Akka.Analyzers rule](https://github.com/akkadotnet/akka.net/pull/7504)
+* [Core: Bump Akka.Analyzers version from 0.3.0 to 0.3.1](https://github.com/akkadotnet/akka.net/pull/7506)
+
+To [see the full set of changes in Akka.NET v1.5.38, click here](https://github.com/akkadotnet/akka.net/milestone/121?closed=1).
+
+4 contributors since release 1.5.37
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 5       | 110  | 9    | Gregorius Soedharmo |
+| 3       | 231  | 28   | Aaron Stannard      |
+| 1       | 81   | 0    | Lydon Chandra       |
+| 1       | 24   | 20   | Dmitriy Barbul      |
+
 #### 1.5.37 January 23rd 2025 ####
 
-Akka.NET v1.5.36 is a maintenance release that rolls back earlier changes made in Akka.NET v1.5.35 that have caused problems in some downstream Akka.NET plugins.
+Akka.NET v1.5.37 is a maintenance release that rolls back earlier changes made in Akka.NET v1.5.35 that have caused problems in some downstream Akka.NET plugins.
 
 * [Rollback to using 6.0 MSFT libraries](https://github.com/akkadotnet/akka.net/pull/7482) <- moving all of our BCL dependencies to 8.0 created issues for our .NET 6-9 users when adopting Akka.NET packages that only targeted .NET Standard, so for the time being we're normalizing everything back to 6.0
 * [Akka.Persistence: `Akka.Persistence.Journal.AsyncWriteJournal+Resequencer` is created as a top-level `/user` actor instead of a child of the journal](https://github.com/akkadotnet/akka.net/issues/7480)

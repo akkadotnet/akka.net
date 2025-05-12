@@ -40,7 +40,7 @@ namespace Akka.Cluster.Sharding.Tests.External
                 akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0
             ")
-            .WithFallback(ClusterSingletonManager.DefaultConfig())
+            .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSharding.DefaultConfig())
             .WithFallback(DistributedData.DistributedData.DefaultConfig());
 

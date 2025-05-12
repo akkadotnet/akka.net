@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -150,14 +151,14 @@ akka.actor.provider = cluster";
                 recoveryCallback);
         }
 
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
             if (!Working)
             {
                 throw new ApplicationException("Failed");
             }
 
-            return base.WriteMessagesAsync(messages);
+            return base.WriteMessagesAsync(messages, cancellationToken);
         }
     }
 
@@ -165,7 +166,9 @@ akka.actor.provider = cluster";
     {
         public static bool Working = false;
 
-        protected override Task DeleteAsync(SnapshotMetadata metadata)
+        protected override Task DeleteAsync(
+            SnapshotMetadata metadata, 
+            CancellationToken cancellationToken)
         {
             if (!Working)
             {
@@ -175,7 +178,10 @@ akka.actor.provider = cluster";
             return Task.CompletedTask;
         }
 
-        protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override Task DeleteAsync(
+            string persistenceId,
+            SnapshotSelectionCriteria criteria, 
+            CancellationToken cancellationToken)
         {
             if (!Working)
             {
@@ -185,8 +191,10 @@ akka.actor.provider = cluster";
             return Task.CompletedTask;
         }
 
-        protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId,
-            SnapshotSelectionCriteria criteria)
+        protected override async Task<SelectedSnapshot> LoadAsync(
+            string persistenceId,
+            SnapshotSelectionCriteria criteria, 
+            CancellationToken cancellationToken)
         {
             if (!Working)
             {
@@ -196,7 +204,10 @@ akka.actor.provider = cluster";
             return null;
         }
 
-        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        protected override Task SaveAsync(
+            SnapshotMetadata metadata,
+            object snapshot, 
+            CancellationToken cancellationToken)
         {
             if (!Working)
             {

@@ -164,9 +164,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Reserve a child actor's name prior to allocating it.
         /// </summary>
-        /// <param name="name">TBD</param>
+        /// <param name="name">The requested name of the child.</param>
+        /// <exception cref="InvalidOperationException">This exception is thrown if the given <paramref name="name"/> belongs to an actor that is terminating.</exception>
+        /// <exception cref="InvalidActorNameException">This exception is thrown if the given <paramref name="name"/> is not unique in the container.</exception>
         public void ReserveChild(string name)
         {
             while (true)
@@ -179,9 +181,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Unreserve a child actor's name.
         /// </summary>
-        /// <param name="name">TBD</param>
+        /// <param name="name">The child's name.</param>
         protected void UnreserveChild(string name)
         {
             while (true)
@@ -196,8 +198,6 @@ namespace Akka.Actor
         /// <summary>
         /// This should only be used privately or when creating the root actor.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
         public ChildRestartStats? InitChild(IInternalActorRef actor)
         {
             var name = actor.Path.Name;
@@ -220,12 +220,7 @@ namespace Akka.Actor
                 else return null;
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="reason">TBD</param>
-        /// <returns>TBD</returns>
+        
         protected bool SetChildrenTerminationReason(SuspendReason reason)
         {
             while (true)
@@ -238,22 +233,14 @@ namespace Akka.Actor
                 else return false;
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected void SetTerminated()
         {
             Interlocked.Exchange(ref _childrenContainerDoNotCallMeDirectly, TerminatedChildrenContainer.Instance);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected bool IsNormal { get { return ChildrenContainer.IsNormal; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected bool IsTerminating { get { return ChildrenContainer.IsTerminating; } }
 
         private bool IsWaitingForChildren  // This is called isWaitingForChildrenOrNull in AkkaJVM but is used like if returned a bool
@@ -306,9 +293,6 @@ namespace Akka.Actor
         /// indicating that only a name has been reserved for the child, or a <see cref="ChildRestartStats"/> for a child that
         /// has been initialized/created.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
         public bool TryGetChildStatsByName(string name, out IChildStats child)   //This is called getChildByName in Akka JVM
         {
             return ChildrenContainer.TryGetByName(name, out child);
@@ -333,9 +317,6 @@ namespace Akka.Actor
         /// Tries to get the stats for the specified child.
         /// <remarks>Since the child exists <see cref="ChildRestartStats"/> is the only valid <see cref="IChildStats"/>.</remarks>
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
         protected bool TryGetChildStatsByRef(IActorRef actor, [NotNullWhen(true)] out ChildRestartStats? child)   //This is called getChildByRef in Akka JVM
         {
             return ChildrenContainer.TryGetByRef(actor, out child);
@@ -378,12 +359,7 @@ namespace Akka.Actor
             }
             return ActorRefs.Nobody;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
+        
         protected SuspendReason? RemoveChildAndGetStateChange(IActorRef child)
         {
             if (ChildrenContainer is TerminatingChildrenContainer terminating)
