@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using Akka.Actor;
 using Akka.Dispatch;
@@ -38,7 +39,7 @@ namespace Akka.IO
     ///
     /// TcpListener is an internal actor that binds to a local address and listens for incoming TCP connections.
     /// </summary>
-    internal sealed class TcpListener : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    internal sealed class TcpListener : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>, IWithTimers
     {
         private readonly TcpExt _tcp;
         private readonly IActorRef _bindCommander; // forwarded destination for Connected
@@ -49,6 +50,43 @@ namespace Akka.IO
         private SocketAsyncActorEventArgs[]? _acceptPool;
         private bool _binding;
         private static readonly EventHandler<SocketAsyncEventArgs> OnCompleted = OnIoCompleted;
+
+        private long _acceptCount;
+        private long _failedCount;
+        private long _retryCount;
+        private long _closedCount;
+
+        private readonly HashSet<IActorRef> _subscribers = [];
+
+        /// <summary>
+        /// Internal for testing purposes
+        /// </summary>
+        internal sealed class PublishStats
+        {
+            private PublishStats()
+            {
+            }
+
+            public static PublishStats Instance { get; } = new();
+        }
+
+        private sealed class BindCommanderDied
+        {
+            private BindCommanderDied()
+            {
+            }
+
+            public static BindCommanderDied Instance { get; } = new();
+        }
+
+        private sealed class ConnectionTerminated
+        {
+            private ConnectionTerminated()
+            {
+            }
+
+            public static ConnectionTerminated Instance { get; } = new();
+        }
 
         private sealed record AcceptCompleted(SocketAsyncEventArgs EventArgs) : INoSerializationVerificationNeeded;
 
@@ -63,15 +101,73 @@ namespace Akka.IO
             if (_acceptLimit <= 0)
             {
                 _log.Warning("Batch accept limit is set to {0}, which is less than or equal to 0. " +
-                             "This value will HANG the listener.", _acceptLimit);;
+                             "This value will HANG the listener.", _acceptLimit);
+                ;
 
                 _acceptLimit = TcpSettings.DefaultAcceptLimit;
                 _log.Warning("Using default value of {0} for batch accept limit", _acceptLimit);
             }
-            
+
             _bindCommander = bindCommander;
 
             Self.Tell(bind);
+        }
+
+        protected override void PreStart()
+        {
+            // periodically publish stats updates to subscribers
+            Timers.StartPeriodicTimer("PublishStats", PublishStats.Instance, TimeSpan.FromSeconds(10));
+        }
+
+        private Tcp.TcpListenerStatistics GetTcpListenerStats()
+        {
+            return new Tcp.TcpListenerStatistics()
+            {
+                AcceptedIncomingConnections = _acceptCount,
+                FailedIncomingConnections = _failedCount,
+                RetriedIncomingConnections = _retryCount,
+                IncomingConnectionsClosed = _closedCount
+            };
+        }
+
+        private bool HandleStatsMessages(object msg)
+        {
+            switch (msg)
+            {
+                case PublishStats:
+                    {
+                        // send stats to all subscribers
+                        var stats = GetTcpListenerStats();
+                        foreach (var subscriber in _subscribers)
+                        {
+                            subscriber.Tell(stats);
+                        }
+                    }   
+                    return true;
+
+                case Tcp.SubscribeToTcpListenerStats subscribe:
+                    if (_subscribers.Add(subscribe.Subscriber))
+                    {
+                        // send some stats immediately
+                        var stats = GetTcpListenerStats();
+                        subscribe.Subscriber.Tell(stats);
+
+                        // set up automatic unsubscribe
+                        Context.WatchWith(subscribe.Subscriber,
+                            new Tcp.UnsubscribeFromTcpListenerStats(subscribe.Subscriber));
+                    }
+                    return true;
+
+                case Tcp.UnsubscribeFromTcpListenerStats unsubscribe:
+                    _subscribers.Remove(unsubscribe.Subscriber);
+                    return true;
+
+                case ConnectionTerminated:
+                    _closedCount++;
+                    return true;
+            }
+
+            return false;
         }
 
         private Receive Bound() => message =>
@@ -99,8 +195,14 @@ namespace Akka.IO
                     _log.Error(failure.Cause, "Received SocketAsyncEventArgs failure");
                     return true;
 
+
+                case BindCommanderDied:
+                    _log.Warning("Bind commander died, stopping listener");
+                    Context.Stop(Self);
+                    return true;
+
                 default:
-                    return false;
+                    return HandleStatsMessages(message);
             }
         };
 
@@ -119,8 +221,15 @@ namespace Akka.IO
                     Context.Stop(Self);
                     return true;
 
+                case ConnectionTerminated:
+                    _closedCount++;
+                    return true;
+
+                case BindCommanderDied: // no-op
+                    return true;
+
                 default:
-                    return false;
+                    return HandleStatsMessages(message);
             }
         };
 
@@ -159,11 +268,15 @@ namespace Akka.IO
             switch (saea.SocketError)
             {
                 case SocketError.Success:
+                    _acceptCount++;
                     var accepted = saea.AcceptSocket!;
                     saea.AcceptSocket = null; // ready for re‑use
-                    Context.ActorOf(Props
+                    var incomingConnection = Context.ActorOf(Props
                         .Create<TcpIncomingConnection>(_tcp, accepted, _bind.Handler, _bind.Options, _bind.PullMode)
                         .WithDeploy(Deploy.Local));
+
+                    // set up the watch for monitoring purposes
+                    Context.WatchWith(incomingConnection, ConnectionTerminated.Instance);
                     StartAccept(saea); // keep the pool full
                     break;
 
@@ -172,12 +285,16 @@ namespace Akka.IO
                 case SocketError.TryAgain:
                 case SocketError.TimedOut:
                 case SocketError.WouldBlock:
+                    _retryCount++;
+                    _log.Warning("Retriable socket error in TcpListener: {0} - retrying accept operation in 10ms",
+                        saea.SocketError);
                     // transient – short back‑off then retry
                     saea.AcceptSocket = null;
                     Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(10), Self,
                         new RetryAccept(saea), ActorRefs.NoSender);
                     break;
                 default:
+                    _failedCount++;
                     _log.Error("Fatal socket error in TcpListener: {0}", saea.SocketError);
                     Context.Stop(Self);
                     break;
@@ -262,7 +379,7 @@ namespace Akka.IO
                     return true;
 
                 case Tcp.Bound bound:
-                    Context.Watch(_bind.Handler);
+                    Context.WatchWith(_bind.Handler, BindCommanderDied.Instance);
                     _bindCommander.Tell(bound);
                     Become(Bound());
                     _binding = false;
@@ -292,5 +409,7 @@ namespace Akka.IO
                 _log.Debug("Error closing ServerSocketChannel: {0}", e);
             }
         }
+
+        public ITimerScheduler Timers { get; set; }
     }
 }

@@ -4097,6 +4097,7 @@ namespace Akka.IO
         {
             public Event() { }
         }
+        public interface ITcpQuery : Akka.Actor.INoSerializationVerificationNeeded { }
         public class Message : Akka.Actor.INoSerializationVerificationNeeded
         {
             public Message() { }
@@ -4148,9 +4149,23 @@ namespace Akka.IO
             public bool WantsAck { get; }
             public Akka.IO.Tcp.CompoundWrite Append(Akka.IO.Tcp.WriteCommand that) { }
         }
+        public sealed class SubscribeToTcpListenerStats : Akka.Actor.INoSerializationVerificationNeeded, Akka.IO.Tcp.ITcpQuery, System.IEquatable<Akka.IO.Tcp.SubscribeToTcpListenerStats>
+        {
+            public SubscribeToTcpListenerStats(Akka.Actor.IActorRef Subscriber) { }
+            public Akka.Actor.IActorRef Subscriber { get; set; }
+        }
         public sealed class SuspendReading : Akka.IO.Tcp.Command
         {
             public static readonly Akka.IO.Tcp.SuspendReading Instance;
+        }
+        [System.Runtime.CompilerServices.NullableAttribute(0)]
+        public sealed class TcpListenerStatistics : Akka.Actor.INoSerializationVerificationNeeded, Akka.IO.Tcp.ITcpQuery, System.IEquatable<Akka.IO.Tcp.TcpListenerStatistics>
+        {
+            public TcpListenerStatistics() { }
+            public long AcceptedIncomingConnections { get; set; }
+            public long FailedIncomingConnections { get; set; }
+            public long IncomingConnectionsClosed { get; set; }
+            public long RetriedIncomingConnections { get; set; }
         }
         public class Unbind : Akka.IO.Tcp.Command
         {
@@ -4159,6 +4174,11 @@ namespace Akka.IO
         public sealed class Unbound : Akka.IO.Tcp.Event
         {
             public static readonly Akka.IO.Tcp.Unbound Instance;
+        }
+        public sealed class UnsubscribeFromTcpListenerStats : Akka.Actor.INoSerializationVerificationNeeded, Akka.IO.Tcp.ITcpQuery, System.IEquatable<Akka.IO.Tcp.UnsubscribeFromTcpListenerStats>
+        {
+            public UnsubscribeFromTcpListenerStats(Akka.Actor.IActorRef Subscriber) { }
+            public Akka.Actor.IActorRef Subscriber { get; set; }
         }
         public sealed class Write : Akka.IO.Tcp.SimpleWriteCommand
         {

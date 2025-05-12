@@ -28,7 +28,8 @@ namespace Akka.Tests.IO
                      akka.io.tcp.direct-buffer-size = 512
                      akka.actor.serialize-creators = on
                      akka.io.tcp.batch-accept-limit = 2")
-        { }
+        {
+        }
 
         [Fact]
         public async Task A_TCP_Listener_must_let_the_bind_commander_know_when_binding_is_complete()
@@ -36,7 +37,7 @@ namespace Akka.Tests.IO
             await new TestSetup(this, pullMode: false).RunAsync(async x =>
             {
                 await x.BindCommander.ExpectMsgAsync<Tcp.Bound>();
-            });           
+            });
         }
 
         [Fact]
@@ -52,9 +53,25 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
+        public async Task A_TCP_Listener_must_provide_metrics()
+        {
+            await new TestSetup(this, pullMode: false).RunAsync(async x =>
+            {
+                await x.BindListener();
+
+                await x.AttemptConnectionToEndpoint();
+                var probe = CreateTestProbe();
+                x.Listener.Tell(new Tcp.SubscribeToTcpListenerStats(probe.Ref));
+                var metrics = await probe.ExpectMsgAsync<Tcp.TcpListenerStatistics>();
+
+                Assert.Equal(1, metrics.AcceptedIncomingConnections);
+            });
+        }
+
+        [Fact]
         public async Task A_TCP_Listener_must_react_to_unbind_commands_by_replying_with_unbound_and_stopping_itself()
         {
-            await new TestSetup(this, pullMode:false).RunAsync(async x =>
+            await new TestSetup(this, pullMode: false).RunAsync(async x =>
             {
                 await x.BindListener();
 
@@ -63,38 +80,36 @@ namespace Akka.Tests.IO
 
                 await unbindCommander.ExpectMsgAsync(Tcp.Unbound.Instance);
                 await x.Parent.ExpectTerminatedAsync(x.Listener);
-            });    
+            });
         }
 
-        class TestSetup
+        private class TestSetup
         {
             private readonly TestKitBase _kit;
-            private readonly bool _pullMode;
 
             private readonly TestProbe _handler;
             private readonly IActorRef _handlerRef;
-            private readonly TestProbe _bindCommander;
-            private readonly TestProbe _parent;
             private readonly TestActorRef<ListenerParent> _parentRef;
-            
+
             public TestSetup(TestKitBase kit, bool pullMode)
             {
                 _kit = kit;
-                _pullMode = pullMode;
 
                 _handler = kit.CreateTestProbe();
                 _handlerRef = _handler.Ref;
-                _bindCommander = kit.CreateTestProbe();
-                _parent = kit.CreateTestProbe();
+                BindCommander = kit.CreateTestProbe();
+                Parent = kit.CreateTestProbe();
                 SelectorRouter = kit.CreateTestProbe();
 
-                _parentRef = new TestActorRef<ListenerParent>(kit.Sys, Props.Create(() => new ListenerParent(this, pullMode)));
+                _parentRef =
+                    new TestActorRef<ListenerParent>(kit.Sys, Props.Create(() => new ListenerParent(this, pullMode)));
             }
 
             public void Run(Action<TestSetup> test)
             {
                 test(this);
             }
+
             public async Task RunAsync(Func<TestSetup, Task> test)
             {
                 await test(this);
@@ -102,7 +117,7 @@ namespace Akka.Tests.IO
 
             public async Task BindListener()
             {
-                var bound = await _bindCommander.ExpectMsgAsync<Tcp.Bound>();
+                var bound = await BindCommander.ExpectMsgAsync<Tcp.Bound>();
                 LocalEndPoint = (IPEndPoint)bound.LocalAddress;
             }
 
@@ -112,12 +127,15 @@ namespace Akka.Tests.IO
                     .ConnectAsync(LocalEndPoint);
             }
 
-            public IActorRef Listener { get { return _parentRef.UnderlyingActor.Listener; } }
+            public IActorRef Listener
+            {
+                get { return _parentRef.UnderlyingActor.Listener; }
+            }
 
             public TestProbe SelectorRouter { get; }
 
-            public TestProbe BindCommander { get { return _bindCommander; } }
-            public TestProbe Parent { get { return _parent; } }
+            public TestProbe BindCommander { get; }
+            public TestProbe Parent { get; }
 
             public IPEndPoint LocalEndPoint { get; private set; }
 
@@ -138,25 +156,28 @@ namespace Akka.Tests.IO
                     var endpoint = new IPEndPoint(IPAddress.Loopback, 0);
 
                     _listener = Context.ActorOf(Props.Create(() =>
-                        new TcpListener(
-                            Tcp.For(Context.System),
-                            test._bindCommander.Ref,
-                            new Tcp.Bind(
-                                _test._handler.Ref, 
-                                endpoint, 
-                                100, 
-                                new Inet.SocketOption[]{ new TestSocketOption(socket => _test.AfterBind(socket)) }, 
-                                pullMode)))
+                            new TcpListener(
+                                Tcp.For(Context.System),
+                                test.BindCommander.Ref,
+                                new Tcp.Bind(
+                                    _test._handler.Ref,
+                                    endpoint,
+                                    100,
+                                    new Inet.SocketOption[] { new TestSocketOption(socket => _test.AfterBind(socket)) },
+                                    pullMode)))
                         .WithDeploy(Deploy.Local));
-                    
-                    _test._parent.Watch(_listener);
+
+                    _test.Parent.Watch(_listener);
                 }
 
-                internal IActorRef Listener { get { return _listener; } }
+                internal IActorRef Listener
+                {
+                    get { return _listener; }
+                }
 
                 protected override bool Receive(object message)
                 {
-                    _test._parent.Forward(message);
+                    _test.Parent.Forward(message);
                     return true;
                 }
 

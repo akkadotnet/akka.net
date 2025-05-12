@@ -54,3 +54,7 @@ The following code example shows a simple server that echo's data received from 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/EchoServer.cs?name=echoServer)]
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/EchoConnection.cs?name=echoConnection)]
+
+### TCP Statistics
+
+

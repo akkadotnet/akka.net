@@ -76,6 +76,7 @@ namespace Akka.IO
         }
 
         #endregion
+        
 
         /// <summary>
         /// Akka.IO Tcp messages are all derived from this class.
@@ -83,6 +84,51 @@ namespace Akka.IO
         public class Message : INoSerializationVerificationNeeded { }
 
         #region user commands
+        
+        /// <summary>
+        /// Queries against Akka.IO.Tcp class types
+        /// </summary>
+        public interface ITcpQuery : INoSerializationVerificationNeeded{}
+
+        /// <summary>
+        /// Subscribe to receive ongoing statistics from a TCP listener. See <see cref="TcpListenerStatistics" />
+        /// </summary>
+        public sealed record SubscribeToTcpListenerStats(IActorRef Subscriber) : ITcpQuery;
+        
+        /// <summary>
+        /// Unsubscribe from receiving ongoing statistics from a TCP listener.
+        /// </summary>
+        public sealed record UnsubscribeFromTcpListenerStats(IActorRef Subscriber) : ITcpQuery;
+        
+        /// <summary>
+        /// A set of statistics from a specific TCP listener.
+        /// </summary>
+        /// <remarks>
+        /// These are ongoing, rolling statistics that are updated as the listener
+        /// processes incoming connections. They will not reset unless the listener is killed.
+        /// </remarks>
+        public sealed record TcpListenerStatistics : ITcpQuery
+        {
+            /// <summary>
+            /// Total number of accepted incoming connections
+            /// </summary>
+            public long AcceptedIncomingConnections { get; init; }
+            
+            /// <summary>
+            /// Incoming connections that could not be accepted
+            /// </summary>
+            public long FailedIncomingConnections { get; init; }
+            
+            /// <summary>
+            /// Incoming connections that had to be retried
+            /// </summary>
+            public long RetriedIncomingConnections { get; init; }
+            
+            /// <summary>
+            /// Total number of incoming connections that were closed
+            /// </summary>
+            public long IncomingConnectionsClosed { get; init; }
+        }
 
         // COMMANDS
         
