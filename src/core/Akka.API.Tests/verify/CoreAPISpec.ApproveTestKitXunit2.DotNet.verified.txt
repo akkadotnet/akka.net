@@ -38,7 +38,6 @@ namespace Akka.TestKit.Xunit2.Internals
     {
         public AkkaEqualException(string format = "", params object[] args) { }
         protected AkkaEqualException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
-        public override string Message { get; }
         [return: System.Runtime.CompilerServices.NullableAttribute(1)]
         public static Akka.TestKit.Xunit2.Internals.AkkaEqualException ForMismatchedValues(object expected, object actual, string format = null, [System.Runtime.CompilerServices.NullableAttribute(1)] params object[] args) { }
     }

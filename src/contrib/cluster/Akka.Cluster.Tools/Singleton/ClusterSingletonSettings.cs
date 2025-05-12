@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,6 +18,10 @@ namespace Akka.Cluster.Tools.Singleton
     /// The settings used for the <see cref="ClusterSingleton"/>
     /// </summary>
     [Serializable]
+    [Obsolete("This setting class is deprecated and will be removed in v1.6, " +
+              "please use ClusterSingletonManager.Props and ClusterSingletonProxy.Props directly instead. " +
+              "See https://getakka.net/community/whats-new/akkadotnet-v1.5-upgrade-advisories.html#upgrading-to-akkanet-v1532. " +
+              "Since 1.5.32.")]
     public class ClusterSingletonSettings : INoSerializationVerificationNeeded
     {
         /// <summary>
@@ -65,11 +69,21 @@ namespace Akka.Cluster.Tools.Singleton
         public bool ConsiderAppVersion { get; }
 
         /// <summary>
+        /// Should the singleton proxy publish a warning if no singleton actor were found after a period of time
+        /// </summary>
+        public bool LogSingletonIdentificationFailure { get; }
+        
+        /// <summary>
+        /// The period the proxy will wait until it logs a missing singleton warning, defaults to 1 minute
+        /// </summary>
+        public TimeSpan SingletonIdentificationFailurePeriod { get; }
+        
+        /// <summary>
         /// Create settings from the default configuration `akka.cluster`.
         /// </summary>
         public static ClusterSingletonSettings Create(ActorSystem system)
         {
-            system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
+            system.Settings.InjectTopLevelFallback(ClusterSingleton.DefaultConfig());
             return Create(system.Settings.Config.GetConfig("akka.cluster"));
         }
 
@@ -88,7 +102,9 @@ namespace Akka.Cluster.Tools.Singleton
                 mgrSettings.HandOverRetryInterval,
                 proxySettings.BufferSize,
                 mgrSettings.LeaseSettings,
-                mgrSettings.ConsiderAppVersion);
+                false,
+                proxySettings.LogSingletonIdentificationFailure,
+                proxySettings.SingletonIdentificationFailurePeriod);
         }
 
         private ClusterSingletonSettings(
@@ -98,7 +114,9 @@ namespace Akka.Cluster.Tools.Singleton
             TimeSpan handOverRetryInterval,
             int bufferSize,
             LeaseUsageSettings leaseSettings,
-            bool considerAppVersion)
+            bool considerAppVersion,
+            bool logSingletonIdentificationFailure,
+            TimeSpan singletonIdentificationFailurePeriod)
         {
             if (singletonIdentificationInterval == TimeSpan.Zero)
                 throw new ArgumentException("singletonIdentificationInterval must be positive", nameof(singletonIdentificationInterval));
@@ -119,16 +137,29 @@ namespace Akka.Cluster.Tools.Singleton
             BufferSize = bufferSize;
             LeaseSettings = leaseSettings;
             ConsiderAppVersion = considerAppVersion;
+            LogSingletonIdentificationFailure = logSingletonIdentificationFailure;
+            SingletonIdentificationFailurePeriod = singletonIdentificationFailurePeriod;
         }
 
         public ClusterSingletonSettings WithRole(string role) => Copy(role: role);
 
+        public ClusterSingletonSettings WithSingletonIdentificationInterval(TimeSpan singletonIdentificationInterval) 
+            => Copy(singletonIdentificationInterval: singletonIdentificationInterval);
+        
         public ClusterSingletonSettings WithRemovalMargin(TimeSpan removalMargin) => Copy(removalMargin: removalMargin);
 
         public ClusterSingletonSettings WithHandOverRetryInterval(TimeSpan handOverRetryInterval) => Copy(handOverRetryInterval: handOverRetryInterval);
+        
+        public ClusterSingletonSettings WithBufferSize(int bufferSize) => Copy(bufferSize: bufferSize);
 
         public ClusterSingletonSettings WithLeaseSettings(LeaseUsageSettings leaseSettings) => Copy(leaseSettings: leaseSettings);
 
+        public ClusterSingletonSettings WithLogSingletonIdentificationFailure(bool logSingletonIdentificationFailure) 
+            => Copy(logSingletonIdentificationFailure: logSingletonIdentificationFailure);
+        
+        public ClusterSingletonSettings WithSingletonIdentificationFailurePeriod(TimeSpan singletonIdentificationFailurePeriod)
+            => Copy(singletonIdentificationFailurePeriod: singletonIdentificationFailurePeriod);
+        
         private ClusterSingletonSettings Copy(
             Option<string> role = default,
             TimeSpan? singletonIdentificationInterval = null,
@@ -136,7 +167,9 @@ namespace Akka.Cluster.Tools.Singleton
             TimeSpan? handOverRetryInterval = null,
             int? bufferSize = null,
             Option<LeaseUsageSettings> leaseSettings = default,
-            bool? considerAppVersion = null)
+            bool? considerAppVersion = null,
+            bool? logSingletonIdentificationFailure = null,
+            TimeSpan? singletonIdentificationFailurePeriod = null)
         {
             return new ClusterSingletonSettings(
                 role: role.HasValue ? role.Value : Role,
@@ -145,16 +178,18 @@ namespace Akka.Cluster.Tools.Singleton
                 handOverRetryInterval: handOverRetryInterval ?? HandOverRetryInterval,
                 bufferSize: bufferSize ?? BufferSize,
                 leaseSettings: leaseSettings.HasValue ? leaseSettings.Value : LeaseSettings,
-                considerAppVersion: considerAppVersion ?? ConsiderAppVersion);
+                considerAppVersion: considerAppVersion ?? ConsiderAppVersion,
+                logSingletonIdentificationFailure: logSingletonIdentificationFailure ?? LogSingletonIdentificationFailure,
+                singletonIdentificationFailurePeriod: singletonIdentificationFailurePeriod ?? SingletonIdentificationFailurePeriod);
         }
 
         [InternalApi]
         internal ClusterSingletonManagerSettings ToManagerSettings(string singletonName) =>
-            new(singletonName, Role, RemovalMargin, HandOverRetryInterval, LeaseSettings, ConsiderAppVersion);
+            new(singletonName, Role, RemovalMargin, HandOverRetryInterval, LeaseSettings, false);
 
         [InternalApi]
         internal ClusterSingletonProxySettings ToProxySettings(string singletonName) =>
-            new(singletonName, Role, SingletonIdentificationInterval, BufferSize, ConsiderAppVersion);
+            new(singletonName, Role, SingletonIdentificationInterval, BufferSize, false, LogSingletonIdentificationFailure, SingletonIdentificationFailurePeriod);
 
         [InternalApi]
         internal bool ShouldRunManager(Cluster cluster) => string.IsNullOrEmpty(Role) || cluster.SelfMember.Roles.Contains(Role);

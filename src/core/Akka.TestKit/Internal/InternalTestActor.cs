@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalTestActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -45,12 +45,10 @@ namespace Akka.TestKit.Internal
                 System.Diagnostics.Debug.WriteLine("TestActor received " + message);
             }
             catch (FormatException)
+                when (message is LogEvent { Message: LogMessage msg })
             {
-                if (message is LogEvent { Message: LogMessage msg })
-                    System.Diagnostics.Debug.WriteLine(
-                        $"TestActor received a malformed formatted message. Template:[{msg.Format}], args:[{string.Join(",", msg.Unformatted())}]");
-                else
-                    throw;
+                System.Diagnostics.Debug.WriteLine(
+                    $"TestActor received a malformed formatted message. Template:[{msg.Format}], args:[{string.Join(",", msg.Unformatted())}]");
             }
 
             switch (message)
@@ -102,5 +100,7 @@ namespace Akka.TestKit.Internal
                 }
             }
         }
+
+        protected override SupervisorStrategy SupervisorStrategy() => _supervisorStrategy;
     }
 }

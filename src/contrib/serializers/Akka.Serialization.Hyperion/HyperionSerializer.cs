@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HyperionSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -170,7 +170,8 @@ namespace Akka.Serialization
         /// <summary>
         /// Default settings used by <see cref="HyperionSerializer"/> when no config has been specified.
         /// </summary>
-        public static readonly HyperionSerializerSettings Default = Create(HyperionSerializer.DefaultConfiguration());
+        public static readonly HyperionSerializerSettings Default = Create(HyperionSerializer.DefaultConfiguration()
+            .GetConfig("akka.actor.serialization-settings.hyperion"));
 
         /// <summary>
         /// Creates a new instance of <see cref="HyperionSerializerSettings"/> using provided HOCON config.

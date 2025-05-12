@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AbstractStash.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -74,9 +74,11 @@ namespace Akka.Actor.Internal
         {
             var currMsg = _actorCell.CurrentMessage;
             var sender = _actorCell.Sender;
-
+            
             if (_actorCell.CurrentEnvelopeId == _currentEnvelopeId)
             {
+                if(currMsg is null)
+                    throw new InvalidOperationException("There is no message to stash right now. Stash() must be called inside an actor's Receive methods.");
                 throw new IllegalActorStateException($"Can't stash the same message {currMsg} more than once");
             }
             _currentEnvelopeId = _actorCell.CurrentEnvelopeId;
@@ -180,7 +182,7 @@ namespace Akka.Actor.Internal
         {
             // since we want to save the order of messages, but still prepending using AddFirst,
             // we must enumerate envelopes in reversed order
-            foreach (var envelope in envelopes.Distinct().Reverse())
+            foreach (var envelope in envelopes.Reverse())
             {
                 _theStash.AddFirst(envelope);
             }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CallingThreadDispatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -43,30 +43,19 @@ namespace Akka.TestKit
     public class CallingThreadDispatcher : MessageDispatcher
     {
         /// <summary>
-        /// TBD 
+        /// HOCON id of the CallingThreadDispatcher
         /// </summary>
-        public static string Id = "akka.test.calling-thread-dispatcher";
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="configurator">TBD</param>
+        public new static string Id = "akka.test.calling-thread-dispatcher";
+        
         public CallingThreadDispatcher(MessageDispatcherConfigurator configurator) : base(configurator)
         {
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="run">TBD</param>
+        
         protected override void ExecuteTask(IRunnable run)
         {
             run.Run();
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override void Shutdown()
         {
             // do nothing

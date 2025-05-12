@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HyperionSerializerSetupSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -225,7 +225,7 @@ akka.actor {
                 yield return new object[]{ Serialize(WindowsIdentity.GetAnonymous()), typeof(WindowsIdentity) };
                 yield return new object[]{ Serialize(new WindowsPrincipal(WindowsIdentity.GetAnonymous())), typeof(WindowsPrincipal)};
             }
-#if NET471
+#if NET48
             yield return new object[]{ Serialize(new Process()), typeof(Process)};
 #endif
             yield return new object[]{ Serialize(new ClaimsIdentity()), typeof(ClaimsIdentity)};

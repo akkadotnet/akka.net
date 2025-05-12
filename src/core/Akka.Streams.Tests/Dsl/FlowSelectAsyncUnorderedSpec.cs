@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSelectAsyncUnorderedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -134,7 +134,7 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(10);
-                c.ExpectError().InnerException.Message.Should().Be("err1");
+                (await c.ExpectErrorAsync()).Message.Should().Be("err1");
                 latch.CountDown();
             }, Materializer);
         }
@@ -193,7 +193,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FromSubscriber(c), Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(10);
-                c.ExpectError().Message.Should().Be("err2");
+                (await c.ExpectErrorAsync()).Message.Should().Be("err2");
                 latch.CountDown();
             }, Materializer);
         }

@@ -36,3 +36,49 @@ akka {
   }
 }
 ```
+
+### Controlling Journal or Snapshot Crash Behavior
+
+By default the base implementations upon which all journal or snapshot-store implementations are build upon provides out of the box behavior for dealing with errors that occur during the writing or reading of data from the underlying store. Errors that occur will be communicated with the persistent actor that is using them at that time.
+So in general once started successfully the journal or snapshot-store will be ready and available for the duration of your application, and won't crash. However in the case they do crash, due to unforeseen circumstances the default behavior is to immediately restart them. This is generally the behavior you want.
+But in case you do want to customize how the system handles the crashing of the journal or snapshot-store. You can specify your own supervision strategy using the `supervisor-strategy` property.
+This class needs to inherit from `Akka.Actor.SupervisorStrategyConfigurator` and have a parameter-less constructor.
+Configuration example:
+
+```hocon
+akka {
+  persistence {
+    journal {
+      plugin = "akka.persistence.journal.sqlite"
+      auto-start-journals = ["akka.persistence.journal.sqlite"]
+      supervisor-strategy = "My.full.namespace.CustomSupervisorStrategyConfigurator"
+    }
+    snapshot-store {
+      plugin = "akka.persistence.snapshot-store.sqlite"
+      auto-start-snapshot-stores = ["akka.persistence.snapshot-store.sqlite"]
+      supervisor-strategy = "My.full.namespace.CustomSupervisorStrategyConfigurator"
+    }
+  }
+}
+```
+
+One such case could be to detect and handle misconfigured application settings during startup. For example if your using a SQL based journal and you misconfigured the connection string you might opt to return a supervision strategy that detects certain network connection errors, and after a few retries signals your application to shutdown instead of continue running with a journal or snapshot-store that in all likelihood will never be able to recover, forever stuck in a restart loop while your application is running.
+
+An example of what this could look like is this:
+
+```csharp
+
+  public class MyCustomSupervisorConfigurator : SupervisorStrategyConfigurator
+        {
+            public override SupervisorStrategy Create()
+            {
+                //optionally only stop if the error occurs more then x times in y period
+                //this will be highly likely if its an unrecoverable error during start/init of the journal/snapshot store
+                return new OneForOneStrategy(10,TimeSpan.FromSeconds(5),ex =>
+                {
+                    //detect unrecoverable exception here
+                    return Directive.Stop;
+                });
+            }
+        }
+```

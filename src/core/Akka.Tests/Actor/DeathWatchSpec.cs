@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeathWatchSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -205,7 +205,9 @@ namespace Akka.Tests.Actor
                     return res.ToString();
                 }, 3).ToListAsync();
 
+#pragma warning disable CS0618 // Type or member is obsolete 
                 ((IInternalActorRef)TestActor).IsTerminated.ShouldBe(false);
+#pragma warning restore CS0618 // Type or member is obsolete
                 result.ShouldOnlyContainInOrder("1", "2", "3");
             });
         }

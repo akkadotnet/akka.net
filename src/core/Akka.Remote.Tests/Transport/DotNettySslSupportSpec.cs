@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DotNettySslSupportSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -162,9 +162,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         private string Thumbprint { get; set; }
-
-
-
+        
         [Fact]
         public async Task Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
         {
@@ -221,6 +219,7 @@ namespace Akka.Remote.Tests.Transport
             });
         }
 
+        #if !NET48 // has text formatting issues on .NET Framework
         [Fact]
         public async Task If_EnableSsl_configuration_is_true_but_not_valid_certificate_is_provided_than_ArgumentNullException_should_be_thrown()
         {
@@ -236,6 +235,7 @@ namespace Akka.Remote.Tests.Transport
             Assert.NotNull(realException);
             Assert.Equal("Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`) (Parameter 'certificatePath')", realException.Message);
         }
+        #endif
 
         [Fact]
         public async Task If_EnableSsl_configuration_is_true_but_not_valid_certificate_password_is_provided_than_WindowsCryptographicException_should_be_thrown()

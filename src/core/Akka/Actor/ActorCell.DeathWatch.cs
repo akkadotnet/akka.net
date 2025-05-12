@@ -1,16 +1,16 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.DeathWatch.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Linq;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
@@ -25,6 +25,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public IActorRef Watch(IActorRef subject)
         {
+            if(subject is null) throw new ArgumentNullException(nameof(subject), "subject must not be null");
             var a = (IInternalActorRef)subject;
 
             if (!a.Equals(Self) && !WatchingContains(a))
@@ -46,6 +47,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public IActorRef WatchWith(IActorRef subject, object message)
         {
+            if(subject is null) throw new ArgumentNullException(nameof(subject), "subject must not be null");
             if (message == null)
                 throw new ArgumentNullException(nameof(message), "message must not be null");
 
@@ -69,6 +71,8 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public IActorRef Unwatch(IActorRef subject)
         {
+            if(subject is null) throw new ArgumentNullException(nameof(subject), "subject must not be null");
+            
             var a = (IInternalActorRef)subject;
             if (!a.Equals(Self) && WatchingContains(a))
             {
@@ -91,8 +95,7 @@ namespace Akka.Actor
             if (!_state.ContainsTerminated(t.ActorRef))
                 return;
 
-            Option<object> customTerminatedMessage;
-            (_state, customTerminatedMessage) = _state.RemoveTerminated(t.ActorRef); // here we know that it is the SAME ref which was put in
+            (_state, var customTerminatedMessage) = _state.RemoveTerminated(t.ActorRef); // here we know that it is the SAME ref which was put in
             ReceiveMessage(customTerminatedMessage.GetOrElse(t));
         }
 
@@ -192,10 +195,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
-        /// <param name="actor">TBD</param>
-        protected void UnwatchWatchedActors(ActorBase actor)
+        /// <remarks>
+        /// Cleanup routine during actor shutdown.
+        /// </remarks>
+        protected void UnwatchWatchedActors(ActorBase? actor)
         {
             var watching = _state
                 .GetWatching()
@@ -235,7 +240,8 @@ namespace Akka.Actor
                 {
                     _state = _state.AddWatchedBy(watcher);
 
-                    if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor.GetType(), string.Format("now watched by {0}", watcher)));
+                    if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor?.GetType(),
+                        $"now watched by {watcher}"));
                 }, watcher);
             }
             else if (!watcheeSelf && watcherSelf)
@@ -244,7 +250,8 @@ namespace Akka.Actor
             }
             else
             {
-                Publish(new Warning(Self.Path.ToString(), Actor.GetType(), string.Format("BUG: illegal Watch({0},{1} for {2}", watchee, watcher, Self)));
+                Publish(new Warning(Self.Path.ToString(), Actor?.GetType(),
+                    $"BUG: illegal Watch({watchee},{watcher} for {Self}"));
             }
         }
 
@@ -255,6 +262,7 @@ namespace Akka.Actor
         /// <param name="watcher">TBD</param>
         protected void RemWatcher(IActorRef watchee, IActorRef watcher)
         {
+            // assert that watchee and watcher are not null
             var watcheeSelf = watchee.Equals(Self);
             var watcherSelf = watcher.Equals(Self);
 
@@ -264,7 +272,8 @@ namespace Akka.Actor
                 {
                     _state = _state.RemoveWatchedBy(watcher);
 
-                    if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor.GetType(), string.Format("no longer watched by {0}", watcher)));
+                    if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor?.GetType(),
+                        $"no longer watched by {watcher}"));
                 }, watcher);
             }
             else if (!watcheeSelf && watcherSelf)
@@ -273,7 +282,8 @@ namespace Akka.Actor
             }
             else
             {
-                Publish(new Warning(Self.Path.ToString(), Actor.GetType(), string.Format("BUG: illegal Unwatch({0},{1} for {2}", watchee, watcher, Self)));
+                Publish(new Warning(Self.Path.ToString(), Actor?.GetType(),
+                    $"BUG: illegal Unwatch({watchee},{watcher} for {Self}"));
             }
         }
 
@@ -314,7 +324,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="block">TBD</param>
         /// <param name="change">TBD</param>
-        private void MaintainAddressTerminatedSubscription(Action block, IActorRef change = null)
+        private void MaintainAddressTerminatedSubscription(Action block, IActorRef? change = null)
         {
             if (IsNonLocal(change))
             {
@@ -333,13 +343,13 @@ namespace Akka.Actor
             }
         }
 
-        private static bool IsNonLocal(IActorRef @ref)
+        private static bool IsNonLocal(IActorRef? @ref)
         {
             if (@ref == null)
                 return true;
 
             var a = @ref as IInternalActorRef;
-            return a != null && !a.IsLocal;
+            return a is { IsLocal: false };
         }
 
         private bool HasNonLocalAddress()

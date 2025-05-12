@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardEntityFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.actor.provider = cluster
                 akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
                 akka.remote.dot-netty.tcp.port = 0")
-            .WithFallback(ClusterSingletonManager.DefaultConfig())
+            .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSharding.DefaultConfig());
         
         private sealed class EntityEnvelope
@@ -135,7 +135,8 @@ namespace Akka.Cluster.Sharding.Tests
                 settings,
                 new TestMessageExtractor(),
                 PoisonPill.Instance,
-                provider
+                provider,
+                null
             ));
 
             Sys.EventStream.Subscribe<Error>(TestActor);

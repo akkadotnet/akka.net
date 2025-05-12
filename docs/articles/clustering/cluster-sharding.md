@@ -157,6 +157,9 @@ public sealed class MessageExtractor : HashCodeMessageExtractor
 }
 ```
 
+> ![IMPORTANT]
+> Since [Akka.NET v1.5.15](https://github.com/akkadotnet/akka.net/releases/tag/1.5.15) Akka.Cluster.Sharding will now automatically handle `ShardRegion.StartEntity` messages for you and will raise an analyzer warning [`AK2001`](xref:AK2001) if you attempt to handle them in your message extractors.
+
 Using `ShardRegion.StartEntity` implies, that you're able to infer a shard id given an entity id alone. For this reason, in example above we modified a cluster sharding routing logic to make use of `HashCodeMessageExtractor` - in this variant, shard id doesn't have to be provided explicitly, as it will be computed from the hash of entity id itself. Notice a `maxNumberOfShards`, which is the maximum available number of shards allowed for this type of an actor - this value must never change during a single lifetime of a cluster.
 
 ### Remember Entities Store

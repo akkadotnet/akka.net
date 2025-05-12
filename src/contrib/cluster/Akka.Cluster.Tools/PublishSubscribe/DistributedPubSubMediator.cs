@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMediator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -642,7 +642,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private IActorRef NewTopicActor(string encodedTopic)
         {
-            var t = Context.ActorOf(Actor.Props.Create(() => new Topic(_settings.RemovedTimeToLive, _settings.RoutingLogic, _settings.SendToDeadLettersWhenNoSubscribers)), encodedTopic);
+            var t = Context.ActorOf(
+                Actor.Props.Create(() => new Topic(_settings.RemovedTimeToLive, _settings.RoutingLogic, _settings.SendToDeadLettersWhenNoSubscribers))
+                    .WithDeploy(Deploy.Local), 
+                encodedTopic);
             HandleRegisterTopic(t);
             return t;
         }

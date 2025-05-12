@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="NodeMetrics.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ namespace Akka.Cluster.Metrics.Serialization
         public static readonly NodeMetricsComparer Instance = new();
         
         private NodeMetricsComparer() { }
-        public bool Equals(NodeMetrics x, NodeMetrics y)
+        public bool Equals(NodeMetrics? x, NodeMetrics? y)
         {
             if (ReferenceEquals(x, y)) return true;
             if (ReferenceEquals(x, null)) return false;
@@ -114,7 +114,7 @@ namespace Akka.Cluster.Metrics.Serialization
          * just stip them from generated code and paste here, with adding Address property check
          */
 
-        public bool Equals(NodeMetrics other)
+        public bool Equals(NodeMetrics? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;

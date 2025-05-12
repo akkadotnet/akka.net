@@ -1,19 +1,16 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSelectionBenchmark.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Net.NetworkInformation;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Engines;
+using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks.Actor
 {
@@ -39,6 +36,7 @@ namespace Akka.Benchmarks.Actor
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark, ActorMessagingBenchmark)]
         public async Task RequestResponseActorSelection()
         {
             for(var i = 0; i < Iterations; i++)
@@ -46,6 +44,7 @@ namespace Akka.Benchmarks.Actor
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark, ActorMessagingBenchmark)]
         public void CreateActorSelection()
         {
             for (var i = 0; i < Iterations; i++)

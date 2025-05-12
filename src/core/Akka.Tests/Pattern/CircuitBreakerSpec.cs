@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CircuitBreakerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.ExceptionServices;
@@ -84,12 +85,12 @@ namespace Akka.Tests.Pattern
         {
             var breaker = ShortCallTimeoutCb();
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            // meant to run as detatched task
-            Task.Run(() => breaker.Instance.WithSyncCircuitBreaker(() => Thread.Sleep(Dilated(TimeSpan.FromSeconds(1)))));
+            // meant to run as detached task
+            var t = Task.Run(() => breaker.Instance.WithSyncCircuitBreaker(() => Thread.Sleep(Dilated(TimeSpan.FromSeconds(1)))));
+            await AwaitConditionAsync(() => t.Status >= TaskStatus.Running); // need to kick off the task before we can check the latch
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             var epsilon = TimeSpan.FromMilliseconds(500); // need to pad timeouts due to non-determinism of OS scheduler
-            await WithinAsync(TimeSpan.FromMilliseconds(900) + epsilon,
-                () => AwaitConditionAsync(() => breaker.Instance.CurrentFailureCount == 1, Dilated(TimeSpan.FromMilliseconds(100)), TimeSpan.FromMilliseconds(100)));
+            await AwaitConditionAsync(() => breaker.Instance.CurrentFailureCount == 1, TimeSpan.FromMilliseconds(900) + epsilon, TimeSpan.FromMilliseconds(100));
         }
     }
 
@@ -199,7 +200,7 @@ namespace Akka.Tests.Pattern
         public async Task Must_allow_calls_through()
         {
             var breaker = LongCallTimeoutCb();
-            var result = await breaker.Instance.WithCircuitBreaker(() => Task.Run(SayHi)).WaitAsync(AwaitTimeout);
+            var result = await breaker.Instance.WithCircuitBreaker(ct => Task.Run(SayHi, ct)).WaitAsync(AwaitTimeout);
             Assert.Equal("hi", result);
         }
 
@@ -208,7 +209,7 @@ namespace Akka.Tests.Pattern
         {
             var breaker = LongCallTimeoutCb();
             await InterceptException<TestException>(() =>
-                breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException)).WaitAsync(AwaitTimeout));
+                breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct)).WaitAsync(AwaitTimeout));
             Assert.True(CheckLatch(breaker.OpenLatch));
             breaker.Instance.CurrentFailureCount.ShouldBe(1);
         }
@@ -217,7 +218,7 @@ namespace Akka.Tests.Pattern
         public void Must_increment_failure_count_on_async_failure()
         {
             var breaker = LongCallTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
+            _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
             Assert.True(CheckLatch(breaker.OpenLatch));
             breaker.Instance.CurrentFailureCount.ShouldBe(1);
         }
@@ -226,10 +227,10 @@ namespace Akka.Tests.Pattern
         public async Task Must_reset_failure_count_after_success()
         {
             var breaker = MultiFailureCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(SayHi));
-            Enumerable.Range(1, 4).ForEach(_ => breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException)));
+            await WaitForTaskToBeScheduled(breaker.Instance.WithCircuitBreaker(ct => Task.Run(SayHi, ct)));
+            await WaitForTaskToBeScheduled(Enumerable.Range(1, 4).Select(_ => breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct))).ToList());
             await AwaitAssertAsync(() => breaker.Instance.CurrentFailureCount.ShouldBe(4), AwaitTimeout);
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(SayHi));
+            await WaitForTaskToBeScheduled(breaker.Instance.WithCircuitBreaker(ct => Task.Run(SayHi, ct)));
             await AwaitAssertAsync(() => breaker.Instance.CurrentFailureCount.ShouldBe(0), AwaitTimeout);
         }
 
@@ -238,9 +239,9 @@ namespace Akka.Tests.Pattern
         {
             var breaker = ShortCallTimeoutCb();
 
-            var future = breaker.Instance.WithCircuitBreaker(async () =>
+            var future = breaker.Instance.WithCircuitBreaker(async ct =>
             {
-                await Task.Delay(150);
+                await Task.Delay(150, ct);
                 ThrowException();
             });
 
@@ -256,7 +257,7 @@ namespace Akka.Tests.Pattern
         public void Must_invoke_onOpen_if_call_fails_and_breaker_transits_to_open_state()
         {
             var breaker = ShortCallTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
+            _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
             Assert.True(CheckLatch(breaker.OpenLatch));
         }
     }
@@ -267,9 +268,9 @@ namespace Akka.Tests.Pattern
         public async Task Must_pass_through_next_call_and_close_on_success()
         {
             var breaker = ShortResetTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
+            _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
             Assert.True(CheckLatch(breaker.HalfOpenLatch));
-            var result = await breaker.Instance.WithCircuitBreaker(() => Task.Run(SayHi)).WaitAsync(AwaitTimeout);
+            var result = await breaker.Instance.WithCircuitBreaker(ct => Task.Run(SayHi, ct)).WaitAsync(AwaitTimeout);
             Assert.Equal("hi", result);
             Assert.True(CheckLatch(breaker.ClosedLatch));
         }
@@ -278,11 +279,11 @@ namespace Akka.Tests.Pattern
         public async Task Must_reopen_on_exception_in_call()
         {
             var breaker = ShortResetTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
+            _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
             Assert.True(CheckLatch(breaker.HalfOpenLatch));
             breaker.OpenLatch.Reset();
             await InterceptException<TestException>(() =>
-                breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException)).WaitAsync(AwaitTimeout));
+                breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct)).WaitAsync(AwaitTimeout));
             Assert.True(CheckLatch(breaker.OpenLatch));
         }
 
@@ -290,11 +291,11 @@ namespace Akka.Tests.Pattern
         public void Must_reopen_on_async_failure()
         {
             var breaker = ShortResetTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
+            _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
             Assert.True(CheckLatch(breaker.HalfOpenLatch));
 
             breaker.OpenLatch.Reset();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
+            _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
             Assert.True(CheckLatch(breaker.OpenLatch));
         }
     }
@@ -305,19 +306,19 @@ namespace Akka.Tests.Pattern
         public async Task Must_throw_exceptions_when_called_before_reset_timeout()
         {
             var breaker = LongResetTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
+            _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
 
             Assert.True(CheckLatch(breaker.OpenLatch));
 
             await InterceptException<OpenCircuitException>(
-                () => breaker.Instance.WithCircuitBreaker(() => Task.Run(SayHi)).WaitAsync(AwaitTimeout));
+                () => breaker.Instance.WithCircuitBreaker(ct => Task.Run(SayHi, ct)).WaitAsync(AwaitTimeout));
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is open must transition to half-open on reset timeout")]
         public void Must_transition_to_half_open_on_reset_timeout()
         {
             var breaker = ShortResetTimeoutCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
+            _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
             Assert.True(CheckLatch(breaker.HalfOpenLatch));
         }
 
@@ -325,11 +326,11 @@ namespace Akka.Tests.Pattern
         public async Task Must_increase_reset_timeout_after_it_transits_to_open_again()
         {
             var breaker = NonOneFactorCb();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
+            _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
             Assert.True(CheckLatch(breaker.OpenLatch));
 
             var e1 = await InterceptException<OpenCircuitException>(
-                () => breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException)));
+                () => breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct)));
             var shortRemainingDuration = e1.RemainingDuration;
 
             await Task.Delay(Dilated(TimeSpan.FromMilliseconds(1000)));
@@ -337,11 +338,11 @@ namespace Akka.Tests.Pattern
 
             // transit to open again
             breaker.OpenLatch.Reset();
-            _ = breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException));
+            _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
             Assert.True(CheckLatch(breaker.OpenLatch));
 
             var e2 = await InterceptException<OpenCircuitException>(() =>
-                breaker.Instance.WithCircuitBreaker(() => Task.FromResult(SayHi())));
+                breaker.Instance.WithCircuitBreaker(_ => Task.FromResult(SayHi())));
             var longRemainingDuration = e2.RemainingDuration;
 
             shortRemainingDuration.ShouldBeLessThan(longRemainingDuration);
@@ -353,6 +354,16 @@ namespace Akka.Tests.Pattern
         public TimeSpan AwaitTimeout => Dilated(TimeSpan.FromSeconds(2));
 
         public bool CheckLatch(CountdownEvent latch) => latch.Wait(AwaitTimeout);
+
+        public Task WaitForTaskToBeScheduled(Task childTask)
+        {
+            return AwaitConditionAsync(() => childTask.Status >= TaskStatus.Running);
+        }
+        
+        public Task WaitForTaskToBeScheduled(IReadOnlyCollection<Task> childTasks)
+        {
+            return AwaitConditionAsync(() => childTasks.All(t => t.Status >= TaskStatus.Running));
+        }
 
         [DebuggerStepThrough]
         public static void ThrowException() => throw new TestException("Test Exception");
@@ -401,11 +412,6 @@ namespace Akka.Tests.Pattern
 
         public TestException(string message, Exception innerException)
             : base(message, innerException)
-        {
-        }
-
-        protected TestException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
         {
         }
     }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FusingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -57,12 +57,6 @@ namespace Akka.Streams.Tests
         [Fact]
         public async Task A_SubFusingActorMaterializer_must_use_multiple_actors_when_there_are_asynchronous_boundaries_in_the_subflows_manual ()
         {
-            string RefFunc()
-            {
-                var bus = (BusLogging)GraphInterpreter.Current.Log;
-                return GetInstanceField(typeof(BusLogging), bus, "_logSource") as string;
-            }
-
             var async = Flow.Create<int>().Select(x =>
             {
                 TestActor.Tell(RefFunc());
@@ -84,6 +78,13 @@ namespace Akka.Streams.Tests
             var refs = await ReceiveNAsync(20).Distinct().ToListAsync();
             // main flow + 10 sub-flows
             refs.Count.Should().Be(11);
+            return;
+
+            string RefFunc()
+            {
+                var bus = (BusLogging)GraphInterpreter.Current.Log;
+                return bus.LogSource;
+            }
         }
 
         [Fact]
@@ -92,7 +93,7 @@ namespace Akka.Streams.Tests
             string RefFunc()
             {
                 var bus = (BusLogging)GraphInterpreter.Current.Log;
-                return GetInstanceField(typeof(BusLogging), bus, "_logSource") as string;
+                return bus.LogSource;
             }
 
             var flow = Flow.Create<int>().Select(x =>

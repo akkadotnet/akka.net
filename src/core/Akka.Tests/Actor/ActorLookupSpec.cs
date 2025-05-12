@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorLookupSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -168,9 +168,13 @@ namespace Akka.Tests.Actor
             a.Path.Elements.Head().Should().Be("temp");
             Provider.ResolveActorRef(a.Path).Should().Be(a);
             Provider.ResolveActorRef(a.Path.ToString()).Should().Be(a);
-            Provider.ResolveActorRef(a.Path.ToString() + "/hello").AsInstanceOf<IInternalActorRef>().IsTerminated.Should().Be(true);
+            
+            // should already be dead
+            var shouldBeDead = Provider.ResolveActorRef(a.Path + "/hello");
+            await WatchAsync(shouldBeDead);
+            await ExpectTerminatedAsync(shouldBeDead);
+            
             f.IsCompleted.Should().Be(false);
-            a.IsTerminated.Should().Be(false);
             a.Tell(42);
             await AwaitAssertAsync(() => f.IsCompleted.Should().Be(true));
             await AwaitAssertAsync(() => f.Result.Should().Be(42));

@@ -41,6 +41,33 @@ namespace Akka.Cluster.Tools.Client
             public override int GetHashCode() { }
         }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class ClusterClientDiscovery : Akka.Actor.UntypedActor, Akka.Actor.IActorStash, Akka.Actor.IWithTimers, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
+    {
+        public ClusterClientDiscovery(Akka.Cluster.Tools.Client.ClusterClientSettings settings) { }
+        public Akka.Actor.IStash Stash { get; set; }
+        public Akka.Actor.ITimerScheduler Timers { get; set; }
+        protected override void OnReceive(object message) { }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+    }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public sealed class ClusterClientDiscoverySettings : System.IEquatable<Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings>
+    {
+        [System.Runtime.CompilerServices.NullableAttribute(1)]
+        public static readonly Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings Empty;
+        public ClusterClientDiscoverySettings(string DiscoveryMethod, string ServiceName, string PortName, int NumberOfContacts, System.TimeSpan Interval, double ExponentialBackoffJitter, System.TimeSpan ExponentialBackoffMax, System.TimeSpan ResolveTimeout, System.TimeSpan ProbeTimeout) { }
+        public string DiscoveryMethod { get; set; }
+        public double ExponentialBackoffJitter { get; set; }
+        public System.TimeSpan ExponentialBackoffMax { get; set; }
+        public System.TimeSpan Interval { get; set; }
+        public int NumberOfContacts { get; set; }
+        public string PortName { get; set; }
+        public System.TimeSpan ProbeTimeout { get; set; }
+        public System.TimeSpan ResolveTimeout { get; set; }
+        public string ServiceName { get; set; }
+        public static Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings Create(Akka.Configuration.Config clusterClientConfig) { }
+    }
     public sealed class ClusterClientReceptionist : Akka.Actor.IExtension
     {
         public ClusterClientReceptionist(Akka.Actor.ExtendedActorSystem system) { }
@@ -58,25 +85,33 @@ namespace Akka.Cluster.Tools.Client
         public ClusterClientReceptionistExtensionProvider() { }
         public override Akka.Cluster.Tools.Client.ClusterClientReceptionist CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class ClusterClientSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
         [System.ObsoleteAttribute("Use constructor with useLegacySerialization argument instead. Since 1.5.15")]
         public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize, System.Nullable<System.TimeSpan> reconnectTimeout = null) { }
+        [System.ObsoleteAttribute("Use constructor with useInitialContactsDiscovery and discoverySettings argument i" +
+            "nstead. Since 1.5.25")]
         public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize, bool useLegacySerialization, System.Nullable<System.TimeSpan> reconnectTimeout = null) { }
+        public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize, bool useLegacySerialization, bool useInitialContactsDiscovery, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings discoverySettings = null, System.Nullable<System.TimeSpan> reconnectTimeout = null, bool verboseLogging = False) { }
         public System.TimeSpan AcceptableHeartbeatPause { get; }
         public int BufferSize { get; }
+        public Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings DiscoverySettings { get; }
         public System.TimeSpan EstablishingGetContactsInterval { get; }
         public System.TimeSpan HeartbeatInterval { get; }
         public System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> InitialContacts { get; }
         public System.Nullable<System.TimeSpan> ReconnectTimeout { get; }
         public System.TimeSpan RefreshContactsInterval { get; }
+        public bool UseInitialContactDiscovery { get; }
         public bool UseLegacySerialization { get; }
+        public bool VerboseLogging { get; }
         public static Akka.Cluster.Tools.Client.ClusterClientSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Tools.Client.ClusterClientSettings Create(Akka.Configuration.Config config) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithBufferSize(int bufferSize) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithEstablishingGetContactsInterval(System.TimeSpan value) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithHeartbeatInterval(System.TimeSpan value) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithInitialContacts(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts) { }
+        public Akka.Cluster.Tools.Client.ClusterClientSettings WithInitialContactsDiscovery(bool useInitialContactsDiscovery, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Cluster.Tools.Client.ClusterClientDiscoverySettings discoverySettings = null) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithReconnectTimeout(System.Nullable<System.TimeSpan> reconnectTimeout) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithRefreshContactsInterval(System.TimeSpan value) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithUseLegacySerialization(bool useLegacySerialization) { }
@@ -357,18 +392,26 @@ namespace Akka.Cluster.Tools.Singleton
     public class ClusterSingleton : Akka.Actor.IExtension
     {
         public ClusterSingleton(Akka.Actor.ExtendedActorSystem system) { }
+        public static Akka.Configuration.Config DefaultConfig() { }
         public static Akka.Cluster.Tools.Singleton.ClusterSingleton Get(Akka.Actor.ActorSystem system) { }
+        [System.ObsoleteAttribute(@"This convenience method is deprecated and will be removed in v1.6, please use ClusterSingletonManager.Props and ClusterSingletonProxy.Props directly instead. See https://getakka.net/community/whats-new/akkadotnet-v1.5-upgrade-advisories.html#upgrading-to-akkanet-v1532. Since 1.5.32.")]
         public Akka.Actor.IActorRef Init(Akka.Cluster.Tools.Singleton.SingletonActor singleton) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1})]
     public sealed class ClusterSingletonManager : Akka.Actor.FSM<Akka.Cluster.Tools.Singleton.ClusterSingletonState, Akka.Cluster.Tools.Singleton.IClusterSingletonData>
     {
         public ClusterSingletonManager(Akka.Actor.Props singletonProps, object terminationMessage, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings settings) { }
+        [System.ObsoleteAttribute("Deprecated and will be removed in v1.6, please use ClusterSingleton.DefaultConfig" +
+            "() instead. Since 1.5.32.")]
         public static Akka.Configuration.Config DefaultConfig() { }
         protected override void PostStop() { }
         protected override void PreStart() { }
         public static Akka.Actor.Props Props(Akka.Actor.Props singletonProps, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings settings) { }
         public static Akka.Actor.Props Props(Akka.Actor.Props singletonProps, object terminationMessage, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings settings) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class ClusterSingletonManagerIsStuckException : Akka.Actor.AkkaException
     {
         public ClusterSingletonManagerIsStuckException(string message) { }
@@ -378,6 +421,7 @@ namespace Akka.Cluster.Tools.Singleton
     {
         public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval, bool considerAppVersion) { }
         public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval, Akka.Coordination.LeaseUsageSettings leaseSettings, bool considerAppVersion) { }
+        [System.ObsoleteAttribute("ConsiderAppVersion is not used anymore and will be removed in future versions.")]
         public bool ConsiderAppVersion { get; }
         public System.TimeSpan HandOverRetryInterval { get; }
         public Akka.Coordination.LeaseUsageSettings LeaseSettings { get; }
@@ -397,45 +441,74 @@ namespace Akka.Cluster.Tools.Singleton
         public ClusterSingletonProvider() { }
         public override Akka.Cluster.Tools.Singleton.ClusterSingleton CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
-    public sealed class ClusterSingletonProxy : Akka.Actor.ReceiveActor
+    public sealed class ClusterSingletonProxy : Akka.Actor.ReceiveActor, Akka.Actor.IWithTimers
     {
         public ClusterSingletonProxy(string singletonManagerPath, Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings settings) { }
+        public Akka.Actor.ITimerScheduler Timers { get; set; }
         public static Akka.Configuration.Config DefaultConfig() { }
         protected override void PostStop() { }
         protected override void PreStart() { }
         public static Akka.Actor.Props Props(string singletonManagerPath, Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings settings) { }
+        public enum IdentifyResult
+        {
+            Success = 0,
+            Timeout = 1,
+        }
+        public sealed class IdentifySingletonResult : Akka.Actor.INoSerializationVerificationNeeded
+        {
+            public IdentifySingletonResult(string singletonName, string role, Akka.Cluster.Tools.Singleton.ClusterSingletonProxy.IdentifyResult result) { }
+            public Akka.Cluster.Tools.Singleton.ClusterSingletonProxy.IdentifyResult Result { get; }
+            public string Role { get; }
+            public string SingletonName { get; }
+            public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxy.IdentifySingletonResult Success(string singletonName, string role) { }
+            public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxy.IdentifySingletonResult Timeout(string singletonName, string role) { }
+        }
     }
     public sealed class ClusterSingletonProxySettings : Akka.Actor.INoSerializationVerificationNeeded
     {
+        [System.ObsoleteAttribute("Use constructor with logSingletonIdentificationFailure and logSingletonIdentifica" +
+            "tionInterval parameter instead. Since v1.5.30")]
         public ClusterSingletonProxySettings(string singletonName, string role, System.TimeSpan singletonIdentificationInterval, int bufferSize, bool considerAppVersion) { }
+        public ClusterSingletonProxySettings(string singletonName, string role, System.TimeSpan singletonIdentificationInterval, int bufferSize, bool considerAppVersion, bool logSingletonIdentificationFailure, System.TimeSpan singletonIdentificationFailurePeriod) { }
         public int BufferSize { get; }
         public bool ConsiderAppVersion { get; }
+        public bool LogSingletonIdentificationFailure { get; }
         public string Role { get; }
+        public System.TimeSpan SingletonIdentificationFailurePeriod { get; }
         public System.TimeSpan SingletonIdentificationInterval { get; }
         public string SingletonName { get; }
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Configuration.Config config, bool considerAppVersion) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithBufferSize(int bufferSize) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithLogSingletonIdentificationFailure(bool logSingletonIdentificationFailure) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithRole(string role) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonIdentificationFailureDuration(System.TimeSpan singletonIdentificationFailurePeriod) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonIdentificationInterval(System.TimeSpan singletonIdentificationInterval) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonName(string singletonName) { }
     }
+    [System.ObsoleteAttribute(@"This setting class is deprecated and will be removed in v1.6, please use ClusterSingletonManager.Props and ClusterSingletonProxy.Props directly instead. See https://getakka.net/community/whats-new/akkadotnet-v1.5-upgrade-advisories.html#upgrading-to-akkanet-v1532. Since 1.5.32.")]
     public class ClusterSingletonSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
         public int BufferSize { get; }
         public bool ConsiderAppVersion { get; }
         public System.TimeSpan HandOverRetryInterval { get; }
         public Akka.Coordination.LeaseUsageSettings LeaseSettings { get; }
+        public bool LogSingletonIdentificationFailure { get; }
         public System.TimeSpan RemovalMargin { get; }
         public string Role { get; }
+        public System.TimeSpan SingletonIdentificationFailurePeriod { get; }
         public System.TimeSpan SingletonIdentificationInterval { get; }
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonSettings Create(Akka.Configuration.Config config) { }
         public override string ToString() { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonSettings WithBufferSize(int bufferSize) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonSettings WithHandOverRetryInterval(System.TimeSpan handOverRetryInterval) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonSettings WithLeaseSettings(Akka.Coordination.LeaseUsageSettings leaseSettings) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonSettings WithLogSingletonIdentificationFailure(bool logSingletonIdentificationFailure) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonSettings WithRemovalMargin(System.TimeSpan removalMargin) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonSettings WithRole(string role) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonSettings WithSingletonIdentificationFailurePeriod(System.TimeSpan singletonIdentificationFailurePeriod) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonSettings WithSingletonIdentificationInterval(System.TimeSpan singletonIdentificationInterval) { }
     }
     public enum ClusterSingletonState
     {
@@ -452,6 +525,7 @@ namespace Akka.Cluster.Tools.Singleton
     }
     public interface IClusterSingletonData { }
     public interface IClusterSingletonMessage { }
+    [System.ObsoleteAttribute(@"This setting class is deprecated and will be removed in v1.6, please use ClusterSingletonManager.Props and ClusterSingletonProxy.Props directly instead. See https://getakka.net/community/whats-new/akkadotnet-v1.5-upgrade-advisories.html#upgrading-to-akkanet-v1532. Since 1.5.32.")]
     public class SingletonActor
     {
         public string Name { get; }

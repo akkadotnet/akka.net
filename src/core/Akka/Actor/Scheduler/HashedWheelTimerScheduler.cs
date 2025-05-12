@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HashedWheelTimerScheduler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -147,25 +147,27 @@ namespace Akka.Actor
 
         private void Start()
         {
-            if (_workerState == WORKER_STATE_STARTED)
+            // only read the worker state once so it can't be a moving target for else-branch
+            var workerStateRead = _workerState;
+            if (workerStateRead == WORKER_STATE_STARTED)
             {
                 // do nothing
             }
-            else if (_workerState == WORKER_STATE_INIT)
+            else if (workerStateRead == WORKER_STATE_INIT)
             {
                 if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) == WORKER_STATE_INIT)
                 {
                     _timer ??= new PeriodicTimer(_timerDuration);
-                    Task.Run(() => RunAsync(_cts.Token)); // start the clock
+                    Task.Run(() => RunAsync(_cts.Token).ConfigureAwait(false)); // start the clock
                 }
             }
-            else if (_workerState == WORKER_STATE_SHUTDOWN)
+            else if (workerStateRead == WORKER_STATE_SHUTDOWN)
             {
                 throw new SchedulerException("cannot enqueue after timer shutdown");
             }
             else
             {
-                throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
+                throw new InvalidOperationException($"Worker in invalid state: {workerStateRead}");
             }
 
             if(_startTime == 0)

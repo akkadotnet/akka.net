@@ -522,6 +522,7 @@ namespace Akka.TestKit
         public bool LogTestKitCalls { get; }
         public System.TimeSpan SingleExpectDefault { get; }
         public System.TimeSpan TestEventFilterLeeway { get; }
+        public System.TimeSpan TestKitStartupTimeout { get; }
         public double TestTimeFactor { get; }
     }
     public class TestLatch

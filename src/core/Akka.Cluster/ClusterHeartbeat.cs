@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterHeartbeat.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,10 +30,7 @@ namespace Akka.Cluster
         private readonly Cluster _cluster;
 
         public bool VerboseHeartbeat => _cluster.Settings.VerboseHeartbeatLogging;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public ClusterHeartbeatReceiver(Cluster cluster)
         {
             _cluster = cluster;
@@ -113,18 +110,12 @@ namespace Akka.Cluster
             _seqNo += 1;
             return new Heartbeat(_cluster.SelfAddress, _seqNo, MonotonicClock.GetNanos());
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override void PreStart()
         {
-            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.IReachabilityEvent) });
+            _cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.IReachabilityEvent));
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override void PostStop()
         {
             foreach (var receiver in _state.ActiveReceivers)
@@ -224,11 +215,13 @@ namespace Akka.Cluster
 
                     // schedule the expected first heartbeat for later, which will give the
                     // other side a chance to reply, and also trigger some resends if needed
+#pragma warning disable AK1004
                     Context.System.Scheduler.ScheduleTellOnce(
                         _cluster.Settings.HeartbeatExpectedResponseAfter,
                         Self,
                         new ExpectedFirstHeartbeat(to),
                         Self);
+#pragma warning restore AK1004
                 }
                 HeartbeatReceiver(to.Address).Tell(SelfHeartbeat());
             }
@@ -391,6 +384,7 @@ namespace Akka.Cluster
         }
 
         #endregion
+        
     }
 
     /// <summary>

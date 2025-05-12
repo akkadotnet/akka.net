@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Valve.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -66,7 +66,7 @@ namespace Akka.Streams.Dsl
     }
 
     /// <summary>
-    /// Materializes into a task of <see cref="IValveSwitch"/> which provides a the method flip that stops or restarts the flow of elements passing through the stage. 
+    /// Materializes into a task of <see cref="IValveSwitch"/> which provides a method that will stop or restart the flow of elements passing through the stage. 
     /// As long as the valve is closed it will backpressure.
     /// Note that closing the valve could result in one element being buffered inside the stage, and if the stream completes or fails while being closed, that element may be lost.
     /// </summary>

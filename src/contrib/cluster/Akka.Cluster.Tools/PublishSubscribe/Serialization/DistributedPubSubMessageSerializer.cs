@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMessageSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -242,13 +242,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             var protoMessage = new Proto.Msg.Publish();
             protoMessage.Topic = publish.Topic;
             protoMessage.Payload = _payloadSupport.PayloadToProto(publish.Message);
+            protoMessage.SendOneMessageToEachGroup = publish.SendOneMessageToEachGroup;
             return protoMessage.ToByteArray();
         }
 
         private Publish PublishFrom(byte[] bytes)
         {
             var publishProto = Proto.Msg.Publish.Parser.ParseFrom(bytes);
-            return new Publish(publishProto.Topic, _payloadSupport.PayloadFrom(publishProto.Payload));
+            return new Publish(publishProto.Topic, _payloadSupport.PayloadFrom(publishProto.Payload), publishProto.SendOneMessageToEachGroup);
         }
 
         private byte[] SendToOneSubscriberToProto(SendToOneSubscriber sendToOneSubscriber)

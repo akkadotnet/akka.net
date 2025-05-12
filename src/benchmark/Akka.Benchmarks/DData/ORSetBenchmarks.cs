@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ORSetBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,11 +31,6 @@ namespace Akka.Benchmarks.DData
 
         private UniqueAddress[] _nodes;
         private string[] _elements;
-
-        private readonly string _user1 = "{\"username\":\"john\",\"password\":\"coltrane\"}";
-        private readonly string _user2 = "{\"username\":\"sonny\",\"password\":\"rollins\"}";
-        private readonly string _user3 = "{\"username\":\"charlie\",\"password\":\"parker\"}";
-        private readonly string _user4 = "{\"username\":\"charles\",\"password\":\"mingus\"}";
 
         // has data from all nodes
         private ORSet<string> _c1 = ORSet<String>.Empty;

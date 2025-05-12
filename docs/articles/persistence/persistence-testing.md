@@ -133,7 +133,7 @@ public class CounterActorTests : PersistenceTestKit
 }
 ```
 
-When we will launch this test it will fail, because the persistence journal failed when we tried to tell `inc` command to the actor. The actor failed with the journal and `read` was never delivered anb we had not received any answer.
+When we will launch this test it will fail, because the persistence journal failed when we tried to tell `inc` command to the actor. The actor failed with the journal and `read` was never delivered and we had not received any answer.
 
 ### How to Make Things Better
 
@@ -205,7 +205,19 @@ Out of the box, the package has the following behaviors:
 
 All methods have additional overload to add artificial delay - `*WithDelay`, i.e. `FailWithDelay`. This could be helpful to simulate network delay or retry of physical persistence operation within the journal.
 
-When all mentioned above behaviors are not enough, it is always possible to implement custom one by implementing the `IJournalInterceptor` interface. An instance of a custom interceptor can be set using the `SetInterceptorAsync` method.
+When all mentioned above behaviors are not enough, it is always possible to implement a custom one by implementing the `IJournalInterceptor` interface. An instance of a custom interceptor can be set using the `SetInterceptorAsync` method.
+
+``` csharp
+[Fact]
+    public async Task Custom_interceptor_example()
+    {
+        WithJournalWrite(write => write.SetInterceptorAsync(new myCustomInterceptor()), () =>
+        {
+            //test code here
+            
+        });
+    }
+```
 
 ### Built-in Snapshot Store Behaviors
 
@@ -243,3 +255,31 @@ public interface ISnapshotStoreInterceptor
     Task InterceptAsync(string persistenceId, SnapshotSelectionCriteria criteria);
 }
 ```
+
+### More Examples and Common Testing Scenario's
+
+Sometimes you might want to verify more complex scenario's for your persistent actor. For example, your actor might persist events only under certain conditions and you want to test that.
+An easy way to do that is by implementing a custom interceptor, either a Journal or a Snapshot interceptor depending on your needs.
+You could have that interceptor then collect the events or snapshots being persisted and assert on the data in that interceptor.
+Depending on your needs you can make this as complicated or simple as you want.
+
+``` csharp
+    [Fact]
+    public async Task Custom_interceptor_example_direct_usage()
+    {
+        var interceptor = new MyCollectingInterceptor();
+        //Journal also has OnRecovery and OnConnect options.
+        Journal.OnWrite.SetInterceptorAsync(interceptor);
+
+        //perform test code here
+
+        //assert at the end
+        Assert.IsTrue(interceptor.HasEventsThatIExpect());
+    }
+```
+
+Should you run into race conditions, between executing your test code and performing the assertions. Wrapping your assertion code in a `AwaitAssert` call would be a good way to manage that.
+
+### Integration Testing
+
+Lets say you need more then just the InMemory persistence model. There is a bootcamp and corresponding video on those subjects that are well worth checking out. [Integration testing with Akka.Hosting](https://petabridge.com/bootcamp/lessons/unit-1/akka-hosting-testkit/)
