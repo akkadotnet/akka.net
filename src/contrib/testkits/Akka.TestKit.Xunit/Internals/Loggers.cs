@@ -9,7 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Util;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Akka.TestKit.Xunit.Internals;
 
