@@ -25,7 +25,11 @@ namespace Akka.IO
         {
             var config = system.Settings.Config.GetConfig("akka.io.tcp");
             if (config.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<TcpSettings>("akka.io.tcp");//($"Failed to create {typeof(TcpSettings)}: akka.io.tcp configuration node not found");
+                throw
+                    ConfigurationException
+                        .NullOrEmptyConfig<
+                            TcpSettings>(
+                            "akka.io.tcp"); //($"Failed to create {typeof(TcpSettings)}: akka.io.tcp configuration node not found");
 
             return Create(config);
         }
@@ -44,7 +48,9 @@ namespace Akka.IO
                 bufferPoolConfigPath: config.GetString("buffer-pool", "akka.io.tcp.disabled-buffer-pool"),
                 initialSocketAsyncEventArgs: config.GetInt("nr-of-socket-async-event-args", 32),
                 traceLogging: config.GetBoolean("trace-logging", false),
-                batchAcceptLimit: config.GetInt("batch-accept-limit", 10),
+                batchAcceptLimit: config.GetString("batch-accept-limit") == "scale-to-cpus"
+                    ? DefaultAcceptLimit
+                    : config.GetInt("batch-accept-limit", DefaultAcceptLimit),
                 registerTimeout: config.GetTimeSpan("register-timeout", TimeSpan.FromSeconds(5)),
                 receivedMessageSizeLimit: config.GetString("max-received-message-size", "unlimited") == "unlimited"
                     ? int.MaxValue
@@ -59,18 +65,23 @@ namespace Akka.IO
                 writeCommandsQueueMaxSize: config.GetInt("write-commands-queue-max-size", -1));
         }
 
-        public TcpSettings( string    bufferPoolConfigPath,
-                            int       initialSocketAsyncEventArgs,
-                            bool      traceLogging,
-                            int       batchAcceptLimit,
-                            TimeSpan? registerTimeout,
-                            int       receivedMessageSizeLimit,
-                            string    managementDispatcher,
-                            string    fileIoDispatcher,
-                            int       transferToLimit,
-                            int       finishConnectRetries,
-                            bool      outgoingSocketForceIpv4,
-                            int       writeCommandsQueueMaxSize)
+        /// <summary>
+        /// Default size of the SAEA pool
+        /// </summary>
+        internal static readonly int DefaultAcceptLimit = Environment.ProcessorCount * 2;
+
+        public TcpSettings(string bufferPoolConfigPath,
+            int initialSocketAsyncEventArgs,
+            bool traceLogging,
+            int batchAcceptLimit,
+            TimeSpan? registerTimeout,
+            int receivedMessageSizeLimit,
+            string managementDispatcher,
+            string fileIoDispatcher,
+            int transferToLimit,
+            int finishConnectRetries,
+            bool outgoingSocketForceIpv4,
+            int writeCommandsQueueMaxSize)
         {
             BufferPoolConfigPath = bufferPoolConfigPath;
             InitialSocketAsyncEventArgs = initialSocketAsyncEventArgs;
@@ -88,7 +99,7 @@ namespace Akka.IO
 
         /// <summary>
         /// A config path to the section defining which byte buffer pool to use.
-        /// Buffer pools are used to mitigate GC-pressure made by potentiall allocation
+        /// Buffer pools are used to mitigate GC-pressure made by potential allocation
         /// and deallocation of byte buffers used for writing/receiving data from sockets.
         /// </summary>
         public string BufferPoolConfigPath { get; }
@@ -112,7 +123,7 @@ namespace Akka.IO
         /// worker-dispatcher
         /// </summary>
         public int BatchAcceptLimit { get; }
-        
+
         /// <summary>
         /// The duration a connection actor waits for a `Register` message from 
         /// its commander before aborting the connection.
@@ -165,7 +176,7 @@ namespace Akka.IO
         /// in cases when DnsEndPoint is used to describe the remote address
         /// </summary>
         public bool OutgoingSocketForceIpv4 { get; }
-        
+
         /// <summary>
         /// Limits maximum size of internal queue, used in <see cref="TcpIncomingConnection"/> connection actor
         /// to store pending write commands.

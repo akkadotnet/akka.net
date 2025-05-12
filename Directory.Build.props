@@ -19,6 +19,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.8.1</XunitVersion>
+    <Xunit3Version>2.0.1</Xunit3Version>
+    <Xunit3RunnerVersion>3.0.2</Xunit3RunnerVersion>
     <XunitRunnerVersion>2.8.1</XunitRunnerVersion>
     <TestSdkVersion>17.9.0</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>

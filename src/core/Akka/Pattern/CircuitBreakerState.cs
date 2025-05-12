@@ -8,6 +8,7 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -45,29 +46,51 @@ namespace Akka.Pattern
         /// <summary>
         /// Fail-fast on any invocation
         /// </summary>
-        /// <typeparam name="T">N/A</typeparam>
+        /// <typeparam name="T">The return value <see cref="Type"/> of the invoked function</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
+        [Obsolete("Use Invoke() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public override Task<T> Invoke<T>(Func<Task<T>> body) => 
             Task.FromException<T>(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
 
-        public override Task
-            InvokeState<TState>(TState state, Func<TState, Task> body) =>
-            Task.FromException(
-                new OpenCircuitException(_breaker.LastCaughtException,
-                    RemainingDuration()));
+        /// <summary>
+        /// Fail-fast on any invocation
+        /// </summary>
+        /// <typeparam name="T">The return value <see cref="Type"/> of the invoked function</typeparam>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public override Task<T> Invoke<T>(Func<CancellationToken, Task<T>> body) => 
+            Task.FromException<T>(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
 
-        public override Task<T> InvokeState<T, TState>(TState state,
-            Func<TState, Task<T>> body) => Task.FromException<T>(
-            new OpenCircuitException(_breaker.LastCaughtException,
-                RemainingDuration()));
+        [Obsolete("Use InvokeState() that accepts functions with CancellationToken parameter. Since 1.5.42")]
+        public override Task InvokeState<TState>(TState state, Func<TState, Task> body) =>
+            Task.FromException(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
+
+        public override Task InvokeState<TState>(TState state, Func<TState, CancellationToken, Task> body) =>
+            Task.FromException(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
+
+        [Obsolete("Use InvokeState() that accepts functions with CancellationToken parameter. Since 1.5.42")]
+        public override Task<T> InvokeState<T, TState>(TState state, Func<TState, Task<T>> body) => 
+            Task.FromException<T>(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
+
+        public override Task<T> InvokeState<T, TState>(TState state, Func<TState, CancellationToken, Task<T>> body) => 
+            Task.FromException<T>(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
 
         /// <summary>
         /// Fail-fast on any invocation
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
+        [Obsolete("Use Invoke() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public override Task Invoke(Func<Task> body) => 
+            Task.FromException(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
+
+        /// <summary>
+        /// Fail-fast on any invocation
+        /// </summary>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public override Task Invoke(Func<CancellationToken, Task> body) => 
             Task.FromException(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
 
         /// <summary>
@@ -144,19 +167,40 @@ namespace Akka.Pattern
         /// Allows a single call through, during which all other callers fail-fast. If the call fails, the breaker reopens.
         /// If the call succeeds, the breaker closes.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">The return value <see cref="Type"/> of the invoked function</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
+        [Obsolete("Use Invoke() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public override Task<T> Invoke<T>(Func<Task<T>> body)
         {
             CheckState();
             return CallThrough(body);
         }
         
+        /// <summary>
+        /// Allows a single call through, during which all other callers fail-fast. If the call fails, the breaker reopens.
+        /// If the call succeeds, the breaker closes.
+        /// </summary>
+        /// <typeparam name="T">The return value <see cref="Type"/> of the invoked function</typeparam>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public override Task<T> Invoke<T>(Func<CancellationToken, Task<T>> body)
+        {
+            CheckState();
+            return CallThrough(body);
+        }
+
+        [Obsolete("Use InvokeState() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public override Task<T> InvokeState<T,TState>(TState state, Func<TState, Task<T>> body)
         {
             CheckState();
-            return CallThrough(state,body);
+            return CallThrough(state, body);
+        }
+
+        public override Task<T> InvokeState<T, TState>(TState state, Func<TState, CancellationToken, Task<T>> body)
+        {
+            CheckState();
+            return CallThrough(state, body);
         }
 
         /// <summary>
@@ -165,17 +209,37 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override async Task Invoke(Func<Task> body)
+        [Obsolete("Use Invoke() that accepts functions with CancellationToken parameter. Since 1.5.42")]
+        public override Task Invoke(Func<Task> body)
         {
             CheckState();
-            await CallThrough(body);
+            return CallThrough(body);
         }
 
-        public override async Task InvokeState<TState>(TState state,
+        /// <summary>
+        /// Allows a single call through, during which all other callers fail-fast. If the call fails, the breaker reopens.
+        /// If the call succeeds, the breaker closes.
+        /// </summary>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public override Task Invoke(Func<CancellationToken, Task> body)
+        {
+            CheckState();
+            return CallThrough(body);
+        }
+
+        [Obsolete("Use InvokeState() that accepts functions with CancellationToken parameter. Since 1.5.42")]
+        public override Task InvokeState<TState>(TState state,
             Func<TState, Task> body)
         {
             CheckState();
-            await CallThrough(state,body);
+            return CallThrough(state, body);
+        }
+
+        public override Task InvokeState<TState>(TState state, Func<TState, CancellationToken, Task> body)
+        {
+            CheckState();
+            return CallThrough(state, body);
         }
 
         /// <summary>
@@ -210,7 +274,7 @@ namespace Akka.Pattern
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format(CultureInfo.InvariantCulture, "Half-Open currently testing call for success = {0}", (_lock.Value == true));
+            return $"Half-Open currently testing call for success = {_lock.Value}";
         }
     }
 
@@ -234,15 +298,33 @@ namespace Akka.Pattern
         /// <summary>
         /// Implementation of invoke, which simply attempts the call
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">The return value <see cref="Type"/> of the invoked function</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
+        [Obsolete("Use Invoke() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public override Task<T> Invoke<T>(Func<Task<T>> body)
         {
             return CallThrough(body);
         }
 
+        /// <summary>
+        /// Implementation of invoke, which simply attempts the call
+        /// </summary>
+        /// <typeparam name="T">The return value <see cref="Type"/> of the invoked function</typeparam>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public override Task<T> Invoke<T>(Func<CancellationToken, Task<T>> body)
+        {
+            return CallThrough(body);
+        }
+
+        [Obsolete("Use InvokeState() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public override Task<T> InvokeState<T, TState>(TState state, Func<TState, Task<T>> body)
+        {
+            return CallThrough(state, body);
+        }
+
+        public override Task<T> InvokeState<T, TState>(TState state, Func<TState, CancellationToken, Task<T>> body)
         {
             return CallThrough(state, body);
         }
@@ -252,12 +334,29 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
+        [Obsolete("Use Invoke() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public override Task Invoke(Func<Task> body)
         {
             return CallThrough(body);
         }
 
+        /// <summary>
+        /// Implementation of invoke, which simply attempts the call
+        /// </summary>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public override Task Invoke(Func<CancellationToken, Task> body)
+        {
+            return CallThrough(body);
+        }
+
+        [Obsolete("Use InvokeState() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public override Task InvokeState<TState>(TState state, Func<TState, Task> body)
+        {
+            return CallThrough(state, body);
+        }
+
+        public override Task InvokeState<TState>(TState state, Func<TState, CancellationToken, Task> body)
         {
             return CallThrough(state, body);
         }

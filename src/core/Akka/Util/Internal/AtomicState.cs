@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Akka.Util.Internal
@@ -76,41 +77,9 @@ namespace Akka.Util.Internal
         /// </summary>
         /// <param name="task"><see cref="Task"/> Implementation of the call</param>
         /// <returns><see cref="Task"/> containing the result of the call</returns>
-        public async Task<T> CallThrough<T>(Func<Task<T>> task)
-        {
-            var result = default(T);
-            try
-            {
-                result = await task().WaitAsync(_callTimeout).ConfigureAwait(false);
-                CallSucceeds();
-            }
-            catch (Exception ex)
-            {
-                var capturedException = ExceptionDispatchInfo.Capture(ex);
-                CallFails(capturedException.SourceException);
-                capturedException.Throw();
-            }
-
-            return result;
-        }
-
-        public async Task<T> CallThrough<T, TState>(TState state, Func<TState, Task<T>> task)
-        {
-            var result = default(T);
-            try
-            {
-                result = await task(state).WaitAsync(_callTimeout).ConfigureAwait(false);
-                CallSucceeds();
-            }
-            catch (Exception ex)
-            {
-                var capturedException = ExceptionDispatchInfo.Capture(ex);
-                CallFails(capturedException.SourceException);
-                capturedException.Throw();
-            }
-
-            return result;
-        }
+        [Obsolete("Use CallThrough that accepts delegate function with CancellationToken argument. Since 1.5.42")]
+        public Task<T> CallThrough<T>(Func<Task<T>> task)
+            => CallThrough(_ => task());
 
         /// <summary>
         /// Shared implementation of call across all states.  Thrown exception or execution of the call beyond the allowed
@@ -118,54 +87,191 @@ namespace Akka.Util.Internal
         /// </summary>
         /// <param name="task"><see cref="Task"/> Implementation of the call</param>
         /// <returns><see cref="Task"/> containing the result of the call</returns>
-        public async Task CallThrough(Func<Task> task)
+        public async Task<T> CallThrough<T>(Func<CancellationToken, Task<T>> task)
         {
+            var result = default(T);
+            var cts = new CancellationTokenSource();
             try
             {
-                await task().WaitAsync(_callTimeout).ConfigureAwait(false);
+                result = await task(cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
                 CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel(); // Signal the protected delegate that operation has been canceled
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
+            }
+            finally
+            {
+                cts.Dispose();
+            }
+
+            return result;
+        }
+
+        [Obsolete("Use CallThrough that accepts delegate function with CancellationToken argument. Since 1.5.42")]
+        public Task<T> CallThrough<T, TState>(TState state, Func<TState, Task<T>> task)
+            => CallThrough(state, (s, _) => task(s));
+
+        public async Task<T> CallThrough<T, TState>(TState state, Func<TState, CancellationToken, Task<T>> task)
+        {
+            var result = default(T);
+            var cts = new CancellationTokenSource();
+            try
+            {
+                result = await task(state, cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
+                CallSucceeds();
+            }
+            catch (Exception ex)
+            {
+                cts.Cancel(); // Signal the protected delegate that operation has been canceled
+                var capturedException = ExceptionDispatchInfo.Capture(ex);
+                CallFails(capturedException.SourceException);
+                capturedException.Throw();
+            }
+            finally
+            {
+                cts.Dispose();
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Shared implementation of call across all states. Thrown exception or execution of the call beyond the allowed
+        /// call timeout is counted as a failed call, otherwise a successful call
+        /// </summary>
+        /// <param name="task"><see cref="Task"/> Implementation of the call</param>
+        /// <returns><see cref="Task"/> containing the result of the call</returns>
+        [Obsolete("Use CallThrough that accepts delegate function with CancellationToken argument. Since 1.5.42")]
+        public Task CallThrough(Func<Task> task)
+            => CallThrough(_ => task());
+
+        /// <summary>
+        /// Shared implementation of call across all states. Thrown exception or execution of the call beyond the allowed
+        /// call timeout is counted as a failed call, otherwise a successful call
+        /// </summary>
+        /// <param name="task"><see cref="Task"/> Implementation of the call</param>
+        /// <returns><see cref="Task"/> containing the result of the call</returns>
+        public async Task CallThrough(Func<CancellationToken, Task> task)
+        {
+            var cts = new CancellationTokenSource();
+            try
+            {
+                await task(cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
+                CallSucceeds();
+            }
+            catch (Exception ex)
+            {
+                cts.Cancel(); // Signal the protected delegate that operation has been canceled
+                var capturedException = ExceptionDispatchInfo.Capture(ex);
+                CallFails(capturedException.SourceException);
+                capturedException.Throw();
+            }
+            finally
+            {
+                cts.Dispose();
             }
         }
 
-        public async Task CallThrough<TState>(TState state, Func<TState, Task> task)
+        [Obsolete("Use CallThrough that accepts delegate function with CancellationToken argument. Since 1.5.42")]
+        public Task CallThrough<TState>(TState state, Func<TState, Task> task)
+            => CallThrough(state, (s, _) => task(s));
+
+        public async Task CallThrough<TState>(TState state, Func<TState, CancellationToken, Task> task)
         {
+            var cts = new CancellationTokenSource();
             try
             {
-                await task(state).WaitAsync(_callTimeout).ConfigureAwait(false);
+                await task(state, cts.Token).WaitAsync(_callTimeout).ConfigureAwait(false);
                 CallSucceeds();
             }
             catch (Exception ex)
             {
+                cts.Cancel(); // Signal the protected delegate that operation has been canceled
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
                 CallFails(capturedException.SourceException);
                 capturedException.Throw();
+            }
+            finally
+            {
+                cts.Dispose();
             }
         }
 
         /// <summary>
         /// Abstract entry point for all states
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">The <see cref="Type"/> returned by the invoked function</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
+        [Obsolete(message:"Use Invoke() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public abstract Task<T> Invoke<T>(Func<Task<T>> body);
 
+        /// <summary>
+        /// Abstract entry point for all states
+        /// </summary>
+        /// <typeparam name="T">The <see cref="Type"/> returned by the invoked function</typeparam>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public abstract Task<T> Invoke<T>(Func<CancellationToken, Task<T>> body);
+
+        /// <summary>
+        /// Abstract entry point for all states
+        /// </summary>
+        /// <typeparam name="T">The <see cref="Type"/> returned by the invoked function</typeparam>
+        /// <typeparam name="TState">The <see cref="Type"/> of the state object passed into the protected function</typeparam> 
+        /// <param name="state">The state object will be passed into the protected function during invocation</param>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        [Obsolete(message:"Use InvokeState() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public abstract Task<T> InvokeState<T, TState>(TState state, Func<TState, Task<T>> body);
 
         /// <summary>
         /// Abstract entry point for all states
         /// </summary>
+        /// <typeparam name="T">The <see cref="Type"/> returned by the invoked function</typeparam>
+        /// <typeparam name="TState">The <see cref="Type"/> of the state object passed into the protected function</typeparam> 
+        /// <param name="state">The state object will be passed into the protected function during invocation</param>
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public abstract Task<T> InvokeState<T, TState>(TState state, Func<TState, CancellationToken, Task<T>> body);
+
+        /// <summary>
+        /// Abstract entry point for all states
+        /// </summary>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        [Obsolete(message:"Use Invoke() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public abstract Task Invoke(Func<Task> body);
 
+        /// <summary>
+        /// Abstract entry point for all states
+        /// </summary>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public abstract Task Invoke(Func<CancellationToken, Task> body);
+
+        /// <summary>
+        /// Abstract entry point for all states
+        /// </summary>
+        /// <typeparam name="TState">The <see cref="Type"/> of the state object passed into the protected function</typeparam> 
+        /// <param name="state">The state object will be passed into the protected function during invocation</param>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        [Obsolete(message:"Use InvokeState() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public abstract Task InvokeState<TState>(TState state, Func<TState, Task> body);
+
+        /// <summary>
+        /// Abstract entry point for all states
+        /// </summary>
+        /// <typeparam name="TState">The <see cref="Type"/> of the state object passed into the protected function</typeparam> 
+        /// <param name="state">The state object will be passed into the protected function during invocation</param>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public abstract Task InvokeState<TState>(TState state, Func<TState, CancellationToken, Task> body);
 
         /// <summary>
         /// Invoked when call fails

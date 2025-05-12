@@ -12,8 +12,8 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Engines;
 using FluentAssertions;
+using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks.Actor
 {
@@ -93,17 +93,17 @@ namespace Akka.Benchmarks.Actor
         private ActorSystem _system;
         private IActorRef _parentActor;
 
-        private ActorWithChild.Get _getMessage = new("food");
-        private ActorWithChild.Create _createMessage = new("food");
+        private readonly ActorWithChild.Get _getMessage = new("food");
+        private readonly ActorWithChild.Create _createMessage = new("food");
 
         private IActorContext _cell;
         private RepointableActorRef _repointableActorRef;
         private LocalActorRef _localActorRef;
         private VirtualPathContainer _virtualPathContainer;
 
-        private List<string> _rpChildQueryPath = new() { "food", "ood", "od" };
-        private List<string> _lclChildQueryPath = new() { "ood", "od", "d" };
-        private List<string> _virtualPathContainerQueryPath = new() { "foo" };
+        private readonly List<string> _rpChildQueryPath = ["food", "ood", "od"];
+        private readonly List<string> _lclChildQueryPath = ["ood", "od", "d"];
+        private readonly List<string> _virtualPathContainerQueryPath = ["foo"];
         
         [GlobalSetup]
         public async Task Setup()
@@ -127,24 +127,28 @@ namespace Akka.Benchmarks.Actor
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public void ResolveChild()
         {
             _cell.Child(_getMessage.Name);
         }
         
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public void Resolve3DeepChildRepointableActorRef()
         {
             _repointableActorRef.GetChild(_rpChildQueryPath);
         }
         
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public void Resolve3DeepChildLocalActorRef()
         {
             _localActorRef.GetChild(_lclChildQueryPath);
         }
         
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public void ResolveVirtualPathContainer()
         {
             _virtualPathContainer.GetChild(_virtualPathContainerQueryPath);

@@ -14,7 +14,7 @@ using Akka.Annotations;
 namespace Akka.Persistence.Journal
 {
     /// <summary>
-    /// TBD
+    /// Base class for the journal persistence
     /// </summary>
     public abstract class WriteJournalBase : ActorBase
     {
@@ -30,10 +30,11 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a sequence of write actions to be executed based on the given messages.
+        /// Applies any registered EventAdapters to the payloads.
         /// </summary>
-        /// <param name="resequenceables">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="resequenceables">list of messages to write</param>
+        /// <returns></returns>
         protected IEnumerable<AtomicWrite> PreparePersistentBatch(IEnumerable<IPersistentEnvelope> resequenceables)
         {
             foreach (var resequenceable in resequenceables)
@@ -53,7 +54,7 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// INTERNAL API
+        /// Apply registered eventadapter to the data payload
         /// </summary>
         [InternalApi]
         protected IEnumerable<IPersistentRepresentation> AdaptFromJournal(IPersistentRepresentation representation)
@@ -65,7 +66,7 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// INTERNAL API
+        /// Apply any registered eventadapter to the data payload
         /// </summary>
         protected IPersistentRepresentation AdaptToJournal(IPersistentRepresentation representation)
         {

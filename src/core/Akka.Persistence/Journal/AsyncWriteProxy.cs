@@ -9,9 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using System.Runtime.Serialization;
+using System.Threading;
 
 namespace Akka.Persistence.Journal
 {
@@ -324,16 +326,19 @@ namespace Akka.Persistence.Journal
         /// TBD
         /// </summary>
         /// <param name="messages">TBD</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> used to signal cancelled snapshot operation</param>
         /// <exception cref="TimeoutException">
         /// This exception is thrown when the store has not been initialized.
         /// </exception>
         /// <returns>TBD</returns>
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(
+            IEnumerable<AtomicWrite> messages,
+            CancellationToken cancellationToken)
         {
             if (_store == null)
-                return StoreNotInitialized<IImmutableList<Exception>>();
+                return StoreNotInitialized<IImmutableList<Exception>>(); 
 
-            return _store.Ask<IImmutableList<Exception>>(new AsyncWriteTarget.WriteMessages(messages), Timeout);
+            return _store.Ask<IImmutableList<Exception>>(new AsyncWriteTarget.WriteMessages(messages), Timeout, cancellationToken);
         }
 
         /// <summary>
@@ -341,16 +346,20 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="toSequenceNr">TBD</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> used to signal cancelled snapshot operation</param>
         /// <exception cref="TimeoutException">
         /// This exception is thrown when the store has not been initialized.
         /// </exception>
         /// <returns>TBD</returns>
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+        protected override Task DeleteMessagesToAsync(
+            string persistenceId,
+            long toSequenceNr,
+            CancellationToken cancellationToken)
         {
             if (_store == null)
                 return StoreNotInitialized<object>();
 
-            return _store.Ask(new AsyncWriteTarget.DeleteMessagesTo(persistenceId, toSequenceNr), Timeout);
+            return _store.Ask(new AsyncWriteTarget.DeleteMessagesTo(persistenceId, toSequenceNr), Timeout, cancellationToken);
         }
 
         /// <summary>
@@ -384,20 +393,24 @@ namespace Akka.Persistence.Journal
         /// </summary>
         /// <param name="persistenceId">TBD</param>
         /// <param name="fromSequenceNr">TBD</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> used to signal cancelled snapshot operation</param>
         /// <exception cref="TimeoutException">
         /// This exception is thrown when the store has not been initialized.
         /// </exception>
         /// <returns>TBD</returns>
-        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        public override Task<long> ReadHighestSequenceNrAsync(
+            string persistenceId,
+            long fromSequenceNr,
+            CancellationToken cancellationToken)
         {
             if (_store == null)
-                return StoreNotInitialized<long>();
+                return StoreNotInitialized<long>(); 
 
-            return _store.Ask<AsyncWriteTarget.ReplaySuccess>(new AsyncWriteTarget.ReplayMessages(persistenceId, 0, 0, 0), Timeout)
+            return _store.Ask<AsyncWriteTarget.ReplaySuccess>(new AsyncWriteTarget.ReplayMessages(persistenceId, 0, 0, 0), Timeout, cancellationToken)
                 .ContinueWith(t => t.Result.HighestSequenceNr, TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
-        private Task<T> StoreNotInitialized<T>()
+        private static Task<T> StoreNotInitialized<T>()
         {
             var promise = new TaskCompletionSource<T>();
             promise.SetException(new TimeoutException("Store not initialized."));
