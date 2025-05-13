@@ -113,8 +113,10 @@ namespace Akka.IO
         protected TcpConnection(TcpExt tcp, Socket socket, Option<int> writeCommandsBufferMaxSize)
         {
             _maxWriteCapacity = writeCommandsBufferMaxSize.GetOrElse(tcp.Settings.WriteCommandsQueueMaxSize);
-            _pendingWrites = new Queue<(WriteCommand Cmd, IActorRef Sender)>(_maxWriteCapacity);
-            _traceLogging = tcp.Settings.TraceLogging;
+            _pendingWrites = _maxWriteCapacity > 0
+                ? new Queue<(WriteCommand Cmd, IActorRef Sender)>(_maxWriteCapacity)
+                : new Queue<(WriteCommand Cmd, IActorRef Sender)>(); // unbounded
+;            _traceLogging = tcp.Settings.TraceLogging;
 
             Tcp = tcp;
             Socket = socket ?? throw new ArgumentNullException(nameof(socket));
@@ -246,7 +248,6 @@ namespace Akka.IO
             done:
             if (batch.Count == 0)
             {
-                TrySendNext();
                 return;
             }
 
@@ -321,12 +322,13 @@ namespace Akka.IO
 
         private bool TryBuffer(WriteCommand cmd, IActorRef sender)
         {
-            if (_pendingWrites.Count < _maxWriteCapacity)
+            // buffer is unlimited OR we're below the max write capacity
+            if (_maxWriteCapacity < 0 || _pendingWrites.Count < _maxWriteCapacity)
             {
                 _pendingWrites.Enqueue((cmd, sender));
                 return true;
             }
-
+            
             // buffer is full
             return false;
         }

@@ -214,32 +214,37 @@ namespace Akka.IO
 
                         CompleteConnect(_commander, _connect.Options);
                     }
-                    else if (remainingFinishConnectRetries > 0 && fallbackAddress != null) // used only when we've resolved a DNS endpoint.
+                    else switch (remainingFinishConnectRetries)
                     {
-                        var self = Self;
-                        var previousAddress = (IPEndPoint)args.RemoteEndPoint;
-                        args.RemoteEndPoint = fallbackAddress;
-                        Context.System.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(1), () =>
+                        // used only when we've resolved a DNS endpoint.
+                        case > 0 when fallbackAddress != null:
                         {
-                            if (!Socket.ConnectAsync(args))
-                                self.Tell(IO.Tcp.SocketConnected.Instance);
-                        });
-                        Context.Become(Connecting(remainingFinishConnectRetries - 1, args, previousAddress));
-                    }
-                    else if (remainingFinishConnectRetries > 0)
-                    {
-                        var self = Self;
-                        Context.System.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(1), () =>
+                            var self = Self;
+                            var previousAddress = (IPEndPoint)args.RemoteEndPoint;
+                            args.RemoteEndPoint = fallbackAddress;
+                            Context.System.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(1), () =>
+                            {
+                                if (!Socket.ConnectAsync(args))
+                                    self.Tell(IO.Tcp.SocketConnected.Instance);
+                            });
+                            Context.Become(Connecting(remainingFinishConnectRetries - 1, args, previousAddress));
+                            break;
+                        }
+                        case > 0:
                         {
-                            if (!Socket.ConnectAsync(args))
-                                self.Tell(IO.Tcp.SocketConnected.Instance);
-                        });
-                        Context.Become(Connecting(remainingFinishConnectRetries - 1, args, null));
-                    }
-                    else
-                    {
-                        Log.Debug("Could not establish connection because finishConnect never returned true (consider increasing akka.io.tcp.finish-connect-retries)");
-                        Stop(_finishConnectNeverReturnedTrueException);
+                            var self = Self;
+                            Context.System.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(1), () =>
+                            {
+                                if (!Socket.ConnectAsync(args))
+                                    self.Tell(IO.Tcp.SocketConnected.Instance);
+                            });
+                            Context.Become(Connecting(remainingFinishConnectRetries - 1, args, null));
+                            break;
+                        }
+                        default:
+                            Log.Debug("Could not establish connection because finishConnect never returned true (consider increasing akka.io.tcp.finish-connect-retries)");
+                            Stop(_finishConnectNeverReturnedTrueException);
+                            break;
                     }
                     return true;
                 }

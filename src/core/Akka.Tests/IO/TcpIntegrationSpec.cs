@@ -519,8 +519,8 @@ namespace Akka.Tests.IO
 
         private async Task ChitChat(TestSetup.ConnectionDetail actors, int rounds = 100)
         {
-            var testData = ByteString.FromBytes(new byte[] {(byte) 0});
-            for (int i = 0; i < rounds; i++)
+            var testData = ByteString.FromBytes([0]);
+            for (var i = 0; i < rounds; i++)
             {
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
                 await actors.ServerHandler.ExpectMsgAsync<Tcp.Received>(x => x.Data.Count == 1 && x.Data[0] == 0, hint: $"server didn't received at {i} round");
