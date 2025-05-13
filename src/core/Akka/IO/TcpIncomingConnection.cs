@@ -34,7 +34,7 @@ namespace Akka.IO
                                      IActorRef bindHandler,
                                      IEnumerable<Inet.SocketOption> options, 
                                      bool readThrottling)
-            : base(tcp, socket, readThrottling, Option<int>.None)
+            : base(tcp, socket, Option<int>.None)
         {
             _bindHandler = bindHandler;
             _options = options;
@@ -44,8 +44,6 @@ namespace Akka.IO
 
         protected override void PreStart()
         {
-            AcquireSocketAsyncEventArgs();
-
             CompleteConnect(_bindHandler, _options);
         }
 

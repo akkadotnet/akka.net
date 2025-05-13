@@ -211,7 +211,6 @@ namespace Akka.IO
                         Log.Debug("Connection established to [{0}]", _connect.RemoteAddress);
 
                         ReleaseConnectionSocketArgs();
-                        AcquireSocketAsyncEventArgs();
 
                         CompleteConnect(_commander, _connect.Options);
                     }

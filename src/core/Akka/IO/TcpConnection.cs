@@ -95,6 +95,9 @@ namespace Akka.IO
         private volatile bool _peerClosed;
 
         private readonly bool _traceLogging;
+        
+        // so we don't try to close the socket a second time during PostStop
+        private bool _socketAlreadyClosed;
 
         private CloseInformation? _closedMessage; // for ConnectionClosed message in postStop
         
@@ -143,9 +146,6 @@ namespace Akka.IO
                 case SocketAsyncOperation.Send:
                     self.Tell(new SocketSendCompleted(e.BytesTransferred, e.SocketError));
                     break;
-                case SocketAsyncOperation.Connect: // TODO: need to anchor this to the `TcpOutGoingConnection` implementation
-                    self.Tell(SocketConnected.Instance);
-                    break;
                 default:
                     self.Tell(new ErrorClosed($"Unexpected socket op {e.LastOperation}"));
                     break;
@@ -171,6 +171,7 @@ namespace Akka.IO
 
         private void IssueReceive()
         {
+            if(_peerClosed) return; // can't read if peer is closed
             if (!Socket.ReceiveAsync(_receiveArgs))
                 Self.Tell(new SocketReceiveCompleted(_receiveArgs.BytesTransferred, _receiveArgs.SocketError));
         }
@@ -254,12 +255,17 @@ namespace Akka.IO
             IssueSend(payload);
         }
         
-        private void FailWritesWithAck(IEnumerable<(IActorRef sender, object Ack)> acks, Exception cause)
+        /// <summary>
+        /// Called when the socket closes before we have processed all pending writes.
+        /// </summary>
+        private void FailUnprocessedPendingWrites(Exception cause)
         {
-            foreach (var (sender, ack) in acks)
+            foreach (var (cmd, ack) in _pendingWrites)
             {
-                sender.Tell(new CommandFailed());
+                var failure = cmd.FailureMessage.WithCause(cause);
+                ack.Tell(failure);
             }
+            _pendingWrites.Clear();
         }
 
         private void HandleSendCompleted(SocketSendCompleted socketSendCompleted)
@@ -300,7 +306,6 @@ namespace Akka.IO
             if (!_closingRequested) return;
             if (_sending || _pendingWrites.Count > 0) return;
             if (!_peerClosed) return;
-            DeliverCloseMessages();
             Context.Stop(Self);
         }
 
@@ -345,6 +350,11 @@ namespace Akka.IO
 
                         var registerInfo = new ConnectionInfo(register.Handler, register.KeepOpenOnPeerClosed,
                             register.UseResumeWriting);
+                        
+                        // we set a default close message here in case the actor dies before we get a close message
+                        // this will prevent close messages from going missing
+                        _closedMessage =
+                            new CloseInformation(new HashSet<IActorRef>([register.Handler]), Aborted.Instance);
 
                         Context.SetReceiveTimeout(null);
                         Context.Become(Connected(registerInfo));
@@ -355,7 +365,7 @@ namespace Akka.IO
                         return true;
                     case CloseCommand cmd:
                         var info = new ConnectionInfo(commander, keepOpenOnPeerClosed: false, useResumeWriting: false);
-                        HandleCloseEvent(info, Sender, cmd.Event);
+                        HandleCloseCommand(info, Sender, cmd);
                         return true;
                     case ReceiveTimeout:
                         // after sending `Register` user should watch this actor to make sure
@@ -424,7 +434,6 @@ namespace Akka.IO
                                         "It will be buffered until Register will be received (buffered write size is {0} bytes)",
                                 write.Bytes);
                         }
-
                         return true;
                     case SocketSendCompleted sendCompleted:
                         HandleSendCompleted(sendCompleted);
@@ -439,21 +448,21 @@ namespace Akka.IO
                     case ResumeReading:
                         // no-ops
                         return true;
+                    case Terminated t: // handler died
+                    {
+                        Log.Debug("Handler [{0}] died, stopping", t.ActorRef);
+                        Context.Stop(Self);
+                        return true;
+                    }
                     default: return false;
                 }
             };
         }
 
-        private void HandleCloseCommand(ConnectionInfo info, IActorRef sender, CloseCommand cmd)
-        {
-            
-        }
-
         /// <summary>
         /// Connection is closing but a write has to be finished first
         /// </summary>
-        private Receive Closing(ConnectionInfo info, IActorRef closeCommander,
-            ConnectionClosed closedEvent)
+        private Receive Closing(ConnectionInfo info, bool confirmClose)
         {
             return message =>
             {
@@ -464,6 +473,14 @@ namespace Akka.IO
                         return true;
                     case SocketSendCompleted s:
                         HandleSendCompleted(s);
+                        if (confirmClose && !IsWritePending)
+                        {
+                            // done writing, so we can now half-close the socket
+                            if (_traceLogging) Log.Debug("Running in close-confirm mode, half-closing socket for writes");
+                            
+                            // We will need to get an EOF
+                            Socket.Shutdown(SocketShutdown.Send);
+                        }
                         return true;
                     case WriteCommand write:
                         DropWrite(write);
@@ -472,10 +489,25 @@ namespace Akka.IO
                     case ResumeReading:
                         // no-ops
                         return true;
-                    case Abort _:
-                        HandleCloseEvent(info, Sender, Aborted.Instance);
+                    case Abort a:
+                        HandleCloseCommand(info, Sender, a);
                         return true;
-                    default: return false;
+                    case ConnectionClosed:
+                        _peerClosed = true;
+                        if (!IsWritePending)
+                        {
+                            Log.Debug("Peer closed connection, stopping");;
+                            Context.Stop(Self);
+                        }
+                        return true;
+                    case Terminated t: // handler died
+                    {
+                        Log.Debug("Handler [{0}] died, stopping", t.ActorRef);
+                        Context.Stop(Self);
+                        return true;
+                    }
+                    default: 
+                        return false;
                 }
             };
         }
@@ -542,74 +574,103 @@ namespace Akka.IO
             Context.SetReceiveTimeout(Tcp.Settings.RegisterTimeout);
             Context.Become(WaitingForRegistration(commander));
         }
+        
+        /// <summary>
+        /// We are in the driver's seat and want to close the connection.
+        /// </summary>
+        private void HandleCloseCommand(ConnectionInfo info, IActorRef sender, CloseCommand cmd)
+        {
+            // we are closing the connection, so set the hook now.
+            _closedMessage  = new CloseInformation(new HashSet<IActorRef> { info.Handler, sender }, cmd.Event);
+            
+            switch (cmd)
+            {
+                case Abort _:
+                {
+                    if (_traceLogging) Log.Debug("Got Abort command. RESETing connection.");
+                    Abort();
+                    break;
+                }
+                case Close:
+                {
+                    _closingRequested = true;
+                    if (IsWritePending) // if we have writes pending, we need to send them
+                    {
+                        if(_traceLogging) Log.Debug("Got Close command but writes are still pending.");
+                        Become(Closing(info, false));
+                    }
+                    else
+                    {
+                        // if we are not writing, we can close the socket right away
+                        if (_traceLogging) Log.Debug("Got Close command, closing connection.");
+                        CloseSocket();
+                        Context.Stop(Self);
+                    }
+                    break;
+                }
+                case ConfirmedClose:
+                {
+                    _closingRequested = true;
+                    if(_traceLogging) Log.Debug("Got ConfirmedClose command - waiting for peer to terminate.");
+                    Become(Closing(info, true));
+                    break;
+                }
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(cmd), cmd, "Unknown close command");
+            }
+        }
 
+        /// <summary>
+        /// Someone else is closing the connection, so we need to handle it.
+        /// </summary>
         private void HandleCloseEvent(ConnectionInfo info, IActorRef closeCommander, ConnectionClosed closedEvent)
         {
+            _closedMessage = new CloseInformation(new HashSet<IActorRef> { info.Handler, closeCommander }, closedEvent);
+            _closingRequested = true;
+            
             switch (closedEvent)
             {
                 case Aborted:
                 {
-                    if (_traceLogging) Log.Debug("Got Abort command. RESETing connection.");
+                    if (_traceLogging) Log.Debug("Got Aborted event. RESETing connection.");
+                    Context.Stop(Self);
+                    break;
+                }
+                case PeerClosed:
+                {
+                    if (_traceLogging) Log.Debug("Got PeerClosed event. Closing connection.");
                     _peerClosed = true;
-                    _closingRequested = true;
-                    DoCloseConnection(info, closeCommander, closedEvent);
+                    if (info.KeepOpenOnPeerClosed)
+                    {
+                        // we are not closing the socket, but we need to stop reading
+                        Context.Become(Closing(info, false));
+                    }
+                    else
+                    {
+                        // we are closing the socket
+                        CloseSocket();
+                        Context.Stop(Self);
+                    }
                     break;
                 }
                 default:
                 {
-                    if (IsWritePending) // finish writing first
-                    {
-                        UnsignDeathPact();
-                        if (_traceLogging) Log.Debug("Got Close command but write is still pending.");
-                        Context.Become(ClosingWithPendingWrite(info, closeCommander, closedEvent));
-                    }
-                    else if (closedEvent is ConfirmedClosed) // shutdown output and wait for confirmation
-                    {
-                        if (_traceLogging) Log.Debug("Got ConfirmedClose command, sending FIN.");
-
-                        // If peer closed first, the socket is now fully closed.
-                        // Also, if shutdownOutput threw an exception we expect this to be an indication
-                        // that the peer closed first or concurrently with this code running.
-                        if (_peerClosed || !SafeShutdownOutput())
-                            DoCloseConnection(info, closeCommander, closedEvent);
-                        else Context.Become(Closing(info, closeCommander));
-                    }
-                    // close gracefully now
-                    else
-                    {
-                        if (_traceLogging) Log.Debug("Got Close command, closing connection.");
-                        Socket.Shutdown(SocketShutdown.Both);
-                        DoCloseConnection(info, closeCommander, closedEvent);
-                    }
-
+                    // log a warning - someone sent us the wrong message type
+                    Log.Warning("Received unexpected ConnectionClosed event type [{0}]", closedEvent.GetType());
+                    
+                    // closing connection anyway, I guess
+                    Become(Closing(info, false));
                     break;
                 }
             }
         }
-
-        private void DoCloseConnection(ConnectionInfo info, IActorRef closeCommander, ConnectionClosed closedEvent)
+        
+        /* Mostly called from outside */
+        protected void StopWith(CloseInformation closeInfo)
         {
-            if (closedEvent is Aborted) Abort();
-            else
-            {
-                CloseSocket();
-            }
-
-            var notifications = new HashSet<IActorRef> { info.Handler, closeCommander };
-            StopWith(new CloseInformation(notifications, closedEvent));
-        }
-
-        private bool SafeShutdownOutput()
-        {
-            try
-            {
-                Socket.Shutdown(SocketShutdown.Send);
-                return true;
-            }
-            catch (SocketException)
-            {
-                return false;
-            }
+            _closedMessage = closeInfo;
+            UnsignDeathPact();
+            Context.Stop(Self);
         }
         
         private void Abort()
@@ -622,24 +683,32 @@ namespace Akka.IO
             {
                 if (_traceLogging) Log.Debug("setSoLinger(true, 0) failed with [{0}]", e);
             }
-
-            CloseSocket();
+            Context.Stop(Self);
         }
 
-        protected void StopWith(CloseInformation closeInfo)
+        private void CloseSocket()
         {
-            _closedMessage = closeInfo;
-            UnsignDeathPact();
-            Context.Stop(Self);
+            if (_socketAlreadyClosed) return;
+            _socketAlreadyClosed = true;
+            try { Socket.Shutdown(SocketShutdown.Both); } catch { /* ignore */ }
+            try{ Socket.Dispose(); } catch { /* ignore */ }
         }
 
         protected override void PostStop()
         {
-            try { Socket.Shutdown(SocketShutdown.Both); } catch { /* ignore */ }
-            Socket.Dispose();
+            if (_traceLogging) Log.Debug("Stopping connection actor [{0}]", Self);
+            CloseSocket(); // just in case we didn't shut ourselves down gracefully first
             _receiveArgs.Dispose();
             _sendArgs.Dispose();
             _bufferPool.Return(_receiveBuffer);
+            
+            FailUnprocessedPendingWrites(DroppingWriteBecauseClosingException);
+            if(_closedMessage != null)
+            {
+                // if we have a close message, we need to deliver it
+                DeliverCloseMessages();
+            }
+            
             base.PostStop();
         }
 
@@ -673,7 +742,7 @@ namespace Akka.IO
         {
             public ISet<IActorRef> NotificationsTo { get; }
 
-            public Tcp.Event ClosedEvent { get; }
+            public Event ClosedEvent { get; }
 
             public CloseInformation(ISet<IActorRef> notificationsTo, Tcp.Event closedEvent)
             {
