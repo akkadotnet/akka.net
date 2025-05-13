@@ -60,7 +60,7 @@ namespace Akka.Tests.IO
             await new TestSetup(this).RunAsync(async _ => await Task.CompletedTask);
         }
 
-        [Fact(Skip="FIXME .net core / linux")]
+        [Fact]
         public async Task The_TCP_transport_implementation_should_allow_connecting_to_and_disconnecting_from_the_test_server()
         {
             await new TestSetup(this).RunAsync(async x =>
@@ -75,7 +75,7 @@ namespace Akka.Tests.IO
             });
         }
 
-        [Fact(Skip="FIXME .net core / linux")]
+        [Fact]
         public async Task The_TCP_transport_implementation_should_properly_handle_connection_abort_from_client_side()
         {
             await new TestSetup(this).RunAsync(async x =>
@@ -89,7 +89,7 @@ namespace Akka.Tests.IO
             });
         }
 
-        [Fact(Skip="FIXME .net core / linux")]
+        [Fact]
         public async Task The_TCP_transport_implementation_should_properly_handle_connection_abort_from_client_side_after_chit_chat()
         {
             await new TestSetup(this).RunAsync(async x =>
@@ -114,7 +114,8 @@ namespace Akka.Tests.IO
                 actors.ClientHandler.Send(actors.ClientConnection, PoisonPill.Instance);
                 await VerifyActorTermination(actors.ClientConnection);
 
-                await actors.ServerHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
+                // PeerClosed because the PostStop of the client connection actor will have it send a graceful termination
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.PeerClosed>();
                 await VerifyActorTermination(actors.ServerConnection);
             });
         }
@@ -130,7 +131,7 @@ namespace Akka.Tests.IO
                 actors.ClientHandler.Send(actors.ClientConnection, PoisonPill.Instance);
                 await VerifyActorTermination(actors.ClientConnection);
 
-                await actors.ServerHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.PeerClosed>();
                 await VerifyActorTermination(actors.ServerConnection);
             });
         }
@@ -144,7 +145,7 @@ namespace Akka.Tests.IO
                 actors.ServerHandler.Send(actors.ServerConnection, PoisonPill.Instance);
                 await VerifyActorTermination(actors.ServerConnection);
 
-                await actors.ClientHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.PeerClosed>();
                 await VerifyActorTermination(actors.ClientConnection);
             });
         }
@@ -160,7 +161,7 @@ namespace Akka.Tests.IO
                 actors.ServerHandler.Send(actors.ServerConnection, PoisonPill.Instance);
                 await VerifyActorTermination(actors.ServerConnection);
 
-                await actors.ClientHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.PeerClosed>();
                 await VerifyActorTermination(actors.ClientConnection);
             });
         }
@@ -170,11 +171,6 @@ namespace Akka.Tests.IO
         [Theory]
         public async Task The_TCP_transport_implementation_should_properly_support_connecting_to_DNS_endpoints(AddressFamily family)
         {
-            // Aaronontheweb, 9/2/2017 - POSIX-based OSES are still having trouble with IPV6 DNS resolution
-            if(!RuntimeInformation
-                .IsOSPlatform(OSPlatform.Windows) && family == AddressFamily.InterNetworkV6)
-                return;
-
             var serverHandler = CreateTestProbe();
             var bindCommander = CreateTestProbe();
             bindCommander.Send(Sys.Tcp(), new Tcp.Bind(serverHandler.Ref, new IPEndPoint(family == AddressFamily.InterNetwork ? IPAddress.Loopback 
