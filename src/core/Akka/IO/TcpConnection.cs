@@ -61,13 +61,13 @@ namespace Akka.IO
 
         #region completion msgs
 
-        private sealed class SocketReceiveCompleted(int bytes, SocketError error) : INoSerializationVerificationNeeded
+        private sealed class SocketReceiveCompleted(int bytes, SocketError error) : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public int Bytes { get; } = bytes;
             public SocketError Error { get; } = error;
         }
 
-        private sealed class SocketSendCompleted(int bytes, SocketError error) : INoSerializationVerificationNeeded
+        private sealed class SocketSendCompleted(int bytes, SocketError error) : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public int Bytes { get; } = bytes;
             public SocketError Error { get; } = error;
