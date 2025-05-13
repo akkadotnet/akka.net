@@ -243,11 +243,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public DistributedPubSubExtensionProvider() { }
         public override Akka.Cluster.Tools.PublishSubscribe.DistributedPubSub CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
-    public class DistributedPubSubMediator : Akka.Actor.ReceiveActor
+    public class DistributedPubSubMediator : Akka.Actor.ReceiveActor, Akka.Actor.IWithTimers
     {
         public DistributedPubSubMediator(Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings settings) { }
-        public Akka.Event.ILoggingAdapter Log { get; }
         public System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, long> OwnVersions { get; }
+        public Akka.Actor.ITimerScheduler Timers { get; set; }
         protected override void PostStop() { }
         protected override void PreStart() { }
         public static Akka.Actor.Props Props(Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings settings) { }
