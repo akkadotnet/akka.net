@@ -67,9 +67,10 @@ namespace Akka.IO
             public SocketError Error { get; } = error;
         }
 
-        private sealed class SocketSendCompleted : INoSerializationVerificationNeeded
+        private sealed class SocketSendCompleted(int bytes, SocketError error) : INoSerializationVerificationNeeded
         {
-            public static readonly SocketSendCompleted Instance = new();
+            public int Bytes { get; } = bytes;
+            public SocketError Error { get; } = error;
         }
 
         #endregion
@@ -85,8 +86,7 @@ namespace Akka.IO
         private readonly byte[] _receiveBuffer;
         private SocketAsyncEventArgs _receiveArgs;
         private AckSocketAsyncEventArgs _sendArgs;
-
-        private IActorRef _handler = ActorRefs.Nobody;
+        
         private IActorRef _watchedActor = Context.System.DeadLetters;
         private readonly int _maxWriteCapacity;
 
@@ -96,14 +96,15 @@ namespace Akka.IO
 
         private readonly bool _traceLogging;
 
-        private bool _isOutputShutdown;
+        private CloseInformation? _closedMessage; // for ConnectionClosed message in postStop
+        
+        private static readonly IOException DroppingWriteBecauseClosingException =
+            new("Dropping write because the connection is closing");
 
-        private CloseInformation _closedMessage; // for ConnectionClosed message in postStop
-
-        private readonly IOException _droppingWriteBecauseWritingIsSuspendedException =
+        private static readonly IOException DroppingWriteBecauseWritingIsSuspendedException =
             new("Dropping write because writing is suspended");
 
-        private readonly IOException _droppingWriteBecauseQueueIsFullException =
+        private static readonly IOException DroppingWriteBecauseQueueIsFullException =
             new("Dropping write because queue is full");
 
         protected TcpConnection(TcpExt tcp, Socket socket, Option<int> writeCommandsBufferMaxSize)
@@ -140,7 +141,7 @@ namespace Akka.IO
                     self.Tell(new SocketReceiveCompleted(e.BytesTransferred, e.SocketError));
                     break;
                 case SocketAsyncOperation.Send:
-                    self.Tell(SocketSendCompleted.Instance);
+                    self.Tell(new SocketSendCompleted(e.BytesTransferred, e.SocketError));
                     break;
                 case SocketAsyncOperation.Connect: // TODO: need to anchor this to the `TcpOutGoingConnection` implementation
                     self.Tell(SocketConnected.Instance);
@@ -150,6 +151,11 @@ namespace Akka.IO
                     break;
             }
         }
+        
+        /// <summary>
+        /// Returns <c>true</c> if a write is in-progress over the wire or if we have writes pending in the queue.
+        /// </summary>
+        public bool IsWritePending => _sending || _pendingWrites.Count > 0;
 
         protected void SignDeathPact(IActorRef actor)
         {
@@ -169,25 +175,29 @@ namespace Akka.IO
                 Self.Tell(new SocketReceiveCompleted(_receiveArgs.BytesTransferred, _receiveArgs.SocketError));
         }
         
-        private void HandleRead(SocketReceiveCompleted rc)
+        private void HandleRead(IActorRef handler, SocketReceiveCompleted rc)
         {
+            if(_traceLogging)
+                Log.Debug("Received {0} bytes from {1}", rc.Bytes, Socket.RemoteEndPoint);
+            
             if (rc.Error != SocketError.Success)
             {
                 Log.Error("Closing connection due to IO error {0}", rc.Error);
-                _handler.Tell(new ErrorClosed(rc.Error.ToString()));
-                Context.Stop(Self);
+                Self.Tell(new ErrorClosed(rc.Error.ToString()));
                 return;
             }
 
             if (rc.Bytes == 0)
             {
                 _peerClosed = true;
-                TryCloseIfDone();
+                
+                // signal to the handler that the peer has closed the connection
+                Self.Tell(PeerClosed.Instance);
                 return;
             }
 
             var bs = ByteString.CopyFrom(_receiveBuffer, 0, rc.Bytes);
-            _handler.Tell(new Received(bs));
+            handler.Tell(new Received(bs));
             IssueReceive();
         }
 
@@ -195,12 +205,12 @@ namespace Akka.IO
         {
             _sendArgs.BufferList = buffers;
             if (!Socket.SendAsync(_sendArgs))
-                Self.Tell(SocketSendCompleted.Instance);
+                Self.Tell(new SocketSendCompleted(_sendArgs.BytesTransferred, _sendArgs.SocketError));
         }
 
         private void TrySendNext()
         {
-            if (_sending || _pendingWrites.Count == 0) return;
+            if (IsWritePending) return;
 
             var maxBytes = _receiveBuffer.Length;
             var accumulated = 0;
@@ -243,16 +253,46 @@ namespace Akka.IO
             var payload = FlattenByteStrings(batch);
             IssueSend(payload);
         }
+        
+        private void FailWritesWithAck(IEnumerable<(IActorRef sender, object Ack)> acks, Exception cause)
+        {
+            foreach (var (sender, ack) in acks)
+            {
+                sender.Tell(new CommandFailed());
+            }
+        }
 
-        private void HandleSendCompleted()
+        private void HandleSendCompleted(SocketSendCompleted socketSendCompleted)
         {
             _sending = false;
+            
+            if(_traceLogging)
+                Log.Debug("Sent {0} bytes to {1}", socketSendCompleted.Bytes, Socket.RemoteEndPoint);
+            
+            // check for errors
+            if (socketSendCompleted.Error != SocketError.Success)
+            {
+                Log.Error("Closing connection due to IO error {0} received during send", socketSendCompleted.Error);
+                Self.Tell(new ErrorClosed(socketSendCompleted.Error.ToString()));
+                return;
+            }
+            
             foreach (var (c, ack) in _sendArgs.PendingAcks)
                 c.Tell(ack);
             _sendArgs.ClearAcks();
             _sendArgs.BufferList.Clear();
+            
             TrySendNext();
             TryCloseIfDone();
+        }
+        
+        private void DeliverCloseMessages()
+        {
+            if (_closedMessage == null) return;
+            foreach (var handler in _closedMessage.NotificationsTo)
+            {
+                handler.Tell(_closedMessage.ClosedEvent);
+            }
         }
 
         private void TryCloseIfDone()
@@ -260,7 +300,7 @@ namespace Akka.IO
             if (!_closingRequested) return;
             if (_sending || _pendingWrites.Count > 0) return;
             if (!_peerClosed) return;
-            _handler.Tell(ConfirmedClosed.Instance);
+            DeliverCloseMessages();
             Context.Stop(Self);
         }
 
@@ -281,11 +321,9 @@ namespace Akka.IO
                 _pendingWrites.Enqueue((cmd, sender));
                 return true;
             }
-            else
-            {
-                // buffer is full
-                return false;
-            }
+
+            // buffer is full
+            return false;
         }
 
         /// <summary>
@@ -317,7 +355,7 @@ namespace Akka.IO
                         return true;
                     case CloseCommand cmd:
                         var info = new ConnectionInfo(commander, keepOpenOnPeerClosed: false, useResumeWriting: false);
-                        HandleClose(info, Sender, cmd.Event);
+                        HandleCloseEvent(info, Sender, cmd.Event);
                         return true;
                     case ReceiveTimeout:
                         // after sending `Register` user should watch this actor to make sure
@@ -331,8 +369,7 @@ namespace Akka.IO
                         var buffered = TryBuffer(write, Sender);
                         if (!buffered)
                         {
-                            var writerInfo = new ConnectionInfo(Sender, false, false);
-                            DropWrite(writerInfo, write);
+                            DropWrite(write);
                         }
                         else
                         {
@@ -342,6 +379,22 @@ namespace Akka.IO
                         }
 
                         return true;
+                    case Terminated t:
+                    {
+                        // if the handler dies before registration, we need to stop
+                        if (t.ActorRef.Equals(commander))
+                        {
+                            Log.Debug("Handler [{0}] died before registration, stopping", t.ActorRef);
+                            Context.Stop(Self);
+                        }
+                        else
+                        {
+                            // ignore
+                            Log.Debug("Handler [{0}] died before registration, ignoring", t.ActorRef);
+                        }
+
+                        return true;
+                    }
                     default: return false;
                 }
             };
@@ -357,14 +410,13 @@ namespace Akka.IO
                 switch (message)
                 {
                     case SocketReceiveCompleted r:
-                        HandleRead(r);
+                        HandleRead(info.Handler, r);
                         return true;
                     case WriteCommand write:
                         var buffered = TryBuffer(write, Sender);
                         if (!buffered)
                         {
-                            var writerInfo = new ConnectionInfo(Sender, false, false);
-                            DropWrite(writerInfo, write);
+                            DropWrite(write);
                         }
                         else
                         {
@@ -374,11 +426,14 @@ namespace Akka.IO
                         }
 
                         return true;
-                    case SocketSendCompleted:
-                        HandleSendCompleted();
+                    case SocketSendCompleted sendCompleted:
+                        HandleSendCompleted(sendCompleted);
                         return true;
-                    case CloseCommand cmd:
-                        HandleClose(info, Sender, cmd.Event);
+                    case CloseCommand cmd: // we are trying to close the socket first
+                        HandleCloseCommand(info, Sender, cmd);
+                        return true;
+                    case ConnectionClosed closed: // peer is closing the socket
+                        HandleCloseEvent(info, Sender, closed);
                         return true;
                     case SuspendReading:
                     case ResumeReading:
@@ -389,99 +444,75 @@ namespace Akka.IO
             };
         }
 
-        /// <summary>
-        /// The peer sent EOF first, but we may still want to send 
-        /// </summary>
-        private Receive PeerSentEOF(ConnectionInfo info)
+        private void HandleCloseCommand(ConnectionInfo info, IActorRef sender, CloseCommand cmd)
         {
-            var handleWrite = HandleWriteMessages(info);
-            return message =>
-            {
-                if (handleWrite(message)) return true;
-                var cmd = message as CloseCommand;
-                if (cmd != null)
-                {
-                    HandleClose(info, Sender, cmd.Event);
-                    return true;
-                }
-
-                if (message is ResumeReading) return true;
-                return false;
-            };
+            
         }
 
         /// <summary>
         /// Connection is closing but a write has to be finished first
         /// </summary>
-        private Receive ClosingWithPendingWrite(ConnectionInfo info, IActorRef closeCommander,
+        private Receive Closing(ConnectionInfo info, IActorRef closeCommander,
             ConnectionClosed closedEvent)
         {
             return message =>
             {
                 switch (message)
                 {
-                    case SuspendReading _:
-                        SuspendReading();
+                    case SocketReceiveCompleted r:
+                        HandleRead(info.Handler, r);
                         return true;
-                    case ResumeReading _:
-                        ResumeReading();
+                    case SocketSendCompleted s:
+                        HandleSendCompleted(s);
                         return true;
-                    case SocketReceived _:
-                        DoRead(info, closeCommander);
+                    case WriteCommand write:
+                        DropWrite(write);
                         return true;
-                    case SocketSent _:
-                        AcknowledgeSent();
-                        if (IsWritePending)
-                            DoWrite(info, GetAllowedPendingWrite());
-                        else
-                            HandleClose(info, closeCommander, closedEvent);
-                        return true;
-                    case UpdatePendingWriteAndThen updatePendingWrite:
-                        var nextWrite = updatePendingWrite.RemainingWrite;
-                        updatePendingWrite.Work();
-
-                        if (nextWrite.HasValue)
-                            DoWrite(info, nextWrite);
-                        else
-                            HandleClose(info, closeCommander, closedEvent);
-                        return true;
-                    case WriteFileFailed fail:
-                        HandleError(info.Handler, fail.Cause);
-                        return true;
-                    case Abort _:
-                        HandleClose(info, Sender, Aborted.Instance);
-                        return true;
-                    default: return false;
-                }
-            };
-        }
-
-        /** connection is closed on our side and we're waiting from confirmation from the other side */
-        private Receive Closing(ConnectionInfo info, IActorRef closeCommander)
-        {
-            return message =>
-            {
-                switch (message)
-                {
-                    case SocketReceived _:
-                        DoRead(info, closeCommander);
-                        return true;
-                    case Abort _:
-                        HandleClose(info, Sender, Aborted.Instance);
-                        return true;
-                    case SuspendReading _:
-                    case ResumeReading _:
+                    case SuspendReading:
+                    case ResumeReading:
                         // no-ops
                         return true;
+                    case Abort _:
+                        HandleCloseEvent(info, Sender, Aborted.Instance);
+                        return true;
                     default: return false;
                 }
             };
         }
 
-        private void DropWrite(ConnectionInfo info, WriteCommand write)
+        private enum DropReason
         {
-            if (_traceLogging) Log.Debug("Dropping write because queue is full");
-            Sender.Tell(write.FailureMessage.WithCause(_droppingWriteBecauseQueueIsFullException));
+            QueueFull = 1,
+            Closing = 2,
+            WritingSuspended = 3
+        }
+        
+        private static string GetDropReasonMessage(DropReason reason)
+        {
+            return reason switch
+            {
+                DropReason.QueueFull => "queue is full",
+                DropReason.Closing => "connection is closing",
+                DropReason.WritingSuspended => "writing is suspended",
+                _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null)
+            };
+        }
+        
+        private static IOException GetDropMessageException(DropReason reason)
+        {
+            return reason switch
+            {
+                DropReason.QueueFull => DroppingWriteBecauseQueueIsFullException,
+                DropReason.Closing => DroppingWriteBecauseClosingException,
+                DropReason.WritingSuspended => DroppingWriteBecauseWritingIsSuspendedException,
+                _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null)
+            };
+        }
+
+        private void DropWrite(WriteCommand write, DropReason reason = DropReason.QueueFull)
+        {
+            if (_traceLogging) Log.Debug("Dropping write because {0}", GetDropReasonMessage(reason));
+            Sender.Tell(write.FailureMessage.WithCause(GetDropMessageException(reason)));
         }
 
         // AUXILIARIES and IMPLEMENTATION
@@ -498,7 +529,7 @@ namespace Akka.IO
             }
             catch (SocketException e)
             {
-                Log.Debug("Could not enable TcpNoDelay: {0}", e.Message);
+                Log.Debug(e, "Could not enable TcpNoDelay: {0}", e.Message);
             }
 
             foreach (var option in options)
@@ -512,46 +543,47 @@ namespace Akka.IO
             Context.Become(WaitingForRegistration(commander));
         }
 
-        private void HandleClose(ConnectionInfo info, IActorRef closeCommander, ConnectionClosed closedEvent)
+        private void HandleCloseEvent(ConnectionInfo info, IActorRef closeCommander, ConnectionClosed closedEvent)
         {
-            SetStatus(ConnectionStatus.ShutdownRequested);
-
-            if (closedEvent is Aborted)
+            switch (closedEvent)
             {
-                if (_traceLogging) Log.Debug("Got Abort command. RESETing connection.");
-                DoCloseConnection(info, closeCommander, closedEvent);
-            }
-            else if (closedEvent is PeerClosed && info.KeepOpenOnPeerClosed)
-            {
-                // report that peer closed the connection
-                info.Handler.Tell(PeerClosed.Instance);
-                // used to check if peer already closed its side later
-                _peerClosed = true;
-                Context.Become(PeerSentEOF(info));
-            }
-            else if (IsWritePending) // finish writing first
-            {
-                UnsignDeathPact();
-                if (_traceLogging) Log.Debug("Got Close command but write is still pending.");
-                Context.Become(ClosingWithPendingWrite(info, closeCommander, closedEvent));
-            }
-            else if (closedEvent is ConfirmedClosed) // shutdown output and wait for confirmation
-            {
-                if (_traceLogging) Log.Debug("Got ConfirmedClose command, sending FIN.");
-
-                // If peer closed first, the socket is now fully closed.
-                // Also, if shutdownOutput threw an exception we expect this to be an indication
-                // that the peer closed first or concurrently with this code running.
-                if (_peerClosed || !SafeShutdownOutput())
+                case Aborted:
+                {
+                    if (_traceLogging) Log.Debug("Got Abort command. RESETing connection.");
+                    _peerClosed = true;
+                    _closingRequested = true;
                     DoCloseConnection(info, closeCommander, closedEvent);
-                else Context.Become(Closing(info, closeCommander));
-            }
-            // close gracefully now
-            else
-            {
-                if (_traceLogging) Log.Debug("Got Close command, closing connection.");
-                Socket.Shutdown(SocketShutdown.Both);
-                DoCloseConnection(info, closeCommander, closedEvent);
+                    break;
+                }
+                default:
+                {
+                    if (IsWritePending) // finish writing first
+                    {
+                        UnsignDeathPact();
+                        if (_traceLogging) Log.Debug("Got Close command but write is still pending.");
+                        Context.Become(ClosingWithPendingWrite(info, closeCommander, closedEvent));
+                    }
+                    else if (closedEvent is ConfirmedClosed) // shutdown output and wait for confirmation
+                    {
+                        if (_traceLogging) Log.Debug("Got ConfirmedClose command, sending FIN.");
+
+                        // If peer closed first, the socket is now fully closed.
+                        // Also, if shutdownOutput threw an exception we expect this to be an indication
+                        // that the peer closed first or concurrently with this code running.
+                        if (_peerClosed || !SafeShutdownOutput())
+                            DoCloseConnection(info, closeCommander, closedEvent);
+                        else Context.Become(Closing(info, closeCommander));
+                    }
+                    // close gracefully now
+                    else
+                    {
+                        if (_traceLogging) Log.Debug("Got Close command, closing connection.");
+                        Socket.Shutdown(SocketShutdown.Both);
+                        DoCloseConnection(info, closeCommander, closedEvent);
+                    }
+
+                    break;
+                }
             }
         }
 
@@ -563,17 +595,8 @@ namespace Akka.IO
                 CloseSocket();
             }
 
-            var notifications = new HashSet<IActorRef>();
-            if (info.Handler != null) notifications.Add(info.Handler);
-            if (closeCommander != null) notifications.Add(closeCommander);
+            var notifications = new HashSet<IActorRef> { info.Handler, closeCommander };
             StopWith(new CloseInformation(notifications, closedEvent));
-        }
-
-        private void HandleError(IActorRef handler, SocketException exception)
-        {
-            Log.Debug("Closing connection due to IO error {0}", exception);
-            StopWith(
-                new CloseInformation(new HashSet<IActorRef>(new[] { handler }), new ErrorClosed(exception.Message)));
         }
 
         private bool SafeShutdownOutput()
@@ -581,32 +604,12 @@ namespace Akka.IO
             try
             {
                 Socket.Shutdown(SocketShutdown.Send);
-                _isOutputShutdown = true;
                 return true;
             }
             catch (SocketException)
             {
                 return false;
             }
-        }
-
-        protected static void ReleaseSocketEventArgs(SocketAsyncEventArgs e)
-        {
-            e.UserToken = null;
-            e.AcceptSocket = null;
-
-            try
-            {
-                e.SetBuffer(null, 0, 0);
-                if (e.BufferList != null)
-                    e.BufferList = null;
-            }
-            // it can be that for some reason socket is in use and haven't closed yet
-            catch (InvalidOperationException)
-            {
-            }
-
-            e.Dispose();
         }
         
         private void Abort()
@@ -644,6 +647,23 @@ namespace Akka.IO
         {
             throw new IllegalStateException("Restarting not supported for connection actors.");
         }
+        
+        /// <summary>
+        /// Groups required connection-related data that are only available once the connection has been fully established.
+        /// </summary>
+        private sealed class ConnectionInfo
+        {
+            public readonly IActorRef Handler;
+            public readonly bool KeepOpenOnPeerClosed;
+            public readonly bool UseResumeWriting;
+
+            public ConnectionInfo(IActorRef handler, bool keepOpenOnPeerClosed, bool useResumeWriting)
+            {
+                Handler = handler;
+                KeepOpenOnPeerClosed = keepOpenOnPeerClosed;
+                UseResumeWriting = useResumeWriting;
+            }
+        }
 
         /// <summary>
         /// Used to transport information to the postStop method to notify
@@ -651,9 +671,6 @@ namespace Akka.IO
         /// </summary>
         protected sealed class CloseInformation
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public ISet<IActorRef> NotificationsTo { get; }
 
             public Tcp.Event ClosedEvent { get; }

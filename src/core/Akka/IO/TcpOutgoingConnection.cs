@@ -61,7 +61,20 @@ namespace Akka.IO
         {
             if (_connectArgs != null)
             {
-                ReleaseSocketEventArgs(_connectArgs);
+                _connectArgs.UserToken = null;
+                _connectArgs.AcceptSocket = null;
+
+                try
+                {
+                    _connectArgs.SetBuffer(null, 0, 0);
+                    _connectArgs.BufferList = null;
+                }
+                // it can be that for some reason socket is in use and haven't closed yet
+                catch (InvalidOperationException)
+                {
+                }
+
+                _connectArgs.Dispose();
                 _connectArgs = null;
             }
         }
