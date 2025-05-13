@@ -294,7 +294,7 @@ namespace Akka.IO
             foreach (var (c, ack) in _sendArgs.PendingAcks)
                 c.Tell(ack);
             _sendArgs.ClearAcks();
-            _sendArgs.BufferList.Clear();
+            _sendArgs.BufferList = null;
             
             TrySendNext();
             TryCloseIfDone();
@@ -439,9 +439,7 @@ namespace Akka.IO
                         }
                         else
                         {
-                            Log.Warning("Received Write command before Register command. " +
-                                        "It will be buffered until Register will be received (buffered write size is {0} bytes)",
-                                write.Bytes);
+                            TrySendNext();
                         }
                         return true;
                     case SocketSendCompleted sendCompleted:
