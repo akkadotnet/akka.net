@@ -29,7 +29,7 @@ namespace Akka.IO
 
         private SocketAsyncEventArgs _connectArgs;
 
-        private readonly ConnectException finishConnectNeverReturnedTrueException =
+        private readonly ConnectException _finishConnectNeverReturnedTrueException =
             new("Could not establish connection because finishConnect never returned true");
 
         public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
@@ -38,7 +38,6 @@ namespace Akka.IO
                    tcp.Settings.OutgoingSocketForceIpv4
                        ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { Blocking = false }
                        : new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false },
-                   connect.PullMode,
                    tcp.Settings.WriteCommandsQueueMaxSize >= 0 ? tcp.Settings.WriteCommandsQueueMaxSize : Option<int>.None)
         {
             _commander = commander;
@@ -99,7 +98,7 @@ namespace Akka.IO
                     if (resolved == null)
                         Become(Resolving(remoteAddress));
                     else if (resolved.Ipv4.Any() && resolved.Ipv6.Any()) // one of both families
-                        Register(new IPEndPoint(resolved.Ipv4.FirstOrDefault(), remoteAddress.Port), new IPEndPoint(resolved.Ipv6.FirstOrDefault(), remoteAddress.Port));
+                        Register(new IPEndPoint(resolved.Ipv4.First(), remoteAddress.Port), new IPEndPoint(resolved.Ipv6.First(), remoteAddress.Port));
                     else // one or the other
                         Register(new IPEndPoint(resolved.Addr, remoteAddress.Port), null);
                 }
@@ -133,8 +132,8 @@ namespace Akka.IO
                     if (resolved.Ipv4.Any() && resolved.Ipv6.Any()) // multiple addresses
                     {
                         ReportConnectFailure(() => Register(
-                            new IPEndPoint(resolved.Ipv4.FirstOrDefault(), remoteAddress.Port),
-                            new IPEndPoint(resolved.Ipv6.FirstOrDefault(), remoteAddress.Port)));
+                            new IPEndPoint(resolved.Ipv4.First(), remoteAddress.Port),
+                            new IPEndPoint(resolved.Ipv6.First(), remoteAddress.Port)));
                     }
                     else // only one address family. No fallbacks.
                     {
@@ -146,6 +145,29 @@ namespace Akka.IO
                 }
                 return false;
             };
+        }
+
+        private static SocketAsyncEventArgs CreateSocketEventArgs(IActorRef onCompleteNotificationsReceiver)
+        {
+            var args = new SocketAsyncEventArgs();
+            args.UserToken = onCompleteNotificationsReceiver;
+            args.Completed += (_, e) =>
+            {
+                var actorRef = e.UserToken as IActorRef;
+                var completeMsg = ResolveMessage(e);
+                actorRef?.Tell(completeMsg);
+            };
+
+            return args;
+
+            Tcp.SocketCompleted ResolveMessage(SocketAsyncEventArgs e)
+            {
+                return e.LastOperation switch
+                {
+                    SocketAsyncOperation.Connect => IO.Tcp.SocketConnected.Instance,
+                    _ => throw new NotSupportedException($"Socket operation {e.LastOperation} is not supported")
+                };
+            }
         }
 
         private void Register(IPEndPoint address, IPEndPoint fallbackAddress)
@@ -205,7 +227,7 @@ namespace Akka.IO
                     else
                     {
                         Log.Debug("Could not establish connection because finishConnect never returned true (consider increasing akka.io.tcp.finish-connect-retries)");
-                        Stop(finishConnectNeverReturnedTrueException);
+                        Stop(_finishConnectNeverReturnedTrueException);
                     }
                     return true;
                 }

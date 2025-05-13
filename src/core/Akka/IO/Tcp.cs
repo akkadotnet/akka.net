@@ -50,25 +50,7 @@ namespace Akka.IO
         
         internal abstract class SocketCompleted : INoSerializationVerificationNeeded, IDeadLetterSuppression 
         { }
-
-        internal sealed class SocketSent : SocketCompleted
-        {
-            public static readonly SocketSent Instance = new();
-            private SocketSent() { }
-        }
-
-        internal sealed class SocketReceived : SocketCompleted
-        {
-            public static readonly SocketReceived Instance = new();
-            private SocketReceived() { }
-        }
-
-        internal sealed class SocketAccepted : SocketCompleted
-        {
-            public static readonly SocketAccepted Instance = new();
-            private SocketAccepted() { }
-        }
-
+        
         internal sealed class SocketConnected : SocketCompleted
         {
             public static readonly SocketConnected Instance = new();
@@ -378,6 +360,11 @@ namespace Akka.IO
             {
                 return new CompoundWrite(other, this);
             }
+            
+            /// <summary>
+            /// The number of bytes that will be written to the socket.
+            /// </summary>
+            public abstract long Bytes { get; }
 
             /// <summary>
             /// Prepend a group of writes before this one.
@@ -489,6 +476,8 @@ namespace Akka.IO
             {
                 return new Write(data, ack);
             }
+
+            public override long Bytes => Data.Count;
         }
         
         /// <summary>
@@ -540,6 +529,8 @@ namespace Akka.IO
 
             public override string ToString() =>
                 $"CompoundWrite({Head}, {TailCommand})";
+
+            public override long Bytes => Head.Bytes + TailCommand.Bytes;
         }
 
         /// <summary>
