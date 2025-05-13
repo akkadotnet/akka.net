@@ -95,6 +95,8 @@ namespace Akka.IO
         private volatile bool _peerClosed;
 
         private readonly bool _traceLogging;
+
+        private long _pendingOutboundBytes; 
         
         // so we don't try to close the socket a second time during PostStop
         private bool _socketAlreadyClosed;
@@ -156,7 +158,7 @@ namespace Akka.IO
         }
         
         /// <summary>
-        /// Returns <c>true</c> if a write is in-progress over the wire or if we have writes pending in the queue.
+        /// Returns <c>true</c> if write is in-progress over the wire or if we have writes pending in the queue.
         /// </summary>
         public bool IsWritePending => _sending || _pendingWrites.Count > 0;
 
@@ -333,6 +335,7 @@ namespace Akka.IO
             if (_maxWriteCapacity < 0 || _pendingWrites.Count < _maxWriteCapacity)
             {
                 _pendingWrites.Enqueue((cmd, sender));
+                _pendingOutboundBytes += cmd.Bytes;
                 return true;
             }
             
