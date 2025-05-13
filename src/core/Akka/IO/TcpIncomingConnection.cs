@@ -20,15 +20,7 @@ namespace Akka.IO
     {
         private readonly IActorRef _bindHandler;
         private readonly IEnumerable<Inet.SocketOption> _options;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="tcp">TBD</param>
-        /// <param name="socket">TBD</param>
-        /// <param name="bindHandler">TBD</param>
-        /// <param name="options">TBD</param>
-        /// <param name="readThrottling">TBD</param>
+        
         public TcpIncomingConnection(TcpExt tcp, 
                                      Socket socket, 
                                      IActorRef bindHandler,
@@ -46,12 +38,7 @@ namespace Akka.IO
         {
             CompleteConnect(_bindHandler, _options);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        
         protected override bool Receive(object message)
         {
             throw new NotSupportedException();

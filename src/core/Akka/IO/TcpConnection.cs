@@ -121,6 +121,7 @@ namespace Akka.IO
             Tcp = tcp;
             Socket = socket ?? throw new ArgumentNullException(nameof(socket));
             const int DefaultBufferSize = 64 * 1024; // 64 KiB – matches legacy DirectBufferSize
+            // TODO: need to set the actual syscall buffer sizes to match
             _receiveBuffer = _bufferPool.Rent(DefaultBufferSize);
             InitSocketEventArgs();
         }
@@ -183,14 +184,18 @@ namespace Akka.IO
             if(_traceLogging)
                 Log.Debug("Received {0} bytes from {1}", rc.Bytes, Socket.RemoteEndPoint);
             
+            // todo: need to harden our SocketError handling
             if (rc.Error != SocketError.Success)
             {
                 Log.Error("Closing connection due to IO error {0}", rc.Error);
                 Self.Tell(new ErrorClosed(rc.Error.ToString()));
                 return;
             }
+            
+            // TODO: what about a closed for writing event handler?
+            // When the peer says "I'm not sending you any more data, but you should send me some?"
 
-            if (rc.Bytes == 0)
+            if (rc.Bytes == 0) // CLOSED FOR READING
             {
                 _peerClosed = true;
                 
@@ -213,7 +218,8 @@ namespace Akka.IO
 
         private void TrySendNext()
         {
-            if (IsWritePending) return;
+            // already sending or no writes to send
+            if (_sending || _pendingWrites.Count == 0) return;
 
             var maxBytes = _receiveBuffer.Length;
             var accumulated = 0;
@@ -235,6 +241,7 @@ namespace Akka.IO
                             _sendArgs.PendingAcks.Add((snd, w.Ack));
                         break;
                     case Write w:
+                        // empty write, discard and ACK if needed - can't send a 0-length message
                         _pendingWrites.Dequeue();
                         if (w.WantsAck) snd.Tell(w.Ack);
                         break;
@@ -354,7 +361,8 @@ namespace Akka.IO
                             register.UseResumeWriting);
                         
                         // we set a default close message here in case the actor dies before we get a close message
-                        // this will prevent close messages from going missing
+                        // this will prevent close messages from going missing 
+                        // part of the fix for https://github.com/akkadotnet/akka.net/issues/7634 
                         _closedMessage =
                             new CloseInformation(new HashSet<IActorRef>([register.Handler]), Aborted.Instance);
 
@@ -389,7 +397,6 @@ namespace Akka.IO
                                         "It will be buffered until Register will be received (buffered write size is {0} bytes)",
                                 write.Bytes);
                         }
-
                         return true;
                     case Terminated t:
                     {
