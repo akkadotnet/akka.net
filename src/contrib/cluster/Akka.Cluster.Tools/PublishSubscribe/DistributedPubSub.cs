@@ -105,10 +105,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 dispatcher = Dispatchers.InternalDispatcherId;
 
             return _system.SystemActorOf(
-                Props.Create(() => new DistributedPubSubMediator(_settings))
-                    .WithDeploy(Deploy.Local)
-                    .WithDispatcher(dispatcher),
-                name);
+                props: DistributedPubSubMediator.Props(_settings).WithDispatcher(dispatcher),
+                name: name);
         }
     }
 }
