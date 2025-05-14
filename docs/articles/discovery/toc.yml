@@ -1,2 +1,4 @@
-- name: Service Discovery Overview
+- name: Akka.Discovery Overview
   href: index.md
+- name: Automatic Cluster Formation with Akka.Management
+  href: akka-management.md
