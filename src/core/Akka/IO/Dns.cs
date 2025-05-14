@@ -19,26 +19,26 @@ using Akka.Routing;
 namespace Akka.IO
 {
     /// <summary>
-    /// TBD
+    /// Base class for DNS resolution backends.
     /// </summary>
     public abstract class DnsBase
     {
         /// <summary>
-        /// TBD
+        /// Returns a cached DNS resolution for the given name, or null if not cached.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The DNS name to look up in the cache.</param>
+        /// <returns>The cached DNS resolution, or null if not found.</returns>
         public virtual Dns.Resolved Cached(string name)
         {
             return null;
         }
         /// <summary>
-        /// TBD
+        /// Attempts to resolve the DNS name, using the cache if possible, otherwise triggers a DNS query.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="system">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The DNS name to resolve.</param>
+        /// <param name="system">The actor system to use for resolution.</param>
+        /// <param name="sender">The actor requesting the resolution.</param>
+        /// <returns>The resolved DNS entry, or null if not cached.</returns>
         public virtual Dns.Resolved Resolve(string name, ActorSystem system, IActorRef sender)
         {
             var ret = Cached(name);
@@ -49,12 +49,12 @@ namespace Akka.IO
     }
 
     /// <summary>
-    /// TBD
+    /// Extension for DNS resolution support in Akka.NET.
     /// </summary>
     public class Dns : ExtensionIdProvider<DnsExt>
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of the Dns extension.
         /// </summary>
         public static readonly Dns Instance = new();
 
@@ -65,14 +65,14 @@ namespace Akka.IO
         { }
 
         /// <summary>
-        /// TBD
+        /// Command to resolve a DNS name.
         /// </summary>
         public class Resolve : Command, IConsistentHashable
         {
             /// <summary>
-            /// TBD
+            /// Creates a new DNS resolve command for the given name.
             /// </summary>
-            /// <param name="name">TBD</param>
+            /// <param name="name">The DNS name to resolve.</param>
             public Resolve(string name)
             {
                 Name = name;
@@ -80,17 +80,17 @@ namespace Akka.IO
             }
 
             /// <summary>
-            /// TBD
+            /// The consistent hash key for this command (the DNS name).
             /// </summary>
             public object ConsistentHashKey { get; private set; }
             /// <summary>
-            /// TBD
+            /// The DNS name to resolve.
             /// </summary>
             public string Name { get; private set; }
         }
 
         /// <summary>
-        /// TBD
+        /// Result of a DNS resolution.
         /// </summary>
         public class Resolved : Command
         {
@@ -102,11 +102,11 @@ namespace Akka.IO
             }
             
             /// <summary>
-            /// TBD
+            /// Creates a new resolved DNS entry.
             /// </summary>
-            /// <param name="name">TBD</param>
-            /// <param name="ipv4">TBD</param>
-            /// <param name="ipv6">TBD</param>
+            /// <param name="name">The DNS name that was resolved.</param>
+            /// <param name="ipv4">The resolved IPv4 addresses.</param>
+            /// <param name="ipv6">The resolved IPv6 addresses.</param>
             public Resolved(string name, IEnumerable<IPAddress> ipv4, IEnumerable<IPAddress> ipv6)
             {
                 Name = name;
@@ -121,20 +121,20 @@ namespace Akka.IO
             public Exception Exception { get; }
 
             /// <summary>
-            /// TBD
+            /// The DNS name that was resolved.
             /// </summary>
             public string Name { get; }
             /// <summary>
-            /// TBD
+            /// The resolved IPv4 addresses.
             /// </summary>
             public IEnumerable<IPAddress> Ipv4 { get; }
             /// <summary>
-            /// TBD
+            /// The resolved IPv6 addresses.
             /// </summary>
             public IEnumerable<IPAddress> Ipv6 { get; }
 
             /// <summary>
-            /// TBD
+            /// The first resolved address, or throws if resolution failed.
             /// </summary>
             public IPAddress Addr
             {
@@ -150,11 +150,11 @@ namespace Akka.IO
             }
 
             /// <summary>
-            /// TBD
+            /// Creates a new resolved DNS entry from a set of addresses.
             /// </summary>
-            /// <param name="name">TBD</param>
-            /// <param name="addresses">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="name">The DNS name that was resolved.</param>
+            /// <param name="addresses">The resolved addresses.</param>
+            /// <returns>A new <see cref="Resolved"/> instance.</returns>
             public static Resolved Create(string name, IEnumerable<IPAddress> addresses)
             {
                 /*
@@ -171,23 +171,23 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a cached DNS resolution for the given name, or null if not cached.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The DNS name to look up in the cache.</param>
+        /// <param name="system">The actor system to use for resolution.</param>
+        /// <returns>The cached DNS resolution, or null if not found.</returns>
         public static Resolved Cached(string name, ActorSystem system)
         {
             return Instance.Apply(system).Cache.Cached(name);
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to resolve the DNS name, using the cache if possible, otherwise triggers a DNS query.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="system">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The DNS name to resolve.</param>
+        /// <param name="system">The actor system to use for resolution.</param>
+        /// <param name="sender">The actor requesting the resolution.</param>
+        /// <returns>The resolved DNS entry, or null if not cached.</returns>
         public static Resolved ResolveName(string name, ActorSystem system, IActorRef sender)
         {
             return Instance.Apply(system).Cache.Resolve(name, system, sender);
