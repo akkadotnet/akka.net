@@ -857,35 +857,23 @@ namespace Akka.Dispatch.SysMsg
     }
 
     /// <summary>
-    /// TBD
+    /// Singleton instance representing a register termination hook system message.
     /// </summary>
-    public sealed class RegisterTerminationHook
-    {
-        private RegisterTerminationHook() { }
-        public static RegisterTerminationHook Instance { get; } = new();
+    public static RegisterTerminationHook Instance { get; } = new();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return "<RegisterTerminationHook>";
-        }
+    public override string ToString()
+    {
+        return "<RegisterTerminationHook>";
     }
 
     /// <summary>
-    /// TBD
+    /// Singleton system message indicating a termination hook.
     /// </summary>
     public sealed class TerminationHook
     {
         private TerminationHook() { }
         public static TerminationHook Instance { get; } = new();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<TerminationHook>";
@@ -893,17 +881,13 @@ namespace Akka.Dispatch.SysMsg
     }
 
     /// <summary>
-    ///     Class Terminate.
+    /// Singleton system message indicating a completed termination hook.
     /// </summary>
     public sealed class TerminationHookDone
     {
         private TerminationHookDone() { }
         public static TerminationHookDone Instance { get; } = new();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<TerminationHookDone>";
