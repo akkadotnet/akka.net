@@ -207,16 +207,16 @@ var serviceDiscovery = Discovery.Get(system).Default;
 A `Lookup` contains a mandatory `serviceName` and an optional `portName` and `protocol`. How these are interpreted is discovery method dependent.
 
 ```csharp
-serviceDiscovery.Lookup(new Lookup("akka.io"), TimeSpan.FromSeconds(1));
+serviceDiscovery.Lookup(new Lookup("akka.net"), TimeSpan.FromSeconds(1));
 // convenience for a Lookup with only a serviceName
-serviceDiscovery.Lookup("akka.io", TimeSpan.FromSeconds(1));
+serviceDiscovery.Lookup("akka.net", TimeSpan.FromSeconds(1));
 ```
 
 `portName` and `protocol` are optional and their meaning is interpreted by the method.
 
 ```csharp
 Task<ServiceDiscovery.Resolved> lookup = serviceDiscovery.Lookup(
-    new Lookup("akka.io").WithPortName("remoting").WithProtocol("tcp"),
+    new Lookup("akka.net").WithPortName("remoting").WithProtocol("tcp"),
     TimeSpan.FromSeconds(1));
 ```
 
