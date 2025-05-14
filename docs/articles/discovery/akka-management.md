@@ -101,4 +101,4 @@ akkaBuilder.WithAzureDiscovery(options =>
 * [Akka.Discovery Overview](index.md)
 * [Akka.Management GitHub](https://github.com/akkadotnet/Akka.Management)
 * [Form Akka.NET Clusters Dynamically with Akka.Management and Akka.Discovery (blog post)](https://petabridge.com/blog/akka-management/)
-* [DrawTogether.NET Example](https://github.com/petabridge/DrawTogether.NET) 
+* [DrawTogether.NET Example](https://github.com/petabridge/DrawTogether.NET)
