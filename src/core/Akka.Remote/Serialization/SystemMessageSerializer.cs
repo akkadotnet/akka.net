@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Text;
 using Akka.Actor;
@@ -21,7 +21,7 @@ namespace Akka.Remote.Serialization
         private readonly WrappedPayloadSupport _payloadSupport;
         private ExceptionSupport _exceptionSupport;
 
-        private static readonly byte[] EmptyBytes = {};
+        private static readonly byte[] EmptyBytes = [];
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SystemMessageSerializer" /> class.
@@ -32,29 +32,29 @@ namespace Akka.Remote.Serialization
             _payloadSupport = new WrappedPayloadSupport(system);
             _exceptionSupport = new ExceptionSupport(system);
         }
-
-        /// <inheritdoc />
+        
         public override bool IncludeManifest { get; } = true; // TODO: should be false
-
-        /// <inheritdoc />
+        
         public override byte[] ToBinary(object obj)
         {
-            if (obj is Create create) return CreateToProto(create);
-            if (obj is Recreate recreate) return RecreateToProto(recreate);
-            if (obj is Suspend) return EmptyBytes;
-            if (obj is Resume resume) return ResumeToProto(resume);
-            if (obj is Terminate) return EmptyBytes;
-            if (obj is Supervise supervise) return SuperviseToProto(supervise);
-            if (obj is Watch watch) return WatchToProto(watch);
-            if (obj is Unwatch unwatch) return UnwatchToProto(unwatch);
-            if (obj is Failed failed) return FailedToProto(failed);
-            if (obj is DeathWatchNotification notification) return DeathWatchNotificationToProto(notification);
-            if (obj is NoMessage) throw new ArgumentException("NoMessage should never be serialized or deserialized");
-
-            throw new ArgumentException($"Cannot serialize object of type [{obj.GetType().TypeQualifiedName()}]");
+            return obj switch
+            {
+                Create create => CreateToProto(create),
+                Recreate recreate => RecreateToProto(recreate),
+                Suspend => EmptyBytes,
+                Resume resume => ResumeToProto(resume),
+                Terminate => EmptyBytes,
+                Supervise supervise => SuperviseToProto(supervise),
+                Watch watch => WatchToProto(watch),
+                Unwatch unwatch => UnwatchToProto(unwatch),
+                Failed failed => FailedToProto(failed),
+                DeathWatchNotification notification => DeathWatchNotificationToProto(notification),
+                NoMessage => throw new ArgumentException("NoMessage should never be serialized or deserialized"),
+                _ => throw new ArgumentException(
+                    $"Cannot serialize object of type [{obj.GetType().TypeQualifiedName()}]")
+            };
         }
-
-        /// <inheritdoc />
+        
         public override object FromBinary(byte[] bytes, Type type)
         {
             if (type == typeof(Create)) return CreateFromProto(bytes);
@@ -125,7 +125,7 @@ namespace Akka.Remote.Serialization
         //
         // Supervise
         //
-        private byte[] SuperviseToProto(Supervise supervise)
+        private static byte[] SuperviseToProto(Supervise supervise)
         {
             var message = new Proto.Msg.SuperviseData();
             message.Child = new Proto.Msg.ActorRefData();
@@ -143,7 +143,7 @@ namespace Akka.Remote.Serialization
         //
         // Watch
         //
-        private byte[] WatchToProto(Watch watch)
+        private static byte[] WatchToProto(Watch watch)
         {
             var message = new Proto.Msg.WatchData();
             message.Watchee = new Proto.Msg.ActorRefData();
@@ -164,7 +164,7 @@ namespace Akka.Remote.Serialization
         //
         // Unwatch
         //
-        private byte[] UnwatchToProto(Unwatch unwatch)
+        private static byte[] UnwatchToProto(Unwatch unwatch)
         {
             var message = new Proto.Msg.WatchData();
             message.Watchee = new Proto.Msg.ActorRefData();

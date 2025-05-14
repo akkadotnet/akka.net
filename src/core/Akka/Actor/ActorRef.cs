@@ -99,6 +99,8 @@ namespace Akka.Actor
     ///
     /// ActorRef implementation used for one-off tasks.
     /// </summary>
+    // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
+    // Phobos inherits from this class
     public class FutureActorRef<T> : MinimalActorRef
     {
         private readonly TaskCompletionSource<T> _result;
@@ -108,19 +110,13 @@ namespace Akka.Actor
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        /// <param name="result">TBD</param>
-        /// <param name="path">TBD</param>
-        /// <param name="provider">TBD</param>
         public FutureActorRef(TaskCompletionSource<T> result, ActorPath path, IActorRefProvider provider)
         {
             _result = result;
             _path = path;
             _provider = provider;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public override ActorPath Path => _path;
 
         /// <summary>
@@ -296,18 +292,11 @@ namespace Akka.Actor
         /// </summary>
         public class Surrogate : ISurrogate
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="path">TBD</param>
             public Surrogate(string path)
             {
                 Path = path;
             }
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public string Path { get; }
 
             /// <summary>
@@ -320,17 +309,9 @@ namespace Akka.Actor
                 return ((ActorSystemImpl)system).Provider.ResolveActorRef(Path);
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public abstract ActorPath Path { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        
         public void Tell(object message, IActorRef sender)
         {
             if (sender == null)
@@ -342,10 +323,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">Message to send.</param>
+        /// <param name="sender">Sender who sent it.</param>
         protected abstract void TellInternal(object message, IActorRef sender);
 
         
@@ -634,7 +615,7 @@ namespace Akka.Actor
         /// <summary>
         /// A surrogate for serializing <see cref="IgnoreActorRef"/>.
         /// </summary>
-        public class IgnoreActorRefSurrogate : ISurrogate
+        private class IgnoreActorRefSurrogate : ISurrogate
         {
             /// <summary>
             /// Converts the <see cref="ISurrogate"/> into a <see cref="IActorRef"/>.
@@ -649,19 +630,16 @@ namespace Akka.Actor
 
         private static readonly IgnoreActorRefSurrogate SurrogateInstance = new();
 
-        private const string fakeSystemName = "local";
-
-        private static readonly ActorPath path = new RootActorPath(new Address("akka", fakeSystemName)) / "ignore";
-        private static readonly string pathString = path.ToString();
-
-        public static ActorPath StaticPath => path;
+        private const string FakeSystemName = "local";
+        public static ActorPath StaticPath { get; } = new RootActorPath(new Address("akka", FakeSystemName)) / "ignore";
+        private static readonly string PathString = StaticPath.ToString();
 
         public IgnoreActorRef(IActorRefProvider provider)
         {
             Provider = provider;
         }
 
-        public override ActorPath Path => path;
+        public override ActorPath Path => StaticPath;
 
         public override IActorRefProvider Provider { get; }
 
@@ -671,7 +649,7 @@ namespace Akka.Actor
         /// <param name="otherPath"></param>
         /// <returns></returns>
         public static bool IsIgnoreRefPath(string otherPath) =>
-            pathString.Equals(otherPath);
+            PathString.Equals(otherPath);
 
         /// <summary>
         /// Check if the passed `otherPath` is the same as IgnoreActorRef.path
@@ -679,7 +657,7 @@ namespace Akka.Actor
         /// <param name="otherPath"></param>
         /// <returns></returns>
         public static bool IsIgnoreRefPath(ActorPath otherPath) =>
-            path.Equals(otherPath);
+            StaticPath.Equals(otherPath);
 
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
@@ -693,31 +671,24 @@ namespace Akka.Actor
         /// <summary>
         /// A surrogate for serializing <see cref="Nobody"/>.
         /// </summary>
-        public class NobodySurrogate : ISurrogate
+        private class NobodySurrogate : ISurrogate
         {
-            /// <summary>
-            /// Converts the <see cref="ISurrogate"/> into a <see cref="IActorRef"/>.
-            /// </summary>
-            /// <param name="system">The actor system.</param>
-            /// <returns>TBD</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                return Nobody.Instance;
+                return Instance;
             }
         }
 
         /// <summary>
         /// Singleton instance of <see cref="Nobody"/>.
         /// </summary>
-        public static Nobody Instance = new();
+        public static readonly Nobody Instance = new();
 
         private static readonly NobodySurrogate SurrogateInstance = new();
-        private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/Nobody");
 
         private Nobody() { }
-
-        /// <inheritdoc cref="InternalActorRefBase"/>
-        public override ActorPath Path { get { return _path; } }
+        
+        public override ActorPath Path { get; } = new RootActorPath(Address.AllSystems, "/Nobody");
 
         /// <summary>N/A</summary>
         /// <exception cref="NotSupportedException">
@@ -727,12 +698,7 @@ namespace Akka.Actor
         {
             get { throw new NotSupportedException("Nobody does not provide"); }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
             return SurrogateInstance;
@@ -774,7 +740,7 @@ namespace Akka.Actor
                      case ActorRefWithCell cell:
                          return cell.SelfAndChildren();
                      default:
-                         return new[] { x };
+                         return [x];
                  }
              }))
             {
@@ -784,80 +750,36 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
+    /// <remarks>
+    /// Used for hosting <see cref="FutureActorRef{T}"/> and other temporary actors.
+    /// </remarks>
     internal class VirtualPathContainer : MinimalActorRef
     {
-        private readonly IInternalActorRef _parent;
-        private readonly ILoggingAdapter _log;
-        private readonly IActorRefProvider _provider;
-        private readonly ActorPath _path;
-
         private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="provider">TBD</param>
-        /// <param name="path">TBD</param>
-        /// <param name="parent">TBD</param>
-        /// <param name="log">TBD</param>
+        
         public VirtualPathContainer(IActorRefProvider provider, ActorPath path, IInternalActorRef parent, ILoggingAdapter log)
         {
-            _parent = parent;
-            _log = log;
-            _provider = provider;
-            _path = path;
+            Parent = parent;
+            Log = log;
+            Provider = provider;
+            Path = path;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override IActorRefProvider Provider
-        {
-            get { return _provider; }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override IInternalActorRef Parent
-        {
-            get { return _parent; }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override ActorPath Path
-        {
-            get { return _path; }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public ILoggingAdapter Log
-        {
-            get { return _log; }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
+        
+        public override IActorRefProvider Provider { get; }
+        
+        public override IInternalActorRef Parent { get; }
+        
+        public override ActorPath Path { get; }
+        
+        public ILoggingAdapter Log { get; }
+        
         protected bool TryGetChild(string name, out IInternalActorRef child)
         {
             return _children.TryGetValue(name, out child);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="actor">TBD</param>
+        
         public void AddChild(string name, IInternalActorRef actor)
         {
             _children.AddOrUpdate(name, actor, (_, v) =>
@@ -866,11 +788,7 @@ namespace Akka.Actor
                 return v;
             });
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
+        
         public void RemoveChild(string name)
         {
             IInternalActorRef tmp;
@@ -879,12 +797,7 @@ namespace Akka.Actor
                 Log.Warning("{0} trying to remove non-child {1}", Path, name);
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="child">TBD</param>
+        
         public void RemoveChild(string name, IActorRef child)
         {
             IInternalActorRef tmp;
@@ -893,28 +806,7 @@ namespace Akka.Actor
                 Log.Warning("{0} trying to remove non-child {1}", Path, name);
             }
         }
-
-        /*
-override def getChild(name: Iterator[String]): InternalActorRef = {
-    if (name.isEmpty) this
-    else {
-      val n = name.next()
-      if (n.isEmpty) this
-      else children.get(n) match {
-        case null ⇒ Nobody
-        case some ⇒
-          if (name.isEmpty) some
-          else some.getChild(name)
-      }
-    }
-  }
-*/
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        
         public override IActorRef GetChild(IReadOnlyList<string> name)
         {
             //Using enumerator to avoid multiple enumerations of name.
@@ -947,7 +839,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         /// <param name="action">A lambda which takes a reference to the internal child actor as an argument.</param>
         public void ForEachChild(Action<IInternalActorRef> action)
         {
-            foreach (IInternalActorRef child in _children.Values)
+            foreach (var child in _children.Values)
             {
                 action(child);
             }
@@ -1061,7 +953,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
                     RemoveWatcher(unwatch.Watchee, unwatch.Watcher);
                     break;
                 case DeathWatchNotification deathWatch:
-                    this.Tell(new Terminated(deathWatch.Actor, existenceConfirmed: true, addressTerminated: false), deathWatch.Actor);
+                    Tell(new Terminated(deathWatch.Actor, existenceConfirmed: true, addressTerminated: false), deathWatch.Actor);
                     break;
             }
         }
@@ -1173,7 +1065,10 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             {
                 _eventStream.Publish(e);
             }
-            catch (Exception) { }
+            catch (Exception)
+            {
+                // ignore
+            }
         }
     }
 }

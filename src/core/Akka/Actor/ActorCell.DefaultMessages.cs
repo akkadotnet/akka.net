@@ -112,9 +112,9 @@ namespace Akka.Actor
         }
         
         /// <summary>
-        /// TBD
+        /// Handler for all <see cref="IAutoReceivedMessage"/> types.
         /// </summary>
-        /// <param name="envelope">TBD</param>
+        /// <param name="envelope">The payload with the <see cref="IAutoReceivedMessage"/>.</param>
         /// <exception cref="ActorKilledException">
         /// This exception is thrown if a <see cref="Akka.Actor.Kill"/> message is included in the given <paramref name="envelope"/>.
         /// </exception>
@@ -150,7 +150,7 @@ namespace Akka.Actor
                 case Kill _:
                     Kill();
                     break;
-                case Akka.Actor.IntentionalRestart:
+                case IntentionalRestart:
                     TriggerIntentionalRestart();
                     break;
             }

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+#nullable enable
 
 namespace Akka.Actor
 {
@@ -21,7 +22,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="actorRef">The actor that is being tested.</param>
         /// <returns><c>true</c> if the <paramref name="actorRef"/> is invalid; otherwise <c>false</c>.</returns>
-        public static bool IsNobody(this IActorRef actorRef)
+        public static bool IsNobody(this IActorRef? actorRef)
         {
             return actorRef is null || actorRef is Nobody || actorRef is DeadLetterActorRef 
                 || actorRef.Path is null || (actorRef.Path.Uid == 0 && actorRef.Path.Name == "deadLetters");
@@ -32,10 +33,10 @@ namespace Akka.Actor
         /// or <see cref="DeadLetterActorRef"/>. Otherwise return the result of evaluating `elseValue`.
         /// </summary>
         /// <param name="actorRef">The actor that is being tested.</param>
-        /// <param name="elseValue">TBD</param>
-        public static IActorRef GetOrElse(this IActorRef actorRef, Func<IActorRef> elseValue)
+        /// <param name="elseValue">The value we'll return if <paramref name="actorRef"/> isn't a valid actor.</param>
+        public static IActorRef GetOrElse(this IActorRef? actorRef, Func<IActorRef> elseValue)
         {
-            return actorRef.IsNobody() ? elseValue() : actorRef;
+            return actorRef.IsNobody() ? elseValue() : actorRef!;
         }
     }
 }

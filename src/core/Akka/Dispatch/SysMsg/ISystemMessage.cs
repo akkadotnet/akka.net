@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -21,22 +21,17 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     internal static class SystemMessageList
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static readonly LatestFirstSystemMessageList LNil = new(null);
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public static readonly EarliestFirstSystemMessageList ENil = new(null);
-
+        
         /// <summary>
-        /// TBD
+        /// Computes the size of the list. This operation has a cost of O(N) in the number of elements.
         /// </summary>
-        /// <param name="head">TBD</param>
-        /// <param name="acc">TBD</param>
-        /// <returns>TBD</returns>
-        internal static int SizeInner(SystemMessage head, int acc)
+        /// <param name="head">Start of the list</param>
+        /// <param name="acc">The initial accumulation value</param>
+        /// <returns>The computed size of the list</returns>
+        internal static int SizeInner(SystemMessage? head, int acc)
         {
             while (true)
             {
@@ -45,14 +40,8 @@ namespace Akka.Dispatch.SysMsg
                 acc = acc + 1;
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="head">TBD</param>
-        /// <param name="acc">TBD</param>
-        /// <returns>TBD</returns>
-        internal static SystemMessage ReverseInner(SystemMessage head, SystemMessage acc)
+        
+        internal static SystemMessage ReverseInner(SystemMessage? head, SystemMessage? acc)
         {
             while (true)
             {
@@ -71,7 +60,7 @@ namespace Akka.Dispatch.SysMsg
     /// INTERNAL API
     ///
     /// Value type supporting list operations on system messages. The `next` field of <see cref="SystemMessage"/>
-    /// is hidden, and can only accessed through the value classes <see cref="LatestFirstSystemMessageList"/> and
+    /// is hidden and only accessed through the value classes <see cref="LatestFirstSystemMessageList"/> and
     /// <see cref="EarliestFirstSystemMessageList"/>, abstracting over the fact that system messages are the
     /// list nodes themselves. If used properly, this stays a compile time construct without any allocation overhead.
     ///
@@ -85,13 +74,13 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         /// The front of the list.
         /// </summary>
-        public SystemMessage Head;
+        public SystemMessage? Head;
 
         /// <summary>
         /// Creates a new message list.
         /// </summary>
         /// <param name="head">The current head item.</param>
-        public LatestFirstSystemMessageList(SystemMessage head)
+        public LatestFirstSystemMessageList(SystemMessage? head)
         {
             Head = head;
         }
@@ -159,13 +148,13 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         /// The front of the list.
         /// </summary>
-        public SystemMessage Head;
+        public SystemMessage? Head;
 
         /// <summary>
         /// Creates a new message list.
         /// </summary>
         /// <param name="head">The current head item.</param>
-        public EarliestFirstSystemMessageList(SystemMessage head)
+        public EarliestFirstSystemMessageList(SystemMessage? head)
         {
             Head = head;
         }
@@ -260,12 +249,9 @@ namespace Akka.Dispatch.SysMsg
     internal interface IStashWhenFailed { }
 
     // public API
-
-    //@SerialVersionUID(1L)
-    //private[akka] case class Create(failure: Option[ActorInitializationException]) extends ISystemMessage // sent to self from Dispatcher.register
-
+    
     /// <summary>
-    ///     Class ISystemMessage.
+    /// Markter interface for all system messages.
     /// </summary>
     public interface ISystemMessage : INoSerializationVerificationNeeded
     {
@@ -286,7 +272,7 @@ namespace Akka.Dispatch.SysMsg
         /// Next fields are only modifiable via the <see cref="SystemMessageList"/> class.
         /// </summary>
         [NonSerialized]
-        internal SystemMessage Next;
+        internal SystemMessage? Next;
 
         /// <summary>
         /// Unlinks this message from the linked list.
@@ -311,7 +297,7 @@ namespace Akka.Dispatch.SysMsg
     }
 
     /// <summary>
-    ///     Class DeathWatchNotification.
+    /// Notification that a watched actor has died.
     /// </summary>
     public sealed class DeathWatchNotification : SystemMessage, IDeadLetterSuppression
     {
@@ -328,23 +314,21 @@ namespace Akka.Dispatch.SysMsg
             AddressTerminated = addressTerminated;
         }
 
-        /// <summary>
-        ///     Gets the actor.
-        /// </summary>
-        /// <value>The actor.</value>
-        public IActorRef Actor { get; private set; }
+        public IActorRef Actor { get; }
 
         /// <summary>
-        ///     Gets a value indicating whether [existence confirmed].
+        /// If this is true, the actor we received the notification for was definitely alive at some point in the past.
+        ///
+        /// If it is false, the actor may have never been deployed or created.
         /// </summary>
-        /// <value><c>true</c> if [existence confirmed]; otherwise, <c>false</c>.</value>
-        public bool ExistenceConfirmed { get; private set; }
+        public bool ExistenceConfirmed { get; }
 
         /// <summary>
-        ///     Gets a value indicating whether [address terminated].
+        /// If this value is true, we're getting this death watch notification because the actor's remote node has been
+        /// terminated before the individual actors could proceed with their shutdown process. This can happen in the
+        /// event of an ungraceful process termination or a node being downed in Akka.Cluster.
         /// </summary>
-        /// <value><c>true</c> if [address terminated]; otherwise, <c>false</c>.</value>
-        public bool AddressTerminated { get; private set; }
+        public bool AddressTerminated { get; }
 
         
         public override string ToString()
@@ -359,47 +343,31 @@ namespace Akka.Dispatch.SysMsg
     [InternalApi]
     public sealed class Failed : SystemMessage, IStashWhenFailed
     {
-        private readonly long _uid;
-        private readonly Exception _cause;
-        private readonly IActorRef _child;
-
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="Failed" /> class.
-        /// </summary>
-        /// <param name="child">The child.</param>
-        /// <param name="cause">The cause.</param>
-        /// <param name="uid">The uid</param>
         public Failed(IActorRef child, Exception cause, long uid)
         {
-            _uid = uid;
-            _child = child;
-            _cause = cause;
+            Uid = uid;
+            Child = child;
+            Cause = cause;
         }
-
+        
         /// <summary>
-        ///     Gets the child.
+        /// The child actor who failed.
         /// </summary>
-        /// <value>The child.</value>
-        public IActorRef Child { get { return _child; } }
-
+        public IActorRef Child { get; }
+        
         /// <summary>
-        ///     Gets the cause.
+        /// Exception thrown during failure.
         /// </summary>
-        /// <value>The cause.</value>
-        public Exception Cause { get { return _cause; } }
-
+        public Exception Cause { get; }
+        
         /// <summary>
-        /// TBD
+        /// The unique identifier for this child <see cref="IActorRef"/>.
         /// </summary>
-        public long Uid { get { return _uid; } }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        public long Uid { get; }
+        
         public override string ToString()
         {
-            return "<Failed>: " + _child + " (" + _uid + ") " + (_cause != null ? ", Cause=" + _cause : "");
+            return "<Failed>: " + Child + " (" + Uid + ") " + (Cause != null ? ", Cause=" + Cause : "");
         }
     }
 
@@ -423,18 +391,14 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets a value indicating whether this <see cref="Supervise" /> is asynchronous.
         /// </summary>
         /// <value><c>true</c> if asynchronous; otherwise, <c>false</c>.</value>
-        public bool Async { get; private set; }
+        public bool Async { get; }
 
         /// <summary>
         ///     Gets the child.
         /// </summary>
         /// <value>The child.</value>
-        public IActorRef Child { get; private set; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        public IActorRef Child { get; }
+        
         public override string ToString()
         {
             return "<Supervise>: " + Child + ", Async=" + Async;
@@ -448,7 +412,7 @@ namespace Akka.Dispatch.SysMsg
     /// is stopped. In the case of a remote actor references, a <see cref="Terminated"/> may also be produced in
     /// the event that the association between the two remote actor systems fails.
     /// </summary>
-    public class Watch : SystemMessage
+    public sealed class Watch : SystemMessage
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Watch" /> class.
@@ -473,16 +437,16 @@ namespace Akka.Dispatch.SysMsg
         /// <value>The watcher.</value>
         public IInternalActorRef Watcher { get; }
 
-        protected bool Equals(Watch other)
+        public bool Equals(Watch other)
         {
             return Equals(Watchee, other.Watchee) && Equals(Watcher, other.Watcher);
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((Watch)obj);
         }
 
@@ -490,14 +454,10 @@ namespace Akka.Dispatch.SysMsg
         {
             unchecked
             {
-                return ((Watchee?.GetHashCode() ?? 0) * 397) ^ (Watcher?.GetHashCode() ?? 0);
+                return ((Watchee.GetHashCode()) * 397) ^ Watcher.GetHashCode();
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         public override string ToString()
         {
             return $"<Watch>: {Watcher} wants to watch {Watchee}";
@@ -537,7 +497,7 @@ namespace Akka.Dispatch.SysMsg
             return Equals(Watchee, other.Watchee) && Equals(Watcher, other.Watcher);
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
@@ -551,11 +511,7 @@ namespace Akka.Dispatch.SysMsg
                 return ((Watchee?.GetHashCode() ?? 0) * 397) ^ (Watcher?.GetHashCode() ?? 0);
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         public override string ToString()
         {
             return $"<Unwatch>: {Watcher} wants to unwatch {Watchee}";
@@ -582,9 +538,9 @@ namespace Akka.Dispatch.SysMsg
         /// <value>The task.</value>
         public Task Task { get; private set; }
     }
-
+    
     /// <summary>
-    /// TBD
+    /// Represents a <see cref="Task"/> completion that will be executed inside the actor's context.
     /// </summary>
     internal sealed class ActorTaskSchedulerMessage : SystemMessage
     {
@@ -594,9 +550,6 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorTaskSchedulerMessage" /> class.
         /// </summary>
-        /// <param name="scheduler">TBD</param>
-        /// <param name="task">TBD</param>
-        /// <param name="message">TBD</param>
         public ActorTaskSchedulerMessage(ActorTaskScheduler scheduler, Task task, object message)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
@@ -614,28 +567,16 @@ namespace Akka.Dispatch.SysMsg
             Exception = exception ?? throw new ArgumentNullException(nameof(exception));
             Message = message;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Exception Exception { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
+        public Exception? Exception { get; }
+        
         public object Message { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         public void ExecuteTask()
         {
             _scheduler.ExecuteTask(_task);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         public override string ToString()
         {
             return "<ActorTaskSchedulerMessage>";
@@ -660,12 +601,8 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the cause.
         /// </summary>
         /// <value>The cause.</value>
-        public Exception Cause { get; private set; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        public Exception Cause { get; }
+        
         public override string ToString()
         {
             return "<Recreate>" + (Cause == null ? "" : " Cause: " + Cause);
@@ -718,14 +655,10 @@ namespace Akka.Dispatch.SysMsg
     }
 
     /// <summary>
-    ///     Class Stop.
+    /// Immediately stops the actor who receives this message
     /// </summary>
     public sealed class Stop : SystemMessage
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Stop>";
@@ -733,30 +666,17 @@ namespace Akka.Dispatch.SysMsg
     }
 
     /// <summary>
-    ///     INTERNAL
+    ///     INTERNAL API
     /// </summary>
     public sealed class StopChild   //StopChild is NOT a ISystemMessage
     {
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="StopChild" /> class.
-        /// </summary>
-        /// <param name="child">The child.</param>
         public StopChild(IActorRef child)
         {
             Child = child;
         }
-
-        /// <summary>
-        ///     Gets the child.
-        /// </summary>
-        /// <value>The child.</value>
-        public IActorRef Child { get; private set; }
-
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
+        public IActorRef Child { get; }
+        
         public override string ToString()
         {
             return "<StopChild> " + Child;
@@ -764,30 +684,17 @@ namespace Akka.Dispatch.SysMsg
     }
 
     /// <summary>
-    ///     Class Escalate.
+    /// Used when the <see cref="Directive.Escalate"/> is issued by a supervisor to its own parent.
     /// </summary>
     public sealed class Escalate : SystemMessage
     {
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="Escalate" /> class.
-        /// </summary>
-        /// <param name="reason">The reason.</param>
         public Escalate(Exception reason)
         {
             Reason = reason;
         }
-
-        /// <summary>
-        ///     Gets the reason.
-        /// </summary>
-        /// <value>The reason.</value>
-        public Exception Reason { get; private set; }
-
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
+        public Exception Reason { get; }
+        
         public override string ToString()
         {
             return "<Escalate>" + (Reason == null ? "" : " Reason: " + Reason);
@@ -796,14 +703,12 @@ namespace Akka.Dispatch.SysMsg
 
 
     /// <summary>
-    ///     Class Terminate.
+    /// INTERNAL API 
+    
+    /// Used to complete an actor's termination sequence.
     /// </summary>
     public sealed class Terminate : SystemMessage, IPossiblyHarmful, IDeadLetterSuppression
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<Terminate>";
@@ -818,16 +723,13 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         /// Initializes a new instance of the <see cref="Create" /> class.
         /// </summary>
-        /// <param name="failure">TBD</param>
+        /// <param name="failure">An optional initialization failure.</param>
         public Create(ActorInitializationException failure = null)
         {
             Failure = failure;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public ActorInitializationException Failure { get; }
+        
+        public ActorInitializationException? Failure { get; }
 
         private bool Equals(Create other)
         {
@@ -845,65 +747,39 @@ namespace Akka.Dispatch.SysMsg
         {
             return Failure?.GetHashCode() ?? 0;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         public override string ToString()
         {
             return $"<Create>{(Failure == null ? "" : " Failure: " + Failure)}";
         }
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     public sealed class RegisterTerminationHook
     {
         private RegisterTerminationHook() { }
         public static RegisterTerminationHook Instance { get; } = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         public override string ToString()
         {
             return "<RegisterTerminationHook>";
         }
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     public sealed class TerminationHook
     {
         private TerminationHook() { }
         public static TerminationHook Instance { get; } = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         public override string ToString()
         {
             return "<TerminationHook>";
         }
     }
-
-    /// <summary>
-    ///     Class Terminate.
-    /// </summary>
+    
     public sealed class TerminationHookDone
     {
         private TerminationHookDone() { }
         public static TerminationHookDone Instance { get; } = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        
         public override string ToString()
         {
             return "<TerminationHookDone>";

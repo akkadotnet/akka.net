@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -22,8 +22,8 @@ namespace Akka.Remote.Serialization
     {
         private readonly WrappedPayloadSupport _wrappedPayloadSupport;
         private const BindingFlags All = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
-        private readonly HashSet<string> _defaultProperties = new()
-        {
+        private readonly HashSet<string> _defaultProperties =
+        [
             "ClassName",
             "Message",
             "StackTraceString",
@@ -39,7 +39,7 @@ namespace Akka.Remote.Serialization
             "HelpLink",
             "StackTrace",
             "WatsonBuckets"
-        };
+        ];
 
         public ExceptionSupport(ExtendedActorSystem system)
         {
@@ -69,7 +69,7 @@ namespace Akka.Remote.Serialization
 
         private readonly FormatterConverter _defaultFormatterConverter = new();
 
-        public Proto.Msg.ExceptionData ExceptionToProtoNet(Exception exception)
+        public Proto.Msg.ExceptionData ExceptionToProtoNet(Exception? exception)
         {
             var message = new Proto.Msg.ExceptionData();
 
@@ -82,14 +82,15 @@ namespace Akka.Remote.Serialization
             message.Message = exception.Message;
             message.StackTrace = exception.StackTrace ?? "";
             message.Source = exception.Source ?? "";
-            message.InnerException = ExceptionToProto(exception.InnerException);
+            if(exception.InnerException != null)
+                message.InnerException = ExceptionToProto(exception.InnerException);
             
             var forwardedFrom = exceptionType.GetCustomAttribute<TypeForwardedFromAttribute>();
             message.TypeForwardedFrom = forwardedFrom is not null 
                 ? forwardedFrom.AssemblyFullName[..forwardedFrom.AssemblyFullName.IndexOf(',')] 
                 : string.Empty;
 
-            var serializable = exception as ISerializable;
+            ISerializable serializable = exception;
             var serializationInfo = new SerializationInfo(exceptionType, _defaultFormatterConverter);
             serializable.GetObjectData(serializationInfo, new StreamingContext());
 
@@ -110,11 +111,13 @@ namespace Akka.Remote.Serialization
 
             return message;
         }
+        
+        private static readonly Exception CouldNotBeDeserialized = new("Could not deserialize exception");
 
         public Exception ExceptionFromProtoNet(Proto.Msg.ExceptionData proto)
         {
             if (string.IsNullOrEmpty(proto.TypeName))
-                return null;
+                return CouldNotBeDeserialized;
 
             var exceptionType = Type.GetType(proto.TypeName);
             
@@ -151,11 +154,11 @@ namespace Akka.Remote.Serialization
                 serializationInfo.AddValue(field.Key, payload);
             }
 
-            Exception obj = null;
-            ConstructorInfo constructorInfo = exceptionType.GetConstructor(
+            Exception? obj = null;
+            var constructorInfo = exceptionType.GetConstructor(
                 All,
                 null,
-                new[] { typeof(SerializationInfo), typeof(StreamingContext) },
+                [typeof(SerializationInfo), typeof(StreamingContext)],
                 null);
 
             if (constructorInfo != null)
@@ -164,10 +167,10 @@ namespace Akka.Remote.Serialization
                 obj = constructorInfo.Invoke(args).AsInstanceOf<Exception>();
             }
 
-            return obj;
+            return obj ?? CouldNotBeDeserialized;
         }
 
-        private static string ValueOrNull(string value)
+        private static string? ValueOrNull(string? value)
             => string.IsNullOrEmpty(value) ? null : value;
     }
 }
