@@ -859,7 +859,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     /// Singleton instance representing a register termination hook system message.
     /// </summary>
-    /// public sealed class RegisterTerminationHook
+    public sealed class RegisterTerminationHook
     {
         private RegisterTerminationHook() { }
         public static RegisterTerminationHook Instance { get; } = new();

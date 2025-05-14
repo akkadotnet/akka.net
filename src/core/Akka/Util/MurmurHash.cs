@@ -260,11 +260,11 @@ namespace Akka.Util
         /// <summary>
         /// Converts a <see cref="BitArray"/> into an array of <see cref="byte"/>
         /// </summary>
-        /// <param name="arr">TBD</param>
+        /// <param name="arr">The BitArray to convert to bytes.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if there aren't enough bits in the given <paramref name="arr"/> to make a byte.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A byte array containing the bits from the BitArray.</returns>
         public static byte[] ToBytes(this BitArray arr)
         {
             if (arr.Length != 8)

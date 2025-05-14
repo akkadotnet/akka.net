@@ -116,9 +116,9 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Checks if the internal priority queue is in a consistent state.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>True if the queue is in a consistent state, false otherwise.</returns>
         public bool IsConsistent()
         {
             // is the heap property true for all data?

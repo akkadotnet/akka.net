@@ -135,9 +135,14 @@ namespace Akka.IO
         public class NoAck : Event
         {
             /// <summary>
-            /// Creates a new NoAck instance with the specified token.
+            /// Singleton instance that represents a no-acknowledgment event.
             /// </summary>
-            /// <param name="token">A token that can be used to identify this NoAck instance.</param>
+            public static readonly NoAck Instance = new(null);
+
+            /// <summary>
+            /// Creates a new NoAck event with the specified token.
+            /// </summary>
+            /// <param name="token">The token associated with this NoAck event.</param>
             public NoAck(object token)
             {
                 Token = token;
