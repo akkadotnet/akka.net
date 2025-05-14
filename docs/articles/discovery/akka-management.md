@@ -7,6 +7,14 @@ uid: akka-management
 
 Akka.Management is a toolkit for managing and bootstrapping Akka.NET clusters in dynamic environments. It provides HTTP endpoints for cluster coordination, integrates with Akka.Discovery for service discovery, and enables safe, automated cluster formation using Cluster Bootstrap.
 
+## Video: Form Akka.NET Clusters Dynamically with Akka.Management and Akka.Discovery
+
+<!-- markdownlint-disable MD033 -->
+<iframe width="560" height="315" src="https://www.youtube.com/embed/XCcrlhVtbKI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
+
+Watch this companion video for a visual walkthrough of dynamic cluster formation using Akka.Management and Akka.Discovery.
+
 ## How Akka.Management Works
 
 Akka.Management exposes a set of HTTP endpoints that allow nodes to:

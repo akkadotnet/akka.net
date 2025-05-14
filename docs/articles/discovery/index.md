@@ -12,6 +12,16 @@ Akka.NET Discovery provides an interface around various ways of locating service
 
 ---
 
+## Video: Form Akka.NET Clusters Dynamically with Akka.Management and Akka.Discovery
+
+<!-- markdownlint-disable MD033 -->
+<iframe width="560" height="315" src="https://www.youtube.com/embed/XCcrlhVtbKI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
+
+Watch this companion video for a visual walkthrough of dynamic cluster formation using Akka.Management and Akka.Discovery.
+
+---
+
 ## Supported Akka.Discovery Plugins
 
 - [`Akka.Discovery.AwsApi`](https://github.com/akkadotnet/Akka.Management/tree/dev/src/discovery/aws/Akka.Discovery.AwsApi): AWS EC2/ECS discovery.
