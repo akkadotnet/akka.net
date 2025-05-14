@@ -23,9 +23,9 @@ namespace Akka.Pattern
         private readonly CircuitBreaker _breaker;
 
         /// <summary>
-        /// TBD
+        /// Creates a new Open state for the circuit breaker.
         /// </summary>
-        /// <param name="breaker">TBD</param>
+        /// <param name="breaker">The circuit breaker this state belongs to.</param>
         public Open(CircuitBreaker breaker)
             : base(breaker.CallTimeout, 0)
         {
@@ -145,9 +145,9 @@ namespace Akka.Pattern
         private readonly AtomicBoolean _lock;
 
         /// <summary>
-        /// TBD
+        /// Creates a new HalfOpen state for the circuit breaker.
         /// </summary>
-        /// <param name="breaker">TBD</param>
+        /// <param name="breaker">The circuit breaker this state belongs to.</param>
         public HalfOpen(CircuitBreaker breaker)
             : base(breaker.CallTimeout, 0)
         {
@@ -271,7 +271,7 @@ namespace Akka.Pattern
         /// <summary>
         /// Override for more descriptive toString
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>String representation of this state</returns>
         public override string ToString()
         {
             return $"Half-Open currently testing call for success = {_lock.Value}";
@@ -286,9 +286,9 @@ namespace Akka.Pattern
         private readonly CircuitBreaker _breaker;
 
         /// <summary>
-        /// TBD
+        /// Creates a new Closed state for the circuit breaker.
         /// </summary>
-        /// <param name="breaker">TBD</param>
+        /// <param name="breaker">The circuit breaker this state belongs to.</param>
         public Closed(CircuitBreaker breaker)
             : base(breaker.CallTimeout, 0)
         {

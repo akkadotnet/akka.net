@@ -98,37 +98,37 @@ namespace Akka.Pattern
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the scheduler used for circuit breaker timing operations.
         /// </summary>
         public IScheduler Scheduler { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the maximum number of failures allowed before the circuit breaker opens.
         /// </summary>
         public int MaxFailures { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the timeout after which a call is considered a failure.
         /// </summary>
         public TimeSpan CallTimeout { get; }
         
         /// <summary>
-        /// TBD
+        /// Gets the timeout after which to attempt to close the circuit if it is open.
         /// </summary>
         public TimeSpan ResetTimeout { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the maximum reset timeout for exponential backoff.
         /// </summary>
         public TimeSpan MaxResetTimeout { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the factor by which the reset timeout increases when using exponential backoff.
         /// </summary>
         public double ExponentialBackoffFactor { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the random factor used to add jitter to the reset timeout.
         /// </summary>
         public double RandomFactor { get; }
 
@@ -146,7 +146,7 @@ namespace Akka.Pattern
         /// <param name="maxFailures">Maximum number of failures before opening the circuit</param>
         /// <param name="callTimeout"><see cref="TimeSpan"/> of time after which to consider a call a failure</param>
         /// <param name="resetTimeout"><see cref="TimeSpan"/> of time after which to attempt to close the circuit</param>
-        /// <returns>TBD</returns>
+        /// <returns>A new CircuitBreaker instance</returns>
         public static CircuitBreaker Create(IScheduler scheduler, int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout)
         {
             return new CircuitBreaker(scheduler, maxFailures, callTimeout, resetTimeout);
@@ -172,9 +172,9 @@ namespace Akka.Pattern
         /// <param name="maxFailures">Maximum number of failures before opening the circuit</param>
         /// <param name="callTimeout"><see cref="TimeSpan"/> of time after which to consider a call a failure</param>
         /// <param name="resetTimeout"><see cref="TimeSpan"/> of time after which to attempt to close the circuit</param>
-        /// <param name="maxResetTimeout"></param>
-        /// <param name="exponentialBackoffFactor"></param>
-        /// <returns>TBD</returns>
+        /// <param name="maxResetTimeout">The maximum reset timeout when using exponential backoff</param>
+        /// <param name="exponentialBackoffFactor">The factor by which the reset timeout increases when using exponential backoff</param>
+        /// <returns>A new CircuitBreaker instance</returns>
         public CircuitBreaker(IScheduler scheduler, int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout, TimeSpan maxResetTimeout, double exponentialBackoffFactor)
             : this(scheduler, maxFailures, callTimeout, resetTimeout, maxResetTimeout, exponentialBackoffFactor, 0.0)
         {
