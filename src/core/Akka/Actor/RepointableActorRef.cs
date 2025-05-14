@@ -182,36 +182,11 @@ namespace Akka.Actor
         public override ActorPath Path { get { return _path; } }
 
         /// <summary>
-        /// TBD
+        /// Stops the actor by sending a <see cref="Terminate"/> system message.
         /// </summary>
-        public override IInternalActorRef Parent { get { return Underlying.Parent; } }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override IActorRefProvider Provider { get { return System.Provider; } }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override bool IsLocal { get { return Underlying.IsLocal; } }
-
-
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override void Start()
+        public override void Stop()
         {
-            //Intentionally left blank
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override void Suspend()
-        {
-            Underlying.Suspend();
+            Underlying.Stop();
         }
 
         /// <summary>
@@ -232,13 +207,12 @@ namespace Akka.Actor
             Underlying.Resume(causedByFailure);
         }
 
-
         /// <summary>
         /// TBD
         /// </summary>
-        public override void Stop()
+        public override void Suspend()
         {
-            Underlying.Stop();
+            Underlying.Suspend();
         }
 
         /// <summary>
@@ -465,51 +439,50 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the parent actor reference.
         /// </summary>
         public IInternalActorRef Parent { get { return _supervisor; } }
 
         /// <summary>
-        /// TBD
+        /// Returns an empty enumeration of children for this actor reference.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An empty enumeration of <see cref="IInternalActorRef"/>.</returns>
         public IEnumerable<IInternalActorRef> GetChildren()
         {
             return Enumerable.Empty<IInternalActorRef>();
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the children container, which is always empty for this reference.
         /// </summary>
         public IChildrenContainer ChildrenContainer => EmptyChildrenContainer.Instance;
 
-
         /// <summary>
-        /// TBD
+        /// Returns <see cref="Nobody.Instance"/> for any child name.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name.</param>
+        /// <returns>Always <see cref="Nobody.Instance"/>.</returns>
         public IInternalActorRef GetSingleChild(string name)
         {
             return Nobody.Instance;
         }
 
         /// <summary>
-        /// TBD
+        /// Returns <see cref="Nobody.Instance"/> for any child name.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name.</param>
+        /// <returns>Always <see cref="Nobody.Instance"/>.</returns>
         public IInternalActorRef GetChildByName(string name)
         {
             return Nobody.Instance;
         }
 
         /// <summary>
-        /// TBD
+        /// Always returns false and sets <paramref name="child"/> to null.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name.</param>
+        /// <param name="child">The output child stats (always null).</param>
+        /// <returns>Always false.</returns>
         public bool TryGetChildStatsByName(string name, out IChildStats child)
         {
             child = null;
@@ -517,10 +490,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a message to this actor reference, dispatching system messages appropriately.
         /// </summary>
-        /// <param name="sender">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="sender">The sender actor reference.</param>
+        /// <param name="message">The message to send.</param>
         public void SendMessage(IActorRef sender, object message)
         {
             if (message is ISystemMessage systemMessage)
@@ -580,7 +553,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets a value indicating whether this actor reference is local.
         /// </summary>
         public bool IsLocal { get { return true; } }
 
@@ -590,7 +563,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets a value indicating whether this actor reference is terminated.
         /// </summary>
         public bool IsTerminated
         {
@@ -605,7 +578,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets a value indicating whether this actor reference has messages in its queue.
         /// </summary>
         public bool HasMessages
         {
@@ -622,7 +595,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the number of messages in the queue for this actor reference.
         /// </summary>
         public int NumberOfMessages
         {
@@ -639,11 +612,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the actor reference itself.
         /// </summary>
         public IActorRef Self { get { return _self; } }
         /// <summary>
-        /// TBD
+        /// Gets the <see cref="Props"/> used to create this actor reference.
         /// </summary>
         public Props Props { get { return _props; } }
     }
