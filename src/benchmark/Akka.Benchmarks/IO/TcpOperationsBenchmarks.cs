@@ -276,6 +276,10 @@ namespace Akka.Benchmarks
 
             public Client(EndPoint endpoint, int messagesToSend, byte[] message)
             {
+                var write =
+                    // create the write only once
+                    Tcp.Write.Create(ByteString.FromBytes(message));
+                
                 DoConnect(endpoint);
                 Receive<Tcp.Connected>(_ =>
                 {
@@ -309,7 +313,7 @@ namespace Akka.Benchmarks
                     }
                     Timers.StartSingleTimer("RetryConnect", RetryConnect.Instance, TimeSpan.FromMilliseconds(20));
                 });
-                Receive<Tcp.Received>(_ =>
+                Receive<Tcp.Received>(r =>
                 {
                     _receivedCount++;
                     if (_receivedCount >= messagesToSend)
@@ -318,7 +322,7 @@ namespace Akka.Benchmarks
                     }
                     else
                     {
-                        _connection.Tell(Tcp.Write.Create(ByteString.FromBytes(message)));
+                        _connection.Tell(write);
                     }
                 });
                 Receive<Tcp.Closed>(_ => { Context.Parent.Tell(new ChildCommunicationFinished()); });

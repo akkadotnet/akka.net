@@ -41,17 +41,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// <summary>
     /// Base class for both topics and groups.
     /// </summary>
-    internal abstract class TopicLike : ActorBase
+    internal abstract class TopicLike : ActorBase, IWithTimers
     {
+        private const string PruneTimerKey = "PruneTimer";
+        
         /// <summary>
         /// TBD
         /// </summary>
         protected readonly TimeSpan PruneInterval;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected readonly ICancelable PruneCancelable;
 
         /// <summary>
         /// TBD
@@ -85,16 +82,21 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             EmptyTimeToLive = emptyTimeToLive;
             SendToDeadLettersWhenNoSubscribers = sendToDeadLettersWhenNone;
             PruneInterval = new TimeSpan(emptyTimeToLive.Ticks / 2);
-            PruneCancelable =
-                Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(PruneInterval, PruneInterval, Self,
-                    Prune.Instance, Self);
+        }
+
+        public ITimerScheduler Timers { get; set; }
+
+        protected override void PreStart()
+        {
+            base.PreStart();
+            Timers.StartPeriodicTimer(PruneTimerKey, Prune.Instance, PruneInterval, PruneInterval, Self);
         }
 
         /// <inheritdoc cref="ActorBase.PostStop"/>
         protected override void PostStop()
         {
             base.PostStop();
-            PruneCancelable.Cancel();
+            Timers.CancelAll();
         }
 
         /// <summary>
@@ -102,7 +104,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// </summary>
         /// <param name="message">The message we're going to process.</param>
         /// <returns>true if we handled it, false otherwise.</returns>
-        protected bool DefaultReceive(object message)
+        private bool DefaultReceive(object message)
         {
             switch (message)
             {
@@ -123,8 +125,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     Remove(terminated.ActorRef);
                     return true;
 
-                case Prune _:
-                    if (PruneDeadline != null && PruneDeadline.IsOverdue)
+                case Prune:
+                    if (PruneDeadline is { IsOverdue: true })
                     {
                         PruneDeadline = null;
                         Context.Parent.Tell(NoMoreSubscribers.Instance);
@@ -132,7 +134,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 
                     return true;
 
-                case TerminateRequest _:
+                case TerminateRequest:
                     if (Subscribers.Count == 0 && !Context.GetChildren().Any())
                     {
                         Context.Stop(Self);
@@ -144,7 +146,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 
                     return true;
 
-                case Count _:
+                case Count:
                     Sender.Tell(Subscribers.Count);
                     return true;
 
@@ -210,7 +212,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         {
             switch (message)
             {
-                case Subscribe subscribe when subscribe.Group != null:
+                case Subscribe { Group: not null } subscribe:
                     var encodedGroup = Utils.EncodeName(subscribe.Group);
                     _buffer.BufferOr(Utils.MakeKey(Self.Path / encodedGroup), subscribe, Sender, () =>
                     {
@@ -227,7 +229,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     PruneDeadline = null;
                     return true;
 
-                case Unsubscribe unsubscribe when unsubscribe.Group != null:
+                case Subscribed:
+                    Context.Parent.Forward(message);
+                    return true;
+
+                case Unsubscribe { Group: not null } unsubscribe:
                     encodedGroup = Utils.EncodeName(unsubscribe.Group);
                     _buffer.BufferOr(Utils.MakeKey(Self.Path / encodedGroup), unsubscribe, Sender, () =>
                     {
@@ -243,21 +249,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     });
                     return true;
 
-                case Subscribed _:
+                case Unsubscribed:
                     Context.Parent.Forward(message);
                     return true;
 
-                case Unsubscribed _:
-                    Context.Parent.Forward(message);
-                    return true;
-
-                case NoMoreSubscribers _:
+                case Cluster:
                     var key = Utils.MakeKey(Sender);
                     _buffer.InitializeGrouping(key);
                     Sender.Tell(TerminateRequest.Instance);
                     return true;
 
-                case NewSubscriberArrived _:
+                case NewSubscriberArrived:
                     key = Utils.MakeKey(Sender);
                     _buffer.ForwardMessages(key, Sender);
                     return true;
@@ -327,7 +329,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// </summary>
     internal static class Utils
     {
-        private static System.Text.RegularExpressions.Regex _pathRegex = new("^/remote/.+(/user/.+)");
+        private static readonly System.Text.RegularExpressions.Regex PathRegex = new("^/remote/.+(/user/.+)");
 
         /// <summary>
         /// <para>
@@ -375,7 +377,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <returns>TBD</returns>
         public static string MakeKey(ActorPath path)
         {
-            return _pathRegex.Replace(path.ToStringWithoutAddress(), "$1");
+            return PathRegex.Replace(path.ToStringWithoutAddress(), "$1");
         }
     }
 }
