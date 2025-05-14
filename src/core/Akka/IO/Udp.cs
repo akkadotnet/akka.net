@@ -141,16 +141,16 @@ namespace Akka.IO
             public static readonly NoAck Instance = new(null);
 
             /// <summary>
-            /// TBD
+            /// Creates a new NoAck instance with the specified token.
             /// </summary>
-            /// <param name="token">TBD</param>
+            /// <param name="token">A token that can be used to identify this NoAck instance.</param>
             public NoAck(object token)
             {
                 Token = token;
             }
 
             /// <summary>
-            /// TBD
+            /// Gets the token associated with this NoAck instance.
             /// </summary>
             public object Token { get; }
 
@@ -236,11 +236,11 @@ namespace Akka.IO
         public sealed class Bind : Command
         {
             /// <summary>
-            /// TBD
+            /// Creates a new Bind command to bind to a specified local address.
             /// </summary>
-            /// <param name="handler">TBD</param>
-            /// <param name="localAddress">TBD</param>
-            /// <param name="options">TBD</param>
+            /// <param name="handler">The actor that will handle incoming UDP messages.</param>
+            /// <param name="localAddress">The local address to bind the socket to.</param>
+            /// <param name="options">Socket options to apply to the UDP socket (optional).</param>
             public Bind(IActorRef handler, EndPoint localAddress, IEnumerable<Inet.SocketOption> options = null)
             {
                 Handler = handler;

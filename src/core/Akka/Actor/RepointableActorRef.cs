@@ -81,7 +81,7 @@ namespace Akka.Actor
         public ICell Lookup { get { return _lookup_DoNotCallMeDirectly; } }
 
         /// <summary>
-        /// TBD
+        /// Indicates whether this actor reference is terminated.
         /// </summary>
         public override bool IsTerminated
         {
@@ -90,9 +90,9 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// TBD
+        /// Swaps the underlying cell of this actor reference with the provided cell.
         /// </summary>
-        /// <param name="cell">TBD</param>
+        /// <param name="cell">The new cell to use.</param>
         public void SwapUnderlying(ICell cell)
         {
 #pragma warning disable 0420
@@ -114,9 +114,9 @@ namespace Akka.Actor
         /// supervisor that we exist so that he can create the real Cell in
         /// handleSupervise().
         /// </summary>
-        /// <param name="async">TBD</param>
+        /// <param name="async">Whether to initialize asynchronously or synchronously.</param>
         /// <exception cref="IllegalStateException">This exception is thrown if this function is called more than once.</exception>
-        /// <returns>TBD</returns>
+        /// <returns>This actor reference for fluent chaining.</returns>
         public RepointableActorRef Initialize(bool async)
         {
             var underlying = Underlying;
@@ -178,7 +178,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the path of this actor reference.
         /// </summary>
         public override ActorPath Path { get { return _path; } }
 
@@ -191,25 +191,25 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a system message to the underlying actor cell.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The system message to send.</param>
         public override void SendSystemMessage(ISystemMessage message)
         {
             Underlying.SendSystemMessage(message);
         }
 
         /// <summary>
-        /// TBD
+        /// Resumes the actor after being suspended.
         /// </summary>
-        /// <param name="causedByFailure">TBD</param>
+        /// <param name="causedByFailure">The exception that caused the actor to be suspended, if any.</param>
         public override void Resume(Exception causedByFailure = null)
         {
             Underlying.Resume(causedByFailure);
         }
 
         /// <summary>
-        /// TBD
+        /// Suspends the actor temporarily by sending a Suspend system message.
         /// </summary>
         public override void Suspend()
         {
@@ -217,16 +217,16 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Restarts the actor by sending a Recreate system message with the specified cause.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The exception that caused the restart.</param>
         public override void Restart(Exception cause)
         {
             Underlying.Restart(cause);
         }
 
         /// <summary>
-        /// TBD
+        /// Indicates whether this actor has been started and is no longer an UnstartedCell.
         /// </summary>
         /// <exception cref="IllegalStateException">This exception is thrown if this property is called before actor is initialized (<see cref="Initialize(bool)"/>).</exception>
         public bool IsStarted
@@ -240,10 +240,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a message to the underlying actor.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The message to send.</param>
+        /// <param name="sender">The sender of the message.</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
             Underlying.SendMessage(sender, message);
@@ -537,9 +537,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a system message to the underlying cell or queues it if the cell is not ready.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The system message to send.</param>
         public void SendSystemMessage(ISystemMessage message)
         {
             lock (_lock)

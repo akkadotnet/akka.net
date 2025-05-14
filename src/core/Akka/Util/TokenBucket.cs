@@ -25,8 +25,8 @@ namespace Akka.Util
         /// <summary>
         /// Initializes a new instance of the <see cref="TokenBucket"/> class.
         /// </summary>
-        /// <param name="capacity">TBD</param>
-        /// <param name="ticksBetweenTokens">TBD</param>
+        /// <param name="capacity">Maximum number of tokens the bucket can hold.</param>
+        /// <param name="ticksBetweenTokens">Number of time ticks between token generation.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the specified <paramref name="capacity"/> is less than zero
         /// or the specified <paramref name="ticksBetweenTokens"/> is less than or equal to zero.
@@ -71,7 +71,7 @@ namespace Akka.Util
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="cost"/> is less than zero.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The number of ticks the element needs to be delayed, or 0 if it can be processed immediately.</returns>
         public long Offer(long cost)
         {
             if(cost < 0)
@@ -124,17 +124,17 @@ namespace Akka.Util
     public sealed class TickTimeTokenBucket : TokenBucket
     {
         /// <summary>
-        /// TBD
+        /// Creates a new token bucket that uses system ticks as time source.
         /// </summary>
-        /// <param name="capacity">TBD</param>
-        /// <param name="period">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="capacity">Maximum number of tokens the bucket can hold.</param>
+        /// <param name="period">Number of ticks between token generation.</param>
+        /// <returns>A new instance of TickTimeTokenBucket.</returns>
         public TickTimeTokenBucket(long capacity, long period) : base(capacity, period)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the current system time in ticks.
         /// </summary>
         public override long CurrentTime => DateTime.Now.Ticks;
     }
