@@ -24,17 +24,17 @@ Watch this companion video for a visual walkthrough of dynamic cluster formation
 
 ## Supported Akka.Discovery Plugins
 
-- [`Akka.Discovery.AwsApi`](https://github.com/akkadotnet/Akka.Management/tree/dev/src/discovery/aws/Akka.Discovery.AwsApi): AWS EC2/ECS discovery.
-- [`Akka.Discovery.KubernetesApi`](https://github.com/akkadotnet/Akka.Management/tree/dev/src/discovery/kubernetes/Akka.Discovery.KubernetesApi): Kubernetes API discovery.
-- [`Akka.Discovery.Azure`](https://github.com/akkadotnet/Akka.Management/tree/dev/src/discovery/azure/Akka.Discovery.Azure): Azure Table Storage discovery.
-- `Akka.Discovery.Configuration`: Built-in, static config-based discovery.
+* [`Akka.Discovery.AwsApi`](https://github.com/akkadotnet/Akka.Management/tree/dev/src/discovery/aws/Akka.Discovery.AwsApi): AWS EC2/ECS discovery.
+* [`Akka.Discovery.KubernetesApi`](https://github.com/akkadotnet/Akka.Management/tree/dev/src/discovery/kubernetes/Akka.Discovery.KubernetesApi): Kubernetes API discovery.
+* [`Akka.Discovery.Azure`](https://github.com/akkadotnet/Akka.Management/tree/dev/src/discovery/azure/Akka.Discovery.Azure): Azure Table Storage discovery.
+* `Akka.Discovery.Configuration`: Built-in, static config-based discovery.
 
 ---
 
 ## How Akka.Management and Akka.Discovery Work Together
 
-Akka.Management exposes HTTP endpoints for cluster coordination. <br>
-Akka.Discovery queries your environment (cloud, Kubernetes, Azure, etc.) for available nodes. <br>
+Akka.Management exposes HTTP endpoints for cluster coordination.
+Akka.Discovery queries your environment (cloud, Kubernetes, Azure, etc.) for available nodes.
 Cluster.Bootstrap uses these to dynamically populate the seed nodes list and safely form or join a cluster.
 
 ---
@@ -85,10 +85,11 @@ var builder = Host.CreateDefaultBuilder()
 ```
 
 **Notes:**
-- The `SeedNodes` array must be empty for Cluster Bootstrap to take over.
-- `requiredContactPoints` should be set to a safe value (typically 2 or 3 for production).
-- The `serviceName` must match between Azure Discovery and Cluster Bootstrap.
-- Adjust remoting and management ports as needed for your environment.
+
+* The `SeedNodes` array must be empty for Cluster Bootstrap to take over.
+* `requiredContactPoints` should be set to a safe value (typically 2 or 3 for production).
+* The `serviceName` must match between Azure Discovery and Cluster Bootstrap.
+* Adjust remoting and management ports as needed for your environment.
 
 ---
 
@@ -132,11 +133,9 @@ Where the above block defines two services, `service1` and `service2`. Each serv
 
 ## Discovery Method: Aggregate Multiple Discovery Methods
 
-Aggregate discovery allows multiple discovery methods to be aggregated, e.g., try and resolve
-via one method and fall back to configuration.
+Aggregate discovery allows multiple discovery methods to be aggregated, e.g., try and resolve via one method and fall back to configuration.
 
-To use aggregate discovery, add its dependency as well as all of the discovery methods that you
-want to aggregate.
+To use aggregate discovery, add its dependency as well as all of the discovery methods that you want to aggregate.
 
 Configure `aggregate` as `akka.discovery.method` and which discovery methods are tried and in which order.
 
@@ -168,7 +167,7 @@ The above configuration will result in Azure being checked first, and if it fail
 
 ---
 
-## Migration from Seed Nodes
+## Migration From Seed Nodes
 
 Dynamic discovery is superior to static seed nodes because it allows clusters to form and recover in dynamic environments (cloud, PaaS, Kubernetes) where static addresses are not available or reliable. Static seed nodes can lead to split-brain scenarios and are not suitable for modern deployments.
 
@@ -176,18 +175,18 @@ Dynamic discovery is superior to static seed nodes because it allows clusters to
 
 ## Caveats and Best Practices
 
-- `requiredContactPoints` must be set to a safe value (never 1).
-- All nodes must have the same discovery method and service name.
-- If using Akka.Management, always clear out static `SeedNodes`.
-- Use `contactWithAllContactPoints` for higher consistency if needed.
+* `requiredContactPoints` must be set to a safe value (never 1).
+* All nodes must have the same discovery method and service name.
+* If using Akka.Management, always clear out static `SeedNodes`.
+* Use `contactWithAllContactPoints` for higher consistency if needed.
 
 ---
 
 ## Further Reading
 
-- [DrawTogether.NET](https://github.com/petabridge/DrawTogether.NET) for a production example.
-- [Form Akka.NET Clusters Dynamically with Akka.Management and Akka.Discovery (blog post)](https://petabridge.com/blog/akka-management/)
-- [Companion video](https://www.youtube.com/watch?v=XCcrlhVtbKI)
+* [DrawTogether.NET](https://github.com/petabridge/DrawTogether.NET) for a production example.
+* [Form Akka.NET Clusters Dynamically with Akka.Management and Akka.Discovery (blog post)](https://petabridge.com/blog/akka-management/)
+* [Companion video](https://www.youtube.com/watch?v=XCcrlhVtbKI)
 
 ---
 
@@ -205,8 +204,7 @@ var system = ActorSystem.Create("example");
 var serviceDiscovery = Discovery.Get(system).Default;
 ```
 
-A `Lookup` contains a mandatory `serviceName` and an optional `portName` and `protocol`. How these are interpreted is discovery
-method dependent.
+A `Lookup` contains a mandatory `serviceName` and an optional `portName` and `protocol`. How these are interpreted is discovery method dependent.
 
 ```csharp
 serviceDiscovery.Lookup(new Lookup("akka.io"), TimeSpan.FromSeconds(1));

@@ -15,12 +15,15 @@ Akka.Management is a toolkit for managing and bootstrapping Akka.NET clusters in
 
 Watch this companion video for a visual walkthrough of dynamic cluster formation using Akka.Management and Akka.Discovery.
 
+---
+
 ## How Akka.Management Works
 
 Akka.Management exposes a set of HTTP endpoints that allow nodes to:
-- Advertise their presence
-- Query the status of other nodes
-- Coordinate cluster formation and joining
+
+* Advertise their presence
+* Query the status of other nodes
+* Coordinate cluster formation and joining
 
 It works in tandem with Akka.Discovery plugins (such as Azure, AWS, Kubernetes, or config-based) to dynamically discover available nodes in the environment. Cluster Bootstrap then uses this information to safely form or join a cluster, replacing the need for static seed nodes.
 
@@ -66,10 +69,10 @@ The following images illustrate the cluster formation process with Akka.Manageme
 
 ## Practical Usage
 
-- **Always clear out static `SeedNodes`** when using Akka.Management and Cluster Bootstrap.
-- Use a supported Akka.Discovery plugin for your environment (Azure, AWS, Kubernetes, etc.).
-- Set `requiredContactPoints` to a safe value (never 1) to avoid split-brain scenarios.
-- Use Akka.Hosting for modern, type-safe configuration.
+* **Always clear out static `SeedNodes`** when using Akka.Management and Cluster Bootstrap.
+* Use a supported Akka.Discovery plugin for your environment (Azure, AWS, Kubernetes, etc.).
+* Set `requiredContactPoints` to a safe value (never 1) to avoid split-brain scenarios.
+* Use Akka.Hosting for modern, type-safe configuration.
 
 ## Example Configuration with Akka.Hosting
 
@@ -95,7 +98,7 @@ akkaBuilder.WithAzureDiscovery(options =>
 
 ## Further Reading
 
-- [Akka.Discovery Overview](index.md)
-- [Akka.Management GitHub](https://github.com/akkadotnet/Akka.Management)
-- [Form Akka.NET Clusters Dynamically with Akka.Management and Akka.Discovery (blog post)](https://petabridge.com/blog/akka-management/)
-- [DrawTogether.NET Example](https://github.com/petabridge/DrawTogether.NET) 
+* [Akka.Discovery Overview](index.md)
+* [Akka.Management GitHub](https://github.com/akkadotnet/Akka.Management)
+* [Form Akka.NET Clusters Dynamically with Akka.Management and Akka.Discovery (blog post)](https://petabridge.com/blog/akka-management/)
+* [DrawTogether.NET Example](https://github.com/petabridge/DrawTogether.NET) 
