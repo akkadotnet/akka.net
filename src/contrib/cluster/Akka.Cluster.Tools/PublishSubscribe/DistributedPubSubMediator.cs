@@ -217,7 +217,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     _log.Warning("Registered actor must be local: [{0}]", put.Ref);
                 else
                 {
-                    PutToRegistry(PubSubCache.MakeKey(put.Ref), put.Ref);
+                    PutToRegistry(Internal.Utils.MakeKey(put.Ref), put.Ref);
                     Context.Watch(put.Ref);
                 }
             });
@@ -251,13 +251,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<NoMoreSubscribers>(_ =>
             {
-                var key = PubSubCache.MakeKey(Sender);
+                var key = Internal.Utils.MakeKey(Sender);
                 _buffer.InitializeGrouping(key);
                 Sender.Tell(TerminateRequest.Instance);
             });
             Receive<NewSubscriberArrived>(_ =>
             {
-                var key = PubSubCache.MakeKey(Sender);
+                var key = Internal.Utils.MakeKey(Sender);
                 _buffer.ForwardMessages(key, Sender);
             });
             Receive<GetTopics>(_ =>
@@ -330,7 +330,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<Prune>(_ => HandlePrune());
             Receive<Terminated>(terminated =>
             {
-                var key = PubSubCache.MakeKey(terminated.ActorRef);
+                var key = Internal.Utils.MakeKey(terminated.ActorRef);
 
                 if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket))
                 {
@@ -486,7 +486,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private void HandleRegisterTopic(IActorRef actorRef)
         {
-            PutToRegistry(PubSubCache.MakeKey(actorRef), actorRef);
+            PutToRegistry(Internal.Utils.MakeKey(actorRef), actorRef);
             Context.Watch(actorRef);
         }
 

@@ -260,18 +260,18 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     return true;
 
                 case Cluster:
-                    var key = PubSubCache.MakeKey(Sender);
+                    var key = Utils.MakeKey(Sender);
                     _buffer.InitializeGrouping(key);
                     Sender.Tell(TerminateRequest.Instance);
                     return true;
 
                 case NewSubscriberArrived:
-                    key = PubSubCache.MakeKey(Sender);
+                    key = Utils.MakeKey(Sender);
                     _buffer.ForwardMessages(key, Sender);
                     return true;
 
                 case Terminated terminated:
-                    key = PubSubCache.MakeKey(terminated.ActorRef);
+                    key = Utils.MakeKey(terminated.ActorRef);
                     _buffer.RecreateAndForwardMessagesIfNeeded(key, () => NewGroupActor(terminated.ActorRef.Path.Name));
                     Remove(terminated.ActorRef);
                     _cache.TryRemoveKey(key, _topicPrefix);
@@ -331,8 +331,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Used for generating Uri-safe topic and group names.
+    /// </summary>
     internal static class Utils
     {
+        public readonly record struct MakeKeyInfo(ActorPath Path, string Topic);
+    
+        private static readonly System.Text.RegularExpressions.Regex PathRegex = new("^/remote/.+(/user/.+)");
+
         /// <summary>
         /// <para>
         /// Mediator uses <see cref="Router"/> to send messages to multiple destinations, Router in general
@@ -361,23 +370,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             var topic = key[(topicPrefix.Length + 1)..];
             return !topic.Contains('/') ? topic : null;
         }
-    }
-    
-    /// <summary>
-    /// INTERNAL API
-    ///
-    /// Used for generating Uri-safe topic and group names.
-    /// </summary>
-    internal sealed class PubSubCache
-    {
-        private readonly record struct MakeKeyInfo(ActorPath Path, string Topic);
-        
-        private static readonly System.Text.RegularExpressions.Regex PathRegex = new("^/remote/.+(/user/.+)");
 
-        private readonly Dictionary<string, string> _topicToEncodedMap = new();
-        private readonly Dictionary<string, string> _encodedToTopicMap = new();
-        private readonly Dictionary<MakeKeyInfo, string> _makeKeyMap = new();
-        private readonly Dictionary<string, MakeKeyInfo> _makeKeyReverseMap = new();
+        #region Key related methods
         
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static string MakeKey(IActorRef actorRef)
@@ -385,80 +379,94 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             return PathRegex.Replace(actorRef.Path.ToStringWithoutAddress(), "$1");
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
-        public string EncodeName(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                return null;
-            
-            if (_topicToEncodedMap.TryGetValue(name, out var encoded))
-                return encoded;
-
-            encoded = Uri.EscapeDataString(name);
-            _topicToEncodedMap[name] = encoded;
-            _encodedToTopicMap[encoded] = name;
-            return encoded;
-        }
-
-        public string MakeKey(ActorPath path, string topic)
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static string MakeKey(this PubSubCache cache, ActorPath path, string topic)
         {
             var info = new MakeKeyInfo(path, topic);
-            if(_makeKeyMap.TryGetValue(info, out var key))
+            if(cache.MakeKeyMap.TryGetValue(info, out var key))
                 return key;
             
             key = PathRegex.Replace((path / topic).ToStringWithoutAddress(), "$1");
-            _makeKeyMap[info] = key;
-            _makeKeyReverseMap[key] = info;
+            cache.MakeKeyMap[info] = key;
+            cache.MakeKeyReverseMap[key] = info;
             return key;
         }
 
-        public void TryRemoveEncodedTopic(string encodedTopic)
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void TryRemoveKey(this PubSubCache cache, string key, string topicPrefix)
         {
-            if (!_encodedToTopicMap.TryGetValue(encodedTopic, out var topic)) 
-                return;
-            
-            _topicToEncodedMap.Remove(topic);
-            _encodedToTopicMap.Remove(encodedTopic);
-        }
-
-        public void TryRemoveTopic(string topic)
-        {
-            if(!_topicToEncodedMap.TryGetValue(topic, out var encodedTopic))
-                return;
-            
-            _encodedToTopicMap.Remove(encodedTopic);
-            _topicToEncodedMap.Remove(topic);
-        }
-
-        public void TryRemoveKey(string key, string topicPrefix)
-        {
-            if (_makeKeyReverseMap.TryGetValue(key, out var keyInfo))
+            if (cache.MakeKeyReverseMap.TryGetValue(key, out var keyInfo))
             {
-                _makeKeyMap.Remove(keyInfo);
-                _makeKeyReverseMap.Remove(key);
+                cache.MakeKeyMap.Remove(keyInfo);
+                cache.MakeKeyReverseMap.Remove(key);
             }
             
             var encodedTopic = Utils.KeyToEncodedTopic(key, topicPrefix);
             if (encodedTopic == null) 
                 return;
 
-            if (!_encodedToTopicMap.TryGetValue(encodedTopic, out var topic)) 
+            if (!cache.EncodedToTopicMap.TryGetValue(encodedTopic, out var topic)) 
                 return;
             
-            _topicToEncodedMap.Remove(topic);
-            _encodedToTopicMap.Remove(encodedTopic);
+            cache.TopicToEncodedMap.Remove(topic);
+            cache.EncodedToTopicMap.Remove(encodedTopic);
         }
         
-        public void Clear()
+        #endregion
+        
+        #region Topic/group name related methods
+        
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static string EncodeName(this PubSubCache cache, string name)
         {
-            _topicToEncodedMap.Clear();
-            _encodedToTopicMap.Clear();
-            _makeKeyMap.Clear();
-            _makeKeyReverseMap.Clear();
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+            
+            if (cache.TopicToEncodedMap.TryGetValue(name, out var encoded))
+                return encoded;
+
+            encoded = Uri.EscapeDataString(name);
+            cache.TopicToEncodedMap[name] = encoded;
+            cache.EncodedToTopicMap[encoded] = name;
+            return encoded;
         }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void TryRemoveEncodedTopic(this PubSubCache cache, string encodedTopic)
+        {
+            if (!cache.EncodedToTopicMap.TryGetValue(encodedTopic, out var topic)) 
+                return;
+            
+            cache.TopicToEncodedMap.Remove(topic);
+            cache.EncodedToTopicMap.Remove(encodedTopic);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void TryRemoveTopic(this PubSubCache cache, string topic)
+        {
+            if(!cache.TopicToEncodedMap.TryGetValue(topic, out var encodedTopic))
+                return;
+            
+            cache.EncodedToTopicMap.Remove(encodedTopic);
+            cache.TopicToEncodedMap.Remove(topic);
+        }
+
+        #endregion
+
+        public static void Clear(this PubSubCache cache)
+        {
+            cache.TopicToEncodedMap.Clear();
+            cache.EncodedToTopicMap.Clear();
+            cache.MakeKeyMap.Clear();
+            cache.MakeKeyReverseMap.Clear();
+        }
+    }
+    
+    internal sealed class PubSubCache
+    {
+        public readonly Dictionary<string, string> TopicToEncodedMap = new();
+        public readonly Dictionary<string, string> EncodedToTopicMap = new();
+        public readonly Dictionary<Utils.MakeKeyInfo, string> MakeKeyMap = new();
+        public readonly Dictionary<string, Utils.MakeKeyInfo> MakeKeyReverseMap = new();
     }
 }
