@@ -557,9 +557,11 @@ namespace Akka.Tests.IO
             private readonly bool _shouldBindServer;
             private readonly TestProbe _bindHandler;
             private IPEndPoint _endpoint;
+            private readonly TcpSettings _settings;
 
-            public TestSetup(AkkaSpec spec, bool shouldBindServer = true)
+            public TestSetup(AkkaSpec spec, bool shouldBindServer = true, TcpSettings? settings = null)
             {
+                _settings = settings ?? TcpSettings.Create(spec.Sys);
                 BindOptions =  [];
                 ConnectOptions = []; 
                 _spec = spec;
@@ -570,14 +572,15 @@ namespace Akka.Tests.IO
             public async Task BindServer()
             {
                 var bindCommander = _spec.CreateTestProbe();
-                bindCommander.Send(_spec.Sys.Tcp(), new Tcp.Bind(_bindHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0), options: BindOptions));
+                bindCommander.Send(_spec.Sys.Tcp(), 
+                    new Tcp.Bind(_bindHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0), options: BindOptions){ TcpSettings = _settings});
                 await bindCommander.ExpectMsgAsync<Tcp.Bound>(bound => _endpoint = (IPEndPoint) bound.LocalAddress);
             }
 
-            public async Task<ConnectionDetail> EstablishNewClientConnectionAsync(bool registerClientHandler = true)
+            public async Task<ConnectionDetail> EstablishNewClientConnectionAsync(bool registerClientHandler = true, TcpSettings? settings = null)
             {
                 var connectCommander = _spec.CreateTestProbe("connect-commander-probe");
-                connectCommander.Send(_spec.Sys.Tcp(), new Tcp.Connect(_endpoint, options: ConnectOptions));
+                connectCommander.Send(_spec.Sys.Tcp(), new Tcp.Connect(_endpoint, options: ConnectOptions){ TcpSettings = settings ?? _settings});
                 await connectCommander.ExpectMsgAsync<Tcp.Connected>();
                 
                 var clientHandler = _spec.CreateTestProbe("client-handler-probe");
