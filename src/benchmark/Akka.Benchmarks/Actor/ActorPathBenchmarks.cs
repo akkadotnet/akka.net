@@ -28,9 +28,8 @@ namespace Akka.Benchmarks.Actor
         private ActorPath _complexPath;
 
         private const string HashCodeCategory = "ActorPathHashCodeBenchmark";
-        
-        [Params(1, 100000, int.MaxValue)]
-        public int Uid { get; set; }
+
+        public int Uid { get; set; } = 10000;
 
         [GlobalSetup]
         public void Setup()
