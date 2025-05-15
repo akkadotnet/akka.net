@@ -66,7 +66,7 @@ namespace Akka.Streams.Tests.IO
 
                 result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
-                result.Item2.Should().BeEquivalentTo(Enumerable.Concat(_byteString.Slice(2), byteString2.Slice(0, 1)));
+                result.Item2.Should().BeEquivalentTo((_byteString.Slice(2).Concat(byteString2.Slice(0, 1))));
 
                 result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
@@ -86,7 +86,7 @@ namespace Akka.Streams.Tests.IO
                 var arr = new byte[_byteString.Count + 1];
                 inputStream.Read(arr, 0, arr.Length).Should().Be(arr.Length - 1);
                 inputStream.Dispose();
-                ByteString.FromBytes(arr).Should().BeEquivalentTo(Enumerable.Concat(_byteString, ByteString.FromBytes(new byte[] { 0 })));
+                ByteString.FromBytes(arr).Should().BeEquivalentTo((_byteString.Concat(ByteString.FromBytes(new byte[] { 0 }))));
                 return Task.CompletedTask;
             }, _materializer);
         }
@@ -214,7 +214,7 @@ namespace Akka.Streams.Tests.IO
                 {
                     var r = ReadN(inputStream, 8);
                     r.Item1.Should().Be(8);
-                    r.Item2.Should().BeEquivalentTo(Enumerable.Concat(bytes[i * 2], bytes[i * 2 + 1]));
+                    r.Item2.Should().BeEquivalentTo(bytes[i * 2].Concat(bytes[i * 2 + 1]));
                 }
 
                 inputStream.Dispose();
@@ -236,7 +236,7 @@ namespace Akka.Streams.Tests.IO
 
                 var r1 = ReadN(inputStream, 15);
                 r1.Item1.Should().Be(15);
-                r1.Item2.Should().BeEquivalentTo(Enumerable.Concat(bytes1, bytes2.Slice(0, 5)));
+                r1.Item2.Should().BeEquivalentTo(bytes1.Concat(bytes2.Slice(0, 5)));
 
                 var r2 = ReadN(inputStream, 15);
                 r2.Item1.Should().Be(5);

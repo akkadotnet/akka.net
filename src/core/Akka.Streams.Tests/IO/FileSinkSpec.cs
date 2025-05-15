@@ -338,7 +338,7 @@ namespace Akka.Streams.Tests.IO
                 var completion = Source.From(_testByteStrings)
                     .Select(bytes =>
                     {
-                        if (bytes.Contains(Convert.ToByte('b'))) throw new TestException("bees!");
+                        if (bytes.ToArray().Contains(Convert.ToByte('b'))) throw new TestException("bees!");
                         return bytes;
                     })
                     .RunWith(FileIO.ToFile(f), _materializer);
