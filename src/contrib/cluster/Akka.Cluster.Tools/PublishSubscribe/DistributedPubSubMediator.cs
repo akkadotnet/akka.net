@@ -487,7 +487,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 _registry[_cluster.SelfAddress] = new Bucket(bucket.Owner, v, bucket.Content.SetItem(key, new ValueHolder(v, value)));
         }
 
-        private void IgnoreOrSendToDeadLetters(IDistributedPubSubMessage message)
+        private void IgnoreOrSendToDeadLetters(IWrappedMessage message)
         {
             if (_settings.SendToDeadLettersWhenNoSubscribers)
             {
