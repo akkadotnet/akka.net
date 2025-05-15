@@ -891,14 +891,7 @@ namespace Akka.IO
 
         internal TcpExt(ExtendedActorSystem system, TcpSettings settings)
         {
-            var bufferPoolConfig = system.Settings.Config.GetConfig(settings.BufferPoolConfigPath);
-
-            if (bufferPoolConfig.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot retrieve TCP buffer pool configuration: {settings.BufferPoolConfigPath} configuration node not found");
-
             Settings = settings;
-            FileIoDispatcher = system.Dispatchers.Lookup(Settings.FileIODispatcher);
-            BufferPool = CreateBufferPool(system, bufferPoolConfig);
             Manager = system.SystemActorOf(
                 props: Props.Create(() => new TcpManager(this)).WithDispatcher(Settings.ManagementDispatcher).WithDeploy(Deploy.Local),
                 name: "IO-TCP");
@@ -908,43 +901,11 @@ namespace Akka.IO
         /// Gets reference to a TCP manager actor.
         /// </summary>
         public override IActorRef Manager { get; }
-
-        /// <summary>
-        /// A buffer pool used by current plugin.
-        /// </summary>
-        public IBufferPool BufferPool { get; }
-
+        
         /// <summary>
         /// The settings used by this extension.
         /// </summary>
         public TcpSettings Settings { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        internal MessageDispatcher FileIoDispatcher { get; }
-
-        private IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
-        {
-            if (config.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<IBufferPool>();
-
-            var type = Type.GetType(config.GetString("class", null), true);
-
-            if (!typeof(IBufferPool).IsAssignableFrom(type))
-                throw new ArgumentException($"Buffer pool of type {type} doesn't implement {nameof(IBufferPool)} interface");
-
-            try
-            {
-                // try to construct via `BufferPool(ExtendedActorSystem, Config)` ctor
-                return (IBufferPool)Activator.CreateInstance(type, system, config);
-            }
-            catch
-            {
-                // try to construct via `BufferPool(ExtendedActorSystem)` ctor
-                return (IBufferPool)Activator.CreateInstance(type, system);
-            }
-        }
     }
 
     /// <summary>
