@@ -112,9 +112,6 @@ namespace Akka.IO
         private static readonly IOException DroppingWriteBecauseQueueIsFullException =
             new("Dropping write because queue is full");
         
-        private static readonly IOException DroppingWriteBecauseExceededMaxFrameSizeException =
-            new("Dropping write because it exceeds the max frame size");
-
         protected TcpConnection(TcpSettings settings, Socket socket)
         {
             Settings = settings;
@@ -235,7 +232,7 @@ namespace Akka.IO
                 switch (cmd)
                 {
                     case Write w when !w.Data.IsEmpty:
-                        int wouldBe = accumulated + w.Data.Count;
+                        var wouldBe = accumulated + w.Data.Count;
                         if (wouldBe > maxBytes && batch.Count > 0) goto done;
                         _pendingWrites.Dequeue();
                         batch.Add(w.Data);
@@ -389,12 +386,6 @@ namespace Akka.IO
                         Context.Stop(Self);
                         return true;
                     case WriteCommand write:
-                        if (write.Bytes > Settings.MaxFrameSizeBytes)
-                        {
-                            DropWrite(write, DropReason.ExceededMaxFrameSize);
-                            return true;
-                        }
-                        
                         // Have to buffer writes until registration
                         var buffered = TryBuffer(write, Sender);
                         if (!buffered)
@@ -442,12 +433,6 @@ namespace Akka.IO
                         HandleRead(info.Handler, r);
                         return true;
                     case WriteCommand write:
-                        if (write.Bytes > Settings.MaxFrameSizeBytes)
-                        {
-                            DropWrite(write, DropReason.ExceededMaxFrameSize);
-                            return true;
-                        }
-                        
                         var buffered = TryBuffer(write, Sender);
                         if (!buffered)
                         {
@@ -540,7 +525,6 @@ namespace Akka.IO
             QueueFull = 1,
             Closing = 2,
             WritingSuspended = 3,
-            ExceededMaxFrameSize = 4
         }
         
         private static string GetDropReasonMessage(DropReason reason)
@@ -550,7 +534,6 @@ namespace Akka.IO
                 DropReason.QueueFull => "queue is full",
                 DropReason.Closing => "connection is closing",
                 DropReason.WritingSuspended => "writing is suspended",
-                DropReason.ExceededMaxFrameSize => "exceeded max frame size",
                 _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null)
             };
         }
@@ -562,7 +545,6 @@ namespace Akka.IO
                 DropReason.QueueFull => DroppingWriteBecauseQueueIsFullException,
                 DropReason.Closing => DroppingWriteBecauseClosingException,
                 DropReason.WritingSuspended => DroppingWriteBecauseWritingIsSuspendedException,
-                DropReason.ExceededMaxFrameSize => DroppingWriteBecauseExceededMaxFrameSizeException,
                 _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null)
             };
         }
