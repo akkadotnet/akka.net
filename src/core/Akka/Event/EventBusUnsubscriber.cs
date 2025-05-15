@@ -30,11 +30,11 @@ namespace Akka.Event
         private readonly ActorSystem _system;
 
         /// <summary>
-        /// TBD
+        /// Creates a new EventStreamUnsubscriber that watches actors subscribed to the event stream.
         /// </summary>
-        /// <param name="eventStream">TBD</param>
-        /// <param name="system">TBD</param>
-        /// <param name="debug">TBD</param>
+        /// <param name="eventStream">The event stream to monitor for subscriptions.</param>
+        /// <param name="system">The actor system this unsubscriber is associated with.</param>
+        /// <param name="debug">Whether to log debug messages for subscription events.</param>
         public EventStreamUnsubscriber(EventStream eventStream, ActorSystem system, bool debug)
         {
             _eventStream = eventStream;

@@ -13,15 +13,15 @@ using System.Linq;
 namespace Akka.Util
 {
     /// <summary>
-    /// TBD
+    /// A thread-safe set implementation using a <see cref="ConcurrentDictionary{TKey, TValue}"/>.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements in the set.</typeparam>
     public class ConcurrentSet<T> : ICollection<T>, IEnumerable<T>, IEnumerable
     {
         private readonly ConcurrentDictionary<T, byte> _storage;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new, empty instance of the <see cref="ConcurrentSet{T}"/> class.
         /// </summary>
         public ConcurrentSet()
         {
@@ -29,28 +29,28 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ConcurrentSet{T}"/> class that contains elements copied from the specified collection.
         /// </summary>
-        /// <param name="collection">TBD</param>
+        /// <param name="collection">The collection whose elements are copied to the new set.</param>
         public ConcurrentSet(IEnumerable<T> collection)
         {
             _storage = new ConcurrentDictionary<T, byte>(collection.Select(_ => new KeyValuePair<T, byte>(_, 0)));
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new, empty instance of the <see cref="ConcurrentSet{T}"/> class that uses the specified equality comparer.
         /// </summary>
-        /// <param name="comparer">TBD</param>
+        /// <param name="comparer">The equality comparer to use for the set.</param>
         public ConcurrentSet(IEqualityComparer<T> comparer)
         {
             _storage = new ConcurrentDictionary<T, byte>(comparer);
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ConcurrentSet{T}"/> class that contains elements copied from the specified collection and uses the specified equality comparer.
         /// </summary>
-        /// <param name="collection">TBD</param>
-        /// <param name="comparer">TBD</param>
+        /// <param name="collection">The collection whose elements are copied to the new set.</param>
+        /// <param name="comparer">The equality comparer to use for the set.</param>
         public ConcurrentSet(IEnumerable<T> collection, IEqualityComparer<T> comparer)
         {
             _storage = new ConcurrentDictionary<T, byte>(collection.Select(_ => new KeyValuePair<T, byte>(_, 0)),
@@ -58,21 +58,21 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new, empty instance of the <see cref="ConcurrentSet{T}"/> class with the specified concurrency level and capacity.
         /// </summary>
-        /// <param name="concurrencyLevel">TBD</param>
-        /// <param name="capacity">TBD</param>
+        /// <param name="concurrencyLevel">The estimated number of threads that will update the set concurrently.</param>
+        /// <param name="capacity">The initial number of elements that the set can contain.</param>
         public ConcurrentSet(int concurrencyLevel, int capacity)
         {
             _storage = new ConcurrentDictionary<T, byte>(concurrencyLevel, capacity);
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ConcurrentSet{T}"/> class that contains elements copied from the specified collection, has the specified concurrency level, and uses the specified equality comparer.
         /// </summary>
-        /// <param name="concurrencyLevel">TBD</param>
-        /// <param name="collection">TBD</param>
-        /// <param name="comparer">TBD</param>
+        /// <param name="concurrencyLevel">The estimated number of threads that will update the set concurrently.</param>
+        /// <param name="collection">The collection whose elements are copied to the new set.</param>
+        /// <param name="comparer">The equality comparer to use for the set.</param>
         public ConcurrentSet(int concurrencyLevel, IEnumerable<T> collection, IEqualityComparer<T> comparer)
         {
             _storage = new ConcurrentDictionary<T, byte>(concurrencyLevel,
@@ -80,18 +80,18 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new, empty instance of the <see cref="ConcurrentSet{T}"/> class with the specified concurrency level, capacity, and equality comparer.
         /// </summary>
-        /// <param name="concurrencyLevel">TBD</param>
-        /// <param name="capacity">TBD</param>
-        /// <param name="comparer">TBD</param>
+        /// <param name="concurrencyLevel">The estimated number of threads that will update the set concurrently.</param>
+        /// <param name="capacity">The initial number of elements that the set can contain.</param>
+        /// <param name="comparer">The equality comparer to use for the set.</param>
         public ConcurrentSet(int concurrencyLevel, int capacity, IEqualityComparer<T> comparer)
         {
             _storage = new ConcurrentDictionary<T, byte>(concurrencyLevel, capacity, comparer);
         }
 
         /// <summary>
-        /// TBD
+        /// Gets a value indicating whether the set is empty.
         /// </summary>
         public bool IsEmpty
         {
@@ -99,7 +99,7 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the number of elements contained in the set.
         /// </summary>
         public int Count
         {
@@ -107,7 +107,7 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Removes all elements from the set.
         /// </summary>
         public void Clear()
         {
@@ -115,10 +115,10 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the set contains a specific value.
         /// </summary>
-        /// <param name="item">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="item">The object to locate in the set.</param>
+        /// <returns>true if the set contains the specified value; otherwise, false.</returns>
         public bool Contains(T item)
         {
             return _storage.ContainsKey(item);
@@ -156,20 +156,20 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to add the specified element to the set.
         /// </summary>
-        /// <param name="item">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="item">The element to add to the set.</param>
+        /// <returns>true if the element is added to the set; false if the element is already present.</returns>
         public bool TryAdd(T item)
         {
             return _storage.TryAdd(item, 0);
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to remove and return the specified element from the set.
         /// </summary>
-        /// <param name="item">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="item">The element to remove.</param>
+        /// <returns>true if the element is successfully removed; otherwise, false.</returns>
         public bool TryRemove(T item)
         {
             byte dontCare;
