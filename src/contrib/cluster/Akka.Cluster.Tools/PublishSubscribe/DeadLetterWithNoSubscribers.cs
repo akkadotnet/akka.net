@@ -30,7 +30,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Topic = topic;
         }
 
-        public string Topic { get; }
+        public string? Topic { get; }
 
         /// <summary>
         /// Returns a string that represents the current object.
