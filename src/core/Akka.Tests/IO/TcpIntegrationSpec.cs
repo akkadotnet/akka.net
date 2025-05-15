@@ -560,8 +560,8 @@ namespace Akka.Tests.IO
 
             public TestSetup(AkkaSpec spec, bool shouldBindServer = true)
             {
-                BindOptions =  Enumerable.Empty<Inet.SocketOption>();
-                ConnectOptions = Enumerable.Empty<Inet.SocketOption>(); 
+                BindOptions =  [];
+                ConnectOptions = []; 
                 _spec = spec;
                 _shouldBindServer = shouldBindServer;
                 _bindHandler = _spec.CreateTestProbe("bind-handler-probe");

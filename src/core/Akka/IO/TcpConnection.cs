@@ -111,6 +111,9 @@ namespace Akka.IO
 
         private static readonly IOException DroppingWriteBecauseQueueIsFullException =
             new("Dropping write because queue is full");
+        
+        private static readonly IOException DroppingWriteBecauseExceededMaxFrameSizeException =
+            new("Dropping write because it exceeds the max frame size");
 
         protected TcpConnection(TcpSettings settings, Socket socket)
         {
@@ -386,6 +389,11 @@ namespace Akka.IO
                         Context.Stop(Self);
                         return true;
                     case WriteCommand write:
+                        if (write.Bytes > Settings.MaxFrameSizeBytes)
+                        {
+                            DropWrite(write, );
+                        }
+                        
                         // Have to buffer writes until registration
                         var buffered = TryBuffer(write, Sender);
                         if (!buffered)
@@ -524,7 +532,8 @@ namespace Akka.IO
         {
             QueueFull = 1,
             Closing = 2,
-            WritingSuspended = 3
+            WritingSuspended = 3,
+            ExceededMaxFrameSize = 4
         }
         
         private static string GetDropReasonMessage(DropReason reason)
@@ -534,6 +543,7 @@ namespace Akka.IO
                 DropReason.QueueFull => "queue is full",
                 DropReason.Closing => "connection is closing",
                 DropReason.WritingSuspended => "writing is suspended",
+                DropReason.ExceededMaxFrameSize => "exceeded max frame size",
                 _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null)
             };
         }
@@ -545,13 +555,16 @@ namespace Akka.IO
                 DropReason.QueueFull => DroppingWriteBecauseQueueIsFullException,
                 DropReason.Closing => DroppingWriteBecauseClosingException,
                 DropReason.WritingSuspended => DroppingWriteBecauseWritingIsSuspendedException,
+                DropReason.ExceededMaxFrameSize => DroppingWriteBecauseExceededMaxFrameSizeException,
                 _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null)
             };
         }
 
         private void DropWrite(WriteCommand write, DropReason reason = DropReason.QueueFull)
         {
-            if (_traceLogging) Log.Debug("Dropping write because {0}", GetDropReasonMessage(reason));
+            // Don't log during closing
+            if (_traceLogging && reason != DropReason.Closing) Log.Warning("Dropping write [{0}] because {1} - (maxQueueLength={2}, maxFrameSize={3}b)", write.Bytes, GetDropReasonMessage(reason),
+                Settings.WriteCommandsQueueMaxSize, Settings.MaxFrameSizeBytes);
             Sender.Tell(write.FailureMessage.WithCause(GetDropMessageException(reason)));
         }
 
