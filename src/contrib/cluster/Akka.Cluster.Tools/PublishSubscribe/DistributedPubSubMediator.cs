@@ -487,14 +487,21 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 _registry[_cluster.SelfAddress] = new Bucket(bucket.Owner, v, bucket.Content.SetItem(key, new ValueHolder(v, value)));
         }
 
-        private void IgnoreOrSendToDeadLetters(object message)
+        private void IgnoreOrSendToDeadLetters(IDistributedPubSubMessage message)
         {
             if (_settings.SendToDeadLettersWhenNoSubscribers)
             {
+                var topic = message switch
+                {
+                    Publish publish => publish.Topic,
+                    Send send => $"Send:{send.Path}",
+                    _ => null
+                };
+
                 // Use the specialized DeadLetterWithNoSubscribers class to clearly indicate
                 // that the message was not delivered because there were no subscribers,
                 // not because the mediator itself is dead.
-                var deadLetter = new DeadLetterWithNoSubscribers(message, Sender, Context.Self);
+                var deadLetter = new DeadLetterWithNoSubscribers(message, topic, Sender, Context.Self);
                 Context.System.DeadLetters.Tell(deadLetter);
             }
         }

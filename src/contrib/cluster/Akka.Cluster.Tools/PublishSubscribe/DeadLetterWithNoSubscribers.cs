@@ -21,12 +21,16 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// Initializes a new instance of the <see cref="DeadLetterWithNoSubscribers"/> class.
         /// </summary>
         /// <param name="message">The original message that could not be delivered.</param>
+        /// <param name="topic">The topic that the message was sent to.</param>
         /// <param name="sender">The actor that sent the message.</param>
         /// <param name="recipient">The actor that was to receive the message (usually the mediator itself).</param>
-        public DeadLetterWithNoSubscribers(object message, IActorRef sender, IActorRef recipient) 
+        public DeadLetterWithNoSubscribers(object message, string? topic, IActorRef sender, IActorRef recipient) 
             : base(message, sender, recipient)
         {
+            Topic = topic;
         }
+
+        public string Topic { get; }
 
         /// <summary>
         /// Returns a string that represents the current object.
@@ -34,7 +38,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <returns>A string that represents the current object.</returns>
         public override string ToString()
         {
-            return $"DeadLetterWithNoSubscribers from {Sender} to {Recipient}: <{Message}> - No subscribers found for topic";
+            return $"DeadLetterWithNoSubscribers from {Sender} to {Recipient}: <{Message}> - No subscribers found for topic {Topic}";
         }
     }
 }
