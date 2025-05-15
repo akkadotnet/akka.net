@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMediator.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -500,10 +500,23 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 _registry[_cluster.SelfAddress] = new Bucket(bucket.Owner, v, bucket.Content.SetItem(key, new ValueHolder(v, value)));
         }
 
-        private void IgnoreOrSendToDeadLetters(object message)
+        private void IgnoreOrSendToDeadLetters(IWrappedMessage message)
         {
             if (_settings.SendToDeadLettersWhenNoSubscribers)
-                Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Context.Self));
+            {
+                var topic = message switch
+                {
+                    Publish publish => publish.Topic,
+                    Send send => $"Send:{send.Path}",
+                    _ => null
+                };
+
+                // Use the specialized DeadLetterWithNoSubscribers class to clearly indicate
+                // that the message was not delivered because there were no subscribers,
+                // not because the mediator itself is dead.
+                var deadLetter = new DeadLetterWithNoSubscribers(message, topic, Sender, Context.Self);
+                Context.System.DeadLetters.Tell(deadLetter);
+            }
         }
 
         private void PublishMessage(string path, IWrappedMessage publish, bool allButSelf = false)
