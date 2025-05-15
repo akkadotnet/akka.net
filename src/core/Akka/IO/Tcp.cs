@@ -168,8 +168,12 @@ namespace Akka.IO
             /// <summary>
             /// Optional - allows you to specify TCP settings for the connection.
             ///
-            /// Otherwise the system defaults will be used.
+            /// Otherwise, the system defaults will be used.
             /// </summary>
+            /// <example>
+            /// var tcpSettings = TcpSettings.Create(ActorSystem);
+            /// var tcpSettingsWithDifferentBufferSizes = tcpSettings with { SendBufferSize = 8192, ReceiveBufferSize = 8192 };
+            /// </example>
             public TcpSettings? TcpSettings { get; set; }
 
             public override string ToString() =>
@@ -220,8 +224,12 @@ namespace Akka.IO
             /// <summary>
             /// Optional - allows you to specify TCP settings for the connection.
             ///
-            /// Otherwise the system defaults will be used.
+            /// Otherwise, the system defaults will be used.
             /// </summary>
+            /// <example>
+            /// var tcpSettings = TcpSettings.Create(ActorSystem);
+            /// var tcpSettingsWithDifferentBufferSizes = tcpSettings with { SendBufferSize = 8192, ReceiveBufferSize = 8192 };
+            /// </example>
             public TcpSettings? TcpSettings { get; set; }
 
             public override string ToString() =>

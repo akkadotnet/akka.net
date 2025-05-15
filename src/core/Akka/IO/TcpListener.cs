@@ -268,7 +268,7 @@ namespace Akka.IO
                     var accepted = saea.AcceptSocket!;
                     saea.AcceptSocket = null; // ready for re‑use
                     var incomingConnection = Context.ActorOf(Props
-                        .Create<TcpIncomingConnection>(_tcp, accepted, _bind.Handler, _bind.Options, _bind.PullMode)
+                        .Create<TcpIncomingConnection>(_bind.TcpSettings ?? _tcp.Settings, accepted, _bind.Handler, _bind.Options, _bind.PullMode)
                         .WithDeploy(Deploy.Local));
 
                     // set up the watch for monitoring purposes

@@ -21,12 +21,12 @@ namespace Akka.IO
         private readonly IActorRef _bindHandler;
         private readonly IEnumerable<Inet.SocketOption> _options;
         
-        public TcpIncomingConnection(TcpExt tcp, 
+        public TcpIncomingConnection(TcpSettings settings, 
                                      Socket socket, 
                                      IActorRef bindHandler,
                                      IEnumerable<Inet.SocketOption> options, 
                                      bool readThrottling)
-            : base(tcp, socket, Option<int>.None)
+            : base(settings, socket)
         {
             _bindHandler = bindHandler;
             _options = options;

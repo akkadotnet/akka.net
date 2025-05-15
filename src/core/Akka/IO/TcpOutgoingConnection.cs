@@ -34,11 +34,10 @@ namespace Akka.IO
 
         public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
             : base(
-                   tcp,
-                   tcp.Settings.OutgoingSocketForceIpv4
+                   (connect.TcpSettings ?? tcp.Settings),
+                    (connect.TcpSettings ?? tcp.Settings).OutgoingSocketForceIpv4
                        ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { Blocking = false }
-                       : new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false },
-                   tcp.Settings.WriteCommandsQueueMaxSize >= 0 ? tcp.Settings.WriteCommandsQueueMaxSize : Option<int>.None)
+                       : new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false })
         {
             _commander = commander;
             _connect = connect;
@@ -83,7 +82,7 @@ namespace Akka.IO
         {
             ReleaseConnectionSocketArgs();
 
-            StopWith(new CloseInformation(new HashSet<IActorRef>(new[] {_commander}), _connect.FailureMessage.WithCause(cause)));
+            StopWith(new CloseInformation(new HashSet<IActorRef>([_commander]), _connect.FailureMessage.WithCause(cause)));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -195,7 +194,7 @@ namespace Akka.IO
                 if (!Socket.ConnectAsync(_connectArgs))
                     Self.Tell(IO.Tcp.SocketConnected.Instance);
 
-                Become(Connecting(Tcp.Settings.FinishConnectRetries, _connectArgs, fallbackAddress));
+                Become(Connecting(Settings.FinishConnectRetries, _connectArgs, fallbackAddress));
             });
         }
 

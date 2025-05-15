@@ -50,9 +50,9 @@ namespace Akka.IO
                     ? DefaultAcceptLimit
                     : config.GetInt("batch-accept-limit", DefaultAcceptLimit),
                 registerTimeout: config.GetTimeSpan("register-timeout", TimeSpan.FromSeconds(5)),
-                maxFrameSizeBytes: config.GetByteSize("maximum-frame-size", 4096).Value,
-                receiveBufferSize: config.GetByteSize("receive-buffer-size", 8192).Value,
-                sendBufferSize: config.GetByteSize("send-buffer-size", 8192).Value,
+                maxFrameSizeBytes: (int)config.GetByteSize("maximum-frame-size", 4096).Value,
+                receiveBufferSize: (int)config.GetByteSize("receive-buffer-size", 8192).Value,
+                sendBufferSize: (int)config.GetByteSize("send-buffer-size", 8192).Value,
                 managementDispatcher: config.GetString("management-dispatcher", "akka.actor.default-dispatcher"),
                 finishConnectRetries: config.GetInt("finish-connect-retries", 5),
                 outgoingSocketForceIpv4: config.GetBoolean("outgoing-socket-force-ipv4", false),
@@ -65,9 +65,9 @@ namespace Akka.IO
             bool traceLogging,
             int batchAcceptLimit,
             TimeSpan? registerTimeout,
-            long maxFrameSizeBytes,
-            long sendBufferSize,
-            long receiveBufferSize,
+            int maxFrameSizeBytes,
+            int sendBufferSize,
+            int receiveBufferSize,
             string managementDispatcher,
             int finishConnectRetries,
             bool outgoingSocketForceIpv4,
@@ -175,17 +175,17 @@ namespace Akka.IO
         /// The maximum frame size we will accept when reading or writing to a socket.
         /// </summary>
         
-        public long MaxFrameSizeBytes { get; init; }
+        public int MaxFrameSizeBytes { get; init; }
         
         /// <summary>
         /// Should be at least 2x the size of the maximum frame size.
         /// </summary>
-        public long ReceiveBufferSize { get; init; }
+        public int ReceiveBufferSize { get; init; }
         
         /// <summary>
         /// Should be at least 2x the size of the maximum frame size.
         /// </summary>
-        public long SendBufferSize { get; init; }
+        public int SendBufferSize { get; init; }
 
         /// <summary>
         /// The maximum number of bytes delivered by a `Received` message. Before

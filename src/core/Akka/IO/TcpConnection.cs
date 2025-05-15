@@ -75,7 +75,7 @@ namespace Akka.IO
 
         #endregion
 
-        protected readonly TcpExt Tcp;
+        protected readonly TcpSettings Settings;
         protected readonly Socket Socket;
         protected ILoggingAdapter Log { get; } = Context.GetLogger();
 
@@ -112,19 +112,17 @@ namespace Akka.IO
         private static readonly IOException DroppingWriteBecauseQueueIsFullException =
             new("Dropping write because queue is full");
 
-        protected TcpConnection(TcpExt tcp, Socket socket, Option<int> writeCommandsBufferMaxSize)
+        protected TcpConnection(TcpSettings settings, Socket socket)
         {
-            _maxWriteCapacity = writeCommandsBufferMaxSize.GetOrElse(tcp.Settings.WriteCommandsQueueMaxSize);
+            Settings = settings;
+            _maxWriteCapacity = settings.WriteCommandsQueueMaxSize;
             _pendingWrites = _maxWriteCapacity > 0
                 ? new Queue<(WriteCommand Cmd, IActorRef Sender)>(_maxWriteCapacity)
                 : new Queue<(WriteCommand Cmd, IActorRef Sender)>(); // unbounded
-;            _traceLogging = tcp.Settings.TraceLogging;
+;            _traceLogging = Settings.TraceLogging;
 
-            Tcp = tcp;
             Socket = socket ?? throw new ArgumentNullException(nameof(socket));
-            const int DefaultBufferSize = 64 * 1024; // 64 KiB – matches legacy DirectBufferSize
-            // TODO: need to set the actual syscall buffer sizes to match
-            _receiveBuffer = _bufferPool.Rent(DefaultBufferSize);
+            _receiveBuffer = _bufferPool.Rent(settings.MaxFrameSizeBytes);
             InitSocketEventArgs();
         }
 
@@ -384,7 +382,7 @@ namespace Akka.IO
                         // after sending `Register` user should watch this actor to make sure
                         // it didn't die because of the timeout
                         Log.Debug("Configured registration timeout of [{0}] expired, stopping",
-                            Tcp.Settings.RegisterTimeout);
+                            Settings.RegisterTimeout);
                         Context.Stop(Self);
                         return true;
                     case WriteCommand write:
@@ -573,6 +571,11 @@ namespace Akka.IO
             {
                 Log.Debug(e, "Could not enable TcpNoDelay: {0}", e.Message);
             }
+            
+            
+            // set the system buffer sizes
+            Socket.SendBufferSize = Settings.SendBufferSize;
+            Socket.ReceiveBufferSize = Settings.ReceiveBufferSize;
 
             foreach (var option in options)
             {
@@ -581,7 +584,7 @@ namespace Akka.IO
 
             commander.Tell(new Connected(Socket.RemoteEndPoint, Socket.LocalEndPoint));
 
-            Context.SetReceiveTimeout(Tcp.Settings.RegisterTimeout);
+            Context.SetReceiveTimeout(Settings.RegisterTimeout);
             Context.Become(WaitingForRegistration(commander));
         }
         
