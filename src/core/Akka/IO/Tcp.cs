@@ -269,7 +269,7 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// In order to close down a listening socket, send this message to that socket’s
+        /// To close down a listening socket, send this message to that socket’s
         /// actor (that is the actor which previously had sent the <see cref="Bound" /> message). The
         /// listener socket actor will reply with a <see cref="Unbound" /> message.
         /// </summary>

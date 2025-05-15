@@ -191,10 +191,10 @@ namespace Akka.Tests.IO
             var testData = ByteString.FromString(str);
             clientEp.Tell(Tcp.Write.Create(testData, Ack.Instance), clientHandler);
             await clientHandler.ExpectMsgAsync<Ack>();
-            var received = await serverHandler.ReceiveWhileAsync(o =>
-            {
-                return o as Tcp.Received;
-            }, RemainingOrDefault, TimeSpan.FromSeconds(0.5)).ToListAsync();
+            var received = await serverHandler
+                .ReceiveWhileAsync(o => o as Tcp.Received, 
+                    RemainingOrDefault, 
+                    TimeSpan.FromSeconds(0.5)).ToListAsync();
 
             received.Sum(s => s.Data.Count).Should().Be(testData.Count);
         }
@@ -332,12 +332,12 @@ namespace Akka.Tests.IO
                 // Setup multiple clients
                 var actors = await x.EstablishNewClientConnectionAsync();
 
-                // Each client sends his index to server
+                // Each client sends their index to server
                 var indexRange = Enumerable.Range(0, clientsCount).ToList();
                 var clients = indexRange.Select(i => (Index: i, Probe: CreateTestProbe($"test-client-{i}"))).ToArray();
                 Parallel.ForEach(clients, client =>
                 {
-                    var msg = ByteString.FromBytes(new byte[] {(byte) 0});
+                    var msg = ByteString.FromBytes([0]);
                     client.Probe.Send(actors.ClientConnection, Tcp.Write.Create(msg, AckWithValue.Create(client.Index)));
                 });
                 
@@ -359,7 +359,7 @@ namespace Akka.Tests.IO
                 // Setup multiple clients
                 var actors = await x.EstablishNewClientConnectionAsync();
 
-                // Each client sends his index to server
+                // Each client sends their index to server
                 var clients = Enumerable.Range(0, clientsCount).Select(i => (Index: i, Probe: CreateTestProbe($"test-client-{i}"))).ToArray();
                 var contentBuilder = new StringBuilder();
                 clients.ForEach(client =>
@@ -441,8 +441,8 @@ namespace Akka.Tests.IO
         {
             await new TestSetup(this).RunAsync(async x =>
             {
-                x.BindOptions = new[] {new Inet.SO.SendBufferSize(1024)};
-                x.ConnectOptions = new[] {new Inet.SO.SendBufferSize(1024)};
+                x.BindOptions = [new Inet.SO.SendBufferSize(1024)];
+                x.ConnectOptions = [new Inet.SO.SendBufferSize(1024)];
 
                 var actors = await x.EstablishNewClientConnectionAsync();
 
