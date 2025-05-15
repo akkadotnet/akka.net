@@ -579,7 +579,14 @@ namespace Akka.IO
             else
             {
                 if (_traceLogging) Log.Debug("Got Close command, closing connection.");
-                Socket.Shutdown(SocketShutdown.Both);
+                try
+                {
+                    Socket.Shutdown(SocketShutdown.Both);
+                }
+                catch (SocketException e)
+                {
+                     Log.Error("Socket shutdown failed with [{0}]", e);
+                }
                 DoCloseConnection(info, closeCommander, closedEvent);
             }
         }
