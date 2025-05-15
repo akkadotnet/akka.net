@@ -164,6 +164,13 @@ namespace Akka.IO
             
             public TimeSpan? Timeout { get; }
             public bool PullMode { get; }
+            
+            /// <summary>
+            /// Optional - allows you to specify TCP settings for the connection.
+            ///
+            /// Otherwise the system defaults will be used.
+            /// </summary>
+            public TcpSettings? TcpSettings { get; set; }
 
             public override string ToString() =>
                 $"Connect(remote: {RemoteAddress}, local: {LocalAddress}, timeout: {Timeout}, pullMode: {PullMode})";
@@ -209,6 +216,13 @@ namespace Akka.IO
             public IEnumerable<Inet.SocketOption> Options { get; }
 
             public bool PullMode { get; }
+            
+            /// <summary>
+            /// Optional - allows you to specify TCP settings for the connection.
+            ///
+            /// Otherwise the system defaults will be used.
+            /// </summary>
+            public TcpSettings? TcpSettings { get; set; }
 
             public override string ToString() =>
                 $"Bind(addr: {LocalAddress}, handler: {Handler}, backlog: {Backlog}, pullMode: {PullMode})";
