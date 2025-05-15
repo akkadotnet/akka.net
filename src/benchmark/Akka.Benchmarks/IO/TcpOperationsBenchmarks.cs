@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TcpOperationsBenchmarks.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -14,19 +15,19 @@ using Akka.Benchmarks.Configurations;
 using Akka.Event;
 using Akka.IO;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
 using Tcp = Akka.IO.Tcp;
 
 namespace Akka.Benchmarks
 {
     [Config(typeof(MacroBenchmarkConfig))]
+    [MemoryDiagnoser]
     public class TcpOperationsBenchmarks
     {
         private ActorSystem _system;
         private byte[] _message;
-        private IActorRef _server;
-        private IActorRef _clientCoordinator;
         
-        public int MessageCount { get; } = 10_000;
+        public const int MessageCount = 1_000_000;
 
         [Params(10, 100)]
         public int MessageLength { get; set; }
@@ -37,12 +38,8 @@ namespace Akka.Benchmarks
         [GlobalSetup]
         public void Setup()
         {
-            _system = ActorSystem.Create("system");
+            _system = ActorSystem.Create("system", "akka.log-dead-letters = off");
             _message = new byte[MessageLength];
-            
-            _server = _system.ActorOf(Props.Create(() => new EchoServer()));
-            _clientCoordinator =
-                _system.ActorOf(Props.Create(() => new ClientCoordinator(_server, ClientsCount)));
         }
 
         [GlobalCleanup]
@@ -51,9 +48,30 @@ namespace Akka.Benchmarks
             _system.Dispose();
         }
 
-        [Benchmark(OperationsPerInvoke = 10_000)]
+        private IActorRef _server;
+        private IActorRef _clientCoordinator;
+        
+        [IterationSetup]
+        public void IterationSetup()
+        {
+            // Create new server and client before each iteration measurement
+            _server = _system.ActorOf(Props.Create(() => new EchoServer(MessageLength)));
+            _clientCoordinator = _system.ActorOf(Props.Create(() => new ClientCoordinator(_server, ClientsCount)));
+        }
+        
+        [IterationCleanup]
+        public void IterationCleanup()
+        {
+            // Clean up actors after each iteration measurement
+            var clientStop = _clientCoordinator.GracefulStop(TimeSpan.FromSeconds(3));
+            var serverStop = _server.GracefulStop(TimeSpan.FromSeconds(3));
+            Task.WhenAll(clientStop, serverStop).Wait();
+        }
+        
+        [Benchmark(OperationsPerInvoke = MessageCount)]
         public async Task ClientServerCommunication()
         {
+            // Only the communication is measured, not setup/teardown
             await _clientCoordinator.Ask<CommunicationFinished>(new CommunicationRequest(MessageCount, _message));
         }
 
@@ -88,9 +106,10 @@ namespace Akka.Benchmarks
         private class EchoServer : ReceiveActor, IWithStash
         {
             private EndPoint? _endpoint;
-            
-            public EchoServer()
+            private readonly int _messageSize;
+            public EchoServer(int messageSize)
             {
+                _messageSize = messageSize;
                 Context.System.Tcp().Tell(new Tcp.Bind(Self, new IPEndPoint(IPAddress.Loopback, 0)));
 
                 Receive<Tcp.Bound>(bound =>
@@ -124,7 +143,7 @@ namespace Akka.Benchmarks
             {
                 Receive<Tcp.Connected>(_ =>
                 {
-                    var connection = Context.ActorOf(Props.Create(() => new EchoConnection(Sender)));
+                    var connection = Context.ActorOf(Props.Create(() => new EchoConnection(Sender, _messageSize)));
                     Sender.Tell(new Tcp.Register(connection));
                 });
                 
@@ -156,9 +175,19 @@ namespace Akka.Benchmarks
 
         private class EchoConnection : ReceiveActor
         {
-            public EchoConnection(IActorRef connection)
+            private readonly Framer _fr;
+            
+            public EchoConnection(IActorRef connection, int messageSize)
             {
-                Receive<Tcp.Received>(received => { connection.Tell(Tcp.Write.Create(received.Data)); });
+                _fr = new Framer(messageSize);
+                Receive<Tcp.Received>(received =>
+                { 
+                    foreach(var m in _fr.Deframe(received.Data))
+                    {
+                        // echo the message back
+                        connection.Tell(Tcp.Write.Create(m));
+                    }
+                });
             }
         }
 
@@ -197,8 +226,6 @@ namespace Akka.Benchmarks
                     // stash messages until we have the endpoint
                     Stash.Stash();
                 });
-                
-                
             }
 
             private void ServerDiedHandler()
@@ -258,12 +285,51 @@ namespace Akka.Benchmarks
             public IStash Stash { get; set; }
         }
 
+        private sealed class Framer
+        {
+            private readonly int _messageSize;
+            private ByteString _partialRead = ByteString.Empty;
+
+            public Framer(int messageSize)
+            {
+                _messageSize = messageSize;
+            }
+
+            public IEnumerable<ByteString> Deframe(ByteString data)
+            {
+                // Prepend any partial read from last time
+                if (_partialRead.Count > 0)
+                {
+                    data = _partialRead.Concat(data);
+                    _partialRead = ByteString.Empty;
+                }
+
+                var msgs = new List<ByteString>();
+                int offset = 0;
+                while (offset + _messageSize <= data.Count)
+                {
+                    msgs.Add(data.Slice(offset, _messageSize));
+                    offset += _messageSize;
+                }
+
+                // Buffer any remaining bytes for next time
+                if (offset < data.Count)
+                {
+                    _partialRead = data.Slice(offset, data.Count - offset);
+                }
+
+                return msgs;
+            }
+        }
+
         private class Client : ReceiveActor, IWithTimers
         {
             private readonly ILoggingAdapter _log = Context.GetLogger();
             private int _receivedCount = 0;
             private IActorRef _connection;
             private int _connectAttemptsRemaining = 5;
+            
+            private Framer _framer;
 
             private class RetryConnect
             {
@@ -273,9 +339,11 @@ namespace Akka.Benchmarks
                 {
                 }
             }
+            
 
             public Client(EndPoint endpoint, int messagesToSend, byte[] message)
             {
+                _framer = new Framer(message.Length);
                 var write =
                     // create the write only once
                     Tcp.Write.Create(ByteString.FromBytes(message));
@@ -284,7 +352,12 @@ namespace Akka.Benchmarks
                 Receive<Tcp.Connected>(_ =>
                 {
                     Sender.Tell(new Tcp.Register(Self));
-                    Sender.Tell(Tcp.Write.Create(ByteString.FromBytes(message)));
+                    
+                    // send messages in bursts of 20
+                    for (var i = 0; i < 20; i++)
+                    {
+                        Sender.Tell(write);
+                    }
                     _connection = Sender;
                 });
                 Receive<RetryConnect>(_ => { DoConnect(endpoint); });
@@ -315,14 +388,17 @@ namespace Akka.Benchmarks
                 });
                 Receive<Tcp.Received>(r =>
                 {
-                    _receivedCount++;
-                    if (_receivedCount >= messagesToSend)
+                    foreach (var m in _framer.Deframe(r.Data))
                     {
-                        _connection.Tell(Tcp.Close.Instance);
-                    }
-                    else
-                    {
-                        _connection.Tell(write);
+                        _receivedCount++;
+                        if (_receivedCount >= messagesToSend)
+                        {
+                            _connection.Tell(Tcp.Close.Instance);
+                        }
+                        else
+                        {
+                            _connection.Tell(write);
+                        }
                     }
                 });
                 Receive<Tcp.Closed>(_ => { Context.Parent.Tell(new ChildCommunicationFinished()); });
