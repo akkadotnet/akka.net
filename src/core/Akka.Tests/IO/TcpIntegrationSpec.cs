@@ -51,7 +51,7 @@ namespace Akka.Tests.IO
 
         private async Task VerifyActorTermination(IActorRef actor)
         {
-            Watch(actor);
+            await WatchAsync(actor);
             await ExpectTerminatedAsync(actor);
         }
 
@@ -282,7 +282,7 @@ namespace Akka.Tests.IO
 
                 var msg = ByteString.FromString("msg"); // 3 bytes
 
-                await EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectOneAsync(() => {
+                await EventFilter.Debug(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectOneAsync(() => {
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(msg));
                     actors.ClientConnection.Tell(new Tcp.Register(actors.ClientHandler));
                     return Task.CompletedTask;
@@ -298,27 +298,30 @@ namespace Akka.Tests.IO
         }
         
         [Fact]
-        public async Task Write_before_Register_should_Be_dropped_if_buffer_is_full()
+        public async Task Write_before_Register_should_Be_dropped_if_WriteQueue_is_full()
         {
-            await new TestSetup(this).RunAsync(async x =>
+            var smallBufferSettings = TcpSettings.Create(Sys) with { WriteCommandsQueueMaxSize = 1 };
+            
+            await new TestSetup(this, settings:smallBufferSettings).RunAsync(async x =>
             {
                 var actors = await x.EstablishNewClientConnectionAsync(registerClientHandler: false);
-
+                
+                var happyMessage = ByteString.FromString("msg"); // 3 bytes
                 var overflowData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize + 1]);
 
                 // We do not want message about receiving Write to be logged, if the write was actually discarded
                 await EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectAsync(0, () => {
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(happyMessage));
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData));
                     return Task.CompletedTask;
                 });
                 
-                await actors.ClientHandler.ExpectMsgAsync<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.CommandFailed>();
                 
                 // After failed receive, next "good" writes should be handled with no issues
-                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(ByteString.FromBytes(new byte[1])));
                 actors.ClientHandler.Send(actors.ClientConnection, new Tcp.Register(actors.ClientHandler));
                 var serverMsgs = await actors.ServerHandler.ReceiveWhileAsync(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(2)).ToListAsync();
-                serverMsgs.Should().HaveCount(1).And.Subject.Should().Contain(m => m.Data.Count == 1);
+                serverMsgs.Should().HaveCount(1).And.Subject.Should().Contain(m => m.Data.Count == 3);
             });
         }
 
