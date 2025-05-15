@@ -124,8 +124,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private readonly ILoggingAdapter _log;
         private readonly Dictionary<Address, Bucket> _registry = new();
 
-        private readonly IActorRef _self;
-        private readonly Lazy<string> _topicPrefix;
+        private readonly string _topicPrefix;
+        private readonly PubSubCache _cache;
 
         public ITimerScheduler Timers { get; set; }
 
@@ -164,8 +164,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             _pruneInterval = new TimeSpan(_settings.RemovedTimeToLive.Ticks / 2);
             _buffer = new PerGroupingBuffer();
 
-            _self = Self;
-            _topicPrefix = new Lazy<string>(() => _self.Path.ToStringWithoutAddress());
+            _topicPrefix = Self.Path.ToStringWithoutAddress();
+            _cache = new PubSubCache();
             
             Receive<Send>(send =>
             {
@@ -204,8 +204,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<Publish>(publish =>
             {
-                var encodedTopic = Internal.Utils.EncodeName(publish.Topic);
-                var key = Internal.Utils.MakeKey(Self.Path, encodedTopic);
+                var encodedTopic = _cache.EncodeName(publish.Topic);
+                var key = _cache.MakeKey(Self.Path, encodedTopic);
                 if (publish.SendOneMessageToEachGroup)
                     PublishToEachGroup(key, publish);
                 else
@@ -217,7 +217,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     _log.Warning("Registered actor must be local: [{0}]", put.Ref);
                 else
                 {
-                    PutToRegistry(Internal.Utils.MakeKey(put.Ref), put.Ref);
+                    PutToRegistry(PubSubCache.MakeKey(put.Ref), put.Ref);
                     Context.Watch(put.Ref);
                 }
             });
@@ -234,9 +234,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<Subscribe>(subscribe =>
             {
                 // each topic is managed by a child actor with the same name as the topic
-                var encodedTopic = Internal.Utils.EncodeName(subscribe.Topic);
+                var encodedTopic = _cache.EncodeName(subscribe.Topic);
 
-                _buffer.BufferOr(Internal.Utils.MakeKey(Self.Path, encodedTopic), subscribe, Sender, () =>
+                _buffer.BufferOr(_cache.MakeKey(Self.Path, encodedTopic), subscribe, Sender, () =>
                 {
                     var child = Context.Child(encodedTopic);
                     if (!child.IsNobody())
@@ -251,13 +251,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<NoMoreSubscribers>(_ =>
             {
-                var key = Internal.Utils.MakeKey(Sender);
+                var key = PubSubCache.MakeKey(Sender);
                 _buffer.InitializeGrouping(key);
                 Sender.Tell(TerminateRequest.Instance);
             });
             Receive<NewSubscriberArrived>(_ =>
             {
-                var key = Internal.Utils.MakeKey(Sender);
+                var key = PubSubCache.MakeKey(Sender);
                 _buffer.ForwardMessages(key, Sender);
             });
             Receive<GetTopics>(_ =>
@@ -270,9 +270,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<Unsubscribe>(unsubscribe =>
             {
-                var encodedTopic = Internal.Utils.EncodeName(unsubscribe.Topic);
+                var encodedTopic = _cache.EncodeName(unsubscribe.Topic);
 
-                _buffer.BufferOr(Internal.Utils.MakeKey(Self.Path, encodedTopic), unsubscribe, Sender, () =>
+                _buffer.BufferOr(_cache.MakeKey(Self.Path, encodedTopic), unsubscribe, Sender, () =>
                 {
                     var child = Context.Child(encodedTopic);
                     if (!child.IsNobody())
@@ -280,7 +280,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     else
                     {
                         // no such topic here
-                        Internal.Utils.TryRemoveTopic(unsubscribe.Topic);
+                        _cache.TryRemoveTopic(unsubscribe.Topic);
                     }
                 });
             });
@@ -330,14 +330,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<Prune>(_ => HandlePrune());
             Receive<Terminated>(terminated =>
             {
-                var key = Internal.Utils.MakeKey(terminated.ActorRef);
+                var key = PubSubCache.MakeKey(terminated.ActorRef);
 
                 if (_registry.TryGetValue(_cluster.SelfAddress, out var bucket))
                 {
                     if (bucket.Content.TryGetValue(key, out var holder) && terminated.ActorRef.Equals(holder.Ref))
                     {
                         PutToRegistry(key, null); // remove
-                        Internal.Utils.TryRemoveKey(key, _topicPrefix.Value);
+                        _cache.TryRemoveKey(key, _topicPrefix);
                     }
                 }
 
@@ -381,7 +381,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 if (member.Address == _cluster.SelfAddress)
                 {
                     Context.Stop(Self);
-                    Internal.Utils.Clear();
+                    _cache.Clear();
                 }
                 else if (IsMatchingRole(member, _role))
                 {
@@ -401,8 +401,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<CountSubscribers>(msg =>
             {
-                var encTopic = Internal.Utils.EncodeName(msg.Topic);
-                _buffer.BufferOr(Internal.Utils.MakeKey(Self.Path, encTopic), msg, Sender, () =>
+                var encTopic = _cache.EncodeName(msg.Topic);
+                _buffer.BufferOr(_cache.MakeKey(Self.Path, encTopic), msg, Sender, () =>
                 {
                     var child = Context.Child(encTopic);
                     if (!child.IsNobody())
@@ -471,7 +471,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private IEnumerable<string> GetCurrentTopics()
         {
-            var topicPrefix = _topicPrefix.Value;
+            var topicPrefix = _topicPrefix;
             foreach (var (_, bucket) in _registry)
             {
                 foreach (var (key, _) in bucket.Content)
@@ -486,7 +486,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private void HandleRegisterTopic(IActorRef actorRef)
         {
-            PutToRegistry(Internal.Utils.MakeKey(actorRef), actorRef);
+            PutToRegistry(PubSubCache.MakeKey(actorRef), actorRef);
             Context.Watch(actorRef);
         }
 

@@ -193,6 +193,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     {
         private readonly RoutingLogic _routingLogic;
         private readonly PerGroupingBuffer _buffer;
+        private readonly PubSubCache _cache;
+        private readonly string _topicPrefix;
 
         /// <summary>
         /// Creates a new topic actor
@@ -205,6 +207,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         {
             _routingLogic = routingLogic;
             _buffer = new PerGroupingBuffer();
+            
+            _topicPrefix = Self.Path.ToStringWithoutAddress();
+            _cache = new PubSubCache();
         }
 
         /// <inheritdoc cref="TopicLike.Business"/>
@@ -213,8 +218,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             switch (message)
             {
                 case Subscribe { Group: not null } subscribe:
-                    var encodedGroup = Utils.EncodeName(subscribe.Group);
-                    _buffer.BufferOr(Utils.MakeKey(Self.Path, encodedGroup), subscribe, Sender, () =>
+                    var encodedGroup = _cache.EncodeName(subscribe.Group);
+                    _buffer.BufferOr(_cache.MakeKey(Self.Path, encodedGroup), subscribe, Sender, () =>
                     {
                         var child = Context.Child(encodedGroup);
                         if (!child.IsNobody())
@@ -234,8 +239,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     return true;
 
                 case Unsubscribe { Group: not null } unsubscribe:
-                    encodedGroup = Utils.EncodeName(unsubscribe.Group);
-                    _buffer.BufferOr(Utils.MakeKey(Self.Path, encodedGroup), unsubscribe, Sender, () =>
+                    encodedGroup = _cache.EncodeName(unsubscribe.Group);
+                    _buffer.BufferOr(_cache.MakeKey(Self.Path, encodedGroup), unsubscribe, Sender, () =>
                     {
                         var child = Context.Child(encodedGroup);
                         if (!child.IsNobody())
@@ -245,7 +250,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                         else
                         {
                             // no such group here
-                            Utils.TryRemoveTopic(unsubscribe.Group);
+                            _cache.TryRemoveTopic(unsubscribe.Group);
                         }
                     });
                     return true;
@@ -255,20 +260,21 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     return true;
 
                 case Cluster:
-                    var key = Utils.MakeKey(Sender);
+                    var key = PubSubCache.MakeKey(Sender);
                     _buffer.InitializeGrouping(key);
                     Sender.Tell(TerminateRequest.Instance);
                     return true;
 
                 case NewSubscriberArrived:
-                    key = Utils.MakeKey(Sender);
+                    key = PubSubCache.MakeKey(Sender);
                     _buffer.ForwardMessages(key, Sender);
                     return true;
 
                 case Terminated terminated:
-                    key = Utils.MakeKey(terminated.ActorRef);
+                    key = PubSubCache.MakeKey(terminated.ActorRef);
                     _buffer.RecreateAndForwardMessagesIfNeeded(key, () => NewGroupActor(terminated.ActorRef.Path.Name));
                     Remove(terminated.ActorRef);
+                    _cache.TryRemoveKey(key, _topicPrefix);
                     return true;
             }
 
@@ -325,22 +331,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
-    /// <summary>
-    /// INTERNAL API
-    ///
-    /// Used for generating Uri-safe topic and group names.
-    /// </summary>
     internal static class Utils
     {
-        private record MakeKeyInfo(ActorPath Path, string Topic);
-        
-        private static readonly System.Text.RegularExpressions.Regex PathRegex = new("^/remote/.+(/user/.+)");
-
-        private static readonly Dictionary<string, string> TopicToEncodedMap = new();
-        private static readonly Dictionary<string, string> EncodedToTopicMap = new();
-        private static readonly Dictionary<MakeKeyInfo, string> MakeKeyMap = new();
-        private static readonly Dictionary<string, MakeKeyInfo> MakeKeyReverseMap = new();
-        
         /// <summary>
         /// <para>
         /// Mediator uses <see cref="Router"/> to send messages to multiple destinations, Router in general
@@ -354,49 +346,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// </para>
         /// </summary>
         /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static object WrapIfNeeded(object message)
         {
             return message is RouterEnvelope ? new MediatorRouterEnvelope(message) : message;
         }
-
-        public static string MakeKey(IActorRef actorRef)
-        {
-            //return MakeKey(actorRef.Path);
-            return PathRegex.Replace(actorRef.Path.ToStringWithoutAddress(), "$1");
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
-        public static string EncodeName(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                return null;
-            
-            if (TopicToEncodedMap.TryGetValue(name, out var encoded))
-                return encoded;
-
-            encoded = Uri.EscapeDataString(name);
-            TopicToEncodedMap[name] = encoded;
-            EncodedToTopicMap[encoded] = name;
-            return encoded;
-        }
-
-        public static string MakeKey(ActorPath path, string topic)
-        {
-            var info = new MakeKeyInfo(path, topic);
-            if(MakeKeyMap.TryGetValue(info, out var key))
-                return key;
-            
-            key = PathRegex.Replace((path / topic).ToStringWithoutAddress(), "$1");
-            MakeKeyMap[info] = key;
-            MakeKeyReverseMap[key] = info;
-            return key;
-        }
-
+        
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static string? KeyToEncodedTopic(string key, string topicPrefix)
         {
@@ -406,50 +361,104 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             var topic = key[(topicPrefix.Length + 1)..];
             return !topic.Contains('/') ? topic : null;
         }
+    }
+    
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Used for generating Uri-safe topic and group names.
+    /// </summary>
+    internal sealed class PubSubCache
+    {
+        private readonly record struct MakeKeyInfo(ActorPath Path, string Topic);
+        
+        private static readonly System.Text.RegularExpressions.Regex PathRegex = new("^/remote/.+(/user/.+)");
 
-        public static void TryRemoveEncodedTopic(string encodedTopic)
+        private readonly Dictionary<string, string> _topicToEncodedMap = new();
+        private readonly Dictionary<string, string> _encodedToTopicMap = new();
+        private readonly Dictionary<MakeKeyInfo, string> _makeKeyMap = new();
+        private readonly Dictionary<string, MakeKeyInfo> _makeKeyReverseMap = new();
+        
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static string MakeKey(IActorRef actorRef)
         {
-            if (!EncodedToTopicMap.TryGetValue(encodedTopic, out var topic)) 
-                return;
-            
-            EncodedToTopicMap.Remove(encodedTopic);
-            TopicToEncodedMap.Remove(topic);
+            return PathRegex.Replace(actorRef.Path.ToStringWithoutAddress(), "$1");
         }
 
-        public static void TryRemoveTopic(string topic)
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <returns>TBD</returns>
+        public string EncodeName(string name)
         {
-            if(!TopicToEncodedMap.TryGetValue(topic, out var encodedTopic))
-                return;
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
             
-            TopicToEncodedMap.Remove(topic);
-            EncodedToTopicMap.Remove(encodedTopic);
+            if (_topicToEncodedMap.TryGetValue(name, out var encoded))
+                return encoded;
+
+            encoded = Uri.EscapeDataString(name);
+            _topicToEncodedMap[name] = encoded;
+            _encodedToTopicMap[encoded] = name;
+            return encoded;
         }
 
-        public static void TryRemoveKey(string key, string topicPrefix)
+        public string MakeKey(ActorPath path, string topic)
         {
-            if (MakeKeyReverseMap.TryGetValue(key, out var keyInfo))
+            var info = new MakeKeyInfo(path, topic);
+            if(_makeKeyMap.TryGetValue(info, out var key))
+                return key;
+            
+            key = PathRegex.Replace((path / topic).ToStringWithoutAddress(), "$1");
+            _makeKeyMap[info] = key;
+            _makeKeyReverseMap[key] = info;
+            return key;
+        }
+
+        public void TryRemoveEncodedTopic(string encodedTopic)
+        {
+            if (!_encodedToTopicMap.TryGetValue(encodedTopic, out var topic)) 
+                return;
+            
+            _topicToEncodedMap.Remove(topic);
+            _encodedToTopicMap.Remove(encodedTopic);
+        }
+
+        public void TryRemoveTopic(string topic)
+        {
+            if(!_topicToEncodedMap.TryGetValue(topic, out var encodedTopic))
+                return;
+            
+            _encodedToTopicMap.Remove(encodedTopic);
+            _topicToEncodedMap.Remove(topic);
+        }
+
+        public void TryRemoveKey(string key, string topicPrefix)
+        {
+            if (_makeKeyReverseMap.TryGetValue(key, out var keyInfo))
             {
-                MakeKeyReverseMap.Remove(key);
-                MakeKeyMap.Remove(keyInfo);
+                _makeKeyMap.Remove(keyInfo);
+                _makeKeyReverseMap.Remove(key);
             }
             
-            var encodedTopic = KeyToEncodedTopic(key, topicPrefix);
+            var encodedTopic = Utils.KeyToEncodedTopic(key, topicPrefix);
             if (encodedTopic == null) 
                 return;
 
-            if (!EncodedToTopicMap.TryGetValue(encodedTopic, out var topic)) 
+            if (!_encodedToTopicMap.TryGetValue(encodedTopic, out var topic)) 
                 return;
             
-            TopicToEncodedMap.Remove(topic);
-            EncodedToTopicMap.Remove(encodedTopic);
+            _topicToEncodedMap.Remove(topic);
+            _encodedToTopicMap.Remove(encodedTopic);
         }
         
-        public static void Clear()
+        public void Clear()
         {
-            TopicToEncodedMap.Clear();
-            EncodedToTopicMap.Clear();
-            MakeKeyMap.Clear();
-            MakeKeyReverseMap.Clear();
+            _topicToEncodedMap.Clear();
+            _encodedToTopicMap.Clear();
+            _makeKeyMap.Clear();
+            _makeKeyReverseMap.Clear();
         }
     }
 }
