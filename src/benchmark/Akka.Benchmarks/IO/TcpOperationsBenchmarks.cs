@@ -296,17 +296,17 @@ namespace Akka.Benchmarks
                     data = data[(_messageSize - _partialRead.Count)..];
                     _partialRead = ByteString.Empty;
                 }
-                    
-                var remaining = data.Count % _messageSize;
-                var count = data.Count - remaining;
+                
+                var remainingBytes = data.Count % _messageSize;
+                var count = data.Count / _messageSize;
                 for (var i = 0; i < count; i += _messageSize)
                 {
                     msgs.Add(data.Slice(i, _messageSize));
                 }
                     
-                if (remaining > 0)
+                if (remainingBytes > 0)
                 {
-                    _partialRead = data.Slice(count, remaining);
+                    _partialRead = data.Slice(count, remainingBytes);
                 }
                     
                 return msgs;
