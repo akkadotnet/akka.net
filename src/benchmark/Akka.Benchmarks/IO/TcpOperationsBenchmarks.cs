@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -20,6 +19,7 @@ using Tcp = Akka.IO.Tcp;
 namespace Akka.Benchmarks
 {
     [Config(typeof(MacroBenchmarkConfig))]
+    [MemoryDiagnoser]
     public class TcpOperationsBenchmarks
     {
         private ActorSystem _system;
@@ -27,7 +27,7 @@ namespace Akka.Benchmarks
         private IActorRef _server;
         private IActorRef _clientCoordinator;
         
-        public int MessageCount { get; } = 1_000_000;
+        public const int MessageCount = 1_000_000;
 
         [Params(10, 100)]
         public int MessageLength { get; set; }
@@ -52,7 +52,7 @@ namespace Akka.Benchmarks
             _system.Dispose();
         }
 
-        [Benchmark(OperationsPerInvoke = 10_000)]
+        [Benchmark(OperationsPerInvoke = MessageCount)]
         public async Task ClientServerCommunication()
         {
             await _clientCoordinator.Ask<CommunicationFinished>(new CommunicationRequest(MessageCount, _message));
