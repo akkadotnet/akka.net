@@ -391,7 +391,8 @@ namespace Akka.IO
                     case WriteCommand write:
                         if (write.Bytes > Settings.MaxFrameSizeBytes)
                         {
-                            DropWrite(write, );
+                            DropWrite(write, DropReason.ExceededMaxFrameSize);
+                            return true;
                         }
                         
                         // Have to buffer writes until registration
@@ -402,7 +403,7 @@ namespace Akka.IO
                         }
                         else
                         {
-                            Log.Warning("Received Write command before Register command. " +
+                            Log.Debug("Received Write command before Register command. " +
                                         "It will be buffered until Register will be received (buffered write size is {0} bytes)",
                                 write.Bytes);
                         }
@@ -441,6 +442,12 @@ namespace Akka.IO
                         HandleRead(info.Handler, r);
                         return true;
                     case WriteCommand write:
+                        if (write.Bytes > Settings.MaxFrameSizeBytes)
+                        {
+                            DropWrite(write, DropReason.ExceededMaxFrameSize);
+                            return true;
+                        }
+                        
                         var buffered = TryBuffer(write, Sender);
                         if (!buffered)
                         {
