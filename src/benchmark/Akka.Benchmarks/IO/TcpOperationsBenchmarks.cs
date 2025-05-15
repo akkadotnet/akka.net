@@ -280,35 +280,27 @@ namespace Akka.Benchmarks
 
             public IEnumerable<ByteString> Deframe(ByteString data)
             {
-                var totalSize = _partialRead.Count + data.Count;
-                if (totalSize < _messageSize)
+                // Prepend any partial read from last time
+                if (_partialRead.Count > 0)
                 {
-                    _partialRead = _partialRead.Concat(data);
-                    return [];
+                    data = _partialRead.Concat(data);
+                    _partialRead = ByteString.Empty;
                 }
 
                 var msgs = new List<ByteString>();
-                if (_partialRead.Count > 0)
+                int offset = 0;
+                while (offset + _messageSize <= data.Count)
                 {
-                    var msg1 = _partialRead.Concat(data[..(_messageSize - _partialRead.Count)]);
-                    msgs.Add(msg1);
-                        
-                    data = data[(_messageSize - _partialRead.Count)..];
-                    _partialRead = ByteString.Empty;
+                    msgs.Add(data.Slice(offset, _messageSize));
+                    offset += _messageSize;
                 }
-                
-                var remainingBytes = data.Count % _messageSize;
-                var count = data.Count / _messageSize;
-                for (var i = 0; i < count; i += _messageSize)
+
+                // Buffer any remaining bytes for next time
+                if (offset < data.Count)
                 {
-                    msgs.Add(data.Slice(i, _messageSize));
+                    _partialRead = data.Slice(offset, data.Count - offset);
                 }
-                    
-                if (remainingBytes > 0)
-                {
-                    _partialRead = data.Slice(count, remainingBytes);
-                }
-                    
+
                 return msgs;
             }
         }
