@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -40,7 +41,7 @@ namespace Akka.Benchmarks
             _system = ActorSystem.Create("system", "akka.log-dead-letters = off");
             _message = new byte[MessageLength];
             
-            _server = _system.ActorOf(Props.Create(() => new EchoServer()));
+            _server = _system.ActorOf(Props.Create(() => new EchoServer(MessageLength)));
             _clientCoordinator =
                 _system.ActorOf(Props.Create(() => new ClientCoordinator(_server, ClientsCount)));
         }
@@ -88,9 +89,10 @@ namespace Akka.Benchmarks
         private class EchoServer : ReceiveActor, IWithStash
         {
             private EndPoint? _endpoint;
-            
-            public EchoServer()
+            private readonly int _messageSize;
+            public EchoServer(int messageSize)
             {
+                _messageSize = messageSize;
                 Context.System.Tcp().Tell(new Tcp.Bind(Self, new IPEndPoint(IPAddress.Loopback, 0)));
 
                 Receive<Tcp.Bound>(bound =>
@@ -124,7 +126,7 @@ namespace Akka.Benchmarks
             {
                 Receive<Tcp.Connected>(_ =>
                 {
-                    var connection = Context.ActorOf(Props.Create(() => new EchoConnection(Sender)));
+                    var connection = Context.ActorOf(Props.Create(() => new EchoConnection(Sender, _messageSize)));
                     Sender.Tell(new Tcp.Register(connection));
                 });
                 
@@ -156,9 +158,19 @@ namespace Akka.Benchmarks
 
         private class EchoConnection : ReceiveActor
         {
-            public EchoConnection(IActorRef connection)
+            private readonly Framer _fr;
+            
+            public EchoConnection(IActorRef connection, int messageSize)
             {
-                Receive<Tcp.Received>(received => { connection.Tell(Tcp.Write.Create(received.Data)); });
+                _fr = new Framer(messageSize);
+                Receive<Tcp.Received>(received =>
+                { 
+                    foreach(var m in _fr.Deframe(received.Data))
+                    {
+                        // echo the message back
+                        connection.Tell(Tcp.Write.Create(m));
+                    }
+                });
             }
         }
 
@@ -256,12 +268,59 @@ namespace Akka.Benchmarks
             public IStash Stash { get; set; }
         }
 
+        private sealed class Framer
+        {
+            private readonly int _messageSize;
+            private ByteString _partialRead = ByteString.Empty;
+
+            public Framer(int messageSize)
+            {
+                _messageSize = messageSize;
+            }
+
+            public IEnumerable<ByteString> Deframe(ByteString data)
+            {
+                var totalSize = _partialRead.Count + data.Count;
+                if (totalSize < _messageSize)
+                {
+                    _partialRead = _partialRead.Concat(data);
+                    return [];
+                }
+
+                var msgs = new List<ByteString>();
+                if (_partialRead.Count > 0)
+                {
+                    var msg1 = _partialRead.Concat(data[..(_messageSize - _partialRead.Count)]);
+                    msgs.Add(msg1);
+                        
+                    data = data[(_messageSize - _partialRead.Count)..];
+                    _partialRead = ByteString.Empty;
+                }
+                    
+                var remaining = data.Count % _messageSize;
+                var count = data.Count - remaining;
+                for (var i = 0; i < count; i += _messageSize)
+                {
+                    msgs.Add(data.Slice(i, _messageSize));
+                }
+                    
+                if (remaining > 0)
+                {
+                    _partialRead = data.Slice(count, remaining);
+                }
+                    
+                return msgs;
+            }
+        }
+
         private class Client : ReceiveActor, IWithTimers
         {
             private readonly ILoggingAdapter _log = Context.GetLogger();
             private int _receivedCount = 0;
             private IActorRef _connection;
             private int _connectAttemptsRemaining = 5;
+            
+            private Framer _framer;
 
             private class RetryConnect
             {
@@ -271,9 +330,11 @@ namespace Akka.Benchmarks
                 {
                 }
             }
+            
 
             public Client(EndPoint endpoint, int messagesToSend, byte[] message)
             {
+                _framer = new Framer(message.Length);
                 var write =
                     // create the write only once
                     Tcp.Write.Create(ByteString.FromBytes(message));
@@ -318,14 +379,17 @@ namespace Akka.Benchmarks
                 });
                 Receive<Tcp.Received>(r =>
                 {
-                    _receivedCount++;
-                    if (_receivedCount >= messagesToSend)
+                    foreach (var m in _framer.Deframe(r.Data))
                     {
-                        _connection.Tell(Tcp.Close.Instance);
-                    }
-                    else
-                    {
-                        _connection.Tell(write);
+                        _receivedCount++;
+                        if (_receivedCount >= messagesToSend)
+                        {
+                            _connection.Tell(Tcp.Close.Instance);
+                        }
+                        else
+                        {
+                            _connection.Tell(write);
+                        }
                     }
                 });
                 Receive<Tcp.Closed>(_ => { Context.Parent.Tell(new ChildCommunicationFinished()); });
