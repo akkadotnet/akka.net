@@ -374,6 +374,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     foreach (var removedMsg in removed)
                     {
                         buffer.Remove(removedMsg);
+                        IgnoreOrSendToDeadLetters(removedMsg.Message, removedMsg.Sender);
                     }
                 }
             });
