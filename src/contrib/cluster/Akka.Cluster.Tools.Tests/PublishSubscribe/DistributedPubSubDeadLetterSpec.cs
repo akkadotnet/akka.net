@@ -12,13 +12,13 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tools.Tests.PublishSubscribe
 {
-    [Collection(nameof(DistributedPubSubDeadLetterSpec))]
     public class DistributedPubSubDeadLetterSpec : AkkaSpec
     {
-        public DistributedPubSubDeadLetterSpec() : base(GetConfig())
+        public DistributedPubSubDeadLetterSpec(ITestOutputHelper output) : base(GetConfig(), output)
         {
         }
 
@@ -27,8 +27,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             return ConfigurationFactory.ParseString(
                 @"akka.actor.provider = cluster"
                 + "\nakka.loglevel = INFO"
-                + "\nakka.log-dead-letters = on"
-                + "\nakka.cluster.pub-sub.send-to-dead-letters-when-no-subscribers = on");
+                + "\nakka.log-dead-letters = on");
         }
         
         [Fact]
@@ -39,7 +38,8 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             var testMessage = "test-message";
 
             // act - publish to a topic that no one is subscribed to
-            await EventFilter.DeadLetter().ExpectAsync(1, () =>
+            await EventFilter.Info(contains: "DeadLetterWithNoSubscribers")
+                .ExpectAsync(1, () =>
             {
                 mediator.Tell(new Publish("unused-topic", testMessage));
                 return Task.CompletedTask;
