@@ -657,12 +657,6 @@ namespace Akka.IO
                     {
                         // we are not closing the socket, but we need to stop reading
                         Context.Become(Closing(info, false));
-                {
-                }
-                catch (SocketException e)
-                {
-                     Log.Error("Socket shutdown failed with [{0}]", e);
-                }
                     }
                     else
                     {
