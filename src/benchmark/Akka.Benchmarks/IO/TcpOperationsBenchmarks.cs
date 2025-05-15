@@ -37,7 +37,7 @@ namespace Akka.Benchmarks
         [GlobalSetup]
         public void Setup()
         {
-            _system = ActorSystem.Create("system");
+            _system = ActorSystem.Create("system", "akka.log-dead-letters = off");
             _message = new byte[MessageLength];
             
             _server = _system.ActorOf(Props.Create(() => new EchoServer()));
@@ -197,8 +197,6 @@ namespace Akka.Benchmarks
                     // stash messages until we have the endpoint
                     Stash.Stash();
                 });
-                
-                
             }
 
             private void ServerDiedHandler()
@@ -284,7 +282,12 @@ namespace Akka.Benchmarks
                 Receive<Tcp.Connected>(_ =>
                 {
                     Sender.Tell(new Tcp.Register(Self));
-                    Sender.Tell(Tcp.Write.Create(ByteString.FromBytes(message)));
+                    
+                    // send messages in bursts of 20
+                    for (var i = 0; i < 20; i++)
+                    {
+                        Sender.Tell(write);
+                    }
                     _connection = Sender;
                 });
                 Receive<RetryConnect>(_ => { DoConnect(endpoint); });
