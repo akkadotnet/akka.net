@@ -15,7 +15,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// DeadLetters because there were no subscribers for the topic in DistributedPubSub,
     /// NOT because the mediator itself is dead.
     /// </summary>
-    public sealed class DeadLetterWithNoSubscribers : AllDeadLetters
+    internal sealed class DeadLetterWithNoSubscribers : AllDeadLetters
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DeadLetterWithNoSubscribers"/> class.
