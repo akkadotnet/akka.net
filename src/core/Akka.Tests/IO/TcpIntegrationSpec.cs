@@ -21,6 +21,7 @@ using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
 using System.Runtime.InteropServices;
+using Akka.Util;
 
 namespace Akka.Tests.IO
 {
@@ -211,20 +212,45 @@ namespace Akka.Tests.IO
                 var actors = await x.EstablishNewClientConnectionAsync();
 
                 // create a large-ish byte string
-                var str = Enumerable.Repeat("f", 567).Join("");
-                var testData = ByteString.FromString(str);
+                const int length = 2064;
+                var buffer1 = new byte[length];
+                ThreadLocalRandom.Current.NextBytes(buffer1);
+                
+                var buffer2 = new byte[length];
+                ThreadLocalRandom.Current.NextBytes(buffer2);
+                
+                var buffer3 = new byte[length];
+                ThreadLocalRandom.Current.NextBytes(buffer3);
 
                 // queue 3 writes
-                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
-                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
-                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(ByteString.FromBytes(buffer1)));
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(ByteString.FromBytes(buffer2)));
+                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(ByteString.FromBytes(buffer3)));
 
                 var serverMsgs = await actors.ServerHandler.ReceiveWhileAsync(o =>
                 {
                     return o as Tcp.Received;
                 }, RemainingOrDefault, TimeSpan.FromSeconds(2)).ToListAsync();
 
-                serverMsgs.Sum(s => s.Data.Count).Should().Be(testData.Count*3);
+                serverMsgs.Sum(s => s.Data.Count).Should().Be(length*3);
+                
+                // verify that the messages are in the same order as they were sent
+                var bigBuffer = new byte[length * 3];
+                var offset = 0;
+                foreach (var serverMsg in serverMsgs)
+                {
+                    serverMsg.Data.CopyTo(bigBuffer, offset, serverMsg.Data.Count);
+                    offset += serverMsg.Data.Count;
+                }
+                
+                var recv1 = bigBuffer.Slice(0, length).ToArray();
+                Assert.Equivalent(recv1, buffer1);
+                
+                var recv2 = bigBuffer.Slice(length, length).ToArray();
+                Assert.Equivalent(recv2, buffer2);
+                
+                var recv3 = bigBuffer.Slice(length * 2, length).ToArray();
+                Assert.Equivalent(recv3, buffer3);
             });
         }
 
