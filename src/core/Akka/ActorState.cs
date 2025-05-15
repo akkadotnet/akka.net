@@ -16,128 +16,124 @@ namespace Akka.Actor
     internal interface IActorState 
     {
         /// <summary>
-        /// Removes the provided <see cref="IActorRef"/> from the `Watching` set
+        /// Removes the provided <see cref="IActorRef"/> from the `Watching` set.
         /// </summary>
-        /// <param name="actor">The <see cref="IActorRef"/> to be removed</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to be removed.</param>
+        /// <returns>The updated actor state.</returns>
         IActorState RemoveWatching(IActorRef actor);
         /// <summary>
-        /// Removes the provided <see cref="IActorRef"/> from the `WatchedBy` set
+        /// Removes the provided <see cref="IActorRef"/> from the `WatchedBy` set.
         /// </summary>
-        /// <param name="actor">The <see cref="IActorRef"/> to be removed</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to be removed.</param>
+        /// <returns>The updated actor state.</returns>
         IActorState RemoveWatchedBy(IActorRef actor);
         /// <summary>
-        /// Removes the provided <see cref="IActorRef"/> from the `Termination queue` set
+        /// Removes the provided <see cref="IActorRef"/> from the `Termination queue` set.
         /// </summary>
-        /// <param name="actor">The <see cref="IActorRef"/> to be removed</param>
-        /// <returns>Updated state and custom terminated message, if any</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to be removed.</param>
+        /// <returns>Updated state and custom terminated message, if any.</returns>
         (IActorState State, Option<object> CustomMessage) RemoveTerminated(IActorRef actor);
         /// <summary>
-        /// Adds the provided <see cref="IActorRef"/> to the `Watching` set
+        /// Adds the provided <see cref="IActorRef"/> to the `Watching` set.
         /// </summary>
-        /// <param name="actor">The <see cref="IActorRef"/> to be added</param>
-        /// <param name="message">The message sent on termination, None for default <see cref="Terminated"/> message</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to be added.</param>
+        /// <param name="message">The message sent on termination, None for default <see cref="Terminated"/> message.</param>
+        /// <returns>The updated actor state.</returns>
         IActorState AddWatching(IActorRef actor, Option<object> message);
         /// <summary>
-        /// Adds the provided <see cref="IActorRef"/> to the `WatchedBy` set
+        /// Adds the provided <see cref="IActorRef"/> to the `WatchedBy` set.
         /// </summary>
-        /// <param name="actor">The <see cref="IActorRef"/> to be added</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to be added.</param>
+        /// <returns>The updated actor state.</returns>
         IActorState AddWatchedBy(IActorRef actor);
-
         /// <summary>
-        /// Adds the provided <see cref="IActorRef"/> to the `Termination queue` set, with optional custom terminated message
+        /// Adds the provided <see cref="IActorRef"/> to the `Termination queue` set, with optional custom terminated message.
         /// </summary>
-        /// <param name="actor">The <see cref="IActorRef"/> to be added</param>
-        /// <param name="customMessage">Optional custom terminated message</param>
-        /// <returns>Updated state</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to be added.</param>
+        /// <param name="customMessage">Optional custom terminated message.</param>
+        /// <returns>The updated actor state.</returns>
         IActorState AddTerminated(IActorRef actor, Option<object> customMessage);
         /// <summary>
-        /// Clears the `Watching` set
+        /// Clears the `Watching` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         IActorState ClearWatching();
         /// <summary>
-        /// Clears the `WatchedBy` set
+        /// Clears the `WatchedBy` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         IActorState ClearWatchedBy();
         /// <summary>
-        /// Clears the `Termination queue` set
+        /// Clears the `Termination queue` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         IActorState ClearTerminated();
         /// <summary>
-        /// Clears the `Behavior` stack
+        /// Clears the `Behavior` stack.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         IActorState ClearBehaviorStack();
         /// <summary>
-        /// Replaces the current receive behavior with a new behavior
+        /// Replaces the current receive behavior with a new behavior.
         /// </summary>
-        /// <param name="receive">The new behavior</param>
-        /// <returns>TBD</returns>
+        /// <param name="receive">The new behavior.</param>
+        /// <returns>The updated actor state.</returns>
         IActorState Become(Receive receive);
         /// <summary>
-        /// Pushes a new receive behavior onto the `Behavior` stack
+        /// Pushes a new receive behavior onto the `Behavior` stack.
         /// </summary>
-        /// <param name="receive">The new top level behavior</param>
-        /// <returns>TBD</returns>
+        /// <param name="receive">The new top level behavior.</param>
+        /// <returns>The updated actor state.</returns>
         IActorState BecomeStacked(Receive receive);
         /// <summary>
-        /// Removes the top level receive behavior from the `Behavior` stack
+        /// Removes the top level receive behavior from the `Behavior` stack.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         IActorState UnbecomeStacked();
         /// <summary>
-        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Watching` set
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Watching` set.
         /// </summary>
-        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Watching` set</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Watching` set.</param>
+        /// <returns>True if the actor is being watched; otherwise, false.</returns>
         bool ContainsWatching(IActorRef actor);
         /// <summary>
-        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Watching` set 
-        /// and retrieves the potential custom termination message
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Watching` set and retrieves the potential custom termination message.
         /// </summary>
-        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Watching` set</param>
-        /// <param name="msg">
-        /// The custom termination message or None if the default <see cref="Terminated"/> message is expected
-        /// </param>
-        /// <returns></returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Watching` set.</param>
+        /// <param name="msg">The custom termination message or None if the default <see cref="Terminated"/> message is expected.</param>
+        /// <returns>True if the actor is being watched; otherwise, false.</returns>
         bool TryGetWatching(IActorRef actor, out Option<object> msg);
         /// <summary>
-        /// Determines whether the provided <see cref="IActorRef"/> is present in the `WatchedBy` set
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `WatchedBy` set.
         /// </summary>
-        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `WatchedBy` set</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `WatchedBy" set.</param>
+        /// <returns>True if the actor is watching this actor; otherwise, false.</returns>
         bool ContainsWatchedBy(IActorRef actor);
         /// <summary>
-        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Termination queue` set
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Termination queue` set.
         /// </summary>
-        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Termination queue` set</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Termination queue` set.</param>
+        /// <returns>True if the actor is in the termination queue; otherwise, false.</returns>
         bool ContainsTerminated(IActorRef actor);
         /// <summary>
-        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `Watching` set
+        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `Watching` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An enumerable of actors being watched.</returns>
         IEnumerable<IActorRef> GetWatching();
         /// <summary>
-        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `WatchedBy` set
+        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `WatchedBy` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An enumerable of actors watching this actor.</returns>
         IEnumerable<IActorRef> GetWatchedBy();
         /// <summary>
-        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `Termination queue` set
+        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `Termination queue` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An enumerable of actors in the termination queue.</returns>
         IEnumerable<IActorRef> GetTerminated();
         /// <summary>
-        /// Returns the top level receive behavior from the behavior stack
+        /// Returns the top level receive behavior from the behavior stack.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The current receive behavior.</returns>
         Receive GetCurrentBehavior();
     }
 
@@ -153,51 +149,51 @@ namespace Akka.Actor
         private Receive _receive;
 
         /// <summary>
-        /// TBD
+        /// Removes the provided <see cref="IActorRef"/> from the `Watching` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to be removed.</param>
+        /// <returns>The updated actor state.</returns>
         public IActorState RemoveWatching(IActorRef actor)
         {
             return this;
         }
 
         /// <summary>
-        /// TBD
+        /// Removes the provided <see cref="IActorRef"/> from the `WatchedBy` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to be removed.</param>
+        /// <returns>The updated actor state.</returns>
         public IActorState RemoveWatchedBy(IActorRef actor)
         {
             return this;
         }
 
         /// <summary>
-        /// TBD
+        /// Removes the provided <see cref="IActorRef"/> from the `Termination queue` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to be removed.</param>
+        /// <returns>Updated state and custom terminated message, if any.</returns>
         public (IActorState, Option<object>) RemoveTerminated(IActorRef actor)
         {
             return (this, Option<object>.None);
         }
 
         /// <summary>
-        /// TBD
+        /// Adds the provided <see cref="IActorRef"/> to the `Watching` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="msg">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to be added.</param>
+        /// <param name="msg">The message sent on termination, None for default <see cref="Terminated"/> message.</param>
+        /// <returns>The updated actor state.</returns>
         public IActorState AddWatching(IActorRef actor, Option<object> msg)
         {
             return GetFullState().AddWatching(actor, msg);
         }
 
         /// <summary>
-        /// TBD
+        /// Adds the provided <see cref="IActorRef"/> to the `WatchedBy` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to be added.</param>
+        /// <returns>The updated actor state.</returns>
         public IActorState AddWatchedBy(IActorRef actor)
         {
             //if we have no watchedBy, assign it to our local ref
@@ -237,31 +233,31 @@ namespace Akka.Actor
         }
         
         /// <summary>
-        /// TBD
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Watching` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Watching` set.</param>
+        /// <returns>True if the actor is being watched; otherwise, false.</returns>
         public bool ContainsWatching(IActorRef actor)
         {
             return false;
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Watching` set and retrieves the potential custom termination message.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="msg">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Watching` set.</param>
+        /// <param name="msg">The custom termination message or None if the default <see cref="Terminated"/> message is expected.</param>
+        /// <returns>True if the actor is being watched; otherwise, false.</returns>
         public bool TryGetWatching(IActorRef actor, out Option<object> msg)
         {
             return GetFullState().TryGetWatching(actor, out msg);
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `WatchedBy` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `WatchedBy" set.</param>
+        /// <returns>True if the actor is watching this actor; otherwise, false.</returns>
         public bool ContainsWatchedBy(IActorRef actor)
         {
             if (_watchedBy == null)
@@ -271,28 +267,28 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Termination queue` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Termination queue` set.</param>
+        /// <returns>True if the actor is in the termination queue; otherwise, false.</returns>
         public bool ContainsTerminated(IActorRef actor)
         {
             return false;
         }
 
         /// <summary>
-        /// TBD
+        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `Watching` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An enumerable of actors being watched.</returns>
         public IEnumerable<IActorRef> GetWatching()
         {
             yield break;
         }
 
         /// <summary>
-        /// TBD
+        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `WatchedBy` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An enumerable of actors watching this actor.</returns>
         public IEnumerable<IActorRef> GetWatchedBy()
         {
             if (_watchedBy != null)
@@ -300,27 +296,27 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `Termination queue` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An enumerable of actors in the termination queue.</returns>
         public IEnumerable<IActorRef> GetTerminated()
         {
             yield break;
         }
 
         /// <summary>
-        /// TBD
+        /// Clears the `Watching` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         public IActorState ClearWatching()
         {
             return this;
         }
 
         /// <summary>
-        /// TBD
+        /// Clears the `WatchedBy` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         public IActorState ClearWatchedBy()
         {
             _watchedBy = null;
@@ -328,19 +324,19 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Clears the `Termination queue` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         public IActorState ClearTerminated()
         {
             return this;
         }
 
         /// <summary>
-        /// TBD
+        /// Replaces the current receive behavior with a new behavior.
         /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="receive">The new behavior.</param>
+        /// <returns>The updated actor state.</returns>
         public IActorState Become(Receive receive)
         {
             if (_receive == null)
@@ -352,10 +348,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Pushes a new receive behavior onto the `Behavior` stack.
         /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="receive">The new top level behavior.</param>
+        /// <returns>The updated actor state.</returns>
         public IActorState BecomeStacked(Receive receive)
         {
             if (_receive == null)
@@ -367,9 +363,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Removes the top level receive behavior from the `Behavior` stack.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         public IActorState UnbecomeStacked()
         {
             return this;
@@ -377,9 +373,9 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// TBD
+        /// Clears the `Behavior` stack.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         public IActorState ClearBehaviorStack()
         {
             _receive = null;
@@ -388,9 +384,9 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// TBD
+        /// Returns the top level receive behavior from the behavior stack.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The current receive behavior.</returns>
         public Receive GetCurrentBehavior()
         {
             //TODO: throw if null?
@@ -408,10 +404,10 @@ namespace Akka.Actor
         private readonly Dictionary<IActorRef, Option<object>> _terminatedQueue = new(); //terminatedqueue should never be used outside the message loop
         private Stack<Receive> _behaviorStack = new(2);
         /// <summary>
-        /// TBD
+        /// Removes the provided <see cref="IActorRef"/> from the `Watching` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to be removed.</param>
+        /// <returns>The updated actor state.</returns>
         public IActorState RemoveWatching(IActorRef actor)
         {
             _watching.Remove(actor);
@@ -419,10 +415,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Removes the provided <see cref="IActorRef"/> from the `WatchedBy` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to be removed.</param>
+        /// <returns>The updated actor state.</returns>
         public IActorState RemoveWatchedBy(IActorRef actor)
         {
             _watchedBy.Remove(actor);
@@ -445,9 +441,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Adds the provided <see cref="IActorRef"/> to the `Watching` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
+        /// <param name="actor">The <see cref="IActorRef"/> to be added.</param>
         /// <param name="msg">TBD</param>
         /// <returns>TBD</returns>
         public IActorState AddWatching(IActorRef actor, Option<object> msg)
@@ -457,9 +453,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Adds the provided <see cref="IActorRef"/> to the `WatchedBy` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
+        /// <param name="actor">The <see cref="IActorRef"/> to be added.</param>
         /// <returns>TBD</returns>
         public IActorState AddWatchedBy(IActorRef actor)
         {
@@ -483,68 +479,68 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// TBD
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Watching` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Watching` set.</param>
+        /// <returns>True if the actor is being watched; otherwise, false.</returns>
         public bool ContainsWatching(IActorRef actor)
         {
             return _watching.ContainsKey(actor);
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Watching` set and retrieves the potential custom termination message.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="msg">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Watching` set.</param>
+        /// <param name="msg">The custom termination message or None if the default <see cref="Terminated"/> message is expected.</param>
+        /// <returns>True if the actor is being watched; otherwise, false.</returns>
         public bool TryGetWatching(IActorRef actor, out Option<object> msg)
         {
             return _watching.TryGetValue(actor, out msg);
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `WatchedBy` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `WatchedBy" set.</param>
+        /// <returns>True if the actor is watching this actor; otherwise, false.</returns>
         public bool ContainsWatchedBy(IActorRef actor)
         {
             return _watchedBy.Contains(actor);
         }
 
         /// <summary>
-        /// TBD
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Termination queue` set.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Termination queue` set.</param>
+        /// <returns>True if the actor is in the termination queue; otherwise, false.</returns>
         public bool ContainsTerminated(IActorRef actor)
         {
             return _terminatedQueue.ContainsKey(actor);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `Watching` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An enumerable of actors being watched.</returns>
         public IEnumerable<IActorRef> GetWatching()
         {
             return _watching.Keys;
         }
 
         /// <summary>
-        /// TBD
+        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `WatchedBy` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An enumerable of actors watching this actor.</returns>
         public IEnumerable<IActorRef> GetWatchedBy()
         {
             return _watchedBy;
         }
 
         /// <summary>
-        /// TBD
+        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `Termination queue` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An enumerable of actors in the termination queue.</returns>
         public IEnumerable<IActorRef> GetTerminated()
         {
             return _terminatedQueue.Keys;
@@ -552,9 +548,9 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// TBD
+        /// Clears the `Watching` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         public IActorState ClearWatching()
         {
             _watching.Clear();
@@ -563,9 +559,9 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// TBD
+        /// Clears the `WatchedBy` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         public IActorState ClearWatchedBy()
         {
             _watchedBy.Clear();
@@ -574,9 +570,9 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// TBD
+        /// Clears the `Termination queue` set.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         public IActorState ClearTerminated()
         {
             _terminatedQueue.Clear();
@@ -585,10 +581,10 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// TBD
+        /// Replaces the current receive behavior with a new behavior.
         /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="receive">The new behavior.</param>
+        /// <returns>The updated actor state.</returns>
         public IActorState Become(Receive receive)
         {
             if (_behaviorStack.Count > 1) //We should never pop off the initial receiver
@@ -598,10 +594,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Pushes a new receive behavior onto the `Behavior` stack.
         /// </summary>
-        /// <param name="receive">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="receive">The new top level behavior.</param>
+        /// <returns>The updated actor state.</returns>
         public IActorState BecomeStacked(Receive receive)
         {
             _behaviorStack.Push(receive);
@@ -609,9 +605,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Removes the top level receive behavior from the `Behavior` stack.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         public IActorState UnbecomeStacked()
         {
             if (_behaviorStack.Count > 1) //We should never pop off the initial receiver
@@ -621,9 +617,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Clears the `Behavior` stack.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The updated actor state.</returns>
         public IActorState ClearBehaviorStack()
         {
             _behaviorStack = new Stack<Receive>(1);
@@ -632,9 +628,9 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// TBD
+        /// Returns the top level receive behavior from the behavior stack.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The current receive behavior.</returns>
         public Receive GetCurrentBehavior()
         {
             return _behaviorStack.Peek();

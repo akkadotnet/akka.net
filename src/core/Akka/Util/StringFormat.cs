@@ -10,7 +10,7 @@ using System.Collections.Generic;
 namespace Akka.Util
 {
     /// <summary>
-    /// TBD
+    /// Utility methods for safely formatting strings with null values.
     /// </summary>
     public static class StringFormat
     {
@@ -21,7 +21,7 @@ namespace Akka.Util
         /// </summary>
         /// <param name="separator">The separator.</param>
         /// <param name="args">The arguments.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A string with the concatenated values, separated by the specified separator.</returns>
         public static string SafeJoin(string separator, params object[] args)
         {
             return string.Join(separator, ConvertValues(args));

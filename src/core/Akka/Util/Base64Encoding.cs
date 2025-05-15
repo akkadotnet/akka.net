@@ -18,10 +18,10 @@ namespace Akka.Util
         private const string Base64Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
 
         /// <summary>
-        /// TBD
+        /// Encodes a 64-bit integer value as a custom base64 string using Akka.NET's encoding alphabet.
         /// </summary>
-        /// <param name="value">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="value">The value to encode.</param>
+        /// <returns>The base64-encoded string representation of the value.</returns>
         public static string Base64Encode(this long value)
         {
             return Base64Encode(value, "");
@@ -50,10 +50,10 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Encodes a string as a standard base64 string using UTF-8 encoding.
         /// </summary>
-        /// <param name="s">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="s">The string to encode.</param>
+        /// <returns>The base64-encoded string.</returns>
         public static string Base64Encode(this string s)
         {
             var bytes = System.Text.Encoding.UTF8.GetBytes(s);

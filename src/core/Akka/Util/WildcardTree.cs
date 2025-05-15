@@ -14,22 +14,22 @@ namespace Akka.Util
     /// <summary>
     /// A searchable nested dictionary, represents a searchable tree structure underneath
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of data stored in the tree nodes.</typeparam>
     internal sealed class WildcardTree<T> where T:class
     {
         public bool IsEmpty => Data == null && Children.Count == 0;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new empty instance of the <see cref="WildcardTree{T}"/> class.
         /// </summary>
         public WildcardTree() : this(null, new Dictionary<string, WildcardTree<T>>()) { }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="WildcardTree{T}"/> class with the specified data and children.
         /// </summary>
-        /// <param name="data">TBD</param>
-        /// <param name="children">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="data">The data to store in this tree node.</param>
+        /// <param name="children">The child nodes of this tree node, keyed by name.</param>
+        /// <returns>A new instance of WildcardTree.</returns>
         public WildcardTree(T data, IDictionary<string, WildcardTree<T>> children)
         {
             Children = children;
@@ -37,21 +37,21 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the data stored in this tree node.
         /// </summary>
         public T Data { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Gets the child nodes of this tree node, keyed by name.
         /// </summary>
         public IDictionary<string, WildcardTree<T>> Children { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Inserts data at the path represented by the elements enumerator.
         /// </summary>
-        /// <param name="elements">TBD</param>
-        /// <param name="data">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="elements">The path elements to traverse when inserting the data.</param>
+        /// <param name="data">The data to insert at the specified path.</param>
+        /// <returns>The updated tree after insertion.</returns>
         public WildcardTree<T> Insert(IEnumerator<string> elements, T data)
         {
             if (!elements.MoveNext())
@@ -117,7 +117,7 @@ namespace Akka.Util
         #region Static methods
 
         /// <summary>
-        /// TBD
+        /// An empty WildcardTree instance.
         /// </summary>
         public static readonly WildcardTree<T> Empty = new();
 

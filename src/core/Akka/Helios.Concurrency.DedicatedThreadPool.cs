@@ -79,12 +79,12 @@ namespace Helios.Concurrency
         public TimeSpan? DeadlockTimeout { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The name of this thread pool, used to identify the threads.
         /// </summary>
         public string Name { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The exception handler to use when unhandled exceptions occur in the threads.
         /// </summary>
         public Action<Exception> ExceptionHandler { get; private set; }
 
@@ -113,18 +113,18 @@ namespace Helios.Concurrency
         private readonly DedicatedThreadPool _pool;
 
         /// <summary>
-        /// TBD
+        /// Creates a new TaskScheduler that schedules tasks onto the specified thread pool.
         /// </summary>
-        /// <param name="pool">TBD</param>
+        /// <param name="pool">The dedicated thread pool to use for executing tasks.</param>
         public DedicatedThreadPoolTaskScheduler(DedicatedThreadPool pool)
         {
             _pool = pool;
         }
 
         /// <summary>
-        /// TBD
+        /// Queues a task to the scheduler for execution on the dedicated thread pool.
         /// </summary>
-        /// <param name="task">TBD</param>
+        /// <param name="task">The task to be queued.</param>
         protected override void QueueTask(Task task)
         {
             lock (_tasks)
@@ -136,10 +136,11 @@ namespace Helios.Concurrency
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to execute a task on the current thread if possible.
         /// </summary>
-        /// <param name="task">TBD</param>
-        /// <param name="taskWasPreviouslyQueued">TBD</param>
+        /// <param name="task">The task to try executing.</param>
+        /// <param name="taskWasPreviouslyQueued">Whether the task was previously queued to the scheduler.</param>
+        /// <returns>True if the task was executed; otherwise, false.</returns>
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
         {
             //current thread isn't running any tasks, can't execute inline
@@ -155,10 +156,10 @@ namespace Helios.Concurrency
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to remove a previously scheduled task from the scheduler.
         /// </summary>
-        /// <param name="task">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="task">The task to remove.</param>
+        /// <returns>True if the task was successfully removed; otherwise, false.</returns>
         protected override bool TryDequeue(Task task)
         {
             lock (_tasks) return _tasks.Remove(task);
@@ -174,12 +175,12 @@ namespace Helios.Concurrency
         }
 
         /// <summary>
-        /// TBD
+        /// Gets an enumerable of the tasks currently scheduled to the scheduler.
         /// </summary>
         /// <exception cref="NotSupportedException">
         /// This exception is thrown if can't ensure a thread-safe return of the list of tasks.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>An enumerable of the tasks currently scheduled.</returns>
         protected override IEnumerable<Task> GetScheduledTasks()
         {
             var lockTaken = false;
@@ -279,17 +280,15 @@ namespace Helios.Concurrency
         }
     }
 
-
-
     /// <summary>
     /// An instanced, dedicated thread pool.
     /// </summary>
     internal sealed class DedicatedThreadPool : IDisposable
     {
         /// <summary>
-        /// TBD
+        /// Creates a new dedicated thread pool with the specified settings.
         /// </summary>
-        /// <param name="settings">TBD</param>
+        /// <param name="settings">The settings that configure this thread pool instance.</param>
         public DedicatedThreadPool(DedicatedThreadPoolSettings settings)
         {
             _workQueue = new ThreadPoolWorkQueue();
@@ -303,7 +302,7 @@ namespace Helios.Concurrency
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the settings used to configure this dedicated thread pool.
         /// </summary>
         public DedicatedThreadPoolSettings Settings { get; private set; }
 
@@ -311,12 +310,12 @@ namespace Helios.Concurrency
         private readonly PoolWorker[] _workers;
 
         /// <summary>
-        /// TBD
+        /// Queues a work item to this thread pool for execution.
         /// </summary>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown if the given <paramref name="work"/> item is undefined.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>True if the work was successfully queued; otherwise, false.</returns>
         public bool QueueUserWorkItem<T>(T work) where T:IRunnable
         {
             if (work == null)
@@ -326,7 +325,7 @@ namespace Helios.Concurrency
         }
 
         /// <summary>
-        /// TBD
+        /// Signals the thread pool to stop accepting new work and shut down after all current work is processed.
         /// </summary>
         public void Dispose()
         {
@@ -334,7 +333,7 @@ namespace Helios.Concurrency
         }
 
         /// <summary>
-        /// TBD
+        /// Waits for all threads in the pool to exit, with no timeout.
         /// </summary>
         public void WaitForThreadsExit()
         {
@@ -342,9 +341,9 @@ namespace Helios.Concurrency
         }
 
         /// <summary>
-        /// TBD
+        /// Waits for all threads in the pool to exit, with the specified timeout.
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The maximum time to wait for all threads to exit.</param>
         public void WaitForThreadsExit(TimeSpan timeout)
         {
             Task.WaitAll(_workers.Select(worker => worker.ThreadExit).ToArray(), timeout);
