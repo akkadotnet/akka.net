@@ -832,18 +832,14 @@ namespace Akka.IO
                 }
                 case PeerClosed:
                 {
-                    // we have probably not requested a close yet, but the peer has closed
-                    if (_state is { IsCloseable: false, KeepOpenOnPeerClosed: true })
-                    {
-                        if (_traceLogging) Log.Debug("Got PeerClosed event but keepOpenOnPeerClosed is set.");
-                        
-                        // set the closure to true - only way we can terminate now is by draining writes
-                        _state = _state with { CloseRequested = true };
-                    }
+                    // set the closure to true - only way we can terminate now is by draining writes
+                    _state = _state with { CloseRequested = true };
                     
                     // we are basically checking
                     if (!_state.IsCloseable)
                     {
+                        if(_traceLogging) Log.Debug("Got PeerClosed event but we are not closing the socket.");
+                        
                         // we are not closing the socket, but we need to stop reading
                         Context.Become(Closing(info, false));
                     }
