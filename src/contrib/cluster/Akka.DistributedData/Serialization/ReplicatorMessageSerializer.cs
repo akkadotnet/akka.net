@@ -552,7 +552,7 @@ namespace Akka.DistributedData.Serialization
         private Gossip GossipFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.Gossip.Parser.ParseFrom(bytes);
-            var builder = ImmutableDictionary<string, DataEnvelope>.Empty.ToBuilder();
+            var builder = ImmutableDictionary.CreateBuilder<string, DataEnvelope>();
             foreach (var entry in proto.Entries)
             {
                 builder.Add(entry.Key, DataEnvelopeFromProto(entry.Envelope));
@@ -585,7 +585,7 @@ namespace Akka.DistributedData.Serialization
             }
             else
             {
-                var builder = ImmutableDictionary<UniqueAddress, IPruningState>.Empty.ToBuilder();
+                var builder = ImmutableDictionary.CreateBuilder<UniqueAddress, IPruningState>();
 
                 foreach (var entry in pruning)
                 {
@@ -710,7 +710,7 @@ namespace Akka.DistributedData.Serialization
         private Status StatusFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.Status.Parser.ParseFrom(bytes);
-            var builder = ImmutableDictionary<string, ByteString>.Empty.ToBuilder();
+            var builder = ImmutableDictionary.CreateBuilder<string, ByteString>();
 
             foreach (var entry in proto.Entries)
             {
@@ -731,7 +731,7 @@ namespace Akka.DistributedData.Serialization
             var reply = proto.Reply;
             var fromNode = _ser.UniqueAddressFromProto(proto.FromNode);
 
-            var builder = ImmutableDictionary<string, Delta>.Empty.ToBuilder();
+            var builder = ImmutableDictionary.CreateBuilder<string, Delta>();
             foreach (var entry in proto.Entries)
             {
                 var fromSeqNr = entry.FromSeqNr;
