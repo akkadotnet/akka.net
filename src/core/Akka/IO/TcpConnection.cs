@@ -81,6 +81,16 @@ namespace Akka.IO
         {
             return state with { IsSending = false };
         }
+
+        public static ConnectionState Receiving(this in ConnectionState state)
+        {
+            return state with { IsReceiving = true };
+        }
+        
+        public static ConnectionState DoneReceiving(this in ConnectionState state)
+        {
+            return state with { IsReceiving = false };
+        }
     }
 
     /// <summary>
@@ -132,6 +142,11 @@ namespace Akka.IO
         /// We've fully closed the socket for reading and writing. The socket itself is no longer accessible.
         /// </summary>
         public bool SocketDisposed { get; init; }
+        
+        /// <summary>
+        /// Set when we start an async receive operation, finished when we get a receive complete event.
+        /// </summary>
+        public bool IsReceiving { get; init; }
 
         /// <summary>
         /// Are we sending packets over the network right now?
@@ -322,10 +337,11 @@ namespace Akka.IO
 
         private void IssueReceive()
         {
-            if (!_state.CanReceive) return;
+            if (_state.IsReceiving || !_state.CanReceive) return;
 
             try
             {
+                _state = _state.Receiving();
                 if (!Socket.ReceiveAsync(_receiveArgs))
                     Self.Tell(new SocketReceiveCompleted(_receiveArgs.BytesTransferred, _receiveArgs.SocketError));
             }
@@ -342,6 +358,8 @@ namespace Akka.IO
 
         private void HandleRead(IActorRef handler, SocketReceiveCompleted rc)
         {
+            _state = _state.DoneReceiving();
+            
             if (_traceLogging)
                 Log.Debug("Received {0} bytes from {1}", rc.Bytes, Socket.RemoteEndPoint);
 

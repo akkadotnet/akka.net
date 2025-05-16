@@ -133,7 +133,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5 });
+                var testData = ByteString.FromBytes([1, 2, 3, 4, 5]);
                 var server = await new Server(this).InitializeAsync();
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
@@ -574,7 +574,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             var binding = await bindTask.ShouldCompleteWithin(3.Seconds());
 
             var testInput = Enumerable.Range(0, 255)
-                .Select(i => ByteString.FromBytes(new byte[] { Convert.ToByte(i) }))
+                .Select(i => ByteString.FromBytes([Convert.ToByte(i)]))
                 .ToList();
 
             var expectedOutput = testInput.Aggregate(ByteString.Empty, (agg, b) => agg.Concat(b));
@@ -604,7 +604,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             var echoConnection = Sys.TcpStream().OutgoingConnection(serverAddress);
 
             var testInput = Enumerable.Range(0, 255)
-                .Select(i => ByteString.FromBytes(new byte[] { Convert.ToByte(i) }))
+                .Select(i => ByteString.FromBytes([Convert.ToByte(i)]))
                 .ToList();
 
             var expectedOutput = testInput.Aggregate(ByteString.Empty, (agg, b) => agg.Concat(b));
