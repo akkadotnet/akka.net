@@ -425,13 +425,22 @@ namespace Akka.IO
         {
             _state = _state with { IsSending = false };
 
-            foreach (var (c, ack) in ea.PendingAcks)
-                c.Tell(ack);
+            if (ea.SocketError != SocketError.Success)
+            {
+                Log.Warning("[TcpConnection] send failed with error [{0}]", ea.SocketError);
+                MarkClose(_handler!, new ErrorClosed(ea.SocketError.ToString()));
+                Context.Stop(Self);
+            }
             
             if (Settings.TraceLogging)
             {
-                Log.Debug("[TcpConnection] completed write of {0} bytes (queued={1}/{2})", ea.BufferList.Sum(c => c.Count), _state.QueuedBytes, _maxQueuedBytes);
+                Log.Debug("[TcpConnection] completed write of {0}/{1} bytes (queued={2}/{3})", ea.BytesTransferred, ea.BufferList.Sum(c => c.Count), _state.QueuedBytes, _maxQueuedBytes);
             }
+
+            foreach (var (c, ack) in ea.PendingAcks)
+                c.Tell(ack);
+            
+           
             
             ea.ClearAcks();
             ea.BufferList = null; // release refs
