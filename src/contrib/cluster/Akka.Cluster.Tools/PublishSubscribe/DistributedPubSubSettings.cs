@@ -54,16 +54,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var unknown => throw new ArgumentException($"Unknown routing logic is tried to be applied to the pub-sub mediator: {unknown}")
             };
 
-            var overflowLogic = config.GetString("buffered-messages.overflow-strategy")?.ToLowerInvariant() switch
-            {
-                "drop-head" => OverflowStrategy.DropHead,
-                "drop-tail" => OverflowStrategy.DropTail,
-                "drop-buffer" => OverflowStrategy.DropBuffer,
-                "drop-new" => OverflowStrategy.DropNew,
-                "fail" => OverflowStrategy.Fail,
-                var unknown => throw new ArgumentException($"Unknown buffer overflow strategy: {unknown}. Valid values are 'drop-head', 'drop-tail', 'drop-buffer', 'drop-new', and 'fail'.")
-            };
-
             // TODO: This will fail if DistributedPubSub.DefaultConfig() is not inside the fallback chain.
             // TODO: "gossip-interval" key depends on Config.GetTimeSpan() to return a TimeSpan.Zero default.
             // TODO: "removed-time-to-live" key depends on Config.GetTimeSpan() to return a TimeSpan.Zero default.
@@ -75,11 +65,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 config.GetTimeSpan("removed-time-to-live"),
                 config.GetInt("max-delta-elements"),
                 config.GetBoolean("send-to-dead-letters-when-no-subscribers"),
-                config.GetBoolean("wait-for-subscribers"),
                 config.GetInt("buffered-messages.max-per-topic"),
-                config.GetTimeSpan("buffered-messages.timeout"),
-                config.GetTimeSpan("buffered-messages.timeout-check-interval"),
-                overflowLogic);
+                config.GetTimeSpan("buffered-messages.timeout-check-interval"));
         }
 
         /// <summary>
@@ -114,34 +101,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public bool SendToDeadLettersWhenNoSubscribers { get; }
         
         /// <summary>
-        /// When set to <c>true</c>, mediator will buffer messages that are failed to be published or sent
-        /// because there are no subscribers in the cluster
-        /// </summary>
-        public bool WaitForSubscribers { get; }
-        
-        /// <summary>
-        /// When <see cref="WaitForSubscribers"/> is set to <c>true</c>, this will set the maximum message buffer size
-        /// for each topic 
+        /// The maximum <see cref="PublishWithAck"/> message buffer size for each topic 
         /// </summary>
         public int MaxBufferedMessagePerTopic { get; }
         
         /// <summary>
-        /// When <see cref="WaitForSubscribers"/> is set to <c>true</c>, this will determine how long an unsent message
-        /// is being kept inside the buffer before it is ultimately being sent to dead letter.
-        /// </summary>
-        public TimeSpan BufferedMessageTimeout { get; }
-
-        /// <summary>
-        /// When <see cref="WaitForSubscribers"/> is set to <c>true</c>, this will determine the interval on which
-        /// all buffered message will be checked for timeout condition
+        /// Determine the interval on which all buffered <see cref="PublishWithAck"/> message will be checked for timeout condition
         /// </summary>
         public TimeSpan BufferedMessageTimeoutCheckInterval { get; }
-        
-        /// <summary>
-        /// When <see cref="WaitForSubscribers"/> is set to <c>true</c>, this will determine how mediator will
-        /// behave when a topic buffer overflowed
-        /// </summary>
-        public OverflowStrategy BufferedMessageOverflowStrategy { get; }
         
         /// <summary>
         /// Creates a new instance of the <see cref="DistributedPubSubSettings" />.
@@ -168,11 +135,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 removedTimeToLive: removedTimeToLive,
                 maxDeltaElements: maxDeltaElements, 
                 sendToDeadLettersWhenNoSubscribers: sendToDeadLettersWhenNoSubscribers,
-                waitForSubscribers: false,
                 maxBufferedMessagePerTopic: 0,
-                bufferedMessageTimeout: TimeSpan.Zero,
-                bufferedMessageTimeoutCheckInterval: TimeSpan.Zero,
-                bufferedMessageOverflowStrategy: OverflowStrategy.DropHead)
+                bufferedMessageTimeoutCheckInterval: TimeSpan.Zero)
         {
         }
 
@@ -185,11 +149,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <param name="removedTimeToLive">The amount of time it takes to prune a deactivated subscriber from the network.</param>
         /// <param name="maxDeltaElements">The maximum number of delta elements that can be propagated in a single gossip tick.</param>
         /// <param name="sendToDeadLettersWhenNoSubscribers">When a message is published to a topic with no subscribers send it to the dead letters.</param>
-        /// <param name="waitForSubscribers">Should the mediator buffers messages that are failed to be published or sent or not</param>
         /// <param name="maxBufferedMessagePerTopic">Maximum message buffer size for each topic</param>
-        /// <param name="bufferedMessageTimeout">How long an unsent message is being kept inside the buffer before it is ultimately being sent to dead letter.</param>
         /// <param name="bufferedMessageTimeoutCheckInterval">Buffered message timeout condition check interval</param>
-        /// <param name="bufferedMessageOverflowStrategy">Determine how the mediator should behave when a topic buffer overflows</param>
         /// <exception cref="ArgumentException">Thrown if a user tries to use a <see cref="ConsistentHashingRoutingLogic"/> with routingLogic.</exception>
         public DistributedPubSubSettings(
             string role,
@@ -198,11 +159,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             TimeSpan removedTimeToLive,
             int maxDeltaElements,
             bool sendToDeadLettersWhenNoSubscribers,
-            bool waitForSubscribers,
             int maxBufferedMessagePerTopic,
-            TimeSpan bufferedMessageTimeout,
-            TimeSpan bufferedMessageTimeoutCheckInterval,
-            OverflowStrategy bufferedMessageOverflowStrategy)
+            TimeSpan bufferedMessageTimeoutCheckInterval)
         {
             if (routingLogic is ConsistentHashingRoutingLogic)
             {
@@ -215,11 +173,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             RemovedTimeToLive = removedTimeToLive;
             MaxDeltaElements = maxDeltaElements;
             SendToDeadLettersWhenNoSubscribers = sendToDeadLettersWhenNoSubscribers;
-            WaitForSubscribers = waitForSubscribers;
             MaxBufferedMessagePerTopic = maxBufferedMessagePerTopic;
-            BufferedMessageTimeout = bufferedMessageTimeout;
             BufferedMessageTimeoutCheckInterval = bufferedMessageTimeoutCheckInterval;
-            BufferedMessageOverflowStrategy = bufferedMessageOverflowStrategy;
         }
 
         private DistributedPubSubSettings Copy(
@@ -229,11 +184,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             TimeSpan? removedTimeToLive = null,
             int? maxDeltaElements = null,
             bool? sendToDeadLettersWhenNoSubscribers = null,
-            bool? waitForSubscribers = null,
             int? maxBufferedMessagePerTopic = null,
-            TimeSpan? bufferedMessageTimeout = null,
-            TimeSpan? bufferedMessageTimeoutCheckInterval = null,
-            OverflowStrategy? bufferedMessageOverflowStrategy = null)
+            TimeSpan? bufferedMessageTimeoutCheckInterval = null)
         {
             return new DistributedPubSubSettings(
                 role ?? Role,
@@ -242,11 +194,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 removedTimeToLive ?? RemovedTimeToLive,
                 maxDeltaElements ?? MaxDeltaElements,
                 sendToDeadLettersWhenNoSubscribers ?? SendToDeadLettersWhenNoSubscribers,
-                waitForSubscribers ?? WaitForSubscribers,
                 maxBufferedMessagePerTopic ?? MaxBufferedMessagePerTopic,
-                bufferedMessageTimeout ?? BufferedMessageTimeout,
-                bufferedMessageTimeoutCheckInterval ?? BufferedMessageTimeoutCheckInterval,
-                bufferedMessageOverflowStrategy ?? BufferedMessageOverflowStrategy);
+                bufferedMessageTimeoutCheckInterval ?? BufferedMessageTimeoutCheckInterval);
         }
         
         public DistributedPubSubSettings WithRole(string role)
@@ -267,14 +216,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public DistributedPubSubSettings WithSendToDeadLettersWhenNoSubscribers(bool sendToDeadLetterWhenNoSubscribers)
             => Copy(sendToDeadLettersWhenNoSubscribers: sendToDeadLetterWhenNoSubscribers);
         
-        public DistributedPubSubSettings WithWaitForSubscribers(bool waitForSubscribers)
-            => Copy(waitForSubscribers: waitForSubscribers);
-        
         public DistributedPubSubSettings WithMaxBufferedMessagePerTopic(int maxBufferedMessagePerTopic)
             => Copy(maxBufferedMessagePerTopic: maxBufferedMessagePerTopic);
-        
-        public DistributedPubSubSettings WithBufferedMessageTimeout(TimeSpan bufferedMessageTimeout)
-            => Copy(bufferedMessageTimeout: bufferedMessageTimeout);
         
         public DistributedPubSubSettings WithBufferedMessageTimeoutCheckInterval(TimeSpan bufferedMessageTimeoutCheckInterval)
             => Copy(bufferedMessageTimeoutCheckInterval: bufferedMessageTimeoutCheckInterval);

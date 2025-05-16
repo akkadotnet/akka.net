@@ -129,11 +129,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private readonly string _topicPrefix;
         private readonly PubSubCache _cache;
 
-        private readonly bool _waitForSubscribers;
         private readonly int _maxBufferPerTopic;
-        private readonly TimeSpan _bufferedMessageTimeout;
         private readonly TimeSpan _bufferedMessageTimeoutCheckInterval;
-        private readonly OverflowStrategy _overflowStrategy;
         private readonly Dictionary<string, List<BufferedMessage>> _bufferedMessages = new();
         
         public ITimerScheduler Timers { get; set; }
@@ -165,10 +162,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             _log = Context.GetLogger();
             
             _role = settings.Role;
-            _waitForSubscribers = settings.WaitForSubscribers;
             _maxBufferPerTopic = settings.MaxBufferedMessagePerTopic;
-            _overflowStrategy = settings.BufferedMessageOverflowStrategy;
-            _bufferedMessageTimeout = settings.BufferedMessageTimeout;
             _bufferedMessageTimeoutCheckInterval = settings.BufferedMessageTimeoutCheckInterval;
             
             _pruneInterval = new TimeSpan(_settings.RemovedTimeToLive.Ticks / 2);
@@ -205,7 +199,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     new Router(_settings.RoutingLogic, routees.ToArray()).Route(
                         Internal.Utils.WrapIfNeeded(send.Message), Sender);
                 else
-                    BufferMessageOrDeadLetter(send, Sender);
+                    IgnoreOrSendToDeadLetters(send, Sender);
             });
             Receive<SendToAll>(sendToAll =>
             {
@@ -339,7 +333,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                             if (keys.Count > 0)
                             {
                                 // Send the diff to ourselves
-                                Self.Tell(new NewSubscribersAdded(keys));
+                                Self.Tell(new NewBucketKeysAdded(keys));
                             }
                             
                             // Merge remote bucket with ours
@@ -351,7 +345,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
             Receive<GossipTick>(_ => HandleGossip());
             Receive<Prune>(_ => HandlePrune());
-            Receive<NewSubscribersAdded>(subs =>
+            Receive<NewBucketKeysAdded>(subs =>
             {
                 foreach (var key in subs.Topics)
                 {
@@ -467,65 +461,30 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
         }
 
-        private void BufferMessageOrDeadLetter(IWrappedMessage message, IActorRef sender)
+        private void BufferMessageOrDeadLetter(PublishWithAck message, IActorRef sender)
         {
-            if (_waitForSubscribers)
+            var topic = message.Topic;
+            var encodedTopic = _cache.EncodeName(topic);
+            var key = _cache.MakeKey(Self.Path, encodedTopic);
+            
+            if (!_bufferedMessages.TryGetValue(key, out var buffer))
             {
-                var topic = message switch
-                {
-                    Publish publish => publish.Topic,
-                    Send send => send.Path,
-                    _ => throw new InvalidOperationException($"Unknown message type: {message.GetType()}")
-                };
-                
-                if (!_bufferedMessages.TryGetValue(topic, out var buffer))
-                {
-                    buffer = [];
-                    _bufferedMessages[topic] = buffer;
-                }
-                
-                if(buffer.Count >= _maxBufferPerTopic)
-                {
-                    _log.Warning("Topic buffer overflowed for topic [{0}]. New message inserted: {1}", topic, message);
-                    switch (_overflowStrategy)
-                    {
-                        case OverflowStrategy.DropHead:
-                            while(buffer.Count >= _maxBufferPerTopic)
-                            {
-                                var removed = buffer.Last();
-                                buffer.RemoveAt(buffer.Count - 1);
-                                IgnoreOrSendToDeadLetters(removed.Message, removed.Sender);
-                            }
-                            break;
-                        case OverflowStrategy.DropTail:
-                            while (buffer.Count >= _maxBufferPerTopic)
-                            {
-                                var removed = buffer[0];
-                                buffer.RemoveAt(0);
-                                IgnoreOrSendToDeadLetters(removed.Message, removed.Sender);
-                            }
-                            break;
-                        case OverflowStrategy.DropBuffer:
-                            foreach (var removed in buffer)
-                            {
-                                IgnoreOrSendToDeadLetters(removed.Message, removed.Sender);
-                            }
-                            buffer.Clear();
-                            break;
-                        case OverflowStrategy.DropNew:
-                            IgnoreOrSendToDeadLetters(message, sender);
-                            return;
-                        case OverflowStrategy.Fail:
-                            throw new BufferOverflowException($"Too many messages were already buffered for topic [{topic}]. New message: {message}");
-                        default:
-                            throw new ArgumentOutOfRangeException(nameof(_overflowStrategy), $"Unknown overflowStrategy: {_overflowStrategy}");
-                    }
-                }
-                
-                buffer.Add(new BufferedMessage(message, new Deadline(DateTime.UtcNow + _bufferedMessageTimeout), sender));
+                buffer = [];
+                _bufferedMessages[key] = buffer;
             }
-            else
-                IgnoreOrSendToDeadLetters(message, sender);
+            
+            if(buffer.Count >= _maxBufferPerTopic)
+            {
+                _log.Warning("PublishWithAck buffer overflowed for topic [{0}]. New message inserted: {1}", topic, message);
+                while (buffer.Count >= _maxBufferPerTopic)
+                {
+                    var removed = buffer[0];
+                    buffer.RemoveAt(0);
+                    IgnoreOrSendToDeadLetters(removed.Message, removed.Sender);
+                }
+            }
+            
+            buffer.Add(new BufferedMessage(message, new Deadline(DateTime.UtcNow + message.Timeout), sender));
         }
         
         private bool OtherHasNewerVersions(IImmutableDictionary<Address, long> versions)
@@ -606,11 +565,16 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 : new Bucket(_cluster.SelfAddress, v, ImmutableDictionary<string, ValueHolder>.Empty.Add(key, new ValueHolder(v, value)));
             
             _registry[_cluster.SelfAddress] = newBucket;
-            Self.Tell(new NewSubscribersAdded([key]));
+            Self.Tell(new NewBucketKeysAdded([key]));
         }
 
         private void IgnoreOrSendToDeadLetters(object message, IActorRef sender)
         {
+            if (message is PublishWithAck needAck)
+            {
+                sender.Tell(new PublishFailed(needAck));
+            }
+            
             if (_settings.SendToDeadLettersWhenNoSubscribers)
             {
                 var topic = message switch
@@ -636,10 +600,17 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 if (r == null) continue;
                 r.Forward(publish.Message);
                 counter++;
+                if(publish is PublishWithAck needAck)
+                    Sender.Tell(new PublishSucceeded(needAck));
             }
 
             if (counter == 0)
-                BufferMessageOrDeadLetter(publish, Sender);
+            {
+                if(publish is PublishWithAck needAck)
+                    BufferMessageOrDeadLetter(needAck, Sender);
+                else
+                    IgnoreOrSendToDeadLetters(publish, Sender);
+            }
             return;
 
             IEnumerable<IActorRef> Refs()
@@ -665,7 +636,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
             if (groups.Count == 0)
             {
-                BufferMessageOrDeadLetter(publish, Sender);
+                if(publish is PublishWithAck needAck)
+                    BufferMessageOrDeadLetter(needAck, Sender);
+                else
+                    IgnoreOrSendToDeadLetters(publish, Sender);
             }
             else
             {
@@ -675,6 +649,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     if (routees.Length != 0)
                         new Router(_settings.RoutingLogic, routees).Route(wrappedMessage, Sender);
                 }
+                
+                if(publish is PublishWithAck needAck)
+                    Sender.Tell(new PublishSucceeded(needAck));
             }
         }
 

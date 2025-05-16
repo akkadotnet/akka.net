@@ -321,7 +321,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// Internal event signalling that a new subscriber has been added to the registry
     /// either locally using <see cref="Put"/>, <see cref="Subscribe"/>, or from a <see cref="Delta"/>.
     /// </summary>
-    internal sealed record NewSubscribersAdded(IEnumerable<string> Topics);
+    internal sealed record NewBucketKeysAdded(IEnumerable<string> Topics);
     
     /// <summary>
     /// Container for buffered <see cref="Publish"/> or <see cref="Send"/> messages

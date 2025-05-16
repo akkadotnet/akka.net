@@ -353,7 +353,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class Publish : IDistributedPubSubMessage, IEquatable<Publish>, IWrappedMessage
+    public class Publish : IDistributedPubSubMessage, IEquatable<Publish>, IWrappedMessage
     {
         /// <summary>
         /// TBD
@@ -415,6 +415,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return $"Publish<topic:{Topic}, sendOneToEachGroup:{SendOneMessageToEachGroup}, message:{Message}>";
         }
     }
+    
+    public sealed class PublishWithAck : Publish
+    {
+        public PublishWithAck(string topic, object message, TimeSpan timeout, bool sendOneMessageToEachGroup = false) : base(topic, message, sendOneMessageToEachGroup)
+        {
+            Timeout = timeout;
+        }
+        
+        public TimeSpan Timeout { get; }
+    }
+    
+    public sealed record PublishFailed(PublishWithAck Message);
+    
+    public sealed record PublishSucceeded(PublishWithAck Message);
 
     /// <summary>
     /// TBD
