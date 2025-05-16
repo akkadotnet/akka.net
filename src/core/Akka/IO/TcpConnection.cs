@@ -236,7 +236,7 @@ namespace Akka.IO
             if (_closeEvent != null)
             {
                 if(Settings.TraceLogging)
-                    Log.Debug("[TcpConnection] sending close event to {0}", _closeNotify);
+                    Log.Debug("[TcpConnection] sending close event [{0}] to {1}", _closeEvent, string.Join(",", _closeNotify));
                 
                 foreach (var sub in _closeNotify)
                     sub.Tell(_closeEvent);
@@ -290,6 +290,21 @@ namespace Akka.IO
             _closeNotify.Add(src);
             if (_handler != null) _closeNotify.Add(_handler);
         }
+        
+        private void Abort()
+        {
+            try
+            {
+                Socket.LingerState = new LingerOption(true, 0);  // causes the following close() to send TCP RST
+            }
+            catch (Exception e)
+            {
+                if (_traceLogging) Log.Debug("setSoLinger(true, 0) failed with [{0}]", e);
+            }
+
+            Context.Stop(Self);
+        }
+
 
 
         private void AwaitRegBehaviour()
@@ -332,6 +347,8 @@ namespace Akka.IO
             Receive<Close>(_ =>
             {
                 _closeRequested = true;
+                _state = _state with { ReadingSuspended = true };
+                Socket.Shutdown(SocketShutdown.Receive);
                 TryStop();
             });
             Receive<ConfirmedClose>(_ =>
@@ -340,7 +357,11 @@ namespace Akka.IO
                 _closeRequested = true;
                 TryStop();
             });
-            Receive<Abort>(_ => { Context.Stop(Self); });
+            Receive<Abort>(s =>
+            {
+                MarkClose(Sender, s.Event);
+                Abort();
+            });
 
             Receive<ResumeReading>(_ =>
             {

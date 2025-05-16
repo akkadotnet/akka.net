@@ -78,7 +78,9 @@ namespace Akka.IO
         {
             ReleaseConnectionSocketArgs();
 
-            MarkClose(_commander, _connect.FailureMessage.WithCause(cause));
+            var failureEvent = _connect.FailureMessage.WithCause(cause);
+            MarkClose(_commander, failureEvent);
+            Context.Stop(Self);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
