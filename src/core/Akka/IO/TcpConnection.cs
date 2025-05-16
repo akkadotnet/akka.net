@@ -99,13 +99,16 @@ namespace Akka.IO
             public bool HasPending => IsSending || Queue.Count > 0;
             public bool CanSend => !ClosedForWrites && !WritingSuspended;
             public bool CanReceive => !PeerClosed && !ReadingSuspended;
+            
+            private bool PeerIsReadyForUsToShutdown => (KeepOpenOnPeerClosed && PeerClosed) ||
+                                                       !KeepOpenOnPeerClosed;
 
             // may stop only when *we* requested it OR peer closed and we are NOT asked to stay open
             public bool Closeable(bool closeRequested) =>
                 closeRequested &&
                 !IsReceiving &&
                 !HasPending &&
-                (!PeerClosed || !KeepOpenOnPeerClosed);
+                PeerIsReadyForUsToShutdown;
 
             public static ConnState Initial(Queue<(WriteCommand Cmd, IActorRef Sender)> queue) =>
                 new(Phase.Connecting, false, false, false, false, false, false, false, queue, 0);
@@ -346,19 +349,34 @@ namespace Akka.IO
 
             Receive<Close>(_ =>
             {
+                if (Settings.TraceLogging)
+                    Log.Debug("[TcpConnection] Close requested");
                 _closeRequested = true;
                 _state = _state with { ReadingSuspended = true };
-                Socket.Shutdown(SocketShutdown.Receive);
+                try
+                {
+                    Socket.Shutdown(SocketShutdown.Receive);
+                }
+                catch(Exception e)
+                {
+                    if (Settings.TraceLogging)
+                        Log.Debug("[TcpConnection] Socket receive shutdown failed: {0}", e.Message);
+                }
                 TryStop();
+                TrySend();
             });
             Receive<ConfirmedClose>(_ =>
             {
+                if (Settings.TraceLogging)
+                    Log.Debug("[TcpConnection] ConfirmedClose requested");
                 HalfCloseWriteSide();
                 _closeRequested = true;
                 TryStop();
             });
             Receive<Abort>(s =>
             {
+                if (Settings.TraceLogging)
+                    Log.Debug("[TcpConnection] Abort requested");
                 MarkClose(Sender, s.Event);
                 Abort();
             });
