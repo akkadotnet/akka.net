@@ -54,7 +54,7 @@ namespace Akka.DistributedData.Tests
             var updater1 = ActorOf(Props.Create<Updater>(), "updater1");
             var updater2 = ActorOf(Props.Create<Updater>(), "updater2");
 
-            var b = ImmutableHashSet<string>.Empty.ToBuilder();
+            var b = ImmutableHashSet.CreateBuilder<string>();
             for (var i = 1; i <= 100; i++)
             {
                 var m1 = "a" + 1;

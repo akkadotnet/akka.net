@@ -52,7 +52,7 @@ namespace Akka.Cluster.Sharding
         public override IImmutableSet<Task<IImmutableSet<EntityId>>> RecoverEntities(IImmutableSet<EntityId> entities)
         {
             var stamp = _frequency;
-            var builder = ImmutableHashSet<Task<IImmutableSet<EntityId>>>.Empty.ToBuilder();
+            var builder = ImmutableHashSet.CreateBuilder<Task<IImmutableSet<EntityId>>>();
             foreach (var bucket in entities.Grouped(_numberOfEntities))
             {
                 var scheduled = ScheduleEntities(stamp, bucket.ToImmutableHashSet());
