@@ -328,7 +328,7 @@ namespace Akka.Persistence
             if (events == null) return;
 
             void Inv(object o) => handler((TEvent)o);
-            var persistents = ImmutableList<IPersistentRepresentation>.Empty.ToBuilder();
+            var persistents = ImmutableList.CreateBuilder<IPersistentRepresentation>();
             foreach (var @event in events)
             {
                 _pendingStashingPersistInvocations++;

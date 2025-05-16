@@ -121,7 +121,7 @@ namespace Akka.DistributedData
 
             if (dot is MultiVersionVector multi)
             {
-                var acc = ImmutableDictionary<UniqueAddress, long>.Empty.ToBuilder();
+                var acc = ImmutableDictionary.CreateBuilder<UniqueAddress, long>();
                 foreach (var pair in multi.Versions)
                 {
                     var v2 = vvector.VersionAt(pair.Key);

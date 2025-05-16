@@ -323,7 +323,7 @@ namespace Akka.DistributedData
 
         private ORDictionary<TKey, TValue> DryMerge(ORDictionary<TKey, TValue> other, ORSet<TKey> mergedKeys, IEnumerator<TKey> valueKeysEnumerator)
         {
-            var mergedValues = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
+            var mergedValues = ImmutableDictionary.CreateBuilder<TKey, TValue>();
             while (valueKeysEnumerator.MoveNext())
             {
                 var key = valueKeysEnumerator.Current;
@@ -456,7 +456,7 @@ namespace Akka.DistributedData
                     return new DeltaGroup(ImmutableArray.Create(this, (IDeltaOperation)other));
                 else
                 {
-                    var builder = ImmutableArray<IDeltaOperation>.Empty.ToBuilder();
+                    var builder = ImmutableArray.CreateBuilder<IDeltaOperation>();
                     builder.Add(this);
                     builder.AddRange(((DeltaGroup)other).Operations);
                     return new DeltaGroup(builder.ToImmutable());
@@ -523,7 +523,7 @@ namespace Akka.DistributedData
                 }
                 else
                 {
-                    var builder = ImmutableArray<IDeltaOperation>.Empty.ToBuilder();
+                    var builder = ImmutableArray.CreateBuilder<IDeltaOperation>();
                     builder.Add(this);
                     builder.AddRange(((DeltaGroup)other).Operations);
                     return new DeltaGroup(builder.ToImmutable());
@@ -595,7 +595,7 @@ namespace Akka.DistributedData
                 }
                 else
                 {
-                    var builder = ImmutableArray<IDeltaOperation>.Empty.ToBuilder();
+                    var builder = ImmutableArray.CreateBuilder<IDeltaOperation>();
                     builder.Add(this);
                     builder.AddRange(((DeltaGroup)other).Operations);
                     return new DeltaGroup(builder.ToImmutable());
@@ -781,8 +781,8 @@ namespace Akka.DistributedData
         private ORDictionary<TKey, TValue> DryMergeDeltas(IDeltaOperation delta, bool withValueDelta = false)
         {
             var mergedKeys = KeySet;
-            var mergedValues = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
-            var tombstonedValues = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
+            var mergedValues = ImmutableDictionary.CreateBuilder<TKey, TValue>();
+            var tombstonedValues = ImmutableDictionary.CreateBuilder<TKey, TValue>();
             foreach (var entry in ValueMap)
             {
                 if (this.KeySet.Contains(entry.Key))

@@ -144,7 +144,7 @@ namespace Akka.Streams.Dsl
             _inputPorts = inputPorts;
             _eagerComplete = eagerComplete;
 
-            var ins = ImmutableArray<Inlet<TIn>>.Empty.ToBuilder();
+            var ins = ImmutableArray.CreateBuilder<Inlet<TIn>>();
             for (var i = 0; i < inputPorts; i++)
                 ins.Add(new Inlet<TIn>("Merge.in" + i));
 
