@@ -40,7 +40,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes(new byte[] {1, 2, 3, 4, 5});
+                var testData = ByteString.FromBytes([1, 2, 3, 4, 5]);
 
                 var server = await new Server(this).InitializeAsync();
                 var tcpReadProbe = new TcpReadProbe(this);
@@ -65,7 +65,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         public async Task Outgoing_TCP_stream_must_be_able_to_write_a_sequence_of_ByteStrings()
         {
             var server = await new Server(this).InitializeAsync();
-            var testInput = Enumerable.Range(0, 256).Select(i => ByteString.FromBytes(new byte[] {Convert.ToByte(i)}));
+            var testInput = Enumerable.Range(0, 256).Select(i => ByteString.FromBytes([Convert.ToByte(i)]));
             var expectedOutput = ByteString.FromBytes(Enumerable.Range(0, 256).Select(Convert.ToByte).ToArray());
 
             Source.From(testInput)
@@ -86,7 +86,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             var testOutput = new byte[255];
             for (byte i = 0; i < 255; i++)
             {
-                testInput[i] = ByteString.FromBytes(new [] {i});
+                testInput[i] = ByteString.FromBytes([i]);
                 testOutput[i] = i;
             }
 
