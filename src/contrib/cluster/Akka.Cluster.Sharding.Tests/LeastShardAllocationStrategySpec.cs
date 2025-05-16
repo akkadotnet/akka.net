@@ -10,6 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util;
@@ -311,76 +312,76 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_shards_4_4_0()
+        public async Task LeastShardAllocationStrategy_must_rebalance_shards_4_4_0()
         {
             var allocationStrategy = strategyWithoutLimits;
             var allocations = CreateAllocations(aCount: 4, bCount: 4);
-            var result = allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty);
             result.Should().BeEquivalentTo("001", "005");
             AllocationCountsAfterRebalance(allocationStrategy, allocations, result).Should().Equal(3, 3, 2);
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_shards_4_4_2()
+        public async Task LeastShardAllocationStrategy_must_rebalance_shards_4_4_2()
         {
             // this is handled by phase 2, to find diff of 2
             var allocationStrategy = strategyWithoutLimits;
             var allocations = CreateAllocations(aCount: 4, bCount: 4, cCount: 2);
-            var result = allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty);
             result.Should().BeEquivalentTo("001");
             AllocationCountsAfterRebalance(allocationStrategy, allocations, result).OrderBy(i => i).Should().Equal(new[] { 3, 4, 3 }.OrderBy(i => i));
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_shards_5_5_0()
+        public async Task LeastShardAllocationStrategy_must_rebalance_shards_5_5_0()
         {
             var allocationStrategy = strategyWithoutLimits;
             var allocations = CreateAllocations(aCount: 5, bCount: 5);
-            var result1 = allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
+            var result1 = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty);
             result1.Should().BeEquivalentTo("001", "006");
 
             // so far [4, 4, 2]
             AllocationCountsAfterRebalance(allocationStrategy, allocations, result1).Should().Equal(4, 4, 2);
             var allocations2 = AfterRebalance(allocationStrategy, allocations, result1);
             // second phase will find the diff of 2, resulting in [3, 4, 3]
-            var result2 = allocationStrategy.Rebalance(allocations2, ImmutableHashSet<string>.Empty).Result;
+            var result2 = await allocationStrategy.Rebalance(allocations2, ImmutableHashSet<string>.Empty);
             result2.Should().BeEquivalentTo("002");
             AllocationCountsAfterRebalance(allocationStrategy, allocations2, result2).OrderBy(i => i).Should().Equal(new[] { 3, 4, 3 }.OrderBy(i => i));
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_rebalance_shards_50_50_0()
+        public async Task LeastShardAllocationStrategy_must_rebalance_shards_50_50_0()
         {
             var allocationStrategy = strategyWithoutLimits;
             var allocations = CreateAllocations(aCount: 50, cCount: 50);
-            var result1 = allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
+            var result1 = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty);
             result1.Should().BeEquivalentTo(shards.Take(50 - 34).Union(shards.Skip(50).Take(50 - 34)));
 
             // so far [34, 34, 32]
             AllocationCountsAfterRebalance(allocationStrategy, allocations, result1).OrderBy(i => i).Should().Equal(new[] { 34, 34, 32 }.OrderBy(i => i));
             var allocations2 = AfterRebalance(allocationStrategy, allocations, result1);
             // second phase will find the diff of 2, resulting in [33, 34, 33]
-            var result2 = allocationStrategy.Rebalance(allocations2, ImmutableHashSet<string>.Empty).Result;
+            var result2 = await allocationStrategy.Rebalance(allocations2, ImmutableHashSet<string>.Empty);
             result2.Should().BeEquivalentTo("017");
             AllocationCountsAfterRebalance(allocationStrategy, allocations2, result2).OrderBy(i => i).Should().Equal(new[] { 33, 34, 33 }.OrderBy(i => i));
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_respect_absolute_limit_of_number_shards()
+        public async Task LeastShardAllocationStrategy_must_respect_absolute_limit_of_number_shards()
         {
             var allocationStrategy = StrategyWithFakeCluster(absoluteLimit: 3, relativeLimit: 1.0);
             var allocations = CreateAllocations(aCount: 1, bCount: 9);
-            var result = allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty);
             result.Should().BeEquivalentTo("002", "003", "004");
             AllocationCountsAfterRebalance(allocationStrategy, allocations, result).Should().Equal(2, 6, 2);
         }
 
         [Fact]
-        public void LeastShardAllocationStrategy_must_respect_relative_limit_of_number_shards()
+        public async Task LeastShardAllocationStrategy_must_respect_relative_limit_of_number_shards()
         {
             var allocationStrategy = StrategyWithFakeCluster(absoluteLimit: 5, relativeLimit: 0.3);
             var allocations = CreateAllocations(aCount: 1, bCount: 9);
-            var result = allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
+            var result = await allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty);
             result.Should().BeEquivalentTo("002", "003", "004");
             AllocationCountsAfterRebalance(allocationStrategy, allocations, result).Should().Equal(2, 6, 2);
         }

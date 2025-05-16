@@ -99,8 +99,8 @@ namespace Akka.Cluster.Sharding.Tests
         {
             var shardRegion = clusterSharding.Start("myType", SimpleEchoActor.Props(), shardingSettings, messageExtractor);
 
-            IActorRef shardCoordinator = Sys.ActorSelection("akka://test/system/sharding/myTypeCoordinator")
-                    .ResolveOne(TimeSpan.FromSeconds(5)).Result;
+            IActorRef shardCoordinator = await Sys.ActorSelection("akka://test/system/sharding/myTypeCoordinator")
+                    .ResolveOne(TimeSpan.FromSeconds(5));
 
             shardCoordinator.Path.Should().NotBeNull();
             shardCoordinator.Path.ToString().Should().EndWith("Coordinator");
