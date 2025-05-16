@@ -8,6 +8,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -186,7 +187,7 @@ namespace Akka.IO
         ///
         /// If either of these conditions are true, we can close the socket SO LONG AS: closing has been requested.
         /// </summary>
-        public bool IsCloseable => CloseRequested && (!(IsWritePending && CanSend) || (PeerClosed && !KeepOpenOnPeerClosed));
+        public bool IsCloseable => CloseRequested && !IsSending && (!(IsWritePending && CanSend) || (PeerClosed && !KeepOpenOnPeerClosed));
     }
 
     /// <summary>
@@ -362,21 +363,40 @@ namespace Akka.IO
             
             if (_traceLogging)
                 Log.Debug("Received {0} bytes from {1}", rc.Bytes, Socket.RemoteEndPoint);
-
-            // todo: need to harden our SocketError handling
-            if (rc.Error != SocketError.Success)
-            {
-                Log.Error("Closing connection due to IO error {0}", rc.Error);
-                Self.Tell(new ErrorClosed(rc.Error.ToString()));
-                return;
-            }
             
             if (rc.Bytes == 0) // CLOSED FOR READING
             {
                 // signal to the handler that the peer has closed the connection
                 Self.Tell(PeerClosed.Instance);
+                
+                // We need to ensure we complete the current receive operation before proceeding,
+                // because we may still have writes to process before fully closing
+                IssueReceive();
                 return;
             }
+
+            // todo: need to harden our SocketError handling
+            if (rc.Error != SocketError.Success)
+            {
+                if (_state.PeerClosed || _state.CloseRequested)
+                {
+                    Log.Warning("Received IO error {0} while trying to close " +
+                                "- this might be totally normal during closures.", rc.Error);
+                    
+                    // don't bother with the close message if we are already closing
+                    Context.Stop(Self);
+                }
+                else
+                {
+                    Log.Error("Closing connection due to IO error {0} received during read", rc.Error);
+                    var errorClosed = new ErrorClosed(rc.Error.ToString());
+                    _state = _state.Update(errorClosed); // block further read attempts
+                    Self.Tell(new ErrorClosed(rc.Error.ToString()));
+                }
+                return;
+            }
+            
+           
 
             var bs = ByteString.CopyFrom(_receiveBuffer, 0, rc.Bytes);
             handler.Tell(new Received(bs));
@@ -550,9 +570,8 @@ namespace Akka.IO
                         // we set a default close message here in case the actor dies before we get a close message
                         // this will prevent close messages from going missing 
                         // part of the fix for https://github.com/akkadotnet/akka.net/issues/7634 
-                        _closedMessage =
-                            new CloseInformation(new HashSet<IActorRef>([register.Handler]), Aborted.Instance);
-
+                        UpdateCloseMessage(register.Handler, Aborted.Instance);
+                        
                         Context.SetReceiveTimeout(null);
                         Context.Become(Connected(registerInfo));
                         // If there is something buffered before we got Register message - put it all to the socket
@@ -697,7 +716,14 @@ namespace Akka.IO
                         return true;
                     case PeerClosed peerClosed:
                         _state = _state.Update(peerClosed);
-                        if (_state.IsCloseable)
+                        // Even if the peer closed the connection, we might still have data to send
+                        if (_state.IsWritePending)
+                        {
+                            // Continue sending pending data before closing
+                            Log.Debug("Peer closed connection but we still have pending writes");
+                            TrySendNext();
+                        }
+                        else if (_state.IsCloseable)
                         {
                             Log.Debug("Peer closed connection, stopping");
                             Context.Stop(Self);
@@ -787,13 +813,25 @@ namespace Akka.IO
             Context.Become(WaitingForRegistration(commander));
         }
 
+        private void UpdateCloseMessage(IActorRef newCloser, Event newCloseEvent)
+        {
+            if(_closedMessage == null)
+            {
+                _closedMessage = new CloseInformation(ImmutableHashSet<IActorRef>.Empty.Add(newCloser), newCloseEvent);
+            }
+            else
+            {
+                _closedMessage = new CloseInformation(NotificationsTo: _closedMessage.NotificationsTo.Add(newCloser), ClosedEvent: newCloseEvent);
+            }
+        }
+
         /// <summary>
         /// We are in the driver's seat and want to close the connection.
         /// </summary>
         private void HandleCloseCommand(ConnectionInfo info, IActorRef sender, CloseCommand cmd)
         {
             // we are closing the connection, so set the hook now.
-            _closedMessage = new CloseInformation(new HashSet<IActorRef> { info.Handler, sender }, cmd.Event);
+            UpdateCloseMessage(sender, cmd.Event);
             _state = _state.Update(cmd);
             
             switch (cmd)
@@ -837,7 +875,8 @@ namespace Akka.IO
         /// </summary>
         private void HandleCloseEvent(ConnectionInfo info, IActorRef closeCommander, ConnectionClosed closedEvent)
         {
-            _closedMessage = new CloseInformation(new HashSet<IActorRef> { info.Handler, closeCommander }, closedEvent);
+            UpdateCloseMessage(closeCommander, closedEvent);
+            UpdateCloseMessage(info.Handler, closedEvent);
             _state = _state.Update(closedEvent);
 
             switch (closedEvent)
@@ -894,7 +933,11 @@ namespace Akka.IO
         /* Mostly called from outside */
         protected void StopWith(CloseInformation closeInfo)
         {
-            _closedMessage = closeInfo;
+            // need to merge with existing close message
+            foreach(var n in closeInfo.NotificationsTo)
+            {
+                UpdateCloseMessage(n, closeInfo.ClosedEvent);
+            }
             UnsignDeathPact();
             Context.Stop(Self);
         }
@@ -980,6 +1023,6 @@ namespace Akka.IO
         /// Used to transport information to the postStop method to notify
         /// interested party about a connection close.
         /// </summary>
-        protected sealed record CloseInformation(ISet<IActorRef> NotificationsTo, Event ClosedEvent);
+        protected sealed record CloseInformation(ImmutableHashSet<IActorRef> NotificationsTo, Event ClosedEvent);
     }
 }

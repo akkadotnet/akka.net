@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -81,8 +82,8 @@ namespace Akka.IO
         private void Stop(Exception cause)
         {
             ReleaseConnectionSocketArgs();
-
-            StopWith(new CloseInformation(new HashSet<IActorRef>([_commander]), _connect.FailureMessage.WithCause(cause)));
+            
+            StopWith(new CloseInformation(ImmutableHashSet<IActorRef>.Empty.Add(_commander), _connect.FailureMessage.WithCause(cause)));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
