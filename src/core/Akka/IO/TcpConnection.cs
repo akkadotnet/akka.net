@@ -84,34 +84,38 @@ namespace Akka.IO
             Closed
         }
 
+        /// <summary>
+        /// Immutable flags – reference to the live Queue + byte counter **and any deferred half‑close**.
+        /// Moving every transient flag in here lets us reason over shutdown with a single value.
+        /// </summary>
         private readonly record struct ConnState(
             Phase Phase,
-            bool IsReceiving,
-            bool IsSending,
-            bool PeerClosed,
-            bool ClosedForWrites,
-            bool ReadingSuspended,
-            bool WritingSuspended,
-            bool KeepOpenOnPeerClosed,
-            Queue<(WriteCommand Cmd, IActorRef Sender)> Queue,
-            int QueuedBytes)
+            bool  IsReceiving,
+            bool  IsSending,
+            bool  PeerClosed,
+            bool  ClosedForWrites,
+            bool  ReadingSuspended,
+            bool  WritingSuspended,
+            bool  KeepOpenOnPeerClosed,
+            bool  PendingHalfClose, // ≙ we have seen ConfirmedClose, waiting for queue to drain
+            Queue<(WriteCommand Cmd, IActorRef Snd)> Queue,
+            int   QueuedBytes)
         {
-            public bool HasPending => IsSending || Queue.Count > 0;
-            public bool CanSend => !ClosedForWrites && !WritingSuspended;
-            public bool CanReceive => !PeerClosed && !ReadingSuspended;
-            
-            private bool PeerIsReadyForUsToShutdown => (KeepOpenOnPeerClosed && PeerClosed) ||
-                                                       !KeepOpenOnPeerClosed;
+            public bool HasPending => IsSending || Queue.Count != 0;
+            public bool CanSend    => !ClosedForWrites && !WritingSuspended;
+            public bool CanReceive    => !PeerClosed       && !ReadingSuspended;
 
-            // may stop only when *we* requested it OR peer closed and we are NOT asked to stay open
+            private bool PeerIsReadyForUsToShutdown => !PeerClosed || !KeepOpenOnPeerClosed;
+
             public bool Closeable(bool closeRequested) =>
+                (closeRequested && Phase < Phase.Open) || // IMMEDIATE close if requested during connect or reg
                 closeRequested &&
-                !IsReceiving &&
-                !HasPending &&
+                !IsReceiving   &&
+                !HasPending    &&
                 PeerIsReadyForUsToShutdown;
 
-            public static ConnState Initial(Queue<(WriteCommand Cmd, IActorRef Sender)> queue) =>
-                new(Phase.Connecting, false, false, false, false, false, false, false, queue, 0);
+            public static ConnState Initial(Queue<(WriteCommand Cmd, IActorRef Snd)> q) =>
+                new(Phase.Connecting, false, false, false, false, false, false, false, false, q, 0);
         }
 
         #region Ack‑aware SAEA
@@ -293,22 +297,6 @@ namespace Akka.IO
             _closeNotify.Add(src);
             if (_handler != null) _closeNotify.Add(_handler);
         }
-        
-        private void Abort()
-        {
-            try
-            {
-                Socket.LingerState = new LingerOption(true, 0);  // causes the following close() to send TCP RST
-            }
-            catch (Exception e)
-            {
-                if (_traceLogging) Log.Debug("setSoLinger(true, 0) failed with [{0}]", e);
-            }
-
-            Context.Stop(Self);
-        }
-
-
 
         private void AwaitRegBehaviour()
         {
@@ -328,7 +316,7 @@ namespace Akka.IO
             Receive<CloseCommand>(c =>
             {
                 _closeRequested = true;
-                TryStop();
+                EvaluateShutdown();
             });
             Receive<CommanderDied>(_ => Context.Stop(Self));
             Receive<ReceiveTimeout>(_ =>
@@ -347,12 +335,13 @@ namespace Akka.IO
 
             Receive<WriteCommand>(Enqueue);
 
-            Receive<Close>(_ =>
+            Receive<Close>(c =>
             {
                 if (Settings.TraceLogging)
                     Log.Debug("[TcpConnection] Close requested");
                 _closeRequested = true;
-                _state = _state with { ReadingSuspended = true };
+                _state = _state with { ReadingSuspended = true, IsReceiving = false };
+                MarkClose(Sender, c.Event);
                 try
                 {
                     Socket.Shutdown(SocketShutdown.Receive);
@@ -362,23 +351,24 @@ namespace Akka.IO
                     if (Settings.TraceLogging)
                         Log.Debug("[TcpConnection] Socket receive shutdown failed: {0}", e.Message);
                 }
-                TryStop();
+                EvaluateShutdown();
                 TrySend();
             });
-            Receive<ConfirmedClose>(_ =>
+            Receive<ConfirmedClose>(cc =>
             {
                 if (Settings.TraceLogging)
                     Log.Debug("[TcpConnection] ConfirmedClose requested");
+                MarkClose(Sender, cc.Event);
                 HalfCloseWriteSide();
                 _closeRequested = true;
-                TryStop();
+                EvaluateShutdown();
             });
             Receive<Abort>(s =>
             {
                 if (Settings.TraceLogging)
-                    Log.Debug("[TcpConnection] Abort requested");
+                    Log.Debug("[TcpConnection] AbortSocket requested");
                 MarkClose(Sender, s.Event);
-                Abort();
+                AbortSocket();
             });
 
             Receive<ResumeReading>(_ =>
@@ -428,7 +418,7 @@ namespace Akka.IO
             MarkClose(Self, PeerClosed.Instance);
             _handler!.Tell(PeerClosed.Instance);
             _state = _state with { PeerClosed = true };
-            TryStop();
+            EvaluateShutdown();
         }
 
         private void HandleSendCompleted(AckSocketAsyncEventArgs ea)
@@ -446,8 +436,14 @@ namespace Akka.IO
             ea.ClearAcks();
             ea.BufferList = null; // release refs
             
+            /* check deferred FIN */
+            if(_state.PendingHalfClose && _pendingWrites.Count==0)
+            {
+                HalfCloseWriteSide();
+            }
+            
             TrySend();
-            TryStop();
+            EvaluateShutdown();
         }
 
         /* ----------------------------------------------------------------- */
@@ -528,18 +524,34 @@ namespace Akka.IO
                 /* ignore */
             }
 
-            _state = _state with { ClosedForWrites = true, Phase = Phase.HalfOpen };
+            _state = _state with { ClosedForWrites = true, Phase = Phase.HalfOpen, PendingHalfClose = false};
         }
 
-        private void TryStop()
+        /* ====================================================================*/
+        /*  Shutdown decision                                                  */
+        /* ====================================================================*/
+        private void EvaluateShutdown()
         {
-            if (_state.Closeable(_closeRequested))
-            {
-                Log.Debug("[TcpConnection] stopping connection actor");
-                
-                // graceful stop
-                Self.Tell(PoisonPill.Instance);
-            }
+            if(!_state.Closeable(_closeRequested)) return;
+            if(Settings.TraceLogging) 
+                Log.Debug("[TcpConnection] shutting down connection");
+            
+            Self.Tell(PoisonPill.Instance);
         }
+        
+        private void AbortSocket()
+        {
+            try
+            {
+                Socket.LingerState = new LingerOption(true, 0);  // causes the following close() to send TCP RST
+            }
+            catch (Exception e)
+            {
+                if (_traceLogging) Log.Debug("setSoLinger(true, 0) failed with [{0}]", e);
+            }
+
+            Context.Stop(Self);
+        }
+
     }
 }
