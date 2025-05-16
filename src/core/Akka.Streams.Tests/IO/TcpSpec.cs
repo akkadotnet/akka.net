@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TcpSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -103,6 +103,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 serverConnection.Write(input);
 
             serverConnection.ConfirmedClose();
+            // Reduced timeout - otherwise we're just waiting longer for the failure
             var result = await resultFuture.ShouldCompleteWithin(3.Seconds());
             result.ShouldBe(expectedOutput);
         }

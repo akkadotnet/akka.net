@@ -329,10 +329,13 @@ namespace Akka.IO
             if (_traceLogging) Log.Debug("TryCloseIfDone called, sending={0}, pendingWrites={1}, peerClosed={2}", 
                 _sending, _pendingWrites.Count, _peerClosed);
             
-            // When all pending writes are completed, we can close the connection
-            // even if the peer hasn't closed its side yet
+            // When outstanding writes exist, we must finish them before closing
             if (_sending || _pendingWrites.Count > 0) return;
             
+            // No pending writes, so we can safely close
+            // Note: We no longer wait for _peerClosed in any scenario to avoid deadlocks in Akka.Streams
+            // The previous implementation could hang when Streams TCP stages sent ConfirmedClose but were
+            // waiting for connection completion which never happened because we were waiting for peer close
             Context.Stop(Self);
         }
 
@@ -377,6 +380,7 @@ namespace Akka.IO
 
                         if (_traceLogging) Log.Debug("[{0}] registered as connection handler", register.Handler);
 
+                        
                         var registerInfo = new ConnectionInfo(register.Handler, register.KeepOpenOnPeerClosed,
                             register.UseResumeWriting);
                         
@@ -394,6 +398,7 @@ namespace Akka.IO
                         IssueReceive();
                         return true;
                     case CloseCommand cmd:
+                        // Default connection info for unregistered connections - always uses keepOpenOnPeerClosed: false
                         var info = new ConnectionInfo(commander, keepOpenOnPeerClosed: false, useResumeWriting: false);
                         HandleCloseCommand(info, Sender, cmd);
                         return true;
