@@ -235,6 +235,9 @@ namespace Akka.IO
 
             if (_closeEvent != null)
             {
+                if(Settings.TraceLogging)
+                    Log.Debug("[TcpConnection] sending close event to {0}", _closeNotify);
+                
                 foreach (var sub in _closeNotify)
                     sub.Tell(_closeEvent);
             }
@@ -278,6 +281,11 @@ namespace Akka.IO
 
         protected void MarkClose(IActorRef src, Event evt)
         {
+            if (Settings.TraceLogging)
+            {
+                Log.Debug("[TcpConnection] working on connection closure: {0}", evt);
+            }
+            
             _closeEvent = evt;
             _closeNotify.Add(src);
             if (_handler != null) _closeNotify.Add(_handler);
@@ -289,6 +297,7 @@ namespace Akka.IO
             Receive<Register>(reg =>
             {
                 _handler = reg.Handler;
+                if (_traceLogging) Log.Debug("[{0}] registered as connection handler", reg.Handler);
                 Context.WatchWith(_handler, HandlerDied.Instance);
                 Context.Unwatch(_commander);
                 _state = _state with { Phase = Phase.Open, KeepOpenOnPeerClosed = reg.KeepOpenOnPeerClosed };
@@ -297,7 +306,6 @@ namespace Akka.IO
                 IssueReceive();
                 TrySend();
             });
-
             Receive<WriteCommand>(Enqueue);
             Receive<CloseCommand>(c =>
             {
@@ -305,6 +313,13 @@ namespace Akka.IO
                 TryStop();
             });
             Receive<CommanderDied>(_ => Context.Stop(Self));
+            Receive<ReceiveTimeout>(_ =>
+            {
+                // after sending `Register` user should watch this actor to make sure
+                // it didn't die because of the timeout
+                Log.Debug("Configured registration timeout of [{0}] expired, stopping", Settings.RegisterTimeout);
+                Context.Stop(Self);
+            });
         }
 
         private void OpenBehaviour()
@@ -356,10 +371,19 @@ namespace Akka.IO
             _state = _state with { IsReceiving = false };
             if (ea is { SocketError: SocketError.Success, BytesTransferred: > 0 })
             {
+                if (Settings.TraceLogging)
+                {
+                    Log.Debug("[TcpConnection] received {0} bytes", ea.BytesTransferred);
+                }
+                
                 _handler!.Tell(new Received(ByteString.CopyFrom(_receiveBuffer, 0, ea.BytesTransferred)));
                 IssueReceive();
                 return;
             }
+            
+            // unless we've been told otherwise, we want to close down the connection
+            if (!_state.KeepOpenOnPeerClosed)
+                _closeRequested = true;
 
             // FIN or error
             MarkClose(Self, PeerClosed.Instance);
@@ -374,9 +398,15 @@ namespace Akka.IO
 
             foreach (var (c, ack) in ea.PendingAcks)
                 c.Tell(ack);
+            
+            if (Settings.TraceLogging)
+            {
+                Log.Debug("[TcpConnection] completed write of {0} bytes (queued={1}/{2})", ea.BufferList.Sum(c => c.Count), _state.QueuedBytes, _maxQueuedBytes);
+            }
+            
             ea.ClearAcks();
             ea.BufferList = null; // release refs
-
+            
             TrySend();
             TryStop();
         }
@@ -449,6 +479,9 @@ namespace Akka.IO
             if (_state.ClosedForWrites) return;
             try
             {
+                if(Settings.TraceLogging)
+                    Log.Debug("[TcpConnection] half‑closing write side");
+                
                 Socket.Shutdown(SocketShutdown.Send);
             }
             catch
@@ -463,6 +496,8 @@ namespace Akka.IO
         {
             if (_state.Closeable(_closeRequested))
             {
+                Log.Debug("[TcpConnection] stopping connection actor");
+                
                 // graceful stop
                 Self.Tell(PoisonPill.Instance);
             }
