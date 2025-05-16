@@ -54,7 +54,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var unknown => throw new ArgumentException($"Unknown routing logic is tried to be applied to the pub-sub mediator: {unknown}")
             };
 
-            var overflowLogic = config.GetString("buffered-message-overflow-strategy")?.ToLowerInvariant() switch
+            var overflowLogic = config.GetString("buffered-messages.overflow-strategy")?.ToLowerInvariant() switch
             {
                 "drop-head" => OverflowStrategy.DropHead,
                 "drop-tail" => OverflowStrategy.DropTail,
@@ -64,18 +64,21 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var unknown => throw new ArgumentException($"Unknown buffer overflow strategy: {unknown}. Valid values are 'drop-head', 'drop-tail', 'drop-buffer', 'drop-new', and 'fail'.")
             };
 
-            var defaultConfig = Create(DistributedPubSub.DefaultConfig().GetConfig("akka.cluster.pub-sub"));
+            // TODO: This will fail if DistributedPubSub.DefaultConfig() is not inside the fallback chain.
+            // TODO: "gossip-interval" key depends on Config.GetTimeSpan() to return a TimeSpan.Zero default.
+            // TODO: "removed-time-to-live" key depends on Config.GetTimeSpan() to return a TimeSpan.Zero default.
+            // TODO: "max-delta-elements" key depends on Config.GetInt() to return a 0 default.
             return new DistributedPubSubSettings(
-                config.GetString("role", defaultConfig.Role),
+                config.GetString("role", ""),
                 routingLogic,
-                config.GetTimeSpan("gossip-interval", defaultConfig.GossipInterval),
-                config.GetTimeSpan("removed-time-to-live", defaultConfig.RemovedTimeToLive),
-                config.GetInt("max-delta-elements", defaultConfig.MaxDeltaElements),
-                config.GetBoolean("send-to-dead-letters-when-no-subscribers", defaultConfig.SendToDeadLettersWhenNoSubscribers),
-                config.GetBoolean("wait-for-subscribers", defaultConfig.WaitForSubscribers),
-                config.GetInt("max-buffered-messages-per-topic", defaultConfig.MaxBufferedMessagePerTopic),
-                config.GetTimeSpan("buffered-message-timeout", defaultConfig.BufferedMessageTimeout),
-                config.GetTimeSpan("buffered-message-timeout-check-interval", defaultConfig.BufferedMessageTimeoutCheckInterval),
+                config.GetTimeSpan("gossip-interval"),
+                config.GetTimeSpan("removed-time-to-live"),
+                config.GetInt("max-delta-elements"),
+                config.GetBoolean("send-to-dead-letters-when-no-subscribers"),
+                config.GetBoolean("wait-for-subscribers"),
+                config.GetInt("buffered-messages.max-per-topic"),
+                config.GetTimeSpan("buffered-messages.timeout"),
+                config.GetTimeSpan("buffered-messages.timeout-check-interval"),
                 overflowLogic);
         }
 
