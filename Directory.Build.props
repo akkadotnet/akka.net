@@ -71,8 +71,4 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
-  <Target Name="TestValue" AfterTargets="build">
-    <Message Text="@(none)">
-    </Message>
-  </Target>
 </Project>
