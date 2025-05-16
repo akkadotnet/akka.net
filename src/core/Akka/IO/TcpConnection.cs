@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TcpConnection.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -175,8 +175,21 @@ namespace Akka.IO
         private void IssueReceive()
         {
             if(_peerClosed) return; // can't read if peer is closed
-            if (!Socket.ReceiveAsync(_receiveArgs))
-                Self.Tell(new SocketReceiveCompleted(_receiveArgs.BytesTransferred, _receiveArgs.SocketError));
+            
+            try 
+            {
+                if (!Socket.ReceiveAsync(_receiveArgs))
+                    Self.Tell(new SocketReceiveCompleted(_receiveArgs.BytesTransferred, _receiveArgs.SocketError));
+            }
+            catch (ObjectDisposedException)
+            {
+                // Socket was closed, signal peer closed
+                Self.Tell(PeerClosed.Instance);
+            }
+            catch (SocketException ex)
+            {
+                Self.Tell(new SocketReceiveCompleted(0, ex.SocketErrorCode));
+            }
         }
         
         private void HandleRead(IActorRef handler, SocketReceiveCompleted rc)
@@ -312,8 +325,14 @@ namespace Akka.IO
         private void TryCloseIfDone()
         {
             if (!_closingRequested) return;
+            
+            if (_traceLogging) Log.Debug("TryCloseIfDone called, sending={0}, pendingWrites={1}, peerClosed={2}", 
+                _sending, _pendingWrites.Count, _peerClosed);
+            
+            // When all pending writes are completed, we can close the connection
+            // even if the peer hasn't closed its side yet
             if (_sending || _pendingWrites.Count > 0) return;
-            if (!_peerClosed) return;
+            
             Context.Stop(Self);
         }
 
