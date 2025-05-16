@@ -38,10 +38,5 @@ namespace Akka.IO
         {
             CompleteConnect(_bindHandler, _options);
         }
-        
-        protected override bool Receive(object message)
-        {
-            throw new NotSupportedException();
-        }
     }
 }

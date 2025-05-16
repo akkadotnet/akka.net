@@ -6,8 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -15,7 +13,6 @@ using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
-using Akka.Util;
 
 namespace Akka.IO
 {
@@ -35,26 +32,24 @@ namespace Akka.IO
 
         public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
             : base(
-                   (connect.TcpSettings ?? tcp.Settings),
-                    (connect.TcpSettings ?? tcp.Settings).OutgoingSocketForceIpv4
-                       ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { Blocking = false }
-                       : new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false })
+                (connect.TcpSettings ?? tcp.Settings),
+                (connect.TcpSettings ?? tcp.Settings).OutgoingSocketForceIpv4
+                    ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { Blocking = false }
+                    : new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false })
         {
             _commander = commander;
             _connect = connect;
-
-            SignDeathPact(commander);
 
             foreach (var option in connect.Options)
             {
                 option.BeforeConnect(Socket);
             }
-            
+
             if (connect.LocalAddress != null)
                 Socket.Bind(connect.LocalAddress);
 
             if (connect.Timeout.HasValue)
-                Context.SetReceiveTimeout(connect.Timeout.Value);  //Initiate connection timeout if supplied
+                Context.SetReceiveTimeout(connect.Timeout.Value); //Initiate connection timeout if supplied
         }
 
         private void ReleaseConnectionSocketArgs()
@@ -82,8 +77,8 @@ namespace Akka.IO
         private void Stop(Exception cause)
         {
             ReleaseConnectionSocketArgs();
-            
-            StopWith(new CloseInformation(ImmutableHashSet<IActorRef>.Empty.Add(_commander), _connect.FailureMessage.WithCause(cause)));
+
+            MarkClose(_commander, _connect.FailureMessage.WithCause(cause));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -99,7 +94,7 @@ namespace Akka.IO
                 Stop(e);
             }
         }
-        
+
         protected override void PreStart()
         {
             ReportConnectFailure(() =>
@@ -109,9 +104,10 @@ namespace Akka.IO
                     Log.Debug("Resolving {0} before connecting", remoteAddress.Host);
                     var resolved = Dns.ResolveName(remoteAddress.Host, Context.System, Self);
                     if (resolved == null)
-                        Become(Resolving(remoteAddress));
+                        Become(() => Resolving(remoteAddress));
                     else if (resolved.Ipv4.Any() && resolved.Ipv6.Any()) // one of both families
-                        Register(new IPEndPoint(resolved.Ipv4.First(), remoteAddress.Port), new IPEndPoint(resolved.Ipv6.First(), remoteAddress.Port));
+                        Register(new IPEndPoint(resolved.Ipv4.First(), remoteAddress.Port),
+                            new IPEndPoint(resolved.Ipv6.First(), remoteAddress.Port));
                     else // one or the other
                         Register(new IPEndPoint(resolved.Addr, remoteAddress.Port), null);
                 }
@@ -119,7 +115,9 @@ namespace Akka.IO
                 {
                     Register(point, null);
                 }
-                else throw new NotSupportedException($"Couldn't connect to [{_connect.RemoteAddress}]: only IP and DNS-based endpoints are supported");
+                else
+                    throw new NotSupportedException(
+                        $"Couldn't connect to [{_connect.RemoteAddress}]: only IP and DNS-based endpoints are supported");
             });
         }
 
@@ -131,33 +129,23 @@ namespace Akka.IO
             base.PostStop();
         }
 
-        protected override bool Receive(object message)
+        private void Resolving(DnsEndPoint remoteAddress)
         {
-            throw new NotSupportedException();
-        }
-
-        private Receive Resolving(DnsEndPoint remoteAddress)
-        {
-            return message =>
+            Receive<Dns.Resolved>(resolved =>
             {
-                if (message is Dns.Resolved resolved)
+                if (resolved.Ipv4.Any() && resolved.Ipv6.Any()) // multiple addresses
                 {
-                    if (resolved.Ipv4.Any() && resolved.Ipv6.Any()) // multiple addresses
-                    {
-                        ReportConnectFailure(() => Register(
-                            new IPEndPoint(resolved.Ipv4.First(), remoteAddress.Port),
-                            new IPEndPoint(resolved.Ipv6.First(), remoteAddress.Port)));
-                    }
-                    else // only one address family. No fallbacks.
-                    {
-                        ReportConnectFailure(() => Register(
-                            new IPEndPoint(resolved.Addr, remoteAddress.Port),
-                            null));
-                    }
-                    return true;
+                    ReportConnectFailure(() => Register(
+                        new IPEndPoint(resolved.Ipv4.First(), remoteAddress.Port),
+                        new IPEndPoint(resolved.Ipv6.First(), remoteAddress.Port)));
                 }
-                return false;
-            };
+                else // only one address family. No fallbacks.
+                {
+                    ReportConnectFailure(() => Register(
+                        new IPEndPoint(resolved.Addr, remoteAddress.Port),
+                        null));
+                }
+            });
         }
 
         private static SocketAsyncEventArgs CreateSocketEventArgs(IActorRef onCompleteNotificationsReceiver)
@@ -195,26 +183,26 @@ namespace Akka.IO
                 if (!Socket.ConnectAsync(_connectArgs))
                     Self.Tell(IO.Tcp.SocketConnected.Instance);
 
-                Become(Connecting(Settings.FinishConnectRetries, _connectArgs, fallbackAddress));
+                Become(() => Connecting(Settings.FinishConnectRetries, _connectArgs, fallbackAddress));
             });
         }
 
-        private Receive Connecting(int remainingFinishConnectRetries, SocketAsyncEventArgs args, IPEndPoint fallbackAddress)
+        private void Connecting(int remainingFinishConnectRetries, SocketAsyncEventArgs args,
+            IPEndPoint fallbackAddress)
         {
-            return message =>
+            Receive<Tcp.SocketConnected>(_ =>
             {
-                if (message is Tcp.SocketConnected)
+                if (args.SocketError == SocketError.Success)
                 {
-                    if (args.SocketError == SocketError.Success)
-                    {
-                        if (_connect.Timeout.HasValue) Context.SetReceiveTimeout(null);
-                        Log.Debug("Connection established to [{0}]", _connect.RemoteAddress);
+                    if (_connect.Timeout.HasValue) Context.SetReceiveTimeout(null);
+                    Log.Debug("Connection established to [{0}]", _connect.RemoteAddress);
 
-                        ReleaseConnectionSocketArgs();
+                    ReleaseConnectionSocketArgs();
 
-                        CompleteConnect(_commander, _connect.Options);
-                    }
-                    else switch (remainingFinishConnectRetries)
+                    CompleteConnect(_commander, _connect.Options);
+                }
+                else
+                    switch (remainingFinishConnectRetries)
                     {
                         // used only when we've resolved a DNS endpoint.
                         case > 0 when fallbackAddress != null:
@@ -227,7 +215,7 @@ namespace Akka.IO
                                 if (!Socket.ConnectAsync(args))
                                     self.Tell(IO.Tcp.SocketConnected.Instance);
                             });
-                            Context.Become(Connecting(remainingFinishConnectRetries - 1, args, previousAddress));
+                            Become(() => Connecting(remainingFinishConnectRetries - 1, args, previousAddress));
                             break;
                         }
                         case > 0:
@@ -238,33 +226,31 @@ namespace Akka.IO
                                 if (!Socket.ConnectAsync(args))
                                     self.Tell(IO.Tcp.SocketConnected.Instance);
                             });
-                            Context.Become(Connecting(remainingFinishConnectRetries - 1, args, null));
+                            Become(() => Connecting(remainingFinishConnectRetries - 1, args, null));
                             break;
                         }
                         default:
-                            Log.Debug("Could not establish connection because finishConnect never returned true (consider increasing akka.io.tcp.finish-connect-retries)");
+                            Log.Debug(
+                                "Could not establish connection because finishConnect never returned true (consider increasing akka.io.tcp.finish-connect-retries)");
                             Stop(_finishConnectNeverReturnedTrueException);
                             break;
                     }
-                    return true;
-                }
-                if (message is ReceiveTimeout)
-                {
-                    if (_connect.Timeout.HasValue) Context.SetReceiveTimeout(null);  // Clear the timeout
-                    Log.Debug("Connect timeout expired, could not establish connection to [{0}]", _connect.RemoteAddress);
-                    Stop(new ConnectException($"Connect timeout of {_connect.Timeout} expired"));
-                    return true;
-                }
-                return false;
-            };
+            });
+            Receive<ReceiveTimeout>(_ =>
+            {
+                if (_connect.Timeout.HasValue) Context.SetReceiveTimeout(null); // Clear the timeout
+                Log.Debug("Connect timeout expired, could not establish connection to [{0}]", _connect.RemoteAddress);
+                Stop(new ConnectException($"Connect timeout of {_connect.Timeout} expired"));
+            });
         }
     }
 
     [InternalApi]
     public class ConnectException : Exception
     {
-        public ConnectException(string message) 
+        public ConnectException(string message)
             : base(message)
-        { }
+        {
+        }
     }
 }
