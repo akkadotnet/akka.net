@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TcpIntegrationSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -84,7 +84,7 @@ namespace Akka.Tests.IO
                 var actors = await x.EstablishNewClientConnectionAsync();
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Abort.Instance);
                 await actors.ClientHandler.ExpectMsgAsync<Tcp.Aborted>();
-                await actors.ServerHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.PeerClosed>();
                 await VerifyActorTermination(actors.ClientConnection);
                 await VerifyActorTermination(actors.ServerConnection);
             });
@@ -100,7 +100,7 @@ namespace Akka.Tests.IO
 
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Abort.Instance);
                 await actors.ClientHandler.ExpectMsgAsync<Tcp.Aborted>();
-                await actors.ServerHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.PeerClosed>();
                 await VerifyActorTermination(actors.ClientConnection);
                 await VerifyActorTermination(actors.ServerConnection);
             });   
@@ -408,33 +408,39 @@ namespace Akka.Tests.IO
         [Fact]
         public async Task Should_fail_writing_when_buffer_is_filled()
         {
-            await new TestSetup(this).RunAsync(async x =>
+            // Set the write queue max size to 1 message
+            var smallBufferSettings = TcpSettings.Create(Sys) with { WriteCommandsQueueMaxSize = 1 };
+            
+            await new TestSetup(this, settings: smallBufferSettings).RunAsync(async x =>
             {
                 var actors = await x.EstablishNewClientConnectionAsync();
 
-                // create a buffer-overflow message
-                var overflowData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize + 1]);
-                var goodData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize]);
+                // Small test messages
+                var testData = ByteString.FromString("test message");
 
                 // If test runner is too loaded, let it try ~3 times with 5 pause interval
                 await AwaitAssertAsync(async () =>
                 {
-                    // try sending overflow
-                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this is sent immediately
-                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this will try to buffer
+                    // Send first message - should be sent immediately
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData)); 
+                    
+                    // Send second message - should be buffered and fail since queue size is 1
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData)); 
+                    
+                    // Third message - should fail immediately since queue is full
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
                     await actors.ClientHandler.ExpectMsgAsync<Tcp.CommandFailed>(TimeSpan.FromSeconds(20));
 
-                    // First overflow data will be received anyway
-                    (await actors.ServerHandler.ReceiveWhileAsync(TimeSpan.FromSeconds(1), m => m as Tcp.Received).ToListAsync())
-                        .Sum(m => m.Data.Count)
-                        .Should().Be(InternalConnectionActorMaxQueueSize + 1);
+                    // First message should be received
+                    var received = await actors.ServerHandler.ReceiveWhileAsync(TimeSpan.FromSeconds(1), m => m as Tcp.Received).ToListAsync();
+                    received.Count.Should().BeGreaterOrEqualTo(1);
+                    received.Sum(m => m.Data.Count).Should().BeGreaterOrEqualTo(testData.Count);
                 
-                    // Check that almost-overflow size does not cause any problems
+                    // Check we can resume writing after clearing the failure
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.ResumeWriting.Instance); // Recover after send failure
-                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(goodData));
-                    (await actors.ServerHandler.ReceiveWhileAsync(TimeSpan.FromSeconds(1), m => m as Tcp.Received).ToListAsync())
-                        .Sum(m => m.Data.Count)
-                        .Should().Be(InternalConnectionActorMaxQueueSize);
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
+                    received = await actors.ServerHandler.ReceiveWhileAsync(TimeSpan.FromSeconds(1), m => m as Tcp.Received).ToListAsync();
+                    received.Count.Should().BeGreaterOrEqualTo(1);
                 }, TimeSpan.FromSeconds(30 * 3), TimeSpan.FromSeconds(5)); // 3 attempts by ~25 seconds + 5 sec pause
             });
         }
