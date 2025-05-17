@@ -73,28 +73,10 @@ namespace Akka.IO
     internal abstract class TcpConnection : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         /// <summary>
-        /// Immutable connection state – the *only* mutable field in the actor is this record.
-        /// </summary>
-        private enum Phase
-        {
-            Connecting,
-            AwaitReg,
-            Open,
-            HalfOpen,
-            Closed
-        }
-
-        /// <summary>
         /// Immutable flags – reference to the live Queue + byte counter **and any deferred half‑close**.
         /// Moving every transient flag in here lets us reason over shutdown with a single value.
         /// </summary>
-        /// <param name="PendingHalfClose">
-        /// Indicates that a half-close (shutdown of the write side) has been requested (via ConfirmedClose or Close),
-        /// but there are still pending writes in the queue. When all writes have been delivered, the write side will
-        /// be closed (Socket.Shutdown(SocketShutdown.Send)), and this flag will be reset to false.
-        /// </param>
         private readonly record struct ConnState(
-            Phase Phase,
             bool IsReceiving,
             bool IsSending,
             bool PeerClosed,
@@ -110,7 +92,7 @@ namespace Akka.IO
             public bool CanReceive => !PeerClosed && !ReadingSuspended;
 
             public static ConnState Initial(Queue<(WriteCommand Cmd, IActorRef Snd)> q) =>
-                new(Phase.Connecting, false, false, false, false, false, false, false, q, 0);
+                new(false, false, false, false, false, false, false, q, 0);
         }
 
         #region Ack‑aware SAEA
@@ -279,7 +261,6 @@ namespace Akka.IO
             commander.Tell(new Connected(Socket.RemoteEndPoint, Socket.LocalEndPoint));
 
             Context.SetReceiveTimeout(Settings.RegisterTimeout);
-            _state = _state with { Phase = Phase.AwaitReg };
             _commander = commander;
             Become(AwaitRegBehaviour);
         }
@@ -306,7 +287,7 @@ namespace Akka.IO
                 if (_traceLogging) Log.Debug("[{0}] registered as connection handler", reg.Handler);
                 Context.WatchWith(_handler, HandlerDied.Instance);
                 Context.Unwatch(_commander);
-                _state = _state with { Phase = Phase.Open, KeepOpenOnPeerClosed = reg.KeepOpenOnPeerClosed };
+                _state = _state with { KeepOpenOnPeerClosed = reg.KeepOpenOnPeerClosed };
                 Context.SetReceiveTimeout(null);
                 Become(OpenBehaviour);
                 IssueReceive();
@@ -690,7 +671,7 @@ namespace Akka.IO
                 /* ignore */
             }
 
-            _state = _state with { Phase = Phase.Closed, OutputShutdown = true };
+            _state = _state with { OutputShutdown = true };
         }
 
         private void AbortSocket()
