@@ -160,6 +160,8 @@ namespace Akka.IO
         private static readonly IOException DroppingWriteBecauseQueueIsFullException =
             new("Dropping write because queue is full");
 
+        private int? _partialWriteOffset = null;
+
         protected TcpConnection(TcpSettings settings, Socket socket, bool pullMode)
         {
             Settings = settings;
@@ -296,7 +298,14 @@ namespace Akka.IO
                 IssueReceive();
                 TrySend();
             });
-            Receive<WriteCommand>(Enqueue);
+            Receive<WriteCommand>(c =>
+            {
+                if (Enqueue(c))
+                {
+                    Log.Warning("Received Write command before Register command. " +
+                                "It will be buffered until Register will be received (buffered write size is {0} bytes)", c.Bytes);
+                }
+            });
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             Receive<SuspendReading>(_ => { _state = _state with { ReadingSuspended = true }; });
             Receive<ResumeReading>(_ =>
@@ -460,6 +469,9 @@ namespace Akka.IO
         {
             _state = _state with { IsSending = false };
 
+            if (_traceLogging)
+                Log.Debug($"[TcpConnection] HandleSendCompleted: BytesTransferred={ea.BytesTransferred}, PendingAcks={ea.PendingAcks.Count}, PartialWriteOffset={_partialWriteOffset}");
+
             if (ea.SocketError != SocketError.Success)
             {
                 if(_traceLogging)
@@ -496,54 +508,84 @@ namespace Akka.IO
             if (!Socket.ReceiveAsync(_receiveArgs)) Self.Tell(_receiveArgs, Self);
         }
 
-        private void Enqueue(WriteCommand cmd)
+        private bool Enqueue(WriteCommand cmd)
         {
             var b = (int)cmd.Bytes;
             if (_maxQueuedBytes >= 0 && _state.QueuedBytes + b > _maxQueuedBytes)
             {
                 Sender.Tell(cmd.FailureMessage.WithCause(DroppingWriteBecauseQueueIsFullException));
-                return;
+                return false;
             }
 
             _pendingWrites.Enqueue((cmd, Sender));
             _state = _state with { QueuedBytes = _state.QueuedBytes + b };
             TrySend();
+            return true;
         }
 
         private void TrySend()
         {
+            if (_traceLogging)
+                Log.Debug($"[TcpConnection] TrySend called. IsSending={_state.IsSending}, PendingWrites={_pendingWrites.Count}, CanSend={_state.CanSend}, PartialWriteOffset={_partialWriteOffset}");
             if (_state.IsSending || _pendingWrites.Count == 0 || !_state.CanSend) return;
             var segs = new List<ArraySegment<byte>>(8);
             var batchBytes = 0;
 
-            while (_pendingWrites.Count > 0)
+            while (_pendingWrites.Count > 0 && batchBytes < Settings.MaxFrameSizeBytes)
             {
                 var (cmd, snd) = _pendingWrites.Peek();
                 if (cmd is not Write w)
                 {
-                    // unsupported command, fail fast
                     _pendingWrites.Dequeue();
                     snd.Tell(cmd.FailureMessage);
+                    _partialWriteOffset = null;
                     continue;
                 }
 
-                // do not break MTU / send‑buffer – simple heuristic
-                if (batchBytes != 0 && batchBytes + w.Data.Count > Settings.MaxFrameSizeBytes)
-                    break;
+                var data = w.Data;
+                var offset = _partialWriteOffset ?? 0;
+                var remaining = data.Count - offset;
+                var toSend = Math.Min(remaining, Settings.MaxFrameSizeBytes - batchBytes);
 
-                // dequeue & account
-                _pendingWrites.Dequeue();
-                _state = _state with { QueuedBytes = _state.QueuedBytes - w.Data.Count };
-                batchBytes += w.Data.Count;
-                segs.AddRange(w.Data.Buffers);
+                if (_traceLogging)
+                    Log.Debug($"[TcpConnection] TrySend batching: offset={offset}, remaining={remaining}, toSend={toSend}, batchBytes={batchBytes}");
 
-                if (w.WantsAck) _sendArgs.PendingAcks.Add((snd, w.Ack));
+                if (toSend <= 0)
+                    break; // batch is full
+
+                var chunk = data.Slice(offset, toSend);
+                segs.AddRange(chunk.Buffers);
+                batchBytes += toSend;
+
+                if (toSend == remaining)
+                {
+                    _pendingWrites.Dequeue();
+                    _state = _state with { QueuedBytes = _state.QueuedBytes - w.Data.Count };
+                    _partialWriteOffset = null;
+                    if (w.WantsAck) _sendArgs.PendingAcks.Add((snd, w.Ack));
+                    if (_traceLogging)
+                        Log.Debug($"[TcpConnection] TrySend: completed full write, dequeued. Remaining queue: {_pendingWrites.Count}");
+                }
+                else
+                {
+                    _partialWriteOffset = offset + toSend;
+                    if (_traceLogging)
+                        Log.Debug($"[TcpConnection] TrySend: partial write, will resume at offset {_partialWriteOffset}");
+                    break; // batch is full
+                }
             }
 
-            if (segs.Count == 0) return; // only empty writes encountered
+            if (segs.Count == 0)
+            {
+                if (_traceLogging)
+                    Log.Debug("[TcpConnection] TrySend: no segments to send (only empty writes encountered)");
+                return; // only empty writes encountered
+            }
 
             _sendArgs.BufferList = segs;
             _state = _state with { IsSending = true };
+            if (_traceLogging)
+                Log.Debug($"[TcpConnection] TrySend: sending {segs.Count} segments, total bytes={batchBytes}");
             if (!Socket.SendAsync(_sendArgs)) Self.Tell(_sendArgs, Self);
         }
         

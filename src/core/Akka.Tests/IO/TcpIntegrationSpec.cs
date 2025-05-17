@@ -281,7 +281,7 @@ namespace Akka.Tests.IO
 
                 var msg = ByteString.FromString("msg"); // 3 bytes
 
-                await EventFilter.Debug(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectOneAsync(() => {
+                await EventFilter.Warning(new Regex("Received Write command before Register[^3]+3 bytes")).ExpectOneAsync(() => {
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(msg));
                     actors.ClientConnection.Tell(new Tcp.Register(actors.ClientHandler));
                     return Task.CompletedTask;
@@ -401,7 +401,7 @@ namespace Akka.Tests.IO
             });
         }
 
-         [Fact(Skip = "Have to re-implement pagination")]
+         [Fact]
         public async Task Should_fail_writing_when_buffer_is_filled()
         {
             await new TestSetup(this).RunAsync(async x =>
