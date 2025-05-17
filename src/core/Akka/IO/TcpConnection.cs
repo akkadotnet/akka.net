@@ -525,7 +525,14 @@ namespace Akka.IO
                     case CompoundWrite compounds: //TODO: poorly designed API we should remove
                         foreach (var c in compounds)
                         {
-                            EnqueueInner(c);
+                            if(c is Write w)
+                            {
+                                _pendingWrites.Enqueue((w, Sender));
+                            }
+                            else
+                            {
+                                Sender.Tell(c.FailureMessage.WithCause(new InvalidOperationException($"Cannot enqueue {c} - only valid classes are Write and CompoundWrite")));
+                            }
                         }
                         break;
                     default:
