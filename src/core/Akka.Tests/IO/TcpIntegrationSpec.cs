@@ -84,7 +84,7 @@ namespace Akka.Tests.IO
                 var actors = await x.EstablishNewClientConnectionAsync();
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Abort.Instance);
                 await actors.ClientHandler.ExpectMsgAsync<Tcp.Aborted>();
-                await actors.ServerHandler.ExpectMsgAsync<Tcp.PeerClosed>();
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
                 await VerifyActorTermination(actors.ClientConnection);
                 await VerifyActorTermination(actors.ServerConnection);
             });
@@ -100,7 +100,7 @@ namespace Akka.Tests.IO
 
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Abort.Instance);
                 await actors.ClientHandler.ExpectMsgAsync<Tcp.Aborted>();
-                await actors.ServerHandler.ExpectMsgAsync<Tcp.PeerClosed>();
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
                 await VerifyActorTermination(actors.ClientConnection);
                 await VerifyActorTermination(actors.ServerConnection);
             });   
@@ -145,7 +145,7 @@ namespace Akka.Tests.IO
                 actors.ServerHandler.Send(actors.ServerConnection, PoisonPill.Instance);
                 await VerifyActorTermination(actors.ServerConnection);
 
-                await actors.ClientHandler.ExpectMsgAsync<Tcp.PeerClosed>();
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
                 await VerifyActorTermination(actors.ClientConnection);
             });
         }
@@ -161,7 +161,7 @@ namespace Akka.Tests.IO
                 actors.ServerHandler.Send(actors.ServerConnection, PoisonPill.Instance);
                 await VerifyActorTermination(actors.ServerConnection);
 
-                await actors.ClientHandler.ExpectMsgAsync<Tcp.PeerClosed>();
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.ErrorClosed>();
                 await VerifyActorTermination(actors.ClientConnection);
             });
         }
