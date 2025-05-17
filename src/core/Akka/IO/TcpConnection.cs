@@ -288,6 +288,9 @@ namespace Akka.IO
                 Context.WatchWith(_handler, HandlerDied.Instance);
                 Context.Unwatch(_commander);
                 _state = _state with { KeepOpenOnPeerClosed = reg.KeepOpenOnPeerClosed };
+                
+                // set a default close event - if someone hard-kills us we log an aborted
+                _closeInformation = CloseInformation.Single(_handler, Aborted.Instance);
                 Context.SetReceiveTimeout(null);
                 Become(OpenBehaviour);
                 IssueReceive();
