@@ -297,7 +297,7 @@ namespace Akka.IO
                 IssueReceive();
                 TrySend();
             });
-            Receive<Write>(Enqueue);
+            Receive<WriteCommand>(Enqueue);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             Receive<SuspendReading>(_ => { _state = _state with { ReadingSuspended = true }; });
             Receive<ResumeReading>(_ =>
@@ -318,7 +318,7 @@ namespace Akka.IO
         {
             Receive<ReadSocketAsyncEventArgs>(s => HandleReceiveCompleted(s, null));
             Receive<AckSocketAsyncEventArgs>(HandleSendCompleted);
-            Receive<Write>(Enqueue);
+            Receive<WriteCommand>(Enqueue);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             SuspendResumeHandlers();
             Receive<HandlerDied>(h =>
@@ -347,7 +347,7 @@ namespace Akka.IO
         private void PeerSentEOF()
         {
             Receive<AckSocketAsyncEventArgs>(HandleSendCompleted);
-            Receive<Write>(Enqueue);
+            Receive<WriteCommand>(Enqueue);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             SuspendResumeHandlers();
         }
@@ -364,7 +364,7 @@ namespace Akka.IO
                     HandleClose(closeSender, e);
                 }
             });
-            Receive<Write>(Enqueue);
+            Receive<WriteCommand>(Enqueue);
             Receive<Abort>(c => HandleClose(Sender, c.Event));
             SuspendResumeHandlers();
             Receive<HandlerDied>(h =>
@@ -381,7 +381,7 @@ namespace Akka.IO
         {
             Receive<ReadSocketAsyncEventArgs>(s => HandleReceiveCompleted(s, closeSender));
             Receive<AckSocketAsyncEventArgs>(HandleSendCompleted);
-            Receive<Write>(w =>
+            Receive<WriteCommand>(w =>
             {
                 // fail all writes
                 Sender.Tell(w.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
@@ -500,7 +500,7 @@ namespace Akka.IO
             if (!Socket.ReceiveAsync(_receiveArgs)) Self.Tell(_receiveArgs, Self);
         }
 
-        private void Enqueue(Write cmd)
+        private void Enqueue(WriteCommand cmd)
         {
             var b = (int)cmd.Bytes;
             if (_maxQueuedBytes >= 0 && _state.QueuedBytes + b > _maxQueuedBytes)
@@ -508,10 +508,31 @@ namespace Akka.IO
                 Sender.Tell(cmd.FailureMessage.WithCause(DroppingWriteBecauseQueueIsFullException));
                 return;
             }
+            
+            EnqueueInner(cmd);
 
-            _pendingWrites.Enqueue((cmd, Sender));
             _state = _state with { QueuedBytes = _state.QueuedBytes + b };
             TrySend();
+            return;
+
+            void EnqueueInner(WriteCommand wCmd)
+            {
+                switch (cmd)
+                {
+                    case Write realWrite:
+                        _pendingWrites.Enqueue((realWrite, Sender));
+                        break;
+                    case CompoundWrite compounds: //TODO: poorly designed API we should remove
+                        foreach (var c in compounds)
+                        {
+                            EnqueueInner(c);
+                        }
+                        break;
+                    default:
+                        Sender.Tell(cmd.FailureMessage.WithCause(new InvalidOperationException($"Cannot enqueue {cmd} - only valid classes are Write and CompoundWrite")));
+                        break;
+                }
+            }
         }
 
         private void TrySend()
