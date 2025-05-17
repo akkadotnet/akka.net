@@ -84,14 +84,14 @@ namespace Akka.IO
             bool ReadingSuspended,
             bool WritingSuspended,
             bool KeepOpenOnPeerClosed,
-            Queue<(WriteCommand Cmd, IActorRef Snd)> Queue,
+            Queue<(Write Cmd, IActorRef Snd)> Queue,
             int QueuedBytes)
         {
             public bool HasPending => IsSending || Queue.Count != 0;
             public bool CanSend => !OutputShutdown && !WritingSuspended;
             public bool CanReceive => !PeerClosed && !ReadingSuspended;
 
-            public static ConnState Initial(Queue<(WriteCommand Cmd, IActorRef Snd)> q) =>
+            public static ConnState Initial(Queue<(Write Cmd, IActorRef Snd)> q) =>
                 new(false, false, false, false, true, true, false, q, 0);
         }
 
@@ -133,7 +133,7 @@ namespace Akka.IO
 
         private readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Shared;
 
-        private readonly Queue<(WriteCommand Cmd, IActorRef Sender)> _pendingWrites;
+        private readonly Queue<(Write Cmd, IActorRef Sender)> _pendingWrites;
         private readonly byte[] _receiveBuffer;
         private readonly ReadSocketAsyncEventArgs _receiveArgs;
         private readonly AckSocketAsyncEventArgs _sendArgs;
@@ -166,7 +166,7 @@ namespace Akka.IO
         {
             Settings = settings;
             _maxQueuedBytes = settings.WriteCommandsQueueMaxSize; // –1 ⇒ unlimited;
-            _pendingWrites = new Queue<(WriteCommand Cmd, IActorRef Sender)>(16);
+            _pendingWrites = new Queue<(Write Cmd, IActorRef Sender)>(16);
             _pullMode = pullMode;
 
             _traceLogging = Settings.TraceLogging;
@@ -290,7 +290,6 @@ namespace Akka.IO
                 Context.WatchWith(_handler, HandlerDied.Instance);
                 Context.Unwatch(_commander);
                 _state = _state with { KeepOpenOnPeerClosed = reg.KeepOpenOnPeerClosed, ReadingSuspended = _pullMode, WritingSuspended = false };
-                
                 // set a default close event - if someone hard-kills us we log an aborted
                 _closeInformation = CloseInformation.Single(_handler, Aborted.Instance);
                 Context.SetReceiveTimeout(null);
@@ -298,18 +297,7 @@ namespace Akka.IO
                 IssueReceive();
                 TrySend();
             });
-            Receive<WriteCommand>(c =>
-            {
-                var queueSize = _pendingWrites.Count;
-                Enqueue(c);
-                
-                // check if we buffered and log a warning
-                if(_pendingWrites.Count > queueSize)
-                {
-                    Log.Warning("Received Write command before Register command. " +
-                                "It will be buffered until Register will be received (buffered write size is {0} bytes)", c.Bytes);
-                }
-            });
+            Receive<Write>(Enqueue);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             Receive<SuspendReading>(_ => { _state = _state with { ReadingSuspended = true }; });
             Receive<ResumeReading>(_ =>
@@ -330,7 +318,7 @@ namespace Akka.IO
         {
             Receive<ReadSocketAsyncEventArgs>(s => HandleReceiveCompleted(s, null));
             Receive<AckSocketAsyncEventArgs>(HandleSendCompleted);
-            Receive<WriteCommand>(Enqueue);
+            Receive<Write>(Enqueue);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             SuspendResumeHandlers();
             Receive<HandlerDied>(h =>
@@ -359,7 +347,7 @@ namespace Akka.IO
         private void PeerSentEOF()
         {
             Receive<AckSocketAsyncEventArgs>(HandleSendCompleted);
-            Receive<WriteCommand>(Enqueue);
+            Receive<Write>(Enqueue);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             SuspendResumeHandlers();
         }
@@ -376,7 +364,7 @@ namespace Akka.IO
                     HandleClose(closeSender, e);
                 }
             });
-            Receive<WriteCommand>(Enqueue);
+            Receive<Write>(Enqueue);
             Receive<Abort>(c => HandleClose(Sender, c.Event));
             SuspendResumeHandlers();
             Receive<HandlerDied>(h =>
@@ -393,7 +381,7 @@ namespace Akka.IO
         {
             Receive<ReadSocketAsyncEventArgs>(s => HandleReceiveCompleted(s, closeSender));
             Receive<AckSocketAsyncEventArgs>(HandleSendCompleted);
-            Receive<WriteCommand>(w =>
+            Receive<Write>(w =>
             {
                 // fail all writes
                 Sender.Tell(w.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
@@ -512,7 +500,7 @@ namespace Akka.IO
             if (!Socket.ReceiveAsync(_receiveArgs)) Self.Tell(_receiveArgs, Self);
         }
 
-        private void Enqueue(WriteCommand cmd)
+        private void Enqueue(Write cmd)
         {
             var b = (int)cmd.Bytes;
             if (_maxQueuedBytes >= 0 && _state.QueuedBytes + b > _maxQueuedBytes)
@@ -532,30 +520,34 @@ namespace Akka.IO
                 Log.Debug($"[TcpConnection] TrySend called. IsSending={_state.IsSending}, PendingWrites={_pendingWrites.Count}, CanSend={_state.CanSend}, PartialWriteOffset={_partialWriteOffset}");
             if (!_state.CanSend) return;
             if (_state.IsSending || _pendingWrites.Count == 0) return;
-            var segs = new List<ArraySegment<byte>>(1);
+
+            var segs = new List<ArraySegment<byte>>(8);
             var batchBytes = 0;
 
             while (_pendingWrites.Count > 0 && batchBytes < Settings.MaxFrameSizeBytes)
             {
-                var (cmd, snd) = _pendingWrites.Peek();
-                if (cmd is not Write w)
-                {
-                    _pendingWrites.Dequeue();
-                    snd.Tell(cmd.FailureMessage);
-                    _partialWriteOffset = null;
-                    continue;
-                }
+                var (w, snd) = _pendingWrites.Peek();
 
                 var data = w.Data;
                 var offset = _partialWriteOffset ?? 0;
                 var remaining = data.Count - offset;
+
+                // Handle empty writes immediately
+                if (remaining == 0)
+                {
+                    _pendingWrites.Dequeue();
+                    _state = _state with { QueuedBytes = _state.QueuedBytes - w.Data.Count };
+                    _partialWriteOffset = null;
+                    if (w.WantsAck) _sendArgs.PendingAcks.Add((snd, w.Ack));
+                    if (_traceLogging)
+                        Log.Debug($"[TcpConnection] TrySend: encountered empty write, dequeued. Remaining queue: {_pendingWrites.Count}");
+                    continue;
+                }
+
                 var toSend = Math.Min(remaining, Settings.MaxFrameSizeBytes - batchBytes);
 
                 if (_traceLogging)
                     Log.Debug($"[TcpConnection] TrySend batching: offset={offset}, remaining={remaining}, toSend={toSend}, batchBytes={batchBytes}");
-
-                if (toSend <= 0)
-                    break; // batch is full
 
                 var chunk = data.Slice(offset, toSend);
                 segs.AddRange(chunk.Buffers);
@@ -563,6 +555,7 @@ namespace Akka.IO
 
                 if (toSend == remaining)
                 {
+                    // Full write completed
                     _pendingWrites.Dequeue();
                     _state = _state with { QueuedBytes = _state.QueuedBytes - w.Data.Count };
                     _partialWriteOffset = null;
@@ -572,10 +565,11 @@ namespace Akka.IO
                 }
                 else
                 {
+                    // Partial write, update offset and break
                     _partialWriteOffset = offset + toSend;
                     if (_traceLogging)
                         Log.Debug($"[TcpConnection] TrySend: partial write, will resume at offset {_partialWriteOffset}");
-                    break; // batch is full
+                    break;
                 }
             }
 
@@ -583,7 +577,7 @@ namespace Akka.IO
             {
                 if (_traceLogging)
                     Log.Debug("[TcpConnection] TrySend: no segments to send (only empty writes encountered)");
-                return; // only empty writes encountered
+                return;
             }
 
             _sendArgs.BufferList = segs;
