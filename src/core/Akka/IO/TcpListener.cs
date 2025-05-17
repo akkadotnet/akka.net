@@ -88,9 +88,9 @@ namespace Akka.IO
             public static ConnectionTerminated Instance { get; } = new();
         }
 
-        private sealed record AcceptCompleted(SocketAsyncEventArgs EventArgs) : INoSerializationVerificationNeeded;
+        private sealed record AcceptCompleted(SocketAsyncEventArgs EventArgs) : INoSerializationVerificationNeeded, IDeadLetterSuppression;
 
-        private sealed record RetryAccept(SocketAsyncEventArgs EventArgs) : INoSerializationVerificationNeeded;
+        private sealed record RetryAccept(SocketAsyncEventArgs EventArgs) : INoSerializationVerificationNeeded, IDeadLetterSuppression;
 
         public TcpListener(TcpExt tcp, IActorRef bindCommander,
             Tcp.Bind bind)

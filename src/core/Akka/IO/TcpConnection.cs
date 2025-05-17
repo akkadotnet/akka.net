@@ -331,7 +331,7 @@ namespace Akka.IO
 
         private void OpenBehaviour()
         {
-            Receive<ReadSocketAsyncEventArgs>(HandleReceiveCompleted);
+            Receive<ReadSocketAsyncEventArgs>(s => HandleReceiveCompleted(s, null));
             Receive<AckSocketAsyncEventArgs>(HandleSendCompleted);
             Receive<WriteCommand>(Enqueue);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
@@ -369,7 +369,7 @@ namespace Akka.IO
 
         private void ClosingWithPendingWrite(IActorRef closeSender, ConnectionClosed e)
         {
-            Receive<ReadSocketAsyncEventArgs>(HandleReceiveCompleted);
+            Receive<ReadSocketAsyncEventArgs>(s => HandleReceiveCompleted(s, closeSender));
             Receive<AckSocketAsyncEventArgs>(s =>
             {
                 HandleSendCompleted(s);
@@ -394,7 +394,7 @@ namespace Akka.IO
         /// </summary>
         private void Closing(IActorRef closeSender)
         {
-            Receive<ReadSocketAsyncEventArgs>(HandleReceiveCompleted);
+            Receive<ReadSocketAsyncEventArgs>(s => HandleReceiveCompleted(s, closeSender));
             Receive<AckSocketAsyncEventArgs>(HandleSendCompleted);
             Receive<WriteCommand>(w =>
             {
@@ -417,7 +417,7 @@ namespace Akka.IO
         private long _totalSentBytes;
         private long _totalReceivedBytes;
 
-        private void HandleReceiveCompleted(SocketAsyncEventArgs ea)
+        private void HandleReceiveCompleted(SocketAsyncEventArgs ea, IActorRef? closeCommander)
         {
             _state = _state with { IsReceiving = false };
             if (ea is { SocketError: SocketError.Success, BytesTransferred: > 0 })
@@ -456,10 +456,19 @@ namespace Akka.IO
             // check for EOF
             if (ea.BytesTransferred == 0)
             {
-                if (_traceLogging)
-                    Log.Debug("[TcpConnection] EOF received");
-                _state = _state with { PeerClosed = true };
-                HandleClose(_handler!, PeerClosed.Instance);
+                if (_state.OutputShutdown)
+                {
+                    if(_traceLogging) 
+                        Log.Debug("[TcpConnection] EOF received; our side is already closed. Closing connection.");
+                    DoCloseConnection(closeCommander ?? _handler!, ConfirmedClosed.Instance);
+                }
+                else
+                {
+                    if (_traceLogging)
+                        Log.Debug("[TcpConnection] EOF received");
+                    _state = _state with { PeerClosed = true };
+                    HandleClose(closeCommander ?? _handler!, PeerClosed.Instance);
+                }
             }
         }
 
