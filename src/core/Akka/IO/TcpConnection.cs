@@ -88,6 +88,11 @@ namespace Akka.IO
         /// Immutable flags – reference to the live Queue + byte counter **and any deferred half‑close**.
         /// Moving every transient flag in here lets us reason over shutdown with a single value.
         /// </summary>
+        /// <param name="PendingHalfClose">
+        /// Indicates that a half-close (shutdown of the write side) has been requested (via ConfirmedClose or Close),
+        /// but there are still pending writes in the queue. When all writes have been delivered, the write side will
+        /// be closed (Socket.Shutdown(SocketShutdown.Send)), and this flag will be reset to false.
+        /// </param>
         private readonly record struct ConnState(
             Phase Phase,
             bool  IsReceiving,
@@ -97,11 +102,6 @@ namespace Akka.IO
             bool  ReadingSuspended,
             bool  WritingSuspended,
             bool  KeepOpenOnPeerClosed,
-            /// <summary>
-            /// Indicates that a half-close (shutdown of the write side) has been requested (via ConfirmedClose or Close),
-            /// but there are still pending writes in the queue. When all writes have been delivered, the write side will
-            /// be closed (Socket.Shutdown(SocketShutdown.Send)), and this flag will be reset to false.
-            /// </summary>
             bool  PendingHalfClose,
             Queue<(WriteCommand Cmd, IActorRef Snd)> Queue,
             int   QueuedBytes)
