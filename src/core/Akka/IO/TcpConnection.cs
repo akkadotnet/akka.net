@@ -315,7 +315,8 @@ namespace Akka.IO
                 Log.Debug("[TcpConnection] working on connection closure: {0}", evt);
             }
             
-            _closeEvent = evt;
+            if (_closeEvent == null)
+                _closeEvent = evt;
             _closeNotify.Add(src);
             if (_handler != null) _closeNotify.Add(_handler);
         }
