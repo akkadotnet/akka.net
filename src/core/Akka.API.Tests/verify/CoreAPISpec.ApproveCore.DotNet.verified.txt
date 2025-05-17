@@ -4252,13 +4252,13 @@ namespace Akka.IO
         [System.ObsoleteAttribute("This property is unused")]
         public int InitialSocketAsyncEventArgs { get; }
         public string ManagementDispatcher { get; }
-        public long MaxFrameSizeBytes { get; set; }
+        public int MaxFrameSizeBytes { get; set; }
         public bool OutgoingSocketForceIpv4 { get; set; }
-        public long ReceiveBufferSize { get; set; }
+        public int ReceiveBufferSize { get; set; }
         [System.ObsoleteAttribute("This property is now MaxFrameSizeBytes")]
         public long ReceivedMessageSizeLimit { get; }
         public System.Nullable<System.TimeSpan> RegisterTimeout { get; set; }
-        public long SendBufferSize { get; set; }
+        public int SendBufferSize { get; set; }
         public bool TraceLogging { get; set; }
         [System.ObsoleteAttribute("This property is unused")]
         public int TransferToLimit { get; set; }
