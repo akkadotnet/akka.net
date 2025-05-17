@@ -79,7 +79,8 @@ namespace Akka.IO
             ReleaseConnectionSocketArgs();
 
             var failureEvent = _connect.FailureMessage.WithCause(cause);
-            MarkClose(_commander, failureEvent);
+            var closeInfo = CloseInformation.Single(_commander, failureEvent);
+            StopWith(closeInfo);
             Context.Stop(Self);
         }
 
