@@ -21,9 +21,7 @@ namespace Akka.Util.Internal.Collections
             {
                 int index = r.Next(i);
                 //swap
-                var tmp = list[index];
-                list[index] = list[i];
-                list[i] = tmp;
+                (list[index], list[i]) = (list[i], list[index]);
             }
             return list;
         }
@@ -38,9 +36,7 @@ namespace Akka.Util.Internal.Collections
             {
                 int index = r.Next(i);
                 //swap
-                var tmp = list[index];
-                list[index] = list[i];
-                list[i] = tmp;
+                (list[index], list[i]) = (list[i], list[index]);
             }
             return list.ToImmutable();
         }
