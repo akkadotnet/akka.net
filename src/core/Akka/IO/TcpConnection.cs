@@ -352,17 +352,8 @@ namespace Akka.IO
                 _closeRequested = true;
                 _state = _state with { ReadingSuspended = true, IsReceiving = false };
                 MarkClose(Sender, c.Event);
-                try
-                {
-                    Socket.Shutdown(SocketShutdown.Receive);
-                }
-                catch(Exception e)
-                {
-                    if (Settings.TraceLogging)
-                        Log.Debug("[TcpConnection] Socket receive shutdown failed: {0}", e.Message);
-                }
-                EvaluateShutdown();
                 TrySend();
+                EvaluateShutdown();
             });
             Receive<ConfirmedClose>(cc =>
             {
@@ -405,6 +396,9 @@ namespace Akka.IO
         /*  Socket‑event handlers                                            */
         /* ----------------------------------------------------------------- */
 
+        private long _totalSentBytes;
+        private long _totalReceivedBytes;
+
         private void HandleReceiveCompleted(SocketAsyncEventArgs ea)
         {
             _state = _state with { IsReceiving = false };
@@ -412,7 +406,8 @@ namespace Akka.IO
             {
                 if (Settings.TraceLogging)
                 {
-                    Log.Debug("[TcpConnection] received {0} bytes", ea.BytesTransferred);
+                    _totalReceivedBytes += ea.BytesTransferred;
+                    Log.Debug("[TcpConnection] received {0} bytes [{1} total]", ea.BytesTransferred, _totalReceivedBytes);
                 }
                 
                 _handler!.Tell(new Received(ByteString.CopyFrom(_receiveBuffer, 0, ea.BytesTransferred)));
@@ -453,7 +448,8 @@ namespace Akka.IO
             
             if (Settings.TraceLogging)
             {
-                Log.Debug("[TcpConnection] completed write of {0}/{1} bytes (queued={2}/{3})", ea.BytesTransferred, ea.BufferList.Sum(c => c.Count), _state.QueuedBytes, _maxQueuedBytes);
+                _totalSentBytes += ea.BytesTransferred;
+                Log.Debug("[TcpConnection] completed write of {0}/{1} bytes (queued={2}/{3}) [{4} total sent]", ea.BytesTransferred, ea.BufferList.Sum(c => c.Count), _state.QueuedBytes, _maxQueuedBytes, _totalSentBytes);
             }
 
             foreach (var (c, ack) in ea.PendingAcks)
