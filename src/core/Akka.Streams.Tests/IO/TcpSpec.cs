@@ -528,6 +528,7 @@ namespace Akka.Streams.Tests.IO
         public async Task Outgoing_TCP_stream_must_not_thrown_on_unbind_after_system_has_been_shut_down()
         {
             var sys2 = ActorSystem.Create("shutdown-test-system", Sys.Settings.Config);
+            InitializeLogger(sys2);
 
             try
             {
