@@ -105,7 +105,8 @@ namespace Akka.IO
             public bool CanSend    => !ClosedForWrites && !WritingSuspended;
             public bool CanReceive    => !PeerClosed       && !ReadingSuspended;
 
-            private bool PeerIsReadyForUsToShutdown => !PeerClosed || !KeepOpenOnPeerClosed;
+            private bool PeerIsReadyForUsToShutdown => (KeepOpenOnPeerClosed && !HasPending && PeerClosed && CanSend) || 
+                                                    (!KeepOpenOnPeerClosed && PeerClosed);
 
             public bool Closeable(bool closeRequested) =>
                 (closeRequested && Phase < Phase.Open) || // IMMEDIATE close if requested during connect or reg
@@ -556,9 +557,19 @@ namespace Akka.IO
         /* ====================================================================*/
         private void EvaluateShutdown()
         {
-            if(!_state.Closeable(_closeRequested)) return;
-            if(Settings.TraceLogging) 
-                Log.Debug("[TcpConnection] shutting down connection");
+            if (_closeRequested)
+            {
+                var canClose = _state.Closeable(_closeRequested);
+                if (!canClose)
+                {
+                    if (Settings.TraceLogging)
+                        Log.Debug("[TcpConnection] can't close yet - state is [{0}]", _state);
+                }
+            }
+
+            if (!_state.Closeable(_closeRequested)) return;
+            if (Settings.TraceLogging)
+                Log.Debug("[TcpConnection] shutting down connection [{0}]", _state);
             
             Self.Tell(PoisonPill.Instance);
         }
