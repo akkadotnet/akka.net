@@ -35,7 +35,7 @@ namespace Akka.IO
                 (connect.TcpSettings ?? tcp.Settings),
                 (connect.TcpSettings ?? tcp.Settings).OutgoingSocketForceIpv4
                     ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { Blocking = false }
-                    : new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false })
+                    : new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false }, connect.PullMode)
         {
             _commander = commander;
             _connect = connect;

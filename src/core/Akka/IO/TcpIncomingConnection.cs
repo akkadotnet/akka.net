@@ -26,7 +26,7 @@ namespace Akka.IO
                                      IActorRef bindHandler,
                                      IEnumerable<Inet.SocketOption> options, 
                                      bool readThrottling)
-            : base(settings, socket)
+            : base(settings, socket, readThrottling)
         {
             _bindHandler = bindHandler;
             _options = options;

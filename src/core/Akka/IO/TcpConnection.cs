@@ -168,6 +168,9 @@ namespace Akka.IO
         private ConnState _state;
 
         private readonly bool _traceLogging;
+        
+        // used by Akka.Streams
+        private readonly bool _pullMode;
 
         private IActorRef? _commander;
         private IActorRef? _handler;
@@ -181,11 +184,12 @@ namespace Akka.IO
         private static readonly IOException DroppingWriteBecauseQueueIsFullException =
             new("Dropping write because queue is full");
 
-        protected TcpConnection(TcpSettings settings, Socket socket)
+        protected TcpConnection(TcpSettings settings, Socket socket, bool pullMode)
         {
             Settings = settings;
             _maxQueuedBytes = settings.WriteCommandsQueueMaxSize; // –1 ⇒ unlimited;
             _pendingWrites = new Queue<(WriteCommand Cmd, IActorRef Sender)>(16);
+            _pullMode = pullMode;
 
             _traceLogging = Settings.TraceLogging;
             _state = ConnState.Initial(_pendingWrites);
@@ -194,6 +198,12 @@ namespace Akka.IO
             _receiveArgs = new ReadSocketAsyncEventArgs();
             _sendArgs = new AckSocketAsyncEventArgs();
             InitSocketEventArgs();
+
+            if (_pullMode)
+            {
+                // have to wait for the first pull request to start reading
+                _state = _state with { ReadingSuspended = true };
+            }
         }
 
         private void InitSocketEventArgs()
@@ -406,7 +416,16 @@ namespace Akka.IO
                 }
                 
                 _handler!.Tell(new Received(ByteString.CopyFrom(_receiveBuffer, 0, ea.BytesTransferred)));
-                IssueReceive();
+                
+                if (_pullMode)
+                {
+                    // in pull mode we need to wait for the next pull request
+                    _state = _state with { ReadingSuspended = true };
+                }
+                else
+                {
+                    IssueReceive();
+                }
                 return;
             }
             
