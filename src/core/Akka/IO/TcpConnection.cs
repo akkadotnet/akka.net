@@ -289,7 +289,7 @@ namespace Akka.IO
                 if (_traceLogging) Log.Debug("[{0}] registered as connection handler", reg.Handler);
                 Context.WatchWith(_handler, HandlerDied.Instance);
                 Context.Unwatch(_commander);
-                _state = _state with { KeepOpenOnPeerClosed = reg.KeepOpenOnPeerClosed, ReadingSuspended = false, WritingSuspended = false };
+                _state = _state with { KeepOpenOnPeerClosed = reg.KeepOpenOnPeerClosed, ReadingSuspended = _pullMode, WritingSuspended = false };
                 
                 // set a default close event - if someone hard-kills us we log an aborted
                 _closeInformation = CloseInformation.Single(_handler, Aborted.Instance);
@@ -532,7 +532,7 @@ namespace Akka.IO
                 Log.Debug($"[TcpConnection] TrySend called. IsSending={_state.IsSending}, PendingWrites={_pendingWrites.Count}, CanSend={_state.CanSend}, PartialWriteOffset={_partialWriteOffset}");
             if (!_state.CanSend) return;
             if (_state.IsSending || _pendingWrites.Count == 0) return;
-            var segs = new List<ArraySegment<byte>>(8);
+            var segs = new List<ArraySegment<byte>>(1);
             var batchBytes = 0;
 
             while (_pendingWrites.Count > 0 && batchBytes < Settings.MaxFrameSizeBytes)
