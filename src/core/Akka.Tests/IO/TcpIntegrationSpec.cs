@@ -464,6 +464,7 @@ namespace Akka.Tests.IO
         [Fact]
         public async Task The_TCP_transport_implementation_should_support_waiting_for_writes_with_backpressure()
         {
+            var transmittedBytes = InternalConnectionActorMaxQueueSize;
             await new TestSetup(this).RunAsync(async x =>
             {
                 x.BindOptions = [new Inet.SO.SendBufferSize(1024)];
@@ -471,10 +472,10 @@ namespace Akka.Tests.IO
 
                 var actors = await x.EstablishNewClientConnectionAsync();
 
-                actors.ServerHandler.Send(actors.ServerConnection, Tcp.Write.Create(ByteString.FromBytes(new byte[100000]), Ack.Instance));
+                actors.ServerHandler.Send(actors.ServerConnection, Tcp.Write.Create(ByteString.FromBytes(new byte[transmittedBytes]), Ack.Instance));
                 await actors.ServerHandler.ExpectMsgAsync(Ack.Instance);
 
-                await x.ExpectReceivedDataAsync(actors.ClientHandler, 100000);
+                await x.ExpectReceivedDataAsync(actors.ClientHandler, transmittedBytes);
             });
         }
 
@@ -609,10 +610,16 @@ namespace Akka.Tests.IO
 
             public async Task ExpectReceivedDataAsync(TestProbe handler, int remaining)
             {
-                if (remaining > 0)
+                while (true)
                 {
-                    var recv = await handler.ExpectMsgAsync<Tcp.Received>();
-                    await ExpectReceivedDataAsync(handler, remaining - recv.Data.Count);
+                    if (remaining > 0)
+                    {
+                        var recv = await handler.ExpectMsgAsync<Tcp.Received>();
+                        remaining = remaining - recv.Data.Count;
+                        continue;
+                    }
+
+                    break;
                 }
             }
 
