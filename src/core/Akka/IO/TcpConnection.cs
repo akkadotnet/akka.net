@@ -385,7 +385,7 @@ namespace Akka.IO
             
             Receive<HandlerDied>(h =>
             {
-                Log.Debug("Handler died, stopping connection actor");
+                Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
                 Context.Stop(Self);
             });
             //Receive<SuspendWriting>(_=> { _st = _st with { WritingSuspended=true  };               });

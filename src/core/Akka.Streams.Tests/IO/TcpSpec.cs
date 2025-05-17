@@ -469,7 +469,7 @@ namespace Akka.Streams.Tests.IO
                     .Run(Materializer);
 
             var result = await Source.From(Enumerable.Repeat(0, 1000)
-                .Select(i => ByteString.FromBytes(new byte[] { Convert.ToByte(i) })))
+                .Select(i => ByteString.FromBytes([Convert.ToByte(i)])))
                 .Via(Sys.TcpStream().OutgoingConnection(serverAddress, halfClose: true))
                 .RunAggregate(0, (i, s) => i + s.Count, Materializer).ShouldCompleteWithin(10.Seconds());
             
