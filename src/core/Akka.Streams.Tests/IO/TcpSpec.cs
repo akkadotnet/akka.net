@@ -506,7 +506,7 @@ namespace Akka.Streams.Tests.IO
                             await AwaitAssertAsync(async () =>
                             {
                                 // Getting rid of existing connection actors by using a blunt instrument
-                                system2.ActorSelection(system2.Tcp().Path / "$a" / "*").Tell(Kill.Instance);
+                                system2.ActorSelection(system2.Tcp().Path / "tcp-client-connection-*").Tell(Kill.Instance);
                             
                                 await result.ShouldCompleteWithin(3.Seconds());
                             }, interval:TimeSpan.FromSeconds(4));
