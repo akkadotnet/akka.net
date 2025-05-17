@@ -416,9 +416,9 @@ namespace Akka.Tests.IO
                 await AwaitAssertAsync(async () =>
                 {
                     // try sending overflow
-                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this is sent immidiately
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this is sent immediately
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this will try to buffer
-                    await actors.ClientHandler.ExpectMsgAsync<Tcp.CommandFailed>(TimeSpan.FromSeconds(20));
+                    await actors.ClientHandler.ExpectMsgAsync<Tcp.CommandFailed>();
 
                     // First overflow data will be received anyway
                     (await actors.ServerHandler.ReceiveWhileAsync(TimeSpan.FromSeconds(1), m => m as Tcp.Received).ToListAsync())
@@ -431,7 +431,7 @@ namespace Akka.Tests.IO
                     (await actors.ServerHandler.ReceiveWhileAsync(TimeSpan.FromSeconds(1), m => m as Tcp.Received).ToListAsync())
                         .Sum(m => m.Data.Count)
                         .Should().Be(InternalConnectionActorMaxQueueSize);
-                }, TimeSpan.FromSeconds(30 * 3), TimeSpan.FromSeconds(5)); // 3 attempts by ~25 seconds + 5 sec pause
+                }, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(3)); // 3 attempts by ~25 seconds + 5 sec pause
             });
         }
 
