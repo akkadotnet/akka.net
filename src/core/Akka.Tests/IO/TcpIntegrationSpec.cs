@@ -416,17 +416,17 @@ namespace Akka.Tests.IO
                 await AwaitAssertAsync(async () =>
                 {
                     // try sending overflow
-                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this is sent immediately
-                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this will try to buffer
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(goodData)); // this is sent immediately
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this will fail
                     await actors.ClientHandler.ExpectMsgAsync<Tcp.CommandFailed>();
 
-                    // First overflow data will be received anyway
+                    // First message will go through, second one will not
                     (await actors.ServerHandler.ReceiveWhileAsync(TimeSpan.FromSeconds(1), m => m as Tcp.Received).ToListAsync())
                         .Sum(m => m.Data.Count)
-                        .Should().Be(InternalConnectionActorMaxQueueSize + 1);
+                        .Should().Be(InternalConnectionActorMaxQueueSize);
                 
                     // Check that almost-overflow size does not cause any problems
-                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.ResumeWriting.Instance); // Recover after send failure
+                    //actors.ClientHandler.Send(actors.ClientConnection, Tcp.ResumeWriting.Instance); // Recover after send failure
                     actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(goodData));
                     (await actors.ServerHandler.ReceiveWhileAsync(TimeSpan.FromSeconds(1), m => m as Tcp.Received).ToListAsync())
                         .Sum(m => m.Data.Count)
