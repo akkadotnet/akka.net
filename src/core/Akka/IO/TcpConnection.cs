@@ -97,7 +97,12 @@ namespace Akka.IO
             bool  ReadingSuspended,
             bool  WritingSuspended,
             bool  KeepOpenOnPeerClosed,
-            bool  PendingHalfClose, // ≙ we have seen ConfirmedClose, waiting for queue to drain
+            /// <summary>
+            /// Indicates that a half-close (shutdown of the write side) has been requested (via ConfirmedClose or Close),
+            /// but there are still pending writes in the queue. When all writes have been delivered, the write side will
+            /// be closed (Socket.Shutdown(SocketShutdown.Send)), and this flag will be reset to false.
+            /// </summary>
+            bool  PendingHalfClose,
             Queue<(WriteCommand Cmd, IActorRef Snd)> Queue,
             int   QueuedBytes)
         {
@@ -360,6 +365,14 @@ namespace Akka.IO
                 _state = _state with { ReadingSuspended = true, IsReceiving = false };
                 MarkClose(Sender, c.Event);
                 TrySend();
+                if (_state.HasPending)
+                {
+                    _state = _state with { PendingHalfClose = true };
+                }
+                else
+                {
+                    HalfCloseWriteSide();
+                }
                 EvaluateShutdown();
             });
             Receive<ConfirmedClose>(cc =>
@@ -367,8 +380,15 @@ namespace Akka.IO
                 if (Settings.TraceLogging)
                     Log.Debug("[TcpConnection] ConfirmedClose requested");
                 MarkClose(Sender, cc.Event);
-                HalfCloseWriteSide();
                 _closeRequested = true;
+                if (_state.HasPending)
+                {
+                    _state = _state with { PendingHalfClose = true };
+                }
+                else
+                {
+                    HalfCloseWriteSide();
+                }
                 EvaluateShutdown();
             });
             Receive<Abort>(s =>
@@ -471,6 +491,7 @@ namespace Akka.IO
             if(_state.PendingHalfClose && _pendingWrites.Count==0)
             {
                 HalfCloseWriteSide();
+                _state = _state with { PendingHalfClose = false };
             }
             
             TrySend();
