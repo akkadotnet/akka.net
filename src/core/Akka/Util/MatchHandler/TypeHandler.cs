@@ -26,11 +26,8 @@ namespace Akka.Tools.MatchHandler
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown if the given <paramref name="handlesType"/> is undefined.
         /// </exception>
-        public TypeHandler(Type handlesType)
-        {
-            if(handlesType == null) throw new ArgumentNullException(nameof(handlesType), "Type cannot be null");
-            _handlesType = handlesType;
-        }
+        public TypeHandler(Type handlesType) =>
+            _handlesType = handlesType ?? throw new ArgumentNullException(nameof(handlesType), "Type cannot be null");
 
         /// <summary>
         /// TBD

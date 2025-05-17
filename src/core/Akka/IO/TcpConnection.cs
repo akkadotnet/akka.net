@@ -100,7 +100,7 @@ namespace Akka.IO
         private readonly ConcurrentQueue<(IActorRef Commander, object Ack)> _pendingAcks = new();
         private bool _peerClosed;
         private IActorRef _interestedInResume;
-        private CloseInformation _closedMessage;  // for ConnectionClosed message in postStop
+        private CloseInformation _closedMessage; // for ConnectionClosed message in postStop
 
         private IActorRef _watchedActor = Context.System.DeadLetters;
 
@@ -110,14 +110,12 @@ namespace Akka.IO
 
         protected TcpConnection(TcpExt tcp, Socket socket, bool pullMode, Option<int> writeCommandsBufferMaxSize)
         {
-            if (socket == null) throw new ArgumentNullException(nameof(socket));
-
             _pullMode = pullMode;
             _writeCommandsQueue = new PendingSimpleWritesQueue(Log, writeCommandsBufferMaxSize);
             _traceLogging = tcp.Settings.TraceLogging;
 
             Tcp = tcp;
-            Socket = socket;
+            Socket = socket ?? throw new ArgumentNullException(nameof(socket));
 
             if (pullMode) SetStatus(ConnectionStatus.ReadingSuspended);
         }
@@ -179,8 +177,12 @@ namespace Akka.IO
                         }
 
                         return true;
-                    case ResumeReading _: ClearStatus(ConnectionStatus.ReadingSuspended); return true;
-                    case SuspendReading _: SetStatus(ConnectionStatus.ReadingSuspended); return true;
+                    case ResumeReading _:
+                        ClearStatus(ConnectionStatus.ReadingSuspended);
+                        return true;
+                    case SuspendReading _:
+                        SetStatus(ConnectionStatus.ReadingSuspended);
+                        return true;
                     case CloseCommand cmd:
                         var info = new ConnectionInfo(commander, keepOpenOnPeerClosed: false, useResumeWriting: false);
                         HandleClose(info, Sender, cmd.Event);
@@ -222,17 +224,25 @@ namespace Akka.IO
                 if (handleWrite(message)) return true;
                 switch (message)
                 {
-                    case SuspendReading _: SuspendReading(); return true;
-                    case ResumeReading _: ResumeReading(); return true;
-                    case SocketReceived _: DoRead(info, null); return true;
-                    case CloseCommand cmd: HandleClose(info, Sender, cmd.Event); return true;
+                    case SuspendReading _:
+                        SuspendReading();
+                        return true;
+                    case ResumeReading _:
+                        ResumeReading();
+                        return true;
+                    case SocketReceived _:
+                        DoRead(info, null);
+                        return true;
+                    case CloseCommand cmd:
+                        HandleClose(info, Sender, cmd.Event);
+                        return true;
                     default: return false;
                 }
             };
         }
 
         /// <summary>
-        /// The peer sent EOF first, but we may still want to send 
+        /// The peer sent EOF first, but we may still want to send
         /// </summary>
         private Receive PeerSentEOF(ConnectionInfo info)
         {
@@ -246,6 +256,7 @@ namespace Akka.IO
                     HandleClose(info, Sender, cmd.Event);
                     return true;
                 }
+
                 if (message is ResumeReading) return true;
                 return false;
             };
@@ -260,9 +271,15 @@ namespace Akka.IO
             {
                 switch (message)
                 {
-                    case SuspendReading _: SuspendReading(); return true;
-                    case ResumeReading _: ResumeReading(); return true;
-                    case SocketReceived _: DoRead(info, closeCommander); return true;
+                    case SuspendReading _:
+                        SuspendReading();
+                        return true;
+                    case ResumeReading _:
+                        ResumeReading();
+                        return true;
+                    case SocketReceived _:
+                        DoRead(info, closeCommander);
+                        return true;
                     case SocketSent _:
                         AcknowledgeSent();
                         if (IsWritePending)
@@ -279,8 +296,12 @@ namespace Akka.IO
                         else
                             HandleClose(info, closeCommander, closedEvent);
                         return true;
-                    case WriteFileFailed fail: HandleError(info.Handler, fail.Cause); return true;
-                    case Abort _: HandleClose(info, Sender, Aborted.Instance); return true;
+                    case WriteFileFailed fail:
+                        HandleError(info.Handler, fail.Cause);
+                        return true;
+                    case Abort _:
+                        HandleClose(info, Sender, Aborted.Instance);
+                        return true;
                     default: return false;
                 }
             };
@@ -293,10 +314,18 @@ namespace Akka.IO
             {
                 switch (message)
                 {
-                    case SuspendReading _: SuspendReading(); return true;
-                    case ResumeReading _: ResumeReading(); return true;
-                    case SocketReceived _: DoRead(info, closeCommander); return true;
-                    case Abort _: HandleClose(info, Sender, Aborted.Instance); return true;
+                    case SuspendReading _:
+                        SuspendReading();
+                        return true;
+                    case ResumeReading _:
+                        ResumeReading();
+                        return true;
+                    case SocketReceived _:
+                        DoRead(info, closeCommander);
+                        return true;
+                    case Abort _:
+                        HandleClose(info, Sender, Aborted.Instance);
+                        return true;
                     default: return false;
                 }
             };
@@ -356,7 +385,7 @@ namespace Akka.IO
                                     return true;
                                 }
 
-                                nextWrite = GetNextWrite(headCommands: new []{ (simpleWriteCommand, Sender) });
+                                nextWrite = GetNextWrite(headCommands: new[] { (simpleWriteCommand, Sender) });
                             }
                             else
                             {
@@ -391,6 +420,7 @@ namespace Akka.IO
                             else Sender.Tell(new CommandFailed(ResumeWriting.Instance));
                         }
                         else Sender.Tell(WritingResumed.Instance);
+
                         return true;
                     case UpdatePendingWriteAndThen updatePendingWrite:
                         var updatedWrite = updatePendingWrite.RemainingWrite;
@@ -453,6 +483,7 @@ namespace Akka.IO
             ClearStatus(ConnectionStatus.ReadingSuspended);
             ReceiveAsync();
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AcknowledgeSent()
         {
@@ -491,6 +522,7 @@ namespace Akka.IO
                                 if (_traceLogging) Log.Debug("Read returned end-of-stream, our side not yet closed");
                                 HandleClose(info, closeCommander, PeerClosed.Instance);
                             }
+
                             break;
                         case ReadResultType.ReadError:
                             HandleError(info.Handler, new SocketException((int)read.Error));
@@ -523,6 +555,7 @@ namespace Akka.IO
 
                 throw new IllegalStateException($"Unexpected value returned from read: {readBytes}");
             }
+
             return ReadResult.AllRead;
         }
 
@@ -558,7 +591,7 @@ namespace Akka.IO
                 _peerClosed = true;
                 Context.Become(PeerSentEOF(info));
             }
-            else if (IsWritePending)   // finish writing first
+            else if (IsWritePending) // finish writing first
             {
                 UnsignDeathPact();
                 if (_traceLogging) Log.Debug("Got Close command but write is still pending.");
@@ -585,8 +618,9 @@ namespace Akka.IO
                 }
                 catch (SocketException e)
                 {
-                     Log.Error("Socket shutdown failed with [{0}]", e);
+                    Log.Error("Socket shutdown failed with [{0}]", e);
                 }
+
                 DoCloseConnection(info, closeCommander, closedEvent);
             }
         }
@@ -703,10 +737,11 @@ namespace Akka.IO
                     e.BufferList = null;
             }
             // it can be that for some reason socket is in use and haven't closed yet
-            catch (InvalidOperationException) { }
+            catch (InvalidOperationException)
+            {
+            }
 
             e.Dispose();
-
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -721,7 +756,7 @@ namespace Akka.IO
         {
             try
             {
-                Socket.LingerState = new LingerOption(true, 0);  // causes the following close() to send TCP RST
+                Socket.LingerState = new LingerOption(true, 0); // causes the following close() to send TCP RST
             }
             catch (Exception e)
             {
@@ -768,7 +803,7 @@ namespace Akka.IO
             if (Socket.Connected) Abort();
             else CloseSocket();
 
-            // We do never store pending writes between messages anymore, so nothing is acquired and nothing to release 
+            // We do never store pending writes between messages anymore, so nothing is acquired and nothing to release
 
             // always try to release SocketAsyncEventArgs to avoid memory leaks
             ReleaseSocketAsyncEventArgs();
@@ -864,6 +899,7 @@ namespace Akka.IO
             /// TBD
             /// </summary>
             public ISet<IActorRef> NotificationsTo { get; }
+
             public Tcp.Event ClosedEvent { get; }
 
             public CloseInformation(ISet<IActorRef> notificationsTo, Tcp.Event closedEvent)
@@ -1049,8 +1085,8 @@ namespace Akka.IO
                     if (_maxQueueSizeInBytes.HasValue && _maxQueueSizeInBytes.Value < sizeAfterAppending)
                     {
                         _log.Warning("Could not receive write command of size {0} bytes, " +
-                                    "because buffer limit is {1} bytes and " +
-                                    "it is already {2} bytes", writeInfo.DataSize, _maxQueueSizeInBytes, _totalSizeInBytes);
+                                     "because buffer limit is {1} bytes and " +
+                                     "it is already {2} bytes", writeInfo.DataSize, _maxQueueSizeInBytes, _totalSizeInBytes);
                         return false;
                     }
 
@@ -1116,6 +1152,7 @@ namespace Akka.IO
                         {
                             yield return extractedSimple;
                         }
+
                         break;
                     default:
                         throw new ArgumentException($"Trying to calculate size of unknown write type: {command.GetType().FullName}");
