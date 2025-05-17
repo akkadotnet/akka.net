@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="TcpConnection.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -113,7 +113,13 @@ namespace Akka.IO
                 closeRequested &&
                 !IsReceiving   &&
                 !HasPending    &&
-                PeerIsReadyForUsToShutdown;
+                (
+                    // If we're in HalfOpen, both sides have closed their write sides, and nothing is left to do
+                    (Phase == Phase.HalfOpen && ClosedForWrites && PeerClosed)
+                    ||
+                    // Fallback to previous logic for other phases
+                    PeerIsReadyForUsToShutdown
+                );
 
             public static ConnState Initial(Queue<(WriteCommand Cmd, IActorRef Snd)> q) =>
                 new(Phase.Connecting, false, false, false, false, false, false, false, false, q, 0);
