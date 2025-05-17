@@ -509,13 +509,13 @@ namespace Akka.IO
                 return;
             }
             
-            EnqueueInner(cmd);
+            EnqueueInner();
 
             _state = _state with { QueuedBytes = _state.QueuedBytes + b };
             TrySend();
             return;
 
-            void EnqueueInner(WriteCommand wCmd)
+            void EnqueueInner()
             {
                 switch (cmd)
                 {
