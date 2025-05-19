@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Akka.Configuration.Hocon;
 using Akka.Util.Internal;
@@ -149,6 +150,7 @@ namespace Akka.Configuration
         /// <param name="def">Default return value if none provided.</param>
         /// <exception cref="InvalidOperationException">This exception is thrown if the current node is undefined.</exception>
         /// <returns>The long value defined in the specified path.</returns>
+        [return: NotNullIfNotNull(nameof(def))]
         public virtual long? GetByteSize(string path, long? def = null)
         {
             HoconValue value = GetNode(path);
