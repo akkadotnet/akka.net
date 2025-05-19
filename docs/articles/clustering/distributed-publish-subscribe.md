@@ -60,18 +60,18 @@ A `PublishWithAck` envelope message works just like a normal `Publish` envelope,
 * If the mediator could not deliver a `PublishWithAck` message, it will store the message inside a buffer.
 * The size of this buffer can be configured using the HOCON setting `akka.cluster.pub-sub.buffered-messages.max-per-topic`
 
-#### Buffer timeout
+#### Buffer Timeout
 
 * The `PublishWithAck` message contains the `Timeout` property.
 * Every `akka.cluster.pub-sub.buffered-messages.timeout-check-interval` time, the mediator will scan through all the buffered message to check and see if it has been sitting in the buffer for more than timeout period.
 * Timed out buffered message will be removed from the buffer and either silently discarded or sent to the dead letter.
 * A `PublishFailure` message will also be sent to the original sender to signal publish failures.
 
-#### Buffer delivery
+#### Buffer Delivery
 
 When any subscribers of the same topic as the `PublishWithAck` topic joins the publisher node, all buffered messages will be sent to the subscriber. For each delivered message, the mediator will send a `PublishSucceeded` message to the original sender as a signal.
 
-#### Buffer overflow
+#### Buffer Overflow
 
 When a new message is inserted and the topic buffer count exceeds `akka.cluster.pub-sub.buffered-messages.max-per-topic`, the mediator will discard the oldest message in the buffer and send a `PublishFailed` to the original sender of that message.
 
