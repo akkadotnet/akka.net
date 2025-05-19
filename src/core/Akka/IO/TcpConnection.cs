@@ -297,7 +297,17 @@ namespace Akka.IO
                 IssueReceive();
                 TrySend();
             });
-            Receive<WriteCommand>(Enqueue);
+            Receive<WriteCommand>(w =>
+            {
+                var queueSizeBefore = _pendingWrites.Count;
+                Enqueue(w);
+                if(_pendingWrites.Count > queueSizeBefore)
+                {
+                    // need to log a warning here about writing before registration
+                    Log.Warning("Received Write command before Register command. " +
+                                "It will be buffered until Register will be received (buffered write size is {0} bytes)", w.Bytes);
+                }
+            });
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             Receive<SuspendReading>(_ => { _state = _state with { ReadingSuspended = true }; });
             Receive<ResumeReading>(_ =>
