@@ -11,6 +11,7 @@ using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Configuration;
 using Akka.Routing;
 using Akka.TestKit;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.PublishSubscribe
@@ -40,6 +41,8 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             distributedPubSubSettings.RemovedTimeToLive.TotalSeconds.ShouldBe(120);
             distributedPubSubSettings.SendToDeadLettersWhenNoSubscribers.ShouldBe(true);
             distributedPubSubSettings.MaxDeltaElements.ShouldBe(3000);
+            distributedPubSubSettings.MaxBufferedMessagePerTopic.ShouldBe(1000);
+            distributedPubSubSettings.BufferedMessageTimeoutCheckInterval.ShouldBe(500.Milliseconds());
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.pub-sub");
             Assert.False(config.IsNullOrEmpty());
