@@ -331,7 +331,7 @@ namespace Akka.IO
             Receive<WriteCommand>(Enqueue);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             SuspendResumeHandlers();
-            Receive<HandlerDied>(h =>
+            Receive<HandlerDied>(_ =>
             {
                 Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
                 Context.Stop(Self);
@@ -360,6 +360,11 @@ namespace Akka.IO
             Receive<WriteCommand>(Enqueue);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             SuspendResumeHandlers();
+            Receive<HandlerDied>(_ =>
+            {
+                Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
+                Context.Stop(Self);
+            });
         }
 
         private void ClosingWithPendingWrite(IActorRef closeSender, ConnectionClosed e)
@@ -377,11 +382,6 @@ namespace Akka.IO
             Receive<WriteCommand>(Enqueue);
             Receive<Abort>(c => HandleClose(Sender, c.Event));
             SuspendResumeHandlers();
-            Receive<HandlerDied>(h =>
-            {
-                Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
-                Context.Stop(Self);
-            });
         }
 
         /// <summary>
@@ -576,7 +576,7 @@ namespace Akka.IO
                     _pendingWrites.Dequeue();
                     _state = _state with { QueuedBytes = _state.QueuedBytes - w.Data.Count };
                     _partialWriteOffset = null;
-                    if (w.WantsAck) _sendArgs.PendingAcks.Add((snd, w.Ack));
+                    if (w.WantsAck) snd.Tell(w.Ack); // message was already sent - ACK right away
                     if (_traceLogging)
                         Log.Debug($"[TcpConnection] TrySend: encountered empty write, dequeued. Remaining queue: {_pendingWrites.Count}");
                     continue;
@@ -587,6 +587,7 @@ namespace Akka.IO
                 if (_traceLogging)
                     Log.Debug($"[TcpConnection] TrySend batching: offset={offset}, remaining={remaining}, toSend={toSend}, batchBytes={batchBytes}");
 
+                // non-copying operation - just creates a new ArraySegment without copying any bytes
                 var chunk = data.Slice(offset, toSend);
                 segs.AddRange(chunk.Buffers);
                 batchBytes += toSend;
@@ -752,7 +753,7 @@ namespace Akka.IO
                 /* ignore */
             }
 
-            _state = _state with { OutputShutdown = true };
+            _state = _state with { OutputShutdown = true, ReadingSuspended = true };
         }
 
         private void AbortSocket()
