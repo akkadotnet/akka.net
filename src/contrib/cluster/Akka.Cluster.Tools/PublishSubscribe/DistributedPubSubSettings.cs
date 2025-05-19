@@ -15,7 +15,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// <summary>
     /// TBD
     /// </summary>
-    public sealed class DistributedPubSubSettings : INoSerializationVerificationNeeded
+    public sealed record DistributedPubSubSettings : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Creates cluster publish/subscribe settings from the default configuration `akka.cluster.pub-sub`.
@@ -72,43 +72,43 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// The mediator starts on members tagged with this role. Uses all if undefined.
         /// </summary>
-        public string Role { get; }
+        public string Role { get; private init; }
 
         /// <summary>
         /// The routing logic to use for <see cref="DistributedPubSubMediator"/>.
         /// </summary>
-        public RoutingLogic RoutingLogic { get; }
+        public RoutingLogic RoutingLogic { get; private init; }
 
         /// <summary>
         /// How often the <see cref="DistributedPubSubMediator"/> should send out gossip information
         /// </summary>
-        public TimeSpan GossipInterval { get; }
+        public TimeSpan GossipInterval { get; private init; }
 
         /// <summary>
         /// Removed entries are pruned after this duration.
         /// </summary>
-        public TimeSpan RemovedTimeToLive { get; }
+        public TimeSpan RemovedTimeToLive { get; private init; }
 
         /// <summary>
         /// Maximum number of elements to transfer in one message when synchronizing the registries.
         /// Next chunk will be transferred in next round of gossip.
         /// </summary>
-        public int MaxDeltaElements { get; }
+        public int MaxDeltaElements { get; private init; }
 
         /// <summary>
         /// When a message is published to a topic with no subscribers send it to the dead letters.
         /// </summary>
-        public bool SendToDeadLettersWhenNoSubscribers { get; }
+        public bool SendToDeadLettersWhenNoSubscribers { get; private init; }
         
         /// <summary>
         /// The maximum <see cref="PublishWithAck"/> message buffer size for each topic 
         /// </summary>
-        public int MaxBufferedMessagePerTopic { get; }
+        public int MaxBufferedMessagePerTopic { get; private init; }
         
         /// <summary>
         /// Determine the interval on which all buffered <see cref="PublishWithAck"/> message will be checked for timeout condition
         /// </summary>
-        public TimeSpan BufferedMessageTimeoutCheckInterval { get; }
+        public TimeSpan BufferedMessageTimeoutCheckInterval { get; private init; }
         
         /// <summary>
         /// Creates a new instance of the <see cref="DistributedPubSubSettings" />.
@@ -177,50 +177,29 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             BufferedMessageTimeoutCheckInterval = bufferedMessageTimeoutCheckInterval;
         }
 
-        private DistributedPubSubSettings Copy(
-            string? role = null,
-            RoutingLogic? routingLogic = null,
-            TimeSpan? gossipInterval = null,
-            TimeSpan? removedTimeToLive = null,
-            int? maxDeltaElements = null,
-            bool? sendToDeadLettersWhenNoSubscribers = null,
-            int? maxBufferedMessagePerTopic = null,
-            TimeSpan? bufferedMessageTimeoutCheckInterval = null)
-        {
-            return new DistributedPubSubSettings(
-                role ?? Role,
-                routingLogic ?? RoutingLogic,
-                gossipInterval ?? GossipInterval,
-                removedTimeToLive ?? RemovedTimeToLive,
-                maxDeltaElements ?? MaxDeltaElements,
-                sendToDeadLettersWhenNoSubscribers ?? SendToDeadLettersWhenNoSubscribers,
-                maxBufferedMessagePerTopic ?? MaxBufferedMessagePerTopic,
-                bufferedMessageTimeoutCheckInterval ?? BufferedMessageTimeoutCheckInterval);
-        }
-        
         public DistributedPubSubSettings WithRole(string role)
-            => Copy(role: role);
+            => this with { Role = role };
 
         public DistributedPubSubSettings WithRoutingLogic(RoutingLogic routingLogic)
-            => Copy(routingLogic: routingLogic);
+            => this with { RoutingLogic = routingLogic };
 
         public DistributedPubSubSettings WithGossipInterval(TimeSpan gossipInterval)
-            => Copy(gossipInterval: gossipInterval);
+            => this with { GossipInterval = gossipInterval };
 
         public DistributedPubSubSettings WithRemovedTimeToLive(TimeSpan removedTtl)
-            => Copy(removedTimeToLive: removedTtl);
+            => this with { RemovedTimeToLive = removedTtl };
 
         public DistributedPubSubSettings WithMaxDeltaElements(int maxDeltaElements)
-            => Copy(maxDeltaElements: maxDeltaElements);
+            => this with { MaxDeltaElements = maxDeltaElements };
 
         public DistributedPubSubSettings WithSendToDeadLettersWhenNoSubscribers(bool sendToDeadLetterWhenNoSubscribers)
-            => Copy(sendToDeadLettersWhenNoSubscribers: sendToDeadLetterWhenNoSubscribers);
+            => this with { SendToDeadLettersWhenNoSubscribers = sendToDeadLetterWhenNoSubscribers }; 
         
         public DistributedPubSubSettings WithMaxBufferedMessagePerTopic(int maxBufferedMessagePerTopic)
-            => Copy(maxBufferedMessagePerTopic: maxBufferedMessagePerTopic);
+            => this with { MaxBufferedMessagePerTopic = maxBufferedMessagePerTopic };
         
         public DistributedPubSubSettings WithBufferedMessageTimeoutCheckInterval(TimeSpan bufferedMessageTimeoutCheckInterval)
-            => Copy(bufferedMessageTimeoutCheckInterval: bufferedMessageTimeoutCheckInterval);
+            => this with { BufferedMessageTimeoutCheckInterval = bufferedMessageTimeoutCheckInterval };
         
     }
 }
