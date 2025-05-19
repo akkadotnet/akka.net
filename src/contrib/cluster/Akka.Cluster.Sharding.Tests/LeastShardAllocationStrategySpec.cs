@@ -99,8 +99,8 @@ namespace Akka.Cluster.Sharding.Tests
         {
             public static readonly ImmutableDictionaryKeepOrder<TKey, TValue> Empty = new(ImmutableDictionary<TKey, TValue>.Empty, ImmutableList<KeyValuePair<TKey, TValue>>.Empty);
 
-            private readonly ImmutableDictionary<TKey, TValue> _dictionary = ImmutableDictionary<TKey, TValue>.Empty;
-            private readonly ImmutableList<KeyValuePair<TKey, TValue>> _items = ImmutableList<KeyValuePair<TKey, TValue>>.Empty;
+            private readonly ImmutableDictionary<TKey, TValue> _dictionary;
+            private readonly ImmutableList<KeyValuePair<TKey, TValue>> _items;
 
             private ImmutableDictionaryKeepOrder(ImmutableDictionary<TKey, TValue> dictionary, ImmutableList<KeyValuePair<TKey, TValue>> items)
             {
