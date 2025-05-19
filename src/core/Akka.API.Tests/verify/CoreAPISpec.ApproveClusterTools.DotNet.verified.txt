@@ -256,9 +256,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     {
         [System.ObsoleteAttribute("Use .ctor that supports WaitForSubscribers instead. Since 1.4.42")]
         public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements, bool sendToDeadLettersWhenNoSubscribers) { }
-        public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements, bool sendToDeadLettersWhenNoSubscribers, bool waitForSubscribers, int maxBufferedMessagePerTopic, System.TimeSpan bufferedMessageTimeout, System.TimeSpan bufferedMessageTimeoutCheckInterval, Akka.Cluster.Tools.PublishSubscribe.OverflowStrategy bufferedMessageOverflowStrategy) { }
-        public Akka.Cluster.Tools.PublishSubscribe.OverflowStrategy BufferedMessageOverflowStrategy { get; }
-        public System.TimeSpan BufferedMessageTimeout { get; }
+        public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements, bool sendToDeadLettersWhenNoSubscribers, int maxBufferedMessagePerTopic, System.TimeSpan bufferedMessageTimeoutCheckInterval) { }
         public System.TimeSpan BufferedMessageTimeoutCheckInterval { get; }
         public System.TimeSpan GossipInterval { get; }
         public int MaxBufferedMessagePerTopic { get; }
@@ -267,10 +265,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public string Role { get; }
         public Akka.Routing.RoutingLogic RoutingLogic { get; }
         public bool SendToDeadLettersWhenNoSubscribers { get; }
-        public bool WaitForSubscribers { get; }
         public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Akka.Configuration.Config config) { }
-        public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithBufferedMessageTimeout(System.TimeSpan bufferedMessageTimeout) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithBufferedMessageTimeoutCheckInterval(System.TimeSpan bufferedMessageTimeoutCheckInterval) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithGossipInterval(System.TimeSpan gossipInterval) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithMaxBufferedMessagePerTopic(int maxBufferedMessagePerTopic) { }
@@ -279,22 +275,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRole(string role) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRoutingLogic(Akka.Routing.RoutingLogic routingLogic) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithSendToDeadLettersWhenNoSubscribers(bool sendToDeadLetterWhenNoSubscribers) { }
-        public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithWaitForSubscribers(bool waitForSubscribers) { }
     }
     public sealed class GetTopics
     {
         public static Akka.Cluster.Tools.PublishSubscribe.GetTopics Instance { get; }
     }
     public interface IDistributedPubSubMessage { }
-    public enum OverflowStrategy
-    {
-        DropHead = 0,
-        DropTail = 1,
-        DropBuffer = 2,
-        DropNew = 3,
-        Fail = 4,
-    }
-    public sealed class Publish : Akka.Actor.IWrappedMessage, Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Publish>
+    public class Publish : Akka.Actor.IWrappedMessage, Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Publish>
     {
         public Publish(string topic, object message, bool sendOneMessageToEachGroup = False) { }
         public object Message { get; }
@@ -304,6 +291,21 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
+    }
+    public sealed class PublishFailed : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.PublishFailed>
+    {
+        public PublishFailed(Akka.Cluster.Tools.PublishSubscribe.PublishWithAck Message) { }
+        public Akka.Cluster.Tools.PublishSubscribe.PublishWithAck Message { get; set; }
+    }
+    public sealed class PublishSucceeded : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.PublishSucceeded>
+    {
+        public PublishSucceeded(Akka.Cluster.Tools.PublishSubscribe.PublishWithAck Message) { }
+        public Akka.Cluster.Tools.PublishSubscribe.PublishWithAck Message { get; set; }
+    }
+    public sealed class PublishWithAck : Akka.Cluster.Tools.PublishSubscribe.Publish
+    {
+        public PublishWithAck(string topic, object message, System.TimeSpan timeout, bool sendOneMessageToEachGroup = False) { }
+        public System.TimeSpan Timeout { get; }
     }
     public sealed class Put : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Put>
     {
@@ -388,11 +390,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 }
 namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 {
-    public class BufferOverflowException : System.Exception
-    {
-        public BufferOverflowException(string message) { }
-        public BufferOverflowException(string message, System.Exception innerException) { }
-    }
     [Akka.Annotations.ApiMayChangeAttribute()]
     public sealed class CountSubscribers
     {
