@@ -57,9 +57,7 @@ public class DistributedPubSubPublishWithAckSpec : AkkaSpec
 
         await ExpectMsgAllOfMatchingPredicatesAsync([ 
             PredicateInfo.Create<string>(msg => msg is "msg-1"), 
-            PredicateInfo.Create<PublishSucceeded>(msg => msg.Message is { Message: "msg-1", Topic: "topic" }) ]).ToListAsync();
-        
-        await ExpectMsgAllOfMatchingPredicatesAsync([ 
+            PredicateInfo.Create<PublishSucceeded>(msg => msg.Message is { Message: "msg-1", Topic: "topic" }), 
             PredicateInfo.Create<string>(msg => msg is "msg-2"), 
             PredicateInfo.Create<PublishSucceeded>(msg => msg.Message is { Message: "msg-2", Topic: "topic" }) ]).ToListAsync();
 
@@ -94,9 +92,7 @@ public class DistributedPubSubPublishWithAckSpec : AkkaSpec
 
         await ExpectMsgAllOfMatchingPredicatesAsync([ 
             PredicateInfo.Create<string>(msg => msg is "msg-3"), 
-            PredicateInfo.Create<PublishSucceeded>(msg => msg.Message is { Message: "msg-3", Topic: "topic" }) ]).ToListAsync();
-        
-        await ExpectMsgAllOfMatchingPredicatesAsync([ 
+            PredicateInfo.Create<PublishSucceeded>(msg => msg.Message is { Message: "msg-3", Topic: "topic" }), 
             PredicateInfo.Create<string>(msg => msg is "msg-4"), 
             PredicateInfo.Create<PublishSucceeded>(msg => msg.Message is { Message: "msg-4", Topic: "topic" }) ]).ToListAsync();
 
