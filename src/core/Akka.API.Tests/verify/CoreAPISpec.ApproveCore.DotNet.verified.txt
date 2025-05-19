@@ -2269,6 +2269,7 @@ namespace Akka.Configuration
         public virtual System.Collections.Generic.IList<bool> GetBooleanList(string path) { }
         public virtual System.Collections.Generic.IList<byte> GetByteList(string path) { }
         public virtual System.Nullable<long> GetByteSize(string path) { }
+        [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute("def")]
         public virtual System.Nullable<long> GetByteSize(string path, System.Nullable<long> def = null) { }
         public virtual Akka.Configuration.Config GetConfig(string path) { }
         public virtual decimal GetDecimal(string path, [System.Runtime.CompilerServices.DecimalConstantAttribute(0, 0, 0u, 0u, 0u)] decimal @default) { }
@@ -4001,6 +4002,8 @@ namespace Akka.IO
             public System.Net.EndPoint LocalAddress { get; }
             public System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> Options { get; }
             public bool PullMode { get; }
+            [System.Runtime.CompilerServices.NullableAttribute(2)]
+            public Akka.IO.TcpSettings TcpSettings { get; set; }
             public override string ToString() { }
         }
         public sealed class Bound : Akka.IO.Tcp.Event
@@ -4043,6 +4046,7 @@ namespace Akka.IO
         public sealed class CompoundWrite : Akka.IO.Tcp.WriteCommand, System.Collections.Generic.IEnumerable<Akka.IO.Tcp.SimpleWriteCommand>, System.Collections.IEnumerable
         {
             public CompoundWrite(Akka.IO.Tcp.SimpleWriteCommand head, Akka.IO.Tcp.WriteCommand tailCommand) { }
+            public override long Bytes { get; }
             public Akka.IO.Tcp.SimpleWriteCommand Head { get; }
             public Akka.IO.Tcp.WriteCommand TailCommand { get; }
             public System.Collections.Generic.IEnumerator<Akka.IO.Tcp.SimpleWriteCommand> GetEnumerator() { }
@@ -4065,6 +4069,8 @@ namespace Akka.IO
             public System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> Options { get; }
             public bool PullMode { get; }
             public System.Net.EndPoint RemoteAddress { get; }
+            [System.Runtime.CompilerServices.NullableAttribute(2)]
+            public Akka.IO.TcpSettings TcpSettings { get; set; }
             public System.Nullable<System.TimeSpan> Timeout { get; }
             public override string ToString() { }
         }
@@ -4184,6 +4190,7 @@ namespace Akka.IO
         {
             public static readonly Akka.IO.Tcp.Write Empty;
             public override Akka.IO.Tcp.Event Ack { get; }
+            public override long Bytes { get; }
             public Akka.IO.ByteString Data { get; }
             public static Akka.IO.Tcp.Write Create(Akka.IO.ByteString data) { }
             public static Akka.IO.Tcp.Write Create(Akka.IO.ByteString data, Akka.IO.Tcp.Event ack) { }
@@ -4192,6 +4199,7 @@ namespace Akka.IO
         public abstract class WriteCommand : Akka.IO.Tcp.Command
         {
             protected WriteCommand() { }
+            public abstract long Bytes { get; }
             public static Akka.IO.Tcp.WriteCommand Create(System.Collections.Generic.IEnumerable<Akka.IO.Tcp.WriteCommand> writes) { }
             public static Akka.IO.Tcp.WriteCommand Create(params WriteCommand[] writes) { }
             public Akka.IO.Tcp.CompoundWrite Prepend(Akka.IO.Tcp.SimpleWriteCommand other) { }
@@ -4205,7 +4213,6 @@ namespace Akka.IO
     public sealed class TcpExt : Akka.IO.IOExtension
     {
         public TcpExt(Akka.Actor.ExtendedActorSystem system) { }
-        public Akka.IO.Buffers.IBufferPool BufferPool { get; }
         public override Akka.Actor.IActorRef Manager { get; }
         public Akka.IO.TcpSettings Settings { get; }
     }
@@ -4231,21 +4238,31 @@ namespace Akka.IO
         public static Akka.IO.Tcp.Command Unbind() { }
         public static Akka.IO.Tcp.Command Write(Akka.IO.ByteString data, Akka.IO.Tcp.Event ack = null) { }
     }
-    public class TcpSettings
+    public sealed class TcpSettings : System.IEquatable<Akka.IO.TcpSettings>
     {
+        [System.ObsoleteAttribute("Many of these options are no longer used. Use the TcpSettings.Create method inste" +
+            "ad.")]
         public TcpSettings(string bufferPoolConfigPath, int initialSocketAsyncEventArgs, bool traceLogging, int batchAcceptLimit, System.Nullable<System.TimeSpan> registerTimeout, int receivedMessageSizeLimit, string managementDispatcher, string fileIoDispatcher, int transferToLimit, int finishConnectRetries, bool outgoingSocketForceIpv4, int writeCommandsQueueMaxSize) { }
-        public int BatchAcceptLimit { get; }
+        public int BatchAcceptLimit { get; set; }
+        [System.ObsoleteAttribute("This property is unused")]
         public string BufferPoolConfigPath { get; }
+        [System.ObsoleteAttribute("This property is unused")]
         public string FileIODispatcher { get; }
-        public int FinishConnectRetries { get; }
+        public int FinishConnectRetries { get; set; }
+        [System.ObsoleteAttribute("This property is unused")]
         public int InitialSocketAsyncEventArgs { get; }
         public string ManagementDispatcher { get; }
-        public bool OutgoingSocketForceIpv4 { get; }
-        public int ReceivedMessageSizeLimit { get; }
-        public System.Nullable<System.TimeSpan> RegisterTimeout { get; }
-        public bool TraceLogging { get; }
+        public int MaxFrameSizeBytes { get; set; }
+        public bool OutgoingSocketForceIpv4 { get; set; }
+        public int ReceiveBufferSize { get; set; }
+        [System.ObsoleteAttribute("This property is now MaxFrameSizeBytes")]
+        public long ReceivedMessageSizeLimit { get; }
+        public System.Nullable<System.TimeSpan> RegisterTimeout { get; set; }
+        public int SendBufferSize { get; set; }
+        public bool TraceLogging { get; set; }
+        [System.ObsoleteAttribute("This property is unused")]
         public int TransferToLimit { get; set; }
-        public int WriteCommandsQueueMaxSize { get; }
+        public int WriteCommandsQueueMaxSize { get; set; }
         public static Akka.IO.TcpSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.IO.TcpSettings Create(Akka.Configuration.Config config) { }
     }

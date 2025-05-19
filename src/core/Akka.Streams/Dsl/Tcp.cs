@@ -180,13 +180,14 @@ namespace Akka.Streams.Dsl
         /// <param name="idleTimeout">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
+        // TODO: this really needs to be an async method
         public Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> Bind(string host, int port, int backlog = 100,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
         {
             // DnsEndpoint isn't allowed
             var ipAddresses = System.Net.Dns.GetHostAddressesAsync(host).Result;
             if (ipAddresses.Length == 0)
-                throw new ArgumentException($"Couldn't resolve IpAdress for host {host}", nameof(host));
+                throw new ArgumentException($"Couldn't resolve IpAddress for host {host}", nameof(host));
 
             return Source.FromGraph(new ConnectionSourceStage(_system.Tcp(), new IPEndPoint(ipAddresses[0], port), backlog,
                 options, halfClose, idleTimeout, BindShutdownTimeout));

@@ -25,18 +25,16 @@ namespace Akka.Tests.IO
             var settings = TcpSettings.Create(tcpConfig);
 
             // Assert: all values match akka.conf reference
-            settings.BufferPoolConfigPath.Should().Be("akka.io.tcp.disabled-buffer-pool");
-            settings.InitialSocketAsyncEventArgs.Should().Be(32);
             settings.TraceLogging.Should().BeFalse();
             settings.BatchAcceptLimit.Should().Be(Environment.ProcessorCount * 2);
             settings.RegisterTimeout.Should().Be(TimeSpan.FromSeconds(5));
-            settings.ReceivedMessageSizeLimit.Should().Be(int.MaxValue);
             settings.ManagementDispatcher.Should().Be("akka.actor.internal-dispatcher");
-            settings.FileIODispatcher.Should().Be("akka.actor.default-blocking-io-dispatcher");
-            settings.TransferToLimit.Should().Be(524288); // 512 KiB
             settings.FinishConnectRetries.Should().Be(5);
             settings.OutgoingSocketForceIpv4.Should().BeFalse();
             settings.WriteCommandsQueueMaxSize.Should().Be(-1);
+            settings.SendBufferSize.Should().Be(8192);
+            settings.ReceiveBufferSize.Should().Be(8192);
+            settings.MaxFrameSizeBytes.Should().Be(4096);
         }
     }
 } 

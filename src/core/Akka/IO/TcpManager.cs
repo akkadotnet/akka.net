@@ -54,6 +54,22 @@ namespace Akka.IO
     {
         private readonly TcpExt _tcp;
         
+        const string TcpListenerNamePrefix = "tcp-listener";
+        const string TcpOutgoingConnectionNamePrefix = "tcp-client-connection";
+        
+        private long _tcpListenerCounter;
+        private long _tcpOutgoingConnectionCounter;
+        
+        private string NextTcpListenerName()
+        {
+            return $"{TcpListenerNamePrefix}-{_tcpListenerCounter++}";
+        }
+        
+        private string NextTcpOutgoingConnectionName()
+        {
+            return $"{TcpOutgoingConnectionNamePrefix}-{_tcpOutgoingConnectionCounter++}";
+        }
+        
         public TcpManager(TcpExt tcp)
         {
             _tcp = tcp;
@@ -66,13 +82,13 @@ namespace Akka.IO
                 case Connect c:
                 {
                     var commander = Sender;
-                    Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c).WithDeploy(Deploy.Local));
+                    Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c).WithDeploy(Deploy.Local), NextTcpOutgoingConnectionName());
                     return true;
                 }
                 case Bind b:
                 {
                     var commander = Sender;
-                    Context.ActorOf(Props.Create<TcpListener>(_tcp, commander, b).WithDeploy(Deploy.Local));
+                    Context.ActorOf(Props.Create<TcpListener>(_tcp, commander, b).WithDeploy(Deploy.Local), NextTcpListenerName());
                     return true;
                 }
                 default:

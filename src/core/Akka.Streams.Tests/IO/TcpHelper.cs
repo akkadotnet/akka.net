@@ -330,9 +330,9 @@ namespace Akka.Streams.Tests.IO
 
             public async Task ExpectTerminatedAsync(CancellationToken cancellationToken = default)
             {
-                _connectionProbe.Watch(_connectionActor);
+                await _connectionProbe.WatchAsync(_connectionActor);
                 await _connectionProbe.ExpectTerminatedAsync(_connectionActor, cancellationToken: cancellationToken);
-                _connectionProbe.Unwatch(_connectionActor);
+                await _connectionProbe.UnwatchAsync(_connectionActor);
             }
         }
 
