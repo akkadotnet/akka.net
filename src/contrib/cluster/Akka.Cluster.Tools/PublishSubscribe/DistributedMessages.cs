@@ -430,7 +430,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     
     public sealed record PublishFailed(PublishWithAck Message, PublishFailReason Reason): IDeadLetterSuppression;
     
-    public sealed record PublishSucceeded(PublishWithAck Message);
+    public sealed record PublishSucceeded(PublishWithAck Message): IDeadLetterSuppression;
 
     /// <summary>
     /// TBD
