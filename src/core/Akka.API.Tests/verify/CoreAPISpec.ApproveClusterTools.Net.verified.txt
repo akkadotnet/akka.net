@@ -252,7 +252,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         protected override void PreStart() { }
         public static Akka.Actor.Props Props(Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings settings) { }
     }
-    public sealed class DistributedPubSubSettings : Akka.Actor.INoSerializationVerificationNeeded
+    public sealed class DistributedPubSubSettings : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings>
     {
         [System.ObsoleteAttribute("Use .ctor that supports WaitForSubscribers instead. Since 1.4.42")]
         public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements, bool sendToDeadLettersWhenNoSubscribers) { }

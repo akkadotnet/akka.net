@@ -181,7 +181,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             => this with { Role = role };
 
         public DistributedPubSubSettings WithRoutingLogic(RoutingLogic routingLogic)
-            => this with { RoutingLogic = routingLogic };
+        {
+            if (routingLogic is ConsistentHashingRoutingLogic)
+                throw new ArgumentException("Consistent hashing routing logic cannot be used by the pub-sub mediator");
+            
+            return this with { RoutingLogic = routingLogic };
+        }
 
         public DistributedPubSubSettings WithGossipInterval(TimeSpan gossipInterval)
             => this with { GossipInterval = gossipInterval };
