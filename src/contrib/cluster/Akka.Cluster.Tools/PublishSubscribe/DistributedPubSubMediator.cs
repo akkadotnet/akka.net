@@ -670,7 +670,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private void HandlePrune()
         {
             var modifications = new List<Bucket>();
-            foreach (var (_, bucket) in _registry)
+            foreach (var bucket in _registry.Values)
             {
                 var oldRemoved = bucket.Content
                     .Where(kv => kv.Value.Ref.IsNobody() && (bucket.Version - kv.Value.Version) > _settings.RemovedTimeToLive.TotalMilliseconds)
