@@ -132,6 +132,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private readonly int _maxBufferPerTopic;
         private readonly TimeSpan _bufferedMessageTimeoutCheckInterval;
         private readonly Dictionary<string, List<BufferedMessage>> _bufferedMessages = new();
+        private readonly List<string> _newlyAddedKeys = new();
         
         public ITimerScheduler Timers { get; set; }
 
@@ -271,6 +272,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Receive<Subscribed>(subscribed =>
             {
                 subscribed.Subscriber.Tell(subscribed.Ack);
+
+                if (_newlyAddedKeys.Count <= 0) 
+                    return;
+                
+                Self.Tell(new NewBucketKeysAdded(_newlyAddedKeys.ToArray()));
+                _newlyAddedKeys.Clear();
             });
             Receive<Unsubscribe>(unsubscribe =>
             {
@@ -333,7 +340,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                             if (keys.Count > 0)
                             {
                                 // Send the diff to ourselves
-                                Self.Tell(new NewBucketKeysAdded(keys));
+                                Self.Tell(new NewBucketKeysAdded(keys.ToArray()));
                             }
                             
                             // Merge remote bucket with ours
@@ -565,7 +572,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 : new Bucket(_cluster.SelfAddress, v, ImmutableDictionary<string, ValueHolder>.Empty.Add(key, new ValueHolder(v, value)));
             
             _registry[_cluster.SelfAddress] = newBucket;
-            Self.Tell(new NewBucketKeysAdded([key]));
+
+            // NOTE: We can't process this immediately here because message publishing needs to be done
+            //       AFTER we send `SubscribeAck`
+            _newlyAddedKeys.Add(key);
         }
 
         private void IgnoreOrSendToDeadLetters(object message, IActorRef sender)
@@ -600,8 +610,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 if (r == null) continue;
                 r.Forward(publish.Message);
                 counter++;
-                if(publish is PublishWithAck needAck)
-                    Sender.Tell(new PublishSucceeded(needAck));
             }
 
             if (counter == 0)
@@ -611,6 +619,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 else
                     IgnoreOrSendToDeadLetters(publish, Sender);
             }
+            else if(publish is PublishWithAck needAck)
+                Sender.Tell(new PublishSucceeded(needAck));
+            
             return;
 
             IEnumerable<IActorRef> Refs()
