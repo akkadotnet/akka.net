@@ -440,20 +440,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var member = removed.Member;
                 if (member.Address == _cluster.SelfAddress)
                 {
-                    // We're shutting down, clear buffer
-                    foreach (var list in _bufferedMessages.Values)
-                    {
-                        foreach (var bufferedMessage in list)
-                        {
-                            bufferedMessage.Sender.Tell(new PublishFailed(
-                                (PublishWithAck)bufferedMessage.Message, 
-                                PublishFailReason.MediatorShuttingDown));
-                        }
-                    }
-                    
                     Context.Stop(Self);
-                    _bufferedMessages.Clear();
-                    _cache.Clear();
                 }
                 else if (IsMatchingRole(member, _role))
                 {
@@ -764,6 +751,20 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         {
             Timers.CancelAll();
             base.PostStop();
+            
+            // We're shutting down, clear buffer
+            foreach (var list in _bufferedMessages.Values)
+            {
+                foreach (var bufferedMessage in list)
+                {
+                    bufferedMessage.Sender.Tell(new PublishFailed(
+                        (PublishWithAck)bufferedMessage.Message, 
+                        PublishFailReason.MediatorShuttingDown));
+                }
+            }
+            
+            _bufferedMessages.Clear();
+            _cache.Clear();
             _cluster.Unsubscribe(Self);
         }
 
