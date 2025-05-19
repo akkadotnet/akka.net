@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -41,6 +43,7 @@ namespace Akka.Streams.Implementation.IO
             private readonly TaskCompletionSource<StreamTcp.ServerBinding> _bindingPromise;
             private readonly TaskCompletionSource<NotUsed> _unbindPromise = new();
             private bool _unbindStarted = false;
+            private readonly Queue<StreamTcp.IncomingConnection> _pendingConnections = new();
 
             public ConnectionSourceStageLogic(Shape shape, ConnectionSourceStage stage, TaskCompletionSource<StreamTcp.ServerBinding> bindingPromise)
                 : base(shape)
@@ -53,8 +56,16 @@ namespace Akka.Streams.Implementation.IO
 
             public void OnPull()
             {
-                // Ignore if still binding
-                _listener?.Tell(new Tcp.ResumeAccepting(1), StageActor.Ref);
+                TryPush();
+            }
+
+            private void TryPush()
+            {
+                if (!IsAvailable(_stage._out)) return; // we have demand and can push
+                if (_pendingConnections.Count <= 0) return;
+                
+                var toPush = _pendingConnections.Dequeue();
+                Push(_stage._out, toPush);
             }
 
             public void OnDownstreamFinish(Exception cause)
@@ -160,7 +171,8 @@ namespace Akka.Streams.Implementation.IO
                         break;
                     
                     case Tcp.Connected connected:
-                        Push(_stage._out, ConnectionFor(connected, sender));
+                        _pendingConnections.Enqueue(ConnectionFor(connected, sender));
+                        TryPush();
                         break;
                     
                     case Tcp.Unbind _:
