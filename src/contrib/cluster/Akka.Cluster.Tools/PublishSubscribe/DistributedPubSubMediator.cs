@@ -216,6 +216,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 else
                     PublishMessage(key, publish);
             });
+            Receive<PublishWithAck>(publish =>
+            {
+                var encodedTopic = _cache.EncodeName(publish.Topic);
+                var key = _cache.MakeKey(Self.Path, encodedTopic);
+                if (publish.SendOneMessageToEachGroup)
+                    PublishToEachGroup(key, publish);
+                else
+                    PublishMessage(key, publish);
+            });
             Receive<Put>(put =>
             {
                 if (put.Ref.Path.Address.HasGlobalScope)
@@ -431,7 +440,19 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var member = removed.Member;
                 if (member.Address == _cluster.SelfAddress)
                 {
+                    // We're shutting down, clear buffer
+                    foreach (var list in _bufferedMessages.Values)
+                    {
+                        foreach (var bufferedMessage in list)
+                        {
+                            bufferedMessage.Sender.Tell(new PublishFailed(
+                                (PublishWithAck)bufferedMessage.Message, 
+                                PublishFailReason.MediatorShuttingDown));
+                        }
+                    }
+                    
                     Context.Stop(Self);
+                    _bufferedMessages.Clear();
                     _cache.Clear();
                 }
                 else if (IsMatchingRole(member, _role))
@@ -582,7 +603,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         {
             if (message is PublishWithAck needAck)
             {
-                sender.Tell(new PublishFailed(needAck));
+                sender.Tell(new PublishFailed(needAck, PublishFailReason.Timeout));
             }
             
             if (_settings.SendToDeadLettersWhenNoSubscribers)
@@ -590,6 +611,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 var topic = message switch
                 {
                     Publish publish => publish.Topic,
+                    PublishWithAck publish => publish.Topic,
                     Send send => $"Send:{send.Path}",
                     _ => null
                 };
@@ -637,7 +659,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             }
         }
 
-        private void PublishToEachGroup(string path, Publish publish)
+        private void PublishToEachGroup(string path, IWrappedMessage publish)
         {
             var prefix = path + "/";
             var lastKey = path + "0";   // '0' is the next char of '/'

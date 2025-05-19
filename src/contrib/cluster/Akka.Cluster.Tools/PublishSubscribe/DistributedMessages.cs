@@ -353,7 +353,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public class Publish : IDistributedPubSubMessage, IEquatable<Publish>, IWrappedMessage
+    public sealed class Publish : IDistributedPubSubMessage, IEquatable<Publish>, IWrappedMessage
     {
         /// <summary>
         /// TBD
@@ -416,17 +416,19 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         }
     }
     
-    public sealed class PublishWithAck : Publish
+    public sealed record PublishWithAck(
+        string Topic,
+        object Message,
+        TimeSpan Timeout,
+        bool SendOneMessageToEachGroup = false) : IDistributedPubSubMessage, IWrappedMessage;
+
+    public enum PublishFailReason
     {
-        public PublishWithAck(string topic, object message, TimeSpan timeout, bool sendOneMessageToEachGroup = false) : base(topic, message, sendOneMessageToEachGroup)
-        {
-            Timeout = timeout;
-        }
-        
-        public TimeSpan Timeout { get; }
+        Timeout,
+        MediatorShuttingDown
     }
     
-    public sealed record PublishFailed(PublishWithAck Message);
+    public sealed record PublishFailed(PublishWithAck Message, PublishFailReason Reason): IDeadLetterSuppression;
     
     public sealed record PublishSucceeded(PublishWithAck Message);
 

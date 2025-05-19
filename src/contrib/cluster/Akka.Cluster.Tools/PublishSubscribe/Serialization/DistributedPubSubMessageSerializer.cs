@@ -79,6 +79,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
                     return SendToAllToProto(all);
                 case Publish publish:
                     return PublishToProto(publish);
+                case PublishWithAck:
+                    throw new SerializationException("ClusterClient does not support PublishWithAck");
                 case SendToOneSubscriber subscriber:
                     return SendToOneSubscriberToProto(subscriber);
                 default:
