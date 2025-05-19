@@ -311,7 +311,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// TBD
     /// </summary>
     [Serializable]
-    internal sealed class GossipTick
+    internal sealed class GossipTick: IDeadLetterSuppression
     {
         public static GossipTick Instance { get; } = new();
         private GossipTick() { }
@@ -330,7 +330,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// <param name="Deadline">The deadline where this buffered message should be timed out</param>
     internal readonly record struct BufferedMessage(IWrappedMessage Message, Deadline Deadline, IActorRef Sender);
 
-    internal sealed class PruneBufferTick
+    internal sealed class PruneBufferTick: IDeadLetterSuppression
     {
         public static PruneBufferTick Instance { get; } = new();
         private PruneBufferTick() { }
