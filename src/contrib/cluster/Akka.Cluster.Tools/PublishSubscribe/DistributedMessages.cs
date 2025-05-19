@@ -416,11 +416,24 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         }
     }
     
-    public sealed record PublishWithAck(
-        string Topic,
-        object Message,
-        TimeSpan Timeout,
-        bool SendOneMessageToEachGroup = false) : IDistributedPubSubMessage, IWrappedMessage;
+    public sealed record PublishWithAck : IDistributedPubSubMessage, IWrappedMessage
+    {
+        public PublishWithAck(string topic, object message, TimeSpan timeout, bool sendOneMessageToEachGroup = false)
+        {
+            if(timeout.Ticks <= 0)
+                throw new ArgumentException("Timeout must be greater than zero", nameof(timeout));
+            
+            Topic = topic;
+            Message = message;
+            Timeout = timeout;
+            SendOneMessageToEachGroup = sendOneMessageToEachGroup;
+        }
+        
+        public string Topic { get; }
+        public object Message { get; }
+        public TimeSpan Timeout { get; }
+        public bool SendOneMessageToEachGroup { get; }
+    }
 
     public enum PublishFailReason
     {

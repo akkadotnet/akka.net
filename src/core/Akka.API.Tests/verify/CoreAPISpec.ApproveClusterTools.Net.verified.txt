@@ -310,11 +310,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     }
     public sealed class PublishWithAck : Akka.Actor.IWrappedMessage, Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.PublishWithAck>
     {
-        public PublishWithAck(string Topic, object Message, System.TimeSpan Timeout, bool SendOneMessageToEachGroup = False) { }
-        public object Message { get; set; }
-        public bool SendOneMessageToEachGroup { get; set; }
-        public System.TimeSpan Timeout { get; set; }
-        public string Topic { get; set; }
+        public PublishWithAck(string topic, object message, System.TimeSpan timeout, bool sendOneMessageToEachGroup = False) { }
+        public object Message { get; }
+        public bool SendOneMessageToEachGroup { get; }
+        public System.TimeSpan Timeout { get; }
+        public string Topic { get; }
     }
     public sealed class Put : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Put>
     {
