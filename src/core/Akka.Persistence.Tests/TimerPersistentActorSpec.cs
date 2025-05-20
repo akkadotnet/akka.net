@@ -9,11 +9,13 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
+using System.Threading.Tasks;
 
 namespace Akka.Persistence.Tests
 {
@@ -43,6 +45,22 @@ namespace Akka.Persistence.Tests
             Watch(pa);
             pa.Tell(new AutoReceivedMessageWrapper(PoisonPill.Instance));
             ExpectTerminated(pa);
+        }
+
+        [Fact]
+        public async Task PersistentActor_must_fire_timer_set_in_constructor()
+        {
+            var probe = CreateTestProbe();
+            var deadLetterProbe = CreateTestProbe();
+            Sys.EventStream.Subscribe(deadLetterProbe.Ref, typeof(DeadLetter));
+            
+            var actor = ActorOf(Props.Create(() => new TimerInCtorActor(probe.Ref)));
+            
+            // According to issue #7650, the timer message should not arrive
+            await probe.ExpectNoMsgAsync();
+            
+            // Check if the message ended up in dead letters instead
+            await deadLetterProbe.ExpectMsgAsync<DeadLetter>(dl => dl.Message.Equals("timer_fired"));
         }
 
         #region Actors
@@ -108,6 +126,37 @@ namespace Akka.Persistence.Tests
                         Persist(message, _ => { });
                         return true;
                 }
+            }
+        }
+
+        internal class TimerInCtorActor : ReceivePersistentActor, IWithTimers
+        {
+            private readonly IActorRef _probe;
+            private readonly ILoggingAdapter _log;
+            public ITimerScheduler Timers { get; set; }
+            public override string PersistenceId => "timer-test";
+
+            public TimerInCtorActor(IActorRef probe)
+            {
+                _probe = probe;
+                _log = Context.GetLogger();
+                
+                // Set up timer in constructor
+                _log.Info("Setting up timer in constructor");
+                Timers.StartSingleTimer("test-timer", "timer_fired", TimeSpan.FromSeconds(1));
+                
+                // Log all messages received
+                Command<object>(msg => 
+                {
+                    _log.Info("Received command message: {0}", msg);
+                    if (msg is string str)
+                        _probe.Tell(str);
+                });
+                
+                Recover<object>(msg => 
+                {
+                    _log.Info("Received recovery message: {0}", msg);
+                });
             }
         }
 
