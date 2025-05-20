@@ -211,6 +211,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 var encodedTopic = _cache.EncodeName(publish.Topic);
                 var key = _cache.MakeKey(Self.Path, encodedTopic);
+                
                 if (publish.SendOneMessageToEachGroup)
                     PublishToEachGroup(key, publish);
                 else
@@ -249,14 +250,21 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 // each topic is managed by a child actor with the same name as the topic
                 var encodedTopic = _cache.EncodeName(subscribe.Topic);
-
+                var key = _cache.MakeKey(Self.Path, encodedTopic);
+                
                 _buffer.BufferOr(_cache.MakeKey(Self.Path, encodedTopic), subscribe, Sender, () =>
                 {
                     var child = Context.Child(encodedTopic);
+                    
                     if (!child.IsNobody())
+                    {
                         child.Forward(subscribe);
+                    }
                     else
-                        NewTopicActor(encodedTopic).Forward(subscribe);
+                    {
+                        var newActor = NewTopicActor(encodedTopic);
+                        newActor.Forward(subscribe);
+                    }
                 });
             });
             Receive<RegisterTopic>(register =>
@@ -785,12 +793,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private IActorRef NewTopicActor(string encodedTopic)
         {
-            var t = Context.ActorOf(
+            _log.Debug("Creating new topic actor with encoded name: '{0}'", encodedTopic);
+            var a = Context.ActorOf(
                 Actor.Props.Create(() => new Topic(_settings.RemovedTimeToLive, _settings.RoutingLogic, _settings.SendToDeadLettersWhenNoSubscribers))
                     .WithDeploy(Deploy.Local), 
                 encodedTopic);
-            HandleRegisterTopic(t);
-            return t;
+            _log.Debug("Created new topic actor: '{0}'", a.Path);
+            HandleRegisterTopic(a);
+            return a;
         }
     }
 }

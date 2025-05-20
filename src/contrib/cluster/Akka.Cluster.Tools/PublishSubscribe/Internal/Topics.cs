@@ -380,15 +380,23 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public static string MakeKey(this PubSubCache cache, ActorPath path, string topic)
+        public static string MakeKey(this PubSubCache cache, ActorPath path, string encodedTopic)
         {
-            var info = new MakeKeyInfo(path, topic);
+            var info = new MakeKeyInfo(path, encodedTopic);
             if(cache.MakeKeyMap.TryGetValue(info, out var key))
+            {
                 return key;
+            }
             
-            key = PathRegex.Replace((path / topic).ToStringWithoutAddress(), "$1");
+            // Create the path string representation first, then append the encoded topic
+            // This avoids any issues with the / operator possibly double-encoding or otherwise mishandling 
+            // already encoded topic names
+            var pathString = path.ToStringWithoutAddress();
+            key = PathRegex.Replace(pathString + "/" + encodedTopic, "$1");
+            
             cache.MakeKeyMap[info] = key;
             cache.MakeKeyReverseMap[key] = info;
+            
             return key;
         }
 
@@ -428,6 +436,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             encoded = Uri.EscapeDataString(name);
             cache.TopicToEncodedMap[name] = encoded;
             cache.EncodedToTopicMap[encoded] = name;
+            
             return encoded;
         }
 
