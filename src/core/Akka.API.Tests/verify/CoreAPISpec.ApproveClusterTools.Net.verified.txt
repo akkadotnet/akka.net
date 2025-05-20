@@ -252,10 +252,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         protected override void PreStart() { }
         public static Akka.Actor.Props Props(Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings settings) { }
     }
-    public sealed class DistributedPubSubSettings : Akka.Actor.INoSerializationVerificationNeeded
+    public sealed class DistributedPubSubSettings : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings>
     {
+        [System.ObsoleteAttribute("Use .ctor that supports WaitForSubscribers instead. Since 1.4.42")]
         public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements, bool sendToDeadLettersWhenNoSubscribers) { }
+        public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements, bool sendToDeadLettersWhenNoSubscribers, int maxBufferedMessagePerTopic, System.TimeSpan bufferedMessageTimeoutCheckInterval) { }
+        public System.TimeSpan BufferedMessageTimeoutCheckInterval { get; }
         public System.TimeSpan GossipInterval { get; }
+        public int MaxBufferedMessagePerTopic { get; }
         public int MaxDeltaElements { get; }
         public System.TimeSpan RemovedTimeToLive { get; }
         public string Role { get; }
@@ -263,7 +267,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public bool SendToDeadLettersWhenNoSubscribers { get; }
         public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Akka.Configuration.Config config) { }
+        public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithBufferedMessageTimeoutCheckInterval(System.TimeSpan bufferedMessageTimeoutCheckInterval) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithGossipInterval(System.TimeSpan gossipInterval) { }
+        public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithMaxBufferedMessagePerTopic(int maxBufferedMessagePerTopic) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithMaxDeltaElements(int maxDeltaElements) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRemovedTimeToLive(System.TimeSpan removedTtl) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRole(string role) { }
@@ -285,6 +291,30 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
+    }
+    public enum PublishFailReason
+    {
+        Timeout = 0,
+        MediatorShuttingDown = 1,
+    }
+    public sealed class PublishFailed : Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.PublishFailed>
+    {
+        public PublishFailed(Akka.Cluster.Tools.PublishSubscribe.PublishWithAck Message, Akka.Cluster.Tools.PublishSubscribe.PublishFailReason Reason) { }
+        public Akka.Cluster.Tools.PublishSubscribe.PublishWithAck Message { get; set; }
+        public Akka.Cluster.Tools.PublishSubscribe.PublishFailReason Reason { get; set; }
+    }
+    public sealed class PublishSucceeded : Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.PublishSucceeded>
+    {
+        public PublishSucceeded(Akka.Cluster.Tools.PublishSubscribe.PublishWithAck Message) { }
+        public Akka.Cluster.Tools.PublishSubscribe.PublishWithAck Message { get; set; }
+    }
+    public sealed class PublishWithAck : Akka.Actor.IWrappedMessage, Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.PublishWithAck>
+    {
+        public PublishWithAck(string topic, object message, System.TimeSpan timeout, bool sendOneMessageToEachGroup = False) { }
+        public object Message { get; }
+        public bool SendOneMessageToEachGroup { get; }
+        public System.TimeSpan Timeout { get; }
+        public string Topic { get; }
     }
     public sealed class Put : System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Put>
     {
