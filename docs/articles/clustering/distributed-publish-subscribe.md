@@ -75,6 +75,12 @@ When any subscribers of the same topic as the `PublishWithAck` topic joins the p
 
 When a new message is inserted and the topic buffer count exceeds `akka.cluster.pub-sub.buffered-messages.max-per-topic`, the mediator will discard the oldest message in the buffer and send a `PublishFailed` to the original sender of that message.
 
+#### Example
+
+This example is the same as the publisher example above, but now it uses `PublishWithAck` and it will wait for 30 minutes for the payload to be consumed.
+
+[!code-csharp[Main](../../../src/examples/Cluster/PublishSubscribe/SamplePublisher/PublisherWithAck.cs?name=SamplePublisherWithAck)]
+
 ### Topic Groups
 
 Actors may also be subscribed to a named topic with a group id. If subscribing with a group id, each message published to a topic with the `SendOneMessageToEachGroup` flag set to true is delivered via the supplied `RoutingLogic` (default random) to one actor within each subscribing group.
