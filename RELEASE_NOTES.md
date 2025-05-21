@@ -1,6 +1,40 @@
-#### 1.5.42 May 6th, 2025 ####
+#### 1.5.42 May 21st, 2025 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.42 contains several bug fixes and also adds new quality of life features to `Akka.IO.Tcp`, `Akka.Persistence`, `Akka.Pattern`, and `Akka.Cluster.Tools.DistributedPubSub`.
+
+* [IO.Tcp: Cleanup API](https://github.com/akkadotnet/akka.net/pull/7621)
+* [IO.Tcp: Fix `TcpListener` connection queue problem](https://github.com/akkadotnet/akka.net/pull/7621)
+* [Persistence: Allow user to use supervision strategy on journal and snapshot store](https://github.com/akkadotnet/akka.net/pull/7595)
+* [Core: Add cancellation token to `CircuitBreaker` API to signal timed out operations](https://github.com/akkadotnet/akka.net/pull/7624)
+* [Persistence: Change all `CircuitBreaker` protected method API to use cancellation token](https://github.com/akkadotnet/akka.net/pull/7624)
+* [Core: Leverage Exception...when pattern](https://github.com/akkadotnet/akka.net/pull/7614)
+* [IO.Tcp: Add `TcpListenerStatistics` and subscription methods](https://github.com/akkadotnet/akka.net/pull/7633)
+* [Cluster.Tools: Modernize `DistributedPubSub` code](https://github.com/akkadotnet/akka.net/pull/7640)
+* [Cluster.Tools: Optimize `DistributedPubSub` memory allocation](https://github.com/akkadotnet/akka.net/pull/7642)
+* [Cluster.Tools: Improve `DistributedPubSub` `DeadLetter` log message](https://github.com/akkadotnet/akka.net/pull/7646)
+* [Core: Refactor immutable collection builders to use simpler `CreateBuilder` pattern](https://github.com/akkadotnet/akka.net/pull/7656)
+* [IO.Tcp: Redesign `TcpConnection`](https://github.com/akkadotnet/akka.net/pull/7637)
+* [Cluster.Tools: Add `PublishWithAck` feature to `DistributedPubSub`](https://github.com/akkadotnet/akka.net/pull/7652)
+
+> [!WARNING]
+> 
+> This release contains several public API breaking changes to Akka.IO.Tcp and Akka.Persistence 
+
+**Akka.IO.Tcp**
+
+* `Akka.IO.Tcp.Instance` static field has been removed. 
+
+To [see the full set of changes in Akka.NET v1.5.42, click here](https://github.com/akkadotnet/akka.net/milestone/125?closed=1).
+
+5 contributors since release 1.5.41
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 15      | 3480 | 2864 | Aaron Stannard      |
+| 5       | 1711 | 713  | Gregorius Soedharmo |
+| 4       | 72   | 100  | Simon Cropp         |
+| 1       | 172  | 51   | Arjen Smits         |
+| 1       | 16   | 60   | JuYoung Kim         |
 
 #### 1.5.41 May 6th, 2025 ####
 
