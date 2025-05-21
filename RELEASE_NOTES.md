@@ -28,14 +28,14 @@ Backward compatible API changes:
 
 **Akka.Cluster.Tools.DistributedPubSub**
 
-The new `PublishWithAck` feature documentation can be read [here](https://getakka.net/articles/clustering/distributed-publish-subscribe.html#publishwithack)
+The documentation for the new `PublishWithAck` feature can be read [here](https://getakka.net/articles/clustering/distributed-publish-subscribe.html#publishwithack)
 
 Backward compatible API changes:
 * There is a new `DistributedPubSubSettings` constructor that leverages the new `PublishWithAck` feature. The old constructor is marked as obsolete.
 
 **Akka.Persistence**
 
-The new supervision strategy for journal and snapshot-store feature documentation can be read [here](https://getakka.net/articles/persistence/storage-plugins.html#controlling-journal-or-snapshot-crash-behavior)
+The documentation for the new supervision strategy for journal and snapshot-store feature can be read [here](https://getakka.net/articles/persistence/storage-plugins.html#controlling-journal-or-snapshot-crash-behavior)
 
 Breaking API changes:
 
