@@ -20,9 +20,55 @@ Akka.NET v1.5.42 contains several bug fixes and also adds new quality of life fe
 > 
 > This release contains several public API breaking changes to Akka.IO.Tcp and Akka.Persistence 
 
+**Akka.Pattern.CircuitBreaker**
+
+Backward compatible API changes:
+* New `.WithCircuitBreaker()` APIs were added that changes the protected function delegate to accept a new `CancellationToken` argument.
+* Old `.WithCircuitBreaker()` APIs were marked as obsolete. 
+
+**Akka.Cluster.Tools.DistributedPubSub**
+
+The new `PublishWithAck` feature documentation can be read [here](https://getakka.net/articles/clustering/distributed-publish-subscribe.html#publishwithack)
+
+Backward compatible API changes:
+* There is a new `DistributedPubSubSettings` constructor that leverages the new `PublishWithAck` feature. The old constructor is marked as obsolete.
+
+**Akka.Persistence**
+
+The new supervision strategy for journal and snapshot-store feature documentation can be read [here](https://getakka.net/articles/persistence/storage-plugins.html#controlling-journal-or-snapshot-crash-behavior)
+
+Breaking API changes:
+
+Due to changes in `CircuitBreaker.WithCircuitBreaker()` APIs, several `Akka.Persistence` journal and snapshot-store were changed in a breaking manner. You will need to consider these changes if you have your own specific `Akka.Persistence` plugin implementation and needed to upgrade to this version of Akka.
+
+* AsyncWriteJournal
+   * `DeleteMessagesToAsync()`
+   * `ReadHighestSequenceNrAsync()`
+   * `WriteMessagesAsync`
+* SnapshotStore
+   * Both `DeleteAsync()` methods
+   * `LoadAsync()`
+   * `SaveAsync()`
+
 **Akka.IO.Tcp**
 
-* `Akka.IO.Tcp.Instance` static field has been removed. 
+The Akka.IO.Tcp has been redesigned to improve its reliability, visibility, and performance. This, unfortunately, requires some breaking changes to be introduced into the code base.
+
+New features:
+* The `TcpListener` actor now accepts a new `SubscribeToTcpListenerStats` message. Subscribers will receive regular `TcpListenerStatistics` metrics report from the `TcpListener`.
+* The new `UnsubscribeFromTcpListenerStats` message can be used to unsubscribe from the `TcpListener`
+
+Backward compatible changes:
+* The `Akka.IO.Tcp.Bind` command now contain a new settable `TcpSettings` property. 
+* The `Akka.IO.Tcp.Connect` command now contain a new settable `TcpSettings` property.
+* The `Akka.IO.TcpSettings` class have several of its unused properties deprecated and/or changed:
+   * The `ReceivedMessageSizeLimit` property has been deprecated, replaced with the new `MaxFrameSizeBytes` property.
+   * New `ReceiveBufferSize` property added.
+   * New `SendBufferSize` property added.
+
+Breaking API changes:
+* `Akka.IO.Tcp.Instance` static field has been removed.
+* `Akka.IO.TcpExt.BufferPool` static property has been removed.
 
 To [see the full set of changes in Akka.NET v1.5.42, click here](https://github.com/akkadotnet/akka.net/milestone/125?closed=1).
 
