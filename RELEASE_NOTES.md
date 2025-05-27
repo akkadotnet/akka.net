@@ -1,3 +1,7 @@
+#### 1.5.43 May 23rd, 2025 ####
+
+*Placeholder for nightlies*
+
 #### 1.5.42 May 21st, 2025 ####
 
 Akka.NET v1.5.42 contains several bug fixes and also adds new quality of life features to `Akka.IO.Tcp`, `Akka.Persistence`, `Akka.Pattern`, and `Akka.Cluster.Tools.DistributedPubSub`.
