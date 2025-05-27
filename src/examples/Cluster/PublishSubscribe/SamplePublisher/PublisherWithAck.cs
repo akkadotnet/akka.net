@@ -20,7 +20,7 @@ public class PublisherWithAck: ReceiveActor
         var mediator = DistributedPubSub.Get(Context.System).Mediator;
         
         Receive<string>(input => mediator.Tell(
-            new PublishWithAck("content", input.ToUpperInvariant(), TimeSpan.FromSeconds(30))));
+            new PublishWithAck("content", input.ToUpperInvariant(), TimeSpan.FromMinutes(30))));
         
         Receive<PublishSucceeded>(success => log.Info(
             "Published {0} to topic {1}.", success.Message.Message, success.Message.Topic));
