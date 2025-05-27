@@ -72,7 +72,21 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
 
         Receive<Passivate>(_ => Sender.Equals(_consumer), p =>
         {
-            Context.Parent.Tell(p);
+            // only consume message if remember entities is enabled
+            if(ClusterSharding.Get(Context.System).Settings.RememberEntities)
+            {
+                Context.Parent.Tell(p);
+            }
+            else if(Settings.AllowBypass)
+            {
+                // I don't know why the consumer would want to do this, but preserve the old behavior
+                _consumer.Forward(p);
+            }
+            else
+            {
+                _log.Warning($"Message unhandled [{p}]. If you need to pass this message to the consumer sharding entity actor, set \"akka.reliable-delivery.sharding.consumer-controller.allow-bypass\" to true");
+                Unhandled(p);
+            }
         });
         
         ReceiveAny(msg =>
@@ -149,7 +163,21 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
 
         Receive<Passivate>(_ => Sender.Equals(_consumer), p =>
         {
-            Context.Parent.Tell(p);
+            // only consume message if remember entities is enabled
+            if(ClusterSharding.Get(Context.System).Settings.RememberEntities)
+            {
+                Context.Parent.Tell(p);
+            }
+            else if(Settings.AllowBypass)
+            {
+                // I don't know why the consumer would want to do this, but preserve the old behavior
+                _consumer.Forward(p);
+            }
+            else
+            {
+                _log.Warning($"Message unhandled [{p}]. If you need to pass this message to the consumer sharding entity actor, set \"akka.reliable-delivery.sharding.consumer-controller.allow-bypass\" to true");
+                Unhandled(p);
+            }
         });
         
         ReceiveAny(msg =>
