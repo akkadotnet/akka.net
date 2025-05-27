@@ -33,6 +33,7 @@ public class DurableRememberEntitiesShardingSpec : AkkaSpec
         akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.inmem"
         akka.remote.dot-netty.tcp.port = 0
         
+        akka.cluster.sharding.remember-entities = on
         akka.cluster.sharding.state-store-mode = ddata
         # no leaks between test runs thank you
         akka.cluster.sharding.distributed-data.durable.keys = []
