@@ -281,6 +281,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public static Akka.Cluster.Tools.PublishSubscribe.GetTopics Instance { get; }
     }
     public interface IDistributedPubSubMessage { }
+    public interface IPublishResponse { }
     public sealed class Publish : Akka.Actor.IWrappedMessage, Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Publish>
     {
         public Publish(string topic, object message, bool sendOneMessageToEachGroup = False) { }
@@ -297,13 +298,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         Timeout = 0,
         MediatorShuttingDown = 1,
     }
-    public sealed class PublishFailed : Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.PublishFailed>
+    public sealed class PublishFailed : Akka.Cluster.Tools.PublishSubscribe.IPublishResponse, Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.PublishFailed>
     {
         public PublishFailed(Akka.Cluster.Tools.PublishSubscribe.PublishWithAck Message, Akka.Cluster.Tools.PublishSubscribe.PublishFailReason Reason) { }
         public Akka.Cluster.Tools.PublishSubscribe.PublishWithAck Message { get; set; }
         public Akka.Cluster.Tools.PublishSubscribe.PublishFailReason Reason { get; set; }
     }
-    public sealed class PublishSucceeded : Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.PublishSucceeded>
+    public sealed class PublishSucceeded : Akka.Cluster.Tools.PublishSubscribe.IPublishResponse, Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.PublishSucceeded>
     {
         public PublishSucceeded(Akka.Cluster.Tools.PublishSubscribe.PublishWithAck Message) { }
         public Akka.Cluster.Tools.PublishSubscribe.PublishWithAck Message { get; set; }

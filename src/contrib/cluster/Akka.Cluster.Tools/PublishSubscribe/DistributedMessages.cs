@@ -441,9 +441,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         MediatorShuttingDown
     }
     
-    public sealed record PublishFailed(PublishWithAck Message, PublishFailReason Reason): IDeadLetterSuppression;
+    public interface IPublishResponse;
     
-    public sealed record PublishSucceeded(PublishWithAck Message): IDeadLetterSuppression;
+    public sealed record PublishFailed(PublishWithAck Message, PublishFailReason Reason): IPublishResponse, IDeadLetterSuppression;
+    
+    public sealed record PublishSucceeded(PublishWithAck Message): IPublishResponse, IDeadLetterSuppression;
 
     /// <summary>
     /// TBD
