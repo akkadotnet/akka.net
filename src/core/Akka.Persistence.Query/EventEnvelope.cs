@@ -44,7 +44,7 @@ namespace Akka.Persistence.Query
             SequenceNr = sequenceNr;
             Event = @event;
             Timestamp = timestamp;
-            Tags = tags ?? Array.Empty<string>();
+            Tags = tags ?? [];
         }        
 
         public Offset Offset { get; }

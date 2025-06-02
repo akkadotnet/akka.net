@@ -223,6 +223,7 @@ namespace Akka.Cluster.Sharding
     public interface IShardingBufferMessageAdapter
     {
         object Apply(object message, Akka.Actor.IActorContext context);
+        object UnApply(object message, Akka.Actor.IActorContext context);
     }
     public interface IStartableAllocationStrategy : Akka.Actor.INoSerializationVerificationNeeded, Akka.Cluster.Sharding.IShardAllocationStrategy
     {

@@ -45,12 +45,10 @@ namespace Akka.TestKit.Internal
                 System.Diagnostics.Debug.WriteLine("TestActor received " + message);
             }
             catch (FormatException)
+                when (message is LogEvent { Message: LogMessage msg })
             {
-                if (message is LogEvent { Message: LogMessage msg })
-                    System.Diagnostics.Debug.WriteLine(
-                        $"TestActor received a malformed formatted message. Template:[{msg.Format}], args:[{string.Join(",", msg.Unformatted())}]");
-                else
-                    throw;
+                System.Diagnostics.Debug.WriteLine(
+                    $"TestActor received a malformed formatted message. Template:[{msg.Format}], args:[{string.Join(",", msg.Unformatted())}]");
             }
 
             switch (message)

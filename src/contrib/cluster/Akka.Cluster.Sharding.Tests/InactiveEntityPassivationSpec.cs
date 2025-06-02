@@ -123,7 +123,7 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.cluster.sharding.verbose-debug-logging = on
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
                 .WithFallback(ClusterSharding.DefaultConfig())
-                .WithFallback(ClusterSingletonManager.DefaultConfig());
+                .WithFallback(ClusterSingleton.DefaultConfig());
 
         public AbstractInactiveEntityPassivationSpec(Config config, ITestOutputHelper helper)
             : base(config.WithFallback(SpecConfig), helper)

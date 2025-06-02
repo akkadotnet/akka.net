@@ -177,9 +177,9 @@ namespace Akka.Actor
         /// Convenience method used by remoting when receiving <see cref="ActorSelectionMessage" /> from a remote
         /// actor.
         /// </summary>
-        /// <param name="anchor">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="sel">TBD</param>
+        /// <param name="anchor">The starting actor reference to deliver the selection from.</param>
+        /// <param name="sender">The sender of the message.</param>
+        /// <param name="sel">The actor selection message to deliver.</param>
         internal static void DeliverSelection(IInternalActorRef anchor, IActorRef sender, ActorSelectionMessage sel)
         {
             if (sel.Elements.IsNullOrEmpty())
@@ -334,7 +334,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="elements">The elements.</param>
-        /// <param name="wildCardFanOut">TBD</param>
+        /// <param name="wildCardFanOut">Whether the selection is a result of a wildcard fan-out operation.</param>
         public ActorSelectionMessage(object message, SelectionPathElement[] elements, bool wildCardFanOut = false)
         {
             Message = message;

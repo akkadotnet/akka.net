@@ -615,15 +615,7 @@ namespace Akka.Actor
             return Decider.Decide(exception);
         }
         
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="restart">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <param name="cause">TBD</param>
-        /// <param name="stats">TBD</param>
-        /// <param name="children">TBD</param>
+        /// <inheritdoc/>
         public override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
         {
             if (children.Count > 0)
@@ -645,12 +637,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorContext">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <param name="children">TBD</param>
+        /// <inheritdoc/>
         public override void HandleChildTerminated(IActorContext actorContext, IActorRef child, IEnumerable<IInternalActorRef> children)
         {
             //Intentionally left blank
@@ -998,14 +985,10 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// Base configurator class used for configuring the guardian-supervisor-strategy
     /// </summary>
     public abstract class SupervisorStrategyConfigurator
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         public abstract SupervisorStrategy Create();
 
         /// <summary>
@@ -1037,30 +1020,20 @@ namespace Akka.Actor
         }
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
+  
     public class DefaultSupervisorStrategy : SupervisorStrategyConfigurator
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+      
         public override SupervisorStrategy Create()
         {
             return SupervisorStrategy.DefaultStrategy;
         }
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
+   
     public class StoppingSupervisorStrategy : SupervisorStrategyConfigurator
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+       
         public override SupervisorStrategy Create()
         {
             return SupervisorStrategy.StoppingStrategy;

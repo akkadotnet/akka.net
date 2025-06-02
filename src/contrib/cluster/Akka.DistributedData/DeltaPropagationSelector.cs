@@ -78,13 +78,13 @@ namespace Akka.DistributedData
 
                 _deltaNodeRoundRobinCounter += sliceSize;
 
-                var result = ImmutableDictionary<Address, DeltaPropagation>.Empty.ToBuilder();
+                var result = ImmutableDictionary.CreateBuilder<Address, DeltaPropagation>();
                 var cache = new Dictionary<(string, long, long), IReplicatedData>();
                 foreach (var node in slice)
                 {
                     // collect the deltas that have not already been sent to the node and merge
                     // them into a delta group
-                    var deltas = ImmutableDictionary<string, (IReplicatedData, long, long)>.Empty.ToBuilder();
+                    var deltas = ImmutableDictionary.CreateBuilder<string, (IReplicatedData, long, long)>();
                     foreach (var entry in _deltaEntries)
                     {
                         var key = entry.Key;

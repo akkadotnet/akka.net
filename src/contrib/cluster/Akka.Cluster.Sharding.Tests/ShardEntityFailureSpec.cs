@@ -30,7 +30,7 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.actor.provider = cluster
                 akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
                 akka.remote.dot-netty.tcp.port = 0")
-            .WithFallback(ClusterSingletonManager.DefaultConfig())
+            .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSharding.DefaultConfig());
         
         private sealed class EntityEnvelope
@@ -135,7 +135,8 @@ namespace Akka.Cluster.Sharding.Tests
                 settings,
                 new TestMessageExtractor(),
                 PoisonPill.Instance,
-                provider
+                provider,
+                null
             ));
 
             Sys.EventStream.Subscribe<Error>(TestActor);

@@ -24,6 +24,7 @@ using Akka.Util.Internal;
 using FluentAssertions.Extensions;
 using Xunit.Abstractions;
 using static FluentAssertions.FluentActions;
+using Akka.Streams.Implementation;
 
 namespace Akka.Streams.Tests.Dsl
 {
@@ -265,13 +266,44 @@ namespace Akka.Streams.Tests.Dsl
 
                 await WithinAsync(10.Seconds(), async () =>
                 {
-                    await EventFilter.Error(contains: "Upstream producer failed with exception").ExpectOneAsync(async () =>
-                    {
-                        Source.Failed<int>(new TestException("failing")).RunWith(sink, Materializer);
-                        Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
-                        var result = await task.ShouldCompleteWithin(3.Seconds());
-                        result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                    });
+                    await EventFilter.Error(contains: "Upstream producer failed with exception")
+                        .ExpectOneAsync(async () =>
+                        {
+                            Source.Failed<int>(new TestException("failing")).RunWith(sink, Materializer);
+                            Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
+                            var result = await task.ShouldCompleteWithin(3.Seconds());
+                            result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                        });
+                });
+            }, Materializer);
+        }
+
+        [Fact]
+        public async Task MergeHub_must_not_log_normal_shutdown_exception()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var (sink, task) = MergeHub.Source<int>(16).Take(10).ToMaterialized(Sink.Seq<int>(), Keep.Both)
+                    .Run(Materializer);
+
+                await WithinAsync(10.Seconds(), async () =>
+                {
+                    await EventFilter
+                        .Custom((e) =>
+                        {
+                            if (e.Cause?.InnerException is NormalShutdownException nse &&
+                                nse == ActorPublisher.NormalShutdownReason)
+                                return true;
+                            else
+                                return false;
+                        })
+                        .ExpectAsync(0, async () =>
+                        {
+                            Source.Failed<int>(ActorPublisher.NormalShutdownReason).RunWith(sink, Materializer);
+                            Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
+                            var result = await task.ShouldCompleteWithin(3.Seconds());
+                            result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                        });
                 });
             }, Materializer);
         }
@@ -580,6 +612,38 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     await source.RunWith(Sink.Seq<int>(), Materializer);
                 }).Should().ThrowAsync<TestException>().ShouldCompleteWithin(3.Seconds());
+            }, Materializer);
+        }
+
+        [Fact]
+        public async Task BroadcastHub_must_handle_cancelled_Sink()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var upstream = this.CreatePublisherProbe<int>();
+                var hubSource = Source.FromPublisher(upstream).RunWith(BroadcastHub.Sink<int>(4), Materializer);
+                var downstream = this.CreateSubscriberProbe<int>();
+                
+                hubSource.RunWith(Sink.Cancelled<int>(), Materializer);
+                hubSource.RunWith(Sink.FromSubscriber(downstream), Materializer);
+                
+                await downstream.EnsureSubscriptionAsync();
+                
+                await downstream.RequestAsync(10);
+                await upstream.ExpectRequestAsync();
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNextAsync(1);
+                await upstream.SendNextAsync(2);
+                await downstream.ExpectNextAsync(2);
+                await upstream.SendNextAsync(3);
+                await downstream.ExpectNextAsync(3);
+                await upstream.SendNextAsync(4);
+                await downstream.ExpectNextAsync(4);
+                await upstream.SendNextAsync(5);
+                await downstream.ExpectNextAsync(5);
+                
+                await upstream.SendCompleteAsync();
+                await downstream.ExpectCompleteAsync();
             }, Materializer);
         }
 

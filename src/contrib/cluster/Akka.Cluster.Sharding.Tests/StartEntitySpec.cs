@@ -113,8 +113,8 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.cluster.sharding.distributed-data.durable.keys = []
                 akka.cluster.sharding.verbose-debug-logging = on
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
-                .WithFallback(ClusterSingletonManager.DefaultConfig()
-                .WithFallback(ClusterSharding.DefaultConfig()));
+                .WithFallback(ClusterSingleton.DefaultConfig())
+                .WithFallback(ClusterSharding.DefaultConfig());
 
         public StartEntitySpec(ITestOutputHelper helper) : base(SpecConfig, helper)
         {

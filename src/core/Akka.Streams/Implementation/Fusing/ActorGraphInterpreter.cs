@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
@@ -281,7 +282,7 @@ namespace Akka.Streams.Implementation.Fusing
                     return eventLimit;
 
                 case ActorGraphInterpreter.AsyncInput asyncInput:
-                    Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Handler);
+                    Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Promise, asyncInput.Handler);
                     if (eventLimit == 1 && _interpreter.IsSuspended)
                     {
                         SendResume(true);
@@ -409,12 +410,12 @@ namespace Akka.Streams.Implementation.Fusing
         private GraphInterpreter GetInterpreter()
         {
             return new GraphInterpreter(_assembly, Materializer, Log, _logics, _connections,
-                (logic, @event, handler) =>
+                (logic, @event, promise, handler) =>
                 {
-                    var asyncInput = new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler);
+                    var asyncInput = new ActorGraphInterpreter.AsyncInput(this, logic, @event, promise, handler);
                     var currentInterpreter = CurrentInterpreterOrNull;
                     if (currentInterpreter == null || !Equals(currentInterpreter.Context, Self))
-                        Self.Tell(new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler));
+                        Self.Tell(asyncInput);
                     else
                         _enqueueToShortCircuit(asyncInput);
                 }, _settings.IsFuzzingMode, Self);
@@ -694,36 +695,18 @@ namespace Akka.Streams.Implementation.Fusing
             public GraphInterpreterShell Shell { get; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         public readonly struct AsyncInput : IBoundaryEvent
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public readonly GraphStageLogic Logic;
-            /// <summary>
-            /// TBD
-            /// </summary>
             public readonly object Event;
-            /// <summary>
-            /// TBD
-            /// </summary>
+            public readonly TaskCompletionSource<Done> Promise;
             public readonly Action<object> Handler;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="shell">TBD</param>
-            /// <param name="logic">TBD</param>
-            /// <param name="event">TBD</param>
-            /// <param name="handler">TBD</param>
-            /// <returns>TBD</returns>
-            public AsyncInput(GraphInterpreterShell shell, GraphStageLogic logic, object @event, Action<object> handler)
+            public AsyncInput(GraphInterpreterShell shell, GraphStageLogic logic, object @event, TaskCompletionSource<Done> promise, Action<object> handler)
             {
                 Shell = shell;
                 Logic = logic;
                 Event = @event;
+                Promise = promise;
                 Handler = handler;
             }
 

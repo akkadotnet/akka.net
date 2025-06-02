@@ -184,25 +184,25 @@ namespace Akka.Actor
         private LocalActorRef _systemGuardian;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="LocalActorRefProvider"/> class.
         /// </summary>
-        /// <param name="systemName">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="eventStream">TBD</param>
+        /// <param name="systemName">The name of the actor system.</param>
+        /// <param name="settings">The settings for the actor system.</param>
+        /// <param name="eventStream">The event stream for logging and events.</param>
         public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream)
             : this(systemName, settings, eventStream, null, null)
         {
-            //Intentionally left blank
+            // Intentionally left blank
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="LocalActorRefProvider"/> class with custom deployer and dead letters factory.
         /// </summary>
-        /// <param name="systemName">TBD</param>
-        /// <param name="settings">TBD</param>
-        /// <param name="eventStream">TBD</param>
-        /// <param name="deployer">TBD</param>
-        /// <param name="deadLettersFactory">TBD</param>
+        /// <param name="systemName">The name of the actor system.</param>
+        /// <param name="settings">The settings for the actor system.</param>
+        /// <param name="eventStream">The event stream for logging and events.</param>
+        /// <param name="deployer">The deployer instance to use.</param>
+        /// <param name="deadLettersFactory">A factory for creating dead letter actor references.</param>
         public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream, Deployer deployer, Func<ActorPath, IInternalActorRef> deadLettersFactory)
         {
             _settings = settings;
@@ -223,54 +223,57 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the dead letters actor reference for this provider.
         /// </summary>
         public IActorRef DeadLetters { get { return _deadLetters; } }
 
+        /// <summary>
+        /// Gets the ignore actor reference for this provider.
+        /// </summary>
         public IActorRef IgnoreRef { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the deployer instance for this provider.
         /// </summary>
         public Deployer Deployer { get { return _deployer; } }
 
         /// <summary>
-        /// TBD
+        /// Gets the root guardian actor reference.
         /// </summary>
         public IInternalActorRef RootGuardian { get { return _rootGuardian; } }
 
         /// <summary>
-        /// TBD
+        /// Gets the root path for this actor system.
         /// </summary>
         public ActorPath RootPath { get { return _rootPath; } }
 
         /// <summary>
-        /// TBD
+        /// Gets the settings for this provider.
         /// </summary>
         public Settings Settings { get { return _settings; } }
 
         /// <summary>
-        /// TBD
+        /// Gets the system guardian actor reference.
         /// </summary>
         public LocalActorRef SystemGuardian { get { return _systemGuardian; } }
 
         /// <summary>
-        /// TBD
+        /// Gets the temporary container for this provider.
         /// </summary>
         public IInternalActorRef TempContainer { get { return _tempContainer; } }
 
         /// <summary>
-        /// TBD
+        /// Gets the termination task for this provider.
         /// </summary>
         public Task TerminationTask { get { return _terminationPromise.Task; } }
 
         /// <summary>
-        /// TBD
+        /// Gets the user guardian actor reference.
         /// </summary>
         public LocalActorRef Guardian { get { return _userGuardian; } }
 
         /// <summary>
-        /// TBD
+        /// Gets the event stream for this provider.
         /// </summary>
         public EventStream EventStream { get { return _eventStream; } }
 
@@ -279,9 +282,9 @@ namespace Akka.Actor
         private SupervisorStrategy UserGuardianSupervisorStrategy { get { return _userGuardianStrategyConfigurator.Create(); } }
 
         /// <summary>
-        /// TBD
+        /// Generates and returns a unique actor path below "/temp".
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A unique temporary actor path.</returns>
         public ActorPath TempPath()
         {
             return _tempNode / GetNextTempName();
@@ -479,11 +482,14 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to resolve a local actor reference using the provided <paramref name="actorRef"/> and <paramref name="pathElements"/>.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <param name="pathElements">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">The parent / root actor</param>
+        /// <param name="pathElements">The child path elements</param>
+        /// <remarks>
+        /// This method is most commonly used in <see cref="ActorSelection"/> resolution.
+        /// </remarks>
+        /// <returns>A valid <see cref="IActorRef"/> if one was found, <see cref="EmptyLocalActorRef"/> otherwise</returns>
         internal IInternalActorRef ResolveActorRef(IInternalActorRef actorRef, IReadOnlyList<string> pathElements)
         {
             if (pathElements.Count == 0)

@@ -146,7 +146,7 @@ namespace Akka.Cluster.Sharding.Tests
                 }
 
                 akka.cluster.sharding.verbose-debug-logging = on")
-                    .WithFallback(ClusterSingletonManager.DefaultConfig())
+                    .WithFallback(ClusterSingleton.DefaultConfig())
                     .WithFallback(ClusterSharding.DefaultConfig());
             }
         }

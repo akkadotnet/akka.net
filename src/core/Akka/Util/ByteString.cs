@@ -507,6 +507,27 @@ namespace Akka.IO
             CopyTo(copy, 0, _count);
             return copy;
         }
+        
+        /// <summary>
+        /// Returns a ReadOnlySpan<byte/> over the contents of this ByteString.
+        /// This is a non-copying operation, when the ByteString is compact.
+        /// When it is not compact, the contents are copied into a new array.
+        /// </summary>
+        /// <returns>A ReadOnlySpan<byte/> over the byte data.</returns>
+        public ReadOnlySpan<byte> ToReadOnlySpan()
+        {
+            if (_count == 0)
+                return ReadOnlySpan<byte>.Empty;
+        
+            if (IsCompact)
+            {
+                // If compact, data is in a single buffer.
+                var compactBuffer = _buffers[0];
+                return new ReadOnlySpan<byte>(compactBuffer.Array, compactBuffer.Offset, compactBuffer.Count);
+            }
+           
+            return new ReadOnlySpan<byte>(ToArray());
+        }
 
         /// <summary>
         /// Appends <paramref name="other"/> <see cref="ByteString"/> at the tail

@@ -5,9 +5,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using Akka.IO;
+using Akka.TestKit;
 using FluentAssertions;
 using FsCheck;
 using Xunit;
@@ -40,6 +43,59 @@ namespace Akka.Tests.Util
         {
             Prop.ForAll((ByteString a, ByteString b) => (a + b).Count == a.Count + b.Count)
                 .QuickCheckThrowOnFailure();
+        }
+
+        [Fact]
+        public void A_ByteString_ToReadOnlySpan_must_have_correct_size()
+        {
+            Prop.ForAll((ByteString a, ByteString b) =>
+            {
+                a.ToReadOnlySpan().Length.Should().Be(a.Count);
+                b.ToReadOnlySpan().Length.Should().Be(b.Count);
+                var concat = a + b;
+                var spanConcat = concat.ToReadOnlySpan();
+                return spanConcat.Length == concat.Count;
+            }).QuickCheckThrowOnFailure();
+        }
+
+        [Fact]
+        public void A_ByteString_Compact_ToReadOnlySpan_must_have_identical_memory_ref()
+        {
+            var bytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+            var a = ByteString.FromBytes(bytes);
+            var aSpan = a.ToReadOnlySpan();
+            
+            var memory = new ReadOnlyMemory<byte>(bytes);
+            var spanMemory = memory.Span;
+
+            // span has memory reference to underlying byte array 
+            (aSpan == spanMemory).Should().BeTrue();
+            
+            // Do another ToReadOnlySpan
+            var span2 = a.ToReadOnlySpan();
+            (aSpan == span2).Should().BeTrue();
+        }
+        
+        [Fact]
+        public void A_ByteString_ToReadOnlySpan_compacted_must_have_identical_memory_ref()
+        {
+            var bytesA = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+            var bytesB = new byte[] { 10, 11, 12, 13, 14, 15, 16, 17, 18 };
+            var a = ByteString.FromBytes(bytesA);
+            var b = ByteString.FromBytes(bytesB);
+            
+            var concat = a + b;
+            
+            var concatSpan = concat.ToReadOnlySpan();
+            var concatSpan2 = concat.ToReadOnlySpan();
+            // not compact, returns a new span
+            (concatSpan == concatSpan2).Should().BeFalse();
+
+            // compact, will return same span
+            var compacted = concat.Compact();
+            var concatSpan3 = compacted.ToReadOnlySpan();
+            var concatSpan4 = compacted.ToReadOnlySpan();
+            (concatSpan3 == concatSpan4).Should().BeTrue();
         }
 
         [Fact]

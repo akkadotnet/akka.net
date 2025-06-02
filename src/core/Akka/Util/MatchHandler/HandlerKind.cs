@@ -8,7 +8,7 @@
 namespace Akka.Tools.MatchHandler
 {
     /// <summary>
-    /// TBD
+    /// Specifies the kind of handler used in message pattern matching.
     /// </summary>
     internal enum HandlerKind
     {

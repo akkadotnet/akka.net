@@ -68,6 +68,11 @@ public class ShardingBufferAdapterSpec: AkkaSpec
             _counter.IncrementAndGet();
             return message;
         }
+
+        public object UnApply(object message, IActorContext context)
+        {
+            return message;
+        }
     }
 
     private const string ShardTypeName = "Caat";

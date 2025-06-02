@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Akka.Persistence.Snapshot
@@ -59,59 +61,37 @@ namespace Akka.Persistence.Snapshot
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="criteria">TBD</param>
-        /// <returns>TBD</returns>
-        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
         {
             return Task.FromResult((SelectedSnapshot)null);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="metadata">TBD</param>
-        /// <param name="snapshot">TBD</param>
         /// <exception cref="NoSnapshotStoreException">
         /// This exception is thrown when no snapshot store is configured.
         /// </exception>
-        /// <returns>TBD</returns>
-        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot, CancellationToken cancellationToken)
         {
             return Flop();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="metadata">TBD</param>
         /// <exception cref="NoSnapshotStoreException">
         /// This exception is thrown when no snapshot store is configured.
         /// </exception>
-        /// <returns>TBD</returns>
-        protected override Task DeleteAsync(SnapshotMetadata metadata)
+        protected override Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken)
         {
             return Flop();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="criteria">TBD</param>
         /// <exception cref="NoSnapshotStoreException">
         /// This exception is thrown when no snapshot store is configured.
         /// </exception>
-        /// <returns>TBD</returns>
-        protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
         {
             return Flop();
         }
 
-        private Task Flop()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Task Flop()
         {
             var promise = new TaskCompletionSource<object>();
             promise.SetException(new NoSnapshotStoreException("No snapshot store configured."));

@@ -118,6 +118,27 @@ public class ResultSpec
             .Should().Throw<ArgumentException>().WithMessage("Task is not completed.*");
     }
     
+    [Fact]
+    public void ResultEqualitySpec()
+    {
+        var result1 = Result.Success(1);
+        var result2 = Result.Success(1);
+        var exception = new TestException("BOOM"); // equality by value does not work for exceptions
+        var result3 = Result.Failure<int>(exception);
+        var result4 = Result.Failure<int>(exception);
+        var result5 = Result.Success("foo");
+        var result6 = Result.Success("bar");
+        var result51 = Result.Success("foo");
+        
+        result1.Equals(result2).Should().BeTrue();
+        result1.Equals(result3).Should().BeFalse();
+        result3.Equals(result4).Should().BeTrue();
+        result5.Equals(result51).Should().BeTrue();
+        (result5 == result51).Should().BeTrue(); // test operator overloads
+        (result5 == result6).Should().BeFalse(); // test operator overloads
+        (result5 != result6).Should().BeTrue(); // test operator overloads
+    }
+    
     private static Task<int> CompletedTask(int n)
     {
         var tcs = new TaskCompletionSource<int>();

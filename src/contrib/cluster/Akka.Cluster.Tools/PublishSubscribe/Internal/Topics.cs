@@ -41,17 +41,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// <summary>
     /// Base class for both topics and groups.
     /// </summary>
-    internal abstract class TopicLike : ActorBase
+    internal abstract class TopicLike : ActorBase, IWithTimers
     {
+        private const string PruneTimerKey = "PruneTimer";
+        
         /// <summary>
         /// TBD
         /// </summary>
         protected readonly TimeSpan PruneInterval;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        protected readonly ICancelable PruneCancelable;
 
         /// <summary>
         /// TBD
@@ -85,16 +82,21 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             EmptyTimeToLive = emptyTimeToLive;
             SendToDeadLettersWhenNoSubscribers = sendToDeadLettersWhenNone;
             PruneInterval = new TimeSpan(emptyTimeToLive.Ticks / 2);
-            PruneCancelable =
-                Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(PruneInterval, PruneInterval, Self,
-                    Prune.Instance, Self);
+        }
+
+        public ITimerScheduler Timers { get; set; }
+
+        protected override void PreStart()
+        {
+            base.PreStart();
+            Timers.StartPeriodicTimer(PruneTimerKey, Prune.Instance, PruneInterval, PruneInterval, Self);
         }
 
         /// <inheritdoc cref="ActorBase.PostStop"/>
         protected override void PostStop()
         {
             base.PostStop();
-            PruneCancelable.Cancel();
+            Timers.CancelAll();
         }
 
         /// <summary>
@@ -102,7 +104,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// </summary>
         /// <param name="message">The message we're going to process.</param>
         /// <returns>true if we handled it, false otherwise.</returns>
-        protected bool DefaultReceive(object message)
+        private bool DefaultReceive(object message)
         {
             switch (message)
             {
@@ -123,8 +125,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     Remove(terminated.ActorRef);
                     return true;
 
-                case Prune _:
-                    if (PruneDeadline != null && PruneDeadline.IsOverdue)
+                case Prune:
+                    if (PruneDeadline is { IsOverdue: true })
                     {
                         PruneDeadline = null;
                         Context.Parent.Tell(NoMoreSubscribers.Instance);
@@ -132,7 +134,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 
                     return true;
 
-                case TerminateRequest _:
+                case TerminateRequest:
                     if (Subscribers.Count == 0 && !Context.GetChildren().Any())
                     {
                         Context.Stop(Self);
@@ -144,7 +146,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 
                     return true;
 
-                case Count _:
+                case Count:
                     Sender.Tell(Subscribers.Count);
                     return true;
 
@@ -191,6 +193,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     {
         private readonly RoutingLogic _routingLogic;
         private readonly PerGroupingBuffer _buffer;
+        private readonly PubSubCache _cache;
+        private readonly string _topicPrefix;
 
         /// <summary>
         /// Creates a new topic actor
@@ -203,6 +207,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         {
             _routingLogic = routingLogic;
             _buffer = new PerGroupingBuffer();
+            
+            _topicPrefix = Self.Path.ToStringWithoutAddress();
+            _cache = new PubSubCache();
         }
 
         /// <inheritdoc cref="TopicLike.Business"/>
@@ -210,9 +217,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         {
             switch (message)
             {
-                case Subscribe subscribe when subscribe.Group != null:
-                    var encodedGroup = Utils.EncodeName(subscribe.Group);
-                    _buffer.BufferOr(Utils.MakeKey(Self.Path / encodedGroup), subscribe, Sender, () =>
+                case Subscribe { Group: not null } subscribe:
+                    var encodedGroup = _cache.EncodeName(subscribe.Group);
+                    _buffer.BufferOr(_cache.MakeKey(Self.Path, encodedGroup), subscribe, Sender, () =>
                     {
                         var child = Context.Child(encodedGroup);
                         if (!child.IsNobody())
@@ -227,9 +234,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     PruneDeadline = null;
                     return true;
 
-                case Unsubscribe unsubscribe when unsubscribe.Group != null:
-                    encodedGroup = Utils.EncodeName(unsubscribe.Group);
-                    _buffer.BufferOr(Utils.MakeKey(Self.Path / encodedGroup), unsubscribe, Sender, () =>
+                case Subscribed:
+                    Context.Parent.Forward(message);
+                    return true;
+
+                case Unsubscribe { Group: not null } unsubscribe:
+                    encodedGroup = _cache.EncodeName(unsubscribe.Group);
+                    _buffer.BufferOr(_cache.MakeKey(Self.Path, encodedGroup), unsubscribe, Sender, () =>
                     {
                         var child = Context.Child(encodedGroup);
                         if (!child.IsNobody())
@@ -239,25 +250,22 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                         else
                         {
                             // no such group here
+                            _cache.TryRemoveTopic(unsubscribe.Group);
                         }
                     });
                     return true;
 
-                case Subscribed _:
+                case Unsubscribed:
                     Context.Parent.Forward(message);
                     return true;
 
-                case Unsubscribed _:
-                    Context.Parent.Forward(message);
-                    return true;
-
-                case NoMoreSubscribers _:
+                case Cluster:
                     var key = Utils.MakeKey(Sender);
                     _buffer.InitializeGrouping(key);
                     Sender.Tell(TerminateRequest.Instance);
                     return true;
 
-                case NewSubscriberArrived _:
+                case NewSubscriberArrived:
                     key = Utils.MakeKey(Sender);
                     _buffer.ForwardMessages(key, Sender);
                     return true;
@@ -266,6 +274,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     key = Utils.MakeKey(terminated.ActorRef);
                     _buffer.RecreateAndForwardMessagesIfNeeded(key, () => NewGroupActor(terminated.ActorRef.Path.Name));
                     Remove(terminated.ActorRef);
+                    _cache.TryRemoveKey(key, _topicPrefix);
                     return true;
             }
 
@@ -306,17 +315,19 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <inheritdoc cref="TopicLike.Business"/>
         protected override bool Business(object message)
         {
-            if (message is SendToOneSubscriber send)
+            switch (message)
             {
-                if (Subscribers.Count != 0)
-                {
-                    var routees = Subscribers.Select(sub => (Routee)new ActorRefRoutee(sub)).ToArray();
+                case SendToOneSubscriber when Subscribers.Count == 0:
+                    return true;
+                
+                case SendToOneSubscriber send:
+                    var routees = Subscribers.Select(Routee (sub) => new ActorRefRoutee(sub)).ToArray();
                     new Router(_routingLogic, routees).Route(Utils.WrapIfNeeded(send.Message), Sender);
-                }
+                    return true;
+                
+                default:
+                    return false;
             }
-            else return false;
-
-            return true;
         }
     }
 
@@ -327,7 +338,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// </summary>
     internal static class Utils
     {
-        private static System.Text.RegularExpressions.Regex _pathRegex = new("^/remote/.+(/user/.+)");
+        public readonly record struct MakeKeyInfo(ActorPath Path, string Topic);
+    
+        private static readonly System.Text.RegularExpressions.Regex PathRegex = new("^/remote/.+(/user/.+)");
 
         /// <summary>
         /// <para>
@@ -342,40 +355,118 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// </para>
         /// </summary>
         /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static object WrapIfNeeded(object message)
         {
             return message is RouterEnvelope ? new MediatorRouterEnvelope(message) : message;
         }
+        
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static string? KeyToEncodedTopic(string key, string topicPrefix)
+        {
+            if (!key.StartsWith(topicPrefix)) 
+                return null;
+                    
+            var topic = key[(topicPrefix.Length + 1)..];
+            return !topic.Contains('/') ? topic : null;
+        }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <returns>TBD</returns>
+        #region Key related methods
+        
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static string MakeKey(IActorRef actorRef)
         {
-            return MakeKey(actorRef.Path);
+            return PathRegex.Replace(actorRef.Path.ToStringWithoutAddress(), "$1");
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
-        public static string EncodeName(string name)
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static string MakeKey(this PubSubCache cache, ActorPath path, string topic)
         {
-            return name == null ? null : Uri.EscapeDataString(name);
+            var info = new MakeKeyInfo(path, topic);
+            if(cache.MakeKeyMap.TryGetValue(info, out var key))
+                return key;
+            
+            key = PathRegex.Replace((path / topic).ToStringWithoutAddress(), "$1");
+            cache.MakeKeyMap[info] = key;
+            cache.MakeKeyReverseMap[key] = info;
+            return key;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
-        public static string MakeKey(ActorPath path)
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void TryRemoveKey(this PubSubCache cache, string key, string topicPrefix)
         {
-            return _pathRegex.Replace(path.ToStringWithoutAddress(), "$1");
+            if (cache.MakeKeyReverseMap.TryGetValue(key, out var keyInfo))
+            {
+                cache.MakeKeyMap.Remove(keyInfo);
+                cache.MakeKeyReverseMap.Remove(key);
+            }
+            
+            var encodedTopic = Utils.KeyToEncodedTopic(key, topicPrefix);
+            if (encodedTopic == null) 
+                return;
+
+            if (!cache.EncodedToTopicMap.TryGetValue(encodedTopic, out var topic)) 
+                return;
+            
+            cache.TopicToEncodedMap.Remove(topic);
+            cache.EncodedToTopicMap.Remove(encodedTopic);
         }
+        
+        #endregion
+        
+        #region Topic/group name related methods
+        
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static string EncodeName(this PubSubCache cache, string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+            
+            if (cache.TopicToEncodedMap.TryGetValue(name, out var encoded))
+                return encoded;
+
+            encoded = Uri.EscapeDataString(name);
+            cache.TopicToEncodedMap[name] = encoded;
+            cache.EncodedToTopicMap[encoded] = name;
+            return encoded;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void TryRemoveEncodedTopic(this PubSubCache cache, string encodedTopic)
+        {
+            if (!cache.EncodedToTopicMap.TryGetValue(encodedTopic, out var topic)) 
+                return;
+            
+            cache.TopicToEncodedMap.Remove(topic);
+            cache.EncodedToTopicMap.Remove(encodedTopic);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void TryRemoveTopic(this PubSubCache cache, string topic)
+        {
+            if(!cache.TopicToEncodedMap.TryGetValue(topic, out var encodedTopic))
+                return;
+            
+            cache.EncodedToTopicMap.Remove(encodedTopic);
+            cache.TopicToEncodedMap.Remove(topic);
+        }
+
+        #endregion
+
+        public static void Clear(this PubSubCache cache)
+        {
+            cache.TopicToEncodedMap.Clear();
+            cache.EncodedToTopicMap.Clear();
+            cache.MakeKeyMap.Clear();
+            cache.MakeKeyReverseMap.Clear();
+        }
+    }
+    
+    internal sealed class PubSubCache
+    {
+        public readonly Dictionary<string, string> TopicToEncodedMap = new();
+        public readonly Dictionary<string, string> EncodedToTopicMap = new();
+        public readonly Dictionary<Utils.MakeKeyInfo, string> MakeKeyMap = new();
+        public readonly Dictionary<string, Utils.MakeKeyInfo> MakeKeyReverseMap = new();
     }
 }

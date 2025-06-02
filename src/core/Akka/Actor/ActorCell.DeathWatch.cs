@@ -195,10 +195,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
-        /// <param name="actor">TBD</param>
-        protected void UnwatchWatchedActors(ActorBase actor)
+        /// <remarks>
+        /// Cleanup routine during actor shutdown.
+        /// </remarks>
+        protected void UnwatchWatchedActors(ActorBase? actor)
         {
             var watching = _state
                 .GetWatching()
@@ -238,7 +240,8 @@ namespace Akka.Actor
                 {
                     _state = _state.AddWatchedBy(watcher);
 
-                    if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor.GetType(), string.Format("now watched by {0}", watcher)));
+                    if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor?.GetType(),
+                        $"now watched by {watcher}"));
                 }, watcher);
             }
             else if (!watcheeSelf && watcherSelf)
@@ -247,7 +250,7 @@ namespace Akka.Actor
             }
             else
             {
-                Publish(new Warning(Self.Path.ToString(), Actor.GetType(),
+                Publish(new Warning(Self.Path.ToString(), Actor?.GetType(),
                     $"BUG: illegal Watch({watchee},{watcher} for {Self}"));
             }
         }
@@ -269,7 +272,8 @@ namespace Akka.Actor
                 {
                     _state = _state.RemoveWatchedBy(watcher);
 
-                    if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor.GetType(), string.Format("no longer watched by {0}", watcher)));
+                    if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor?.GetType(),
+                        $"no longer watched by {watcher}"));
                 }, watcher);
             }
             else if (!watcheeSelf && watcherSelf)
@@ -278,7 +282,7 @@ namespace Akka.Actor
             }
             else
             {
-                Publish(new Warning(Self.Path.ToString(), Actor.GetType(),
+                Publish(new Warning(Self.Path.ToString(), Actor?.GetType(),
                     $"BUG: illegal Unwatch({watchee},{watcher} for {Self}"));
             }
         }

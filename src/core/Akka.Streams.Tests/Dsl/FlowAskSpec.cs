@@ -238,9 +238,7 @@ namespace Akka.Streams.Tests.Dsl
 
             c.ExpectSubscription().Request(10);
             var error = c.ExpectError();
-            error.As<AggregateException>().Flatten()
-                .InnerException
-                .Should().BeOfType<AskTimeoutException>();
+            error.Should().BeOfType<AskTimeoutException>();
             return Task.CompletedTask;
         }, _materializer);
 
@@ -253,8 +251,17 @@ namespace Akka.Streams.Tests.Dsl
                 .Ask<Reply>(failsOn, _timeout, 1)
                 .RunWith(Sink.FromSubscriber(c), _materializer);
 
-            var error = (AggregateException)c.ExpectSubscriptionAndError();
-            error.InnerException.Message.Should().Be("Booming for 1!");
+            var error = c.ExpectSubscriptionAndError();
+            if (error is AggregateException aggregateException) // happens if we hit the fast path and don't await
+            {
+                aggregateException.Flatten()
+                    .InnerException!.Message.Should().Be("Booming for 1!");
+            }
+            else
+            {
+                error.Message.Should().Be("Booming for 1!");
+            }
+            
             return Task.CompletedTask;
         }, _materializer);
 

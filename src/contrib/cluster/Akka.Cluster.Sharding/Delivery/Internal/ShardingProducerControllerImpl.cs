@@ -350,10 +350,11 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
             {
                 switch (c)
                 {
+                    
                     case (_, _, { IsEmpty: true }): // no reply
                         break;
-                    case (_, _, { IsEmpty: false } replyTo):
-                        replyTo.Value.Tell(Done.Instance);
+                    case (_, var outSeqNr, { IsEmpty: false } replyTo):
+                        replyTo.Value.Tell(outSeqNr);  // Send the sequence number instead of Done.Instance
                         break;
                 }
             }
@@ -539,7 +540,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         var self = Self;
 
         DurableQueueRef.Value.Ask<DurableProducerQueue.StoreMessageSentAck>(Mapper,
-                askTimeout, cancellationToken: default)
+                askTimeout, cancellationToken: CancellationToken.None)
             .PipeTo(self, success: _ => new StoreMessageSentCompleted<T>(messageSent),
                 failure: _ => new StoreMessageSentFailed<T>(messageSent, attempt));
     }
@@ -559,11 +560,6 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         if (_log.IsDebugEnabled) // TODO: add trace support
             _log.Debug("Sending [{0}] to [{1}] with outSeqNr [{2}]", msg?.GetType().Name, nextTo, outSeqNr);
 
-        ProducerController.MessageWithConfirmation<T> Transform(IActorRef askTarget)
-        {
-            return new ProducerController.MessageWithConfirmation<T>(msg, askTarget);
-        }
-
         var self = Self;
         nextTo.Ask<long>(Transform, Settings.InternalAskTimeout, CancellationToken.None)
             .PipeTo(self, success: seqNr =>
@@ -573,6 +569,12 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
                     return new Ack(outKey, seqNr);
                 },
                 failure: _ => new AskTimeout(outKey, outSeqNr));
+        return;
+
+        ProducerController.MessageWithConfirmation<T> Transform(IActorRef askTarget)
+        {
+            return new ProducerController.MessageWithConfirmation<T>(msg, askTarget);
+        }
     }
 
     private static Option<DurableProducerQueue.State<T>> CreateInitialState(bool hasDurableQueue)
@@ -602,12 +604,13 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         var loadTimeout = Settings.ProducerControllerSettings.DurableQueueRequestTimeout;
         durableProducerQueue.OnSuccess(@ref =>
         {
-            DurableProducerQueue.LoadState Mapper(IActorRef r) => new(r);
-
             var self = Self;
             @ref.Ask<DurableProducerQueue.State<T>>(Mapper, timeout: loadTimeout, cancellationToken: default)
                 .PipeTo(self, success: state => new LoadStateReply<T>(state),
                     failure: _ => new LoadStateFailed(attempt)); // timeout
+            return;
+
+            DurableProducerQueue.LoadState Mapper(IActorRef r) => new(r);
         });
     }
 

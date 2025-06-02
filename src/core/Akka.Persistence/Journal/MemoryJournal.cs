@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -18,50 +19,7 @@ using Akka.Util.Internal;
 namespace Akka.Persistence.Journal
 {
     using Messages = IDictionary<string, LinkedList<IPersistentRepresentation>>;
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    public interface IMemoryMessages
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistent">TBD</param>
-        /// <returns>TBD</returns>
-        Messages Add(IPersistentRepresentation persistent);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <param name="seqNr">TBD</param>
-        /// <param name="updater">TBD</param>
-        /// <returns>TBD</returns>
-        Messages Update(string pid, long seqNr, Func<IPersistentRepresentation, IPersistentRepresentation> updater);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <param name="seqNr">TBD</param>
-        /// <returns>TBD</returns>
-        Messages Delete(string pid, long seqNr);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <param name="fromSeqNr">TBD</param>
-        /// <param name="toSeqNr">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <returns>TBD</returns>
-        IEnumerable<IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max);
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <returns>TBD</returns>
-        long HighestSequenceNr(string pid);
-    }
-
+    
     /// <summary>
     /// In-memory journal for testing purposes.
     /// </summary>
@@ -72,17 +30,9 @@ namespace Akka.Persistence.Journal
         private readonly ConcurrentDictionary<string, long> _meta = new();
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new();
         
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return _messages; } }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="messages">TBD</param>
-        /// <returns>TBD</returns>
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+        
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
             foreach (var w in messages)
             {
@@ -91,13 +41,13 @@ namespace Akka.Persistence.Journal
                     var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
                     Add(persistentRepresentation);
                     _allMessages.AddLast(persistentRepresentation);
-                    if (!(p.Payload is Tagged tagged)) continue;
+                    if (p.Payload is not Tagged tagged) continue;
                     
                     foreach (var tag in tagged.Tags)
                     {
                         _tagsToMessagesMapping.AddOrUpdate(
                             tag,
-                            (_) => new LinkedList<IPersistentRepresentation>(new[] { persistentRepresentation }),
+                            (_) => new LinkedList<IPersistentRepresentation>([persistentRepresentation]),
                             (_, v) =>
                             {
                                 v.AddLast(persistentRepresentation);
@@ -107,46 +57,24 @@ namespace Akka.Persistence.Journal
                 }
             }
             
-            return Task.FromResult((IImmutableList<Exception>) null); // all good
+            return Task.FromResult<IImmutableList<Exception>>(null); // all good
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="fromSequenceNr">TBD</param>
-        /// <returns>TBD</returns>
-        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken)
         {
-            return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.TryGetValue(persistenceId, out long metaSeqNr) ? metaSeqNr : 0L));
+            return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.GetValueOrDefault(persistenceId, 0L)));
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="fromSequenceNr">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <param name="recoveryCallback">TBD</param>
-        /// <returns>TBD</returns>
+        
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
             var highest = HighestSequenceNr(persistenceId);
             if (highest != 0L && max != 0L)
                 Read(persistenceId, fromSequenceNr, Math.Min(toSequenceNr, highest), max).ForEach(recoveryCallback);
-            return Task.FromResult(new object());
+            return Task.CompletedTask;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <returns>TBD</returns>
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+        
+        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken)
         {
             var highestSeqNr = HighestSequenceNr(persistenceId);
             var toSeqNr = Math.Min(toSequenceNr, highestSeqNr);
@@ -154,7 +82,7 @@ namespace Akka.Persistence.Journal
                 _meta.AddOrUpdate(persistenceId, highestSeqNr, (_, _) => highestSeqNr);
             for (var snr = 1L; snr <= toSeqNr; snr++)
                 Delete(persistenceId, snr);
-            return Task.FromResult(new object());
+            return Task.CompletedTask;
         }
 
         protected override bool ReceivePluginInternal(object message)
@@ -190,20 +118,17 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// Replays all events with given tag withing provided boundaries from memory.
         /// </summary>
-        /// <param name="replay">TBD</param>
-        /// <returns>TBD</returns>
         private Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
             if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
                 return Task.FromResult(0);
 
-            int index = 0;
+            var index = 0;
             foreach (var persistence in _tagsToMessagesMapping[replay.Tag]
                          .Skip(replay.FromOffset)
                          .Take(replay.ToOffset))
             {
-                var payload = (Tagged)persistence.Payload;
-                replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence.WithPayload(payload.Payload), replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
+                replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
                 index++;
             }
 
@@ -212,7 +137,7 @@ namespace Akka.Persistence.Journal
         
         private Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
-            int index = 0;
+            var index = 0;
             var replayed = _allMessages
                 .Skip(replay.FromOffset)
                 .Take(replay.ToOffset - replay.FromOffset)
@@ -264,46 +189,23 @@ namespace Akka.Persistence.Journal
                 HighestOrderingNumber = highestOrderingNumber;
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         [Serializable]
         public sealed class ReplayTaggedMessages : IJournalRequest
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public readonly int FromOffset;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public readonly int ToOffset;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public readonly int Max;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public readonly string Tag;
-
-            /// <summary>
-            /// TBD
-            /// </summary>
+            
             public readonly IActorRef ReplyTo;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="ReplayTaggedMessages"/> class.
             /// </summary>
-            /// <param name="fromOffset">TBD</param>
-            /// <param name="toOffset">TBD</param>
-            /// <param name="max">TBD</param>
-            /// <param name="tag">TBD</param>
-            /// <param name="replyTo">TBD</param>
             /// <exception cref="ArgumentException">
             /// This exception is thrown for a number of reasons. These include the following:
             /// <ul>
@@ -334,70 +236,42 @@ namespace Akka.Persistence.Journal
                 ReplyTo = replyTo;
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         [Serializable]
         public sealed class ReplayedTaggedMessage : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly IPersistentRepresentation Persistent;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly string Tag;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly int Offset;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="persistent">TBD</param>
-            /// <param name="tag">TBD</param>
-            /// <param name="offset">TBD</param>
+            public readonly IPersistentRepresentation Persistent;
+
+            [Obsolete("If there are tags, they will be stored in the PersistentRepresentation")]
+            public readonly string Tag;
+
+            public readonly int Offset;
+            
             public ReplayedTaggedMessage(IPersistentRepresentation persistent, string tag, int offset)
             {
                 Persistent = persistent;
+#pragma warning disable CS0618 // Type or member is obsolete
                 Tag = tag;
+#pragma warning restore CS0618 // Type or member is obsolete
                 Offset = offset;
             }
         }
         
-        /// <summary>
-        /// TBD
-        /// </summary>
         [Serializable]
         public sealed class ReplayAllEvents : IJournalRequest
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public readonly int FromOffset;
-            /// <summary>
-            /// TBD
-            /// </summary>
+
             public readonly int ToOffset;
-            /// <summary>
-            /// TBD
-            /// </summary>
+
             public readonly long Max;
-            /// <summary>
-            /// TBD
-            /// </summary>
+
             public readonly IActorRef ReplyTo;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="ReplayAllEvents"/> class.
             /// </summary>
-            /// <param name="fromOffset">TBD</param>
-            /// <param name="toOffset">TBD</param>
-            /// <param name="max">TBD</param>
-            /// <param name="replyTo">TBD</param>
             /// <exception cref="ArgumentException">
             /// This exception is thrown for a number of reasons. These include the following:
             /// <ul>
@@ -419,36 +293,22 @@ namespace Akka.Persistence.Journal
             }
         }
         
-        /// <summary>
-        /// TBD
-        /// </summary>
+
         [Serializable]
         public sealed class ReplayedEvent : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly IPersistentRepresentation Persistent;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            public readonly int Offset;
 
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="persistent">TBD</param>
-            /// <param name="offset">TBD</param>
+            public readonly IPersistentRepresentation Persistent;
+
+            public readonly int Offset;
+            
             public ReplayedEvent(IPersistentRepresentation persistent, int offset)
             {
                 Persistent = persistent;
                 Offset = offset;
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         [Serializable]
         public sealed class ReplayTaggedMessagesSuccess
         {
@@ -463,9 +323,6 @@ namespace Akka.Persistence.Journal
             public int HighestSequenceNr { get; }
         }
         
-        /// <summary>
-        /// TBD
-        /// </summary>
         [Serializable]
         public sealed class EventReplaySuccess
         {
@@ -521,8 +378,7 @@ namespace Akka.Persistence.Journal
         
             public override bool Equals(object obj)
             {
-                if (!(obj is EventReplayFailure f)) return false;
-                return Equals(f);
+                return obj is EventReplayFailure f && Equals(f);
             }
 
         
@@ -535,29 +391,17 @@ namespace Akka.Persistence.Journal
         #endregion
         
         #region IMemoryMessages implementation
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistent">TBD</param>
-        /// <returns>TBD</returns>
+        
         public Messages Add(IPersistentRepresentation persistent)
         {
             var list = Messages.GetOrAdd(persistent.PersistenceId, _ => new LinkedList<IPersistentRepresentation>());
             list.AddLast(persistent);
             return Messages;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <param name="seqNr">TBD</param>
-        /// <param name="updater">TBD</param>
-        /// <returns>TBD</returns>
+        
         public Messages Update(string pid, long seqNr, Func<IPersistentRepresentation, IPersistentRepresentation> updater)
         {
-            if (Messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
+            if (Messages.TryGetValue(pid, out var persistents))
             {
                 var node = persistents.First;
                 while (node != null)
@@ -571,16 +415,10 @@ namespace Akka.Persistence.Journal
 
             return Messages;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <param name="seqNr">TBD</param>
-        /// <returns>TBD</returns>
+        
         public Messages Delete(string pid, long seqNr)
         {
-            if (Messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
+            if (Messages.TryGetValue(pid, out var persistents))
             {
                 var node = persistents.First;
                 while (node != null)
@@ -594,35 +432,22 @@ namespace Akka.Persistence.Journal
 
             return Messages;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <param name="fromSeqNr">TBD</param>
-        /// <param name="toSeqNr">TBD</param>
-        /// <param name="max">TBD</param>
-        /// <returns>TBD</returns>
+        
         public IEnumerable<IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max)
         {
-            if (Messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
+            if (Messages.TryGetValue(pid, out var persistents))
             {
                 return persistents
                     .Where(x => x.SequenceNr >= fromSeqNr && x.SequenceNr <= toSeqNr)
                     .Take(max > int.MaxValue ? int.MaxValue : (int)max);
             }
 
-            return Enumerable.Empty<IPersistentRepresentation>();
+            return [];
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="pid">TBD</param>
-        /// <returns>TBD</returns>
+        
         public long HighestSequenceNr(string pid)
         {
-            if (Messages.TryGetValue(pid, out LinkedList<IPersistentRepresentation> persistents))
+            if (Messages.TryGetValue(pid, out var persistents))
             {
                 var last = persistents.LastOrDefault();
                 return last?.SequenceNr ?? 0L;
@@ -633,17 +458,11 @@ namespace Akka.Persistence.Journal
 
         #endregion
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     public class SharedMemoryJournal : MemoryJournal
     {
         private static readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> SharedMessages = new();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected override ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return SharedMessages; } }
     }
 }

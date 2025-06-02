@@ -4,10 +4,11 @@
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Threading;
@@ -36,10 +37,10 @@ namespace Akka.Actor
         }
 
         private ImmutableDictionary<string, FunctionRef> FunctionRefs => Volatile.Read(ref _functionRefsDoNotCallMeDirectly);
-        internal bool TryGetFunctionRef(string name, out FunctionRef functionRef) =>
+        internal bool TryGetFunctionRef(string name, [NotNullWhen(true)]out FunctionRef? functionRef) =>
             FunctionRefs.TryGetValue(name, out functionRef);
 
-        internal bool TryGetFunctionRef(string name, int uid, out FunctionRef functionRef) =>
+        internal bool TryGetFunctionRef(string name, int uid, [NotNullWhen(true)]out FunctionRef? functionRef) =>
             FunctionRefs.TryGetValue(name, out functionRef) && (uid == ActorCell.UndefinedUid || uid == functionRef.Path.Uid);
 
         internal FunctionRef AddFunctionRef(Action<IActorRef, object> tell, string suffix = "")
@@ -93,7 +94,7 @@ namespace Akka.Actor
         /// This exception is thrown if the actor tries to create a child while it is terminating or is terminated.
         /// </exception>
         /// <returns>A reference to the initialized child actor.</returns>
-        public virtual IActorRef AttachChild(Props props, bool isSystemService, string name = null)
+        public virtual IActorRef AttachChild(Props props, bool isSystemService, string? name = null)
         {
             return MakeChild(props, name == null ? GetRandomActorName() : CheckName(name), true, isSystemService);
         }
@@ -112,13 +113,13 @@ namespace Akka.Actor
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown if the actor tries to create a child while it is terminating or is terminated.
         /// </exception>
-        /// <returns>TBD</returns>
-        public virtual IActorRef ActorOf(Props props, string name = null)
+        /// <returns>A reference to the new child actor.</returns>
+        public virtual IActorRef ActorOf(Props props, string? name = null)
         {
             return ActorOf(props, name, false, false);
         }
 
-        private IActorRef ActorOf(Props props, string name, bool isAsync, bool isSystemService)
+        private IActorRef ActorOf(Props props, string? name, bool isAsync, bool isSystemService)
         {
             if (name == null)
                 name = GetRandomActorName();
@@ -140,11 +141,9 @@ namespace Akka.Actor
         /// <param name="child">The child.</param>
         public void Stop(IActorRef child)
         {
-            ChildRestartStats stats;
-            if (ChildrenContainer.TryGetByRef(child, out stats))
+            if (ChildrenContainer.TryGetByRef(child, out _))
             {
-                var repointableActorRef = child as RepointableActorRef;
-                if (repointableActorRef == null || repointableActorRef.IsStarted)
+                if (child is not RepointableActorRef repointableActorRef || repointableActorRef.IsStarted)
                 {
                     while (true)
                     {
@@ -165,9 +164,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Reserve a child actor's name prior to allocating it.
         /// </summary>
-        /// <param name="name">TBD</param>
+        /// <param name="name">The requested name of the child.</param>
+        /// <exception cref="InvalidOperationException">This exception is thrown if the given <paramref name="name"/> belongs to an actor that is terminating.</exception>
+        /// <exception cref="InvalidActorNameException">This exception is thrown if the given <paramref name="name"/> is not unique in the container.</exception>
         public void ReserveChild(string name)
         {
             while (true)
@@ -180,9 +181,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Unreserve a child actor's name.
         /// </summary>
-        /// <param name="name">TBD</param>
+        /// <param name="name">The child's name.</param>
         protected void UnreserveChild(string name)
         {
             while (true)
@@ -197,9 +198,7 @@ namespace Akka.Actor
         /// <summary>
         /// This should only be used privately or when creating the root actor.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <returns>TBD</returns>
-        public ChildRestartStats InitChild(IInternalActorRef actor)
+        public ChildRestartStats? InitChild(IInternalActorRef actor)
         {
             var name = actor.Path.Name;
             while (true)
@@ -211,7 +210,7 @@ namespace Akka.Actor
                     {
                         case ChildRestartStats restartStats:
                             return restartStats;
-                        case ChildNameReserved _:
+                        case ChildNameReserved:
                             var crs = new ChildRestartStats(actor);
                             if (SwapChildrenRefs(cc, cc.Add(name, crs)))
                                 return crs;
@@ -221,12 +220,7 @@ namespace Akka.Actor
                 else return null;
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="reason">TBD</param>
-        /// <returns>TBD</returns>
+        
         protected bool SetChildrenTerminationReason(SuspendReason reason)
         {
             while (true)
@@ -239,22 +233,14 @@ namespace Akka.Actor
                 else return false;
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected void SetTerminated()
         {
             Interlocked.Exchange(ref _childrenContainerDoNotCallMeDirectly, TerminatedChildrenContainer.Instance);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected bool IsNormal { get { return ChildrenContainer.IsNormal; } }
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         protected bool IsTerminating { get { return ChildrenContainer.IsTerminating; } }
 
         private bool IsWaitingForChildren  // This is called isWaitingForChildrenOrNull in AkkaJVM but is used like if returned a bool
@@ -268,7 +254,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Suspends the children.
         /// </summary>
-        private void SuspendChildren(List<IActorRef> exceptFor = null)
+        private void SuspendChildren(List<IActorRef>? exceptFor = null)
         {
             if (exceptFor == null)
             {
@@ -292,7 +278,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Resumes the children.
         /// </summary>
-        private void ResumeChildren(Exception causedByFailure, IActorRef perpetrator)
+        private void ResumeChildren(Exception? causedByFailure, IActorRef? perpetrator)
         {
             foreach (var stats in ChildrenContainer.Stats)
             {
@@ -307,9 +293,6 @@ namespace Akka.Actor
         /// indicating that only a name has been reserved for the child, or a <see cref="ChildRestartStats"/> for a child that
         /// has been initialized/created.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
         public bool TryGetChildStatsByName(string name, out IChildStats child)   //This is called getChildByName in Akka JVM
         {
             return ChildrenContainer.TryGetByName(name, out child);
@@ -318,7 +301,7 @@ namespace Akka.Actor
         /// <summary>
         /// Tries to get the stats for the child with the specified name. This ignores children for whom only names have been reserved.
         /// </summary>
-        private bool TryGetChildRestartStatsByName(string name, out ChildRestartStats child)
+        private bool TryGetChildRestartStatsByName(string name, [NotNullWhen(true)] out ChildRestartStats? child)
         {
             if (ChildrenContainer.TryGetByName(name, out var stats))
             {
@@ -334,10 +317,7 @@ namespace Akka.Actor
         /// Tries to get the stats for the specified child.
         /// <remarks>Since the child exists <see cref="ChildRestartStats"/> is the only valid <see cref="IChildStats"/>.</remarks>
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
-        protected bool TryGetChildStatsByRef(IActorRef actor, out ChildRestartStats child)   //This is called getChildByRef in Akka JVM
+        protected bool TryGetChildStatsByRef(IActorRef actor, [NotNullWhen(true)] out ChildRestartStats? child)   //This is called getChildByRef in Akka JVM
         {
             return ChildrenContainer.TryGetByRef(actor, out child);
         }
@@ -367,7 +347,7 @@ namespace Akka.Actor
             else
             {
                 var (s, uid) = GetNameAndUid(name);
-                if (TryGetChildRestartStatsByName(s, out var stats) && (uid == ActorCell.UndefinedUid || uid == stats.Uid))
+                if (TryGetChildRestartStatsByName(s, out var stats) && (uid == UndefinedUid || uid == stats.Uid))
                 {
                     return stats.Child;
                 }
@@ -379,21 +359,15 @@ namespace Akka.Actor
             }
             return ActorRefs.Nobody;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
-        protected SuspendReason RemoveChildAndGetStateChange(IActorRef child)
+        
+        protected SuspendReason? RemoveChildAndGetStateChange(IActorRef child)
         {
             if (ChildrenContainer is TerminatingChildrenContainer terminating)
             {
                 var n = RemoveChild(child);
-                if (!(n is TerminatingChildrenContainer))
+                if (n is not TerminatingChildrenContainer)
                     return terminating.Reason;
-                else
-                    return null;
+                return null;
             }
 
             RemoveChild(child);
@@ -424,17 +398,17 @@ namespace Akka.Actor
 
         private IInternalActorRef MakeChild(Props props, string name, bool async, bool systemService)
         {
-            if (_systemImpl.Settings.SerializeAllCreators && !systemService && !(props.Deploy.Scope is LocalScope))
+            if (SystemImpl.Settings.SerializeAllCreators && !systemService && !(props.Deploy.Scope is LocalScope))
             {
                 var oldInfo = Serialization.Serialization.CurrentTransportInformation;
-                object propArgument = null;
+                object? propArgument = null;
                 try
                 {
                     if (oldInfo == null)
                         Serialization.Serialization.CurrentTransportInformation =
                             SystemImpl.Provider.SerializationInformation;
 
-                    var ser = _systemImpl.Serialization;
+                    var ser = SystemImpl.Serialization;
                     if (props.Arguments != null)
                     {
                         foreach (var argument in props.Arguments)
@@ -471,35 +445,33 @@ namespace Akka.Actor
             {
                 throw new InvalidOperationException("Cannot create child while terminating or terminated");
             }
-            else
+
+            // this name will either be unreserved or overwritten with a real child below
+            ReserveChild(name);
+            IInternalActorRef actor;
+            try
             {
-                // this name will either be unreserved or overwritten with a real child below
-                ReserveChild(name);
-                IInternalActorRef actor;
-                try
-                {
-                    var childPath = new ChildActorPath(Self.Path, name, NewUid());
-                    actor = _systemImpl.Provider.ActorOf(_systemImpl, props, _self, childPath,
-                        systemService: systemService, deploy: null, lookupDeploy: true, async: async);
-                }
-                catch
-                {
-                    //if actor creation failed, unreserve the name
-                    UnreserveChild(name);
-                    throw;
-                }
-
-                if (Mailbox != null && IsFailed)
-                {
-                    for (var i = 1; i <= Mailbox.SuspendCount(); i++)
-                        actor.Suspend();
-                }
-
-                //replace the reservation with the real actor
-                InitChild(actor);
-                actor.Start();
-                return actor;
+                var childPath = new ChildActorPath(Self.Path, name, NewUid());
+                actor = SystemImpl.Provider.ActorOf(SystemImpl, props, _self, childPath,
+                    systemService: systemService, deploy: null, lookupDeploy: true, async: async);
             }
+            catch
+            {
+                //if actor creation failed, unreserve the name
+                UnreserveChild(name);
+                throw;
+            }
+
+            if (Mailbox != null && IsFailed)
+            {
+                for (var i = 1; i <= Mailbox.SuspendCount(); i++)
+                    actor.Suspend();
+            }
+
+            //replace the reservation with the real actor
+            InitChild(actor);
+            actor.Start();
+            return actor;
         }
     }
 }

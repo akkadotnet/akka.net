@@ -15,8 +15,9 @@ using Akka.Cluster;
 using Akka.Cluster.Sharding;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
-using Akka.Persistence.Sqlite;
+using Akka.Persistence.Sql;
 using Akka.Util;
+using LinqToDB;
 
 namespace ClusterSharding.Node
 {
@@ -43,8 +44,8 @@ namespace ClusterSharding.Node
             
             var config = ConfigurationFactory.ParseString(await File.ReadAllTextAsync("app.conf"))
                 .BootstrapFromDocker()
-                .WithFallback(ClusterSingletonManager.DefaultConfig())
-                .WithFallback(SqlitePersistence.DefaultConfiguration());
+                .WithFallback(ClusterSingleton.DefaultConfig())
+                .WithFallback(SqlPersistence.DefaultConfiguration);
 
             var system = ActorSystem.Create("sharded-cluster-system", config);
             

@@ -32,11 +32,5 @@ namespace Akka.Coordination
             : base(message, innerEx)
         {
         }
-
-        protected LeaseTimeoutException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-
-        }
     }
 }

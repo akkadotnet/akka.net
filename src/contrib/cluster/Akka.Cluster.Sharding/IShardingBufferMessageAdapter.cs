@@ -14,6 +14,7 @@ namespace Akka.Cluster.Sharding;
 public interface IShardingBufferMessageAdapter
 {
     public object Apply(object message, IActorContext context);
+    public object UnApply(object message, IActorContext context);
 }
 
 [InternalApi]
@@ -24,6 +25,8 @@ internal class EmptyBufferMessageAdapter: IShardingBufferMessageAdapter
     private EmptyBufferMessageAdapter()
     {
     }
-        
+    
     public object Apply(object message, IActorContext context) => message;
+    
+    public object UnApply(object message, IActorContext context) => message;
 }

@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <Import Project="..\..\multiNodeRunnerSettings.props" />
   <PropertyGroup>
     <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
   </PropertyGroup>

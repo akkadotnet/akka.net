@@ -18,20 +18,20 @@ namespace Akka.Util
         private readonly object _lock = new();
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Switch"/> class.
         /// </summary>
-        /// <param name="startAsOn">TBD</param>
+        /// <param name="startAsOn">Whether the switch should start in the on position.</param>
         public Switch(bool startAsOn = false)
         {
             _switch = new Util.AtomicBoolean(startAsOn);
         }
 
         /// <summary>
-        /// TBD
+        /// Performs a state transition from the specified state while executing an action.
         /// </summary>
-        /// <param name="from">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="from">The state to transition from.</param>
+        /// <param name="action">The action to execute during the transition.</param>
+        /// <returns>True if the transition was successful, false otherwise.</returns>
         protected bool TranscendFrom(bool from, Action action)
         {
             lock(_lock)
@@ -195,9 +195,9 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Executes an action while holding the switch's lock.
         /// </summary>
-        /// <param name="action">TBD</param>
+        /// <param name="action">The action to execute under the lock.</param>
         public void Locked(Action action)
         {
             lock (_lock)

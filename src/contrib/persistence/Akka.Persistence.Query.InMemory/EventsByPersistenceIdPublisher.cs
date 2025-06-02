@@ -6,9 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Immutable;
+using System.Linq;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Persistence.Journal;
 using Akka.Streams.Actors;
+using static Akka.Persistence.Query.InMemory.MemoryQueryJournalHelpers;
 
 namespace Akka.Persistence.Query.InMemory
 {
@@ -36,7 +40,7 @@ namespace Akka.Persistence.Query.InMemory
     {
         private ILoggingAdapter _log;
 
-        protected DeliveryBuffer<EventEnvelope> Buffer;
+        protected readonly DeliveryBuffer<EventEnvelope> Buffer;
         protected readonly IActorRef JournalRef;
         protected long CurrentSequenceNr;
 
@@ -73,13 +77,13 @@ namespace Akka.Persistence.Query.InMemory
         {
             switch (message)
             {
-                case EventsByPersistenceIdPublisher.Continue _:
+                case EventsByPersistenceIdPublisher.Continue:
                     // no-op
                     return true;
-                case Request _:
+                case Request:
                     Replay();
                     return true;
-                case Cancel _:
+                case Cancel:
                     Context.Stop(Self);
                     return true;
                 default:
@@ -120,16 +124,11 @@ namespace Akka.Persistence.Query.InMemory
                 switch (message)
                 {
                     case ReplayedMessage replayed:
-                        var seqNr = replayed.Persistent.SequenceNr;
-                        // NOTES: tags is empty because tags are not retrieved from the database query (as of this writing)
-                        Buffer.Add(new EventEnvelope(
-                            offset: new Sequence(seqNr),
-                            persistenceId: PersistenceId,
-                            sequenceNr: seqNr,
-                            @event: replayed.Persistent.Payload,
-                            timestamp: replayed.Persistent.Timestamp,
-                            tags: Array.Empty<string>()));
-                        CurrentSequenceNr = seqNr + 1;
+                        var e = PrepareEnventEnvelope(replayed.Persistent);
+                        
+                        Buffer.Add(e);
+                        
+                        CurrentSequenceNr = e.SequenceNr + 1;
                         Buffer.DeliverBuffer(TotalDemand);
                         return true;
 

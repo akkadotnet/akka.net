@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
+using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks.Actor
 {
@@ -124,6 +125,7 @@ namespace Akka.Benchmarks.Actor
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark, ActorMessagingBenchmark)]
         public async Task BenchmarkFsm()
         {
             for (var i = 0; i < MsgCount; i++)
@@ -142,6 +144,7 @@ namespace Akka.Benchmarks.Actor
         }
         
         [Benchmark(Baseline = true)]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark, ActorMessagingBenchmark)]
         public async Task BenchmarkUntyped()
         {
             for (var i = 0; i < MsgCount; i++)

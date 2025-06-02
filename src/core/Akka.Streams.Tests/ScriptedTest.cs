@@ -312,17 +312,6 @@ namespace Akka.Streams.Tests
         {
         }
 
-        [Obsolete("Will be removed after async_testkit conversion is done. Use RunScriptAsync instead")]
-        protected void RunScript<TIn2, TOut2, TMat2>(
-            Script<TIn2, TOut2> script, 
-            ActorMaterializerSettings settings,
-            Func<Flow<TIn2, TIn2, NotUsed>, Flow<TIn2, TOut2, TMat2>> op,
-            int maximumOverrun = 3,
-            int maximumRequest = 3,
-            int maximumBuffer = 3)
-            => RunScriptAsync(script, settings, op, maximumOverrun, maximumRequest, maximumBuffer)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-        
         protected async Task RunScriptAsync<TIn2, TOut2, TMat2>(
             Script<TIn2, TOut2> script, 
             ActorMaterializerSettings settings,

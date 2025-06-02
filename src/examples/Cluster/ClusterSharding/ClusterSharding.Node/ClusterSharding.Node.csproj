@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\contrib\cluster\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
-    <ProjectReference Include="..\..\..\..\contrib\persistence\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj" />
     <ProjectReference Include="..\..\..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
   </ItemGroup>
 
@@ -20,6 +19,9 @@
 
   <ItemGroup>
     <PackageReference Include="Akka.Bootstrap.Docker" Version="0.5.3" />
+    <PackageReference Include="Akka.Persistence.Sql" Version="1.5.38.1" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.14" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.14" />
   </ItemGroup>
 
 </Project>

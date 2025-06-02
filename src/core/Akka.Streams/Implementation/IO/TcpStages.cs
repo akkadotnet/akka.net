@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -41,6 +43,7 @@ namespace Akka.Streams.Implementation.IO
             private readonly TaskCompletionSource<StreamTcp.ServerBinding> _bindingPromise;
             private readonly TaskCompletionSource<NotUsed> _unbindPromise = new();
             private bool _unbindStarted = false;
+            private readonly Queue<StreamTcp.IncomingConnection> _pendingConnections = new();
 
             public ConnectionSourceStageLogic(Shape shape, ConnectionSourceStage stage, TaskCompletionSource<StreamTcp.ServerBinding> bindingPromise)
                 : base(shape)
@@ -53,8 +56,16 @@ namespace Akka.Streams.Implementation.IO
 
             public void OnPull()
             {
-                // Ignore if still binding
-                _listener?.Tell(new Tcp.ResumeAccepting(1), StageActor.Ref);
+                TryPush();
+            }
+
+            private void TryPush()
+            {
+                if (!IsAvailable(_stage._out)) return; // we have demand and can push
+                if (_pendingConnections.Count <= 0) return;
+                
+                var toPush = _pendingConnections.Dequeue();
+                Push(_stage._out, toPush);
             }
 
             public void OnDownstreamFinish(Exception cause)
@@ -160,7 +171,8 @@ namespace Akka.Streams.Implementation.IO
                         break;
                     
                     case Tcp.Connected connected:
-                        Push(_stage._out, ConnectionFor(connected, sender));
+                        _pendingConnections.Enqueue(ConnectionFor(connected, sender));
+                        TryPush();
                         break;
                     
                     case Tcp.Unbind _:
@@ -424,7 +436,10 @@ namespace Akka.Streams.Implementation.IO
                 _bytesOut = shape.Outlet;
 
                 _readHandler = new LambdaOutHandler(
-                    onPull: () => _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref),
+                    onPull: () =>
+                    {
+                        _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
+                    },
                     onDownstreamFinish: cause =>
                     {
                         if (cause is SubscriptionWithCancelException.NonFailureCancellation)
@@ -549,22 +564,39 @@ namespace Akka.Streams.Implementation.IO
             {
                 var msg = args.Item2;
 
-                if (msg is Terminated) FailStage(new StreamTcpException("The connection actor has terminated. Stopping now."));
-                else if (msg is Tcp.CommandFailed failed) FailStage(new StreamTcpException($"Tcp command {failed.Cmd} failed"));
-                else if (msg is Tcp.ErrorClosed closed) FailStage(new StreamTcpException($"The connection closed with error: {closed.Cause}"));
-                else if (msg is Tcp.Aborted) FailStage(new StreamTcpException("The connection has been aborted"));
-                else if (msg is Tcp.Closed) CompleteStage();
-                else if (msg is Tcp.ConfirmedClosed) CompleteStage();
-                else if (msg is Tcp.PeerClosed) Complete(_bytesOut);
-                else if (msg is Tcp.Received received)
+                switch (msg)
                 {
                     // Keep on reading even when closed. There is no "close-read-side" in TCP
-                    if (IsClosed(_bytesOut)) _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
-                    else Push(_bytesOut, received.Data);
-                }
-                else if (msg is WriteAck)
-                {
-                    if (!IsClosed(_bytesIn)) Pull(_bytesIn);
+                    case Tcp.Received received when IsClosed(_bytesOut):
+                        _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
+                        break;
+                    case Tcp.Received received:
+                        Push(_bytesOut, received.Data);
+                        break;
+                    case WriteAck:
+                    {
+                        if (!IsClosed(_bytesIn)) Pull(_bytesIn);
+                        break;
+                    }
+                    case Terminated:
+                        FailStage(new StreamTcpException("The connection actor has terminated. Stopping now."));
+                        break;
+                    case Tcp.CommandFailed failed:
+                        FailStage(new StreamTcpException($"Tcp command {failed.Cmd} failed"));
+                        break;
+                    case Tcp.ErrorClosed closed:
+                        FailStage(new StreamTcpException($"The connection closed with error: {closed.Cause}"));
+                        break;
+                    case Tcp.Aborted:
+                        FailStage(new StreamTcpException("The connection has been aborted"));
+                        break;
+                    case Tcp.Closed:
+                    case Tcp.ConfirmedClosed:
+                        CompleteStage();
+                        break;
+                    case Tcp.PeerClosed:
+                        Complete(_bytesOut);
+                        break;
                 }
             }
         }

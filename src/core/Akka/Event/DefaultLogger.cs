@@ -19,10 +19,10 @@ namespace Akka.Event
         private MinimalLogger _stdoutLogger;
         
         /// <summary>
-        /// TBD
+        /// Handles incoming logger messages and events.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message to be processed.</param>
+        /// <returns>True if the message was handled, false otherwise.</returns>
         protected override bool Receive(object message)
         {
             switch (message)

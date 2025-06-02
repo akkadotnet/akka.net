@@ -137,7 +137,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                 .WithFallback(DistributedData.DistributedData.DefaultConfig())
-                .WithFallback(ClusterSingletonManager.DefaultConfig());
+                .WithFallback(ClusterSingleton.DefaultConfig());
         }
 
         public RememberEntitiesBatchedUpdatesSpec(ITestOutputHelper helper) : base(GetConfig(), helper)

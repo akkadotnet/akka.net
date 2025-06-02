@@ -344,7 +344,8 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor extractor,
             object handOffStopMessage,
-            IRememberEntitiesProvider? rememberEntitiesProvider)
+            IRememberEntitiesProvider? rememberEntitiesProvider,
+            IShardingBufferMessageAdapter? bufferMessageAdapter)
         {
             return Actor.Props.Create(() => new Shard(
                 typeName,
@@ -353,7 +354,8 @@ namespace Akka.Cluster.Sharding
                 settings,
                 extractor,
                 handOffStopMessage,
-                rememberEntitiesProvider)).WithDeploy(Deploy.Local);
+                rememberEntitiesProvider,
+                bufferMessageAdapter)).WithDeploy(Deploy.Local);
         }
 
         [Serializable]
@@ -976,7 +978,8 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor extractor,
             object handOffStopMessage,
-            IRememberEntitiesProvider? rememberEntitiesProvider)
+            IRememberEntitiesProvider? rememberEntitiesProvider,
+            IShardingBufferMessageAdapter? bufferMessageAdapter)
         {
             _typeName = typeName;
             _shardId = shardId;
@@ -1020,7 +1023,7 @@ namespace Akka.Cluster.Sharding
                 _leaseRetryInterval = settings.LeaseSettings.LeaseRetryInterval;
             }
 
-            _bufferMessageAdapter = ClusterSharding.Get(Context.System).BufferMessageAdapter;
+            _bufferMessageAdapter = bufferMessageAdapter ?? EmptyBufferMessageAdapter.Instance;
         }
 
         protected override SupervisorStrategy SupervisorStrategy()
@@ -2001,7 +2004,7 @@ namespace Akka.Cluster.Sharding
                     if (WrappedMessage.Unwrap(message) is ShardRegion.StartEntity se)
                         StartEntity(se.EntityId, @ref);
                     else
-                        DeliverMessage(entityId, message, @ref);
+                        DeliverMessage(entityId, _bufferMessageAdapter.UnApply(message, Context), @ref);
                 }
 
                 TouchLastMessageTimestamp(entityId);
