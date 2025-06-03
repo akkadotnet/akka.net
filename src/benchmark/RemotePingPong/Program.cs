@@ -29,7 +29,7 @@ namespace RemotePingPong
             var configString = $@"
             akka {{
               actor.provider = remote
-              loglevel = INFO
+              loglevel = ERROR
               suppress-json-serializer-warning = on
               log-dead-letters = off
 
