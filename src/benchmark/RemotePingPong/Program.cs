@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util.Internal;
+using Akka.Event;
 
 namespace RemotePingPong
 {
@@ -70,6 +71,10 @@ namespace RemotePingPong
 
         private static async Task Main(params string[] args)
         {
+            // NEW: Parse command line arguments for recycler testing
+            var config = ParseArgs(args);
+            PrintRecyclerConfig(config);
+            
             try
             {
                 Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
@@ -78,12 +83,315 @@ namespace RemotePingPong
             {
                 await Console.Error.WriteLineAsync($"Attempted to elevate process priority, but failed due to {ex.Message} - carrying on at normal process priority.");
             }
-            if (args.Length == 0 || !uint.TryParse(args[0], out var timesToRun))
+
+            // NEW: Run comparison test if requested
+            if (config.CompareMode)
             {
-                timesToRun = 1u;
+                await RunComparison(config.TimesToRun);
+            }
+            else
+            {
+                await Start(config.TimesToRun);
+            }
+        }
+
+        // NEW: Configuration class for recycler testing
+        private class BenchmarkConfig
+        {
+            public uint TimesToRun { get; set; } = 1;
+            public bool CompareMode { get; set; } = false;
+            public bool DisableRecycler { get; set; } = false;
+            public bool MonitorExceptions { get; set; } = false;
+        }
+
+        // NEW: Parse command line arguments
+        private static BenchmarkConfig ParseArgs(string[] args)
+        {
+            var config = new BenchmarkConfig();
+            
+            for (int i = 0; i < args.Length; i++)
+            {
+                switch (args[i].ToLower())
+                {
+                    case "--times":
+                    case "-t":
+                        if (i + 1 < args.Length && uint.TryParse(args[i + 1], out var times))
+                        {
+                            config.TimesToRun = times;
+                            i++; // Skip next argument
+                        }
+                        break;
+                    case "--compare":
+                    case "-c":
+                        config.CompareMode = true;
+                        break;
+                    case "--disable-recycler":
+                    case "-d":
+                        config.DisableRecycler = true;
+                        break;
+                    case "--monitor-exceptions":
+                    case "-m":
+                        config.MonitorExceptions = true;
+                        break;
+                    case "--help":
+                    case "-h":
+                        PrintUsage();
+                        Environment.Exit(0);
+                        break;
+                    default:
+                        // Legacy: first argument as times to run
+                        if (i == 0 && uint.TryParse(args[0], out var legacyTimes))
+                        {
+                            config.TimesToRun = legacyTimes;
+                        }
+                        break;
+                }
             }
 
-            await Start(timesToRun);
+            // Set recycler environment variable if requested
+            if (config.DisableRecycler)
+            {
+                Environment.SetEnvironmentVariable("io.netty.recycler.maxCapacityPerThread", "0");
+            }
+
+            return config;
+        }
+
+        // NEW: Print usage information
+        private static void PrintUsage()
+        {
+            Console.WriteLine("RemotePingPong ThreadLocalPool Recycler Test");
+            Console.WriteLine();
+            Console.WriteLine("Usage: RemotePingPong [options]");
+            Console.WriteLine();
+            Console.WriteLine("Options:");
+            Console.WriteLine("  -t, --times <n>           Number of benchmark runs (default: 1)");
+            Console.WriteLine("  -c, --compare             Run comparison: recycler enabled vs disabled");
+            Console.WriteLine("  -d, --disable-recycler    Disable ThreadLocalPool recycler");
+            Console.WriteLine("  -m, --monitor-exceptions  Monitor for ThreadLocalPool exceptions");
+            Console.WriteLine("  -h, --help               Show this help");
+            Console.WriteLine();
+            Console.WriteLine("Examples:");
+            Console.WriteLine("  RemotePingPong --compare                    # Compare both modes");
+            Console.WriteLine("  RemotePingPong --disable-recycler -t 3      # Run 3 times with recycler disabled");
+            Console.WriteLine("  RemotePingPong --monitor-exceptions         # Monitor for exceptions");
+        }
+
+        // NEW: Print recycler configuration
+        private static void PrintRecyclerConfig(BenchmarkConfig config)
+        {
+            Console.WriteLine("=== ThreadLocalPool Recycler Configuration ===");
+            
+            var recyclerSetting = Environment.GetEnvironmentVariable("io.netty.recycler.maxCapacityPerThread");
+            var isDisabled = recyclerSetting == "0";
+            
+            Console.WriteLine($"Environment Variable: {recyclerSetting ?? "NOT SET"}");
+            Console.WriteLine($"Recycler Status: {(isDisabled ? "DISABLED" : "ENABLED")}");
+            Console.WriteLine($"Compare Mode: {config.CompareMode}");
+            Console.WriteLine($"Monitor Exceptions: {config.MonitorExceptions}");
+            Console.WriteLine($"Server GC: {GCSettings.IsServerGC}");
+            Console.WriteLine();
+        }
+
+        // NEW: Run comparison between enabled and disabled recycler
+        private static async Task RunComparison(uint timesToRun)
+        {
+            Console.WriteLine("=== COMPARISON MODE: Testing with and without ThreadLocalPool recycler ===");
+            Console.WriteLine();
+
+            // Test with recycler ENABLED
+            Console.WriteLine(">>> PHASE 1: ThreadLocalPool Recycler ENABLED <<<");
+            Environment.SetEnvironmentVariable("io.netty.recycler.maxCapacityPerThread", null);
+            PrintRecyclerStatus();
+            var enabledResults = await RunBenchmarkWithMetrics(timesToRun, "ENABLED");
+
+            Console.WriteLine();
+            Console.WriteLine(">>> PHASE 2: ThreadLocalPool Recycler DISABLED <<<");
+            Environment.SetEnvironmentVariable("io.netty.recycler.maxCapacityPerThread", "0");
+            PrintRecyclerStatus();
+            var disabledResults = await RunBenchmarkWithMetrics(timesToRun, "DISABLED");
+
+            // Print comparison
+            PrintComparison(enabledResults, disabledResults);
+        }
+
+        // NEW: Print current recycler status
+        private static void PrintRecyclerStatus()
+        {
+            var setting = Environment.GetEnvironmentVariable("io.netty.recycler.maxCapacityPerThread");
+            Console.WriteLine($"io.netty.recycler.maxCapacityPerThread = {setting ?? "NOT SET"}");
+            Console.WriteLine($"Recycler Status: {(setting == "0" ? "DISABLED" : "ENABLED")}");
+            Console.WriteLine();
+        }
+
+        // NEW: Benchmark results class
+        private class BenchmarkResults
+        {
+            public string Mode { get; set; }
+            public List<long> Throughputs { get; set; } = new();
+            public long TotalMemoryBefore { get; set; }
+            public long TotalMemoryAfter { get; set; }
+            public int Gen0CollectionsBefore { get; set; }
+            public int Gen0CollectionsAfter { get; set; }
+            public int Gen1CollectionsBefore { get; set; }
+            public int Gen1CollectionsAfter { get; set; }
+            public int Gen2CollectionsBefore { get; set; }
+            public int Gen2CollectionsAfter { get; set; }
+            public int ExceptionCount { get; set; }
+            public TimeSpan TotalTime { get; set; }
+        }
+
+        // NEW: Run benchmark with detailed metrics collection
+        private static async Task<BenchmarkResults> RunBenchmarkWithMetrics(uint timesToRun, string mode)
+        {
+            var results = new BenchmarkResults { Mode = mode };
+            var exceptionMonitor = new ThreadLocalPoolExceptionMonitor();
+            
+            // Collect initial metrics
+            var totalMemoryBefore = GC.GetTotalMemory(true);
+            var gen0Before = GC.CollectionCount(0);
+            var gen1Before = GC.CollectionCount(1);
+            var gen2Before = GC.CollectionCount(2);
+            
+            var stopwatch = Stopwatch.StartNew();
+            
+            try
+            {
+                for (var i = 0; i < timesToRun; i++)
+                {
+                    var redCount = 0;
+                    var bestThroughput = 0L;
+                    foreach (var throughput in GetClientSettings())
+                    {
+                        var result = await Benchmark(throughput, repeat, bestThroughput, redCount, exceptionMonitor);
+                        bestThroughput = result.Item2;
+                        redCount = result.Item3;
+                        results.Throughputs.Add(bestThroughput);
+                    }
+                }
+            }
+            finally
+            {
+                stopwatch.Stop();
+                
+                // Collect final metrics
+                var totalMemoryAfter = GC.GetTotalMemory(true);
+                var gen0After = GC.CollectionCount(0);
+                var gen1After = GC.CollectionCount(1);
+                var gen2After = GC.CollectionCount(2);
+                
+                results.TotalMemoryBefore = totalMemoryBefore;
+                results.TotalMemoryAfter = totalMemoryAfter;
+                results.Gen0CollectionsBefore = gen0Before;
+                results.Gen0CollectionsAfter = gen0After;
+                results.Gen1CollectionsBefore = gen1Before;
+                results.Gen1CollectionsAfter = gen1After;
+                results.Gen2CollectionsBefore = gen2Before;
+                results.Gen2CollectionsAfter = gen2After;
+                results.ExceptionCount = exceptionMonitor.ThreadLocalPoolExceptionCount;
+                results.TotalTime = stopwatch.Elapsed;
+            }
+            
+            return results;
+        }
+
+        // NEW: ThreadLocalPool exception monitor
+        private class ThreadLocalPoolExceptionMonitor
+        {
+            public int ThreadLocalPoolExceptionCount { get; private set; }
+            
+            public ThreadLocalPoolExceptionMonitor()
+            {
+                AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+            }
+            
+            private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+            {
+                if (e.ExceptionObject is Exception ex && 
+                    IsThreadLocalPoolException(ex))
+                {
+                    Interlocked.Increment(ref ThreadLocalPoolExceptionCount);
+                    Console.WriteLine($"[EXCEPTION] ThreadLocalPool NullReferenceException detected: {ex.Message}");
+                    Console.WriteLine($"[EXCEPTION] Stack trace: {ex.StackTrace}");
+                }
+            }
+            
+            private static bool IsThreadLocalPoolException(Exception ex)
+            {
+                return ex is NullReferenceException && 
+                       (ex.StackTrace?.Contains("ThreadLocalPool") == true ||
+                        ex.StackTrace?.Contains("WeakOrderQueue") == true);
+            }
+        }
+
+        // NEW: Print comparison results
+        private static void PrintComparison(BenchmarkResults enabled, BenchmarkResults disabled)
+        {
+            Console.WriteLine();
+            Console.WriteLine("=== RECYCLER COMPARISON RESULTS ===");
+            Console.WriteLine();
+            
+            var avgThroughputEnabled = enabled.Throughputs.Count > 0 ? enabled.Throughputs.Average() : 0;
+            var avgThroughputDisabled = disabled.Throughputs.Count > 0 ? disabled.Throughputs.Average() : 0;
+            var throughputDelta = avgThroughputDisabled - avgThroughputEnabled;
+            var throughputPercentChange = avgThroughputEnabled > 0 ? (throughputDelta / avgThroughputEnabled) * 100 : 0;
+            
+            Console.WriteLine($"{"Metric",-30} {"Enabled",-15} {"Disabled",-15} {"Delta",-15} {"% Change",-10}");
+            Console.WriteLine(new string('=', 85));
+            
+            Console.WriteLine($"{"Avg Throughput (msg/sec)",-30} {avgThroughputEnabled,-15:N0} {avgThroughputDisabled,-15:N0} {throughputDelta,-15:N0} {throughputPercentChange,-10:F1}%");
+            
+            var memoryDeltaEnabled = enabled.TotalMemoryAfter - enabled.TotalMemoryBefore;
+            var memoryDeltaDisabled = disabled.TotalMemoryAfter - disabled.TotalMemoryBefore;
+            var memoryDiff = memoryDeltaDisabled - memoryDeltaEnabled;
+            var memoryPercentChange = memoryDeltaEnabled != 0 ? ((double)memoryDiff / memoryDeltaEnabled) * 100 : 0;
+            
+            Console.WriteLine($"{"Memory Delta (bytes)",-30} {memoryDeltaEnabled,-15:N0} {memoryDeltaDisabled,-15:N0} {memoryDiff,-15:N0} {memoryPercentChange,-10:F1}%");
+            
+            var gen0DeltaEnabled = enabled.Gen0CollectionsAfter - enabled.Gen0CollectionsBefore;
+            var gen0DeltaDisabled = disabled.Gen0CollectionsAfter - disabled.Gen0CollectionsBefore;
+            var gen0Diff = gen0DeltaDisabled - gen0DeltaEnabled;
+            var gen0PercentChange = gen0DeltaEnabled > 0 ? ((double)gen0Diff / gen0DeltaEnabled) * 100 : 0;
+            
+            Console.WriteLine($"{"Gen 0 Collections",-30} {gen0DeltaEnabled,-15} {gen0DeltaDisabled,-15} {gen0Diff,-15} {gen0PercentChange,-10:F1}%");
+            
+            var gen1DeltaEnabled = enabled.Gen1CollectionsAfter - enabled.Gen1CollectionsBefore;
+            var gen1DeltaDisabled = disabled.Gen1CollectionsAfter - disabled.Gen1CollectionsBefore;
+            var gen1Diff = gen1DeltaDisabled - gen1DeltaEnabled;
+            var gen1PercentChange = gen1DeltaEnabled > 0 ? ((double)gen1Diff / gen1DeltaEnabled) * 100 : 0;
+            
+            Console.WriteLine($"{"Gen 1 Collections",-30} {gen1DeltaEnabled,-15} {gen1DeltaDisabled,-15} {gen1Diff,-15} {gen1PercentChange,-10:F1}%");
+            
+            Console.WriteLine($"{"ThreadLocalPool Exceptions",-30} {enabled.ExceptionCount,-15} {disabled.ExceptionCount,-15} {disabled.ExceptionCount - enabled.ExceptionCount,-15} {"N/A",-10}");
+            Console.WriteLine($"{"Total Time",-30} {enabled.TotalTime.TotalSeconds,-15:F2}s {disabled.TotalTime.TotalSeconds,-15:F2}s {(disabled.TotalTime - enabled.TotalTime).TotalSeconds,-15:F2}s {"N/A",-10}");
+            
+            Console.WriteLine();
+            Console.WriteLine("=== SUMMARY ===");
+            if (disabled.ExceptionCount == 0 && enabled.ExceptionCount > 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("✓ SUCCESS: Disabling recycler eliminated ThreadLocalPool exceptions!");
+                Console.ResetColor();
+            }
+            else if (disabled.ExceptionCount > 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("✗ WARNING: ThreadLocalPool exceptions still occurring with recycler disabled");
+                Console.ResetColor();
+            }
+            
+            if (Math.Abs(throughputPercentChange) < 10)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"✓ Performance impact acceptable: {throughputPercentChange:F1}% change in throughput");
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"⚠ Significant performance impact: {throughputPercentChange:F1}% change in throughput");
+                Console.ResetColor();
+            }
         }
 
         private static bool _firstRun = true;
@@ -148,7 +456,7 @@ namespace RemotePingPong
             return numberOfClients * numberOfRepeats * 2;
         }
 
-        private static async Task<(bool, long, int)> Benchmark(int numberOfClients, long numberOfRepeats, long bestThroughput, int redCount)
+        private static async Task<(bool, long, int)> Benchmark(int numberOfClients, long numberOfRepeats, long bestThroughput, int redCount, ThreadLocalPoolExceptionMonitor exceptionMonitor = null)
         {
             var totalMessagesReceived = GetTotalMessagesReceived(numberOfClients, numberOfRepeats);
             var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0));

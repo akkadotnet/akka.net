@@ -6,6 +6,8 @@
   <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);net6.0</TargetFrameworks>
   <OutputType>Exe</OutputType>
   <IsPackable>false</IsPackable>
+  <!-- Support multiple main entry points -->
+  <StartupObject Condition="'$(RecyclerTest)' == 'true'">RemotePingPong.RecyclerTestProgram</StartupObject>
 </PropertyGroup>
 
 <PropertyGroup>
