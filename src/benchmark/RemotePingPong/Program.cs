@@ -39,13 +39,6 @@ namespace RemotePingPong
                 dot-netty.tcp {{
                     port = {port}
                     hostname = ""{ipOrHostname}""
-                    log-dot-netty-config = {enableDotNettyConfigDump.ToString().ToLower()}
-                    batching {{
-                        enabled = true
-                        max-pending-writes = 30
-                        max-pending-bytes = 16k
-                        flush-interval = 40ms
-                    }}
                 }}
               }}
             }}";
