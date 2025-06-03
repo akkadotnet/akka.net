@@ -25,6 +25,13 @@ using DotNetty.Handlers.Tls;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Globalization;
+using System.Runtime;
+using System.Threading;
+using DotNetty.Common.Concurrency;
+using DotNetty.Transport.Channels.Groups;
 
 namespace Akka.Remote.Transport.DotNetty
 {
@@ -149,6 +156,12 @@ namespace Akka.Remote.Transport.DotNetty
             AssociationListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
 
             SchemeIdentifier = (Settings.EnableSsl ? "ssl." : string.Empty) + Settings.TransportMode.ToString().ToLowerInvariant();
+
+            // NEW: Dump DotNetty configuration if requested
+            if (Settings.LogDotNettyConfig)
+            {
+                LogDotNettyConfiguration();
+            }
         }
 
         public DotNettyTransportSettings Settings { get; }
@@ -427,6 +440,189 @@ namespace Akka.Remote.Transport.DotNetty
             }
 
             return new IPEndPoint(found, address.Port);
+        }
+
+        /// <summary>
+        /// Logs the actual DotNetty configuration for debugging purposes.
+        /// This includes ThreadLocalPool settings, allocator information,
+        /// and other internal DotNetty settings that can help diagnose issues.
+        /// </summary>
+        private void LogDotNettyConfiguration()
+        {
+            Log.Info("=== DotNetty Configuration Dump ===");
+            
+            try
+            {
+                // Log basic environment and runtime information
+                Log.Info("Environment: OS={0}, ProcessorCount={1}, ServerGC={2}", 
+                    Environment.OSVersion, Environment.ProcessorCount, GCSettings.IsServerGC);
+                
+                // Log ThreadLocalPool recycler configuration
+                LogThreadLocalPoolConfiguration();
+                
+                // Log ByteBuffer allocator configuration
+                LogByteBufferAllocatorConfiguration();
+                
+                // Log DotNetty transport settings
+                LogTransportConfiguration();
+                
+                // Log loaded DotNetty assemblies
+                LogLoadedDotNettyAssemblies();
+                
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Failed to dump DotNetty configuration: {0}", ex.Message);
+            }
+            
+            Log.Info("=== End DotNetty Configuration Dump ===");
+        }
+
+        /// <summary>
+        /// Logs ThreadLocalPool recycler configuration by inspecting environment variables
+        /// and attempting to determine the actual runtime behavior.
+        /// </summary>
+        private void LogThreadLocalPoolConfiguration()
+        {
+            try
+            {
+                Log.Info("ThreadLocalPool Recycler Configuration:");
+                
+                // Check environment variables that control recycler behavior
+                var maxCapacityPerThread = Environment.GetEnvironmentVariable("io.netty.recycler.maxCapacityPerThread");
+                var maxCapacity = Environment.GetEnvironmentVariable("io.netty.recycler.maxCapacity");
+                var ratio = Environment.GetEnvironmentVariable("io.netty.recycler.ratio");
+                var linkCapacity = Environment.GetEnvironmentVariable("io.netty.recycler.linkCapacity");
+                
+                Log.Info("  io.netty.recycler.maxCapacityPerThread = {0}", maxCapacityPerThread ?? "NOT SET");
+                Log.Info("  io.netty.recycler.maxCapacity = {0}", maxCapacity ?? "NOT SET");
+                Log.Info("  io.netty.recycler.ratio = {0}", ratio ?? "NOT SET");
+                Log.Info("  io.netty.recycler.linkCapacity = {0}", linkCapacity ?? "NOT SET");
+                
+                // Determine effective recycler state
+                bool recyclerDisabled = maxCapacityPerThread == "0" || maxCapacity == "0";
+                Log.Info("  Effective recycler state: {0}", recyclerDisabled ? "DISABLED" : "ENABLED");
+                
+                if (recyclerDisabled)
+                {
+                    Log.Info("  ✓ ThreadLocalPool recycling is DISABLED - this should prevent ARM64 race conditions");
+                }
+                else
+                {
+                    Log.Warning("  ⚠ ThreadLocalPool recycling is ENABLED - may be vulnerable to ARM64 race conditions");
+                    Log.Warning("    Consider setting io.netty.recycler.maxCapacityPerThread=0 to disable recycling");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Failed to log ThreadLocalPool configuration: {0}", ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Logs ByteBuffer allocator configuration used by DotNetty.
+        /// </summary>
+        private void LogByteBufferAllocatorConfiguration()
+        {
+            try
+            {
+                Log.Info("ByteBuffer Allocator Configuration:");
+                
+                // Akka.Remote always uses UnpooledByteBufferAllocator.Default
+                Log.Info("  Akka.Remote uses: UnpooledByteBufferAllocator.Default");
+                Log.Info("  Enable pooling setting: {0}", Settings.EnableBufferPooling);
+                
+                if (!Settings.EnableBufferPooling)
+                {
+                    Log.Info("  ✓ Buffer pooling is disabled in Akka.Remote settings");
+                }
+                else
+                {
+                    Log.Info("  ⚠ Buffer pooling is enabled in Akka.Remote settings");
+                    Log.Info("    Note: Akka.Remote still uses UnpooledByteBufferAllocator regardless");
+                }
+                
+                // Check for DotNetty pooling environment variables
+                var disablePooledBuf = Environment.GetEnvironmentVariable("io.netty.buffer.noPreferDirect");
+                var maxOrder = Environment.GetEnvironmentVariable("io.netty.allocator.maxOrder");
+                
+                Log.Info("  io.netty.buffer.noPreferDirect = {0}", disablePooledBuf ?? "NOT SET");
+                Log.Info("  io.netty.allocator.maxOrder = {0}", maxOrder ?? "NOT SET");
+                
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Failed to log ByteBuffer allocator configuration: {0}", ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Logs the current DotNetty transport settings from Akka.Remote configuration.
+        /// </summary>
+        private void LogTransportConfiguration()
+        {
+            try
+            {
+                Log.Info("DotNetty Transport Settings:");
+                Log.Info("  Transport mode: {0}", Settings.TransportMode);
+                Log.Info("  Enable SSL: {0}", Settings.EnableSsl);
+                Log.Info("  Hostname: {0}:{1}", Settings.Hostname, Settings.Port);
+                Log.Info("  Max frame size: {0} bytes", Settings.MaxFrameSize);
+                Log.Info("  Server worker pool size: {0}", Settings.ServerSocketWorkerPoolSize);
+                Log.Info("  Client worker pool size: {0}", Settings.ClientSocketWorkerPoolSize);
+                Log.Info("  TCP keep alive: {0}", Settings.TcpKeepAlive);
+                Log.Info("  TCP no delay: {0}", Settings.TcpNoDelay);
+                Log.Info("  Log transport: {0}", Settings.LogTransport);
+                Log.Info("  Backwards compatibility: {0}", Settings.BackwardsCompatibilityModeEnabled);
+                Log.Info("  Byte order: {0}", Settings.ByteOrder);
+                
+                if (Settings.ReceiveBufferSize.HasValue)
+                    Log.Info("  Receive buffer size: {0} bytes", Settings.ReceiveBufferSize.Value);
+                if (Settings.SendBufferSize.HasValue)
+                    Log.Info("  Send buffer size: {0} bytes", Settings.SendBufferSize.Value);
+                if (Settings.WriteBufferHighWaterMark.HasValue)
+                    Log.Info("  Write buffer high water mark: {0} bytes", Settings.WriteBufferHighWaterMark.Value);
+                if (Settings.WriteBufferLowWaterMark.HasValue)
+                    Log.Info("  Write buffer low water mark: {0} bytes", Settings.WriteBufferLowWaterMark.Value);
+                    
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Failed to log DotNetty transport configuration: {0}", ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Logs information about loaded DotNetty assemblies and their versions.
+        /// </summary>
+        private void LogLoadedDotNettyAssemblies()
+        {
+            try
+            {
+                var dotNettyAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+                    .Where(a => a.GetName().Name?.Contains("DotNetty") == true)
+                    .ToArray();
+                
+                Log.Info("Loaded DotNetty Assemblies:");
+                
+                if (dotNettyAssemblies.Length == 0)
+                {
+                    Log.Info("  No DotNetty assemblies currently loaded");
+                }
+                else
+                {
+                    foreach (var assembly in dotNettyAssemblies)
+                    {
+                        var name = assembly.GetName();
+                        Log.Info("  {0} v{1}", name.Name, name.Version);
+                    }
+                }
+                
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Failed to log loaded DotNetty assemblies: {0}", ex.Message);
+            }
         }
 
         #endregion

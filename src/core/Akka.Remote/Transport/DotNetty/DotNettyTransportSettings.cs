@@ -108,6 +108,9 @@ namespace Akka.Remote.Transport.DotNetty
     /// <param name="BatchWriterSettings">
     ///     Used for performance-tuning the DotNetty channels to maximize I/O performance.
     /// </param>
+    /// <param name="LogDotNettyConfig">
+    ///     When set to true, it will enable logging of DotNetty configuration during initialization.
+    /// </param>
     internal sealed record DotNettyTransportSettings(
         TransportMode TransportMode, 
         bool EnableSsl,
@@ -132,6 +135,7 @@ namespace Akka.Remote.Transport.DotNetty
         int? WriteBufferLowWaterMark,
         bool BackwardsCompatibilityModeEnabled,
         bool LogTransport,
+        bool LogDotNettyConfig,
         ByteOrder ByteOrder,
         bool EnableBufferPooling,
         BatchWriterSettings BatchWriterSettings)
@@ -214,6 +218,7 @@ namespace Akka.Remote.Transport.DotNetty
                 WriteBufferLowWaterMark: ToNullableInt(config.GetByteSize("write-buffer-low-water-mark", null)),
                 BackwardsCompatibilityModeEnabled: config.GetBoolean("enable-backwards-compatibility"),
                 LogTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport"),
+                LogDotNettyConfig: config.HasPath("log-dot-netty-config") && config.GetBoolean("log-dot-netty-config"),
                 ByteOrder: order,
                 EnableBufferPooling: config.GetBoolean("enable-pooling", true),
                 BatchWriterSettings: batchWriterSettings
