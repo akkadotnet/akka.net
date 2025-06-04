@@ -16,6 +16,8 @@ namespace Akka.Persistence.Query
 {
     public sealed class PersistenceQuery : IExtension
     {
+        private static readonly Type ReadJournalType = typeof(IReadJournal);
+        
         private readonly ExtendedActorSystem _system;
         private readonly ConcurrentDictionary<string, IReadJournal> _readJournalPluginExtensionIds = new();
         private ILoggingAdapter _log;
@@ -34,18 +36,24 @@ namespace Akka.Persistence.Query
         }
 
         public TJournal ReadJournalFor<TJournal>(string readJournalPluginId) where TJournal : IReadJournal
+            => (TJournal) ReadJournalFor(typeof(TJournal), readJournalPluginId);
+
+        public IReadJournal ReadJournalFor(Type readJournalType, string readJournalPluginId)
         {
+            if(!ReadJournalType.IsAssignableFrom(readJournalType))
+                throw new ArgumentException("Must implement IReadJournal interface", nameof(readJournalType));
+            
             if(_readJournalPluginExtensionIds.TryGetValue(readJournalPluginId, out var plugin))
-                return (TJournal)plugin;
+                return plugin;
             
             lock (_lock)
             {
                 if (_readJournalPluginExtensionIds.TryGetValue(readJournalPluginId, out plugin))
-                    return (TJournal)plugin;
+                    return plugin;
                 
-                plugin = CreatePlugin(readJournalPluginId, GetDefaultConfig<TJournal>()).GetReadJournal();
+                plugin = CreatePlugin(readJournalPluginId, GetDefaultConfig(readJournalType)).GetReadJournal();
                 _readJournalPluginExtensionIds[readJournalPluginId] = plugin;
-                return (TJournal)plugin;
+                return plugin;
             }
         }
 
@@ -79,8 +87,11 @@ namespace Akka.Persistence.Query
         }
 
         public static Config GetDefaultConfig<TJournal>()
+            => GetDefaultConfig(typeof(TJournal));
+
+        public static Config GetDefaultConfig(Type journalType)
         {
-            var defaultConfigMethod = typeof(TJournal).GetMethod("DefaultConfiguration", BindingFlags.Public | BindingFlags.Static);
+            var defaultConfigMethod = journalType.GetMethod("DefaultConfiguration", BindingFlags.Public | BindingFlags.Static);
             return defaultConfigMethod?.Invoke(null, null) as Config;
         }
     }
