@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AskSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ namespace Akka.Tests.Actor
                             Sender.Tell(123);
                             break;
                         case "system":
-                            Sender.Tell(new DummySystemMessage());
+                            Sender.As<IInternalActorRef>().SendSystemMessage(new DummySystemMessage());
                             break;
                     }
                 
@@ -218,7 +218,7 @@ namespace Akka.Tests.Actor
             }
             catch (AskTimeoutException e)
             {
-                Assert.Equal("Timeout after 00:00:03 seconds", e.Message);
+                Assert.Equal("Timeout after 3.00 seconds", e.Message);
             }
         }
 

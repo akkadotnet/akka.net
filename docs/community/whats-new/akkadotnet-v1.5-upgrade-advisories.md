@@ -11,6 +11,72 @@ This document contains specific upgrade suggestions, warnings, and notices that 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/-UPestlIw4k" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 <!-- markdownlint-enable MD033 -->
 
+## Upgrading to Akka.NET v1.5.40
+
+### Akka.Persistence.Sql.Common and Akka.Persistence.Query.Sql Deprecation
+
+we're deprecating `Akka.Persistence.Sql.Common` and `Akka.Persistence.Query.Sql` packages and all `Akka.Persistence` plugins based on them. For continual support, we strongly recommend that you migrate to the new [`Akka.Persistence.Sql` or the `Akka.Persistence.Sql.Hosting`](https://github.com/akkadotnet/Akka.Persistence.Sql) package.
+
+#### Migration Resources
+
+To assist with the migration, please refer to the following resources:
+
+* **Migration Guide:**  
+  Learn the necessary steps to upgrade by following the [Migration Guide](https://github.com/akkadotnet/Akka.Persistence.Sql/blob/dev/docs/articles/migration.md).
+
+* **Migration Walkthrough:**  
+  For a step-by-step walkthrough, check out our [Migration Walkthrough](https://github.com/akkadotnet/Akka.Persistence.Sql/blob/dev/docs/articles/migration-walkthrough.md).
+
+* **Migration Guide Video:**  
+  Watch the [Migration Guide Video](https://www.youtube.com/watch?v=gSmqUrVHPq8) on YouTube for a detailed explanation of the migration process.
+
+## Upgrading to Akka.NET v1.5.32
+
+### Future Breaking Change in `Akka.Cluster.Tools`
+
+The method `ClusterSingleton.Init()` will be removed in future v1.6, if you're using this method, you need to convert it to use `ClusterSingletonManager.Props` and `ClusterSingletonProxy.Props` instead.
+
+In order to preserve backward compatibility within your cluster, if you're using this convention:
+
+```csharp
+var settings = ClusterSingletonSettings.Create(system);
+var singletonActor = SingletonActor.Create(Counter.Props, "GlobalCounter")
+    .WithStopMessage(MyStopMessage.Instance)
+    .WithSettings(settings);
+var proxy = singleton.Init(singletonActor);
+```
+
+You will need to convert it to:
+
+```csharp
+var managerSettings = ClusterSingletonManagerSettings.Create(system)
+    .WithSingletonName("GlobalCounter");
+system.ActorOf(
+    props: ClusterSingletonManager.Props(
+        singletonProps: Counter.Props,
+        terminationMessage: MyStopMessage.Instance,
+        settings: managerSettings),
+    name: "singletonManagerGlobalCounter");
+
+var proxySettings = ClusterSingletonProxySettings.Create(system)
+    .WithSingletonName("GlobalCounter");
+var proxy = system.ActorOf(
+    props: ClusterSingletonProxy.Props(
+        singletonManagerPath: "/user/singletonManagerGlobalCounter",
+        settings: proxySettings),
+    name: "singletonProxyGlobalCounter");
+```
+
+Note that to preserve backward compatibility between cluster nodes, the singleton manager actor name **MUST** be in the `$"singletonManager{singletonName}"` format.
+
+## Upgrading to Akka.NET v1.5.31
+
+Akka.NET v1.5.31 introduces a breaking behavior change to actor `Stash`. In previous behavior, `Stash` will filter out any messages that are identical (see explanation below) when it is prepended with another. It will not do so now, which is the actual intended behavior.
+
+This change will affect `Akka.Persistence` users or users who use the `Stash.Prepend()` method in their code. You will need to add a de-duplication code if your code depends on sending identical messages multiple times to a persistence actor while it is recovering.
+
+Messages are considered as identical if they are sent from the same sender actor and have a payload message that `Equals()` to true against another message. Example payload types would be an object pointing to the same memory address (`ReferenceEquals()` returns true), value types (enum, primitives, structs), and classes that implements the `IEquatable` interface.
+
 ## Upgrading to Akka.NET v1.5.15
 
 Akka.NET v1.5.15 introduces several major changes:

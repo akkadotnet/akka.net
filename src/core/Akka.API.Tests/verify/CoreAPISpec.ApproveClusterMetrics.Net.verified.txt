@@ -371,6 +371,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 [Akka.Annotations.InternalApiAttribute()]
                 public static bool Defined(Akka.Cluster.Metrics.Helpers.AnyNumber value) { }
                 public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric other) { }
+                public override bool Equals(object obj) { }
                 public override int GetHashCode() { }
                 public bool SameAs(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric that) { }
                 public static Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric +(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric m1, Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric m2) { }

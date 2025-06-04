@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LeastShardAllocationStrategySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -99,8 +99,8 @@ namespace Akka.Cluster.Sharding.Tests
         {
             public static readonly ImmutableDictionaryKeepOrder<TKey, TValue> Empty = new(ImmutableDictionary<TKey, TValue>.Empty, ImmutableList<KeyValuePair<TKey, TValue>>.Empty);
 
-            private readonly ImmutableDictionary<TKey, TValue> _dictionary = ImmutableDictionary<TKey, TValue>.Empty;
-            private readonly ImmutableList<KeyValuePair<TKey, TValue>> _items = ImmutableList<KeyValuePair<TKey, TValue>>.Empty;
+            private readonly ImmutableDictionary<TKey, TValue> _dictionary;
+            private readonly ImmutableList<KeyValuePair<TKey, TValue>> _items;
 
             private ImmutableDictionaryKeepOrder(ImmutableDictionary<TKey, TValue> dictionary, ImmutableList<KeyValuePair<TKey, TValue>> items)
             {

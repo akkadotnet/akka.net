@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StringFormat.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ using System.Collections.Generic;
 namespace Akka.Util
 {
     /// <summary>
-    /// TBD
+    /// Utility methods for safely formatting strings with null values.
     /// </summary>
     public static class StringFormat
     {
@@ -21,7 +21,7 @@ namespace Akka.Util
         /// </summary>
         /// <param name="separator">The separator.</param>
         /// <param name="args">The arguments.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A string with the concatenated values, separated by the specified separator.</returns>
         public static string SafeJoin(string separator, params object[] args)
         {
             return string.Join(separator, ConvertValues(args));

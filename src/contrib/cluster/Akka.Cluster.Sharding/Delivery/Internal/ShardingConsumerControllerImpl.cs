@@ -1,9 +1,9 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="ShardingConsumerControllerImpl.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-//  </copyright>
-// -----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ShardingConsumerControllerImpl.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 #nullable enable
 using System;
@@ -68,6 +68,11 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
         {
             _log.Debug("Consumer terminated before initialized.");
             Context.Stop(Self);
+        });
+
+        Receive<Passivate>(_ => Sender.Equals(_consumer), p =>
+        {
+            Context.Parent.Tell(p);
         });
         
         ReceiveAny(msg =>
@@ -140,6 +145,11 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
                     _log.Debug("Unknown [{0}] terminated.", t.ActorRef);
                 }
             }
+        });
+
+        Receive<Passivate>(_ => Sender.Equals(_consumer), p =>
+        {
+            Context.Parent.Tell(p);
         });
         
         ReceiveAny(msg =>

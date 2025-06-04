@@ -1,10 +1,10 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RememberEntitiesBatchedUpdatesSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-#nullable enable
+
 using System;
 using System.Linq;
 using Akka.Actor;
@@ -137,7 +137,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                 .WithFallback(DistributedData.DistributedData.DefaultConfig())
-                .WithFallback(ClusterSingletonManager.DefaultConfig());
+                .WithFallback(ClusterSingleton.DefaultConfig());
         }
 
         public RememberEntitiesBatchedUpdatesSpec(ITestOutputHelper helper) : base(GetConfig(), helper)

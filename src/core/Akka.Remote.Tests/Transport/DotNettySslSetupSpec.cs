@@ -1,6 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="DotNettySslSupportSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="DotNettySslSetupSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -72,6 +73,7 @@ akka {{
         {
         }
 
+        #if !NET471
         [Fact]
         public async Task Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
         {
@@ -88,6 +90,7 @@ akka {{
                 await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
             }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
         }
+        #endif
 
         [Fact]
         public async Task Secure_transport_should_NOT_be_possible_between_systems_using_SSL_and_one_not_using_it()

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "docfx": {
+      "version": "2.78.3",
+      "commands": [
+        "docfx"
+      ],
+      "rollForward": true
+    },
+    "incrementalist.cmd": {
+      "version": "1.1.0-beta1",
+      "commands": [
+        "incrementalist"
+      ],
+      "rollForward": true
+    }
+  }
+}

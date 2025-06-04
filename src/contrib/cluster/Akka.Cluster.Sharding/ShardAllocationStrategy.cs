@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardAllocationStrategy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -169,11 +169,11 @@ namespace Akka.Cluster.Sharding
                 var sortedRegionEntries = RegionEntriesFor(currentShardAllocations).OrderBy(i => i, ShardSuitabilityOrdering.Instance).ToImmutableList();
                 if (IsAGoodTimeToRebalance(sortedRegionEntries))
                 {
-                    var (_, Shards) = MostSuitableRegion(sortedRegionEntries);
+                    var (_, shards) = MostSuitableRegion(sortedRegionEntries);
                     // even if it is to another new node.
                     var mostShards = sortedRegionEntries.Select(r => r.ShardIds.Where(s => !rebalanceInProgress.Contains(s))).MaxBy(i => i.Count())?.ToArray() ?? Array.Empty<string>();
 
-                    var difference = mostShards.Length - Shards.Count;
+                    var difference = mostShards.Length - shards.Count;
                     if (difference >= _rebalanceThreshold)
                     {
                         var n = Math.Min(

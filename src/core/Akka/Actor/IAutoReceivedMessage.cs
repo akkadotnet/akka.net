@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IAutoReceivedMessage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -210,6 +210,21 @@ namespace Akka.Actor
         public override string ToString()
         {
             return "<PoisonPill>";
+        }
+    }
+
+    /// <summary>
+    /// Sending a <see cref="IntentionalRestart"/> message will force it to throw a <see cref="IntentionalActorRestartException"/>
+    /// when it processes the message.
+    /// </summary>
+    public sealed class IntentionalRestart : IAutoReceivedMessage
+    {
+        private IntentionalRestart() { }
+        public static IntentionalRestart Instance { get; } = new();
+        
+        public override string ToString()
+        {
+            return "<Restart>";
         }
     }
 

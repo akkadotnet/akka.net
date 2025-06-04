@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SmallestMailboxSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ namespace Akka.Tests.Routing
                         usedActors.TryAdd(0, Self.Path.ToString());
                         Self.Tell("another in busy mailbox");
                         receivedLatch.CountDown();
-                        busy.Ready(TestLatch.DefaultTimeout);
+                        busy.Ready(TimeSpan.FromSeconds(5));
                         break;
                     
                     case (int msg, TestLatch receivedLatch) _:

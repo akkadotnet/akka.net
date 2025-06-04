@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Replicator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -390,8 +390,8 @@ namespace Akka.DistributedData
             _previousClockTime = DateTime.UtcNow.Ticks * 100;
 
             _hasDurableKeys = settings.DurableKeys.Count > 0;
-            var durableKeysBuilder = ImmutableHashSet<string>.Empty.ToBuilder();
-            var durableWildcardsBuilder = ImmutableHashSet<string>.Empty.ToBuilder();
+            var durableKeysBuilder = ImmutableHashSet.CreateBuilder<string>();
+            var durableWildcardsBuilder = ImmutableHashSet.CreateBuilder<string>();
             foreach (var key in settings.DurableKeys)
             {
                 if (key.EndsWith('*'))
@@ -1198,7 +1198,7 @@ namespace Akka.DistributedData
             if (_log.IsDebugEnabled && _settings.VerboseDebugLogging)
                 _log.Debug("Received gossip from [{0}], containing [{1}]", Sender.Path.Address, string.Join(", ", updatedData.Keys));
 
-            var replyData = ImmutableDictionary<string, DataEnvelope>.Empty.ToBuilder();
+            var replyData = ImmutableDictionary.CreateBuilder<string, DataEnvelope>();
             foreach (var d in updatedData)
             {
                 var key = d.Key;

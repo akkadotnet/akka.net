@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ILoggingAdapter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -493,7 +493,7 @@ namespace Akka.Event
         public static void Error<T1, T2, T3, T4>(this ILoggingAdapter log, Exception cause, string format, T1 arg1,
             T2 arg2, T3 arg3, T4 arg4)
         {
-            if (!log.IsInfoEnabled)
+            if (!log.IsErrorEnabled)
                 return;
 
             log.Log(LogLevel.ErrorLevel, cause, format, arg1, arg2, arg3, arg4);

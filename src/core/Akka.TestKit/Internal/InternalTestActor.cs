@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalTestActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
+using System.Threading.Channels;
 using Akka.Actor;
 using Akka.Event;
 
@@ -16,18 +17,18 @@ namespace Akka.TestKit.Internal
     /// An actor that enqueues received messages to a <see cref="BlockingCollection{T}"/>.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public class InternalTestActor : UntypedActor
+    internal sealed class InternalTestActor : UntypedActor
     {
-        private readonly ITestActorQueue<MessageEnvelope> _queue;
-        private TestKit.TestActor.Ignore _ignore;
+        private readonly ChannelWriter<MessageEnvelope> _queue;
+        private TestActor.Ignore _ignore;
         private AutoPilot _autoPilot;
-        private DelegatingSupervisorStrategy _supervisorStrategy = new();
+        private readonly DelegatingSupervisorStrategy _supervisorStrategy = new();
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="queue">TBD</param>
-        public InternalTestActor(ITestActorQueue<MessageEnvelope> queue)
+        public InternalTestActor(ChannelWriter<MessageEnvelope> queue)
         {
             _queue = queue;
         }
@@ -41,15 +42,13 @@ namespace Akka.TestKit.Internal
         {
             try
             {
-                global::System.Diagnostics.Debug.WriteLine("TestActor received " + message);
+                System.Diagnostics.Debug.WriteLine("TestActor received " + message);
             }
             catch (FormatException)
+                when (message is LogEvent { Message: LogMessage msg })
             {
-                if (message is LogEvent { Message: LogMessage msg })
-                    global::System.Diagnostics.Debug.WriteLine(
-                        $"TestActor received a malformed formatted message. Template:[{msg.Format}], args:[{string.Join(",", msg.Unformatted())}]");
-                else
-                    throw;
+                System.Diagnostics.Debug.WriteLine(
+                    $"TestActor received a malformed formatted message. Template:[{msg.Format}], args:[{string.Join(",", msg.Unformatted())}]");
             }
 
             switch (message)
@@ -75,7 +74,11 @@ namespace Akka.TestKit.Internal
                     {
                         _supervisorStrategy.Update(actor, spawn._supervisorStrategy.Value);
                     }
-                    _queue.Enqueue(new RealMessageEnvelope(actor, Self));
+                    var wrote = _queue.TryWrite(new RealMessageEnvelope(actor, Self));
+                    if (!wrote)
+                    {
+                        throw new InvalidOperationException("Failed to write to internal TestActor queue");
+                    }
                     return;
                 }
             }
@@ -87,8 +90,17 @@ namespace Akka.TestKit.Internal
                 if(newAutoPilot is not KeepRunning)
                     _autoPilot = newAutoPilot;
             }
-            if(_ignore == null || !_ignore(message))
-                _queue.Enqueue(new RealMessageEnvelope(message, actorRef));
+
+            if (_ignore != null && _ignore(message)) return;
+            {
+                var wrote =  _queue.TryWrite(new RealMessageEnvelope(message, actorRef));
+                if (!wrote)
+                {
+                    throw new InvalidOperationException("Failed to write to internal TestActor queue");
+                }
+            }
         }
+
+        protected override SupervisorStrategy SupervisorStrategy() => _supervisorStrategy;
     }
 }

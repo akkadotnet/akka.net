@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Shard.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Cluster.Sharding.Internal;
@@ -343,7 +344,8 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor extractor,
             object handOffStopMessage,
-            IRememberEntitiesProvider? rememberEntitiesProvider)
+            IRememberEntitiesProvider? rememberEntitiesProvider,
+            IShardingBufferMessageAdapter? bufferMessageAdapter)
         {
             return Actor.Props.Create(() => new Shard(
                 typeName,
@@ -352,7 +354,8 @@ namespace Akka.Cluster.Sharding
                 settings,
                 extractor,
                 handOffStopMessage,
-                rememberEntitiesProvider)).WithDeploy(Deploy.Local);
+                rememberEntitiesProvider,
+                bufferMessageAdapter)).WithDeploy(Deploy.Local);
         }
 
         [Serializable]
@@ -962,6 +965,8 @@ namespace Akka.Cluster.Sharding
         private readonly Lease? _lease;
         private readonly TimeSpan _leaseRetryInterval = TimeSpan.FromSeconds(5); // won't be used
 
+        private readonly IShardingBufferMessageAdapter _bufferMessageAdapter;
+        
         public ILoggingAdapter Log { get; } = Context.GetLogger();
         public IStash Stash { get; set; } = null!;
         public ITimerScheduler Timers { get; set; } = null!;
@@ -973,7 +978,8 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor extractor,
             object handOffStopMessage,
-            IRememberEntitiesProvider? rememberEntitiesProvider)
+            IRememberEntitiesProvider? rememberEntitiesProvider,
+            IShardingBufferMessageAdapter? bufferMessageAdapter)
         {
             _typeName = typeName;
             _shardId = shardId;
@@ -1016,6 +1022,8 @@ namespace Akka.Cluster.Sharding
 
                 _leaseRetryInterval = settings.LeaseSettings.LeaseRetryInterval;
             }
+
+            _bufferMessageAdapter = bufferMessageAdapter ?? EmptyBufferMessageAdapter.Instance;
         }
 
         protected override SupervisorStrategy SupervisorStrategy()
@@ -1051,17 +1059,25 @@ namespace Akka.Cluster.Sharding
 
         private void ReleaseLeaseIfNeeded()
         {
-            if (_lease != null)
+            if (_lease is null)
+                return;
+
+            try
             {
-                _lease.Release().ContinueWith(r =>
+                ReleaseLease().GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // no-op, we're shutting down anyway.
+            }
+            
+            return;
+
+            async Task ReleaseLease()
+            {
+                try
                 {
-                    if (r.IsFaulted || r.IsCanceled)
-                    {
-                        Log.Error(r.Exception,
-                            "{0}: Failed to release lease of shardId [{1}]. Shard may not be able to run on another node until lease timeout occurs.",
-                            _typeName, _shardId);
-                    }
-                    else if (r.Result)
+                    if (await _lease.Release())
                     {
                         Log.Info("{0}: Lease of shardId [{1}] released.", _typeName, _shardId);
                     }
@@ -1071,7 +1087,13 @@ namespace Akka.Cluster.Sharding
                             "{0}: Failed to release lease of shardId [{1}]. Shard may not be able to run on another node until lease timeout occurs.",
                             _typeName, _shardId);
                     }
-                });
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex,
+                        "{0}: Failed to release lease of shardId [{1}]. Shard may not be able to run on another node until lease timeout occurs.",
+                        _typeName, _shardId);
+                }
             }
         }
 
@@ -1085,18 +1107,12 @@ namespace Akka.Cluster.Sharding
         {
             switch (message)
             {
-                case LeaseAcquireResult lar when lar.Acquired:
+                case LeaseAcquireResult { Acquired: true }:
                     Log.Debug("{0}: Lease acquired", _typeName);
                     TryLoadRememberedEntities();
                     return true;
 
-                case LeaseAcquireResult lar when !lar.Acquired && lar.Reason == null:
-                    Log.Error("{0}: Failed to get lease for shard id [{1}]. Retry in {2}",
-                        _typeName, _shardId, _leaseRetryInterval);
-                    Timers.StartSingleTimer(LeaseRetryTimer, Shard.LeaseRetry.Instance, _leaseRetryInterval);
-                    return true;
-
-                case LeaseAcquireResult lar when !lar.Acquired && lar.Reason != null:
+                case LeaseAcquireResult { Acquired: false } lar:
                     Log.Error(lar.Reason, "{0}: Failed to get lease for shard id [{1}]. Retry in {2}",
                         _typeName, _shardId, _leaseRetryInterval);
                     Timers.StartSingleTimer(LeaseRetryTimer, Shard.LeaseRetry.Instance, _leaseRetryInterval);
@@ -1126,12 +1142,21 @@ namespace Akka.Cluster.Sharding
             Log.Info("{0}: Acquiring lease {1}", _typeName, lease.Settings);
 
             var self = Self;
-            lease.Acquire(reason => { self.Tell(new LeaseLost(reason)); }).ContinueWith(r =>
+            Acquire().PipeTo(self);
+            return;
+            
+            async Task<LeaseAcquireResult> Acquire()
             {
-                if (r.IsFaulted || r.IsCanceled)
-                    return new LeaseAcquireResult(false, r.Exception);
-                return new LeaseAcquireResult(r.Result, null);
-            }).PipeTo(Self);
+                try
+                {
+                    var result = await lease.Acquire(reason => { self.Tell(new LeaseLost(reason)); });
+                    return new LeaseAcquireResult(result, null);
+                }
+                catch (Exception ex)
+                {
+                    return new LeaseAcquireResult(false, ex);
+                }
+            }
         }
 
         // ===== remember entities initialization =====
@@ -1610,7 +1635,7 @@ namespace Akka.Cluster.Sharding
                         "HandOffStopper"));
 
                     //During hand off we only care about watching for termination of the hand off stopper
-                    Context.Become((object message) =>
+                    Context.Become(message =>
                     {
                         switch (message)
                         {
@@ -1953,7 +1978,7 @@ namespace Akka.Cluster.Sharding
                 if (Log.IsDebugEnabled)
                     Log.Debug("{0}: Message of type [{1}] for entity [{2}] buffered", _typeName, msg.GetType().Name,
                         id);
-                _messageBuffers.Append(id, msg, snd);
+                _messageBuffers.Append(id, _bufferMessageAdapter.Apply(msg, Context), snd);
             }
         }
 
@@ -1976,10 +2001,10 @@ namespace Akka.Cluster.Sharding
                 // and as the child exists, the message will be directly forwarded
                 foreach (var (message, @ref) in messages)
                 {
-                    if (message is ShardRegion.StartEntity se)
+                    if (WrappedMessage.Unwrap(message) is ShardRegion.StartEntity se)
                         StartEntity(se.EntityId, @ref);
                     else
-                        DeliverMessage(entityId, message, @ref);
+                        DeliverMessage(entityId, _bufferMessageAdapter.UnApply(message, Context), @ref);
                 }
 
                 TouchLastMessageTimestamp(entityId);

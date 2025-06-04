@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueueSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -233,9 +233,8 @@ namespace Akka.Streams.Tests.Dsl
                 await ExpectMsgAsync(Option<int>.Create(2));
 
                 sub.SendComplete();
-                var future = queue.PullAsync();
-                future.Wait(_pause).Should().BeTrue();
-                future.Result.Should().Be(Option<int>.None);
+                var result = await queue.PullAsync();
+                result.Should().Be(Option<int>.None);
             }, _materializer);
         }
 

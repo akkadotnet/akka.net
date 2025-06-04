@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorSpecAsyncAwait.Actors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -597,11 +597,12 @@ namespace Akka.Persistence.Tests
                             await Task.Delay(100);
 
                             Sender.Tell(cmd.Data);
+                            var events = new List<Evt>();
                             for (int i = 1; i <= 3; i++)
                             {
-                                PersistAsync(new Evt(cmd.Data.ToString() + "-" + (++_counter)),
-                                    evt => { Sender.Tell("a" + evt.Data.ToString().Substring(1)); });
+                                events.Add(new Evt(cmd.Data.ToString() + "-" + (++_counter)));
                             }
+                            PersistAllAsync(events, evt => { Sender.Tell("a" + evt.Data.ToString().Substring(1)); });
                         });
 
                         return true;

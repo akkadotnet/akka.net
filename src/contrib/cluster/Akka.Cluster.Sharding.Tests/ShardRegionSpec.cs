@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardRegionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -44,7 +44,6 @@ namespace Akka.Cluster.Sharding.Tests
                 => message switch
                 {
                     int i => (i % 10).ToString(),
-                    ShardRegion.StartEntity se => (int.Parse(se.EntityId) % numberOfShards).ToString(),
                     _ => null
                 };
 
@@ -73,8 +72,8 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.cluster.sharding.verbose-debug-logging = on
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
                 akka.cluster.sharding.distributed-data.durable.keys = []")
-                .WithFallback(ClusterSingletonManager.DefaultConfig()
-                .WithFallback(ClusterSharding.DefaultConfig()));
+                .WithFallback(ClusterSingleton.DefaultConfig())
+                .WithFallback(ClusterSharding.DefaultConfig());
 
 
         private ActorSystem sysA;

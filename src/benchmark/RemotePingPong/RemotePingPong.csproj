@@ -5,6 +5,7 @@
   <Authors>Akka.NET Team</Authors>
   <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);net6.0</TargetFrameworks>
   <OutputType>Exe</OutputType>
+  <IsPackable>false</IsPackable>
 </PropertyGroup>
 
 <PropertyGroup>
