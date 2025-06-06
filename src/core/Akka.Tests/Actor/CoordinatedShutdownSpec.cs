@@ -53,10 +53,30 @@ namespace Akka.Tests.Actor
 
         private class CustomReason : CoordinatedShutdown.Reason
         {
+            public const int CustomExitCode = 999;
+            public const string CustomMessage = "Custom Exit Code";
+            static CustomReason()
+            {
+                Reason.RegisterReason(CustomExitCode, CustomMessage);
+            }
+            
+            public override int ExitCode => CustomExitCode;
         }
 
         private static CoordinatedShutdown.Reason customReason = new CustomReason();
 
+        [Fact]
+        public async Task CoordinatedShutdown_must_set_ActorSystem_exit_code_to_Reason_ExitCode()
+        {
+            // Intentionally running as a detached task
+            _ = CoordinatedShutdown.Get(Sys).Run(customReason);
+
+            var systemResult = await Sys.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(10));
+            systemResult.Should().Be(CustomReason.CustomExitCode);
+
+            Reason.TryGetReason(systemResult, out var reason).Should().BeTrue();
+            reason.Should().Be(CustomReason.CustomMessage);
+        }
 
         [Fact]
         public void CoordinatedShutdown_must_sort_phases_in_topological_order()

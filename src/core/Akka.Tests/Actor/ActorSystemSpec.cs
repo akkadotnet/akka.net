@@ -23,6 +23,7 @@ using Akka.Event;
 using Akka.TestKit.Extensions;
 using FluentAssertions.Execution;
 using Akka.Tests.Util;
+using FluentAssertions;
 
 namespace Akka.Tests.Actor
 {
@@ -210,6 +211,21 @@ namespace Akka.Tests.Actor
             
             var ex = Assert.Throws<InvalidOperationException>(() => actorSystem.RegisterOnTermination(() => { }));
             Assert.Equal("ActorSystem already terminated.", ex.Message);
+        }
+
+        [Fact]
+        public async Task ActorSystem_exit_code_must_be_OK_on_terminate()
+        {
+            var shutdownResult = await Sys.Terminate();
+            shutdownResult.Should().Be((int)CoordinatedShutdown.CommonExitCodes.Ok);
+        }
+
+        [Fact]
+        public async Task ActorSystem_exit_code_must_be_ABORT_on_abort()
+        {
+            ((ExtendedActorSystem)Sys).Abort();
+            var shutdownResult = await Sys.WhenTerminated;
+            shutdownResult.Should().Be((int)CoordinatedShutdown.CommonExitCodes.Abort);
         }
 
         [Fact]

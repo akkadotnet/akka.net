@@ -156,20 +156,69 @@ namespace Akka.Actor
         public const string PhaseBeforeActorSystemTerminate = "before-actor-system-terminate";
         public const string PhaseActorSystemTerminate = "actor-system-terminate";
 
-
+        /// <summary>
+        /// Common exit codes supported out of the box.
+        /// Note: When adding new exit codes, make sure that the exit code adheres
+        ///       to the Linux standard.
+        /// See: https://manpages.ubuntu.com/manpages/lunar/man3/sysexits.h.3head.html
+        /// See: https://manpages.ubuntu.com/manpages/noble/man3/EXIT_SUCCESS.3const.html
+        /// </summary>
+        internal enum CommonExitCodes
+        {
+            Ok = 0,
+            UnknownReason = 1,
+            // Exit code 2 is reserved for Linux Bash for "Incorrect Usage"
+            Abort = 3,
+            ClrExit = 4,
+            ClusterDowned = 5,
+            ClusterLeft = 6,
+            ClusterJoinFailed = 7,
+            // Exit codes 64-78 is reserved by Linux sysexits.h
+            // Exit codes 126 and above is reserved by Linux shell
+        }
 
         /// <summary>
-        /// Reason for the shutdown, which can be used by tasks in case they need to do
+        /// Reason for the shutdown, which tasks can use in case they need to do
         /// different things depending on what caused the shutdown. There are some
         /// predefined reasons, but external libraries applications may also define
         /// other reasons.
         /// </summary>
-        public class Reason
+        public abstract class Reason
         {
+            private static readonly Dictionary<int, string> ReasonMap;
+
+            static Reason()
+            {
+                ReasonMap = new Dictionary<int, string>
+                {
+                    [(int)CommonExitCodes.Ok] = "ActorSystem shutdown successfully",
+                    [(int)CommonExitCodes.UnknownReason] = "Unknown shutdown reason",
+                    [(int)CommonExitCodes.Abort] = "ActorSystem aborted",
+                    [(int)CommonExitCodes.ClrExit] = "CLR exit",
+                    [(int)CommonExitCodes.ClusterDowned] = "Cluster node downed",
+                    [(int)CommonExitCodes.ClusterLeft] = "Cluster node left the cluster",
+                    [(int)CommonExitCodes.ClusterJoinFailed] = "Cluster join unsuccessful",
+                };
+            }
+            
+            public abstract int ExitCode { get; }
+            
             protected Reason()
             {
 
             }
+            
+            public static void RegisterReason(int code, string reason)
+                => ReasonMap[code] = reason;
+
+            public static bool TryGetReason(int code, out string reason)
+                => ReasonMap.TryGetValue(code, out reason);
+
+            public static string GetReason(int code)
+                => ReasonMap.TryGetValue(code, out var reason) ? reason : $"Reason code not found: {code}";
+
+            public override string ToString()
+                => $"CoordinatedShutdown [{ExitCode}]: {GetReason(ExitCode)}";
         }
 
         /// <summary>
@@ -179,9 +228,9 @@ namespace Akka.Actor
         {
             public static readonly Reason Instance = new UnknownReason();
 
+            public override int ExitCode => (byte)CommonExitCodes.UnknownReason;
             private UnknownReason()
             {
-
             }
         }
 
@@ -192,9 +241,9 @@ namespace Akka.Actor
         {
             public static readonly Reason Instance = new ActorSystemTerminateReason();
 
+            public override int ExitCode => (byte)CommonExitCodes.Ok;
             private ActorSystemTerminateReason()
             {
-
             }
         }
 
@@ -205,6 +254,7 @@ namespace Akka.Actor
         {
             public static readonly Reason Instance = new ClrExitReason();
 
+            public override int ExitCode => (byte)CommonExitCodes.ClrExit;
             private ClrExitReason()
             {
 
@@ -219,6 +269,7 @@ namespace Akka.Actor
         {
             public static readonly Reason Instance = new ClusterDowningReason();
 
+            public override int ExitCode => (byte)CommonExitCodes.ClusterDowned;
             private ClusterDowningReason()
             {
 
@@ -233,6 +284,7 @@ namespace Akka.Actor
         {
             public static readonly Reason Instance = new ClusterLeavingReason();
 
+            public override int ExitCode => (byte)CommonExitCodes.ClusterLeft;
             private ClusterLeavingReason()
             {
 
@@ -245,6 +297,8 @@ namespace Akka.Actor
         public class ClusterJoinUnsuccessfulReason : Reason
         {
             public static readonly Reason Instance = new ClusterJoinUnsuccessfulReason();
+            
+            public override int ExitCode => (byte)CommonExitCodes.ClusterJoinFailed;
             private ClusterJoinUnsuccessfulReason() { }
         }
 
@@ -274,7 +328,7 @@ namespace Akka.Actor
         private readonly ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>> _tasks = new();
         private readonly AtomicReference<Reason> _runStarted = new(null);
         private readonly AtomicBoolean _clrHooksStarted = new(false);
-        private readonly TaskCompletionSource<Done> _runPromise = new();
+        private readonly TaskCompletionSource<int> _runPromise = new();
         private readonly TaskCompletionSource<Done> _hooksRunPromise = new();
 
         private volatile bool _runningClrHook = false;
@@ -395,7 +449,7 @@ namespace Akka.Actor
         /// <remarks>
         /// It is safe to call this method multiple times. It will only run the shutdown sequence once.
         /// </remarks>
-        public Task<Done> Run(Reason reason, string fromPhase = null)
+        public Task<int> Run(Reason reason, string fromPhase = null)
         {
             if (_runStarted.CompareAndSet(null, reason))
             {
@@ -516,7 +570,7 @@ namespace Akka.Actor
                 done.ContinueWith(tr =>
                 {
                     if (!tr.IsFaulted && !tr.IsCanceled)
-                        _runPromise.SetResult(tr.Result);
+                        _runPromise.SetResult(reason.ExitCode);
                     else
                     {
                         // ReSharper disable once PossibleNullReferenceException
@@ -646,32 +700,31 @@ namespace Akka.Actor
                         {
                             if (!system.WhenTerminated.Wait(timeout) && !coord._runningClrHook)
                             {
-                                Environment.Exit(0);
+                                // TODO: We're forcefully stopping the process due to timeout, should this return 0?
+                                Environment.Exit(coord.ShutdownReason?.ExitCode ?? 0);
                             }
                         });
                     }
 
                     if (terminateActorSystem)
                     {
-                        return system.FinalTerminate().ContinueWith(_ =>
+                        return system.FinalTerminate(coord.ShutdownReason?.ExitCode ?? 0).ContinueWith(_ =>
                         {
                             if (exitClr && !coord._runningClrHook)
                             {
-                                Environment.Exit(0);
+                                Environment.Exit(coord.ShutdownReason?.ExitCode ?? 0);
                             }
 
                             return Done.Instance;
                         });
                     }
-                    else if (exitClr)
+                    
+                    if (exitClr)
                     {
-                        Environment.Exit(0);
-                        return TaskEx.Completed;
+                        Environment.Exit(Get(system).ShutdownReason?.ExitCode ?? 0);
                     }
-                    else
-                    {
-                        return TaskEx.Completed;
-                    }
+                    
+                    return TaskEx.Completed;
                 });
             }
         }

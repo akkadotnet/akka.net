@@ -362,9 +362,9 @@ namespace Akka.Actor
         /// <returns>
         /// A <see cref="Task"/> that will complete once the actor system has finished terminating and all actors are stopped.
         /// </returns>
-        public abstract Task Terminate();
+        public abstract Task<int> Terminate();
 
-        internal abstract Task FinalTerminate();
+        internal abstract Task<int> FinalTerminate(int exitCode);
 
         /// <summary>
         /// Returns a task which will be completed after the <see cref="ActorSystem"/> has been
@@ -372,7 +372,7 @@ namespace Akka.Actor
         /// operations on the `dispatcher` of this actor system as it will have been shut down
         /// before this task completes.
         /// </summary>
-        public abstract Task WhenTerminated { get; }
+        public abstract Task<int> WhenTerminated { get; }
 
         /// <summary>
         /// Stops the specified actor permanently.

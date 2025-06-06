@@ -203,7 +203,7 @@ namespace Akka.Actor.Internal
         public override void Abort()
         {
             Aborting = true;
-            FinalTerminate(); // Skip CoordinatedShutdown check and aggressively shutdown the ActorSystem
+            FinalTerminate((byte)CoordinatedShutdown.CommonExitCodes.Abort); // Skip CoordinatedShutdown check and aggressively shutdown the ActorSystem
         }
 
         /// <summary>Starts this system</summary>
@@ -488,7 +488,7 @@ namespace Akka.Actor.Internal
 
         private void ConfigureTerminationCallbacks()
         {
-            _terminationCallbacks = new TerminationCallbacks(Provider.TerminationTask);
+            _terminationCallbacks = new TerminationCallbacks(Provider.TerminationTask, this);
         }
 
         /// <summary>
@@ -524,19 +524,20 @@ namespace Akka.Actor.Internal
         /// <returns>
         /// A <see cref="Task"/> that will complete once the actor system has finished terminating and all actors are stopped.
         /// </returns>
-        public override Task Terminate()
+        public override Task<int> Terminate()
         {
             if(Settings.CoordinatedShutdownRunByActorSystemTerminate)
             {
                 return CoordinatedShutdown.Get(this)
                     .Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
             }
-            return FinalTerminate();
+            return FinalTerminate(0);
         }
 
-        internal override Task FinalTerminate()
+        internal override Task<int> FinalTerminate(int exitCode)
         {
             Log.Debug("System shutdown initiated");
+            _terminationCallbacks.FinalExitCode = exitCode;
             if (!Settings.LogDeadLettersDuringShutdown && _logDeadLetterListener != null)
                 Stop(_logDeadLetterListener);
             _provider.Guardian.Stop();
@@ -549,7 +550,7 @@ namespace Akka.Actor.Internal
         /// operations on the `dispatcher` of this actor system as it will have been shut down
         /// before this task completes.
         /// </summary>
-        public override Task WhenTerminated { get { return _terminationCallbacks.TerminationTask; } }
+        public override Task<int> WhenTerminated { get { return _terminationCallbacks.TerminationTask; } }
 
         /// <summary>
         /// Stops the specified actor permanently.
@@ -648,23 +649,33 @@ namespace Akka.Actor.Internal
     /// <summary>
     /// This class represents a callback used to run a task when the actor system is terminating.
     /// </summary>
+    #nullable enable
     internal class TerminationCallbacks
     {
-        private Task _terminationTask;
-        private readonly AtomicReference<Task> _atomicRef;
+        private readonly TaskCompletionSource<int> _terminationPromise = new ();
+        private readonly AtomicReference<Task?> _atomicRef;
+
+        // Final exit code will be 0, unless overriden by something else (like Abort() call)
+        public int FinalExitCode { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TerminationCallbacks" /> class.
         /// </summary>
         /// <param name="upStreamTerminated">The task to run when the actor system is terminating</param>
-        public TerminationCallbacks(Task upStreamTerminated)
+        /// <param name="system">The ActorSystem parent of this instance</param>
+        public TerminationCallbacks(Task upStreamTerminated, ActorSystem system)
         {
-            _atomicRef = new AtomicReference<Task>(new Task(() => { }));
+            _atomicRef = new AtomicReference<Task?>(new Task(() =>
+            {
+                // CoordinatedShutdown must be fetched in a lazy way because it might not be initialized yet.
+                var exitCode = CoordinatedShutdown.Get(system).ShutdownReason?.ExitCode ?? FinalExitCode;
+                _terminationPromise.TrySetResult(exitCode);
+            }));
 
             upStreamTerminated.ContinueWith(_ =>
             {
-                _terminationTask = _atomicRef.GetAndSet(null);
-                _terminationTask.Start();
+                var task = _atomicRef.GetAndSet(null);
+                task!.Start(); // task shouldn't be null
             });
         }
 
@@ -677,7 +688,7 @@ namespace Akka.Actor.Internal
         {
             var previous = _atomicRef.Value;
 
-            if (_atomicRef.Value == null)
+            if (_atomicRef.Value == null || previous is null)
                 throw new InvalidOperationException("ActorSystem already terminated.");
 
             var t = new Task(code);
@@ -694,7 +705,7 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// The task that is currently being performed
         /// </summary>
-        public Task TerminationTask { get { return _atomicRef.Value ?? _terminationTask; } }
+        public Task<int> TerminationTask => _terminationPromise.Task;
     }
 }
 
