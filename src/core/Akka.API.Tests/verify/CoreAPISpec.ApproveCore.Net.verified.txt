@@ -400,6 +400,7 @@ namespace Akka.Actor
         public abstract Akka.Actor.IScheduler Scheduler { get; }
         public abstract Akka.Serialization.Serialization Serialization { get; }
         public abstract Akka.Actor.Settings Settings { get; }
+        public abstract Akka.Actor.CoordinatedShutdown.Reason ShutdownReason { get; }
         public System.TimeSpan StartTime { get; }
         public System.TimeSpan Uptime { get; }
         public abstract System.Threading.Tasks.Task WhenTerminated { get; }
@@ -579,30 +580,41 @@ namespace Akka.Actor
         public class ActorSystemTerminateReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public override int ExitCode { get; }
         }
         public class ClrExitReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public override int ExitCode { get; }
         }
         public class ClusterDowningReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public override int ExitCode { get; }
         }
         public class ClusterJoinUnsuccessfulReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public override int ExitCode { get; }
         }
         public class ClusterLeavingReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public override int ExitCode { get; }
         }
-        public class Reason
+        public abstract class Reason
         {
             protected Reason() { }
+            public abstract int ExitCode { get; }
+            public static string GetReason(int code) { }
+            public static void RegisterReason(int code, string reason) { }
+            public override string ToString() { }
+            public static bool TryGetReason(int code, out string reason) { }
         }
         public class UnknownReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public override int ExitCode { get; }
         }
     }
     public sealed class CoordinatedShutdownExtension : Akka.Actor.ExtensionIdProvider<Akka.Actor.CoordinatedShutdown>
@@ -2023,6 +2035,7 @@ namespace Akka.Actor.Internal
         public override Akka.Actor.IScheduler Scheduler { get; }
         public override Akka.Serialization.Serialization Serialization { get; }
         public override Akka.Actor.Settings Settings { get; }
+        public override Akka.Actor.CoordinatedShutdown.Reason ShutdownReason { get; }
         public override Akka.Actor.IInternalActorRef SystemGuardian { get; }
         public override System.Threading.Tasks.Task WhenTerminated { get; }
         public override void Abort() { }
