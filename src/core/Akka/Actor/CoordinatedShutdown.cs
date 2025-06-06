@@ -322,7 +322,7 @@ namespace Akka.Actor
         private readonly ConcurrentDictionary<string, ImmutableList<(string, Func<Task<Done>>)>> _tasks = new();
         private readonly AtomicReference<Reason> _runStarted = new(null);
         private readonly AtomicBoolean _clrHooksStarted = new(false);
-        private readonly TaskCompletionSource<int> _runPromise = new();
+        private readonly TaskCompletionSource<Done> _runPromise = new();
         private readonly TaskCompletionSource<Done> _hooksRunPromise = new();
 
         private volatile bool _runningClrHook = false;
@@ -443,7 +443,7 @@ namespace Akka.Actor
         /// <remarks>
         /// It is safe to call this method multiple times. It will only run the shutdown sequence once.
         /// </remarks>
-        public Task<int> Run(Reason reason, string fromPhase = null)
+        public Task<Done> Run(Reason reason, string fromPhase = null)
         {
             if (_runStarted.CompareAndSet(null, reason))
             {
@@ -564,7 +564,7 @@ namespace Akka.Actor
                 done.ContinueWith(tr =>
                 {
                     if (!tr.IsFaulted && !tr.IsCanceled)
-                        _runPromise.SetResult(reason.ExitCode);
+                        _runPromise.SetResult(tr.Result);
                     else
                     {
                         // ReSharper disable once PossibleNullReferenceException
