@@ -168,11 +168,8 @@ namespace Akka.Actor
             Ok = 0,
             UnknownReason = 1,
             // Exit code 2 is reserved for Linux Bash for "Incorrect Usage"
-            Abort = 3,
-            ClrExit = 4,
-            ClusterDowned = 5,
-            ClusterLeft = 6,
-            ClusterJoinFailed = 7,
+            ClusterDowned = 3,
+            ClusterJoinFailed = 4,
             // Exit codes 64-78 is reserved by Linux sysexits.h
             // Exit codes 126 and above is reserved by Linux shell
         }
@@ -193,10 +190,7 @@ namespace Akka.Actor
                 {
                     [(int)CommonExitCodes.Ok] = "ActorSystem shutdown successfully",
                     [(int)CommonExitCodes.UnknownReason] = "Unknown shutdown reason",
-                    [(int)CommonExitCodes.Abort] = "ActorSystem aborted",
-                    [(int)CommonExitCodes.ClrExit] = "CLR exit",
                     [(int)CommonExitCodes.ClusterDowned] = "Cluster node downed",
-                    [(int)CommonExitCodes.ClusterLeft] = "Cluster node left the cluster",
                     [(int)CommonExitCodes.ClusterJoinFailed] = "Cluster join unsuccessful",
                 };
             }
@@ -241,7 +235,7 @@ namespace Akka.Actor
         {
             public static readonly Reason Instance = new ActorSystemTerminateReason();
 
-            public override int ExitCode => (byte)CommonExitCodes.Ok;
+            public override int ExitCode => (int)CommonExitCodes.Ok;
             private ActorSystemTerminateReason()
             {
             }
@@ -254,7 +248,7 @@ namespace Akka.Actor
         {
             public static readonly Reason Instance = new ClrExitReason();
 
-            public override int ExitCode => (byte)CommonExitCodes.ClrExit;
+            public override int ExitCode => (int)CommonExitCodes.Ok;
             private ClrExitReason()
             {
 
@@ -269,7 +263,7 @@ namespace Akka.Actor
         {
             public static readonly Reason Instance = new ClusterDowningReason();
 
-            public override int ExitCode => (byte)CommonExitCodes.ClusterDowned;
+            public override int ExitCode => (int)CommonExitCodes.ClusterDowned;
             private ClusterDowningReason()
             {
 
@@ -284,7 +278,7 @@ namespace Akka.Actor
         {
             public static readonly Reason Instance = new ClusterLeavingReason();
 
-            public override int ExitCode => (byte)CommonExitCodes.ClusterLeft;
+            public override int ExitCode => (int)CommonExitCodes.Ok;
             private ClusterLeavingReason()
             {
 
@@ -298,7 +292,7 @@ namespace Akka.Actor
         {
             public static readonly Reason Instance = new ClusterJoinUnsuccessfulReason();
             
-            public override int ExitCode => (byte)CommonExitCodes.ClusterJoinFailed;
+            public override int ExitCode => (int)CommonExitCodes.ClusterJoinFailed;
             private ClusterJoinUnsuccessfulReason() { }
         }
 
@@ -700,7 +694,6 @@ namespace Akka.Actor
                         {
                             if (!system.WhenTerminated.Wait(timeout) && !coord._runningClrHook)
                             {
-                                // TODO: We're forcefully stopping the process due to timeout, should this return 0?
                                 Environment.Exit(coord.ShutdownReason?.ExitCode ?? 0);
                             }
                         });
@@ -708,7 +701,7 @@ namespace Akka.Actor
 
                     if (terminateActorSystem)
                     {
-                        return system.FinalTerminate(coord.ShutdownReason?.ExitCode ?? 0).ContinueWith(_ =>
+                        return system.FinalTerminate().ContinueWith(_ =>
                         {
                             if (exitClr && !coord._runningClrHook)
                             {

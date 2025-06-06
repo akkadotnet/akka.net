@@ -364,7 +364,7 @@ namespace Akka.Actor
         /// </returns>
         public abstract Task<int> Terminate();
 
-        internal abstract Task<int> FinalTerminate(int exitCode);
+        internal abstract Task<int> FinalTerminate();
 
         /// <summary>
         /// Returns a task which will be completed after the <see cref="ActorSystem"/> has been

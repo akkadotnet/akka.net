@@ -221,14 +221,6 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public async Task ActorSystem_exit_code_must_be_ABORT_on_abort()
-        {
-            ((ExtendedActorSystem)Sys).Abort();
-            var shutdownResult = await Sys.WhenTerminated;
-            shutdownResult.Should().Be((int)CoordinatedShutdown.CommonExitCodes.Abort);
-        }
-
-        [Fact]
         public async Task Reliably_create_waves_of_actors()
         {
             var timeout = Dilated(TimeSpan.FromSeconds(20));

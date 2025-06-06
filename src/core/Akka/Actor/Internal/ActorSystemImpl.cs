@@ -203,7 +203,7 @@ namespace Akka.Actor.Internal
         public override void Abort()
         {
             Aborting = true;
-            FinalTerminate((byte)CoordinatedShutdown.CommonExitCodes.Abort); // Skip CoordinatedShutdown check and aggressively shutdown the ActorSystem
+            FinalTerminate(); // Skip CoordinatedShutdown check and aggressively shutdown the ActorSystem
         }
 
         /// <summary>Starts this system</summary>
@@ -531,13 +531,12 @@ namespace Akka.Actor.Internal
                 return CoordinatedShutdown.Get(this)
                     .Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
             }
-            return FinalTerminate(0);
+            return FinalTerminate();
         }
 
-        internal override Task<int> FinalTerminate(int exitCode)
+        internal override Task<int> FinalTerminate()
         {
             Log.Debug("System shutdown initiated");
-            _terminationCallbacks.FinalExitCode = exitCode;
             if (!Settings.LogDeadLettersDuringShutdown && _logDeadLetterListener != null)
                 Stop(_logDeadLetterListener);
             _provider.Guardian.Stop();
@@ -655,9 +654,6 @@ namespace Akka.Actor.Internal
         private readonly TaskCompletionSource<int> _terminationPromise = new ();
         private readonly AtomicReference<Task?> _atomicRef;
 
-        // Final exit code will be 0, unless overriden by something else (like Abort() call)
-        public int FinalExitCode { get; set; }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="TerminationCallbacks" /> class.
         /// </summary>
@@ -668,7 +664,7 @@ namespace Akka.Actor.Internal
             _atomicRef = new AtomicReference<Task?>(new Task(() =>
             {
                 // CoordinatedShutdown must be fetched in a lazy way because it might not be initialized yet.
-                var exitCode = CoordinatedShutdown.Get(system).ShutdownReason?.ExitCode ?? FinalExitCode;
+                var exitCode = CoordinatedShutdown.Get(system).ShutdownReason?.ExitCode ?? 0;
                 _terminationPromise.TrySetResult(exitCode);
             }));
 
