@@ -71,10 +71,10 @@ namespace Akka.Tests.Actor
             // Intentionally running as a detached task
             _ = CoordinatedShutdown.Get(Sys).Run(customReason);
 
-            var systemResult = await Sys.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(10));
-            systemResult.Should().Be(CustomReason.CustomExitCode);
+            await Sys.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(10));
+            Sys.ShutdownReason.ExitCode.Should().Be(CustomReason.CustomExitCode);
 
-            Reason.TryGetReason(systemResult, out var reason).Should().BeTrue();
+            Reason.TryGetReason(Sys.ShutdownReason.ExitCode, out var reason).Should().BeTrue();
             reason.Should().Be(CustomReason.CustomMessage);
         }
 

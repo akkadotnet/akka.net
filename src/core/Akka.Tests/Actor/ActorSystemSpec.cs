@@ -214,10 +214,10 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public async Task ActorSystem_exit_code_must_be_OK_on_terminate()
+        public async Task ActorSystem_shutdown_reason_must_be_Ok()
         {
-            var shutdownResult = await Sys.Terminate();
-            shutdownResult.Should().Be((int)CoordinatedShutdown.CommonExitCodes.Ok);
+            await Sys.Terminate();
+            Sys.ShutdownReason.ExitCode.Should().Be(0);
         }
 
         [Fact]

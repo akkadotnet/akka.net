@@ -154,6 +154,9 @@ namespace Akka.Actor.Internal
 
         public Option<Props> GuardianProps { get; }
 
+        public override CoordinatedShutdown.Reason ShutdownReason 
+            => CoordinatedShutdown.Get(this).ShutdownReason ?? CoordinatedShutdown.ActorSystemTerminateReason.Instance;
+
         /// <summary>
         /// Creates a new system actor that lives under the "/system" guardian.
         /// </summary>
@@ -524,7 +527,7 @@ namespace Akka.Actor.Internal
         /// <returns>
         /// A <see cref="Task"/> that will complete once the actor system has finished terminating and all actors are stopped.
         /// </returns>
-        public override Task<int> Terminate()
+        public override Task Terminate()
         {
             if(Settings.CoordinatedShutdownRunByActorSystemTerminate)
             {
@@ -534,7 +537,7 @@ namespace Akka.Actor.Internal
             return FinalTerminate();
         }
 
-        internal override Task<int> FinalTerminate()
+        internal override Task FinalTerminate()
         {
             Log.Debug("System shutdown initiated");
             if (!Settings.LogDeadLettersDuringShutdown && _logDeadLetterListener != null)
@@ -549,7 +552,7 @@ namespace Akka.Actor.Internal
         /// operations on the `dispatcher` of this actor system as it will have been shut down
         /// before this task completes.
         /// </summary>
-        public override Task<int> WhenTerminated { get { return _terminationCallbacks.TerminationTask; } }
+        public override Task WhenTerminated { get { return _terminationCallbacks.TerminationTask; } }
 
         /// <summary>
         /// Stops the specified actor permanently.
