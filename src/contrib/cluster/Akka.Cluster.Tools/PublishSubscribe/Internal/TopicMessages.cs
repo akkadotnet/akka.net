@@ -12,6 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
+using Akka.Remote;
 using Akka.Routing;
 
 namespace Akka.Cluster.Tools.PublishSubscribe.Internal
@@ -310,12 +311,31 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// TBD
     /// </summary>
     [Serializable]
-    internal sealed class GossipTick
+    internal sealed class GossipTick: IDeadLetterSuppression
     {
         public static GossipTick Instance { get; } = new();
         private GossipTick() { }
     }
 
+    /// <summary>
+    /// Internal event signalling that a new subscriber has been added to the registry
+    /// either locally using <see cref="Put"/>, <see cref="Subscribe"/>, or from a <see cref="Delta"/>.
+    /// </summary>
+    internal sealed record NewBucketKeysAdded(IReadOnlyList<string> Topics): IDeadLetterSuppression;
+    
+    /// <summary>
+    /// Container for buffered <see cref="Publish"/> or <see cref="Send"/> messages
+    /// </summary>
+    /// <param name="Message">The original message being buffered</param>
+    /// <param name="Deadline">The deadline where this buffered message should be timed out</param>
+    internal readonly record struct BufferedMessage(IWrappedMessage Message, Deadline Deadline, IActorRef Sender);
+
+    internal sealed class PruneBufferTick: IDeadLetterSuppression
+    {
+        public static PruneBufferTick Instance { get; } = new();
+        private PruneBufferTick() { }
+    }
+    
     /// <summary>
     /// TBD
     /// </summary>

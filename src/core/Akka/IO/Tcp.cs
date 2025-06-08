@@ -50,25 +50,7 @@ namespace Akka.IO
         
         internal abstract class SocketCompleted : INoSerializationVerificationNeeded, IDeadLetterSuppression 
         { }
-
-        internal sealed class SocketSent : SocketCompleted
-        {
-            public static readonly SocketSent Instance = new();
-            private SocketSent() { }
-        }
-
-        internal sealed class SocketReceived : SocketCompleted
-        {
-            public static readonly SocketReceived Instance = new();
-            private SocketReceived() { }
-        }
-
-        internal sealed class SocketAccepted : SocketCompleted
-        {
-            public static readonly SocketAccepted Instance = new();
-            private SocketAccepted() { }
-        }
-
+        
         internal sealed class SocketConnected : SocketCompleted
         {
             public static readonly SocketConnected Instance = new();
@@ -182,6 +164,17 @@ namespace Akka.IO
             
             public TimeSpan? Timeout { get; }
             public bool PullMode { get; }
+            
+            /// <summary>
+            /// Optional - allows you to specify TCP settings for the connection.
+            ///
+            /// Otherwise, the system defaults will be used.
+            /// </summary>
+            /// <example>
+            /// var tcpSettings = TcpSettings.Create(ActorSystem);
+            /// var tcpSettingsWithDifferentBufferSizes = tcpSettings with { SendBufferSize = 8192, ReceiveBufferSize = 8192 };
+            /// </example>
+            public TcpSettings? TcpSettings { get; set; }
 
             public override string ToString() =>
                 $"Connect(remote: {RemoteAddress}, local: {LocalAddress}, timeout: {Timeout}, pullMode: {PullMode})";
@@ -227,6 +220,17 @@ namespace Akka.IO
             public IEnumerable<Inet.SocketOption> Options { get; }
 
             public bool PullMode { get; }
+            
+            /// <summary>
+            /// Optional - allows you to specify TCP settings for the connection.
+            ///
+            /// Otherwise, the system defaults will be used.
+            /// </summary>
+            /// <example>
+            /// var tcpSettings = TcpSettings.Create(ActorSystem);
+            /// var tcpSettingsWithDifferentBufferSizes = tcpSettings with { SendBufferSize = 8192, ReceiveBufferSize = 8192 };
+            /// </example>
+            public TcpSettings? TcpSettings { get; set; }
 
             public override string ToString() =>
                 $"Bind(addr: {LocalAddress}, handler: {Handler}, backlog: {Backlog}, pullMode: {PullMode})";
@@ -265,7 +269,7 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// In order to close down a listening socket, send this message to that socket’s
+        /// To close down a listening socket, send this message to that socket’s
         /// actor (that is the actor which previously had sent the <see cref="Bound" /> message). The
         /// listener socket actor will reply with a <see cref="Unbound" /> message.
         /// </summary>
@@ -378,6 +382,11 @@ namespace Akka.IO
             {
                 return new CompoundWrite(other, this);
             }
+            
+            /// <summary>
+            /// The number of bytes that will be written to the socket.
+            /// </summary>
+            public abstract long Bytes { get; }
 
             /// <summary>
             /// Prepend a group of writes before this one.
@@ -489,6 +498,8 @@ namespace Akka.IO
             {
                 return new Write(data, ack);
             }
+
+            public override long Bytes => Data.Count;
         }
         
         /// <summary>
@@ -540,6 +551,8 @@ namespace Akka.IO
 
             public override string ToString() =>
                 $"CompoundWrite({Head}, {TailCommand})";
+
+            public override long Bytes => Head.Bytes + TailCommand.Bytes;
         }
 
         /// <summary>
@@ -900,14 +913,7 @@ namespace Akka.IO
 
         internal TcpExt(ExtendedActorSystem system, TcpSettings settings)
         {
-            var bufferPoolConfig = system.Settings.Config.GetConfig(settings.BufferPoolConfigPath);
-
-            if (bufferPoolConfig.IsNullOrEmpty())
-                throw new ConfigurationException($"Cannot retrieve TCP buffer pool configuration: {settings.BufferPoolConfigPath} configuration node not found");
-
             Settings = settings;
-            FileIoDispatcher = system.Dispatchers.Lookup(Settings.FileIODispatcher);
-            BufferPool = CreateBufferPool(system, bufferPoolConfig);
             Manager = system.SystemActorOf(
                 props: Props.Create(() => new TcpManager(this)).WithDispatcher(Settings.ManagementDispatcher).WithDeploy(Deploy.Local),
                 name: "IO-TCP");
@@ -917,43 +923,11 @@ namespace Akka.IO
         /// Gets reference to a TCP manager actor.
         /// </summary>
         public override IActorRef Manager { get; }
-
-        /// <summary>
-        /// A buffer pool used by current plugin.
-        /// </summary>
-        public IBufferPool BufferPool { get; }
-
+        
         /// <summary>
         /// The settings used by this extension.
         /// </summary>
         public TcpSettings Settings { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        internal MessageDispatcher FileIoDispatcher { get; }
-
-        private IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
-        {
-            if (config.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<IBufferPool>();
-
-            var type = Type.GetType(config.GetString("class", null), true);
-
-            if (!typeof(IBufferPool).IsAssignableFrom(type))
-                throw new ArgumentException($"Buffer pool of type {type} doesn't implement {nameof(IBufferPool)} interface");
-
-            try
-            {
-                // try to construct via `BufferPool(ExtendedActorSystem, Config)` ctor
-                return (IBufferPool)Activator.CreateInstance(type, system, config);
-            }
-            catch
-            {
-                // try to construct via `BufferPool(ExtendedActorSystem)` ctor
-                return (IBufferPool)Activator.CreateInstance(type, system);
-            }
-        }
     }
 
     /// <summary>

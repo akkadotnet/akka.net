@@ -12,9 +12,9 @@ using Akka.Configuration;
 namespace Akka.IO
 {
     /// <summary>
-    /// TBD
+    /// Settings for Akka.IO.Tcp's outbound and inbound connection acvtors.
     /// </summary>
-    public class TcpSettings
+    public sealed record TcpSettings
     {
         /// <summary>
         /// Creates a new instance of <see cref="TcpSettings"/> class 
@@ -29,7 +29,7 @@ namespace Akka.IO
                     ConfigurationException
                         .NullOrEmptyConfig<
                             TcpSettings>(
-                            "akka.io.tcp"); //($"Failed to create {typeof(TcpSettings)}: akka.io.tcp configuration node not found");
+                            "akka.io.tcp"); 
 
             return Create(config);
         }
@@ -38,38 +38,72 @@ namespace Akka.IO
         /// Creates a new instance of <see cref="TcpSettings"/> class 
         /// and fills it with values parsed from provided HOCON config.
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="config">The HOCON path that contains the `akka.io.tcp` section.</param>
         public static TcpSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<TcpSettings>();
 
             return new TcpSettings(
-                bufferPoolConfigPath: config.GetString("buffer-pool", "akka.io.tcp.disabled-buffer-pool"),
-                initialSocketAsyncEventArgs: config.GetInt("nr-of-socket-async-event-args", 32),
                 traceLogging: config.GetBoolean("trace-logging", false),
                 batchAcceptLimit: config.GetString("batch-accept-limit") == "scale-to-cpus"
                     ? DefaultAcceptLimit
                     : config.GetInt("batch-accept-limit", DefaultAcceptLimit),
                 registerTimeout: config.GetTimeSpan("register-timeout", TimeSpan.FromSeconds(5)),
-                receivedMessageSizeLimit: config.GetString("max-received-message-size", "unlimited") == "unlimited"
-                    ? int.MaxValue
-                    : config.GetInt("max-received-message-size", 0),
+                maxFrameSizeBytes: (int)config.GetByteSize("maximum-frame-size", 4096).Value,
+                receiveBufferSize: (int)config.GetByteSize("receive-buffer-size", 8192).Value,
+                sendBufferSize: (int)config.GetByteSize("send-buffer-size", 8192).Value,
                 managementDispatcher: config.GetString("management-dispatcher", "akka.actor.default-dispatcher"),
-                fileIoDispatcher: config.GetString("file-io-dispatcher", "akka.actor.default-dispatcher"),
-                transferToLimit: config.GetString("file-io-transferTo-limit", null) == "unlimited"
-                    ? int.MaxValue
-                    : config.GetInt("file-io-transferTo-limit", 512 * 1024),
                 finishConnectRetries: config.GetInt("finish-connect-retries", 5),
                 outgoingSocketForceIpv4: config.GetBoolean("outgoing-socket-force-ipv4", false),
                 writeCommandsQueueMaxSize: config.GetInt("write-commands-queue-max-size", -1));
         }
+        
+        
+        // private so we can change the constructor in the future
+        private TcpSettings(
+            bool traceLogging,
+            int batchAcceptLimit,
+            TimeSpan? registerTimeout,
+            int maxFrameSizeBytes,
+            int sendBufferSize,
+            int receiveBufferSize,
+            string managementDispatcher,
+            int finishConnectRetries,
+            bool outgoingSocketForceIpv4,
+            int writeCommandsQueueMaxSize)
+        {
+            TraceLogging = traceLogging;
+            BatchAcceptLimit = batchAcceptLimit;
+            RegisterTimeout = registerTimeout;
+            MaxFrameSizeBytes = maxFrameSizeBytes;
+            SendBufferSize = sendBufferSize;
+            ReceiveBufferSize = receiveBufferSize;
+            
+            // fail if send/receive buffer sizes are smaller than max frame size
+            if (SendBufferSize < MaxFrameSizeBytes)
+                throw new ArgumentException($"SendBufferSize ({SendBufferSize}) must be at least 2x the size of the maximum frame size ({MaxFrameSizeBytes})");
+            if (ReceiveBufferSize < MaxFrameSizeBytes)
+                throw new ArgumentException($"ReceiveBufferSize ({ReceiveBufferSize}) must be at least 2x the size of the maximum frame size ({MaxFrameSizeBytes})");
+            
+            // fail if the max frame size is negative
+            if (MaxFrameSizeBytes < 0)
+                throw new ArgumentException($"MaxFrameSizeBytes ({MaxFrameSizeBytes}) must be a positive number");
+            
+            FinishConnectRetries = finishConnectRetries;
+            OutgoingSocketForceIpv4 = outgoingSocketForceIpv4;
+            WriteCommandsQueueMaxSize = writeCommandsQueueMaxSize;
+            ManagementDispatcher = managementDispatcher;
+        }
+
+        
 
         /// <summary>
         /// Default size of the SAEA pool
         /// </summary>
         internal static readonly int DefaultAcceptLimit = Environment.ProcessorCount * 2;
 
+        [Obsolete("Many of these options are no longer used. Use the TcpSettings.Create method instead.")]
         public TcpSettings(string bufferPoolConfigPath,
             int initialSocketAsyncEventArgs,
             bool traceLogging,
@@ -88,7 +122,12 @@ namespace Akka.IO
             TraceLogging = traceLogging;
             BatchAcceptLimit = batchAcceptLimit;
             RegisterTimeout = registerTimeout;
-            ReceivedMessageSizeLimit = receivedMessageSizeLimit;
+            MaxFrameSizeBytes = receivedMessageSizeLimit;
+            
+            // have to manually set these
+            SendBufferSize = receivedMessageSizeLimit * 2;
+            ReceiveBufferSize = receivedMessageSizeLimit * 2;
+            
             ManagementDispatcher = managementDispatcher;
             FileIODispatcher = fileIoDispatcher;
             TransferToLimit = transferToLimit;
@@ -102,12 +141,14 @@ namespace Akka.IO
         /// Buffer pools are used to mitigate GC-pressure made by potential allocation
         /// and deallocation of byte buffers used for writing/receiving data from sockets.
         /// </summary>
+        [Obsolete("This property is unused")]
         public string BufferPoolConfigPath { get; }
 
         /// <summary>
         /// The initial number of SocketAsyncEventArgs to be preallocated. This value
         /// will grow infinitely if needed.
         /// </summary>
+        [Obsolete("This property is unused")]
         public int InitialSocketAsyncEventArgs { get; }
 
         /// <summary>
@@ -115,20 +156,36 @@ namespace Akka.IO
         /// Be aware that this may log more than once per message sent to the 
         /// actors of the tcp implementation.
         /// </summary>
-        public bool TraceLogging { get; }
+        public bool TraceLogging { get; init; }
 
         /// <summary>
         /// The maximum number of connection that are accepted in one go, higher 
         /// numbers decrease latency, lower numbers increase fairness on the 
         /// worker-dispatcher
         /// </summary>
-        public int BatchAcceptLimit { get; }
+        public int BatchAcceptLimit { get; init; }
 
         /// <summary>
         /// The duration a connection actor waits for a `Register` message from 
         /// its commander before aborting the connection.
         /// </summary>
-        public TimeSpan? RegisterTimeout { get; }
+        public TimeSpan? RegisterTimeout { get; init; }
+        
+        /// <summary>
+        /// The maximum frame size we will accept when reading or writing to a socket.
+        /// </summary>
+        
+        public int MaxFrameSizeBytes { get; init; }
+        
+        /// <summary>
+        /// Should be at least 2x the size of the maximum frame size.
+        /// </summary>
+        public int ReceiveBufferSize { get; init; }
+        
+        /// <summary>
+        /// Should be at least 2x the size of the maximum frame size.
+        /// </summary>
+        public int SendBufferSize { get; init; }
 
         /// <summary>
         /// The maximum number of bytes delivered by a `Received` message. Before
@@ -138,7 +195,8 @@ namespace Akka.IO
         /// configured receive buffer size. When using value 'unlimited' it will
         /// try to read all from the receive buffer.
         /// </summary>
-        public int ReceivedMessageSizeLimit { get; }
+        [Obsolete("This property is now MaxFrameSizeBytes")]
+        public long ReceivedMessageSizeLimit => MaxFrameSizeBytes;
 
         /// <summary>
         /// Fully qualified config path which holds the dispatcher configuration
@@ -150,6 +208,7 @@ namespace Akka.IO
         /// Fully qualified config path which holds the dispatcher configuration
         /// on which file IO tasks are scheduled
         /// </summary>
+        [Obsolete("This property is unused")]
         public string FileIODispatcher { get; }
 
         /// <summary>
@@ -160,6 +219,7 @@ namespace Akka.IO
         /// Decreasing the value may improve fairness while increasing may improve
         /// throughput.
         /// </summary>
+        [Obsolete("This property is unused")]
         public int TransferToLimit { get; set; }
 
         /// <summary>
@@ -167,21 +227,24 @@ namespace Akka.IO
         /// OP_CONNECT. Retries are needed if the OP_CONNECT notification doesn't imply that
         /// `finishConnect` will succeed, which is the case on Android.
         /// </summary>
-        public int FinishConnectRetries { get; }
+        public int FinishConnectRetries { get; init; }
 
         /// <summary>
         /// Enforce outgoing socket connection to use IPv4 address family. Required in
-        /// scenario when IPv6 is not available, for example in Azure Web App sandbox.
+        /// a scenario when IPv6 is not available, for example in Azure Web App sandbox.
         /// When set to true it is required to set akka.io.dns.inet-address.use-ipv6 to false
         /// in cases when DnsEndPoint is used to describe the remote address
         /// </summary>
-        public bool OutgoingSocketForceIpv4 { get; }
+        public bool OutgoingSocketForceIpv4 { get; init; }
 
         /// <summary>
         /// Limits maximum size of internal queue, used in <see cref="TcpIncomingConnection"/> connection actor
         /// to store pending write commands.
         /// To allow unlimited size, set to -1.
         /// </summary>
-        public int WriteCommandsQueueMaxSize { get; }
+        /// <remarks>
+        /// This setting defines the maximum number of messages, not the maximum size in bytes.
+        /// </remarks>
+        public int WriteCommandsQueueMaxSize { get; init; }
     }
 }
