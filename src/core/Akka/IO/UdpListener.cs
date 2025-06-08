@@ -17,7 +17,6 @@ using Akka.Util.Internal;
 namespace Akka.IO
 {
     using static Udp;
-    using ByteBuffer = ArraySegment<byte>;
 
     /// <summary>
     /// INTERNAL API

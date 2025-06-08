@@ -65,7 +65,7 @@ namespace Akka.IO
         {
             if (e.Buffer != null)
             {
-                _bufferPool.Release(new ArraySegment<byte>(e.Buffer, e.Offset, e.Count));
+                _bufferPool.Release(new ByteBuffer(e.Buffer, e.Offset, e.Count));
             }
             if (e.BufferList != null)
             {
