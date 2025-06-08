@@ -69,6 +69,11 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
             _log.Debug("Consumer terminated before initialized.");
             Context.Stop(Self);
         });
+
+        Receive<Passivate>(_ => Sender.Equals(_consumer), p =>
+        {
+            Context.Parent.Tell(p);
+        });
         
         ReceiveAny(msg =>
         {
@@ -140,6 +145,11 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
                     _log.Debug("Unknown [{0}] terminated.", t.ActorRef);
                 }
             }
+        });
+
+        Receive<Passivate>(_ => Sender.Equals(_consumer), p =>
+        {
+            Context.Parent.Tell(p);
         });
         
         ReceiveAny(msg =>

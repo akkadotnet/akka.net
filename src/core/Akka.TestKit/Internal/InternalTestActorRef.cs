@@ -323,18 +323,6 @@ namespace Akka.TestKit.Internal
                 _testActorCell = (TestActorCell) testActorCell;
             }
 
-            /// <inheritdoc />
-            protected override void OnBeforeTaskStarted()
-            {
-                ActorCellKeepingSynchronizationContext.AsyncCache = _testActorCell;
-            }
-
-            /// <inheritdoc />
-            protected override void OnAfterTaskCompleted()
-            {
-                ActorCellKeepingSynchronizationContext.AsyncCache = null;
-            }
-
             public void OnTaskCompleted(object message, Exception exception)
             {
                 _taskCallback(message, exception);
