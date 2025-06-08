@@ -616,6 +616,38 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public async Task BroadcastHub_must_handle_cancelled_Sink()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var upstream = this.CreatePublisherProbe<int>();
+                var hubSource = Source.FromPublisher(upstream).RunWith(BroadcastHub.Sink<int>(4), Materializer);
+                var downstream = this.CreateSubscriberProbe<int>();
+                
+                hubSource.RunWith(Sink.Cancelled<int>(), Materializer);
+                hubSource.RunWith(Sink.FromSubscriber(downstream), Materializer);
+                
+                await downstream.EnsureSubscriptionAsync();
+                
+                await downstream.RequestAsync(10);
+                await upstream.ExpectRequestAsync();
+                await upstream.SendNextAsync(1);
+                await downstream.ExpectNextAsync(1);
+                await upstream.SendNextAsync(2);
+                await downstream.ExpectNextAsync(2);
+                await upstream.SendNextAsync(3);
+                await downstream.ExpectNextAsync(3);
+                await upstream.SendNextAsync(4);
+                await downstream.ExpectNextAsync(4);
+                await upstream.SendNextAsync(5);
+                await downstream.ExpectNextAsync(5);
+                
+                await upstream.SendCompleteAsync();
+                await downstream.ExpectCompleteAsync();
+            }, Materializer);
+        }
+
+        [Fact]
         public async Task PartitionHub_must_work_in_the_happy_case_with_one_stream()
         {
             await this.AssertAllStagesStoppedAsync(async () =>

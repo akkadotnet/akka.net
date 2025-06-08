@@ -10,15 +10,16 @@ using Akka.Actor;
 namespace Akka.Util
 {
     /// <summary>
-    /// TBD
+    /// Interface for surrogate objects that can be converted back to their original form.
+    /// Surrogates are used to provide serializable versions of objects that might not be directly serializable.
     /// </summary>
     public interface ISurrogate
     {
         /// <summary>
-        /// TBD
+        /// Converts this surrogate back to its original object.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system to use during conversion.</param>
+        /// <returns>The original object that this surrogate represents.</returns>
         ISurrogated FromSurrogate(ActorSystem system);
     }
 
@@ -28,10 +29,10 @@ namespace Akka.Util
     public interface ISurrogated
     {
         /// <summary>
-        /// TBD
+        /// Converts this object to a surrogate that can be more easily serialized.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system to use during conversion.</param>
+        /// <returns>A surrogate representation of this object.</returns>
         ISurrogate ToSurrogate(ActorSystem system);
     }
 }

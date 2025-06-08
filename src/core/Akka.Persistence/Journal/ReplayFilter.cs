@@ -233,18 +233,18 @@ namespace Akka.Persistence.Journal
                                         throw new ArgumentException("Mode must not be Disabled");
                                 }
                             }
+
                             node = next;
                         }
+
                         _buffer.AddLast(value);
                     }
 
                 }
                 catch (IllegalStateException ex)
+                    when (Mode == ReplayFilterMode.Fail)
                 {
-                    if (Mode == ReplayFilterMode.Fail)
-                        Fail(ex);
-                    else
-                        throw;
+                    Fail(ex);
                 }
             }
             else if (message is RecoverySuccess or ReplayMessagesFailure)

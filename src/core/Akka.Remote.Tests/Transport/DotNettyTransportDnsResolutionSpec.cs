@@ -155,13 +155,11 @@ namespace Akka.Remote.Tests.Transport
                           useIpv6Dns: dnsIpv6,
                           enforceIpFamily: enforceIpFamily);
                 }
-                catch
+                catch when (enforceIpFamily && IsExpectedFailure(inbound, outbound, dnsIpv6))
                 {
                     //if ip family is enforced, there are some special cases when it is normal to unable 
                     //to create actor system
-                    if (enforceIpFamily && IsExpectedFailure(inbound, outbound, dnsIpv6))
-                        return true.ToProperty();
-                    throw;
+                    return true.ToProperty();
                 }
 
                 var outboundReceivedAck = true;
@@ -246,14 +244,13 @@ namespace Akka.Remote.Tests.Transport
                           dnsUseIpv6,
                           enforceIpFamily);
                 }
-                catch
+                catch when (enforceIpFamily && IsExpectedFailure(inbound, outbound, dnsUseIpv6))
                 {
                     //if ip family is enforced, there are some special cases when it is normal to unable 
                     //to create actor system
-                    if (enforceIpFamily && IsExpectedFailure(inbound, outbound, dnsUseIpv6))
-                        return true.ToProperty();
-                    throw;
+                    return true.ToProperty();
                 }
+
                 var outboundReceivedAck = true;
                 var inboundReceivedAck = true;
                 _outbound.ActorSelection(_inboundAck).Tell("ping", _outboundProbe.Ref);

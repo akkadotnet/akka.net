@@ -204,7 +204,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _stage = stage;
                 _left = _stage._count < 0 ? 0 : _stage._count;
-                _builder = ImmutableList<T>.Empty.ToBuilder();
+                _builder = ImmutableList.CreateBuilder<T>();
 
                 _subHandler = new LambdaOutHandler(onPull: () =>
                 {

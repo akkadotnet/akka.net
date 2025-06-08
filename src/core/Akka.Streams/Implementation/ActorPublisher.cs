@@ -267,9 +267,8 @@ namespace Akka.Streams.Implementation
                 }
             }
             catch (Exception exception)
+                when (exception is ISpecViolation)
             {
-                if (!(exception is ISpecViolation))
-                    throw;
             }
         }
     }

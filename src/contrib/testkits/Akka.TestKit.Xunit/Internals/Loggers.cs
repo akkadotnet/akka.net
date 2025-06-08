@@ -8,53 +8,56 @@
 using System;
 using Akka.Actor;
 using Akka.Event;
-using Xunit.Abstractions;
+using Akka.Util;
+using Xunit;
 
-namespace Akka.TestKit.Xunit.Internals
+namespace Akka.TestKit.Xunit.Internals;
+
+/// <summary>
+/// This class represents an actor that logs output from tests using an <see cref="ITestOutputHelper"/> provider.
+/// </summary>
+public class TestOutputLogger : ReceiveActor
 {
-    /// <summary>
-    /// This class represents an actor that logs output from tests using an ITestOutputHelper provider.
-    /// </summary>
-    public class TestOutputLogger : ReceiveActor
-    {
-        private readonly ITestOutputHelper _output;
-        
-        /// <summary>
-        /// Initializes a new instance of the <see cref="TestOutputLogger"/> class.
-        /// </summary>
-        /// <param name="output">The provider used to write test output.</param>
-        public TestOutputLogger(ITestOutputHelper output)
-        {
-            _output = output;
-            
-            Receive<Debug>(Write);
-            Receive<Info>(Write);
-            Receive<Warning>(Write);
-            Receive<Error>(Write);
-            Receive<InitializeLogger>(e =>
-            {
-                e.LoggingBus.Subscribe(Self, typeof (LogEvent));
-            });
-        }
+    private readonly ITestOutputHelper _output;
 
-        private void Write(LogEvent e)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestOutputLogger"/> class.
+    /// </summary>
+    /// <param name="output">The provider used to write test output.</param>
+    public TestOutputLogger(ITestOutputHelper output)
+    {
+        _output = output;
+
+        Receive<Debug>(HandleLogEvent);
+        Receive<Info>(HandleLogEvent);
+        Receive<Warning>(HandleLogEvent);
+        Receive<Error>(HandleLogEvent);
+        Receive<InitializeLogger>(e =>
         {
-            try
-            {
-                _output.WriteLine(e.ToString());
-            }
-            catch (FormatException ex)
-            {
-                if (e.Message is LogMessage msg)
-                {
-                    var message =
-                        $"Received a malformed formatted message. Log level: [{e.LogLevel()}], Template: [{msg.Format}], args: [{string.Join(",", msg.Unformatted())}]";
-                    if(e.Cause != null)
-                        throw new AggregateException(message, ex, e.Cause);
-                    throw new FormatException(message, ex);
-                }
-                throw;
-            }
+            e.LoggingBus.Subscribe(Self, typeof (LogEvent));
+            Sender.Tell(new LoggerInitialized());
+        });
+    }
+
+    private void HandleLogEvent(LogEvent e)
+    {
+        try
+        {
+            _output.WriteLine(e.ToString());
+        }
+        catch (FormatException ex)
+            when (e.Message is LogMessage msg)
+        {
+            var message =
+                $"Received a malformed formatted message. Log level: [{e.LogLevel()}], Template: [{msg.Format}], args: [{string.Join(",", msg.Unformatted())}]";
+            if (e.Cause != null)
+                throw new AggregateException(message, ex, e.Cause);
+            throw new FormatException(message, ex);
+        }
+        catch (InvalidOperationException ie)
+        {
+            StandardOutWriter.WriteLine($"Received InvalidOperationException: {ie} - probably because the test had completed executing.");
+            Context.Stop(Self); // shut ourselves down, can't do our job any longer
         }
     }
 }

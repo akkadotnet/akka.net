@@ -22,8 +22,6 @@ namespace Akka.TestKit
     class ActorCellKeepingSynchronizationContext : SynchronizationContext
     {
         private readonly ActorCell _cell;
-        
-        internal static ActorCell AsyncCache { get; set; }
 
         /// <summary>
         /// TBD
@@ -46,7 +44,8 @@ namespace Akka.TestKit
                 var oldCell = InternalCurrentActorCellKeeper.Current;
                 var oldContext = Current;
                 SetSynchronizationContext(this);
-                InternalCurrentActorCellKeeper.Current = AsyncCache ?? _cell;
+
+                InternalCurrentActorCellKeeper.Current = _cell;
 
                 try
                 {

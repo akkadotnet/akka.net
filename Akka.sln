@@ -277,6 +277,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClusterToolsExample.Node", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.Xunit2.Tests", "src\contrib\testkits\Akka.TestKit.Xunit2.Tests\Akka.TestKit.Xunit2.Tests.csproj", "{95017C99-E960-44E5-83AD-BF21461DF06F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.Xunit.Tests", "src\contrib\testkits\Akka.TestKit.Xunit.Tests\Akka.TestKit.Xunit.Tests.csproj", "{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1304,6 +1306,18 @@ Global
 		{95017C99-E960-44E5-83AD-BF21461DF06F}.Release|x64.Build.0 = Release|Any CPU
 		{95017C99-E960-44E5-83AD-BF21461DF06F}.Release|x86.ActiveCfg = Release|Any CPU
 		{95017C99-E960-44E5-83AD-BF21461DF06F}.Release|x86.Build.0 = Release|Any CPU
+		{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68}.Debug|x64.Build.0 = Debug|Any CPU
+		{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68}.Debug|x86.Build.0 = Debug|Any CPU
+		{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68}.Release|x64.ActiveCfg = Release|Any CPU
+		{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68}.Release|x64.Build.0 = Release|Any CPU
+		{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68}.Release|x86.ActiveCfg = Release|Any CPU
+		{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1426,6 +1440,7 @@ Global
 		{ED00E6F4-2B5C-4F16-ADE4-45E4A73C17B8} = {7735F35A-E7B7-44DE-B6FB-C770B53EB69C}
 		{337A85B5-4A7C-4883-8634-46E7E52A765F} = {7735F35A-E7B7-44DE-B6FB-C770B53EB69C}
 		{95017C99-E960-44E5-83AD-BF21461DF06F} = {7625FD95-4B2C-4A5B-BDD5-94B1493FAC8E}
+		{F80F41E6-E5C7-4C92-B1CF-42539ECFBE68} = {7625FD95-4B2C-4A5B-BDD5-94B1493FAC8E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {03AD8E21-7507-4E68-A4E9-F4A7E7273164}

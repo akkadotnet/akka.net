@@ -21,7 +21,7 @@ namespace Akka.IO
     using ByteBuffer = ArraySegment<byte>;
 
     /// <summary>
-    /// UDP Extension for Akka’s IO layer.
+    /// UDP Extension for Akka's IO layer.
     ///
     /// This extension implements the connectionless UDP protocol with
     /// calling `connect` on the underlying sockets, i.e. with restricting
@@ -88,15 +88,15 @@ namespace Akka.IO
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Singleton instance of the UdpConnected extension.
         /// </summary>
         public static readonly UdpConnected Instance = new();
 
         /// <summary>
-        /// TBD
+        /// Creates a new UdpConnected extension instance for the specified actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system to create the extension for.</param>
+        /// <returns>A new UdpConnected extension instance.</returns>
         public override UdpConnectedExt CreateExtension(ExtendedActorSystem system)
         {
             return new UdpConnectedExt(system);
@@ -113,7 +113,7 @@ namespace Akka.IO
         public abstract class Command : Message
         {
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the Command class with a default failure message.
             /// </summary>
             protected Command()
             {
@@ -121,7 +121,7 @@ namespace Akka.IO
             }
 
             /// <summary>
-            /// TBD
+            /// Gets a failure message representation of this command.
             /// </summary>
             public object FailureMessage { get; }
         }
@@ -135,22 +135,21 @@ namespace Akka.IO
         public class NoAck : Event
         {
             /// <summary>
-            /// Default <see cref="NoAck"/> instance which is used when no acknowledgment information is
-            /// explicitly provided. Its "token" is <see langword="null"/>.
+            /// Singleton instance that represents a no-acknowledgment event.
             /// </summary>
             public static readonly NoAck Instance = new(null);
 
             /// <summary>
-            /// TBD
+            /// Creates a new NoAck event with the specified token.
             /// </summary>
-            /// <param name="token">TBD</param>
+            /// <param name="token">The token associated with this NoAck event.</param>
             public NoAck(object token)
             {
                 Token = token;
             }
 
             /// <summary>
-            /// TBD
+            /// Gets the token associated with this NoAck instance.
             /// </summary>
             public object Token { get; }
         }
@@ -212,12 +211,12 @@ namespace Akka.IO
         public sealed class Connect : Command
         {
             /// <summary>
-            /// TBD
+            /// Creates a new Connect command with the specified parameters.
             /// </summary>
-            /// <param name="handler">TBD</param>
-            /// <param name="remoteAddress">TBD</param>
-            /// <param name="localAddress">TBD</param>
-            /// <param name="options">TBD</param>
+            /// <param name="handler">The actor that will handle incoming UDP messages.</param>
+            /// <param name="remoteAddress">The remote address to connect to.</param>
+            /// <param name="localAddress">The local address to bind to (optional).</param>
+            /// <param name="options">Socket options to apply to the UDP socket (optional).</param>
             public Connect(IActorRef handler, 
                            EndPoint remoteAddress,
                            EndPoint localAddress = null, 
@@ -230,19 +229,19 @@ namespace Akka.IO
             }
 
             /// <summary>
-            /// TBD
+            /// The actor that will handle incoming UDP messages.
             /// </summary>
             public IActorRef Handler { get; }
             /// <summary>
-            /// TBD
+            /// The remote address to connect to.
             /// </summary>
             public EndPoint RemoteAddress { get; }
             /// <summary>
-            /// TBD
+            /// The local address to bind to (may be null).
             /// </summary>
             public EndPoint LocalAddress { get; }
             /// <summary>
-            /// TBD
+            /// Socket options to apply to the UDP socket.
             /// </summary>
             public IEnumerable<Inet.SocketOption> Options { get; }
         }
@@ -255,7 +254,7 @@ namespace Akka.IO
         public class Disconnect : Command
         {
             /// <summary>
-            /// TBD
+            /// Singleton instance that represents a disconnect command.
             /// </summary>
             public static readonly Disconnect Instance = new();
 
@@ -266,14 +265,14 @@ namespace Akka.IO
 
         /// <summary>
         /// Send this message to a listener actor (which sent a <see cref="Udp.Bound"/> message) to
-        /// have it stop reading datagrams from the network. If the O/S kernel’s receive
+        /// have it stop reading datagrams from the network. If the O/S kernel's receive
         /// buffer runs full then subsequent datagrams will be silently discarded.
         /// Re-enable reading from the socket using the `ResumeReading` command.
         /// </summary>
         public class SuspendReading : Command
         {
             /// <summary>
-            /// TBD
+            /// Singleton instance that represents a suspend reading command.
             /// </summary>
             public static readonly SuspendReading Instance = new();
 
@@ -288,7 +287,7 @@ namespace Akka.IO
         public class ResumeReading : Command
         {
             /// <summary>
-            /// TBD
+            /// Singleton instance that represents a resume reading command.
             /// </summary>
             public static readonly ResumeReading Instance = new();
 
@@ -308,16 +307,16 @@ namespace Akka.IO
         public sealed class Received : Event
         {
             /// <summary>
-            /// TBD
+            /// Creates a new Received event with the specified data.
             /// </summary>
-            /// <param name="data">TBD</param>
+            /// <param name="data">The UDP datagram payload.</param>
             public Received(ByteString data)
             {
                 Data = data;
             }
 
             /// <summary>
-            /// TBD
+            /// The UDP datagram payload.
             /// </summary>
             public ByteString Data { get; }
         }
@@ -329,16 +328,16 @@ namespace Akka.IO
         public sealed class CommandFailed : Event
         {
             /// <summary>
-            /// TBD
+            /// Creates a new CommandFailed event for the specified command.
             /// </summary>
-            /// <param name="cmd">TBD</param>
+            /// <param name="cmd">The command that failed.</param>
             public CommandFailed(Command cmd)
             {
                 Cmd = cmd;
             }
 
             /// <summary>
-            /// TBD
+            /// The command that failed.
             /// </summary>
             public Command Cmd { get; }
         }
@@ -351,7 +350,7 @@ namespace Akka.IO
         public class Connected : Event
         {
             /// <summary>
-            /// TBD
+            /// Singleton instance that represents a connected event.
             /// </summary>
             public static readonly Connected Instance = new();
 
@@ -366,7 +365,7 @@ namespace Akka.IO
         public class Disconnected : Event
         {
             /// <summary>
-            /// TBD
+            /// Singleton instance that represents a disconnected event.
             /// </summary>
             public static readonly Disconnected Instance = new();
 
@@ -377,7 +376,7 @@ namespace Akka.IO
     }
 
     /// <summary>
-    /// TBD
+    /// Implementation of the UdpConnected IO extension for Akka.
     /// </summary>
     public class UdpConnectedExt : IOExtension, INoSerializationVerificationNeeded
     {
@@ -404,7 +403,7 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the UdpConnected manager actor reference.
         /// </summary>
         public override IActorRef Manager { get; }
 

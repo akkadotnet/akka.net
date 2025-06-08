@@ -53,52 +53,49 @@ namespace Akka.IO
     internal sealed class TcpManager : ActorBase
     {
         private readonly TcpExt _tcp;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="tcp">TBD</param>
+        
+        const string TcpListenerNamePrefix = "tcp-listener";
+        const string TcpOutgoingConnectionNamePrefix = "tcp-client-connection";
+        
+        private long _tcpListenerCounter;
+        private long _tcpOutgoingConnectionCounter;
+        
+        private string NextTcpListenerName()
+        {
+            return $"{TcpListenerNamePrefix}-{_tcpListenerCounter++}";
+        }
+        
+        private string NextTcpOutgoingConnectionName()
+        {
+            return $"{TcpOutgoingConnectionNamePrefix}-{_tcpOutgoingConnectionCounter++}";
+        }
+        
         public TcpManager(TcpExt tcp)
         {
             _tcp = tcp;
-            Context.System.EventStream.Subscribe(Self, typeof(DeadLetter));
         }
         
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            var c = message as Connect;
-            if (c != null)
+            switch (message)
             {
-                var commander = Sender;
-                Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c).WithDeploy(Deploy.Local));
-                return true;
-            }
-            var b = message as Bind;
-            if (b != null)
-            {
-                var commander = Sender;
-                Context.ActorOf(Props.Create<TcpListener>(_tcp, commander, b).WithDeploy(Deploy.Local));
-                return true;
-            }
-            var dl = message as DeadLetter;
-            if (dl != null)
-            {
-                var completed = dl.Message as SocketCompleted;
-                if (completed != null)
+                case Connect c:
                 {
-                    //TODO: release resources?
+                    var commander = Sender;
+                    Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c).WithDeploy(Deploy.Local), NextTcpOutgoingConnectionName());
+                    return true;
                 }
-                return true;
+                case Bind b:
+                {
+                    var commander = Sender;
+                    Context.ActorOf(Props.Create<TcpListener>(_tcp, commander, b).WithDeploy(Deploy.Local), NextTcpListenerName());
+                    return true;
+                }
+                default:
+                    throw new ArgumentException($"The supplied message of type {message.GetType().Name} is invalid. Only Connect and Bind messages are supported. " +
+                                                $"If you are going to manage your connection state, you need to communicate with Tcp.Connected sender actor. " +
+                                                $"See more here: https://getakka.net/articles/networking/io.html", nameof(message));
             }
-            throw new ArgumentException($"The supplied message of type {message.GetType().Name} is invalid. Only Connect and Bind messages are supported. " +
-                                        $"If you are going to manage your connection state, you need to communicate with Tcp.Connected sender actor. " +
-                                        $"See more here: https://getakka.net/articles/networking/io.html", nameof(message));
         }
     }
 }

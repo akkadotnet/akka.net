@@ -2,14 +2,16 @@
 
     <PropertyGroup>
         <Description>TestKit for writing tests for Akka.NET using xUnit.</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFrameworks>$(NetStandardLibVersion);net8.0</TargetFrameworks>
+        <Nullable>enable</Nullable>
         <PackageTags>$(AkkaPackageTags);testkit;xunit</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\core\Akka.TestKit\Akka.TestKit.csproj" />
-        <PackageReference Include="xunit" Version="$(XunitVersion)" />
+        <PackageReference Include="xunit.v3.extensibility.core" Version="$(Xunit3Version)" />
+        <PackageReference Include="xunit.v3.assert" Version="$(Xunit3Version)" />
     </ItemGroup>
 
     <PropertyGroup>

@@ -315,10 +315,9 @@ namespace Akka.Dispatch
                     return VerifyRequirements(LookupByQueueType(actorRequirement.Value));
                 }
                 catch (Exception)
+                    when (hasMailboxRequirement)
                 {
-                    if (hasMailboxRequirement)
-                        return VerifyRequirements(LookupByQueueType(mailboxRequirement));
-                    throw;
+                    return VerifyRequirements(LookupByQueueType(mailboxRequirement));
                 }
             }
             if (hasMailboxRequirement)

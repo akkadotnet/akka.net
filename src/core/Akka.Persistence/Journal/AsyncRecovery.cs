@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 
@@ -24,7 +25,7 @@ namespace Akka.Persistence.Journal
         /// could not be replayed.
         /// 
         /// The <paramref name="toSequenceNr"/> is the lowest of what was returned by
-        /// <see cref="ReadHighestSequenceNrAsync"/> and what the user specified as recovery
+        /// <see cref="ReadHighestSequenceNrAsync(string, long, CancellationToken)"/> and what the user specified as recovery
         /// <see cref="Recovery"/> parameter.
         /// This does imply that this call is always preceded by reading the highest sequence number
         /// for the given <paramref name="persistenceId"/>.
@@ -62,7 +63,8 @@ namespace Akka.Persistence.Journal
         /// <param name="fromSequenceNr">Hint where to start searching for the highest sequence number.
         /// When a persistent actor is recovering this <paramref name="fromSequenceNr"/> will the sequence
         /// number of the used snapshot, or `0L` if no snapshot is used.</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/> used to signal cancelled recovery operation</param>
         /// <returns>TBD</returns>
-        Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
+        Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken);
     }
 }

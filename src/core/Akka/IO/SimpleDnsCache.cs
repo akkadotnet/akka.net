@@ -13,18 +13,18 @@ using Akka.Util;
 namespace Akka.IO
 {
     /// <summary>
-    /// TBD
+    /// Interface for DNS caches that support periodic cleanup of expired entries.
     /// </summary>
     internal interface IPeriodicCacheCleanup
     {
         /// <summary>
-        /// TBD
+        /// Cleans up expired entries from the cache.
         /// </summary>
         void CleanUp();
     }
 
     /// <summary>
-    /// TBD
+    /// A simple in-memory DNS cache that stores resolved DNS entries with TTL-based expiration.
     /// </summary>
     public class SimpleDnsCache : DnsBase, IPeriodicCacheCleanup
     {
@@ -32,7 +32,7 @@ namespace Akka.IO
         private readonly long _ticksBase;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the SimpleDnsCache.
         /// </summary>
         public SimpleDnsCache()
         {
@@ -41,19 +41,19 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Gets a cached DNS resolution result for the specified hostname.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The hostname to lookup in the cache.</param>
+        /// <returns>The cached DNS resolution result, or null if not found or expired.</returns>
         public override Dns.Resolved Cached(string name)
         {
             return _cache.Value.Get(name);
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the current clock time in milliseconds since cache initialization.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The current clock time in milliseconds.</returns>
         protected virtual long Clock()
         {
             var now = DateTime.Now.Ticks;
@@ -63,11 +63,10 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Adds a resolved DNS entry to the cache with the specified TTL.
         /// </summary>
-        /// <param name="r">TBD</param>
-        /// <param name="ttl">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="r">The resolved DNS entry to add to the cache.</param>
+        /// <param name="ttl">Time-to-live in milliseconds for the entry.</param>
         internal void Put(Dns.Resolved r, long ttl)
         {
             var c = _cache.Value;
@@ -76,7 +75,7 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Cleans up expired entries from the cache.
         /// </summary>
         public void CleanUp()
         {

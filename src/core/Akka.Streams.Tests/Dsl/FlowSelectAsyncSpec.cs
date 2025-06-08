@@ -712,76 +712,32 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
+        [Fact]
         public async Task A_Flow_with_SelectAsync_must_not_run_more_futures_than_configured()
         {
-            await this.AssertAllStagesStoppedAsync(async() =>
+            await this.AssertAllStagesStoppedAsync(async () =>
             {
                 const int parallelism = 8;
+                const int n = 10000;
                 var counter = new AtomicCounter();
-                var queue = Channel.CreateUnbounded<(TaskCompletionSource<int>, long)>();
-                var cancellation = new CancellationTokenSource();
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                Task.Run(async () =>
-                {
-                    var delay = 500; // 50000 nanoseconds
-                    var count = 0;
-                    var cont = true;
-                    while (cont)
+
+                var result = await Source.From(Enumerable.Range(1, n))
+                    .SelectAsync(parallelism, async _ =>
                     {
-                        try
-                        {
-                            var t = await queue.Reader.ReadAsync(cancellation.Token);
-                            var promise = t.Item1;
-                            var enqueued = t.Item2;
-                            var wakeup = enqueued + delay;
-                            while (DateTime.Now.Ticks < wakeup) { }
-                            counter.Decrement();
-                            promise.SetResult(count);
-                            count++;
-                        }
-                        catch
-                        {
-                            cont = false;
-                        }
-                    }
-                }, cancellation.Token);
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                        if (counter.IncrementAndGet() > parallelism)
+                            throw new Exception("Parallelism exceeded");
 
-                try
-                {
-                    const int n = 10000;
-                    var task = Source.From(Enumerable.Range(1, n))
-                        .SelectAsync(parallelism, _ => Deferred())
-                        .RunAggregate(0, (c, _) => c + 1, Materializer);
+                        await Task.Delay(50_000.Nanoseconds());
+                        counter.Decrement();
+                        return 1;
+                    })
+                    .RunAggregate(0, (acc, i) => acc + i, Materializer)
+                    .ShouldCompleteWithin(3.Seconds());
 
-                    var complete = await task.ShouldCompleteWithin(3.Seconds());
-                    complete.Should().Be(n);
-                }
-                finally
-                {
-                    cancellation.Cancel(false);
-                }
-
-                return;
-
-                Task<int> Deferred()
-                {
-                    var promise = new TaskCompletionSource<int>();
-                    if (counter.IncrementAndGet() > parallelism)
-                        promise.SetException(new Exception("parallelism exceeded"));
-                    else
-                    {
-                        var wrote = queue.Writer.TryWrite((promise, DateTime.Now.Ticks));
-                        if (!wrote)
-                            promise.SetException(new Exception("Failed to write to queue"));
-                    }
-                        
-                    return promise.Task;
-                }
+                result.Should().Be(n);
             }, Materializer);
         }
-        
+
         [Fact(DisplayName = "A Flow with SelectAsync must not invoke the decider twice when SelectAsync throws")]
         public async Task SelectAsyncDeciderFailingSelectAsync()
         {

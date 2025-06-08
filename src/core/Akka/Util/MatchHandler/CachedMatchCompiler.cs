@@ -15,26 +15,27 @@ using System.Reflection.Emit;
 namespace Akka.Tools.MatchHandler
 {
     /// <summary>
-    /// TBD
+    /// Caching implementation of the match compiler that stores compiled expressions for reuse.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of messages to match against.</typeparam>
     internal class CachedMatchCompiler<T> : IMatchCompiler<T>
     {
         private readonly IMatchExpressionBuilder _expressionBuilder;
         private readonly IPartialActionBuilder _actionBuilder;
         private readonly ILambdaExpressionCompiler _expressionCompiler;
         private readonly ConcurrentDictionary<MatchBuilderSignature, Delegate> _cache = new();
+        
         /// <summary>
-        /// TBD
+        /// Singleton instance of the cached match compiler using default implementations.
         /// </summary>
         public static readonly CachedMatchCompiler<T> Instance = new(new MatchExpressionBuilder<T>(), new PartialActionBuilder(), new LambdaExpressionCompiler());
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="CachedMatchCompiler{T}"/> class.
         /// </summary>
-        /// <param name="expressionBuilder">TBD</param>
-        /// <param name="actionBuilder">TBD</param>
-        /// <param name="expressionCompiler">TBD</param>
+        /// <param name="expressionBuilder">The expression builder to use for creating match expressions.</param>
+        /// <param name="actionBuilder">The action builder to use for creating partial actions.</param>
+        /// <param name="expressionCompiler">The compiler to use for compiling lambda expressions.</param>
         public CachedMatchCompiler(IMatchExpressionBuilder expressionBuilder, IPartialActionBuilder actionBuilder, ILambdaExpressionCompiler expressionCompiler)
         {
             _expressionBuilder = expressionBuilder;
@@ -43,12 +44,12 @@ namespace Akka.Tools.MatchHandler
         }
 
         /// <summary>
-        /// TBD
+        /// Compiles a list of type handlers into a partial action, using cached versions when available.
         /// </summary>
-        /// <param name="handlers">TBD</param>
-        /// <param name="capturedArguments">TBD</param>
-        /// <param name="signature">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="handlers">The list of type handlers to compile.</param>
+        /// <param name="capturedArguments">The arguments captured by the match statement.</param>
+        /// <param name="signature">The signature of the match builder, used as a cache key.</param>
+        /// <returns>A compiled partial action that can match and handle messages.</returns>
         public PartialAction<T> Compile(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments, MatchBuilderSignature signature)
         {
             object[] delegateArguments = null;

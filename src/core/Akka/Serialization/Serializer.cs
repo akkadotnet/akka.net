@@ -80,7 +80,7 @@ namespace Akka.Serialization
         /// </summary>
         /// <param name="address">The address to use when serializing local ActorRef´s</param>
         /// <param name="obj">The object to serialize</param>
-        /// <returns>TBD</returns>
+        /// <returns>A byte array containing the serialized object with decorated ActorRef's</returns>
         public byte[] ToBinaryWithAddress(Address address, object obj)
         {
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -105,7 +105,7 @@ namespace Akka.Serialization
     }
 
     /// <summary>
-    /// TBD
+    /// A specialized serializer that uses string manifests for type hinting during deserialization.
     /// </summary>
     public abstract class SerializerWithStringManifest : Serializer
     {
@@ -181,14 +181,14 @@ namespace Akka.Serialization
         internal const string SerializationIdentifiers = "akka.actor.serialization-identifiers";
 
         /// <summary>
-        /// TBD
+        /// Gets the serializer identifier for the specified type from the configuration.
         /// </summary>
-        /// <param name="type">TBD</param>
-        /// <param name="system">TBD</param>
+        /// <param name="type">The type of the serializer to get the identifier for.</param>
+        /// <param name="system">The actor system containing the configuration.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the system couldn't find the given serializer <paramref name="type"/> id in the configuration.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The serializer identifier for the specified type.</returns>
         public static int GetSerializerIdentifierFromConfig(Type type, ExtendedActorSystem system)
         {
             var config = system.Settings.Config.GetConfig(SerializationIdentifiers);

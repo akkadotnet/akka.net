@@ -1,6 +1,131 @@
-#### 1.5.41 April 3rd, 2025 ####
+#### 1.5.43 May 23rd, 2025 ####
 
 *Placeholder for nightlies*
+
+#### 1.5.42 May 21st, 2025 ####
+
+Akka.NET v1.5.42 contains several bug fixes and also adds new quality of life features to `Akka.IO.Tcp`, `Akka.Persistence`, `Akka.Pattern`, and `Akka.Cluster.Tools.DistributedPubSub`.
+
+* [IO.Tcp: Cleanup API](https://github.com/akkadotnet/akka.net/pull/7621)
+* [IO.Tcp: Fix `TcpListener` connection queue problem](https://github.com/akkadotnet/akka.net/pull/7621)
+* [Persistence: Allow user to use supervision strategy on journal and snapshot store](https://github.com/akkadotnet/akka.net/pull/7595)
+* [Core: Add cancellation token to `CircuitBreaker` API to signal timed out operations](https://github.com/akkadotnet/akka.net/pull/7624)
+* [Persistence: Change all `CircuitBreaker` protected method API to use cancellation token](https://github.com/akkadotnet/akka.net/pull/7624)
+* [Core: Leverage Exception...when pattern](https://github.com/akkadotnet/akka.net/pull/7614)
+* [IO.Tcp: Add `TcpListenerStatistics` and subscription methods](https://github.com/akkadotnet/akka.net/pull/7633)
+* [Cluster.Tools: Modernize `DistributedPubSub` code](https://github.com/akkadotnet/akka.net/pull/7640)
+* [Cluster.Tools: Optimize `DistributedPubSub` memory allocation](https://github.com/akkadotnet/akka.net/pull/7642)
+* [Cluster.Tools: Improve `DistributedPubSub` `DeadLetter` log message](https://github.com/akkadotnet/akka.net/pull/7646)
+* [Core: Refactor immutable collection builders to use simpler `CreateBuilder` pattern](https://github.com/akkadotnet/akka.net/pull/7656)
+* [IO.Tcp: Redesign `TcpConnection`](https://github.com/akkadotnet/akka.net/pull/7637)
+* [Cluster.Tools: Add `PublishWithAck` feature to `DistributedPubSub`](https://github.com/akkadotnet/akka.net/pull/7652)
+
+> [!WARNING]
+> 
+> This release contains several public API breaking changes to Akka.IO.Tcp and Akka.Persistence 
+
+**Akka.Pattern.CircuitBreaker**
+
+Backward compatible API changes:
+* New `.WithCircuitBreaker()` APIs were added that changes the protected function delegate to accept a new `CancellationToken` argument.
+* Old `.WithCircuitBreaker()` APIs were marked as obsolete. 
+
+**Akka.Cluster.Tools.DistributedPubSub**
+
+The documentation for the new `PublishWithAck` feature can be read [here](https://getakka.net/articles/clustering/distributed-publish-subscribe.html#publishwithack)
+
+Backward compatible API changes:
+* There is a new `DistributedPubSubSettings` constructor that leverages the new `PublishWithAck` feature. The old constructor is marked as obsolete.
+
+**Akka.Persistence**
+
+The documentation for the new supervision strategy for journal and snapshot-store feature can be read [here](https://getakka.net/articles/persistence/storage-plugins.html#controlling-journal-or-snapshot-crash-behavior)
+
+Breaking API changes:
+
+Due to changes in `CircuitBreaker.WithCircuitBreaker()` APIs, several `Akka.Persistence` journal and snapshot-store were changed in a breaking manner. You will need to consider these changes if you have your own specific `Akka.Persistence` plugin implementation and needed to upgrade to this version of Akka.
+
+* AsyncWriteJournal
+   * `DeleteMessagesToAsync()`
+   * `ReadHighestSequenceNrAsync()`
+   * `WriteMessagesAsync`
+* SnapshotStore
+   * Both `DeleteAsync()` methods
+   * `LoadAsync()`
+   * `SaveAsync()`
+
+**Akka.IO.Tcp**
+
+The Akka.IO.Tcp has been redesigned to improve its reliability, visibility, and performance. This, unfortunately, requires some breaking changes to be introduced into the code base.
+
+New features:
+* The `TcpListener` actor now accepts a new `SubscribeToTcpListenerStats` message. Subscribers will receive regular `TcpListenerStatistics` metrics report from the `TcpListener`.
+* The new `UnsubscribeFromTcpListenerStats` message can be used to unsubscribe from the `TcpListener`
+
+Backward compatible changes:
+* The `Akka.IO.Tcp.Bind` command now contain a new settable `TcpSettings` property. 
+* The `Akka.IO.Tcp.Connect` command now contain a new settable `TcpSettings` property.
+* The `Akka.IO.TcpSettings` class have several of its unused properties deprecated and/or changed:
+   * The `ReceivedMessageSizeLimit` property has been deprecated, replaced with the new `MaxFrameSizeBytes` property.
+   * New `ReceiveBufferSize` property added.
+   * New `SendBufferSize` property added.
+
+Breaking API changes:
+* `Akka.IO.Tcp.Instance` static field has been removed.
+* `Akka.IO.TcpExt.BufferPool` static property has been removed.
+
+To [see the full set of changes in Akka.NET v1.5.42, click here](https://github.com/akkadotnet/akka.net/milestone/125?closed=1).
+
+5 contributors since release 1.5.41
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 15      | 3480 | 2864 | Aaron Stannard      |
+| 5       | 1711 | 713  | Gregorius Soedharmo |
+| 4       | 72   | 100  | Simon Cropp         |
+| 1       | 172  | 51   | Arjen Smits         |
+| 1       | 16   | 60   | JuYoung Kim         |
+
+#### 1.5.41 May 6th, 2025 ####
+
+Akka.NET v1.5.41 contains several bug fixes and also adds new quality of life features to Akka.TestKit and Akka.Streams.
+
+* [TestKit: Ensure that `EventFilter` respects `WithinAsync` timeout blocks](https://github.com/akkadotnet/akka.net/pull/7541)
+* [TestKit: Add support to XUnit 3 to Akka.TestKit.Xunit](https://github.com/akkadotnet/akka.net/issues/7603)
+* [TestKit: Improve `ExpectNextNAsync()` error message clarity](https://github.com/akkadotnet/akka.net/pull/7616)
+* [Remoting: Mark `IDaemonMsg` with public interface marker](https://github.com/akkadotnet/akka.net/pull/7596)
+* [Streams: Fix cancelled sinks are blocking other `BroadcastHub` consumers](https://github.com/akkadotnet/akka.net/pull/7615)
+* [Streams: Allow `GroupBy` to use infinite output sub-streams](https://github.com/akkadotnet/akka.net/pull/7607)
+* [Analyzers: Bump Akka.Analyzers from 0.3.1 to 0.3.2](https://github.com/akkadotnet/akka.net/pull/7609)
+
+**XUnit V3 Support**
+
+We've added XUnit v3 support to Akka.TestKit.Xunit, please use this package if you're planning on using and/or migrating to the latest XUnit 3 platform.
+
+Note that due to XUnit v3 limitation, please make sure that you're following these minimum requirements:
+* Use net472 and above if you're targeting .NET Framework.
+* Use net8.0 and above if you're targeting .NET Core.
+* Reference the `xunit.v3.*` packages v2.0.2 and above.
+* Reference the `xunit.runner.visualstudio` package v3.1.0 and above.
+
+**Akka.Streams `GroupBy` API improvement**
+
+`Akka.Streams` `GroupBy` stage can now, and now by default, create an unlimited number of sub-streams. Simply omit the `maxSubstreams` parameter or change the `maxSubstreams` parameter to a negative value to enable this feature.
+
+> [!NOTE]
+> 
+> This can cause memory leak issue if you design your stream to be long-running, and it is designed to generate/process a very large number of sub-streams.
+
+4 contributors since release 1.5.40
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 9       | 1757 | 1690 | Aaron Stannard      |
+| 6       | 1089 | 542  | Gregorius Soedharmo |
+| 1       | 3    | 16   | Simon Cropp         |
+| 1       | 10   | 2    | JuYoung Kim         |
+
+To [see the full set of changes in Akka.NET v1.5.40, click here](https://github.com/akkadotnet/akka.net/milestone/124?closed=1).
 
 #### 1.5.40 March 24th, 2025 ####
 
@@ -21,7 +146,7 @@
 | 28      | 1177 | 2458 | Aaron Stannard      |
 | 7       | 788  | 9534 | Gregorius Soedharmo |
 
-To [see the full set of changes in Akka.NET v1.5.40, click here](https://github.com/akkadotnet/akka.net/milestone/123).
+To [see the full set of changes in Akka.NET v1.5.40, click here](https://github.com/akkadotnet/akka.net/milestone/123?closed=1).
 
 #### 1.5.39 March 14th, 2025 ####
 
