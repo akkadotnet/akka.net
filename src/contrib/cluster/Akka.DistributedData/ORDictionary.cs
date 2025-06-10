@@ -488,9 +488,7 @@ namespace Akka.DistributedData
 
             public PutDeltaOperation(ORSet<TKey>.IDeltaOperation underlying, TKey key, TValue value)
             {
-                if (underlying == null) throw new ArgumentNullException(nameof(underlying));
-
-                Underlying = underlying;
+                Underlying = underlying ?? throw new ArgumentNullException(nameof(underlying));
                 Key = key;
                 Value = value;
             }

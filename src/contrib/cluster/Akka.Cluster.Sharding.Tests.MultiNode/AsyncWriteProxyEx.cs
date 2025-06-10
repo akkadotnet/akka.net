@@ -65,13 +65,8 @@ namespace Akka.Cluster.Sharding.Tests
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="store"/> is undefined.
         /// </exception>
-        public SetStore(IActorRef store)
-        {
-            if (store == null)
-                throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
-
-            Store = store;
-        }
+        public SetStore(IActorRef store) =>
+            Store = store ?? throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
 
         /// <summary>
         /// TBD

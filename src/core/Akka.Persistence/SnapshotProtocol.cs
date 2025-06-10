@@ -793,10 +793,7 @@ namespace Akka.Persistence
         /// </exception>
         public SaveSnapshot(SnapshotMetadata metadata, object snapshot)
         {
-            if (metadata == null)
-                throw new ArgumentNullException(nameof(metadata), "SaveSnapshot requires SnapshotMetadata to be provided");
-
-            Metadata = metadata;
+            Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata), "SaveSnapshot requires SnapshotMetadata to be provided");
             Snapshot = snapshot;
         }
 
@@ -848,13 +845,8 @@ namespace Akka.Persistence
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="metadata"/> is undefined.
         /// </exception>
-        public DeleteSnapshot(SnapshotMetadata metadata)
-        {
-            if (metadata == null)
-                throw new ArgumentNullException(nameof(metadata), "DeleteSnapshot requires SnapshotMetadata to be provided");
-
-            Metadata = metadata;
-        }
+        public DeleteSnapshot(SnapshotMetadata metadata) =>
+            Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata), "DeleteSnapshot requires SnapshotMetadata to be provided");
 
         /// <summary>
         /// Snapshot metadata.
