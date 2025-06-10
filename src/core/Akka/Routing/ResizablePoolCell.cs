@@ -23,10 +23,12 @@ namespace Akka.Routing
     internal class ResizablePoolCell : RoutedActorCell
     {
         private Resizer resizer;
+
         /// <summary>
         /// must always use ResizeInProgressState static class to compare or assign values
         /// </summary>
         private AtomicBoolean _resizeInProgress;
+
         private AtomicCounterLong _resizeCounter;
         private Pool _pool;
 
@@ -53,9 +55,7 @@ namespace Akka.Routing
             Pool pool)
             : base(system, self, routerProps, dispatcher, routeeProps, supervisor)
         {
-            if (pool.Resizer == null) throw new ArgumentException("RouterConfig must be a Pool with defined resizer", nameof(pool));
-
-            resizer = pool.Resizer;
+            resizer = pool.Resizer ?? throw new ArgumentException("RouterConfig must be a Pool with defined resizer", nameof(pool));
             _pool = pool;
             _resizeCounter = new AtomicCounterLong(0);
             _resizeInProgress = new AtomicBoolean();
@@ -79,7 +79,7 @@ namespace Akka.Routing
         /// <param name="envelope">TBD</param>
         public override void SendMessage(Envelope envelope)
         {
-            if(!(RouterConfig.IsManagementMessage(envelope.Message)) &&
+            if (!(RouterConfig.IsManagementMessage(envelope.Message)) &&
                 resizer.IsTimeForResize(_resizeCounter.GetAndIncrement()) &&
                 _resizeInProgress.CompareAndSet(false, true))
             {

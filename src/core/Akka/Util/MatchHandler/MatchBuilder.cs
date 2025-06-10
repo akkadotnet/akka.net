@@ -52,11 +52,8 @@ namespace Akka.Tools.MatchHandler
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown if the given <paramref name="compiler"/> is undefined.
         /// </exception>
-        public MatchBuilder(IMatchCompiler<TItem> compiler)
-        {
-            if(compiler == null) throw new ArgumentNullException(nameof(compiler), "Compiler cannot be null");
-            _compiler = compiler;
-        }
+        public MatchBuilder(IMatchCompiler<TItem> compiler) =>
+            _compiler = compiler ?? throw new ArgumentNullException(nameof(compiler), "Compiler cannot be null");
 
         /// <summary>
         /// Adds a handler that is called if the item being matched is of type <typeparamref name="T"/>

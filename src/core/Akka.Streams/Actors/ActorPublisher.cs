@@ -666,11 +666,8 @@ namespace Akka.Streams.Actors
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="ref"/> is undefined.
         /// </exception>
-        public ActorPublisherImpl(IActorRef @ref)
-        {
-            if(@ref == null) throw new ArgumentNullException(nameof(@ref), "ActorPublisherImpl requires IActorRef to be defined");
-            _ref = @ref;
-        }
+        public ActorPublisherImpl(IActorRef @ref) =>
+            _ref = @ref ?? throw new ArgumentNullException(nameof(@ref), "ActorPublisherImpl requires IActorRef to be defined");
 
         /// <summary>
         /// TBD
@@ -700,11 +697,8 @@ namespace Akka.Streams.Actors
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="ref"/> is undefined.
         /// </exception>
-        public ActorPublisherSubscription(IActorRef @ref)
-        {
-            if (@ref == null) throw new ArgumentNullException(nameof(@ref), "ActorPublisherSubscription requires IActorRef to be defined");
-            _ref = @ref;
-        }
+        public ActorPublisherSubscription(IActorRef @ref) =>
+            _ref = @ref ?? throw new ArgumentNullException(nameof(@ref), "ActorPublisherSubscription requires IActorRef to be defined");
 
         /// <summary>
         /// TBD

@@ -94,13 +94,8 @@ namespace Akka.Persistence.Journal
             /// <exception cref="System.ArgumentNullException">
             /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
             /// </exception>
-            public ReplayFailure(Exception cause)
-            {
-                if (cause == null)
-                    throw new ArgumentNullException(nameof(cause), "AsyncWriteTarget.ReplayFailure cause exception cannot be null");
-
-                Cause = cause;
-            }
+            public ReplayFailure(Exception cause) =>
+                Cause = cause ?? throw new ArgumentNullException(nameof(cause), "AsyncWriteTarget.ReplayFailure cause exception cannot be null");
 
             /// <summary>
             /// The cause of the failure

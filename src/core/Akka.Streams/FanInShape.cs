@@ -91,11 +91,8 @@ namespace Akka.Streams
             /// <param name="inlets">TBD</param>
             public InitPorts(Outlet<TOut> outlet, IEnumerable<Inlet> inlets)
             {
-                if (outlet == null) throw new ArgumentNullException(nameof(outlet));
-                if (inlets == null) throw new ArgumentNullException(nameof(inlets));
-
-                _outlet = outlet;
-                _inlets = inlets;
+                _outlet = outlet ?? throw new ArgumentNullException(nameof(outlet));
+                _inlets = inlets ?? throw new ArgumentNullException(nameof(inlets));
             }
 
             /// <summary>
