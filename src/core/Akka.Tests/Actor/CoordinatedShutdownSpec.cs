@@ -53,6 +53,7 @@ namespace Akka.Tests.Actor
 
         private class CustomReason : CoordinatedShutdown.Reason
         {
+            public override int ExitCode => 999;
         }
 
         private static CoordinatedShutdown.Reason customReason = new CustomReason();
