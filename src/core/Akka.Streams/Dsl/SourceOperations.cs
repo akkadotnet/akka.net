@@ -1802,7 +1802,7 @@ namespace Akka.Streams.Dsl
         /// through will also be sent to the wire-tap Sink, without the latter affecting the mainline flow. If the wire-tap Sink backpressures,
         /// elements that would've been sent to it will be dropped instead.
         /// </para>
-        /// <para>It is similar to <seealso cref="AlsoTo{TOut,TMat}"/> which does backpressure instead of dropping elements.</para>
+        /// <para>It is similar to <seealso cref="AlsoTo{TOut,TMat}(Source{TOut, TMat},IGraph{SinkShape{TOut},TMat})"/> which does backpressure instead of dropping elements.</para>
         /// <para>Emits when element is available and demand exists from the downstream; the element will also be sent to the wire-tap Sink if there is demand.</para>
         /// <para>Backpressures when downstream backpressures</para>
         /// <para>Completes when upstream completes</para>
@@ -1815,9 +1815,9 @@ namespace Akka.Streams.Dsl
         /// <para>
         /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, as a wire tap, meaning that elements that pass
         /// through will also be sent to the wire-tap Sink, without the latter affecting the mainline flow. If the wire-tap Sink backpressures,
-        /// elements that would've been sent to it will be dropped instead..
+        /// elements that would've been sent to it will be dropped instead.
         /// </para>
-        /// <para>It is similar to <seealso cref="AlsoToMaterialized{TOut,TMat,TMat2,TMat3}"/> which does backpressure instead of dropping elements.</para>
+        /// <para>It is similar to <seealso cref="AlsoToMaterialized{TOut,TMat,TMat2,TMat3}(Source{TOut,TMat},IGraph{SinkShape{TOut},TMat2}, Func{TMat, TMat2, TMat3})"/> which does backpressure instead of dropping elements.</para>
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>

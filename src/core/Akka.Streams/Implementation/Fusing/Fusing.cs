@@ -330,8 +330,8 @@ namespace Akka.Streams.Implementation.Fusing
         {
 
             var isAsync = module is GraphStageModule or GraphModule
-                ? module.Attributes.Contains(Attributes.AsyncBoundary.Instance)
-                : module.IsAtomic || module.Attributes.Contains(Attributes.AsyncBoundary.Instance);
+                ? module.Attributes.GetAttribute(Attributes.AsyncBoundary.Instance) is not null
+                : module.IsAtomic || module.Attributes.GetAttribute(Attributes.AsyncBoundary.Instance) is not null;
             if (IsDebug)
                 Log(indent,
                     $"entering {module.GetType().Name} (hash={module.GetHashCode()}, async={isAsync}, name={module.Attributes.GetNameLifted()}, dispatcher={GetDispatcher(module)})");
@@ -545,7 +545,7 @@ namespace Akka.Streams.Implementation.Fusing
         private static bool IsAsync(CopiedModule module)
         {
             var attrs = module.Attributes.And(module.CopyOf.Attributes);
-            return attrs.Contains(Attributes.AsyncBoundary.Instance);
+            return attrs.GetAttribute(Attributes.AsyncBoundary.Instance) is not null;
         }
 
         /// <summary>

@@ -163,7 +163,7 @@ namespace Akka.Streams.Tests.Dsl
                 await leftProbe.ExpectNextAsync(1 / -1);
                 await rightProbe.ExpectNextAsync("1/-1");
 
-                await EventFilter.Exception<DivideByZeroException>().ExpectOneAsync(requestFromBoth);
+                EventFilter.Exception<DivideByZeroException>().ExpectOne(requestFromBoth);
 
                 leftProbe.ExpectError().Should().BeOfType<DivideByZeroException>();
                 rightProbe.ExpectError().Should().BeOfType<DivideByZeroException>();

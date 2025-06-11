@@ -128,10 +128,6 @@ akka.remote.dot-netty.tcp.port = {port}";
             {
             }
 
-            protected TestException(SerializationInfo info, StreamingContext context) : base(info, context)
-            {
-            }
-
             public TestException(string message) : base(message)
             {
             }

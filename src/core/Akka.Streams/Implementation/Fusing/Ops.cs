@@ -1969,7 +1969,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                            if (_buffer.IsFull)
+                            if (_buffer!.IsFull)
                                 _buffer.DropHead();
                             _buffer.Enqueue(element);
                             Pull(_stage.Inlet);
@@ -1980,7 +1980,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                            if (_buffer.IsFull)
+                            if (_buffer!.IsFull)
                                 _buffer.DropTail();
                             _buffer.Enqueue(element);
                             Pull(_stage.Inlet);
@@ -1991,7 +1991,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                            if (_buffer.IsFull)
+                            if (_buffer!.IsFull)
                                 _buffer.Clear();
                             _buffer.Enqueue(element);
                             Pull(_stage.Inlet);
@@ -2002,7 +2002,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                            if (!_buffer.IsFull)
+                            if (!_buffer!.IsFull)
                                 _buffer.Enqueue(element);
 
                             Pull(_stage.Inlet);
@@ -2013,7 +2013,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                            _buffer.Enqueue(element);
+                            _buffer!.Enqueue(element);
 
                             if (!_buffer.IsFull)
                                 Pull(_stage.Inlet);
@@ -2024,7 +2024,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                            if (_buffer.IsFull)
+                            if (_buffer!.IsFull)
                                 FailStage(new BufferOverflowException(
                                     $"Buffer overflow (max capacity was {_stage._count})"));
                             else
@@ -2068,7 +2068,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                if (_buffer.NonEmpty)
+                if (_buffer!.NonEmpty)
                     Push(_stage.Outlet, _buffer.Dequeue());
                 if (IsClosed(_stage.Inlet))
                 {
@@ -2083,7 +2083,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                if (_buffer.IsEmpty)
+                if (_buffer!.IsEmpty)
                     CompleteStage();
             }
         }
@@ -2855,7 +2855,7 @@ namespace Akka.Streams.Implementation.Fusing
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
                 var inlet = _stage.In;
-                if (!_buffer.IsEmpty)
+                if (!_buffer!.IsEmpty)
                     Push(_stage.Out, _buffer.Dequeue());
                 else if (IsClosed(inlet) && Todo == 0)
                     CompleteStage();
@@ -2878,7 +2878,7 @@ namespace Akka.Streams.Implementation.Fusing
                         Push(_stage.Out, result.Value);
                     }
                     else
-                        _buffer.Enqueue(result.Value);
+                        _buffer!.Enqueue(result.Value);
                 }
                 else
                 {
@@ -2900,7 +2900,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                     
-                    return _inFlight + _buffer.Used;
+                    return _inFlight + _buffer!.Used;
                 }
             }
 
@@ -3350,7 +3350,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                if (_buffer.IsFull)
+                if (_buffer!.IsFull)
                     _onPushWhenBufferFull();
                 else
                 {
@@ -3368,7 +3368,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                if (!IsTimerActive(TimerName) && !_buffer.IsEmpty && NextElementWaitTime < 0)
+                if (!IsTimerActive(TimerName) && !_buffer!.IsEmpty && NextElementWaitTime < 0)
                     Push(_stage.Outlet, _buffer.Dequeue().Item2);
 
                 if (!IsClosed(_stage.Inlet) && !HasBeenPulled(_stage.Inlet) && PullCondition)
@@ -3385,7 +3385,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                    return (long)_stage._delay.TotalMilliseconds - (DateTime.UtcNow.Ticks - _buffer.Peek().Item1) * 1000 * 10;
+                    return (long)_stage._delay.TotalMilliseconds - (DateTime.UtcNow.Ticks - _buffer!.Peek().Item1) * 1000 * 10;
                 }
             }
 
@@ -3395,7 +3395,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                if (IsClosed(_stage.Inlet) && _buffer.IsEmpty)
+                if (IsClosed(_stage.Inlet) && _buffer!.IsEmpty)
                     CompleteStage();
             }
 
@@ -3404,9 +3404,9 @@ namespace Akka.Streams.Implementation.Fusing
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
                 if (IsAvailable(_stage.Outlet))
-                    Push(_stage.Outlet, _buffer.Dequeue().Item2);
+                    Push(_stage.Outlet, _buffer!.Dequeue().Item2);
 
-                if (!_buffer.IsEmpty)
+                if (!_buffer!.IsEmpty)
                 {
                     var waitTime = NextElementWaitTime;
                     if (waitTime > 10)
@@ -3422,7 +3422,7 @@ namespace Akka.Streams.Implementation.Fusing
                 {
                     Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                     
-                    return _stage._strategy != DelayOverflowStrategy.Backpressure || _buffer.Used < _size;
+                    return _stage._strategy != DelayOverflowStrategy.Backpressure || _buffer!.Used < _size;
                 }
             }
 
@@ -3430,7 +3430,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                _buffer.Enqueue((DateTime.UtcNow.Ticks, Grab(_stage.Inlet)));
+                _buffer!.Enqueue((DateTime.UtcNow.Ticks, Grab(_stage.Inlet)));
                 if (PullCondition)
                     Pull(_stage.Inlet);
             }
@@ -3445,7 +3445,7 @@ namespace Akka.Streams.Implementation.Fusing
                             Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
                             if (!IsTimerActive(TimerName))
-                                Push(_stage.Outlet, _buffer.Dequeue().Item2);
+                                Push(_stage.Outlet, _buffer!.Dequeue().Item2);
                             else
                             {
                                 CancelTimer(TimerName);
@@ -3457,7 +3457,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                            _buffer.DropHead();
+                            _buffer!.DropHead();
                             GrabAndPull();
                         };
                     case DelayOverflowStrategy.DropTail:
@@ -3465,7 +3465,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                            _buffer.DropTail();
+                            _buffer!.DropTail();
                             GrabAndPull();
                         };
                     case DelayOverflowStrategy.DropNew:
@@ -3480,7 +3480,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                            _buffer.Clear();
+                            _buffer!.Clear();
                             GrabAndPull();
                         };
                     case DelayOverflowStrategy.Fail:

@@ -688,7 +688,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public async Task Should_reply_back_on_original_Transport()
+        public void Should_reply_back_on_original_Transport()
         {
             
         }

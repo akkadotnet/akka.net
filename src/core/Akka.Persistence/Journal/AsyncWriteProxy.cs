@@ -252,8 +252,10 @@ namespace Akka.Persistence.Journal
     /// <summary>
     /// A journal that delegates actual storage to a target actor. For testing only.
     /// </summary>
-    public abstract class AsyncWriteProxy : AsyncWriteJournal, IWithUnboundedStash
+    public abstract class AsyncWriteProxy : AsyncWriteJournal, IWithUnboundedStash, IWithTimers
     {
+        private const string InitTimeoutTimerKey = nameof(InitTimeoutTimerKey);
+        
         private bool _isInitialized;
         private bool _isInitTimedOut;
         private IActorRef _store;
@@ -275,7 +277,7 @@ namespace Akka.Persistence.Journal
         /// </summary>
         public override void AroundPreStart()
         {
-            Context.System.Scheduler.ScheduleTellOnce(Timeout, Self, InitTimeout.Instance, Self);
+            Timers.StartSingleTimer(InitTimeoutTimerKey, InitTimeout.Instance, Timeout, Self);
             base.AroundPreStart();
         }
 
@@ -415,7 +417,9 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// TBD
         /// </summary>
-        public IStash Stash { get; set; }
+        public IStash Stash { get; set; } = null!;
+
+        public ITimerScheduler Timers { get; set; } = null!;
 
         // sent to self only
         /// <summary>

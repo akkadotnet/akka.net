@@ -487,9 +487,18 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="collector">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Deprecated. Please use Collect(isDefined, collector) instead. Since v1.5.44")]
         public static SubFlow<TOut2, TMat, TClosed> Collect<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, Func<TOut1, TOut2> collector)
         {
             return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Collect(flow, collector);
+        }
+
+        public static SubFlow<TOut2, TMat, TClosed> Collect<TOut1, TOut2, TMat, TClosed>(
+            this SubFlow<TOut1, TMat, TClosed> flow,
+            Func<TOut1, bool> isDefined,
+            Func<TOut1, TOut2> collector)
+        {
+            return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Collect(flow, isDefined, collector);
         }
 
         /// <summary>
