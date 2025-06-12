@@ -223,7 +223,7 @@ namespace Akka.Tests.Actor
 
             await waves.AwaitWithTimeout(timeout.Duration() + TimeSpan.FromSeconds(5));
 
-            Assert.Equal(new[] { "done", "done", "done" }, waves.Result);
+            Assert.Equal(new[] { "done", "done", "done" }, await waves);
         }
 
         [Fact]
