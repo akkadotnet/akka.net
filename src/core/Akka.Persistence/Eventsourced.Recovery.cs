@@ -293,13 +293,6 @@ namespace Akka.Persistence
             });
         }
 
-        protected override void PostStop()
-        {
-            base.PostStop();
-            _timeoutCancelable?.Cancel();
-            _timeoutCancelable = null;
-        }
-
         private void ReturnRecoveryPermit() =>
             RecoveryPermitter.Tell(Akka.Persistence.ReturnRecoveryPermit.Instance, Self);
 
