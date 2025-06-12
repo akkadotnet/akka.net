@@ -273,7 +273,7 @@ namespace Akka.Remote.Tests.Transport
             reader.Tell(TestAssociate(33), TestActor);
 
             await statusPromise.Task.WithTimeout(3.Seconds());
-            var result = statusPromise.Task.Result;
+            var result = await statusPromise.Task;
             switch (result)
             {
                 case AkkaProtocolHandle h:
@@ -321,7 +321,7 @@ namespace Akka.Remote.Tests.Transport
             reader.Tell(TestAssociate(33), TestActor);
 
             await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(3));
-            var result = statusPromise.Task.Result;
+            var result = await statusPromise.Task;
             switch (result)
             {
                 case AkkaProtocolHandle h:
@@ -369,7 +369,7 @@ namespace Akka.Remote.Tests.Transport
             stateActor.Tell(TestAssociate(33), TestActor);
 
             await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(3));
-            var result = statusPromise.Task.Result;
+            var result = await statusPromise.Task;
             switch (result)
             {
                 case AkkaProtocolHandle h:
@@ -420,7 +420,7 @@ namespace Akka.Remote.Tests.Transport
             stateActor.Tell(TestAssociate(33), TestActor);
 
             await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(3));
-            var result = statusPromise.Task.Result;
+            var result = await statusPromise.Task;
             switch (result)
             {
                 case AkkaProtocolHandle h:

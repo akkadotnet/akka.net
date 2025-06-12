@@ -81,7 +81,7 @@ namespace Akka.Remote.Tests
             _sys2 = ActorSystem.Create("System2", RemoteConfig);
             InitializeLogger(_sys2);
             var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
-            
+
             // open an association via remote deployment
             var associated =
                 Sys.ActorOf(BlackHoleActor.Props.WithDeploy(Deploy.None.WithScope(new RemoteScope(sys2Address))),
@@ -89,9 +89,9 @@ namespace Akka.Remote.Tests
             Watch(associated);
 
             // verify that the association is open (don't terminate until handshake is finished)
-            associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault).Result.MessageId.ShouldBe("foo");
-            
-            
+            var actorIdentity = await associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault);
+            actorIdentity.MessageId.ShouldBe("foo");
+
             // terminate the DEPLOYED system
             Assert.True(await _sys2.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
             await ExpectTerminatedAsync(associated); // expect that the remote deployed actor is dead
