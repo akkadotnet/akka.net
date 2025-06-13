@@ -113,14 +113,14 @@ namespace Akka.Remote.Tests.Transport
         {
             private volatile bool _isAvailable = true;
             public override bool IsAvailable => _isAvailable;
-            public void SetAvailable(bool available) => Volatile.Write(ref _isAvailable, available);
+            public void SetAvailable(bool available) => _isAvailable = available;
             
             private volatile bool _called;
             public override bool IsMonitoring => _called;
 
             public override void HeartBeat()
             {
-                Volatile.Write(ref _called, true);
+                _called = true;
             }
         }
 
