@@ -193,7 +193,7 @@ namespace Akka.Streams.Actors
     /// </para>
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public abstract class ActorPublisher<T> : ActorBase, IWithTimers
+    public abstract class ActorPublisher<T> : ActorBase
     {
         private const string SubscriptionTimeoutExceededTimerKey = nameof(SubscriptionTimeoutExceededTimerKey);
         
@@ -213,8 +213,6 @@ namespace Akka.Streams.Actors
         {
             SubscriptionTimeout = Timeout.InfiniteTimeSpan;
         }
-
-        public ITimerScheduler Timers { get; set; } = null!;
 
         /// <summary>
         /// Subscription timeout after which this actor will become Canceled and reject any incoming "late" subscriber.
@@ -587,7 +585,7 @@ namespace Akka.Streams.Actors
             if (SubscriptionTimeout != Timeout.InfiniteTimeSpan)
             {
                 _scheduledSubscriptionTimeout = new Cancelable(Context.System.Scheduler);
-                Timers.StartSingleTimer(SubscriptionTimeoutExceededTimerKey, SubscriptionTimeoutExceeded.Instance, SubscriptionTimeout, Self);
+                Context.System.Scheduler.ScheduleTellOnce(SubscriptionTimeout, Self, SubscriptionTimeoutExceeded.Instance, Self, _scheduledSubscriptionTimeout);
             }
         }
 
