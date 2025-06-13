@@ -1105,7 +1105,7 @@ namespace Akka.Streams.Actors
         public void Cancel() { }
         public void Request(long n) { }
     }
-    public abstract class ActorPublisher<T> : Akka.Actor.ActorBase, Akka.Actor.IWithTimers
+    public abstract class ActorPublisher<T> : Akka.Actor.ActorBase
     {
         protected ActorPublisher() { }
         public bool IsActive { get; }
@@ -1113,7 +1113,6 @@ namespace Akka.Streams.Actors
         public bool IsCompleted { get; }
         public bool IsErrorEmitted { get; }
         public System.TimeSpan SubscriptionTimeout { get; set; }
-        public Akka.Actor.ITimerScheduler Timers { get; set; }
         public long TotalDemand { get; }
         public override void AroundPostRestart(System.Exception cause, object message) { }
         public override void AroundPostStop() { }
@@ -2284,9 +2283,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Batch<TOut, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, long max, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> BatchWeighted<TOut, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, long max, System.Func<TOut, long> costFunction, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> Buffer<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, int size, Akka.Streams.OverflowStrategy strategy) { }
-        [System.ObsoleteAttribute("Deprecated. Please use Collect(isDefined, collector) instead. Since v1.5.44")]
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Collect<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, System.Func<TOut1, TOut2> collector) { }
-        public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Collect<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, System.Func<TOut1, bool> isDefined, System.Func<TOut1, TOut2> collector) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> CompletionTimeout<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> Concat<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat> other) { }
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> ConcatMany<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, System.Func<TOut1, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat>> flatten) { }
