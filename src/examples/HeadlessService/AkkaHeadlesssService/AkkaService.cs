@@ -15,8 +15,8 @@ namespace AkkaHeadlesssService
 {
     public sealed class AkkaService : IHostedService
     {
-        private IActorRef _actorRef;
-        private ActorSystem _actorSystem;
+        private IActorRef? _actorRef;
+        private ActorSystem? _actorSystem;
         private readonly IServiceProvider _serviceProvider;
 
         private readonly IHostApplicationLifetime _applicationLifetime;
