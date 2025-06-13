@@ -182,7 +182,7 @@ namespace Akka.Streams
         {
             public static readonly AsyncBoundary Instance = new();
             private AsyncBoundary() { }
-            public bool Equals(AsyncBoundary other) => other is not null;
+            public bool Equals(AsyncBoundary other) => other is AsyncBoundary;
             public override bool Equals(object obj) => obj is AsyncBoundary;
             public override int GetHashCode() => 0;
             public override string ToString() => "AsyncBoundary";
