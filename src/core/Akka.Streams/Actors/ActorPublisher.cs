@@ -195,8 +195,6 @@ namespace Akka.Streams.Actors
     /// <typeparam name="T">TBD</typeparam>
     public abstract class ActorPublisher<T> : ActorBase
     {
-        private const string SubscriptionTimeoutExceededTimerKey = nameof(SubscriptionTimeoutExceededTimerKey);
-        
         private readonly ActorPublisherState _state = ActorPublisherState.Instance.Apply(Context.System);
         private long _demand;
         private LifecycleState _lifecycleState = LifecycleState.PreSubscriber;
