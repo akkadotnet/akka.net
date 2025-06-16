@@ -128,9 +128,11 @@ akka.remote.dot-netty.tcp.port = {port}";
             {
             }
 
+#pragma warning disable SYSLIB0051 // Exception serialization needs to be enabled for this test
             protected TestException(SerializationInfo info, StreamingContext context) : base(info, context)
             {
             }
+#pragma warning restore SYSLIB0051
 
             public TestException(string message) : base(message)
             {

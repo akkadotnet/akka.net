@@ -145,6 +145,7 @@ namespace Akka.Streams
         public ActorMaterializerSettings(int initialInputBufferSize, int maxInputBufferSize, string dispatcher, Akka.Streams.Supervision.Decider supervisionDecider, Akka.Streams.StreamSubscriptionTimeoutSettings subscriptionTimeoutSettings, Akka.Streams.Dsl.StreamRefSettings streamRefSettings, bool isDebugLogging, int outputBurstLimit, bool isFuzzingMode, bool isAutoFusing, int maxFixedBufferSize, int syncProcessingLimit = 1000) { }
         public static Akka.Streams.ActorMaterializerSettings Create(Akka.Actor.ActorSystem system) { }
         public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public Akka.Streams.ActorMaterializerSettings WithAutoFusing(bool isAutoFusing) { }
         public Akka.Streams.ActorMaterializerSettings WithDebugLogging(bool isEnabled) { }
         public Akka.Streams.ActorMaterializerSettings WithDispatcher(string dispatcher) { }

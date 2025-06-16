@@ -99,14 +99,14 @@ namespace Akka.Remote.Tests.Serialization
                 // have the ParentActor remotely deploy an EchoActor onto the second ActorSystem
                 var child = await parent
                     .Ask<IActorRef>(new ParentActor.DeployChild(
-                        system2.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress), RemainingOrDefault).ConfigureAwait(false);
+                        system2.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress), RemainingOrDefault);
 
                 // assert that Child is a remote actor reference
                 child.Should().BeOfType<RemoteActorRef>();
                 Watch(child);
                 
                 // send a message to the EchoActor and verify that it is received
-                (await child.Ask<string>("hello", RemainingOrDefault).ConfigureAwait(false)).Should().Be("hello");
+                (await child.Ask<string>("hello", RemainingOrDefault)).Should().Be("hello");
                 
                 // cause the child to crash
                 child.Tell(EchoActor.Fail.Instance);

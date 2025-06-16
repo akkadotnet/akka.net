@@ -328,6 +328,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// </summary>
     /// <param name="Message">The original message being buffered</param>
     /// <param name="Deadline">The deadline where this buffered message should be timed out</param>
+    /// <param name="Sender">The original sender of the message</param>
     internal readonly record struct BufferedMessage(IWrappedMessage Message, Deadline Deadline, IActorRef Sender);
 
     internal sealed class PruneBufferTick: IDeadLetterSuppression
