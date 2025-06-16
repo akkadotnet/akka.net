@@ -204,7 +204,7 @@ namespace Akka.Persistence.Query.InMemory
         {
         }
 
-        protected void ReceiveInitialRequest()
+        public void ReceiveInitialRequest()
         {
             Replay();
         }

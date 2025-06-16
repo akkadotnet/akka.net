@@ -28,9 +28,6 @@ namespace Akka.Remote.Tests.Performance.Transports
         private Counter _remoteMessageThroughput;
         private List<Task> _tasks = new();
         private readonly List<IActorRef> _receivers = new();
-        private IActorRef _echo;
-        private IActorRef _remoteEcho;
-        private IActorRef _remoteReceiver;
 
         private static readonly AtomicCounter ActorSystemNameCounter = new(0);
         protected ActorSystem System1;

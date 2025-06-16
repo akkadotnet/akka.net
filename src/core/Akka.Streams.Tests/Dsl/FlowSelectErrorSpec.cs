@@ -33,15 +33,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task A_SelectError_must_select_when_there_is_a_handler()
         {
-            await this.AssertAllStagesStoppedAsync(async() => {
-                Source.From(Enumerable.Range(1, 3))                                                                             
-                .Select(ThrowOnTwo)                                                                             
-                .SelectError(_ => Boom)                                                                             
-                .RunWith(this.SinkProbe<int>(), Materializer)                                                                             
-                .Request(2)                                                                             
-                .ExpectNext(1)                                                                             
-                .ExpectError().Should().Be(Boom);
-                return Task.CompletedTask;
+            await this.AssertAllStagesStoppedAsync(async () => {
+                (await Source.From(Enumerable.Range(1, 3))
+                    .Select(ThrowOnTwo)
+                    .SelectError(_ => Boom)
+                    .RunWith(this.SinkProbe<int>(), Materializer)
+                    .Request(2)
+                    .ExpectNext(1)
+                    .ExpectErrorAsync()).Should().Be(Boom);
             }, Materializer);
         }
 

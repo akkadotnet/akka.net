@@ -866,11 +866,12 @@ namespace Akka.Persistence.Journal
         protected static System.Exception TryUnwrapException(System.Exception e) { }
         protected abstract System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> messages, System.Threading.CancellationToken cancellationToken);
     }
-    public abstract class AsyncWriteProxy : Akka.Persistence.Journal.AsyncWriteJournal, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
+    public abstract class AsyncWriteProxy : Akka.Persistence.Journal.AsyncWriteJournal, Akka.Actor.IActorStash, Akka.Actor.IWithTimers, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
     {
         protected AsyncWriteProxy() { }
         public Akka.Actor.IStash Stash { get; set; }
         public abstract System.TimeSpan Timeout { get; }
+        public Akka.Actor.ITimerScheduler Timers { get; set; }
         public override void AroundPreStart() { }
         protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, System.Threading.CancellationToken cancellationToken) { }
@@ -1063,10 +1064,11 @@ namespace Akka.Persistence.Journal
             public Akka.Actor.IActorRef ReplyTo { get; }
         }
     }
-    public class PersistencePluginProxy : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
+    public class PersistencePluginProxy : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithTimers, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
     {
         public PersistencePluginProxy(Akka.Configuration.Config config) { }
         public Akka.Actor.IStash Stash { get; set; }
+        public Akka.Actor.ITimerScheduler Timers { get; set; }
         protected override void PreStart() { }
         protected override bool Receive(object message) { }
         public static void SetTargetLocation(Akka.Actor.ActorSystem system, Akka.Actor.Address address) { }

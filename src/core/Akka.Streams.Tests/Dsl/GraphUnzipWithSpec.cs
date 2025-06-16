@@ -15,6 +15,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
@@ -149,27 +150,29 @@ namespace Akka.Streams.Tests.Dsl
                 var leftSubscription = await leftProbe.ExpectSubscriptionAsync();
                 var rightSubscription = await rightProbe.ExpectSubscriptionAsync();
 
-                Action requestFromBoth = () =>
-                {
-                    leftSubscription.Request(1);
-                    rightSubscription.Request(1);
-                };
-
-                requestFromBoth();
+                await RequestFromBoth();
                 await leftProbe.ExpectNextAsync(1 / -2);
                 await rightProbe.ExpectNextAsync("1/-2");
 
-                requestFromBoth();
+                await RequestFromBoth();
                 await leftProbe.ExpectNextAsync(1 / -1);
                 await rightProbe.ExpectNextAsync("1/-1");
 
-                await EventFilter.Exception<DivideByZeroException>().ExpectOneAsync(requestFromBoth);
+                await EventFilter.Exception<DivideByZeroException>().ExpectOneAsync(3.Seconds(), RequestFromBoth);
 
-                leftProbe.ExpectError().Should().BeOfType<DivideByZeroException>();
-                rightProbe.ExpectError().Should().BeOfType<DivideByZeroException>();
+                (await leftProbe.ExpectErrorAsync()).Should().BeOfType<DivideByZeroException>();
+                (await rightProbe.ExpectErrorAsync()).Should().BeOfType<DivideByZeroException>();
 
                 await leftProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
                 await rightProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+                return;
+
+                Task RequestFromBoth()
+                {
+                    leftSubscription.Request(1);
+                    rightSubscription.Request(1);
+                    return Task.CompletedTask;
+                }
             }, Materializer);
         }
 
