@@ -727,7 +727,7 @@ namespace Akka.Streams.Implementation
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
                 EnqueueAndNotify(new Result<Option<T>>(Grab(_stage.In)));
-                if (_buffer.Used < _maxBuffer) Pull(_stage.In);
+                if (_buffer!.Used < _maxBuffer) Pull(_stage.In);
             }
 
             public void OnUpstreamFinish() => EnqueueAndNotify(new Result<Option<T>>(Option<T>.None));
@@ -759,7 +759,7 @@ namespace Akka.Streams.Implementation
                         {
                             Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                            if (_buffer.IsEmpty)
+                            if (_buffer!.IsEmpty)
                                 _currentRequest = promise;
                             else
                             {
@@ -775,7 +775,7 @@ namespace Akka.Streams.Implementation
             {
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                var e = _buffer.Dequeue();
+                var e = _buffer!.Dequeue();
                 if (e.IsSuccess)
                 {
                     promise.SetResult(e.Value);
@@ -784,7 +784,7 @@ namespace Akka.Streams.Implementation
                 }
                 else
                 {
-                    promise.SetException(e.Exception);
+                    promise.SetException(e.Exception!);
                     FailStage(e.Exception);
                 }
             }
@@ -793,7 +793,7 @@ namespace Akka.Streams.Implementation
             {
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                _buffer.Enqueue(requested);
+                _buffer!.Enqueue(requested);
                 if (_currentRequest.HasValue)
                 {
                     SendDownstream(_currentRequest.Value);

@@ -623,7 +623,7 @@ namespace Akka.Persistence
             {
                 _internalStash.Stash();
             }
-            catch (StashOverflowException e)
+            catch (StashOverflowException)
             {
                 var strategy = InternalStashOverflowStrategy;
                 if (strategy is DiscardToDeadLetterStrategy)

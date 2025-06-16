@@ -450,7 +450,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="collector">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Deprecated. Please use Collect(isDefined, collector) instead")]
+        [Obsolete("Deprecated. Please use Collect(isDefined, collector) instead. Since v1.4.51")]
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
         {
             return flow.Via(new Fusing.Collect<TIn, TOut>(collector));
