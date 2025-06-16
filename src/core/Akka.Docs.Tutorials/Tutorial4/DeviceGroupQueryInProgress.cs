@@ -75,9 +75,7 @@ namespace Tutorials.Tutorial4
         #region query-added
         public class DeviceGroup : UntypedActor
         {
-            private Dictionary<string, IActorRef> deviceIdToActor = new();
             private Dictionary<IActorRef, string> actorToDeviceId = new();
-            private long nextCollectionId = 0L;
 
             public DeviceGroup(string groupId)
             {
