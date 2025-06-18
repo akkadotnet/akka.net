@@ -30,7 +30,10 @@ namespace Akka.Streams.Tests
         public ScriptException() { }
         public ScriptException(string message) : base(message) { }
         public ScriptException(string message, Exception inner) : base(message, inner) { }
+        
+#pragma warning disable SYSLIB0051 // Needed for backward compatibility because of `Serializable` attribute
         protected ScriptException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#pragma warning restore SYSLIB0051
     }
 
     public abstract class ScriptedTest : AkkaSpec
