@@ -16,8 +16,10 @@ using Akka.Persistence.Snapshot;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public abstract class SnapshotStoreProxy : SnapshotStore, IWithUnboundedStash
+    public abstract class SnapshotStoreProxy : SnapshotStore, IWithUnboundedStash, IWithTimers
     {
+        private const string TimeoutTimerKey = nameof(TimeoutTimerKey);
+        
         private class InitTimeout
         {
             public static readonly InitTimeout Instance = new();
@@ -49,12 +51,14 @@ namespace Akka.Cluster.Sharding.Tests
         /// </summary>
         public IStash Stash { get; set; }
 
+        public ITimerScheduler Timers { get; set; }
+
         /// <summary>
         /// TBD
         /// </summary>
         public override void AroundPreStart()
         {
-            Context.System.Scheduler.ScheduleTellOnce(Timeout, Self, InitTimeout.Instance, Self);
+            Timers.StartSingleTimer(TimeoutTimerKey, InitTimeout.Instance, Timeout, Self);
             base.AroundPreStart();
         }
 

@@ -196,6 +196,7 @@ akka.actor.provider = cluster";
             SnapshotSelectionCriteria criteria, 
             CancellationToken cancellationToken)
         {
+            await Task.Yield();
             if (!Working)
             {
                 throw new ApplicationException("Failed");

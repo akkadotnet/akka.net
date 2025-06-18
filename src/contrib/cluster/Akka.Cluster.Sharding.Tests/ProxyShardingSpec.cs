@@ -20,9 +20,10 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ProxyShardingSpec : Akka.TestKit.Xunit2.TestKit
     {
-        ClusterSharding clusterSharding;
-        ClusterShardingSettings shardingSettings;
+        private ClusterSharding clusterSharding;
+        private ClusterShardingSettings shardingSettings;
         private MessageExtractor messageExtractor = new(10);
+        private readonly ProxyMessageExtractor _proxyMessageExtractor = new();
 
         private class MessageExtractor : HashCodeMessageExtractor
         {
@@ -36,24 +37,27 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private Option<(string, object)> IdExtractor(object message)
+        private class ProxyMessageExtractor: IMessageExtractor
         {
-            switch (message)
-            {
-                case int i:
-                    return (i.ToString(), message);
-            }
-            throw new NotSupportedException();
-        }
+            public string EntityId(object message)
+                => message switch
+                {
+                    int i => i.ToString(),
+                    _ => null
+                };
 
-        private string ShardResolver(object message)
-        {
-            switch (message)
-            {
-                case int i:
-                    return i.ToString();
-            }
-            throw new NotSupportedException();
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    int i => i.ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => entityId;
         }
 
 
@@ -73,7 +77,7 @@ namespace Akka.Cluster.Sharding.Tests
             var role = "Shard";
             clusterSharding = ClusterSharding.Get(Sys);
             shardingSettings = ClusterShardingSettings.Create(Sys);
-            clusterSharding.StartProxy("myType", role, IdExtractor, ShardResolver);
+            clusterSharding.StartProxy("myType", role, _proxyMessageExtractor);
         }
 
         [Fact]
