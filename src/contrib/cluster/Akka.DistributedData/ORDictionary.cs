@@ -478,6 +478,14 @@ namespace Akka.DistributedData
 
             public Type KeyType { get; } = typeof(TKey);
             public Type ValueType { get; } = typeof(TValue);
+
+            public override int GetHashCode()
+            {
+                var hash = KeyType.GetHashCode();
+                hash = (hash * 397) ^ ValueType.GetHashCode();
+                hash = (hash * 397) ^ Underlying?.GetHashCode() ?? 0;
+                return hash;
+            }
         }
 
         internal sealed class PutDeltaOperation : AtomicDeltaOperation, ORDictionary.IPutDeltaOp
