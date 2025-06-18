@@ -11,21 +11,45 @@ using Reactive.Streams;
 
 namespace Akka.Streams.Tests.TCK
 {
-    class TransformProcessorTest : AkkaIdentityProcessorVerification<int?>
+    internal class TransformProcessorTest : AkkaIdentityProcessorVerification<int?>
     {
         public override int? CreateElement(int element) => element;
 
         public override IProcessor<int?,int?> CreateIdentityProcessor(int bufferSize)
         {
-            var settings = ActorMaterializerSettings.Create(System).WithInputBuffer(bufferSize/2, bufferSize);
-            var materializer = ActorMaterializer.Create(System, settings);
-
-            return Flow.Create<int?>().Transform(() => new Stage()).ToProcessor().Run(materializer);
+            return Flow.Create<int?>()
+                .Via(new Stage())
+                .ToProcessor()
+                .WithAttributes(Attributes.CreateInputBuffer(bufferSize / 2, bufferSize))
+                .Run(System.Materializer());
         }
 
-        private sealed class Stage : PushStage<int?, int?>
+        private sealed class Stage : GraphStage<FlowShape<int?, int?>>
         {
-            public override ISyncDirective OnPush(int? element, IContext<int?> context) => context.Push(element);
+            private class Logic: InAndOutGraphStageLogic
+            {
+                private readonly Stage _parent;
+                public Logic(Stage parent) : base(parent.Shape)
+                {
+                    _parent = parent;
+                    SetHandlers(_parent.In, _parent.Out, this);
+                }
+                
+                public override void OnPush() => Push(_parent.Out, Grab(_parent.In));
+                public override void OnPull() => Pull(_parent.In);
+            }
+
+            public Stage()
+            {
+                Shape = new FlowShape<int?, int?>(In, Out);
+            }
+            
+            public readonly Inlet<int?> In = new("Stage.in");
+            public readonly Outlet<int?> Out = new("Stage.out");
+            public override FlowShape<int?, int?> Shape { get; }
+
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+                => new Logic(this);
         }
     }
 }

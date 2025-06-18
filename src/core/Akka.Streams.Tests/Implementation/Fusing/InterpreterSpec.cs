@@ -96,7 +96,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         [Fact]
         public void Interpreter_should_work_with_only_boundary_ops()
         {
-            WithOneBoundedSetup(Array.Empty<IStage<int, int>>(),
+            WithOneBoundedSetup<int>(
+                [],
                 (lastEvents, upstream, downstream) =>
                 {
                     lastEvents().Should().BeEmpty();
@@ -690,6 +691,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         public void Interpreter_should_not_allow_AbsorbTermination_from_OnDownstreamFinish()
         {
             // This test must be kept since it tests the compatibility layer, which while is deprecated it is still here.
+#pragma warning disable CS0618 // Type or member is obsolete, see comment above
             WithOneBoundedSetup(ToGraphStage(new InvalidAbsorbTermination<int>()),
                 (lastEvents, _, downstream) =>
                 {
@@ -703,6 +705,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                             lastEvents().Should().BeEquivalentTo(new Cancel(new NotSupportedException("It is not allowed to call AbsorbTermination() from OnDownstreamFinish.")));
                         });
                 });
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         public class Doubler<T> : SimpleLinearGraphStage<T>
