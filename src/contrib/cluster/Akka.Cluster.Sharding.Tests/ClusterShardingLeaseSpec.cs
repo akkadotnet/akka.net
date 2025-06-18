@@ -55,11 +55,6 @@ namespace Akka.Cluster.Sharding.Tests
                 : base(message, innerEx)
             {
             }
-
-            protected LeaseFailed(SerializationInfo info, StreamingContext context)
-                : base(info, context)
-            {
-            }
         }
 
         private static Config SpecConfig =>

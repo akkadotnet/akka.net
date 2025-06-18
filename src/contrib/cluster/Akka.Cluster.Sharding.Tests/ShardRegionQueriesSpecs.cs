@@ -23,6 +23,7 @@ namespace Akka.Cluster.Sharding.Tests
     {
         private readonly Cluster _cluster;
         private readonly ClusterSharding _clusterSharding;
+        private readonly MessageExtractor _messageExtractor = new();
         private readonly IActorRef _shardRegion;
 
         private readonly ActorSystem _proxySys;
@@ -32,7 +33,7 @@ namespace Akka.Cluster.Sharding.Tests
             _clusterSharding = ClusterSharding.Get(Sys);
             _cluster = Cluster.Get(Sys);
             _shardRegion = _clusterSharding.Start("entity", _ => EchoActor.Props(this, true),
-                ClusterShardingSettings.Create(Sys).WithRole("shard"), ExtractEntityId, ExtractShardId);
+                ClusterShardingSettings.Create(Sys).WithRole("shard"), _messageExtractor);
 
             var proxySysConfig = ConfigurationFactory.ParseString("akka.cluster.roles = [proxy]")
                 .WithFallback(Sys.Settings.Config);
@@ -53,33 +54,35 @@ namespace Akka.Cluster.Sharding.Tests
             base.AfterAll();
         }
 
-        private Option<(string, object)> ExtractEntityId(object message)
-        {
-            switch (message)
-            {
-                case int i:
-                    return (i.ToString(), message);
-            }
-
-            throw new NotSupportedException();
-        }
-
+#pragma warning disable AK2001 // See https://getakka.net/articles/clustering/cluster-sharding.html#querying-for-the-location-of-specific-entities
         // <GetEntityLocationExtractor>
-        private string ExtractShardId(object message)
+        private class MessageExtractor: IMessageExtractor
         {
-            switch (message)
-            {
-                case int i:
-                    return (i % 10 + 1).ToString();
-                // must support ShardRegion.StartEntity in order for
-                // GetEntityLocation to work properly
-                case ShardRegion.StartEntity se:
-                    return (int.Parse(se.EntityId) % 10 + 1).ToString();
-            }
+            public string EntityId(object message)
+                => message switch
+                {
+                    int i => i.ToString(),
+                    _ => null
+                };
 
-            throw new NotSupportedException();
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    int i => (i % 10).ToString(),
+                    // must support ShardRegion.StartEntity in order for
+                    // GetEntityLocation to work properly
+                    ShardRegion.StartEntity se => (int.Parse(se.EntityId) % 10 + 1).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % 10).ToString();
         }
         // </GetEntityLocationExtractor>
+#pragma warning restore AK2001
 
         private static Config GetConfig()
         {
@@ -153,7 +156,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             // arrange
             var sharding2 = ClusterSharding.Get(_proxySys);
-            var shardRegionProxy = await sharding2.StartProxyAsync("entity", "shard", ExtractEntityId, ExtractShardId);
+            var shardRegionProxy = await sharding2.StartProxyAsync("entity", "shard", _messageExtractor);
             
             await shardRegionProxy.Ask<int>(1, TimeSpan.FromSeconds(3));
             await shardRegionProxy.Ask<int>(2, TimeSpan.FromSeconds(3));

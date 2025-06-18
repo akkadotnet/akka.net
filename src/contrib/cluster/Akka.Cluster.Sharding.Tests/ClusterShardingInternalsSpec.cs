@@ -20,24 +20,27 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingInternalsSpec : AkkaSpec
     {
-        private Option<(string, object)> ExtractEntityId(object message)
+        private class MessageExtractor: IMessageExtractor
         {
-            switch (message)
-            {
-                case int i:
-                    return (i.ToString(), message);
-            }
-            throw new NotSupportedException();
-        }
+            public string EntityId(object message)
+                => message switch
+                {
+                    int i => i.ToString(),
+                    _ => null
+                };
 
-        private string ExtractShardId(object message)
-        {
-            switch (message)
-            {
-                case int i:
-                    return (i % 10).ToString();
-            }
-            throw new NotSupportedException();
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    int i => (i % 10).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % 10).ToString();
         }
 
         private static Config SpecConfig =>
@@ -50,7 +53,8 @@ namespace Akka.Cluster.Sharding.Tests
                 .WithFallback(DistributedData.DistributedData.DefaultConfig())
                 .WithFallback(ClusterSingleton.DefaultConfig());
 
-        ClusterSharding clusterSharding;
+        private ClusterSharding clusterSharding;
+        private readonly MessageExtractor _messageExtractor = new();
 
         public ClusterShardingInternalsSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
         {
@@ -67,16 +71,14 @@ namespace Akka.Cluster.Sharding.Tests
                   typeName: typeName,
                   entityProps: Props.Empty,
                   settings: settingsWithRole,
-                  extractEntityId: ExtractEntityId,
-                  extractShardId: ExtractShardId,
+                  messageExtractor: _messageExtractor,
                   allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(3, 0.1),
                   handOffStopMessage: PoisonPill.Instance);
 
             var proxy = clusterSharding.StartProxy(
                   typeName: typeName,
                   role: settingsWithRole.Role,
-                  extractEntityId: ExtractEntityId,
-                  extractShardId: ExtractShardId
+                  messageExtractor: _messageExtractor
                 );
 
             region.Should().BeSameAs(proxy);
