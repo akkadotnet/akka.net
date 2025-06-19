@@ -467,6 +467,7 @@ namespace Akka.Streams.Dsl
             return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.SkipWhile(flow, predicate);
         }
 
+        // Backward compatibility
         /// <summary>
         /// Transform this stream by applying the given function <paramref name="collector"/> to each of the elements
         /// on which the function is defined (read: returns not null) as they pass through this processing step.
@@ -480,17 +481,25 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="TOut1">TBD</typeparam>
-        /// <typeparam name="TOut2">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <typeparam name="TClosed">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="collector">TBD</param>
-        /// <returns>TBD</returns>
+        [Obsolete("Deprecated. Please use Collect(SubFlow, Func, Func) instead. Since v1.5.44, will be removed in v1.6")]
         public static SubFlow<TOut2, TMat, TClosed> Collect<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, Func<TOut1, TOut2> collector)
-        {
-            return (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Collect(flow, collector);
-        }
+            => (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Collect(flow, null, collector);
+
+        /// <summary>
+        /// Transform this stream by applying the given function <paramref name="collector"/> to each of the elements
+        /// on which the delegate <paramref name="isDefined"/> returns <c>true</c> as they pass through this processing step.
+        /// Non-matching elements are filtered out.
+        /// <para>
+        /// Emits when the provided function <paramref name="collector"/> is defined for the element
+        /// </para>
+        /// Backpressures when the function <paramref name="collector"/> is defined for the element and downstream backpressures
+        /// <para>
+        /// Completes when upstream completes
+        /// </para>
+        /// Cancels when downstream cancels
+        /// </summary>
+        public static SubFlow<TOut2, TMat, TClosed> Collect<TOut1, TOut2, TMat, TClosed>(this SubFlow<TOut1, TMat, TClosed> flow, Func<TOut1, bool>? isDefined, Func<TOut1, TOut2> collector)
+            => (SubFlow<TOut2, TMat, TClosed>)InternalFlowOperations.Collect(flow, isDefined, collector);
 
         /// <summary>
         /// Chunk up this stream into groups of the given size, with the last group

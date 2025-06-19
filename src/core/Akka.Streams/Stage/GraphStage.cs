@@ -266,7 +266,7 @@ namespace Akka.Streams.Stage
     /// </summary>
     /// <remarks>
     ///  To be thread safe the methods of this class must only be called from either the constructor of the graph operator during
-    /// materialization or one of the methods invoked by the graph operator machinery, such as <see cref="GraphStageLogic.OnPush"/>
+    /// materialization or one of the methods invoked by the graph operator machinery, such as <see cref="IInHandler.OnPush"/>
     /// </remarks>
     public abstract class TimerGraphStageLogic : GraphStageLogic
     {
