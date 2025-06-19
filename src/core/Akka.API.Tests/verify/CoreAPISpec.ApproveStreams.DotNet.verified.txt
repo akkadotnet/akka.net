@@ -207,6 +207,7 @@ namespace Akka.Streams
             public static readonly Akka.Streams.Attributes.AsyncBoundary Instance;
             public bool Equals(Akka.Streams.Attributes.AsyncBoundary other) { }
             public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
             public override string ToString() { }
         }
         public sealed class CancellationStrategy : Akka.Streams.Attributes.IAttribute, Akka.Streams.Attributes.IMandatoryAttribute
@@ -1472,7 +1473,15 @@ namespace Akka.Streams.Dsl
     }
     public class static FlowWithContextOperations
     {
+        [System.ObsoleteAttribute("Deprecated. Please use Collect(FlowWithContext, Func, Func) instead. Since v1.5.4" +
+            "4, will be removed in v1.6")]
         public static Akka.Streams.Dsl.FlowWithContext<TIn, TCtx, TOut2, TCtx, TMat> Collect<TIn, TCtx, TOut, TOut2, TMat>(this Akka.Streams.Dsl.FlowWithContext<TIn flow, System.Func<TOut, TOut2> fn)
+            where TOut2 :  class { }
+        public static Akka.Streams.Dsl.FlowWithContext<TIn, TCtx, TOut2, TCtx, TMat> Collect<TIn, TCtx, TOut, TOut2, TMat>(this Akka.Streams.Dsl.FlowWithContext<TIn flow, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                0,
+                0,
+                0})] System.Func<System.ValueTuple<TOut, TCtx>, bool> isDefined, System.Func<TOut, TOut2> fn)
             where TOut2 :  class { }
         public static Akka.Streams.Dsl.FlowWithContext<TIn, TCtx, System.Collections.Generic.IReadOnlyList<TOut>, System.Collections.Generic.IReadOnlyList<TCtx>, TMat> Grouped<TIn, TCtx, TOut, TMat>(this Akka.Streams.Dsl.FlowWithContext<TIn flow, int n) { }
         public static Akka.Streams.Dsl.FlowWithContext<TIn, TCtx, TOut2, TCtx, TMat> Select<TIn, TCtx, TOut, TOut2, TMat>(this Akka.Streams.Dsl.FlowWithContext<TIn flow, System.Func<TOut, TOut2> fn) { }
@@ -2173,7 +2182,15 @@ namespace Akka.Streams.Dsl
     }
     public class static SourceWithContextOperations
     {
+        [System.ObsoleteAttribute("Deprecated. Please use Collect(SourceWithContext, Func, Func) instead. Since v1.5" +
+            ".44, will be removed in v1.6")]
         public static Akka.Streams.Dsl.SourceWithContext<TOut2, TCtx, TMat> Collect<TOut, TCtx, TOut2, TMat>(this Akka.Streams.Dsl.SourceWithContext<TOut, TCtx, TMat> flow, System.Func<TOut, TOut2> fn)
+            where TOut2 :  class { }
+        public static Akka.Streams.Dsl.SourceWithContext<TOut2, TCtx, TMat> Collect<TOut, TCtx, TOut2, TMat>(this Akka.Streams.Dsl.SourceWithContext<TOut, TCtx, TMat> flow, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                0,
+                0,
+                0})] System.Func<System.ValueTuple<TOut, TCtx>, bool> isDefined, System.Func<TOut, TOut2> fn)
             where TOut2 :  class { }
         public static Akka.Streams.Dsl.SourceWithContext<System.Collections.Generic.IReadOnlyList<TOut>, System.Collections.Generic.IReadOnlyList<TCtx>, TMat> Grouped<TOut, TCtx, TMat>(this Akka.Streams.Dsl.SourceWithContext<TOut, TCtx, TMat> flow, int n) { }
         public static Akka.Streams.Dsl.SourceWithContext<TOut2, TCtx, TMat> Select<TOut, TCtx, TOut2, TMat>(this Akka.Streams.Dsl.SourceWithContext<TOut, TCtx, TMat> flow, System.Func<TOut, TOut2> fn) { }
@@ -2282,7 +2299,12 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Batch<TOut, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, long max, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> BatchWeighted<TOut, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, long max, System.Func<TOut, long> costFunction, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> Buffer<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, int size, Akka.Streams.OverflowStrategy strategy) { }
+        [System.ObsoleteAttribute("Deprecated. Please use Collect(SubFlow, Func, Func) instead. Since v1.5.44, will " +
+            "be removed in v1.6")]
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Collect<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, System.Func<TOut1, TOut2> collector) { }
+        public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Collect<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                0})] System.Func<TOut1, bool> isDefined, System.Func<TOut1, TOut2> collector) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> CompletionTimeout<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> Concat<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat> other) { }
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> ConcatMany<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, System.Func<TOut1, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat>> flatten) { }
