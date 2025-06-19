@@ -1,6 +1,18 @@
-#### 1.5.44 June 11th, 2025 ####
+#### 1.5.44 June 19th, 2025 ####
 
-*Placeholder for nightlies*
+Akka.NET v1.5.44 is a minor patch that contains a bug fix to the Akka.Persistence plugin.
+
+* [Persistence: Make sure that EventSourced timer is canceled when persistent actor is stopped](https://github.com/akkadotnet/akka.net/pull/7693)
+
+3 contributors since release 1.5.43
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 10      | 438  | 323  | Gregorius Soedharmo |
+| 2       | 4    | 2015 | Aaron Stannard      |
+| 1       | 47   | 43   | Simon Cropp         |
+
+To [see the full set of changes in Akka.NET v1.5.44, click here](https://github.com/akkadotnet/akka.net/milestone/127?closed=1).
 
 #### 1.5.43 June 10th, 2025 ####
 
