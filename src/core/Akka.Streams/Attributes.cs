@@ -398,9 +398,15 @@ namespace Akka.Streams
         /// Note that operators in general should not inspect the whole hierarchy but instead use
         /// `get` to get the most specific attribute value.
         /// </summary>
-        [Obsolete("Use GetAttribute<TAttr>() instead")]
+        [Obsolete("Use Contains<TAttr>() instead")]
         public bool Contains<TAttr>(TAttr attribute) where TAttr : IAttribute => _attributes.Any(a => a is TAttr);
 
+        /// <summary>
+        /// Test whether the given attribute <see cref="Type"/> is contained within this attribute list.
+        /// 
+        /// Note that operators in general should not inspect the whole hierarchy but instead use
+        /// `get` to get the most specific attribute value.
+        /// </summary>
         public bool Contains<TAttr>() where TAttr : IAttribute => _attributes.Any(a => a is TAttr);
         
         /// <summary>
