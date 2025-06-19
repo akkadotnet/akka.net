@@ -54,8 +54,6 @@ namespace Akka.Cluster.Sharding.Tests
             base.AfterAll();
         }
 
-#pragma warning disable AK2001 // See https://getakka.net/articles/clustering/cluster-sharding.html#querying-for-the-location-of-specific-entities
-        // <GetEntityLocationExtractor>
         private class MessageExtractor: IMessageExtractor
         {
             public string EntityId(object message)
@@ -72,17 +70,12 @@ namespace Akka.Cluster.Sharding.Tests
                 => message switch
                 {
                     int i => (i % 10).ToString(),
-                    // must support ShardRegion.StartEntity in order for
-                    // GetEntityLocation to work properly
-                    ShardRegion.StartEntity se => (int.Parse(se.EntityId) % 10 + 1).ToString(),
                     _ => null
                 };
 
             public string ShardId(string entityId, object messageHint = null)
                 => (int.Parse(entityId) % 10).ToString();
         }
-        // </GetEntityLocationExtractor>
-#pragma warning restore AK2001
 
         private static Config GetConfig()
         {
