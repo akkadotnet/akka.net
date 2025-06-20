@@ -212,6 +212,7 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash, IWithTi
             Receive<ShutdownTimeout>(_ =>
             {
                 // We somehow could not terminate cleanly within 3 seconds, shutdown immediately
+                _log.Warning("ShardingConsumerController cleanup timed out, force terminating.");
                 Context.Stop(Self);
             });
 
