@@ -920,9 +920,7 @@ namespace Akka.Streams.Implementation.Fusing
             if (FuzzingMode)
             {
                 var swapWith = (ThreadLocalRandom.Current.Next(_queueTail - _queueHead) + _queueHead) & _mask;
-                var ev = _eventQueue[swapWith];
-                _eventQueue[swapWith] = _eventQueue[idx];
-                _eventQueue[idx] = ev;
+                (_eventQueue[swapWith], _eventQueue[idx]) = (_eventQueue[idx], _eventQueue[swapWith]);
             }
             var element = _eventQueue[idx];
             _eventQueue[idx] = NoEvent;
