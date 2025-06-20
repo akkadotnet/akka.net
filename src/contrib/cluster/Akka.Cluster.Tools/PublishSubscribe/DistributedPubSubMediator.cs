@@ -583,7 +583,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
             // NOTE: We can't process this immediately here because message publishing needs to be done
             //       AFTER we send `SubscribeAck`
-            _newlyAddedKeys.Add(key);
+            if(value is not null)
+                _newlyAddedKeys.Add(key);
         }
 
         private void IgnoreOrSendToDeadLetters(object message, IActorRef sender)
