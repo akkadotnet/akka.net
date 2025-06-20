@@ -65,13 +65,8 @@ namespace Akka.Cluster.Sharding.Tests
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="store"/> is undefined.
         /// </exception>
-        public SetStore(IActorRef store)
-        {
-            if (store == null)
-                throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
-
-            Store = store;
-        }
+        public SetStore(IActorRef store) =>
+            Store = store ?? throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
 
         /// <summary>
         /// TBD
@@ -82,8 +77,10 @@ namespace Akka.Cluster.Sharding.Tests
     /// <summary>
     /// A journal that delegates actual storage to a target actor. For testing only.
     /// </summary>
-    public abstract class AsyncWriteProxyEx : AsyncWriteJournal, IWithUnboundedStash
+    public abstract class AsyncWriteProxyEx : AsyncWriteJournal, IWithUnboundedStash, IWithTimers
     {
+        private const string InitTimeoutTimerKey = nameof(InitTimeoutTimerKey);
+        
         private class InitTimeout
         {
             public static readonly InitTimeout Instance = new();
@@ -114,7 +111,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// </summary>
         public override void AroundPreStart()
         {
-            Context.System.Scheduler.ScheduleTellOnce(Timeout, Self, InitTimeout.Instance, Self);
+            Timers.StartSingleTimer(InitTimeoutTimerKey, InitTimeout.Instance, Timeout, Self);
             base.AroundPreStart();
         }
 
@@ -259,6 +256,8 @@ namespace Akka.Cluster.Sharding.Tests
         /// TBD
         /// </summary>
         public IStash Stash { get; set; }
+
+        public ITimerScheduler Timers { get; set; }
     }
 
     /// <summary>

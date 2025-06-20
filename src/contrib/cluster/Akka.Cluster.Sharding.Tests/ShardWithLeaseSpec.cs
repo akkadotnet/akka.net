@@ -88,11 +88,6 @@ namespace Akka.Cluster.Sharding.Tests
                 : base(message, innerEx)
             {
             }
-
-            protected BadLease(SerializationInfo info, StreamingContext context)
-                : base(info, context)
-            {
-            }
         }
 
         private class Setup

@@ -128,6 +128,8 @@ namespace Akka.Persistence.Tests
             {
                 return obj is InvalidReq;
             }
+
+            public override int GetHashCode() => 19;
         }
 
         internal class Receiver : AtLeastOnceDeliveryReceiveActor
@@ -272,6 +274,8 @@ namespace Akka.Persistence.Tests
             {
                 return obj is ReqAck;
             }
+
+            public override int GetHashCode() => 31;
         }
 
         [Serializable]

@@ -64,8 +64,11 @@ namespace Akka.Remote.Tests.Transport
             public static ResendFinal Instance { get; } = new();
         }
 
-        private class SequenceVerifier : UntypedActor
+        private class SequenceVerifier : UntypedActor, IWithTimers
         {
+            private const string SendNextTimerKey = nameof(SendNextTimerKey);
+            private const string SendFinalTimerKey = nameof(SendFinalTimerKey);
+            
             private const int Limit = 100000;
             private int _nextSeq = 0;
             private int _maxSeq = -1;
@@ -80,6 +83,8 @@ namespace Akka.Remote.Tests.Transport
                 _controller = controller;
             }
 
+            public ITimerScheduler Timers { get; set; } = null!;
+
             protected override void OnReceive(object message)
             {
                 if (message.Equals("start"))
@@ -91,7 +96,7 @@ namespace Akka.Remote.Tests.Transport
                     _remote.Tell(_nextSeq);
                     _nextSeq++;
                     if (_nextSeq%2000 == 0)
-                        Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(500), Self, "sendNext", Self);
+                        Timers.StartSingleTimer(SendNextTimerKey, "sendNext", TimeSpan.FromMilliseconds(500), Self);
                     else
                         Self.Tell("sendNext");
                 }
@@ -111,8 +116,7 @@ namespace Akka.Remote.Tests.Transport
                         if (seq > Limit*0.5)
                         {
                             _controller.Tell((_maxSeq, _losses));
-                            Context.System.Scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), Self,
-                                ResendFinal.Instance, Self);
+                            Timers.StartPeriodicTimer(SendFinalTimerKey, ResendFinal.Instance, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), Self);
                             Context.Become(Done);
                         }
                     }

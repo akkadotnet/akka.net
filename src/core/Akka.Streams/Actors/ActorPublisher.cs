@@ -583,7 +583,13 @@ namespace Akka.Streams.Actors
             if (SubscriptionTimeout != Timeout.InfiniteTimeSpan)
             {
                 _scheduledSubscriptionTimeout = new Cancelable(Context.System.Scheduler);
+                // AK1004: Hard to replace this with IWithTimers implementation because SubscriptionTimeoutExceeded is
+                // being handled inside AroundReceive which interferes with IWithTimers internal message handling.
+                //
+                // Naive IWithTimers implementation will break this actor behavior.
+#pragma warning disable AK1004 
                 Context.System.Scheduler.ScheduleTellOnce(SubscriptionTimeout, Self, SubscriptionTimeoutExceeded.Instance, Self, _scheduledSubscriptionTimeout);
+#pragma warning restore AK1004
             }
         }
 
@@ -622,6 +628,7 @@ namespace Akka.Streams.Actors
         /// </summary>
         public override void AroundPostStop()
         {
+            _scheduledSubscriptionTimeout.Cancel();
             _state.Remove(Self);
             try
             {
@@ -666,11 +673,8 @@ namespace Akka.Streams.Actors
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="ref"/> is undefined.
         /// </exception>
-        public ActorPublisherImpl(IActorRef @ref)
-        {
-            if(@ref == null) throw new ArgumentNullException(nameof(@ref), "ActorPublisherImpl requires IActorRef to be defined");
-            _ref = @ref;
-        }
+        public ActorPublisherImpl(IActorRef @ref) =>
+            _ref = @ref ?? throw new ArgumentNullException(nameof(@ref), "ActorPublisherImpl requires IActorRef to be defined");
 
         /// <summary>
         /// TBD
@@ -700,11 +704,8 @@ namespace Akka.Streams.Actors
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="ref"/> is undefined.
         /// </exception>
-        public ActorPublisherSubscription(IActorRef @ref)
-        {
-            if (@ref == null) throw new ArgumentNullException(nameof(@ref), "ActorPublisherSubscription requires IActorRef to be defined");
-            _ref = @ref;
-        }
+        public ActorPublisherSubscription(IActorRef @ref) =>
+            _ref = @ref ?? throw new ArgumentNullException(nameof(@ref), "ActorPublisherSubscription requires IActorRef to be defined");
 
         /// <summary>
         /// TBD

@@ -96,6 +96,32 @@ akkaBuilder.WithAzureDiscovery(options =>
 });
 ```
 
+## Running Clustered Nodes on a Single Machine
+
+When developing or testing, you may need to run multiple Akka.NET nodes on the same host. Manually assigning distinct remote port for each process can work for a fixed seed-node strategy, but doing so for management ports would not work with `Akka.Discovery` and `Akka.Management.Cluster.Bootstrap`.
+
+`Cluster.Bootstrap` expects that all hosts have the same management port. When `Akka.Discovery` returns a list of open ports on a host, the bootstrap coordinator will filter out any ports that are different from the locally configured management port, ignoring the rest.
+
+To allow each host to advertise its own management port without filtering each other out, disable fallback-port filtering:
+
+```csharp
+builder.WithClusterBootstrap(setup =>
+{
+    setup.ContactPoint.FilterOnFallbackPort = false;
+});
+```
+
+```hocon
+akka.management {
+  cluster.bootstrap {
+    contact-point {
+      # allow discovery to return multiple ports per host
+      filter-on-fallback-port = false 
+    }
+  }
+}
+```
+
 ## Further Reading
 
 * [Akka.Discovery Overview](index.md)

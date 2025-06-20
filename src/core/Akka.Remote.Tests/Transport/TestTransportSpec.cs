@@ -130,7 +130,7 @@ namespace Akka.Remote.Tests.Transport
             handleB.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
             await associate.WithTimeout(DefaultTimeout);
-            var handleA = associate.Result;
+            var handleA = await associate;
 
             //Initialize handles
             handleA.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
@@ -185,7 +185,7 @@ namespace Akka.Remote.Tests.Transport
             handleB.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
             await associate.WithTimeout(DefaultTimeout);
-            var handleA = associate.Result;
+            var handleA = await associate;
 
             //Initialize handles
             handleA.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));

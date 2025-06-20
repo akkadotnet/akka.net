@@ -60,10 +60,10 @@ namespace Akka.IO
     /// Every TcpConnection gets assigned a single socket fields and pair of <see cref="SocketAsyncEventArgs"/>,
     /// allocated once per lifetime of the connection actor:
     /// 
-    /// - <see cref="ReceiveArgs"/> used only for receiving data. It has assigned buffer, rent from 
+    /// - <see cref="_receiveArgs"/> used only for receiving data. It has assigned buffer, rent from 
     ///   <see cref="TcpExt"/> once and recycled back upon actor termination. Once data has been received, it's 
     ///   copied to a separate <see cref="ByteString"/> object (so it's NOT a zero-copy operation).
-    /// - <see cref="SendArgs"/> used only for sending data. Unlike receive args, it doesn't have any buffer 
+    /// - <see cref="_sendArgs"/> used only for sending data. Unlike receive args, it doesn't have any buffer 
     ///   assigned. Instead it uses treats incoming data as a buffer (it's safe due to immutable nature of
     ///   <see cref="ByteString"/> object). Therefore writes don't allocate any byte buffers.
     /// 
@@ -486,7 +486,7 @@ namespace Akka.IO
             {
                 _totalSentBytes += ea.BytesTransferred;
                 Log.Debug("[TcpConnection] completed write of {0}/{1} bytes (queued={2}/{3}) [{4} total sent]",
-                    ea.BytesTransferred, ea.BufferList.Sum(c => c.Count), _state.QueuedBytes, _maxQueuedBytes,
+                    ea.BytesTransferred, ea.BufferList?.Sum(c => c.Count) ?? 0, _state.QueuedBytes, _maxQueuedBytes,
                     _totalSentBytes);
             }
 

@@ -93,6 +93,10 @@ namespace Akka.Persistence
         /// <inheritdoc/>
         public override void AroundPostStop()
         {
+            // This is declared in Eventsourced.Recovery.cs
+            _timeoutCancelable?.Cancel();
+            _timeoutCancelable = null;
+            
             try
             {
                 _internalStash.UnstashAll();

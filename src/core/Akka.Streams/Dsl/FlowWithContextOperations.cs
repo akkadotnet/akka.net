@@ -36,13 +36,22 @@ namespace Akka.Streams.Dsl
             return flow.Via(Flow.FromGraph(stage));
         }
 
+        // Backward compatibility
+        /// <summary>
+        /// Context-preserving variant of <see cref="Collect{TIn,TOut}"/>
+        /// </summary>
+        [Obsolete("Deprecated. Please use Collect(FlowWithContext, Func, Func) instead. Since v1.5.44, will be removed in v1.6")]
+        public static FlowWithContext<TIn, TCtx, TOut2, TCtx, TMat> Collect<TIn, TCtx, TOut, TOut2, TMat>(
+            this FlowWithContext<TIn, TCtx, TOut, TCtx, TMat> flow, Func<TOut, TOut2> fn) where TOut2 : class
+            => Collect(flow, null, fn);
+
         /// <summary>
         /// Context-preserving variant of <see cref="Collect{TIn,TOut}"/>
         /// </summary>
         public static FlowWithContext<TIn, TCtx, TOut2, TCtx, TMat> Collect<TIn, TCtx, TOut, TOut2, TMat>(
-            this FlowWithContext<TIn, TCtx, TOut, TCtx, TMat> flow, Func<TOut, TOut2> fn) where TOut2 : class
+            this FlowWithContext<TIn, TCtx, TOut, TCtx, TMat> flow, Func<(TOut, TCtx), bool>? isDefined, Func<TOut, TOut2> fn) where TOut2 : class
         {
-            var stage = new Collect<(TOut, TCtx), (TOut2, TCtx)>(func: x =>
+            var stage = new Collect<(TOut, TCtx), (TOut2, TCtx)>(isDefined, x =>
             {
                 var result = fn(x.Item1);
                 return ReferenceEquals(result, null) ? default((TOut2, TCtx)) : (result, x.Item2);
@@ -178,13 +187,22 @@ namespace Akka.Streams.Dsl
             return flow.Via(Flow.FromGraph(stage));
         }
 
+        // Backward compatibility
+        /// <summary>
+        /// Context-preserving variant of <see cref="Collect{TIn,TOut}"/>
+        /// </summary>
+        [Obsolete("Deprecated. Please use Collect(SourceWithContext, Func, Func) instead. Since v1.5.44, will be removed in v1.6")]
+        public static SourceWithContext<TOut2, TCtx, TMat> Collect<TOut, TCtx, TOut2, TMat>(
+            this SourceWithContext<TOut, TCtx, TMat> flow, Func<TOut, TOut2> fn) where TOut2 : class
+            => Collect(flow, null, fn);
+
         /// <summary>
         /// Context-preserving variant of <see cref="Collect{TIn,TOut}"/>
         /// </summary>
         public static SourceWithContext<TOut2, TCtx, TMat> Collect<TOut, TCtx, TOut2, TMat>(
-            this SourceWithContext<TOut, TCtx, TMat> flow, Func<TOut, TOut2> fn) where TOut2 : class
+            this SourceWithContext<TOut, TCtx, TMat> flow, Func<(TOut, TCtx), bool>? isDefined, Func<TOut, TOut2> fn) where TOut2 : class
         {
-            var stage = new Collect<(TOut, TCtx), (TOut2, TCtx)>(func: x =>
+            var stage = new Collect<(TOut, TCtx), (TOut2, TCtx)>(isDefined, x =>
             {
                 var result = fn(x.Item1);
                 return ReferenceEquals(result, null) ? default((TOut2, TCtx)) : (result, x.Item2);

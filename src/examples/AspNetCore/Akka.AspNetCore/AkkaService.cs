@@ -14,10 +14,10 @@ namespace Akka.AspNetCore
 {
     public class AkkaService : IHostedService, IActorBridge
     {
-        private ActorSystem _actorSystem;
+        private ActorSystem? _actorSystem;
         private readonly IConfiguration _configuration;
         private readonly IServiceProvider _serviceProvider;
-        private IActorRef _actorRef;
+        private IActorRef? _actorRef;
 
         private readonly IHostApplicationLifetime _applicationLifetime;
 

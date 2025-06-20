@@ -374,7 +374,7 @@ namespace Akka.Streams.Tests.Dsl
                                 StreamSubscriptionTimeoutTerminationMode.CancelTermination,
                                 TimeSpan.FromMilliseconds(500))));
                 var testSource = Source.Single(1)
-                    .MapMaterializedValue<TaskCompletionSource<int>>(_ => null)
+                    .MapMaterializedValue<TaskCompletionSource<int>>(_ => null!)
                     .Concat(Source.Maybe<int>())
                     .SplitWhen(_ => true);
 
@@ -382,7 +382,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     await testSource.Lift()
                         .Delay(TimeSpan.FromSeconds(1))
-                        .ConcatMany(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null))
+                        .ConcatMany(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null!))
                         .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer);
                 }).Should().ThrowAsync<SubscriptionTimeoutException>();
             }, Materializer)

@@ -100,7 +100,7 @@ namespace Akka.Streams.Implementation.StreamRef
                 get
                 {
                     Debug.Assert(_stageActor != null, nameof(_stageActor) + " != null");
-                    return _stageActor.Ref;
+                    return _stageActor!.Ref;
                 }
             }
             public IActorRef PartnerRef
@@ -165,10 +165,10 @@ namespace Akka.Streams.Implementation.StreamRef
                 Debug.Assert(_receiveBuffer != null, nameof(_receiveBuffer) + " != null");
                 Debug.Assert(_requestStrategy != null, nameof(_requestStrategy) + " != null");
                 
-                var i = _receiveBuffer.RemainingCapacity - _localRemainingRequested;
+                var i = _receiveBuffer!.RemainingCapacity - _localRemainingRequested;
                 if (_partnerRef != null && i > 0)
                 {
-                    var addDemand = _requestStrategy.RequestDemand((int)(_receiveBuffer.Used + _localRemainingRequested));
+                    var addDemand = _requestStrategy!.RequestDemand((int)(_receiveBuffer.Used + _localRemainingRequested));
 
                     // only if demand has increased we shoot it right away
                     // otherwise it's the same demand level, so it'd be triggered via redelivery anyway
@@ -237,14 +237,14 @@ namespace Akka.Streams.Implementation.StreamRef
                         ObserveAndValidateSender(sender, "Illegal sender in RemoteStreamCompleted");
                         ObserveAndValidateSequenceNr(completed.SeqNr, "Illegal sequence nr in RemoteStreamCompleted");
                         Log.Debug("[{0}] The remote stream has completed, completing as well...", StageActorName);
-                        _stageActor.Unwatch(sender);
+                        _stageActor!.Unwatch(sender);
                         _completed = true;
                         TryPush();
                         break;
                     case RemoteStreamFailure failure:
                         ObserveAndValidateSender(sender, "Illegal sender in RemoteStreamFailure");
                         Log.Warning("[{0}] The remote stream has failed, failing (reason: {1})", StageActorName, failure.Message);
-                        _stageActor.Unwatch(sender);
+                        _stageActor!.Unwatch(sender);
                         FailStage(new RemoteStreamRefActorTerminatedException($"Remote stream ({sender.Path}) failed, reason: {failure.Message}"));
                         break;
                     case Terminated terminated:
@@ -265,7 +265,7 @@ namespace Akka.Streams.Implementation.StreamRef
             {
                 Debug.Assert(_receiveBuffer != null, nameof(_receiveBuffer) + " != null");
                 
-                if (!_receiveBuffer.IsEmpty && IsAvailable(_stage.Outlet)) Push(_stage.Outlet, _receiveBuffer.Dequeue());
+                if (!_receiveBuffer!.IsEmpty && IsAvailable(_stage.Outlet)) Push(_stage.Outlet, _receiveBuffer.Dequeue());
                 else if (_receiveBuffer.IsEmpty && _completed) CompleteStage();
             }
 
@@ -275,7 +275,7 @@ namespace Akka.Streams.Implementation.StreamRef
                 
                 var outlet = _stage.Outlet;
                 _localRemainingRequested--;
-                if (_receiveBuffer.IsEmpty && IsAvailable(outlet))
+                if (_receiveBuffer!.IsEmpty && IsAvailable(outlet))
                     Push(outlet, (TOut)payload);
                 else if (_receiveBuffer.IsFull)
                     throw new IllegalStateException($"Attempted to overflow buffer! Capacity: {_receiveBuffer.Capacity}, incoming element: {payload}, localRemainingRequested: {_localRemainingRequested}, localCumulativeDemand: {_localCumulativeDemand}");
@@ -295,7 +295,7 @@ namespace Akka.Streams.Implementation.StreamRef
                 {
                     Log.Debug("Received first message from {0}, assuming it to be the remote partner for this stage", partner);
                     _partnerRef = partner;
-                    _stageActor.Watch(partner);
+                    _stageActor!.Watch(partner);
                 }
                 else if (!Equals(_partnerRef, partner))
                 {

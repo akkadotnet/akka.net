@@ -920,9 +920,7 @@ namespace Akka.Streams.Implementation.Fusing
             if (FuzzingMode)
             {
                 var swapWith = (ThreadLocalRandom.Current.Next(_queueTail - _queueHead) + _queueHead) & _mask;
-                var ev = _eventQueue[swapWith];
-                _eventQueue[swapWith] = _eventQueue[idx];
-                _eventQueue[idx] = ev;
+                (_eventQueue[swapWith], _eventQueue[idx]) = (_eventQueue[idx], _eventQueue[swapWith]);
             }
             var element = _eventQueue[idx];
             _eventQueue[idx] = NoEvent;
@@ -938,7 +936,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// <returns>TBD</returns>
         public void Enqueue(Connection connection)
         {
+#pragma warning disable CS0162 // Unreachable code can be reached if IsDebug is set to true.
             if (IsDebug && _queueTail - _queueHead > _mask) throw new Exception($"{Name} internal queue full ({QueueStatus()}) + {connection}");
+#pragma warning restore CS0162
             _eventQueue[_queueTail & _mask] = connection;
             _queueTail++;
         }

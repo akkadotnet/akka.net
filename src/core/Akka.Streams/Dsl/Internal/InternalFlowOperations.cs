@@ -200,7 +200,7 @@ namespace Akka.Streams.Dsl.Internal
         /// operations (such as `Log`, or emitting metrics), for each element without having to modify it.
         /// </para>
         /// <para>
-        /// For logging signals (elements, completion, error) consider using the <see cref="Log"/> stage instead,
+        /// For logging signals (elements, completion, error) consider using the <see cref="Log{T,TMat}"/> stage instead,
         /// along with appropriate <see cref="Attributes.LogLevels"/>.
         /// </para>
         /// <para>
@@ -450,7 +450,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="collector">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Deprecated. Please use Collect(isDefined, collector) instead")]
+        [Obsolete("Deprecated. Please use Collect(isDefined, collector) instead. Since v1.4.51")]
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
         {
             return flow.Via(new Fusing.Collect<TIn, TOut>(collector));

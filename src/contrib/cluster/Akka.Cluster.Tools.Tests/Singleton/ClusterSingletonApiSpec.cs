@@ -71,7 +71,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                     hostname = ""127.0.0.1""
                     port = 0
                 }
-            }").WithFallback(TestConfigs.DefaultConfig);
+            }")
+            .WithFallback(TestConfigs.DefaultConfig)
+            .WithFallback(ClusterSingleton.DefaultConfig());
 
         public ClusterSingletonApiSpec(ITestOutputHelper testOutput)
             : base(GetConfig(), testOutput)
@@ -81,6 +83,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             _system2 = ActorSystem.Create(
                 Sys.Name,
                 ConfigurationFactory.ParseString("akka.cluster.roles = [\"singleton\"]").WithFallback(Sys.Settings.Config));
+            InitializeLogger(_system2, "Sys2: ");
 
             _clusterNode2 = Cluster.Get(_system2);
         }
@@ -97,29 +100,40 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             _clusterNode2.Join(_clusterNode2.SelfAddress);
             node2UpProbe.AwaitAssert(() => _clusterNode2.SelfMember.Status.ShouldBe(MemberStatus.Up), TimeSpan.FromSeconds(3));
 
-            var cs1 = ClusterSingleton.Get(Sys);
-            var cs2 = ClusterSingleton.Get(_system2);
-
-            var settings = ClusterSingletonSettings.Create(Sys).WithRole("singleton");
-            var node1ref = cs1.Init(SingletonActor.Create(Props.Create<PingPong>(), "ping-pong").WithStopMessage(Perish.Instance).WithSettings(settings));
-            var node2ref = cs2.Init(SingletonActor.Create(Props.Create<PingPong>(), "ping-pong").WithStopMessage(Perish.Instance).WithSettings(settings));
-
-            // subsequent spawning returns the same refs
-            cs1.Init(SingletonActor.Create(Props.Create<PingPong>(), "ping-pong").WithStopMessage(Perish.Instance).WithSettings(settings)).ShouldBe(node1ref);
-            cs2.Init(SingletonActor.Create(Props.Create<PingPong>(), "ping-pong").WithStopMessage(Perish.Instance).WithSettings(settings)).ShouldBe(node2ref);
+            var settings = ClusterSingletonManagerSettings.Create(Sys)
+                .WithRole("singleton").WithSingletonName("ping-pong");
+            
+            Sys.ActorOf(ClusterSingletonManager.Props(
+                singletonProps: Props.Create<PingPong>(),
+                terminationMessage: Perish.Instance,
+                settings: settings), "singletonManager-ping-pong");
+            _system2.ActorOf(ClusterSingletonManager.Props(
+                singletonProps: Props.Create<PingPong>(),
+                terminationMessage: Perish.Instance,
+                settings: settings), "singletonManager-ping-pong");
+                
+            var proxySettings = ClusterSingletonProxySettings.Create(Sys)
+                .WithRole("singleton").WithSingletonName("ping-pong");
+            
+            var node1Ref = Sys.ActorOf(ClusterSingletonProxy.Props(
+                singletonManagerPath: "/user/singletonManager-ping-pong",
+                settings: proxySettings), "singletonProxy-ping-pong");
+            var node2Ref = _system2.ActorOf(ClusterSingletonProxy.Props(
+                singletonManagerPath: "/user/singletonManager-ping-pong",
+                settings: proxySettings), "singletonProxy-ping-pong");
 
             var node1PongProbe = CreateTestProbe(Sys);
             var node2PongProbe = CreateTestProbe(_system2);
 
             node1PongProbe.AwaitAssert(() =>
             {
-                node1ref.Tell(new Ping(node1PongProbe.Ref));
+                node1Ref.Tell(new Ping(node1PongProbe.Ref));
                 node1PongProbe.ExpectMsg<Pong>();
             }, TimeSpan.FromSeconds(3));
 
             node2PongProbe.AwaitAssert(() =>
             {
-                node2ref.Tell(new Ping(node2PongProbe.Ref));
+                node2Ref.Tell(new Ping(node2PongProbe.Ref));
                 node2PongProbe.ExpectMsg<Pong>();
             }, TimeSpan.FromSeconds(3));
         }
