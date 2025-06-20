@@ -191,11 +191,10 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash, IWithTi
         Timers.StartSingleTimer(ShutdownTimeoutTimerKey, ShutdownTimeout.Instance, TimeSpan.FromSeconds(3), Self);
 
         _log.Debug("Shutting down child controllers");
-        
-        // It's fine to shut down producers immediately since the `_consumer` user entity actor is already dead,
-        // no delivery is needed
+
         foreach (var p in ProducerControllers.Keys)
-            Context.Stop(p);
+            Context.Unwatch(p);
+        ProducerControllers = ImmutableDictionary<IActorRef, string>.Empty;
         
         foreach (var c in ConsumerControllers.Values.Distinct())
             Context.Stop(c);
@@ -218,25 +217,17 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash, IWithTi
 
             Receive<Terminated>(t =>
             {
-                if (ProducerControllers.TryGetValue(t.ActorRef, out var producer))
-                {
-                    _log.Debug("ProducerController for producerId [{0}] terminated.", producer);
-                    ProducerControllers = ProducerControllers.Remove(t.ActorRef);
-                }
-                else
-                {
-                    var removeList = ConsumerControllers
-                        .Where(kv => kv.Value.Equals(t.ActorRef))
-                        .Select(kv => kv.Key)
-                        .ToArray();
+                var removeList = ConsumerControllers
+                    .Where(kv => kv.Value.Equals(t.ActorRef))
+                    .Select(kv => kv.Key)
+                    .ToArray();
                     
-                    if(removeList.Length > 0)
-                    {
-                        foreach (var key in removeList)
-                            _log.Debug("ConsumerController for producerId [{0}] terminated.", key);
+                if(removeList.Length > 0)
+                {
+                    foreach (var key in removeList)
+                        _log.Debug("ConsumerController for producerId [{0}] terminated.", key);
                         
-                        ConsumerControllers = ConsumerControllers.RemoveRange(removeList);
-                    }
+                    ConsumerControllers = ConsumerControllers.RemoveRange(removeList);
                 }
                 
                 if (ProducerControllers.Count > 0 || ConsumerControllers.Count > 0)
