@@ -200,7 +200,7 @@ namespace Akka.Streams.Dsl.Internal
         /// operations (such as `Log`, or emitting metrics), for each element without having to modify it.
         /// </para>
         /// <para>
-        /// For logging signals (elements, completion, error) consider using the <see cref="Log"/> stage instead,
+        /// For logging signals (elements, completion, error) consider using the <see cref="Log{T,TMat}"/> stage instead,
         /// along with appropriate <see cref="Attributes.LogLevels"/>.
         /// </para>
         /// <para>

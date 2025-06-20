@@ -1780,7 +1780,7 @@ namespace Akka.Streams.Dsl
         /// operations (such as `Log`, or emitting metrics), for each element without having to modify it.
         /// </para>
         /// <para>
-        /// For logging signals (elements, completion, error) consider using the <see cref="Log"/> stage instead,
+        /// For logging signals (elements, completion, error) consider using the <see cref="Log{TOut,TMat}"/> stage instead,
         /// along with appropriate <see cref="Attributes.LogLevels"/>.
         /// </para>
         /// <para>Emits when upstream emits an element</para>
