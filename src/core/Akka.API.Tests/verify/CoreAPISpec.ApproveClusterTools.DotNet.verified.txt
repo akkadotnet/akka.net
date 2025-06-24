@@ -243,6 +243,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public DistributedPubSubExtensionProvider() { }
         public override Akka.Cluster.Tools.PublishSubscribe.DistributedPubSub CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class DistributedPubSubMediator : Akka.Actor.ReceiveActor, Akka.Actor.IWithTimers
     {
         public DistributedPubSubMediator(Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings settings) { }
