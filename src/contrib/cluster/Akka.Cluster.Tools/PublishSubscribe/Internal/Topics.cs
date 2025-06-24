@@ -43,7 +43,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// </summary>
     internal abstract class TopicLike : ActorBase, IWithTimers
     {
-        private const string PruneTimerKey = "PruneTimer";
+        private const string PruneTimerKey = nameof(PruneTimerKey);
+        private const string PruneBufferTimerKey = nameof(PruneBufferTimerKey);
         
         /// <summary>
         /// TBD
@@ -70,18 +71,31 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// </summary>
         protected readonly bool SendToDeadLettersWhenNoSubscribers;
 
+        protected readonly TimeSpan PruneBufferInterval;
+
+        private readonly ILoggingAdapter _log;
+        
+        protected int MaxBufferSize { get; }
+        
+        private readonly List<BufferedMessage> _buffer = new();
+
         /// <summary>
         /// Creates a new instance of a topic or group actor.
         /// </summary>
         /// <param name="emptyTimeToLive">The TTL for how often this actor will be removed.</param>
         /// <param name="sendToDeadLettersWhenNone">When set to <c>true</c>, this actor will
         /// publish a <see cref="DeadLetter"/> for each message if the total number of subscribers == 0.</param>
-        protected TopicLike(TimeSpan emptyTimeToLive, bool sendToDeadLettersWhenNone)
+        /// <param name="pruneBufferInterval">Time interval to check for timed out PublishWithAck</param>
+        /// <param name="maxBufferSize">Maximum buffer size for each topic</param>
+        protected TopicLike(TimeSpan emptyTimeToLive, bool sendToDeadLettersWhenNone, TimeSpan pruneBufferInterval, int maxBufferSize)
         {
             Subscribers = new HashSet<IActorRef>();
             EmptyTimeToLive = emptyTimeToLive;
             SendToDeadLettersWhenNoSubscribers = sendToDeadLettersWhenNone;
             PruneInterval = new TimeSpan(emptyTimeToLive.Ticks / 2);
+            PruneBufferInterval = pruneBufferInterval;
+            MaxBufferSize = maxBufferSize;
+            _log = Context.GetLogger();
         }
 
         public ITimerScheduler Timers { get; set; }
@@ -90,6 +104,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         {
             base.PreStart();
             Timers.StartPeriodicTimer(PruneTimerKey, Prune.Instance, PruneInterval, PruneInterval, Self);
+            Timers.StartPeriodicTimer(PruneBufferTimerKey, PruneBufferTick.Instance, PruneBufferInterval, PruneBufferInterval, Self);
         }
 
         /// <inheritdoc cref="ActorBase.PostStop"/>
@@ -113,12 +128,29 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     Subscribers.Add(subscribe.Ref);
                     PruneDeadline = null;
                     Context.Parent.Tell(new Subscribed(new SubscribeAck(subscribe), Sender));
+                    
+                    if(_buffer.Count == 0)
+                        return true;
+            
+                    foreach (var msg in _buffer)
+                        Self.Tell(msg.Message, msg.Sender);
+                    _buffer.Clear();
+
                     return true;
 
                 case Unsubscribe unsubscribe:
                     Context.Unwatch(unsubscribe.Ref);
                     Remove(unsubscribe.Ref);
                     Context.Parent.Tell(new Unsubscribed(new UnsubscribeAck(unsubscribe), Sender));
+                    return true;
+                
+                case PruneBufferTick:
+                    var removed = _buffer.Where(b => b.Deadline.IsOverdue).ToArray();
+                    foreach (var item in removed)
+                    {
+                        _buffer.Remove(item);
+                        IgnoreOrSendToDeadLetters(item.Message, item.Sender);
+                    }
                     return true;
 
                 case Terminated terminated:
@@ -137,6 +169,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                 case TerminateRequest:
                     if (Subscribers.Count == 0 && !Context.GetChildren().Any())
                     {
+                        foreach (var msg in _buffer)
+                            IgnoreOrSendToDeadLetters(msg.Message, msg.Sender);
+                        _buffer.Clear();
                         Context.Stop(Self);
                     }
                     else
@@ -152,17 +187,61 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
 
                 default:
                     foreach (var subscriber in Subscribers)
-                        subscriber.Forward(message);
+                    {
+                        if(message is PublishWithAck needAck)
+                        {
+                            subscriber.Forward(needAck.Message);
+                            Sender.Tell(new PublishSucceeded(needAck));
+                        }
+                        else
+                        {
+                            subscriber.Forward(message);
+                        }
+                    }
 
                     // no subscribers
-                    if (Subscribers.Count == 0 && SendToDeadLettersWhenNoSubscribers)
+                    if (Subscribers.Count == 0)
                     {
-                        var noSubs = new NoSubscribersDeadLetter(Context.Self.Path.Name, message);
-                        var deadLetter = new DeadLetter(noSubs, Sender, Self);
-                        Context.System.EventStream.Publish(deadLetter);
+                        if(message is PublishWithAck publish)
+                            BufferMessageOrDeadLetter(publish, Sender);
+                        else
+                            IgnoreOrSendToDeadLetters(message, Sender);
                     }
 
                     return true;
+            }
+        }
+
+        private void BufferMessageOrDeadLetter(PublishWithAck message, IActorRef sender)
+        {
+            if(_buffer.Count >= MaxBufferSize)
+            {
+                _log.Warning("PublishWithAck buffer overflowed for topic [{0}]. New message inserted: {1}", Self.Path.Name, message);
+                while (_buffer.Count >= MaxBufferSize)
+                {
+                    var removed = _buffer[0];
+                    _buffer.RemoveAt(0);
+                    IgnoreOrSendToDeadLetters(removed.Message, removed.Sender);
+                }
+            }
+            
+            _buffer.Add(new BufferedMessage(message, new Deadline(DateTime.UtcNow + message.Timeout), sender));
+        }
+
+        private void IgnoreOrSendToDeadLetters(object message, IActorRef sender)
+        {
+            if (message is PublishWithAck needAck)
+            {
+                sender.Tell(new PublishFailed(needAck, PublishFailReason.Timeout));
+            }
+            
+            if (SendToDeadLettersWhenNoSubscribers)
+            {
+                // Use the specialized NoSubscribersDeadLetter struct to clearly indicate
+                // that the message was not delivered because there were no subscribers
+                var noSubs = new NoSubscribersDeadLetter(Context.Self.Path.Name, message);
+                var deadLetter = new DeadLetter(noSubs, Sender, Self);
+                Context.System.EventStream.Publish(deadLetter);
             }
         }
 
@@ -203,7 +282,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <param name="sendToDeadLettersWhenNone">When set to <c>true</c>, this actor will
         /// publish a <see cref="DeadLetter"/> for each message if the total number of subscribers == 0.</param>
         /// <param name="routingLogic">The routing logic to use for distributing messages to subscribers.</param>
-        public Topic(TimeSpan emptyTimeToLive, RoutingLogic routingLogic, bool sendToDeadLettersWhenNone) : base(emptyTimeToLive, sendToDeadLettersWhenNone)
+        /// <param name="pruneBufferInterval">Time interval to check for timed out PublishWithAck</param>
+        /// <param name="maxBufferSize">Maximum buffer size for each topic</param>
+        public Topic(TimeSpan emptyTimeToLive, RoutingLogic routingLogic, bool sendToDeadLettersWhenNone, TimeSpan pruneBufferInterval, int maxBufferSize) 
+            : base(emptyTimeToLive, sendToDeadLettersWhenNone, pruneBufferInterval, maxBufferSize)
         {
             _routingLogic = routingLogic;
             _buffer = new PerGroupingBuffer();
@@ -284,7 +366,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         private IActorRef NewGroupActor(string encodedGroup)
         {
             var g = Context.ActorOf(
-                Props.Create(() => new Group(EmptyTimeToLive, _routingLogic, SendToDeadLettersWhenNoSubscribers))
+                Props.Create(() => new Group(EmptyTimeToLive, _routingLogic, SendToDeadLettersWhenNoSubscribers, PruneBufferInterval, MaxBufferSize))
                     .WithDeploy(Deploy.Local),
                 encodedGroup);
             Context.Watch(g);
@@ -307,7 +389,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         /// <param name="sendToDeadLettersWhenNone">When set to <c>true</c>, this actor will
         /// publish a <see cref="DeadLetter"/> for each message if the total number of subscribers == 0.</param>
         /// <param name="routingLogic">The routing logic to use for distributing messages to subscribers.</param>
-        public Group(TimeSpan emptyTimeToLive, RoutingLogic routingLogic, bool sendToDeadLettersWhenNone) : base(emptyTimeToLive, sendToDeadLettersWhenNone)
+        /// <param name="pruneBufferInterval">Time interval to check for timed out PublishWithAck</param>
+        /// <param name="maxBufferSize">Maximum buffer size for each topic</param>
+        public Group(TimeSpan emptyTimeToLive, RoutingLogic routingLogic, bool sendToDeadLettersWhenNone, TimeSpan pruneBufferInterval, int maxBufferSize) 
+            : base(emptyTimeToLive, sendToDeadLettersWhenNone, pruneBufferInterval, maxBufferSize)
         {
             _routingLogic = routingLogic;
         }

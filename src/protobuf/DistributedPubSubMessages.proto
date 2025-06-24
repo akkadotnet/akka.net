@@ -50,6 +50,13 @@ message Publish {
   bool sendOneMessageToEachGroup = 4;
 }
 
+message PublishWithAck {
+  string topic = 1;
+  Akka.Remote.Serialization.Proto.Msg.Payload payload = 2;
+  bool sendOneMessageToEachGroup = 3;
+  int64 timeout = 4;
+}
+
 // Send a message to only one subscriber of a group.
 message SendToOneSubscriber {
   Akka.Remote.Serialization.Proto.Msg.Payload payload = 1;

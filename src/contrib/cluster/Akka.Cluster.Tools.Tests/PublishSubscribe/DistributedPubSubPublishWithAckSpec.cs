@@ -6,9 +6,11 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.PublishSubscribe;
+using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Configuration;
 using Akka.TestKit;
 using FluentAssertions.Extensions;
@@ -31,7 +33,68 @@ public class DistributedPubSubPublishWithAckSpec : AkkaSpec
             akka.actor.provider = cluster
             akka.cluster.pub-sub.buffered-messages.max-per-topic = 2
             akka.cluster.pub-sub.buffered-messages.timeout-check-interval = 100ms
+            akka.cluster.pub-sub.gossip-interval = 250ms
+            # akka.cluster.pub-sub.removed-time-to-live = 500ms
             """);
+    }
+
+    private sealed class ProbeActor: ReceiveActor
+    {
+        public ProbeActor(IActorRef probe)
+        {
+            Receive<string>(s => s is "die", _ => Context.Stop(Self));
+            ReceiveAny(probe.Tell);
+        }
+    }
+    
+    [Fact(DisplayName = "Mediator should detect missing remote subscriber and PublishWithAck should return PublishFailed")]
+    public async Task PublishWithAckMissingRemoteSubscriber()
+    {
+        var cluster = Cluster.Get(Sys);
+        await cluster.JoinAsync(cluster.SelfAddress);
+        var mediator = DistributedPubSub.Get(Sys).Mediator;
+        
+        var sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+        InitializeLogger(sys2, "SYS2");
+        
+        await Cluster.Get(sys2).JoinAsync(cluster.SelfAddress);
+        var mediator2 = DistributedPubSub.Get(sys2).Mediator;
+        
+        var messageProbe = CreateTestProbe(sys2);
+        var probeActor = sys2.ActorOf(Props.Create(() => new ProbeActor(messageProbe)));
+        
+        var probe2 = CreateTestProbe(sys2);
+        mediator2.Tell(new Subscribe("topic", probeActor), probe2);
+        await probe2.ExpectMsgAsync<SubscribeAck>();
+        
+        var probe1 = CreateTestProbe();
+        mediator.Tell(new PublishWithAck("topic", "message", 5.Seconds()), probe1);
+        await probe1.ExpectMsgAsync<PublishSucceeded>(5.Seconds());
+        await messageProbe.ExpectMsgAsync("message");
+        
+        await probe2.WatchAsync(probeActor);
+        probeActor.Tell("die");
+        await probe2.ExpectTerminatedAsync(probeActor);
+
+        await AwaitConditionAsync(() =>
+        {
+            mediator2.Tell(new CountSubscribers("topic"), probe2);
+            var subs = probe2.ExpectMsg<int>();
+            Output.WriteLine($">>>> {subs}");
+            return subs == 0;
+        }, 5.Seconds(), 100.Milliseconds(), "Timed out", CancellationToken.None);
+        
+        /*
+        await AwaitConditionAsync(() =>
+        {
+            mediator.Tell(Count.Instance, TestActor);
+            var subs = ExpectMsg<int>();
+            return subs == 0;
+        }, 5.Seconds(), 100.Milliseconds(), "Timed out", CancellationToken.None);
+        */
+        
+        mediator.Tell(new PublishWithAck("topic", "message", 200.Milliseconds()), TestActor);
+        await ExpectMsgAsync<PublishFailed>();
     }
 
     [Fact(DisplayName = "PublishWithAck message should be buffered")]

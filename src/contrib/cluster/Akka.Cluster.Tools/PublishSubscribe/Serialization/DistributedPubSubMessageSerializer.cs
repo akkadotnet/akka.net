@@ -32,6 +32,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
         private const string SendToAllManifest = "D";
         private const string PublishManifest = "E";
         private const string SendToOneSubscriberManifest = "F";
+        private const string PublishWithAckManifest = "G";
 
         private readonly IDictionary<string, Func<byte[], object>> _fromBinaryMap;
 
@@ -51,7 +52,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
                 {SendManifest, SendFrom},
                 {SendToAllManifest, SendToAllFrom},
                 {PublishManifest, PublishFrom},
-                {SendToOneSubscriberManifest, SendToOneSubscriberFrom}
+                {SendToOneSubscriberManifest, SendToOneSubscriberFrom},
+                {PublishWithAckManifest, PublishWithAckFrom}
             };
         }
 
@@ -79,8 +81,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
                     return SendToAllToProto(all);
                 case Publish publish:
                     return PublishToProto(publish);
-                case PublishWithAck:
-                    throw new SerializationException("ClusterClient does not support PublishWithAck");
+                case PublishWithAck publishWithAck:
+                    return PublishWithAckToProto(publishWithAck);
                 case SendToOneSubscriber subscriber:
                     return SendToOneSubscriberToProto(subscriber);
                 default:
@@ -132,6 +134,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
                     return PublishManifest;
                 case SendToOneSubscriber _:
                     return SendToOneSubscriberManifest;
+                case PublishWithAck:
+                    return PublishWithAckManifest;
                 default:
                     throw new ArgumentException($"Serializer {nameof(DistributedPubSubMessageSerializer)} cannot serialize message of type {o.GetType()}");
             }
@@ -267,6 +271,29 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
             return new SendToOneSubscriber(_payloadSupport.PayloadFrom(sendToOneSubscriberProto.Payload));
         }
 
+        private byte[] PublishWithAckToProto(PublishWithAck publishWithAck)
+        {
+            var protoMessage = new Proto.Msg.PublishWithAck
+            {
+                Topic = publishWithAck.Topic,
+                Payload = _payloadSupport.PayloadToProto(publishWithAck.Message),
+                SendOneMessageToEachGroup = publishWithAck.SendOneMessageToEachGroup,
+                Timeout = publishWithAck.Timeout.Ticks
+            };
+            return protoMessage.ToByteArray();
+        }
+        
+        private PublishWithAck PublishWithAckFrom(byte[] bytes)
+        {
+            var publishWithAckProto = Proto.Msg.PublishWithAck.Parser.ParseFrom(bytes);
+            return new PublishWithAck(
+                publishWithAckProto.Topic,
+                _payloadSupport.PayloadFrom(publishWithAckProto.Payload),
+                TimeSpan.FromTicks(publishWithAckProto.Timeout),
+                publishWithAckProto.SendOneMessageToEachGroup
+            );
+        }
+        
         //
         // Address
         //

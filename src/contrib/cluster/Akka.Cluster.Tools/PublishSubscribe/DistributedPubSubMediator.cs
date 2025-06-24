@@ -623,7 +623,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             var counter = 0;
             foreach (var r in Refs())
             {
-                r.Forward(publish.Message);
+                r.Forward(publish is PublishWithAck ? publish : publish.Message);
                 counter++;
             }
 
@@ -634,8 +634,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 else
                     IgnoreOrSendToDeadLetters(publish, Sender);
             }
-            else if(publish is PublishWithAck needAck)
-                Sender.Tell(new PublishSucceeded(needAck));
             
             return;
 
@@ -677,9 +675,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     if (routees.Length != 0)
                         new Router(_settings.RoutingLogic, routees).Route(wrappedMessage, Sender);
                 }
-                
-                if(publish is PublishWithAck needAck)
-                    Sender.Tell(new PublishSucceeded(needAck));
             }
         }
 
@@ -797,7 +792,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private IActorRef NewTopicActor(string encodedTopic)
         {
             var t = Context.ActorOf(
-                Actor.Props.Create(() => new Topic(_settings.RemovedTimeToLive, _settings.RoutingLogic, _settings.SendToDeadLettersWhenNoSubscribers))
+                Actor.Props.Create(() => new Topic(_settings.RemovedTimeToLive, _settings.RoutingLogic, _settings.SendToDeadLettersWhenNoSubscribers, _settings.BufferedMessageTimeoutCheckInterval, _settings.MaxBufferedMessagePerTopic))
                     .WithDeploy(Deploy.Local), 
                 encodedTopic);
             HandleRegisterTopic(t);
