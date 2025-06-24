@@ -186,17 +186,16 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
                     return true;
 
                 default:
-                    foreach (var subscriber in Subscribers)
+                    if(message is PublishWithAck needAck)
                     {
-                        if(message is PublishWithAck needAck)
-                        {
+                        foreach (var subscriber in Subscribers)
                             subscriber.Forward(needAck.Message);
-                            Sender.Tell(new PublishSucceeded(needAck));
-                        }
-                        else
-                        {
+                        Sender.Tell(new PublishSucceeded(needAck));
+                    }
+                    else
+                    {
+                        foreach (var subscriber in Subscribers)
                             subscriber.Forward(message);
-                        }
                     }
 
                     // no subscribers
