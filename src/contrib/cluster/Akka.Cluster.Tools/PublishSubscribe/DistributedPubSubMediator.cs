@@ -19,6 +19,7 @@ using Akka.Routing;
 using Akka.Util;
 using Status = Akka.Cluster.Tools.PublishSubscribe.Internal.Status;
 
+#nullable enable
 namespace Akka.Cluster.Tools.PublishSubscribe
 {
     /// <summary>
@@ -133,8 +134,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private readonly TimeSpan _bufferedMessageTimeoutCheckInterval;
         private readonly Dictionary<string, List<BufferedMessage>> _bufferedMessages = new();
         private readonly List<string> _newlyAddedKeys = new();
-        
-        public ITimerScheduler Timers { get; set; }
+
+        public ITimerScheduler Timers { get; set; } = null!;
 
         /// <summary>
         /// TBD
@@ -403,6 +404,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
                 _buffer.RecreateAndForwardMessagesIfNeeded(key, () => NewTopicActor(terminated.ActorRef.Path.Name));
             });
+
+            #region Cluster events
+
             Receive<ClusterEvent.CurrentClusterState>(state =>
             {
                 var nodes = state.Members
@@ -449,6 +453,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 }
             });
             Receive<ClusterEvent.IMemberEvent>(_ => { /* ignore */ });
+
+            #endregion
+            
             Receive<Count>(_ =>
             {
                 var count = _registry.Sum(entry => entry.Value.Content.Count(kv => !kv.Value.Ref.IsNobody()));
@@ -559,7 +566,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 foreach (var (key, _) in bucket.Content)
                 {
                     var encodedTopic = Internal.Utils.KeyToEncodedTopic(key, topicPrefix);
-                    if (key is null)
+                    if (key is null || encodedTopic is null)
                         continue;
                     yield return encodedTopic;
                 }
@@ -572,7 +579,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Context.Watch(actorRef);
         }
 
-        private void PutToRegistry(string key, IActorRef value)
+        private void PutToRegistry(string key, IActorRef? value)
         {
             var v = NextVersion();
             var newBucket = _registry.TryGetValue(_cluster.SelfAddress, out var bucket)
@@ -616,7 +623,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             var counter = 0;
             foreach (var r in Refs())
             {
-                if (r == null) continue;
                 r.Forward(publish.Message);
                 counter++;
             }
@@ -637,11 +643,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             {
                 foreach (var (address, bucket) in _registry)
                 {
-                    if (!(allButSelf && address == _cluster.SelfAddress) && bucket.Content.TryGetValue(path, out var valueHolder))
-                    {
-                        if (valueHolder != null && !valueHolder.Ref.IsNobody())
-                            yield return valueHolder.Ref;
-                    }
+                    if (allButSelf && address == _cluster.SelfAddress || !bucket.Content.TryGetValue(path, out var valueHolder)) 
+                        continue;
+                    
+                    if(valueHolder?.Ref is null || valueHolder.Ref.IsNobody())
+                        continue;
+                    
+                    yield return valueHolder.Ref;
                 }
             }
         }
@@ -680,8 +688,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             foreach (var (_, bucket) in _registry)
             {
                 //TODO: optimize into tree-aware key range [prefix, lastKey]
-                foreach (var (key, value) in bucket.Content.Where(kv => kv.Key.CompareTo(prefix) != -1 && kv.Key.CompareTo(lastKey) != 1))
+                foreach (var (key, value) in bucket.Content
+                             .Where(kv => string.Compare(kv.Key, prefix, StringComparison.Ordinal) != -1 && string.Compare(kv.Key, lastKey, StringComparison.Ordinal) != 1))
                 {
+                    if (value.Routee is null)
+                        continue;
                     yield return new KeyValuePair<string, Routee>(key, value.Routee);
                 }
             }
@@ -723,9 +734,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Address SelectRandomNode(IList<Address> addresses)
+        private static Address? SelectRandomNode(IList<Address>? addresses)
         {
-            if (addresses == null || addresses.Count == 0) return null;
+            if (addresses is null || addresses.Count == 0) return null;
             return addresses[ThreadLocalRandom.Current.Next(addresses.Count)];
         }
 

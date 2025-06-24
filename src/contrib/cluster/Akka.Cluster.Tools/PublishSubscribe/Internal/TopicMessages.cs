@@ -129,43 +129,27 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
+    #nullable enable
     [Serializable]
     internal sealed class ValueHolder : IEquatable<ValueHolder>
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
         public long Version { get; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public IActorRef Ref { get; }
+        public IActorRef? Ref { get; }
 
         [NonSerialized]
-        private Routee _routee;
+        private Routee? _routee;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="version">TBD</param>
-        /// <param name="ref">TBD</param>
-        public ValueHolder(long version, IActorRef @ref)
+        public ValueHolder(long version, IActorRef? @ref)
         {
             Version = version;
             Ref = @ref;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Routee Routee { get { return _routee ??= Ref != null ? new ActorRefRoutee(Ref) : null; } }
+        public Routee? Routee { get { return _routee ??= Ref != null ? new ActorRefRoutee(Ref) : null; } }
 
         /// <inheritdoc/>
-        public bool Equals(ValueHolder other)
+        public bool Equals(ValueHolder? other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(other, this)) return true;
@@ -174,9 +158,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
-            return Equals(obj as ValueHolder);
+            return obj is ValueHolder holder && Equals(holder);
         }
 
         /// <inheritdoc/>
@@ -190,6 +174,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             }
         }
     }
+    #nullable restore
 
     /// <summary>
     /// TBD
