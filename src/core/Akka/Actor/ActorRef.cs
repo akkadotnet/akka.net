@@ -139,22 +139,25 @@ namespace Akka.Actor
             
             switch (message)
             {
+                case ISystemMessage msg:
+                    handled = _result.TrySetException(new InvalidOperationException($"system message of type '{msg.GetType().Name}' is invalid for {nameof(FutureActorRef<T>)}"));
+                    break;
+                case Status.Failure f when !typeof(Status).IsAssignableFrom(typeof(T)):
+                    handled = _result.TrySetException(f.Cause
+                        ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
+                    break;
+#pragma warning disable CS0618
+                // for backwards compatibility, remove in v1.6
+                case Failure f when !typeof(Failure).IsAssignableFrom(typeof(T)):
+                    handled = _result.TrySetException(f.Exception
+                                                      ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
+#pragma warning restore CS0618
+                    break;
                 case T t:
                     handled = _result.TrySetResult(t);
                     break;
                 case null:
                     handled = _result.TrySetResult(default);
-                    break;
-                case Status.Failure f:
-                    handled = _result.TrySetException(f.Cause
-                        ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
-                    break;
-#pragma warning disable CS0618
-                // for backwards compatibility
-                case Failure f:
-                    handled = _result.TrySetException(f.Exception
-                                                      ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
-#pragma warning restore CS0618
                     break;
                 default:
                     _ = _result.TrySetException(new ArgumentException(
@@ -166,7 +169,7 @@ namespace Akka.Actor
             if (!handled && !_result.Task.IsCanceled)
                 _provider.DeadLetters.Tell(message ?? default(T), this);            
         }
-
+        
         public override void SendSystemMessage(ISystemMessage message)
         {
             if (message is Watch watch)
