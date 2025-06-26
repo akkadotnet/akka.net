@@ -147,7 +147,7 @@ namespace Akka.Actor
                         ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
                     break;
 #pragma warning disable CS0618
-                // for backwards compatibility
+                // for backwards compatibility, remove in v1.6
                 case Failure f when !typeof(Failure).IsAssignableFrom(typeof(T)):
                     handled = _result.TrySetException(f.Exception
                                                       ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
