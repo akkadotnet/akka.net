@@ -142,7 +142,7 @@ namespace Akka.Actor
                 case ISystemMessage msg:
                     handled = _result.TrySetException(new InvalidOperationException($"system message of type '{msg.GetType().Name}' is invalid for {nameof(FutureActorRef<T>)}"));
                     break;
-                case Status.Failure f when typeof(T) != typeof(Status.Failure):
+                case Status.Failure f when !typeof(Status).IsAssignableFrom(typeof(T)):
                     handled = _result.TrySetException(f.Cause
                         ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
                     break;

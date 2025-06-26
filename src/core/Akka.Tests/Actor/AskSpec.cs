@@ -297,6 +297,30 @@ namespace Akka.Tests.Actor
 
             var ex = await Assert.ThrowsAsync<Exception>(async () => await actor.Ask("answer"));
             ex.Message.ShouldBe(textExceptionMessage);
+
+            ex = await Assert.ThrowsAsync<Exception>(async () => await actor.Ask<object>("answer"));
+            ex.Message.ShouldBe(textExceptionMessage);
+        }
+
+        /// <summary>
+        /// Reproduction for https://github.com/akkadotnet/akka.net/issues/7254
+        /// </summary>
+        [Fact]
+        public async Task Bugfix7254_should_not_throw_error_when_expecting_Status_type()
+        {
+            const string textExceptionMessage = "THIS IS TEST";
+
+            var actor = Sys.ActorOf(act => act.ReceiveAny((_, context) =>
+            {
+                context.Sender.Tell(new Status.Failure(new Exception(textExceptionMessage)));
+            }));
+
+            var failure = await actor.Ask<Status.Failure>("answer");
+            failure.Cause.Message.ShouldBe(textExceptionMessage);
+
+            var status = await actor.Ask<Status>("answer");
+            Assert.IsType<Status.Failure>(status);
+            ((Status.Failure)status).Cause.Message.ShouldBe(textExceptionMessage);
         }
 
         [Fact]
