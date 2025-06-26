@@ -1012,9 +1012,9 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         public override ActorPath Path { get; }
         public override IActorRefProvider Provider { get; }
         [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
-#pragma warning disable CS0809 // Ambiguous reference in cref attribute
+#pragma warning disable CS0809 
         public override bool IsTerminated => Volatile.Read(ref _watchedBy) == null;
-#pragma warning restore CS0809 // Ambiguous reference in cref attribute
+#pragma warning restore CS0809 
 
         /// <summary>
         /// Have this FunctionRef watch the given Actor. This method must not be
