@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MatchBuilder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -52,11 +52,8 @@ namespace Akka.Tools.MatchHandler
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown if the given <paramref name="compiler"/> is undefined.
         /// </exception>
-        public MatchBuilder(IMatchCompiler<TItem> compiler)
-        {
-            if(compiler == null) throw new ArgumentNullException(nameof(compiler), "Compiler cannot be null");
-            _compiler = compiler;
-        }
+        public MatchBuilder(IMatchCompiler<TItem> compiler) =>
+            _compiler = compiler ?? throw new ArgumentNullException(nameof(compiler), "Compiler cannot be null");
 
         /// <summary>
         /// Adds a handler that is called if the item being matched is of type <typeparamref name="T"/>

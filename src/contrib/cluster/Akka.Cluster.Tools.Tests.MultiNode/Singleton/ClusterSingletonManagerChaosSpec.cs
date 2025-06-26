@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManagerChaosSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,7 +47,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
             ")
-            .WithFallback(ClusterSingletonManager.DefaultConfig())
+            .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSingletonProxy.DefaultConfig())
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }

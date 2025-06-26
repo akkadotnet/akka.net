@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowOnCompleteSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -90,7 +90,7 @@ namespace Akka.Streams.Tests.Dsl
                     onCompleteProbe.Ref.Tell("map-" + x);
                     return x;
                 }).RunWith(foreachSink, Materializer);
-                future.ContinueWith(t => onCompleteProbe.Tell(t.IsCompleted ? "done" : "failure"));
+                _ = future.ContinueWith(t => onCompleteProbe.Tell(t.IsCompleted ? "done" : "failure"));
 
                 var proc = await p.ExpectSubscriptionAsync();
                 await proc.ExpectRequestAsync();

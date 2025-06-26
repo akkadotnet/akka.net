@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowGroupBySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -377,6 +377,29 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
+        [Fact(DisplayName = "GroupBy must not have substream limit when maxSubStream is set to negative numbers")]
+        public async Task GroupBy_UnlimitedSubstreamTest()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var f = Flow.Create<int>().GroupBy(-1, x => x).PrefixAndTail(0).MergeSubstreams();
+                var (up, down) = ((Flow<int, (IImmutableList<int>, Source<int, NotUsed>), NotUsed>)f)
+                    .RunWith(this.SourceProbe<int>(), this.SinkProbe<(IImmutableList<int>, Source<int, NotUsed>)>(), Materializer);
+                
+                await down.RequestAsync(100);
+                
+                foreach (var i in Enumerable.Range(0, 100))
+                {
+                    await up.SendNextAsync(i);
+                    var (_, source) = await down.ExpectNextAsync();
+                    var (sub, probe) = await StreamPuppet(source.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
+                    
+                    sub.Request(1);
+                    await probe.ExpectNextAsync(i);
+                }
+            }, Materializer);
+        }
+        
         [Fact]
         public async Task GroupBy_must_resume_when_exceeding_maxSubStreams()
         {

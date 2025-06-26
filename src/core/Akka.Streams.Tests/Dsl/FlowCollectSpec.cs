@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowCollectSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -76,9 +76,9 @@ namespace Akka.Streams.Tests.Dsl
                 int ThrowOnTwo(int x) => x == 2 ? throw new TestException("") : x;
 
                 var probe =
+#pragma warning disable CS0618
                     Source.From(Enumerable.Range(1, 3))
                         // This is intentional, testing backward compatibility with old obsolete method 
-#pragma warning disable CS0618
                         .Collect(ThrowOnTwo)
 #pragma warning restore CS0618
                         .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))

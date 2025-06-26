@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -223,7 +223,7 @@ namespace Akka.Tests.Actor
 
             await waves.AwaitWithTimeout(timeout.Duration() + TimeSpan.FromSeconds(5));
 
-            Assert.Equal(new[] { "done", "done", "done" }, waves.Result);
+            Assert.Equal(new[] { "done", "done", "done" }, await waves);
         }
 
         [Fact]
@@ -468,9 +468,12 @@ namespace Akka.Tests.Actor
             {
                 _master = Sender;
 
-                for (int i = 0; i < n; i++)
+                for (var i = 0; i < n; i++)
                 {
+                    // we are intentionally creating top-level actors here
+#pragma warning disable AK1008
                     var man = Context.Watch(Context.System.ActorOf(Props.Create<Terminater>()));
+#pragma warning restore AK1008
                     man.Tell("run");
                     _terminaters.Add(man);
                 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,35 +28,22 @@ namespace Akka.Remote.Transport
         private readonly TaskCompletionSource<IAssociationEventListener> _associationListenerPromise = new();
 
         private readonly AssociationRegistry _registry;
-        /// <summary>
-        /// TBD
-        /// </summary>
+
         public readonly SwitchableLoggedBehavior<Address, AssociationHandle> AssociateBehavior;
-        /// <summary>
-        /// TBD
-        /// </summary>
+
         public readonly SwitchableLoggedBehavior<TestAssociationHandle, bool> DisassociateBehavior;
         /*
          * Programmable behaviors
          */
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public readonly SwitchableLoggedBehavior<bool, (Address, TaskCompletionSource<IAssociationEventListener>)>
             ListenBehavior;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+
         public readonly Address LocalAddress;
-        /// <summary>
-        /// TBD
-        /// </summary>
+
         public readonly SwitchableLoggedBehavior<bool, bool> ShutdownBehavior;
-        /// <summary>
-        /// TBD
-        /// </summary>
+  
         public readonly SwitchableLoggedBehavior<(TestAssociationHandle, ByteString), bool> WriteBehavior;
 
         /// <summary>
@@ -111,12 +98,7 @@ namespace Akka.Remote.Transport
                 throw new ConfigurationException("Please specify a value for config setting \"" + name + "\"");
             return value;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="remote">TBD</param>
-        /// <returns>TBD</returns>
+        
         public override bool IsResponsibleFor(Address remote)
         {
             return true;
@@ -297,15 +279,8 @@ namespace Akka.Remote.Transport
     {
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     public sealed class ListenAttempt : Activity
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="boundAddress">TBD</param>
         public ListenAttempt(Address boundAddress)
         {
             BoundAddress = boundAddress;
@@ -332,92 +307,48 @@ namespace Akka.Remote.Transport
             RemoteAddress = remoteAddress;
             LocalAddress = localAddress;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public Address LocalAddress { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
         public Address RemoteAddress { get; private set; }
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     public sealed class ShutdownAttempt : Activity
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="boundAddress">TBD</param>
         public ShutdownAttempt(Address boundAddress)
         {
             BoundAddress = boundAddress;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public Address BoundAddress { get; private set; }
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     public sealed class WriteAttempt : Activity
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="sender">TBD</param>
-        /// <param name="recipient">TBD</param>
-        /// <param name="payload">TBD</param>
         public WriteAttempt(Address sender, Address recipient, ByteString payload)
         {
             Payload = payload;
             Recipient = recipient;
             Sender = sender;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public Address Sender { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
         public Address Recipient { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
         public ByteString Payload { get; private set; }
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     public sealed class DisassociateAttempt : Activity
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="requestor">TBD</param>
-        /// <param name="remote">TBD</param>
         public DisassociateAttempt(Address requestor, Address remote)
         {
             Remote = remote;
             Requestor = requestor;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public Address Requestor { get; private set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
         public Address Remote { get; private set; }
     }
 
@@ -429,8 +360,8 @@ namespace Akka.Remote.Transport
     ///     currently active behavior. The bottom of the stack always contains the <see cref="DefaultBehavior" /> which
     ///     can not be popped out.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">Input type</typeparam>
+    /// <typeparam name="TOut">Output type</typeparam>
     public class SwitchableLoggedBehavior<TIn, TOut>
     {
         private readonly ConcurrentStack<Func<TIn, Task<TOut>>> _behaviorStack = new();
@@ -446,19 +377,10 @@ namespace Akka.Remote.Transport
             DefaultBehavior = defaultBehavior;
             _behaviorStack.Push(DefaultBehavior);
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public Func<TIn, Task<TOut>> DefaultBehavior { get; }
-        /// <summary>
-        /// TBD
-        /// </summary>
         public Action<TIn> LogCallback { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public Func<TIn, Task<TOut>> CurrentBehavior
         {
             get
@@ -521,10 +443,7 @@ namespace Akka.Remote.Transport
 
             return controlPromise;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
         public void Pop()
         {
             if (_behaviorStack.Count > 1)
@@ -533,12 +452,7 @@ namespace Akka.Remote.Transport
                 _behaviorStack.TryPop(out behavior);
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="param">TBD</param>
-        /// <returns>TBD</returns>
+        
         public Task<TOut> Apply(TIn param)
         {
             LogCallback(param);
@@ -752,29 +666,15 @@ namespace Akka.Remote.Transport
             _listenersTable.Clear();
         }
     }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
+    
     public sealed class TestAssociationHandle : AssociationHandle
     {
         private readonly TestTransport _transport;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly bool Inbound;
-        /// <summary>
-        /// TBD
-        /// </summary>
-        internal volatile bool Writeable = true;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="transport">TBD</param>
-        /// <param name="inbound">TBD</param>
+        public readonly bool Inbound;
+  
+        internal volatile bool Writeable = true;
+        
         public TestAssociationHandle(Address localAddress, Address remoteAddress, TestTransport transport, bool inbound)
             : base(localAddress, remoteAddress)
         {
@@ -795,12 +695,7 @@ namespace Akka.Remote.Transport
                     : (RemoteAddress, LocalAddress);
             }
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="payload">TBD</param>
-        /// <returns>TBD</returns>
+        
         public override bool Write(ByteString payload)
         {
             if (Writeable)
@@ -812,10 +707,7 @@ namespace Akka.Remote.Transport
 
             return false;
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
 #pragma warning disable CS0672
         public override void Disassociate()
 #pragma warning restore CS0672

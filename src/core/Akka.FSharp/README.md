@@ -245,7 +245,7 @@ Example:
         match box msg with
         | :? FileInfo as fi ->
             let reader = new StreamReader(fi.OpenRead())
-            reader.AsyncReadToEnd() |!> mailbox.Self
+            Async.AwaitTask (reader.ReadToEndAsync()) |!> mailbox.Self
         | :? string as content ->
             printfn "File content: %s" content
         | _ -> mailbox.Unhandled()

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Index.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,12 +20,12 @@ namespace Akka.Util
     /// Add/remove is serialized over the specified key.
     /// Reads are fully concurrent.
     /// </summary>
-    /// <typeparam name="TKey">TBD</typeparam>
-    /// <typeparam name="TValue">TBD</typeparam>
+    /// <typeparam name="TKey">The type of keys in the index.</typeparam>
+    /// <typeparam name="TValue">The type of values associated with each key in the index.</typeparam>
     public class Index<TKey, TValue> where TValue : IComparable<TValue>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Index{TKey, TValue}"/> class.
         /// </summary>
         public Index()
         {
@@ -98,9 +98,9 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the collection of values associated with the specified key.
         /// </summary>
-        /// <param name="index">TBD</param>
+        /// <param name="index">The key whose associated values are to be retrieved.</param>
         public IEnumerable<TValue> this[TKey index]
         {
             get

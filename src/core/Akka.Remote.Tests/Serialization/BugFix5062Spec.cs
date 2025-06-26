@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BugFix5062Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -53,7 +53,8 @@ namespace Akka.Remote.Tests.Serialization
                 true);
 
             var node1 = new Address("akka.tcp", "Sys", "localhost", 2551);
-            var serialized = MessageSerializer.Serialize((ExtendedActorSystem)Sys, node1, message);
+            var info = new Information(node1, Sys);
+            var serialized = MessageSerializer.Serialize((ExtendedActorSystem)Sys, info, message);
 
             var o = new object();
             o.Invoking(_ => MessageSerializer.Deserialize((ExtendedActorSystem)Sys, serialized)).Should()

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotFailureRobustnessSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -168,22 +169,16 @@ namespace Akka.Persistence.Tests
 
         internal class DeleteFailingLocalSnapshotStore : LocalSnapshotStore
         {
-            protected override Task DeleteAsync(SnapshotMetadata metadata)
+            protected override async Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken)
             {
-                base.DeleteAsync(metadata); // we actually delete it properly, but act as if it failed
-                var promise = new TaskCompletionSource<object>();
-                promise.SetException(new InvalidOperationException("Failed to delete snapshot for some reason."));
-                return promise.Task;
+                await base.DeleteAsync(metadata, cancellationToken); // we actually delete it properly, but act as if it failed
+                throw new InvalidOperationException("Failed to delete snapshot for some reason.");
             }
 
-            protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+            protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
             {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                base.DeleteAsync(persistenceId, criteria); // we actually delete it properly, but act as if it failed
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                var promise = new TaskCompletionSource<object>();
-                promise.SetException(new InvalidOperationException("Failed to delete snapshot for some reason."));
-                return promise.Task;
+                await base.DeleteAsync(persistenceId, criteria, cancellationToken); // we actually delete it properly, but act as if it failed
+                throw new InvalidOperationException("Failed to delete snapshot for some reason.");
             }
         }
 
@@ -290,6 +285,43 @@ akka.persistence.snapshot-store.local-delete-fail.class = ""Akka.Persistence.Tes
             pref.Tell(new DeleteSnapshots(criteria));
             ExpectMsg<DeleteSnapshotsFailure>(m => m.Criteria.Equals(criteria) &&
                                           m.Cause.Message.Contains("Failed to delete"));
+        }
+    }
+
+    public class SnapshotIsOptionalSpec : PersistenceSpec
+    {
+        public SnapshotIsOptionalSpec() : base(Configuration("SnapshotIsOptionalSpec", serialization: "off",
+            extraConfig: @"
+akka.persistence.snapshot-store.local.snapshot-is-optional = true
+akka.persistence.snapshot-store.local.class = ""Akka.Persistence.Tests.SnapshotFailureRobustnessSpec+FailingLocalSnapshotStore, Akka.Persistence.Tests""
+"))
+        {
+        }
+        
+        [Fact]
+        public void PersistentActor_with_a_failing_snapshot_with_snapshot_is_optional_true_falls_back_to_events()
+        {
+            var spref = Sys.ActorOf(Props.Create(() => new SnapshotFailureRobustnessSpec.SaveSnapshotTestActor(Name, TestActor)));
+            
+            ExpectMsg<RecoveryCompleted>();
+            spref.Tell(new SnapshotFailureRobustnessSpec.Cmd("boom"));
+            ExpectMsg(1L);
+            
+            Sys.EventStream.Subscribe(TestActor, typeof(Error));
+            try
+            {
+                
+                var lpref = Sys.ActorOf(Props.Create(() => new SnapshotFailureRobustnessSpec.LoadSnapshotTestActor(Name, TestActor)));
+                ExpectMsg<Error>(m => m.Message.ToString().StartsWith("Error loading snapshot"));
+                ExpectMsg("boom-1");
+                ExpectMsg<RecoveryCompleted>();
+                
+            }
+            finally
+            {
+                Sys.EventStream.Unsubscribe(TestActor, typeof(Error));
+            }
+            
         }
     }
 }

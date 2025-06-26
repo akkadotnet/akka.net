@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RouterConfig.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -129,6 +129,19 @@ namespace Akka.Routing
 
         
         public override bool Equals(object obj) => Equals(obj as RouterConfig);
+
+        public override int GetHashCode()
+        {
+            if (GetType() == typeof(NoRouter))
+                return GetType().GetHashCode();
+            
+            unchecked
+            {
+                int hashCode = GetType().GetHashCode();
+                hashCode = (hashCode * 397) ^ (RouterDispatcher?.GetHashCode() ?? 0);
+                return hashCode;
+            }
+        }
     }
 
     /// <summary>

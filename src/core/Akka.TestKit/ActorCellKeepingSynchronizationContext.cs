@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCellKeepingSynchronizationContext.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,8 +22,6 @@ namespace Akka.TestKit
     class ActorCellKeepingSynchronizationContext : SynchronizationContext
     {
         private readonly ActorCell _cell;
-        
-        internal static ActorCell AsyncCache { get; set; }
 
         /// <summary>
         /// TBD
@@ -46,7 +44,8 @@ namespace Akka.TestKit
                 var oldCell = InternalCurrentActorCellKeeper.Current;
                 var oldContext = Current;
                 SetSynchronizationContext(this);
-                InternalCurrentActorCellKeeper.Current = AsyncCache ?? _cell;
+
+                InternalCurrentActorCellKeeper.Current = _cell;
 
                 try
                 {

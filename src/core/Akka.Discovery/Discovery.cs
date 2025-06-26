@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Discovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -79,17 +79,16 @@ namespace Akka.Discovery
                 return Create(className);
             }
             catch (Exception ex)
+                when (ex is TypeLoadException or MissingMethodException)
             {
-                if (ex is TypeLoadException or MissingMethodException)
-                    throw new ArgumentException(
-                        message: $"Illegal akka.discovery.{method}.class value or incompatible class!\n" +
-                                 "The implementation class MUST extend Akka.Discovery.ServiceDiscovery with:\n" +
-                                 "  * parameterless constructor, " +
-                                 $"  * constructor with a single {nameof(ExtendedActorSystem)} parameter, or\n" +
-                                 $"  * constructor with {nameof(ExtendedActorSystem)} and {nameof(Configuration.Config)} parameters.",
-                        paramName: nameof(method), 
-                        innerException: ex);
-                throw;
+                throw new ArgumentException(
+                    message: $"Illegal akka.discovery.{method}.class value or incompatible class!\n" +
+                             "The implementation class MUST extend Akka.Discovery.ServiceDiscovery with:\n" +
+                             "  * parameterless constructor, " +
+                             $"  * constructor with a single {nameof(ExtendedActorSystem)} parameter, or\n" +
+                             $"  * constructor with {nameof(ExtendedActorSystem)} and {nameof(Configuration.Config)} parameters.",
+                    paramName: nameof(method),
+                    innerException: ex);
             }
 
             ServiceDiscovery Create(string typeName)

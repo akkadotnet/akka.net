@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaPduCodecBenchmark.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Remote;
 using Akka.Remote.Serialization;
 using Akka.Remote.Transport;
+using Akka.Serialization;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Loggers;
 using Google.Protobuf;
@@ -40,6 +41,7 @@ namespace Akka.Benchmarks.Remoting
 
         private Address _addr1;
         private Address _addr2;
+        private Information _addr2Info;
         private AkkaPduProtobuffCodec _recvCodec;
         private AkkaPduProtobuffCodec _sendCodec;
 
@@ -62,6 +64,7 @@ namespace Akka.Benchmarks.Remoting
             _rarp = RARP.For(_sys1).Provider;
             _addr1 = _rarp.DefaultAddress;
             _addr2 = RARP.For(_sys2).Provider.DefaultAddress;
+            _addr2Info = new Information(_addr2, _sys2);
 
             _senderActorRef =
                 _sys2.ActorOf(act => { act.ReceiveAny((_, context) => context.Sender.Tell(context.Sender)); },
@@ -188,7 +191,7 @@ namespace Akka.Benchmarks.Remoting
         private ByteString CreatePayloadPdu()
         {
             return _sendCodec.ConstructPayload(_sendCodec.ConstructMessage(_remoteReceiveRef.LocalAddressToUse, _remoteReceiveRef,
-                MessageSerializer.Serialize(_sys2, _addr2, _message), _senderActorRef, null, _lastAck));
+                MessageSerializer.Serialize(_sys2, _addr2Info, _message), _senderActorRef, null, _lastAck));
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardingProducerController.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -95,12 +95,12 @@ public static class ShardingProducerController
         /// <returns>A task that will complete once the message has been successfully persisted by the <see cref="ProducerController"/>.</returns>
         public Task<long> AskNextTo(EntityId entityId, T msg, CancellationToken cancellationToken = default)
         {
+            return AskNextToRef.Ask<long>(Wrapper, cancellationToken: cancellationToken, timeout: null);
+
             MessageWithConfirmation<T> Wrapper(IActorRef r)
             {
                 return new MessageWithConfirmation<T>(entityId, msg, r);
             }
-
-            return AskNextToRef.Ask<long>(Wrapper, cancellationToken: cancellationToken, timeout: null);
         }
 
         /// <summary>

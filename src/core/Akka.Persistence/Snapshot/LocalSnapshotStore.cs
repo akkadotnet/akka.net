@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LocalSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Dispatch;
 using Akka.Event;
@@ -67,7 +68,7 @@ namespace Akka.Persistence.Snapshot
         private readonly ILoggingAdapter _log;
 
         /// <inheritdoc/>
-        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
         {
             //
             // Heuristics:
@@ -81,7 +82,7 @@ namespace Akka.Persistence.Snapshot
         }
 
         /// <inheritdoc/>
-        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
+        protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot, CancellationToken cancellationToken)
         {
             _saving.Add(metadata);
             return RunWithStreamDispatcher(() =>
@@ -92,7 +93,7 @@ namespace Akka.Persistence.Snapshot
         }
 
         /// <inheritdoc/>
-        protected override Task DeleteAsync(SnapshotMetadata metadata)
+        protected override Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken)
         {
             _saving.Remove(metadata);
             return RunWithStreamDispatcher(() =>
@@ -109,11 +110,11 @@ namespace Akka.Persistence.Snapshot
         }
 
         /// <inheritdoc/>
-        protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
         {
             foreach (var metadata in GetSnapshotMetadata(persistenceId, criteria))
             {
-                await DeleteAsync(metadata);
+                await DeleteAsync(metadata, cancellationToken);
             }
         }
 

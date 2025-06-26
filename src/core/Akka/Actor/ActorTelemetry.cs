@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorTelemetry.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Event;
 
+#nullable enable
 namespace Akka.Actor
 {
     /// <summary>
@@ -30,19 +31,28 @@ namespace Akka.Actor
         /// The implementation type for this actor.
         /// </summary>
         Type ActorType { get; }
+        
+        /// <summary>
+        /// A type name override for the actor
+        /// </summary>
+        public string ActorTypeOverride { get; }
     }
     
     // Create ActorTelemetryEvent messages for the following events: starting an actor, stopping an actor, restarting an actor
     public sealed class ActorStarted : IActorTelemetryEvent
     {
-        internal ActorStarted(IActorRef subject, Type actorType)
+        public ActorStarted(IActorRef subject, Type actorType, string? actorTypeOverride = null)
         {
             Subject = subject;
             ActorType = actorType;
+            
+            if(actorTypeOverride is not null)
+                ActorTypeOverride = actorTypeOverride;
         }
 
         public IActorRef Subject { get; }
         public Type ActorType { get; }
+        public string ActorTypeOverride { get; } = string.Empty;
     }
 
     /// <summary>
@@ -50,14 +60,18 @@ namespace Akka.Actor
     /// </summary>
     public sealed class ActorStopped : IActorTelemetryEvent
     {
-        internal ActorStopped(IActorRef subject, Type actorType)
+        public ActorStopped(IActorRef subject, Type actorType, string? actorTypeOverride = null)
         {
             Subject = subject;
             ActorType = actorType;
+            
+            if(actorTypeOverride is not null)
+                ActorTypeOverride = actorTypeOverride;
         }
 
         public IActorRef Subject { get; }
         public Type ActorType { get; }
+        public string ActorTypeOverride { get; } = string.Empty;
     }
     
     /// <summary>
@@ -65,15 +79,19 @@ namespace Akka.Actor
     /// </summary>
     public sealed class ActorRestarted : IActorTelemetryEvent
     {
-        internal ActorRestarted(IActorRef subject, Type actorType, Exception reason)
+        public ActorRestarted(IActorRef subject, Type actorType, Exception reason, string? actorTypeOverride = null)
         {
             Subject = subject;
             ActorType = actorType;
             Reason = reason;
+            
+            if(actorTypeOverride is not null)
+                ActorTypeOverride = actorTypeOverride;
         }
 
         public IActorRef Subject { get; }
         public Type ActorType { get; }
+        public string ActorTypeOverride { get; } = string.Empty;
         
         public Exception Reason { get; }
     }

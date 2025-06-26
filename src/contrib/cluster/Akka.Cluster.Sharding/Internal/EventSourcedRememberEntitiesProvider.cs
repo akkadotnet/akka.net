@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventSourcedRememberEntitiesProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
+using Akka.Pattern;
 
 namespace Akka.Cluster.Sharding.Internal
 {
@@ -29,7 +30,15 @@ namespace Akka.Cluster.Sharding.Internal
         /// <returns></returns>
         public Props ShardStoreProps(string shardId)
         {
-            return EventSourcedRememberEntitiesShardStore.Props(TypeName, shardId, Settings);
+            var backoffOptions = Backoff.OnStop(
+                EventSourcedRememberEntitiesShardStore.Props(TypeName, shardId, Settings),
+                childName: "shardstore",
+                minBackoff: Settings.TuningParameters.ShardFailureBackoff,
+                maxBackoff: Settings.TuningParameters.ShardFailureBackoff,
+                randomFactor: 0.2,
+                maxNrOfRetries: -1);
+            
+            return BackoffSupervisor.Props(backoffOptions);
         }
 
         /// <summary>
@@ -39,7 +48,14 @@ namespace Akka.Cluster.Sharding.Internal
         /// <returns></returns>
         public Props CoordinatorStoreProps()
         {
-            return EventSourcedRememberEntitiesCoordinatorStore.Props(TypeName, Settings);
+            var backoffOptions = Backoff.OnStop(
+                EventSourcedRememberEntitiesCoordinatorStore.Props(TypeName, Settings),
+                childName: "coordinator",
+                minBackoff: Settings.TuningParameters.CoordinatorFailureBackoff,
+                maxBackoff: Settings.TuningParameters.CoordinatorFailureBackoff,
+                randomFactor: 0.2,
+                maxNrOfRetries: -1);
+            return BackoffSupervisor.Props(backoffOptions);
         }
     }
 }

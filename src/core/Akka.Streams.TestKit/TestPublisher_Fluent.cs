@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestPublisher_Fluent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ namespace Akka.Streams.TestKit
                 CancellationToken cancellationToken = default)
             {
                 ExpectRequestTask(Probe, subscription, nrOfElements, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -52,7 +52,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNoMsg(CancellationToken cancellationToken = default)
             {
                 ExpectNoMsgTask(Probe, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -63,7 +63,7 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectNoMsg(TimeSpan duration, CancellationToken cancellationToken = default)
             {
                 ExpectNoMsgTask(Probe, duration, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
@@ -75,35 +75,35 @@ namespace Akka.Streams.TestKit
             public Probe<T> SendNext(T element, CancellationToken cancellationToken = default)
             {
                 SendNextTask(this, element, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
             public Probe<T> UnsafeSendNext(T element, CancellationToken cancellationToken = default)
             {
                 UnsafeSendNextTask(this, element, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
             public Probe<T> SendComplete(CancellationToken cancellationToken = default)
             {
                 SendCompleteTask(this, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
 
             public Probe<T> SendError(Exception e, CancellationToken cancellationToken = default)
             {
                 SendErrorTask(this, e, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
             
             public Probe<T> ExpectCancellation(CancellationToken cancellationToken = default)
             {
                 ExpectCancellationTask(this, cancellationToken)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                    .GetAwaiter().GetResult();
                 return this;
             }
             

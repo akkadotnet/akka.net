@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LogFormatSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -107,19 +107,28 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
         // need to sanitize the thread id
         text = SanitizeDateTime(text);
         text = SanitizeThreadNumber(text);
+        // to resolve https://github.com/akkadotnet/akka.net/issues/7421
+        text = SanitizeTestEventListener(text);
         
         await Verifier.Verify(text);
     }
-
-    static string SanitizeThreadNumber(string log)
+    
+    private static string SanitizeTestEventListener(string logs)
     {
-        string pattern = @"(\[Thread )\d+(\])";
-        string replacement = "[Thread 0001]";
-        string result = Regex.Replace(log, pattern, replacement);
+        var pattern = @"^.*Akka\.TestKit\.TestEventListener.*$";
+        var result = Regex.Replace(logs, pattern, string.Empty, RegexOptions.Multiline);
         return result;
     }
 
-    static string SanitizeDateTime(string logs, string replacement = "DateTime")
+    private static string SanitizeThreadNumber(string log)
+    {
+        var pattern = @"(\[Thread )\d+(\])";
+        var replacement = "[Thread 0001]";
+        var result = Regex.Replace(log, pattern, replacement);
+        return result;
+    }
+
+    private static string SanitizeDateTime(string logs, string replacement = "DateTime")
     {
         // Regular expression to match the datetime
         string pattern = @"\[\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}\.\d{3}Z\]";

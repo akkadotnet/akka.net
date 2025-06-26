@@ -60,9 +60,6 @@
                 "_site/**"
             ]
         }],
-        "xref": [
-            "../tools/msdn.4.5.2/content/msdn.4.5.2.zip"
-        ],
         "globalMetadata": {
             "_appTitle": "Akka.NET Documentation",
             "_appLogoPath": "/images/akkalogo.png",

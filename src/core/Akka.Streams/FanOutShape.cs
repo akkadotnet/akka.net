@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FanOutShape.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -87,11 +87,8 @@ namespace Akka.Streams
             /// <exception cref="ArgumentNullException">TBD</exception>
             public InitPorts(Inlet<TIn> inlet, IEnumerable<Outlet> outlets)
             {
-                if (outlets == null) throw new ArgumentNullException(nameof(outlets));
-                if (inlet == null) throw new ArgumentNullException(nameof(inlet));
-
-                Inlet = inlet;
-                Outlets = outlets;
+                Inlet = inlet ?? throw new ArgumentNullException(nameof(inlet));
+                Outlets = outlets ?? throw new ArgumentNullException(nameof(outlets));
                 Name = "FanOut";
             }
 

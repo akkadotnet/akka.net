@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Configs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -86,19 +86,21 @@ namespace Akka.Benchmarks.Configurations
     {
         public MacroBenchmarkConfig()
         {
-            int processorCount = Environment.ProcessorCount;
-            IntPtr affinityMask = (IntPtr)((1 << processorCount) - 1);
-
-            
             AddExporter(MarkdownExporter.GitHub);
             AddColumn(new RequestsPerSecondColumn());
+            AddColumn(new CategoriesColumn());
+            AddLogger(ConsoleLogger.Default);
+            
+            int processorCount = Environment.ProcessorCount;
+            IntPtr affinityMask = (IntPtr)((1 << processorCount) - 1);
+            
             AddJob(Job.LongRun
                 .WithGcMode(new GcMode { Server = true, Concurrent = true })
-                .WithWarmupCount(25)
-                .WithIterationCount(50)
+                .WithWarmupCount(3) // Reduced from 25
+                .WithIterationCount(10) // Reduced from 50
                 .RunOncePerIteration()
                 .WithStrategy(RunStrategy.Monitoring)
-                .WithAffinity(affinityMask)
+                // .WithAffinity(affinityMask) // Optional
             );
         }
     }

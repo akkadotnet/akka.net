@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Option.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ namespace Akka.Util
     /// reference and value types.
     /// Useful where distinguishing between null (or zero, or false) and uninitialized is significant.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of the optional value.</typeparam>
     [InternalStableApi]
     public readonly struct Option<T>
     {
@@ -44,14 +44,14 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Gets a value indicating whether this option has a value.
         /// </summary>
         public bool HasValue { get; }
 
         public bool IsEmpty => !HasValue;
 
         /// <summary>
-        /// TBD
+        /// Gets the value contained in this option.
         /// </summary>
         public T Value { get; }
 

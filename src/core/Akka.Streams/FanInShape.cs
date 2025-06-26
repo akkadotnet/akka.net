@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FanInShape.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -91,11 +91,8 @@ namespace Akka.Streams
             /// <param name="inlets">TBD</param>
             public InitPorts(Outlet<TOut> outlet, IEnumerable<Inlet> inlets)
             {
-                if (outlet == null) throw new ArgumentNullException(nameof(outlet));
-                if (inlets == null) throw new ArgumentNullException(nameof(inlets));
-
-                _outlet = outlet;
-                _inlets = inlets;
+                _outlet = outlet ?? throw new ArgumentNullException(nameof(outlet));
+                _inlets = inlets ?? throw new ArgumentNullException(nameof(inlets));
             }
 
             /// <summary>

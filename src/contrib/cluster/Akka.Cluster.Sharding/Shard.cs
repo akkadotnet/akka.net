@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Shard.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -344,7 +344,8 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor extractor,
             object handOffStopMessage,
-            IRememberEntitiesProvider? rememberEntitiesProvider)
+            IRememberEntitiesProvider? rememberEntitiesProvider,
+            IShardingBufferMessageAdapter? bufferMessageAdapter)
         {
             return Actor.Props.Create(() => new Shard(
                 typeName,
@@ -353,7 +354,8 @@ namespace Akka.Cluster.Sharding
                 settings,
                 extractor,
                 handOffStopMessage,
-                rememberEntitiesProvider)).WithDeploy(Deploy.Local);
+                rememberEntitiesProvider,
+                bufferMessageAdapter)).WithDeploy(Deploy.Local);
         }
 
         [Serializable]
@@ -963,6 +965,8 @@ namespace Akka.Cluster.Sharding
         private readonly Lease? _lease;
         private readonly TimeSpan _leaseRetryInterval = TimeSpan.FromSeconds(5); // won't be used
 
+        private readonly IShardingBufferMessageAdapter _bufferMessageAdapter;
+        
         public ILoggingAdapter Log { get; } = Context.GetLogger();
         public IStash Stash { get; set; } = null!;
         public ITimerScheduler Timers { get; set; } = null!;
@@ -974,7 +978,8 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor extractor,
             object handOffStopMessage,
-            IRememberEntitiesProvider? rememberEntitiesProvider)
+            IRememberEntitiesProvider? rememberEntitiesProvider,
+            IShardingBufferMessageAdapter? bufferMessageAdapter)
         {
             _typeName = typeName;
             _shardId = shardId;
@@ -1017,6 +1022,8 @@ namespace Akka.Cluster.Sharding
 
                 _leaseRetryInterval = settings.LeaseSettings.LeaseRetryInterval;
             }
+
+            _bufferMessageAdapter = bufferMessageAdapter ?? EmptyBufferMessageAdapter.Instance;
         }
 
         protected override SupervisorStrategy SupervisorStrategy()
@@ -1971,7 +1978,7 @@ namespace Akka.Cluster.Sharding
                 if (Log.IsDebugEnabled)
                     Log.Debug("{0}: Message of type [{1}] for entity [{2}] buffered", _typeName, msg.GetType().Name,
                         id);
-                _messageBuffers.Append(id, msg, snd);
+                _messageBuffers.Append(id, _bufferMessageAdapter.Apply(msg, Context), snd);
             }
         }
 
@@ -1994,10 +2001,10 @@ namespace Akka.Cluster.Sharding
                 // and as the child exists, the message will be directly forwarded
                 foreach (var (message, @ref) in messages)
                 {
-                    if (message is ShardRegion.StartEntity se)
+                    if (WrappedMessage.Unwrap(message) is ShardRegion.StartEntity se)
                         StartEntity(se.EntityId, @ref);
                     else
-                        DeliverMessage(entityId, message, @ref);
+                        DeliverMessage(entityId, _bufferMessageAdapter.UnApply(message, Context), @ref);
                 }
 
                 TouchLastMessageTimestamp(entityId);

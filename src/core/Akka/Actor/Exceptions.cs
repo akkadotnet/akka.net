@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Exceptions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -254,6 +254,17 @@ namespace Akka.Actor
             : base(info, context)
         {
         }
+    }
+
+    /// <summary>
+    /// Thrown when an actor is sent a <see cref="IntentionalRestart"/> message.
+    /// </summary>
+    /// <remarks>
+    /// Meant to be used primarily for testing purposes.
+    /// </remarks>
+    public sealed class IntentionalActorRestartException : AkkaException
+    {
+        public IntentionalActorRestartException() : base("Intentional actor restart") { }
     }
 
     /// <summary>

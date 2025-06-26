@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InMemoryPersistenceIdsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,11 +15,8 @@ namespace Akka.Persistence.Query.InMemory.Tests
     public class InMemoryPersistenceIdsSpec : PersistenceIdsSpec
     {
         private static Config Config() => ConfigurationFactory.ParseString(@"
-            akka.loglevel = INFO
-            akka.persistence.query.journal.inmem.refresh-interval = 1s
-            akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
-            akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""")
-            .WithFallback(InMemoryReadJournal.DefaultConfiguration());
+            akka.loglevel = INFO")
+            .WithFallback(InMemoryPersistenceSpecConfig.Config);
 
 
         public InMemoryPersistenceIdsSpec(ITestOutputHelper output) : base(Config(), nameof(InMemoryPersistenceIdsSpec), output)

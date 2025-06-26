@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Settings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -89,7 +89,9 @@ namespace Akka.Persistence.Custom
             ConnectionString = config.GetString("connection-string");
             ConnectionTimeout = config.GetTimeSpan("connection-timeout");
             AutoInitialize = config.GetBoolean("auto-initialize");
+#pragma warning disable CS0618 // Type or member is obsolete
             DefaultSerializer = config.GetString("serializer", null);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
     }
 }

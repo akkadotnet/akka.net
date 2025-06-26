@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Bugfix7145Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,8 +47,10 @@ public class Bugfix7145Spec : AkkaSpec
         var actor = Sys.ActorOf(Props.Create(() => new BuggyActor()));
         var probe = CreateTestProbe();
         actor.Tell("hello", probe);
+#pragma warning disable xUnit1030
         var response1 = await probe.ExpectMsgAsync<string>().ConfigureAwait(false);
         var response2 = await probe.ExpectMsgAsync<string>().ConfigureAwait(false);
+#pragma warning restore xUnit1030
         response1.Should().Be("hello1");
         response2.Should().Be("hello2");
     }

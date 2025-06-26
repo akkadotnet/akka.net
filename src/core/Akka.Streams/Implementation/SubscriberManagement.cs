@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SubscriberManagement.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -265,14 +265,10 @@ namespace Akka.Streams.Implementation
                         goOn = true;
                     }
                     catch (Exception e)
+                        when (e is ISpecViolation)
                     {
-                        if (e is ISpecViolation)
-                        {
-                            UnregisterSubscriptionInternal(subscription);
-                            goOn = false;
-                        }
-                        else
-                            throw;
+                        UnregisterSubscriptionInternal(subscription);
+                        goOn = false;
                     }
 
                     if (!goOn)

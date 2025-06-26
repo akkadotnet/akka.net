@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManagerSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,7 +27,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <returns>The requested settings.</returns>
         public static ClusterSingletonManagerSettings Create(ActorSystem system)
         {
-            system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
+            system.Settings.InjectTopLevelFallback(ClusterSingleton.DefaultConfig());
 
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton");
             if (config.IsNullOrEmpty())

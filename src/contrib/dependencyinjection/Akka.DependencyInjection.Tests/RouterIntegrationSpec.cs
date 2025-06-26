@@ -1,23 +1,19 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RouterIntegrationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Routing;
-using Akka.TestKit;
-using Akka.Util.Internal;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -130,61 +126,6 @@ namespace Akka.DependencyInjection.Tests
         public async Task DisposeAsync()
         {
             await _akkaService.StopAsync();
-        }
-        
-        internal class TestDiActor : ReceiveActor
-        {
-            public static readonly AtomicCounter Counter = new(0);
-
-            public TestDiActor(InjectedService injected)
-            {
-                long count = Counter.GetAndIncrement();
-                Receive<GetMessage>(_ => Sender.Tell(new Message{Value = injected.Message, Counter = count}));
-            }
-        }
-
-        internal class Message
-        {
-            public string Value { get; set; }
-            public long Counter { get; set; }
-        }
-        
-        internal class GetMessage
-        {
-            public static readonly GetMessage Instance = new();
-            private GetMessage()
-            { }
-        }
-        
-        internal class InjectedService
-        {
-            public string Message => "I was injected";
-        }
-
-        internal class AkkaService : IHostedService
-        {
-            public ActorSystem ActorSystem { get; private set; }
-
-            private readonly IServiceProvider _serviceProvider;
-
-            public AkkaService(IServiceProvider serviceProvider)
-            {
-                _serviceProvider = serviceProvider;
-            }
-
-            public Task StartAsync(CancellationToken cancellationToken)
-            {
-                var setup = DependencyResolverSetup.Create(_serviceProvider)
-                    .And(BootstrapSetup.Create().WithConfig(TestKitBase.DefaultConfig));
-
-                ActorSystem = ActorSystem.Create("TestSystem", setup);
-                return Task.CompletedTask;
-            }
-
-            public async Task StopAsync(CancellationToken cancellationToken = default)
-            {
-                await ActorSystem.Terminate();
-            }
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteAskFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -128,9 +128,11 @@ akka.remote.dot-netty.tcp.port = {port}";
             {
             }
 
+#pragma warning disable SYSLIB0051 // Exception serialization needs to be enabled for this test
             protected TestException(SerializationInfo info, StreamingContext context) : base(info, context)
             {
             }
+#pragma warning restore SYSLIB0051
 
             public TestException(string message) : base(message)
             {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Replicator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -220,7 +220,6 @@ namespace Akka.DistributedData
     /// A deleted key cannot be reused again, but it is still recommended to delete unused
     /// data entries because that reduces the replication overhead when new nodes join the cluster.
     /// Subsequent <see cref="Delete"/>, <see cref="Update"/> and <see cref="Get"/> requests will be replied with <see cref="DataDeleted"/>.
-    /// Subscribers will receive <see cref="Deleted"/>.
     ///
     /// In the <see cref="Delete"/> message you can pass an optional request context in the same way as for the
     /// <see cref="Update"/> message, described above. For example the original sender can be passed and replied
@@ -390,8 +389,8 @@ namespace Akka.DistributedData
             _previousClockTime = DateTime.UtcNow.Ticks * 100;
 
             _hasDurableKeys = settings.DurableKeys.Count > 0;
-            var durableKeysBuilder = ImmutableHashSet<string>.Empty.ToBuilder();
-            var durableWildcardsBuilder = ImmutableHashSet<string>.Empty.ToBuilder();
+            var durableKeysBuilder = ImmutableHashSet.CreateBuilder<string>();
+            var durableWildcardsBuilder = ImmutableHashSet.CreateBuilder<string>();
             foreach (var key in settings.DurableKeys)
             {
                 if (key.EndsWith('*'))
@@ -1198,7 +1197,7 @@ namespace Akka.DistributedData
             if (_log.IsDebugEnabled && _settings.VerboseDebugLogging)
                 _log.Debug("Received gossip from [{0}], containing [{1}]", Sender.Path.Address, string.Join(", ", updatedData.Keys));
 
-            var replyData = ImmutableDictionary<string, DataEnvelope>.Empty.ToBuilder();
+            var replyData = ImmutableDictionary.CreateBuilder<string, DataEnvelope>();
             foreach (var d in updatedData)
             {
                 var key = d.Key;

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncEnumerableSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -225,7 +225,11 @@ namespace Akka.Streams.Tests.Dsl
                 subscription.Cancel();
 
                 // The cancellation token inside the IAsyncEnumerable should be cancelled
-                await WithinAsync(3.Seconds(), async () => latch.Value);
+                await WithinAsync(3.Seconds(), async () =>
+                {
+                    await Task.Yield();
+                    return latch.Value;
+                });
             }, Materializer);
         }
 
@@ -431,6 +435,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             foreach (var i in Enumerable.Range(start, count))
             {
+                await Task.Yield();
                 if(token.IsCancellationRequested)
                     yield break;
 
@@ -447,6 +452,7 @@ namespace Akka.Streams.Tests.Dsl
             token.Register(() => { latch.GetAndSet(true); });
             foreach (var i in Enumerable.Range(start, count))
             {
+                await Task.Yield();
                 if(token.IsCancellationRequested)
                     yield break;
 

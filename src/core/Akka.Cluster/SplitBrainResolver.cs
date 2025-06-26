@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SplitBrainResolver.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -257,10 +257,8 @@ namespace Akka.Cluster
 
         public SplitBrainDecider(TimeSpan stableAfter, ISplitBrainStrategy strategy, Cluster cluster)
         {
-            if (strategy == null) throw new ArgumentNullException(nameof(strategy));
-
             _stabilityTimeout = stableAfter;
-            _strategy = strategy;
+            _strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
             _cluster = cluster;
         }
 

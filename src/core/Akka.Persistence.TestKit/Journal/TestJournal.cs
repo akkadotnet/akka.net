@@ -1,9 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System.Threading;
 
 namespace Akka.Persistence.TestKit
 {
@@ -48,7 +50,7 @@ namespace Akka.Persistence.TestKit
             }
         }
 
-        protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+        protected override async Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
             await _connectionInterceptor.InterceptAsync();
             var exceptions = new List<Exception>();
@@ -68,11 +70,7 @@ namespace Akka.Persistence.TestKit
                     exceptions.Add(rejected);
                     continue;
                 }
-                catch (TestJournalFailureException)
-                {
-                    // i.e. data-store problems: network, invalid credentials, etc.
-                    throw;
-                }
+
                 exceptions.Add(null);
             }
 
@@ -88,25 +86,16 @@ namespace Akka.Persistence.TestKit
                 var messages = Read(persistenceId, fromSequenceNr, Math.Min(toSequenceNr, highest), max);
                 foreach (var p in messages)
                 {
-                    try
-                    {
-                        await _recoveryInterceptor.InterceptAsync(p);
-                        recoveryCallback(p);
-                    }
-                    catch (TestJournalFailureException)
-                    {
-                        // i.e. problems with data: corrupted data-set, problems in serialization
-                        // i.e. data-store problems: network, invalid credentials, etc.
-                        throw;
-                    }
+                    await _recoveryInterceptor.InterceptAsync(p);
+                    recoveryCallback(p);
                 }
             }
         }
 
-        public override async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        public override async Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken)
         {
             await _connectionInterceptor.InterceptAsync();
-            return await base.ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr);
+            return await base.ReadHighestSequenceNrAsync(persistenceId, fromSequenceNr, cancellationToken);
         }
 
         /// <summary>

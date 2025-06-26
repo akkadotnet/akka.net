@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingleton.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Configuration;
 using Akka.Util;
 
 namespace Akka.Cluster.Tools.Singleton
@@ -22,6 +23,17 @@ namespace Akka.Cluster.Tools.Singleton
     {
         private readonly ActorSystem _system;
         private readonly Lazy<Cluster> _cluster;
+        
+        /// <summary>
+        /// Returns default HOCON configuration for the cluster singleton.
+        /// </summary>
+        public static Config DefaultConfig()
+        {
+            return ConfigurationFactory.FromResource<ClusterSingleton>(
+                "Akka.Cluster.Tools.Singleton.reference.conf");
+        }
+        
+        // Cache for singleton proxies, remove in v1.6
         private readonly ConcurrentDictionary<string, IActorRef> _proxies = new();
 
         public static ClusterSingleton Get(ActorSystem system) =>
@@ -30,6 +42,7 @@ namespace Akka.Cluster.Tools.Singleton
         public ClusterSingleton(ExtendedActorSystem system)
         {
             _system = system;
+            _system.Settings.InjectTopLevelFallback(DefaultConfig());
             _cluster = new Lazy<Cluster>(() => Cluster.Get(system));
         }
 
@@ -40,6 +53,10 @@ namespace Akka.Cluster.Tools.Singleton
         /// <para>If there already is a proxy running for the given `singletonName` on this node, an <see cref="IActorRef"/> to that is returned.</para>
         /// </summary>
         /// <returns>A proxy actor that can be used to communicate with the singleton in the cluster</returns>
+        [Obsolete("This convenience method is deprecated and will be removed in v1.6, " +
+                  "please use ClusterSingletonManager.Props and ClusterSingletonProxy.Props directly instead. " +
+                  "See https://getakka.net/community/whats-new/akkadotnet-v1.5-upgrade-advisories.html#upgrading-to-akkanet-v1532. " +
+                  "Since 1.5.32.")]
         public IActorRef Init(SingletonActor singleton)
         {
             var settings = singleton.Settings.GetOrElse(ClusterSingletonSettings.Create(_system));
@@ -63,21 +80,23 @@ namespace Akka.Cluster.Tools.Singleton
             return GetProxy(singleton.Name, settings);
         }
 
+        [Obsolete("Deprecated, remove in v1.6")]
         private IActorRef GetProxy(string name, ClusterSingletonSettings settings)
         {
             IActorRef ProxyCreator()
             {
                 var proxyName = $"singletonProxy{name}";
-                return _system.ActorOf(ClusterSingletonProxy.Props(
-                    singletonManagerPath: $"/user/{ManagerNameFor(name)}",
-                    settings: settings.ToProxySettings(name)),
-                    proxyName);
+                return _system.ActorOf(
+                    props: ClusterSingletonProxy.Props(
+                        singletonManagerPath: $"/user/{ManagerNameFor(name)}",
+                        settings: settings.ToProxySettings(name)),
+                    name: proxyName);
             }
 
             return _proxies.GetOrAdd(name, _ => ProxyCreator());
         }
 
-
+        [Obsolete("Deprecated, remove in v1.6")]
         private string ManagerNameFor(string singletonName) => $"singletonManager{singletonName}";
     }
 
@@ -86,6 +105,10 @@ namespace Akka.Cluster.Tools.Singleton
         public override ClusterSingleton CreateExtension(ExtendedActorSystem system) => new(system);
     }
 
+    [Obsolete("This setting class is deprecated and will be removed in v1.6, " +
+              "please use ClusterSingletonManager.Props and ClusterSingletonProxy.Props directly instead. " +
+              "See https://getakka.net/community/whats-new/akkadotnet-v1.5-upgrade-advisories.html#upgrading-to-akkanet-v1532. " +
+              "Since 1.5.32.")]
     public class SingletonActor
     {
         public string Name { get; }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -415,6 +415,37 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return $"Publish<topic:{Topic}, sendOneToEachGroup:{SendOneMessageToEachGroup}, message:{Message}>";
         }
     }
+    
+    public sealed record PublishWithAck : IDistributedPubSubMessage, IWrappedMessage
+    {
+        public PublishWithAck(string topic, object message, TimeSpan timeout, bool sendOneMessageToEachGroup = false)
+        {
+            if(timeout.Ticks <= 0)
+                throw new ArgumentException("Timeout must be greater than zero", nameof(timeout));
+            
+            Topic = topic;
+            Message = message;
+            Timeout = timeout;
+            SendOneMessageToEachGroup = sendOneMessageToEachGroup;
+        }
+        
+        public string Topic { get; }
+        public object Message { get; }
+        public TimeSpan Timeout { get; }
+        public bool SendOneMessageToEachGroup { get; }
+    }
+
+    public enum PublishFailReason
+    {
+        Timeout,
+        MediatorShuttingDown
+    }
+    
+    public interface IPublishResponse;
+    
+    public sealed record PublishFailed(PublishWithAck Message, PublishFailReason Reason): IPublishResponse, IDeadLetterSuppression;
+    
+    public sealed record PublishSucceeded(PublishWithAck Message): IPublishResponse, IDeadLetterSuppression;
 
     /// <summary>
     /// TBD

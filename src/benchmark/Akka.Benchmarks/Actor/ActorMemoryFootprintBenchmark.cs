@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorMemoryFootprintBenchmark.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
+using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks.Actor
 {
@@ -42,6 +43,7 @@ namespace Akka.Benchmarks.Actor
         }
 
         [Benchmark]
+        [BenchmarkCategory(ActorSpawningBenchmark, MicroBenchmark)]
         public void SpawnActor()
         {
             for(var i = 0; i < SpawnCount; i++)

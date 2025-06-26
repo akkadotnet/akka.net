@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StableListPriorityQueue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ namespace Akka.Util
             {
                 var pi = (ci - 1) / 2; // parent index
                 if (comparator.Compare(_data[ci], _data[pi]) >= 0) break; // child item is larger than (or equal) parent so we're done
-                var tmp = _data[ci]; _data[ci] = _data[pi]; _data[pi] = tmp;
+                (_data[ci], _data[pi]) = (_data[pi], _data[ci]);
                 ci = pi;
             }
         }
@@ -111,7 +111,7 @@ namespace Akka.Util
                 if (rc <= li && comparator.Compare(_data[rc], _data[ci]) < 0) // if there is a rc (ci + 1), and it is smaller than left child, use the rc instead
                     ci = rc;
                 if (comparator.Compare(_data[pi], _data[ci]) <= 0) break; // parent is smaller than (or equal to) smallest child so done
-                var tmp = _data[pi]; _data[pi] = _data[ci]; _data[ci] = tmp; // swap parent and child
+                (_data[pi], _data[ci]) = (_data[ci], _data[pi]); // swap parent and child
                 pi = ci;
             }
             return frontItem.Envelope;

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliveryCrashSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -74,7 +74,7 @@ namespace Akka.Persistence.Tests
             private readonly IActorRef _testProbe;
             private ILoggingAdapter _adapter;
 
-            ILoggingAdapter Log { get { return _adapter ??= Context.GetLogger(); } }
+            protected override ILoggingAdapter Log { get { return _adapter ??= Context.GetLogger(); } }
 
             public CrashingActor(IActorRef testProbe)
             {

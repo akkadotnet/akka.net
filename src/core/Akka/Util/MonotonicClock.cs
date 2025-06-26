@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MonotonicClock.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -63,9 +63,9 @@ namespace Akka.Util
         public static long GetTicksHighRes() => (long)(Stopwatch.ElapsedTicks * TicksFrequency);
 
         /// <summary>
-        /// TBD
+        /// Gets the elapsed time in milliseconds as measured by the system uptime.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The elapsed time in milliseconds.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long GetMilliseconds()
         {
@@ -73,9 +73,9 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the elapsed time in nanoseconds as measured by the system uptime.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The elapsed time in nanoseconds.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long GetNanos()
         {
@@ -83,9 +83,9 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the elapsed time in ticks as measured by the system uptime.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The elapsed time in ticks (where 1 tick = 100 nanoseconds).</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long GetTicks()
         {
@@ -97,8 +97,8 @@ namespace Akka.Util
         /// 
         /// This extension method converts a Ticks value to nano seconds.
         /// </summary>
-        /// <param name="ticks">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="ticks">The number of ticks to convert to nanoseconds.</param>
+        /// <returns>The equivalent value in nanoseconds.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static long ToNanos(this long ticks)
         {
@@ -110,8 +110,8 @@ namespace Akka.Util
         /// 
         /// This extension method converts a nano seconds value to Ticks.
         /// </summary>
-        /// <param name="nanos">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="nanos">The number of nanoseconds to convert to ticks.</param>
+        /// <returns>The equivalent value in ticks.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static long ToTicks(this long nanos)
         {

@@ -217,6 +217,11 @@ akka.persistence.journal-plugin-fallback {
   # Dispatcher for message replay.
   replay-dispatcher = "akka.persistence.dispatchers.default-replay-dispatcher"
 
+  # journal supervisor strategy used. 
+  # It needs to be a subclass of Akka.Actor.SupervisorStrategyConfigurator. And have a parameterless constructor
+  # by default it restarts the journal on crash
+  supervisor-strategy = "Akka.Actor.DefaultSupervisorStrategy"
+
   # Default serializer used as manifest serializer when applicable 
   # and payload serializer when no specific binding overrides are specified
   serializer = "json"
@@ -406,6 +411,11 @@ akka.persistence.snapshot-store-plugin-fallback {
   # Dispatcher for the plugin actor.
   plugin-dispatcher = "akka.persistence.dispatchers.default-plugin-dispatcher"
 
+  # snapshot-store supervisor strategy used. 
+  # It needs to be a subclass of Akka.Actor.SupervisorStrategyConfigurator. And have a parameterless constructor
+  # by default it restarts the snapshot-store on crash
+  supervisor-strategy = "Akka.Actor.DefaultSupervisorStrategy"
+  
   # Default serializer used as manifest serializer when applicable 
   # and payload serializer when no specific binding overrides are specified
   serializer = "json"

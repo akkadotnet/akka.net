@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DotNettyTransportDnsResolutionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -155,13 +155,11 @@ namespace Akka.Remote.Tests.Transport
                           useIpv6Dns: dnsIpv6,
                           enforceIpFamily: enforceIpFamily);
                 }
-                catch
+                catch when (enforceIpFamily && IsExpectedFailure(inbound, outbound, dnsIpv6))
                 {
                     //if ip family is enforced, there are some special cases when it is normal to unable 
                     //to create actor system
-                    if (enforceIpFamily && IsExpectedFailure(inbound, outbound, dnsIpv6))
-                        return true.ToProperty();
-                    throw;
+                    return true.ToProperty();
                 }
 
                 var outboundReceivedAck = true;
@@ -246,14 +244,13 @@ namespace Akka.Remote.Tests.Transport
                           dnsUseIpv6,
                           enforceIpFamily);
                 }
-                catch
+                catch when (enforceIpFamily && IsExpectedFailure(inbound, outbound, dnsUseIpv6))
                 {
                     //if ip family is enforced, there are some special cases when it is normal to unable 
                     //to create actor system
-                    if (enforceIpFamily && IsExpectedFailure(inbound, outbound, dnsUseIpv6))
-                        return true.ToProperty();
-                    throw;
+                    return true.ToProperty();
                 }
+
                 var outboundReceivedAck = true;
                 var inboundReceivedAck = true;
                 _outbound.ActorSelection(_inboundAck).Tell("ping", _outboundProbe.Ref);

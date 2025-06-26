@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSplitWhenSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -374,7 +374,7 @@ namespace Akka.Streams.Tests.Dsl
                                 StreamSubscriptionTimeoutTerminationMode.CancelTermination,
                                 TimeSpan.FromMilliseconds(500))));
                 var testSource = Source.Single(1)
-                    .MapMaterializedValue<TaskCompletionSource<int>>(_ => null)
+                    .MapMaterializedValue<TaskCompletionSource<int>>(_ => null!)
                     .Concat(Source.Maybe<int>())
                     .SplitWhen(_ => true);
 
@@ -382,7 +382,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     await testSource.Lift()
                         .Delay(TimeSpan.FromSeconds(1))
-                        .ConcatMany(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null))
+                        .ConcatMany(s => s.MapMaterializedValue<TaskCompletionSource<int>>(_ => null!))
                         .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer);
                 }).Should().ThrowAsync<SubscriptionTimeoutException>();
             }, Materializer)

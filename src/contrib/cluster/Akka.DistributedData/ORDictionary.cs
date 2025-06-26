@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ORDictionary.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -323,7 +323,7 @@ namespace Akka.DistributedData
 
         private ORDictionary<TKey, TValue> DryMerge(ORDictionary<TKey, TValue> other, ORSet<TKey> mergedKeys, IEnumerator<TKey> valueKeysEnumerator)
         {
-            var mergedValues = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
+            var mergedValues = ImmutableDictionary.CreateBuilder<TKey, TValue>();
             while (valueKeysEnumerator.MoveNext())
             {
                 var key = valueKeysEnumerator.Current;
@@ -456,7 +456,7 @@ namespace Akka.DistributedData
                     return new DeltaGroup(ImmutableArray.Create(this, (IDeltaOperation)other));
                 else
                 {
-                    var builder = ImmutableArray<IDeltaOperation>.Empty.ToBuilder();
+                    var builder = ImmutableArray.CreateBuilder<IDeltaOperation>();
                     builder.Add(this);
                     builder.AddRange(((DeltaGroup)other).Operations);
                     return new DeltaGroup(builder.ToImmutable());
@@ -478,6 +478,14 @@ namespace Akka.DistributedData
 
             public Type KeyType { get; } = typeof(TKey);
             public Type ValueType { get; } = typeof(TValue);
+
+            public override int GetHashCode()
+            {
+                var hash = KeyType.GetHashCode();
+                hash = (hash * 397) ^ ValueType.GetHashCode();
+                hash = (hash * 397) ^ Underlying?.GetHashCode() ?? 0;
+                return hash;
+            }
         }
 
         internal sealed class PutDeltaOperation : AtomicDeltaOperation, ORDictionary.IPutDeltaOp
@@ -488,9 +496,7 @@ namespace Akka.DistributedData
 
             public PutDeltaOperation(ORSet<TKey>.IDeltaOperation underlying, TKey key, TValue value)
             {
-                if (underlying == null) throw new ArgumentNullException(nameof(underlying));
-
-                Underlying = underlying;
+                Underlying = underlying ?? throw new ArgumentNullException(nameof(underlying));
                 Key = key;
                 Value = value;
             }
@@ -523,7 +529,7 @@ namespace Akka.DistributedData
                 }
                 else
                 {
-                    var builder = ImmutableArray<IDeltaOperation>.Empty.ToBuilder();
+                    var builder = ImmutableArray.CreateBuilder<IDeltaOperation>();
                     builder.Add(this);
                     builder.AddRange(((DeltaGroup)other).Operations);
                     return new DeltaGroup(builder.ToImmutable());
@@ -595,7 +601,7 @@ namespace Akka.DistributedData
                 }
                 else
                 {
-                    var builder = ImmutableArray<IDeltaOperation>.Empty.ToBuilder();
+                    var builder = ImmutableArray.CreateBuilder<IDeltaOperation>();
                     builder.Add(this);
                     builder.AddRange(((DeltaGroup)other).Operations);
                     return new DeltaGroup(builder.ToImmutable());
@@ -781,8 +787,8 @@ namespace Akka.DistributedData
         private ORDictionary<TKey, TValue> DryMergeDeltas(IDeltaOperation delta, bool withValueDelta = false)
         {
             var mergedKeys = KeySet;
-            var mergedValues = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
-            var tombstonedValues = ImmutableDictionary<TKey, TValue>.Empty.ToBuilder();
+            var mergedValues = ImmutableDictionary.CreateBuilder<TKey, TValue>();
+            var tombstonedValues = ImmutableDictionary.CreateBuilder<TKey, TValue>();
             foreach (var entry in ValueMap)
             {
                 if (this.KeySet.Contains(entry.Key))

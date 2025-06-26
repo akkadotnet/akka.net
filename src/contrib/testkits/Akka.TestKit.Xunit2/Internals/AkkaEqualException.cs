@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaEqualException.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,14 +15,12 @@ namespace Akka.TestKit.Xunit2.Internals
     /// <summary>
     /// TBD
     /// </summary>
+    [Serializable]
     public class AkkaEqualException : XunitException
     {
         // Length of "Expected: " and "Actual:   "
         private static readonly string NewLineAndIndent = Environment.NewLine + new string(' ', 10);
         
-        private readonly string? _format;
-        private readonly object[] _args = Array.Empty<object>();
-
         public static AkkaEqualException ForMismatchedValues(
             object? expected,
             object? actual,
@@ -46,48 +44,46 @@ namespace Akka.TestKit.Xunit2.Internals
                 args
             );
         }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="AkkaEqualException"/> class.
         /// </summary>
         /// <param name="format">A template string that describes the error.</param>
         /// <param name="args">An optional object array that contains zero or more objects to format.</param>
-        public AkkaEqualException(string format = "", params object[] args): base(null)
-        {
-            _format = format;
-            _args = args;
-        }
+        public AkkaEqualException(string format = "", params object[] args)
+            : base(BuildAssertionMessage(format, args)) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AkkaEqualException"/> class.
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected AkkaEqualException(SerializationInfo info, StreamingContext context): base(null)
-        {
-        }
+        protected AkkaEqualException(SerializationInfo info, StreamingContext context)
+            : base(info.GetString("Message")) { }
 
         /// <summary>
-        /// The message that describes the error.
+        /// Builds assertion message by applying specified arguments to the format string.
+        /// When no arguments are specified, format string is returned as-is.
         /// </summary>
-        public override string Message
+        internal static string? BuildAssertionMessage(string format, object[] args)
         {
-            get
+            if (string.IsNullOrEmpty(format))
             {
-                if(string.IsNullOrEmpty(_format))
-                    return base.Message;
+                return null;
+            }
 
-                string message;
-                try
-                {
-                    message = string.Format(_format!, _args);
-                }
-                catch(Exception)
-                {
-                    message = $@"[Could not string.Format(""{_format}"", {string.Join(", ", _args)})]";
-                }
+            if (args is not { Length: > 0 })
+            {
+                return format;
+            }
 
-                return base.Message is not null ? $"{base.Message} {message}" : message;
+            try
+            {
+                return string.Format(format, args);
+            }
+            catch (Exception)
+            {
+                return $"""[Could not string.Format("{format}", {string.Join(", ", args)})]""";
             }
         }
     }

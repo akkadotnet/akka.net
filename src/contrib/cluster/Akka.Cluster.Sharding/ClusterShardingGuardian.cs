@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingGuardian.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2024 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2024 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -95,10 +95,9 @@ namespace Akka.Cluster.Sharding
                 object handOffStopMessage)
             {
                 if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException(nameof(typeName), "ClusterSharding start requires type name to be provided");
-                if (entityProps == null) throw new ArgumentNullException(nameof(entityProps), $"ClusterSharding start requires Props for [{typeName}] to be provided");
 
                 TypeName = typeName;
-                EntityProps = entityProps;
+                EntityProps = entityProps ?? throw new ArgumentNullException(nameof(entityProps), $"ClusterSharding start requires Props for [{typeName}] to be provided");
                 Settings = settings;
                 MessageExtractor = extractor;
                 AllocationStrategy = allocationStrategy;
