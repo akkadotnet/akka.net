@@ -46,22 +46,27 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
         private const string PruneTimerKey = "PruneTimer";
         
         /// <summary>
-        /// TBD
+        /// Timer interval to check to see if this actor needs to notify the <see cref="DistributedPubSubMediator"/>
+        /// that this topic needs to be pruned.
         /// </summary>
         protected readonly TimeSpan PruneInterval;
 
         /// <summary>
-        /// TBD
+        /// Hash set of all local <see cref="IActorRef"/> that subscribed to this topic
         /// </summary>
         protected readonly ISet<IActorRef> Subscribers;
 
         /// <summary>
-        /// TBD
+        /// Delay before this actor notify the <see cref="DistributedPubSubMediator"/> that the topic is empty and
+        /// it needs to be pruned.
         /// </summary>
         protected readonly TimeSpan EmptyTimeToLive;
 
         /// <summary>
-        /// TBD
+        /// The current prune deadline.
+        ///  * Set when the last subscriber is downed or unsubscribed from this topic.
+        ///  * Reset to <c>null</c> when a new subscriber arrived.
+        ///  * Deadline checked regularly every <see cref="PruneInterval"/> interval.
         /// </summary>
         protected Deadline PruneDeadline = null;
 
@@ -166,7 +171,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             }
         }
 
-        /// <inheritdoc cref="TopicLike.Business"/>
+        /// <summary>
+        /// Default message handler for both <see cref="Topic"/> and <see cref="Group"/>
+        /// </summary>
+        /// <param name="message">The message we're going to process.</param>
+        /// <returns>true if we handled it, false otherwise.</returns>
         protected abstract bool Business(object message);
 
         /// <inheritdoc cref="ActorBase.Receive"/>
