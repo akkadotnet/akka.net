@@ -89,7 +89,9 @@ namespace Akka.Persistence.Custom
             ConnectionString = config.GetString("connection-string");
             ConnectionTimeout = config.GetTimeSpan("connection-timeout");
             AutoInitialize = config.GetBoolean("auto-initialize");
+#pragma warning disable CS0618 // Type or member is obsolete
             DefaultSerializer = config.GetString("serializer", null);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
     }
 }

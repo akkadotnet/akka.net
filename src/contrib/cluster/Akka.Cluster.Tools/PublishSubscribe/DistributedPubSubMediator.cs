@@ -106,10 +106,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private const string PruneBufferTimerKey = "PruneBufferTimer";
         
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="Props"/> instance to create this actor
         /// </summary>
-        /// <param name="settings">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="settings">The <see cref="DistributedPubSubSettings"/> settings to use to create the actor</param>
+        /// <returns>A new <see cref="Props"/> instance to create this actor</returns>
         public static Props Props(DistributedPubSubSettings settings)
         {
             return Actor.Props.Create(() => new DistributedPubSubMediator(settings)).WithDeploy(Deploy.Local);
@@ -137,7 +137,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public ITimerScheduler Timers { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Transforms the local bucket registry dictionary into a dictionary of topic key and version number pairs 
         /// </summary>
         public IImmutableDictionary<Address, long> OwnVersions
             => _registry
@@ -145,11 +145,15 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 .ToImmutableDictionary(kv => kv.Key, kv => kv.Value);
 
         /// <summary>
-        /// TBD
+        /// Creates a new instance of <see cref="DistributedPubSub"/> actor.
+        /// Use <see cref="DistributedPubSubMediator.Props"/> instead.
         /// </summary>
-        /// <param name="settings">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="settings">The <see cref="DistributedPubSubSettings"/> settings to use to create the actor</param>
+        /// <exception cref="ArgumentException">
+        /// Thrown when:
+        ///   * Settings uses <see cref="ConsistentHashingRoutingLogic"/> as routing logic
+        ///   * Settings uses a role not listed inside the local cluster settings.
+        /// </exception>
         public DistributedPubSubMediator(DistributedPubSubSettings settings)
         {
             if (settings.RoutingLogic is ConsistentHashingRoutingLogic)
@@ -729,9 +733,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             return addresses[ThreadLocalRandom.Current.Next(addresses.Count)];
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected override void PreStart()
         {
             base.PreStart();
@@ -744,9 +745,6 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             Timers.StartPeriodicTimer(PruneBufferTimerKey, PruneBufferTick.Instance, _bufferedMessageTimeoutCheckInterval, _bufferedMessageTimeoutCheckInterval, Self);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         protected override void PostStop()
         {
             Timers.CancelAll();

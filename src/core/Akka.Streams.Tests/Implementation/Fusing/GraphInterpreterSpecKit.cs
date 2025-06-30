@@ -980,19 +980,11 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             }
         }
 
-#pragma warning disable CS0618 // Type or member is obsolete
+        [Obsolete("Obsolete, but we need to keep this because of backward compatibility unit tests")]
         public PushPullGraphStage<TIn, TOut> ToGraphStage<TIn, TOut>(IStage<TIn, TOut> stage)
-#pragma warning restore CS0618 // Type or member is obsolete
         {
             var s = stage;
             return new PushPullGraphStage<TIn, TOut>(_ => s, Attributes.None);
-        }
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        public IGraphStageWithMaterializedValue<Shape, object>[] ToGraphStage<TIn, TOut>(IStage<TIn, TOut>[] stages)
-#pragma warning restore CS0618 // Type or member is obsolete
-        {
-            return stages.Select(ToGraphStage).Cast<IGraphStageWithMaterializedValue<Shape, object>>().ToArray();
         }
 
         public void WithTestSetup(Action<TestSetup, Func<ISet<TestSetup.ITestEvent>>> spec)
@@ -1017,26 +1009,6 @@ namespace Akka.Streams.Tests.Implementation.Fusing
         {
             var setup = new TestSetup(Sys);
             spec(setup, setup.Builder, setup.LastEvents);
-        }
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        public void WithOneBoundedSetup<T>(IStage<T, T> op,
-#pragma warning restore CS0618 // Type or member is obsolete
-            Action
-                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
-                    OneBoundedSetup.DownstreamOneBoundedPortProbe<T>> spec)
-        {
-            WithOneBoundedSetup<T>(ToGraphStage(op), spec);
-        }
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        public void WithOneBoundedSetup<T>(IStage<T, T>[] ops,
-#pragma warning restore CS0618 // Type or member is obsolete
-            Action
-                <Func<ISet<OneBoundedSetup.ITestEvent>>, OneBoundedSetup.UpstreamOneBoundedProbe<T>,
-                    OneBoundedSetup.DownstreamOneBoundedPortProbe<T>> spec)
-        {
-            WithOneBoundedSetup<T>(ToGraphStage(ops), spec);
         }
 
         public void WithOneBoundedSetup<T>(IGraphStageWithMaterializedValue<Shape, object> op,

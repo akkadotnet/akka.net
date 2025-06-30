@@ -649,7 +649,7 @@ namespace Akka.Streams.Dsl
         /// beginning) regardless of when they subscribed.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
-        /// <param name=" asyncEnumerable">TBD</param>
+        /// <param name="asyncEnumerable">TBD</param>
         /// <returns>TBD</returns>
         public static Source<T, NotUsed> From<T>(Func<IAsyncEnumerable<T>> asyncEnumerable)
             => FromGraph(new AsyncEnumerable<T>(asyncEnumerable)).WithAttributes(DefaultAttributes.EnumerableSource);

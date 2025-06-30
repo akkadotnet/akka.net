@@ -275,12 +275,8 @@ namespace Akka.Streams.Stage
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="state"/> is undefined.
         /// </exception>
-        public void Become(StageState<TIn, TOut> state)
-        {
-            if (state == null)
-                throw new ArgumentNullException(nameof(state));
-            _current = state;
-        }
+        public void Become(StageState<TIn, TOut> state) =>
+            _current = state ?? throw new ArgumentNullException(nameof(state));
 
         /// <summary>
         /// Invokes current state.
@@ -417,7 +413,9 @@ namespace Akka.Streams.Stage
                     {
                         _isEmitting = false;
 
-                        if (andThen is StatefulStage.Stay) ;
+                        if (andThen is StatefulStage.Stay)
+                        {
+                        }
                         else if (andThen is StatefulStage.Become<TIn, TOut> become)
                         {
                             Become(become.State);

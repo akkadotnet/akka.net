@@ -126,12 +126,9 @@ namespace Akka.Serialization
         /// <param name="stringBuilderMaxSize">Max retained size used for pooled string builders if enabled</param>
         public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preserveObjectReferences, IEnumerable<Type> converters, bool usePooledStringBuilder, int stringBuilderMinSize, int stringBuilderMaxSize)
         {
-            if (converters == null)
-                throw new ArgumentNullException(nameof(converters), $"{nameof(NewtonSoftJsonSerializerSettings)} requires a sequence of converters.");
-
             EncodeTypeNames = encodeTypeNames;
             PreserveObjectReferences = preserveObjectReferences;
-            Converters = converters;
+            Converters = converters ?? throw new ArgumentNullException(nameof(converters), $"{nameof(NewtonSoftJsonSerializerSettings)} requires a sequence of converters.");
             UsePooledStringBuilder = usePooledStringBuilder;
             StringBuilderMinSize = stringBuilderMinSize;
             StringBuilderMaxSize = stringBuilderMaxSize;

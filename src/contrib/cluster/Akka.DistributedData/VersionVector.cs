@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Akka.Cluster;
 using Akka.Util.Internal;
 
@@ -105,6 +106,17 @@ namespace Akka.DistributedData
         
         public override bool Equals(object obj) => obj is VersionVector vector && Equals(vector);
 
+        public override int GetHashCode()
+        {
+            var hash = 373;
+            foreach (var (addr, ver) in InternalVersions)
+            {
+                hash = hash * 31 + addr.GetHashCode();
+                hash = hash * 31 + ver.GetHashCode();
+            }
+            return hash;
+        }
+
         /// <summary>
         /// Returns true if this VersionVector has the same history
         /// as the <paramref name="y"/> VersionVector else false.
@@ -162,14 +174,17 @@ namespace Akka.DistributedData
         {
             if (ReferenceEquals(this, other)) return Ordering.Same;
 
-            return Compare(InternalVersionEnumerator, other.InternalVersionEnumerator,
-                order == Ordering.Concurrent ? Ordering.FullOrder : order);
+            using var ie1 = InternalVersionEnumerator;
+            using var ie2 = other.InternalVersionEnumerator;
+            return Compare(ie1, ie2, order == Ordering.Concurrent ? Ordering.FullOrder : order);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static T NextOrElse<T>(IEnumerator<T> enumerator, T defaultValue) =>
             enumerator.MoveNext() ? enumerator.Current : defaultValue;
 
-        private Ordering Compare(IEnumerator<(UniqueAddress addr, long version)> i1,
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Ordering Compare(IEnumerator<(UniqueAddress addr, long version)> i1,
             IEnumerator<(UniqueAddress addr, long version)> i2, Ordering requestedOrder)
         {
             var nt1 = NextOrElse(i1, EndMarker);

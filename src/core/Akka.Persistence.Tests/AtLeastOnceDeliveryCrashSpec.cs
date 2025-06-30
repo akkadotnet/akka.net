@@ -74,7 +74,7 @@ namespace Akka.Persistence.Tests
             private readonly IActorRef _testProbe;
             private ILoggingAdapter _adapter;
 
-            ILoggingAdapter Log { get { return _adapter ??= Context.GetLogger(); } }
+            protected override ILoggingAdapter Log { get { return _adapter ??= Context.GetLogger(); } }
 
             public CrashingActor(IActorRef testProbe)
             {

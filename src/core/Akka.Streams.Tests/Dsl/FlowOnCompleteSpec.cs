@@ -90,7 +90,7 @@ namespace Akka.Streams.Tests.Dsl
                     onCompleteProbe.Ref.Tell("map-" + x);
                     return x;
                 }).RunWith(foreachSink, Materializer);
-                future.ContinueWith(t => onCompleteProbe.Tell(t.IsCompleted ? "done" : "failure"));
+                _ = future.ContinueWith(t => onCompleteProbe.Tell(t.IsCompleted ? "done" : "failure"));
 
                 var proc = await p.ExpectSubscriptionAsync();
                 await proc.ExpectRequestAsync();

@@ -155,6 +155,7 @@ namespace Akka.DistributedData
     {
         public static readonly Akka.DistributedData.FlushChanges Instance;
         public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
     }
     public sealed class GCounter : Akka.DistributedData.FastMerge<Akka.DistributedData.GCounter>, Akka.DistributedData.IDeltaReplicatedData, Akka.DistributedData.IDeltaReplicatedData<Akka.DistributedData.GCounter, Akka.DistributedData.GCounter>, Akka.DistributedData.IRemovedNodePruning, Akka.DistributedData.IRemovedNodePruning<Akka.DistributedData.GCounter>, Akka.DistributedData.IReplicatedData, Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData.IReplicatedData<Akka.DistributedData.GCounter>, Akka.DistributedData.IReplicatedDelta, System.IEquatable<Akka.DistributedData.GCounter>
     {
@@ -910,6 +911,7 @@ namespace Akka.DistributedData
         public static Akka.DistributedData.VersionVector Create(System.Collections.Immutable.ImmutableDictionary<Akka.Cluster.UniqueAddress, long> versions) { }
         public bool Equals(Akka.DistributedData.VersionVector other) { }
         public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public abstract Akka.DistributedData.VersionVector Increment(Akka.Cluster.UniqueAddress node);
         public bool IsAfter(Akka.DistributedData.VersionVector y) { }
         public bool IsBefore(Akka.DistributedData.VersionVector y) { }
@@ -948,6 +950,7 @@ namespace Akka.DistributedData
         public static readonly Akka.DistributedData.WriteLocal Instance;
         public System.TimeSpan Timeout { get; }
         public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public override string ToString() { }
     }
     public sealed class WriteMajority : Akka.DistributedData.IWriteConsistency, System.IEquatable<Akka.DistributedData.WriteMajority>
@@ -998,12 +1001,14 @@ namespace Akka.DistributedData.Durable
         public static readonly Akka.DistributedData.Durable.LoadAll Instance;
         public bool Equals(Akka.DistributedData.Durable.LoadAll other) { }
         public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
     }
     public sealed class LoadAllCompleted : System.IEquatable<Akka.DistributedData.Durable.LoadAllCompleted>
     {
         public static readonly Akka.DistributedData.Durable.LoadAllCompleted Instance;
         public bool Equals(Akka.DistributedData.Durable.LoadAllCompleted other) { }
         public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
     }
     public sealed class LoadData
     {

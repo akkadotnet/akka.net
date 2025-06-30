@@ -50,7 +50,7 @@ namespace Akka.Util
             {
                 var pi = (ci - 1) / 2; // parent index
                 if (_priorityCalculator(_data[ci].Message).CompareTo(_priorityCalculator(_data[pi].Message)) >= 0) break; // child item is larger than (or equal) parent so we're done
-                var tmp = _data[ci]; _data[ci] = _data[pi]; _data[pi] = tmp;
+                (_data[ci], _data[pi]) = (_data[pi], _data[ci]);
                 ci = pi;
             }
         }
@@ -77,7 +77,7 @@ namespace Akka.Util
                 if (rc <= li && _priorityCalculator(_data[rc].Message).CompareTo(_priorityCalculator(_data[ci].Message)) < 0) // if there is a rc (ci + 1), and it is smaller than left child, use the rc instead
                     ci = rc;
                 if (_priorityCalculator(_data[pi].Message).CompareTo(_priorityCalculator(_data[ci].Message)) <= 0) break; // parent is smaller than (or equal to) smallest child so done
-                var tmp = _data[pi]; _data[pi] = _data[ci]; _data[ci] = tmp; // swap parent and child
+                (_data[pi], _data[ci]) = (_data[ci], _data[pi]); // swap parent and child
                 pi = ci;
             }
             return frontItem;

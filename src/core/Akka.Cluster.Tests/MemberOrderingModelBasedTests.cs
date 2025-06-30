@@ -56,7 +56,7 @@ namespace Akka.Cluster.Tests
                 a1 = a2; // next member
             }
 
-            return true.Classify(true, "all distinct").Classify(false, "empty set"); ;
+            return true.Classify(true, "all distinct").Classify(false, "empty set");
         }
     }
 

@@ -98,9 +98,7 @@ namespace Akka.Remote.Tests.Transport
                     }
                 }
             }");
-            return false
-                ? config
-                : config.WithFallback(@"akka.remote.dot-netty.tcp.ssl {
+            return config.WithFallback(@"akka.remote.dot-netty.tcp.ssl {
                     suppress-validation = ""true""
                     certificate {
                         use-thumprint-over-file = true

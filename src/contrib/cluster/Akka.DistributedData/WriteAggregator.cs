@@ -193,6 +193,8 @@ namespace Akka.DistributedData
             return obj != null && obj is WriteLocal;
         }
 
+        public override int GetHashCode() => 811;
+
         private WriteLocal() { }
 
         public override string ToString() => "WriteLocal";

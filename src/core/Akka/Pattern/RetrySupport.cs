@@ -118,14 +118,12 @@ namespace Akka.Pattern
                         var nextAttempt = attempted + 1;
                         switch (delayFunction(nextAttempt))
                         {
-                            case Option<TimeSpan> delay when delay.HasValue:
+                            case { HasValue: true } delay:
                                 return delay.Value.Ticks < 1
                                     ? Retry(attempt, maxAttempts, delayFunction, nextAttempt, scheduler)
                                     : After(delay.Value, scheduler, () => Retry(attempt, maxAttempts, delayFunction, nextAttempt, scheduler));
-                            case Option<TimeSpan> _:
-                                return Retry(attempt, maxAttempts, delayFunction, nextAttempt, scheduler);
                             default:
-                                throw new InvalidOperationException("The delayFunction of Retry should not return null.");
+                                return Retry(attempt, maxAttempts, delayFunction, nextAttempt, scheduler);
                         }
                     }
                     return t;

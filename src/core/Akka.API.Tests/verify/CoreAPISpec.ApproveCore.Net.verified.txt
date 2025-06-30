@@ -579,30 +579,37 @@ namespace Akka.Actor
         public class ActorSystemTerminateReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public override int ExitCode { get; }
         }
         public class ClrExitReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public override int ExitCode { get; }
         }
         public class ClusterDowningReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public override int ExitCode { get; }
         }
         public class ClusterJoinUnsuccessfulReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public override int ExitCode { get; }
         }
         public class ClusterLeavingReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public override int ExitCode { get; }
         }
-        public class Reason
+        public abstract class Reason
         {
             protected Reason() { }
+            public abstract int ExitCode { get; }
         }
         public class UnknownReason : Akka.Actor.CoordinatedShutdown.Reason
         {
             public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public override int ExitCode { get; }
         }
     }
     public sealed class CoordinatedShutdownExtension : Akka.Actor.ExtensionIdProvider<Akka.Actor.CoordinatedShutdown>
@@ -905,14 +912,14 @@ namespace Akka.Actor
         }
         public delegate void TransitionHandler<TState, TData>(TState initialState, TState nextState);
     }
-    [System.ObsoleteAttribute("Use Akka.Actor.Status.Failure")]
+    [System.ObsoleteAttribute("Use Akka.Actor.Status.Failure. Will be removed in v1.6")]
     public class Failure
     {
         public Failure() { }
         public System.Exception Exception { get; set; }
         public System.DateTime Timestamp { get; set; }
     }
-    [System.ObsoleteAttribute("Use List of Akka.Actor.Status.Failure")]
+    [System.ObsoleteAttribute("Use List of Akka.Actor.Status.Failure. Will be removed in v1.6")]
     public class Failures
     {
         public Failures() { }

@@ -49,7 +49,7 @@ namespace Akka.Streams.Implementation.Fusing
                     Debug.Assert(_q != null, nameof(_q) + " != null");
                     
                     // could be unavailable due to async input having been executed before this notification
-                    if (_q.NonEmpty && IsAvailable(_stage._out))
+                    if (_q!.NonEmpty && IsAvailable(_stage._out))
                         PushOut();
                 };
 
@@ -86,7 +86,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 Debug.Assert(_q != null, nameof(_q) + " != null");
 
-                var src = _q.Dequeue();
+                var src = _q!.Dequeue();
                 Push(_stage._out, src.Grab());
                 if (!src.IsClosed)
                     src.Pull();
@@ -119,7 +119,7 @@ namespace Akka.Streams.Implementation.Fusing
                             sinkIn.Pull();
                         }
                         else
-                            _q.Enqueue(sinkIn);
+                            _q!.Enqueue(sinkIn);
                     },
                     onUpstreamFinish: () =>
                     {

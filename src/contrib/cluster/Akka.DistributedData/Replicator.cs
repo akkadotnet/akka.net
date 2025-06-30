@@ -220,7 +220,6 @@ namespace Akka.DistributedData
     /// A deleted key cannot be reused again, but it is still recommended to delete unused
     /// data entries because that reduces the replication overhead when new nodes join the cluster.
     /// Subsequent <see cref="Delete"/>, <see cref="Update"/> and <see cref="Get"/> requests will be replied with <see cref="DataDeleted"/>.
-    /// Subscribers will receive <see cref="Deleted"/>.
     ///
     /// In the <see cref="Delete"/> message you can pass an optional request context in the same way as for the
     /// <see cref="Update"/> message, described above. For example the original sender can be passed and replied

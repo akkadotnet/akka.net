@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -57,21 +58,21 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         }
 
         [Fact]
-        public void TestActorRef_must_support_nested_Actor_creation_when_used_with_TestActorRef()
+        public async Task TestActorRef_must_support_nested_Actor_creation_when_used_with_TestActorRef()
         {
             var a = new TestActorRef<NestingActor>(Sys, Props.Create(() => new NestingActor(true)));
             Assert.NotNull(a);
-            var nested = a.Ask<IActorRef>("any", DefaultTimeout).Result;
+            var nested = await a.Ask<IActorRef>("any", DefaultTimeout);
             Assert.NotNull(nested);
             Assert.NotSame(a, nested);
         }
 
         [Fact]
-        public void TestActorRef_must_support_nested_Actor_creation_when_used_with_ActorRef()
+        public async Task TestActorRef_must_support_nested_Actor_creation_when_used_with_ActorRef()
         {
             var a = new TestActorRef<NestingActor>(Sys, Props.Create(() => new NestingActor(false)));
             Assert.NotNull(a);
-            var nested = a.Ask<IActorRef>("any", DefaultTimeout).Result;
+            var nested = await a.Ask<IActorRef>("any", DefaultTimeout);
             Assert.NotNull(nested);
             Assert.NotSame(a, nested);
         }

@@ -29,10 +29,10 @@ module Serialization =
     type ExprSerializer(system) = 
         inherit Serializer(system)
         let fsp = FsPickler.CreateBinarySerializer()
-        override __.Identifier = 99
-        override __.IncludeManifest = true        
-        override __.ToBinary(o) = serializeToBinary fsp o        
-        override __.FromBinary(bytes, _) = deserializeFromBinary fsp bytes
+        override _.Identifier = 99
+        override _.IncludeManifest = true        
+        override _.ToBinary(o) = serializeToBinary fsp o        
+        override _.FromBinary(bytes, _) = deserializeFromBinary fsp bytes
         
                         
     let exprSerializationSupport (system: ActorSystem) =
@@ -176,7 +176,7 @@ module Actors =
     type ActorBuilder() = 
     
         /// Binds the next message.
-        member __.Bind(m : IO<'In>, f : 'In -> _) = Func(fun m -> f m)
+        member _.Bind(m : IO<'In>, f : 'In -> _) = Func(fun m -> f m)
     
         /// Binds the result of another actor computation expression.
         member this.Bind(x : Cont<'In, 'Out1>, f : 'Out1 -> Cont<'In, 'Out2>) : Cont<'In, 'Out2> = 
@@ -184,9 +184,9 @@ module Actors =
             | Func fx -> Func(fun m -> this.Bind(fx m, f))
             | Return v -> f v
     
-        member __.ReturnFrom(x) = x
-        member __.Return x = Return x
-        member __.Zero() = Return()
+        member _.ReturnFrom(x) = x
+        member _.Return x = Return x
+        member _.Zero() = Return()
     
         member this.TryWith(f : unit -> Cont<'In, 'Out>, c : exn -> Cont<'In, 'Out>) : Cont<'In, 'Out> = 
             try 
@@ -222,7 +222,7 @@ module Actors =
                 | v -> this.While(condition, f)
             else Return()
     
-        member __.For(source : 'Iter seq, f : 'Iter -> Cont<'In, unit>) : Cont<'In, unit> = 
+        member _.For(source : 'Iter seq, f : 'Iter -> Cont<'In, unit>) : Cont<'In, unit> = 
             use e = source.GetEnumerator()
         
             let rec loop() = 
@@ -236,9 +236,9 @@ module Actors =
                 else Return()
             loop()
     
-        member __.Delay(f : unit -> Cont<_, _>) = f
-        member __.Run(f : unit -> Cont<_, _>) = f()
-        member __.Run(f : Cont<_, _>) = f
+        member _.Delay(f : unit -> Cont<_, _>) = f
+        member _.Run(f : unit -> Cont<_, _>) = f()
+        member _.Run(f : Cont<_, _>) = f
     
         member this.Combine(f : unit -> Cont<'In, _>, g : unit -> Cont<'In, 'Out>) : Cont<'In, 'Out> = 
             match f() with
@@ -268,26 +268,26 @@ module Actors =
             let self' = this.Self
             let context = UntypedActor.Context :> IActorContext
             actor { new Actor<'Message> with
-                        member __.Receive() = Input
-                        member __.Self = self'
-                        member __.Context = context
-                        member __.Sender() = this.Sender()
-                        member __.Unhandled msg = this.Unhandled msg
-                        member __.ActorOf(props, name) = context.ActorOf(props, name)
-                        member __.ActorSelection(path : string) = context.ActorSelection(path)
-                        member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
-                        member __.Watch(aref:IActorRef) = context.Watch aref
-                        member __.WatchWith(aref:IActorRef, msg) = context.WatchWith (aref, msg)
-                        member __.Unwatch(aref:IActorRef) = context.Unwatch aref
-                        member __.Log = lazy (Akka.Event.Logging.GetLogger(context))
-                        member __.Defer fn = deferables <- fn::deferables 
-                        member __.Stash() = (this :> IWithUnboundedStash).Stash.Stash()
-                        member __.Unstash() = (this :> IWithUnboundedStash).Stash.Unstash()
-                        member __.UnstashAll() = (this :> IWithUnboundedStash).Stash.UnstashAll() }
+                        member _.Receive() = Input
+                        member _.Self = self'
+                        member _.Context = context
+                        member _.Sender() = this.Sender()
+                        member _.Unhandled msg = this.Unhandled msg
+                        member _.ActorOf(props, name) = context.ActorOf(props, name)
+                        member _.ActorSelection(path : string) = context.ActorSelection(path)
+                        member _.ActorSelection(path : ActorPath) = context.ActorSelection(path)
+                        member _.Watch(aref:IActorRef) = context.Watch aref
+                        member _.WatchWith(aref:IActorRef, msg) = context.WatchWith (aref, msg)
+                        member _.Unwatch(aref:IActorRef) = context.Unwatch aref
+                        member _.Log = lazy (Akka.Event.Logging.GetLogger(context))
+                        member _.Defer fn = deferables <- fn::deferables 
+                        member _.Stash() = (this :> IWithUnboundedStash).Stash.Stash()
+                        member _.Unstash() = (this :> IWithUnboundedStash).Stash.Unstash()
+                        member _.UnstashAll() = (this :> IWithUnboundedStash).Stash.UnstashAll() }
         
         new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(QuotationEvaluator.Evaluate actor)
-        member __.Sender() : IActorRef = base.Sender
-        member __.Unhandled msg = base.Unhandled msg
+        member _.Sender() : IActorRef = base.Sender
+        member _.Unhandled msg = base.Unhandled msg
         override x.OnReceive msg = 
             match state with
             | Func f -> 
@@ -440,7 +440,7 @@ module internal OptionHelper =
         
 open Akka.Util
 type ExprDeciderSurrogate(serializedExpr: byte array) =
-    member __.SerializedExpr = serializedExpr
+    member _.SerializedExpr = serializedExpr
     interface ISurrogate with
         member this.FromSurrogate _ = 
             let fsp = MBrace.FsPickler.FsPickler.CreateBinarySerializer()
@@ -448,7 +448,7 @@ type ExprDeciderSurrogate(serializedExpr: byte array) =
             ExprDecider(expr) :> ISurrogated
 
 and ExprDecider (expr: Expr<(exn->Directive)>) =
-    member __.Expr = expr
+    member _.Expr = expr
     member private this.Compiled = lazy (QuotationEvaluator.Evaluate this.Expr)
     interface IDecider with
         member this.Decide (e: exn): Directive = this.Compiled.Value (e)

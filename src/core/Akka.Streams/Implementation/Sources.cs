@@ -185,7 +185,7 @@ namespace Akka.Streams.Implementation
             {
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                _buffer.Enqueue(offer.Element);
+                _buffer!.Enqueue(offer.Element);
                 offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Enqueued.Instance);
             }
 
@@ -193,7 +193,7 @@ namespace Akka.Streams.Implementation
             {
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
                 
-                if (!_buffer.IsFull)
+                if (!_buffer!.IsFull)
                     EnqueueAndSuccess(offer);
                 else
                 {

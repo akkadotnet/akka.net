@@ -662,6 +662,26 @@ namespace Akka.Streams
                 s.StreamRefSettings == StreamRefSettings;
         }
 
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hash = (17 * 23) ^ InitialInputBufferSize;
+                hash = (hash * 23) ^ MaxInputBufferSize;
+                hash = (hash * 23) ^ Dispatcher.GetHashCode();
+                hash = (hash * 23) ^ SupervisionDecider.GetHashCode();
+                hash = (hash * 23) ^ SubscriptionTimeoutSettings.GetHashCode();
+                hash = (hash * 23) ^ IsDebugLogging.GetHashCode();
+                hash = (hash * 23) ^ OutputBurstLimit;
+                hash = (hash * 23) ^ SyncProcessingLimit;
+                hash = (hash * 23) ^ IsFuzzingMode.GetHashCode();
+                hash = (hash * 23) ^ IsAutoFusing.GetHashCode();
+                hash = (hash * 23) ^ MaxFixedBufferSize;
+                hash = (hash * 23) ^ StreamRefSettings.GetHashCode();
+                return hash;
+            }
+        }
+
         internal Attributes ToAttributes()
         {
             return new Attributes(new Attributes.IAttribute[]
