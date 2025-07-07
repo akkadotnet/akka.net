@@ -1261,8 +1261,8 @@ namespace Akka.Cluster.Sharding
                 case Passivate p:
                     Passivate(Sender, p.StopMessage);
                     return true;
-                case ExcessiveSupervisorRestartPassivation ex:
-                    HandleExcessiveErrors(ex);
+                case SupervisorStopDirectivePassivation ex:
+                    HandleSupervisorStop(ex);
                     return true;
                 case IShardQuery msg:
                     ReceiveShardQuery(msg);
@@ -1381,8 +1381,8 @@ namespace Akka.Cluster.Sharding
                                 _entities.EntityId(Sender) ?? $"Unknown actor {Sender}");
                         Passivate(Sender, p.StopMessage);
                         return true;
-                    case ExcessiveSupervisorRestartPassivation ex:
-                        HandleExcessiveErrors(ex);
+                    case SupervisorStopDirectivePassivation ex:
+                        HandleSupervisorStop(ex);
                         return true;
                     case IShardQuery msg:
                         ReceiveShardQuery(msg);
@@ -1851,7 +1851,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private void HandleExcessiveErrors(ExcessiveSupervisorRestartPassivation msg)
+        private void HandleSupervisorStop(SupervisorStopDirectivePassivation msg)
         {
             // We only have to do this if we have R-E enabled
             if (!_rememberEntities)
@@ -1870,8 +1870,8 @@ namespace Akka.Cluster.Sharding
             
             Log.Error(
                 msg.LastCause, 
-                "{0}: Remembered entity {1} was stopped because it has failed repeatedly within {2} ms, exceeding the supervisor strategy maximum restart count of {3}", 
-                _typeName, id, msg.TimeWindowInMilliseconds, msg.MaxRestartCount);
+                "{0}: Remembered entity {1} was stopped: {2}", 
+                _typeName, id, msg.Reason);
         }
 
         private void DeliverMessage(string entityId, object msg, IActorRef snd)

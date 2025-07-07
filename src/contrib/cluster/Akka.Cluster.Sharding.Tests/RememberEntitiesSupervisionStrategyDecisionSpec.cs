@@ -27,7 +27,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Cluster.Sharding.Tests;
 
-public class RememberEntitiesExcessiveFailureSpec : AkkaSpec
+public class RememberEntitiesSupervisionStrategyDecisionSpec : AkkaSpec
 {
     private sealed record EntityEnvelope(long Id, object Payload);
 
@@ -261,7 +261,7 @@ public class RememberEntitiesExcessiveFailureSpec : AkkaSpec
                         state-store-mode = ddata
                         remember-entities = on
                         remember-entities-store = custom
-                        remember-entities-custom-store = "Akka.Cluster.Sharding.Tests.RememberEntitiesExcessiveFailureSpec+FakeStore, Akka.Cluster.Sharding.Tests"
+                        remember-entities-custom-store = "Akka.Cluster.Sharding.Tests.RememberEntitiesSupervisionStrategyDecisionSpec+FakeStore, Akka.Cluster.Sharding.Tests"
                         verbose-debug-logging = on
                     }
                 }
@@ -269,7 +269,7 @@ public class RememberEntitiesExcessiveFailureSpec : AkkaSpec
             .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSharding.DefaultConfig());
 
-    public RememberEntitiesExcessiveFailureSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
+    public RememberEntitiesSupervisionStrategyDecisionSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
     {
     }
 
@@ -289,8 +289,8 @@ public class RememberEntitiesExcessiveFailureSpec : AkkaSpec
         return Directive.Restart;
     }
     
-    [Fact(DisplayName = "Persistent shard must stop remembered entity with excessive failures on start")]
-    public async Task Persistent_Shard_must_stop_remembered_entity_with_excessive_constructor_failure()
+    [Fact(DisplayName = "Persistent shard must stop remembered entity with excessive failures")]
+    public async Task Persistent_Shard_must_stop_remembered_entity_with_excessive_restart_attempt()
     {
         var strategyCounter = new AtomicCounter(0);
         
@@ -305,7 +305,7 @@ public class RememberEntitiesExcessiveFailureSpec : AkkaSpec
         Sys.EventStream.Subscribe<Error>(TestActor);
 
         var entityProps = Props.Create(() => new PreStartFailActor());
-        await EventFilter.Error(contains: "cats: Remembered entity 1 was stopped because it has failed repeatedly")
+        await EventFilter.Error(contains: "cats: Remembered entity 1 was stopped: entity failed repeatedly")
             .ExpectOneAsync(async () =>
             {
                 _ = Sys.ActorOf(Props.Create(() => new FakeShardRegion(settings, entityProps)));
@@ -316,4 +316,33 @@ public class RememberEntitiesExcessiveFailureSpec : AkkaSpec
         // Failed on the 4th call
         strategyCounter.Current.Should().Be(4);
     }
+    
+    [Fact(DisplayName = "Persistent shard must stop remembered entity when stopped using Directive.Stop decision")]
+    public async Task Persistent_Shard_must_stop_remembered_entity_with_stop_directive_on_constructor_failure()
+    {
+        var strategyCounter = new AtomicCounter(0);
+        
+        var settings = ClusterShardingSettings.Create(Sys);
+        settings = settings
+            .WithTuningParameters(settings.TuningParameters.WithEntityRestartBackoff(0.1.Seconds()))
+            .WithRememberEntities(true)
+            .WithSupervisorStrategy(new TestSupervisionStrategy(strategyCounter, 3, 1000, SupervisorStrategy.DefaultDecider.Decide));
+
+        var storeProbe = CreateTestProbe();
+        Sys.EventStream.Subscribe<ShardStoreCreated>(storeProbe);
+        Sys.EventStream.Subscribe<Error>(TestActor);
+
+        var entityProps = Props.Create(() => new ConstructorFailActor());
+        await EventFilter.Error(contains: "cats: Remembered entity 1 was stopped: entity stopped by Directive.Stop decision")
+            .ExpectOneAsync(async () =>
+            {
+                _ = Sys.ActorOf(Props.Create(() => new FakeShardRegion(settings, entityProps)));
+                storeProbe.ExpectMsg<ShardStoreCreated>();
+                await Task.Yield();
+            });
+
+        // Failed on the 1st call
+        strategyCounter.Current.Should().Be(1);
+    }
+    
 }

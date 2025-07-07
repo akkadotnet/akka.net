@@ -59,9 +59,10 @@ public class ShardSupervisionStrategy: OneForOneStrategy
             RestartChild(child, cause, suspendFirst: false);
         else
         {
-            // Only send failure feedback if restart was requested
-            if(restart)
-                context.Self.Tell(new ExcessiveSupervisorRestartPassivation(child, WithinTimeRangeMilliseconds, MaxNumberOfRetries, cause));
+            var reason = restart 
+                ? $"entity failed repeatedly within {WithinTimeRangeMilliseconds} ms, exceeding the supervisor strategy maximum restart count of {MaxNumberOfRetries}" 
+                : "entity stopped by Directive.Stop decision";
+            context.Self.Tell(new SupervisorStopDirectivePassivation(child, reason, cause));
             context.Stop(child);
         }
     }
