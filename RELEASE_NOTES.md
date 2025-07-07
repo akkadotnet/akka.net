@@ -1,3 +1,23 @@
+#### 1.5.45 July 7th, 2025 ####
+
+Akka.NET v1.5.45 is a minor patch containing bug fixes for Core Akka and Akka.Cluster.Sharding plugin.
+
+* [Core: Code modernization, use deconstructor for variable swapping](https://github.com/akkadotnet/akka.net/pull/7658)
+* [Sharding: Fix unclean `ShardingConsumerControllerImpl` shutdown](https://github.com/akkadotnet/akka.net/pull/7714)
+* [Core: Convert `Failure` to `Exception` for `Ask<object>`](https://github.com/akkadotnet/akka.net/pull/7286)
+* [Core: Fix `Settings.InjectTopLevelFallback` race condition](https://github.com/akkadotnet/akka.net/pull/7721)
+
+4 contributors since release 1.5.44
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 8       | 279  | 103  | Gregorius Soedharmo |
+| 1       | 7    | 13   | Simon Cropp         |
+| 1       | 60   | 18   | ondravondra         |
+| 1       | 1    | 0    | Aaron Stannard      |
+
+To [see the full set of changes in Akka.NET v1.5.45, click here](https://github.com/akkadotnet/akka.net/milestone/128?closed=1)
+
 #### 1.5.44 June 19th, 2025 ####
 
 Akka.NET v1.5.44 is a minor patch that contains a bug fix to the Akka.Persistence plugin.
