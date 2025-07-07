@@ -8,6 +8,11 @@ Akka.NET v1.5.45 is a minor patch containing bug fixes for Core Akka and Akka.Cl
 * [Core: Fix `Settings.InjectTopLevelFallback` race condition](https://github.com/akkadotnet/akka.net/pull/7721)
 * [Sharding: Make remembered entities honor supervision strategy decisions](https://github.com/akkadotnet/akka.net/pull/7720)
 
+**Supervision Strategy For Sharding Remembered Entities**
+
+* We've added a `SupervisorStrategy` property to `ClusterShardingSettings`. You can use any type of `SupervisionStrategy`, but it is recommended that you inherit `ShardSupervisionStrategy` if you're making your own custom supervision strategy.
+* Remembered shard entities will now honor `SupervisionStrategy` decisions and stops remembered entities if the `SupervisionStrategy.Decider` returned a `Directive.Stop` or if there is a maximum restart retry limitation.
+
 4 contributors since release 1.5.44
 
 | COMMITS | LOC+ | LOC- | AUTHOR              |
