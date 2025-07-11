@@ -229,7 +229,7 @@ namespace Akka.Cluster.Sharding
     /// <para>
     /// Typical usage of this extension:
     ///   1. At system startup on each cluster node by registering the supported entity types with
-    /// the <see cref="ClusterSharding.Start"/> method
+    /// the <see cref="ClusterSharding.Start(string,Props,ClusterShardingSettings,IMessageExtractor)"/> method
     ///   1. Retrieve the <see cref="Sharding.ShardRegion"/> actor for a named entity type with <see cref="ClusterSharding.ShardRegion"/>
     /// Settings can be configured as described in the `akka.cluster.sharding` section of the `reference.conf`.
     /// </para>
@@ -291,9 +291,9 @@ namespace Akka.Cluster.Sharding
     /// <para>
     /// '''Delivery Semantics''':
     /// As long as a sender uses the same <see cref="Sharding.ShardRegion"/> actor to deliver messages to an entity
-    /// actor the order of the messages is preserved. As long as the buffer limit is not reached
-    /// messages are delivered on a best effort basis, with at-most once delivery semantics,
-    /// in the same way as ordinary message sending. Reliable end-to-end messaging, with
+    /// actor the order of the messages is preserved. As long as the buffer limit is not reached,
+    /// messages will be delivered on a best effort basis, with at-most once delivery semantics,
+    /// in the same way as an ordinary message sending. Reliable end-to-end messaging, with
     /// at-least-once semantics can be added by using `AtLeastOnceDelivery` in `akka-persistence`.
     /// </para>
     /// <para>
@@ -1417,7 +1417,9 @@ namespace Akka.Cluster.Sharding
 #pragma warning disable CS0419 // Ambiguous reference in cref attribute
         /// <summary>
         /// Retrieve the actor reference of the <see cref="Sharding.ShardRegion"/> actor responsible for the named entity type.
-        /// The entity type must be registered with the <see cref="ClusterSharding.Start"/> or <see cref="ClusterShardingGuardian.StartProxy"/> method before it
+        /// The entity type must be registered with the
+        /// <see cref="ClusterSharding.Start(string,Props,ClusterShardingSettings,IMessageExtractor)"/> or
+        /// <see cref="ClusterShardingGuardian.StartProxy"/> method before it
         /// can be used here. Messages to the entity is always sent via the <see cref="Sharding.ShardRegion"/>.
         /// </summary>
         /// <param name="typeName">TBD</param>

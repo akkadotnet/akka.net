@@ -1,3 +1,29 @@
+#### 1.5.45 July 7th, 2025 ####
+
+Akka.NET v1.5.45 is a minor patch containing bug fixes for Core Akka and Akka.Cluster.Sharding plugin.
+
+* [Core: Code modernization, use deconstructor for variable swapping](https://github.com/akkadotnet/akka.net/pull/7658)
+* [Sharding: Fix unclean `ShardingConsumerControllerImpl` shutdown](https://github.com/akkadotnet/akka.net/pull/7714)
+* [Core: Convert `Failure` to `Exception` for `Ask<object>`](https://github.com/akkadotnet/akka.net/pull/7286)
+* [Core: Fix `Settings.InjectTopLevelFallback` race condition](https://github.com/akkadotnet/akka.net/pull/7721)
+* [Sharding: Make remembered entities honor supervision strategy decisions](https://github.com/akkadotnet/akka.net/pull/7720)
+
+**Supervision Strategy For Sharding Remembered Entities**
+
+* We've added a `SupervisorStrategy` property to `ClusterShardingSettings`. You can use any type of `SupervisionStrategy`, but it is recommended that you inherit `ShardSupervisionStrategy` if you're making your own custom supervision strategy.
+* Remembered shard entities will now honor `SupervisionStrategy` decisions and stops remembered entities if the `SupervisionStrategy.Decider` returned a `Directive.Stop` or if there is a maximum restart retry limitation.
+
+4 contributors since release 1.5.44
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 10      | 823  | 108  | Gregorius Soedharmo |
+| 1       | 7    | 13   | Simon Cropp         |
+| 1       | 60   | 18   | ondravondra         |
+| 1       | 1    | 0    | Aaron Stannard      |
+
+To [see the full set of changes in Akka.NET v1.5.45, click here](https://github.com/akkadotnet/akka.net/milestone/128?closed=1)
+
 #### 1.5.44 June 19th, 2025 ####
 
 Akka.NET v1.5.44 is a minor patch that contains a bug fix to the Akka.Persistence plugin.

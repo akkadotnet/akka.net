@@ -139,14 +139,15 @@ namespace Akka.Cluster.Sharding.Tests
                 null
             ));
 
-            Sys.EventStream.Subscribe<Error>(TestActor);
+            var errorProbe = CreateTestProbe();
+            Sys.EventStream.Subscribe<Error>(errorProbe);
 
             var persistentShard = Sys.ActorOf(props);
 
             persistentShard.Tell(new EntityEnvelope(1, "Start"));
 
             // entity died here
-            var err = ExpectMsg<Error>();
+            var err = errorProbe.ExpectMsg<Error>();
             err.Cause.Should().BeOfType<ActorInitializationException>();
 
             // Need to wait for the internal state to reset, else everything we sent will go to dead letter

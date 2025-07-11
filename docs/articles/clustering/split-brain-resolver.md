@@ -6,6 +6,10 @@ title: Split Brain Resolver
 
 When working with an Akka.NET cluster, you must consider how to handle [network partitions](https://en.wikipedia.org/wiki/Network_partition) (a.k.a. split brain scenarios) and machine crashes (including .NET CLR/Core and hardware failures). This is crucial for correct behavior of your cluster, especially if you use Cluster Singleton or Cluster Sharding.
 
+<!-- markdownlint-disable MD033 -->
+<iframe width="560" height="315" src="https://www.youtube.com/embed/1u9Yhxic2NE?si=vuZ2iBgfUjVwOw0y" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+ <!-- markdownlint-enable MD033 -->
+
 ## The Problem
 
 One of the common problems present in distributed systems are potential hardware failures. Things like garbage collection pauses, machine crashes or network partitions happen all the time. Moreover it is impossible to distinguish between them. Different cause can have different result on our cluster. A careful balance here is highly desired:

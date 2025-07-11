@@ -912,14 +912,14 @@ namespace Akka.Actor
         }
         public delegate void TransitionHandler<TState, TData>(TState initialState, TState nextState);
     }
-    [System.ObsoleteAttribute("Use Akka.Actor.Status.Failure")]
+    [System.ObsoleteAttribute("Use Akka.Actor.Status.Failure. Will be removed in v1.6")]
     public class Failure
     {
         public Failure() { }
         public System.Exception Exception { get; set; }
         public System.DateTime Timestamp { get; set; }
     }
-    [System.ObsoleteAttribute("Use List of Akka.Actor.Status.Failure")]
+    [System.ObsoleteAttribute("Use List of Akka.Actor.Status.Failure. Will be removed in v1.6")]
     public class Failures
     {
         public Failures() { }

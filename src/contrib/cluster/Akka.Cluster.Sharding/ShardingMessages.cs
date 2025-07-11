@@ -61,6 +61,8 @@ namespace Akka.Cluster.Sharding
         public object StopMessage { get; }
     }
 
+    internal sealed record SupervisorStopDirectivePassivation(IActorRef Child, string Reason, Exception LastCause) : IShardRegionCommand;
+    
     /// <summary>
     /// Send this message to the <see cref="ShardRegion"/> actor to handoff all shards that are hosted by
     /// the <see cref="ShardRegion"/> and then the <see cref="ShardRegion"/> actor will be stopped. You can <see cref="ICanWatch.Watch"/>

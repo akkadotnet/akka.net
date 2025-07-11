@@ -72,7 +72,7 @@ namespace Akka.Streams.Dsl
             Source.FromGraph(Inner).ToMaterialized(sink, combine);
 
         /// <summary>
-        /// Context-preserving variant of <see cref="Source{TOut, TMat2}.MapMaterializedValue{TMat2}(Func{TMat2, TMat2})"/>.
+        /// Context-preserving variant of <see cref="Source{TOut, TMat}.MapMaterializedValue{TMat2}(Func{TMat, TMat2})"/>.
         /// </summary>
         public SourceWithContext<TOut, TCtx, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> combine) =>
             new(Source.FromGraph(Inner).MapMaterializedValue(combine));
