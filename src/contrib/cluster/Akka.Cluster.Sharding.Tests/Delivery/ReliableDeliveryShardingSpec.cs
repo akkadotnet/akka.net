@@ -27,7 +27,7 @@ namespace Akka.Cluster.Sharding.Tests.Delivery;
 public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
 {
     public static Config Configuration = @"
-        akka.loglevel = DEBUG
+        akka.loglevel = INFO
         akka.actor.provider = cluster
         akka.remote.dot-netty.tcp.port = 0
         akka.reliable-delivery.consumer-controller.flow-control-window = 20
@@ -63,7 +63,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         var consumerEndProbe = CreateTestProbe();
         var region = await ClusterSharding.Get(Sys).StartAsync($"TestConsumer-{_idCount}", _ =>
                 ShardingConsumerController.Create<Job>(c =>
-                        PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
+                        PropsFor(TimeSpan.Zero, 500, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
                 o => string.Empty, o => o));
@@ -550,7 +550,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         public TestShardingProducer(IActorRef producerController)
         {
             _producerController = producerController;
-            Idle(0);
+            Idle(-1);
         }
 
         public ITimerScheduler Timers { get; set; } = null!;
@@ -576,21 +576,14 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         private void Idle(int n)
         {
             Receive<Tick>(_ => { }); // ignore
-            Receive<RequestNext>(next => { Become(() => Active(n + 1, next.SendNextTo)); });
-        }
-
-        private void Active(int n, IActorRef sendTo)
-        {
-            Receive<Tick>(_ =>
+            Receive<RequestNext>(next =>
             {
+                _log.Info("TRACK:[ProAct.Rcv-RequestNext,{0},{1}]", next.SendNextTo.Path.Name, DateTime.UtcNow.ToString("mm:ss.ffff"));
+                n++;
                 var msg = $"msg-{n}";
                 var entityId = $"entity-{n % 3}";
-                _log.Info("Sending {0} to {1}", msg, entityId);
-                sendTo.Tell(new ShardingEnvelope(entityId, new Job(msg)));
-                Become(() => Idle(n));
+                next.SendNextTo.Tell(new ShardingEnvelope(entityId, new Job(msg)));
             });
-
-            Receive<RequestNext>(_ => { }); // already active
         }
 
         public sealed class Tick
