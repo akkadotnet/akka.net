@@ -31,8 +31,8 @@ public class ClusterDeliveryBenchmark
     private IActorRef? _controller;
     private IActorRef? _aggregator;
 
-    [Params(3000)]
-    public int MessageCount;
+    //[Params(3000)]
+    private const int MessageCount = 800;
 
     [GlobalSetup]
     public void GlobalSetup()
@@ -74,13 +74,13 @@ public class ClusterDeliveryBenchmark
         );
         
         // Create the producer actor
-        _producer = _system.ActorOf(Props.Create(() => new ProducerActor(_controller, MessageCount)), "producer");
+        _producer = _system.ActorOf(Props.Create(() => new ProducerActor(_controller)), "producer");
     }
 
     [GlobalCleanup]
     public void Teardown()
     {
-        _system.Terminate().WaitAsync(10.Seconds()).GetAwaiter().GetResult();
+        _system.Terminate().WaitAsync(30.Seconds()).GetAwaiter().GetResult();
         _aggregator = null;
         _producer = null;
         _region = null;
@@ -94,9 +94,14 @@ public class ClusterDeliveryBenchmark
     }
     
     [Benchmark]
+    [InvocationCount(MessageCount)]
     public async Task ClusterShardingDeliveryMessageThroughputBenchmark()
     {
-        _producer.Tell(Start.Instance);
+        foreach (var message in Enumerable.Range(0, MessageCount))
+        {
+            _producer.Tell(message);
+        }
+        
         await _aggregator.Ask<Completed>(GetCompleted.Instance);
     }
 }

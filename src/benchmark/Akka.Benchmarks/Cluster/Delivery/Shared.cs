@@ -71,25 +71,24 @@ internal class TestConsumerEntity : ReceiveActor
 internal class MessageExtractor() : HashCodeMessageExtractor(10)
 {
     public override string EntityId(object message) =>
-        message is Job cmd ? (cmd.Payload % 100).ToString() : string.Empty;
+        message is Job cmd ? (cmd.Payload % 3).ToString() : string.Empty;
 }
 
 // The producer actor
-internal class ProducerActor : ReceiveActor
+internal class ProducerActor : ReceiveActor, IWithStash
 {
-    private IActorRef _sendNext;
     private readonly IActorRef _producerController;
+    private IActorRef _sendNext = ActorRefs.Nobody;
     private readonly ILoggingAdapter _log;
-    private readonly int _maxCount;
-    private int _count;
 
-    public ProducerActor(IActorRef producerController, int maxCount)
+    public ProducerActor(IActorRef producerController)
     {
         _log = Context.GetLogger();
         _producerController = producerController;
-        _maxCount = maxCount;
         Become(Idle);
     }
+
+    public IStash Stash { get; set; } = null!;
 
     protected override void PreStart()
     {
@@ -98,29 +97,30 @@ internal class ProducerActor : ReceiveActor
 
     private void Idle()
     {
-        _count = 0;
-        Receive<Start>(_ => Become(Active));
         Receive<ShardingProducerController.RequestNext<Job>>(next =>
         {
             _sendNext = next.SendNextTo;
+            Stash.Unstash();
+            Become(Active);
+        });
+
+        Receive<int>(_ =>
+        {
+            Stash.Stash();
         });
     }
 
     private void Active()
     {
-        if (_sendNext != null)
+        Receive<int>(msg =>
         {
-            _sendNext.Tell(new ShardingEnvelope(_count.ToString(), new Job(_count)));
-            _sendNext = null;
-            _count++;
-        }
+            Become(Idle);
+            _sendNext.Tell(new ShardingEnvelope(msg.ToString(), new Job(msg)));
+        });
         
         Receive<ShardingProducerController.RequestNext<Job>>(next =>
         {
-            next.SendNextTo.Tell(new ShardingEnvelope(_count.ToString(), new Job(_count)));
-            _count++;
-            if(_count >= _maxCount)
-                Become(Idle);
+            _sendNext = next.SendNextTo;
         });
     }
 }
