@@ -93,8 +93,7 @@ public class ClusterDeliveryBenchmark
         _aggregator.Ask<Done>(Reset.Instance).GetAwaiter().GetResult();
     }
     
-    [Benchmark]
-    [InvocationCount(MessageCount)]
+    [Benchmark(OperationsPerInvoke = MessageCount)]
     public async Task ClusterShardingDeliveryMessageThroughputBenchmark()
     {
         foreach (var message in Enumerable.Range(0, MessageCount))
