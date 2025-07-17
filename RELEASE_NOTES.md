@@ -1,3 +1,19 @@
+#### 1.5.46 July 17th, 2025 ####
+
+Akka.NET v1.5.46 is a minor patch containing a fix for the Akka.IO.Dns extension.
+
+* [Core: Resolve ManagerClass type from IDnsProvider](https://github.com/akkadotnet/akka.net/pull/7727)
+
+3 contributors since release 1.5.45
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 4    | 0    | Aaron Stannard      |
+| 1       | 1    | 1    | Pavel Anpin         |
+| 1       | 1    | 0    | Gregorius Soedharmo |
+
+To [see the full set of changes in Akka.NET v1.5.46, click here](https://github.com/akkadotnet/akka.net/milestone/129?closed=1)
+
 #### 1.5.45 July 7th, 2025 ####
 
 Akka.NET v1.5.45 is a minor patch containing bug fixes for Core Akka and Akka.Cluster.Sharding plugin.
