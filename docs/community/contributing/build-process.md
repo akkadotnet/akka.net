@@ -12,8 +12,8 @@ Akka.NET has migrated from using FAKE build scripts to using the .NET CLI for bu
 
 ## Prerequisites
 
-- .NET SDK (as specified in `global.json`)
-- PowerShell
+* .NET SDK (as specified in `global.json`)
+* PowerShell
 
 ## Building the Solution
 
@@ -108,9 +108,9 @@ dotnet incrementalist run --config .incrementalist/incrementalist.json -- test -
 
 The project includes several Incrementalist configuration files:
 
-- `.incrementalist/incrementalist.json` - General incremental build configuration
-- `.incrementalist/testsOnly.json` - Configuration for running only tests
-- `.incrementalist/mutliNodeOnly.json` - Configuration for multi-node tests only
+* `.incrementalist/incrementalist.json` - General incremental build configuration
+* `.incrementalist/testsOnly.json` - Configuration for running only tests
+* `.incrementalist/mutliNodeOnly.json` - Configuration for multi-node tests only
 
 For more information about Incrementalist, visit the [GitHub repository](https://github.com/petabridge/Incrementalist).
 
@@ -155,9 +155,10 @@ The project uses a PowerShell script (`build.ps1`) to handle release notes and v
 ```
 
 This script:
-- Reads release notes from `RELEASE_NOTES.md`
-- Updates version information in `Directory.Build.props`
-- Prepares the project for building with the correct version
+
+* Reads release notes from `RELEASE_NOTES.md`
+* Updates version information in `Directory.Build.props`
+* Prepares the project for building with the correct version
 
 > [!NOTE]
 > PowerShell is now available on Linux and macOS, so the `build.ps1` script can be run on all supported platforms.
