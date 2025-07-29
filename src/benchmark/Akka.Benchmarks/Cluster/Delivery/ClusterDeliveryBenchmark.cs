@@ -15,6 +15,7 @@ using FluentAssertions.Extensions;
 namespace Akka.Benchmarks.Cluster.Delivery;
 
 [Config(typeof(MacroBenchmarkConfig))]
+[IterationCount(100)]
 public class ClusterDeliveryBenchmark
 {
     private static readonly Config Config = 
@@ -35,7 +36,10 @@ public class ClusterDeliveryBenchmark
     private IActorRef? _controller;
     private IActorRef? _aggregator;
 
-    private const int MessageCount = 3000;
+    private const int MessageCount = 800;
+    
+    [Params(false, true)]
+    public bool UseSingleState;
 
     [GlobalSetup]
     public void GlobalSetup()
@@ -77,7 +81,7 @@ public class ClusterDeliveryBenchmark
         );
         
         // Create the producer actor
-        _producer = _system.ActorOf(Props.Create(() => new ProducerActor(_controller)), "producer");
+        _producer = _system.ActorOf(Props.Create(() => new ProducerActor(_controller, UseSingleState)), "producer");
         
         // Debug
         var consumerSettings = ConsumerController.Settings.Create(_system);

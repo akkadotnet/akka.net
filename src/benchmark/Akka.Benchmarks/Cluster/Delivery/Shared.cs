@@ -81,11 +81,14 @@ internal class ProducerActor : ReceiveActor, IWithStash
     private IActorRef _sendNext = ActorRefs.Nobody;
     private readonly ILoggingAdapter _log;
 
-    public ProducerActor(IActorRef producerController)
+    public ProducerActor(IActorRef producerController, bool singleState)
     {
         _log = Context.GetLogger();
         _producerController = producerController;
-        Become(Idle);
+        if(singleState)
+            Become(SingleState);
+        else
+            Become(Idle);
     }
 
     public IStash Stash { get; set; } = null!;
@@ -93,6 +96,28 @@ internal class ProducerActor : ReceiveActor, IWithStash
     protected override void PreStart()
     {
         _producerController.Tell(new ShardingProducerController.Start<Job>(Self));
+    }
+
+    private void SingleState()
+    {
+        Receive<ShardingProducerController.RequestNext<Job>>(next =>
+        {
+            _sendNext = next.SendNextTo;
+            Stash.Unstash();
+        });
+        
+        Receive<int>(msg =>
+        {
+            if(ReferenceEquals(_sendNext, ActorRefs.Nobody))
+            {
+                Stash.Stash();
+            }
+            else
+            {
+                _sendNext.Tell(new ShardingEnvelope(msg.ToString(), new Job(msg)));
+                _sendNext = ActorRefs.Nobody;
+            }
+        });
     }
 
     private void Idle()

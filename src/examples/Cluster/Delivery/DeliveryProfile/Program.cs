@@ -78,7 +78,7 @@ public static class Program
         );
         
         // Create the producer actor
-        _producer = _system.ActorOf(Props.Create(() => new ProducerActor(_controller)), "producer");
+        _producer = _system.ActorOf(Props.Create(() => new ProducerActor(_controller, true)), "producer");
         
         // Debug
         var consumerSettings = ConsumerController.Settings.Create(_system);
