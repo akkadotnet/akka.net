@@ -15,13 +15,15 @@ using System.Linq;
 using Akka.Util.Internal;
 using Xunit;
 using System.Threading.Tasks;
+using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Event
 {
     public class EventStreamSpec : AkkaSpec
     {
-        public EventStreamSpec()
-            : base(GetConfig())
+        public EventStreamSpec(ITestOutputHelper output)
+            : base(GetConfig(), output)
         {
         }
 
@@ -101,20 +103,21 @@ namespace Akka.Tests.Event
         }
 
         [Fact]
-        public async Task Be_able_to_log_unhandled_messages()
+        public void Be_able_to_log_unhandled_messages()
         {
-            using (var system = ActorSystem.Create("EventStreamSpecUnhandled", GetDebugUnhandledMessagesConfig()))
+            var testKit = new TestKit.Xunit2.TestKit(config: GetDebugUnhandledMessagesConfig(), output: Output);
+            try
             {
-                system.EventStream.Subscribe(TestActor, typeof(Debug));
-
-                var msg = new UnhandledMessage(42, system.DeadLetters, system.DeadLetters);
-
-                system.EventStream.Publish(msg);
-
-                var debugMsg = await ExpectMsgAsync<Debug>();
-
-                debugMsg.Message.ToString().StartsWith("Unhandled message from").ShouldBeTrue();
-                debugMsg.Message.ToString().EndsWith(": 42").ShouldBeTrue();
+                var msg = new UnhandledMessage(42, testKit.Sys.DeadLetters, testKit.Sys.DeadLetters);
+                testKit.EventFilter.Debug(start: "Unhandled message from", contains: "42")
+                    .Expect(1, () =>
+                    {
+                        testKit.Sys.EventStream.Publish(msg);
+                    });
+            }
+            finally
+            {
+                testKit.Shutdown();
             }
         }
 
@@ -122,21 +125,22 @@ namespace Akka.Tests.Event
         /// Reproduction spec for https://github.com/akkadotnet/akka.net/issues/3267
         /// </summary>
         [Fact]
-        public async Task Bugfix3267_able_to_log_unhandled_messages_with_nosender()
+        public void Bugfix3267_able_to_log_unhandled_messages_with_nosender()
         {
-            using (var system = ActorSystem.Create("EventStreamSpecUnhandled", GetDebugUnhandledMessagesConfig()))
+            var testKit = new TestKit.Xunit2.TestKit(config: GetDebugUnhandledMessagesConfig(), output: Output);
+            try
             {
-                system.EventStream.Subscribe(TestActor, typeof(Debug));
-
                 // sender is NoSender
-                var msg = new UnhandledMessage(42, ActorRefs.NoSender, system.DeadLetters);
-
-                system.EventStream.Publish(msg);
-
-                var debugMsg = await ExpectMsgAsync<Debug>();
-
-                debugMsg.Message.ToString().StartsWith("Unhandled message from").ShouldBeTrue();
-                debugMsg.Message.ToString().EndsWith(": 42").ShouldBeTrue();
+                var msg = new UnhandledMessage(42, ActorRefs.NoSender, testKit.Sys.DeadLetters);
+                testKit.EventFilter.Debug(start: "Unhandled message from", contains: "42")
+                    .Expect(1, () =>
+                    {
+                        testKit.Sys.EventStream.Publish(msg);
+                    });
+            }
+            finally
+            {
+                testKit.Shutdown();
             }
         }
 
@@ -300,9 +304,7 @@ namespace Akka.Tests.Event
                     log-dead-letters = off
                     stdout-loglevel = DEBUG
                     loglevel = DEBUG
-                    loggers = [""%logger%""]
-                }
-                ".Replace("%logger%", typeof(MyLog).AssemblyQualifiedName);
+                }";
         }
 
         public class MyLog : ReceiveActor
