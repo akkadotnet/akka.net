@@ -78,6 +78,8 @@ namespace Akka.Cluster.Sharding
         public ClusterShardingSettings(string role, bool rememberEntities, string journalPluginId, string snapshotPluginId, System.TimeSpan passivateIdleEntityAfter, Akka.Cluster.Sharding.StateStoreMode stateStoreMode, Akka.Cluster.Sharding.TuningParameters tuningParameters, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings) { }
         public ClusterShardingSettings(string role, bool rememberEntities, string journalPluginId, string snapshotPluginId, System.TimeSpan passivateIdleEntityAfter, Akka.Cluster.Sharding.StateStoreMode stateStoreMode, Akka.Cluster.Sharding.TuningParameters tuningParameters, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings, Akka.Coordination.LeaseUsageSettings leaseSettings) { }
         public ClusterShardingSettings(string role, bool rememberEntities, string journalPluginId, string snapshotPluginId, System.TimeSpan passivateIdleEntityAfter, Akka.Cluster.Sharding.StateStoreMode stateStoreMode, Akka.Cluster.Sharding.RememberEntitiesStore rememberEntitiesStore, System.TimeSpan shardRegionQueryTimeout, Akka.Cluster.Sharding.TuningParameters tuningParameters, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings, Akka.Coordination.LeaseUsageSettings leaseSettings) { }
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        public Akka.Actor.SupervisorStrategy SupervisorStrategy { get; }
         public static Akka.Cluster.Sharding.ClusterShardingSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Sharding.ClusterShardingSettings Create(Akka.Configuration.Config config, Akka.Configuration.Config singletonConfig) { }
         public Akka.Cluster.Sharding.ClusterShardingSettings WithCoordinatorSingletonSettings(Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings) { }
@@ -88,6 +90,7 @@ namespace Akka.Cluster.Sharding
         public Akka.Cluster.Sharding.ClusterShardingSettings WithRole(string role) { }
         public Akka.Cluster.Sharding.ClusterShardingSettings WithSnapshotPluginId(string snapshotPluginId) { }
         public Akka.Cluster.Sharding.ClusterShardingSettings WithStateStoreMode(Akka.Cluster.Sharding.StateStoreMode mode) { }
+        public Akka.Cluster.Sharding.ClusterShardingSettings WithSupervisorStrategy(Akka.Actor.SupervisorStrategy supervisorStrategy) { }
         public Akka.Cluster.Sharding.ClusterShardingSettings WithTuningParameters(Akka.Cluster.Sharding.TuningParameters tuningParameters) { }
     }
     public sealed class ClusterShardingStats : Akka.Cluster.Sharding.IClusterShardingSerializable, System.IEquatable<Akka.Cluster.Sharding.ClusterShardingStats>
@@ -295,6 +298,18 @@ namespace Akka.Cluster.Sharding
         public bool Equals(Akka.Cluster.Sharding.ShardState other) { }
         public override int GetHashCode() { }
         public override string ToString() { }
+    }
+    public class ShardSupervisionStrategy : Akka.Actor.OneForOneStrategy
+    {
+        public ShardSupervisionStrategy(System.Nullable<int> maxNrOfRetries, System.Nullable<System.TimeSpan> withinTimeRange, System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider) { }
+        public ShardSupervisionStrategy(System.Nullable<int> maxNrOfRetries, System.Nullable<System.TimeSpan> withinTimeRange, Akka.Actor.IDecider decider) { }
+        public ShardSupervisionStrategy(int maxNrOfRetries, int withinTimeMilliseconds, System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider, bool loggingEnabled = True) { }
+        public ShardSupervisionStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Akka.Actor.IDecider decider, bool loggingEnabled = True) { }
+        public ShardSupervisionStrategy(System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider) { }
+        public ShardSupervisionStrategy(System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider, bool loggingEnabled = True) { }
+        public ShardSupervisionStrategy(Akka.Actor.IDecider decider) { }
+        public ShardSupervisionStrategy() { }
+        public override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
     }
     [Akka.Annotations.ApiMayChangeAttribute()]
     [Akka.Annotations.DoNotInheritAttribute()]

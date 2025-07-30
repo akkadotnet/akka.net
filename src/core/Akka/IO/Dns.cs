@@ -275,7 +275,7 @@ namespace Akka.IO
         {
             get
             {
-                return _manager = _manager ?? _system.SystemActorOf(Props.Create(() => new SimpleDnsManager(this))
+                return _manager = _manager ?? _system.SystemActorOf(Props.Create(Provider.ManagerClass, this)
                                                                          .WithDeploy(Deploy.Local)
                                                                          .WithDispatcher(Settings.Dispatcher));
             }

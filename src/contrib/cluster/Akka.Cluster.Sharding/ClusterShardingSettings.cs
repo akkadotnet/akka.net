@@ -338,6 +338,8 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public readonly LeaseUsageSettings LeaseSettings;
 
+        public SupervisorStrategy? SupervisorStrategy { get; }
+        
         /// <summary>
         /// Create settings from the default configuration `akka.cluster.sharding`.
         /// </summary>
@@ -517,6 +519,34 @@ namespace Akka.Cluster.Sharding
             LeaseSettings = leaseSettings;
         }
 
+        private ClusterShardingSettings(
+            string role,
+            bool rememberEntities,
+            string journalPluginId,
+            string snapshotPluginId,
+            TimeSpan passivateIdleEntityAfter,
+            StateStoreMode stateStoreMode,
+            RememberEntitiesStore rememberEntitiesStore,
+            TimeSpan shardRegionQueryTimeout,
+            TuningParameters tuningParameters,
+            ClusterSingletonManagerSettings coordinatorSingletonSettings,
+            LeaseUsageSettings leaseSettings,
+            SupervisorStrategy supervisorStrategy)
+        {
+            Role = role;
+            RememberEntities = rememberEntities;
+            JournalPluginId = journalPluginId;
+            SnapshotPluginId = snapshotPluginId;
+            PassivateIdleEntityAfter = passivateIdleEntityAfter;
+            StateStoreMode = stateStoreMode;
+            RememberEntitiesStore = rememberEntitiesStore;
+            ShardRegionQueryTimeout = shardRegionQueryTimeout;
+            TuningParameters = tuningParameters;
+            CoordinatorSingletonSettings = coordinatorSingletonSettings;
+            LeaseSettings = leaseSettings;
+            SupervisorStrategy = supervisorStrategy;
+        }
+
         /// <summary>
         /// If true, this node should run the shard region, otherwise just a shard proxy should started on this node.
         /// </summary>
@@ -603,6 +633,11 @@ namespace Akka.Cluster.Sharding
             return Copy(leaseSettings: leaseSettings);
         }
 
+        public ClusterShardingSettings WithSupervisorStrategy(SupervisorStrategy supervisorStrategy)
+        {
+            return Copy(supervisorStrategy: supervisorStrategy);
+        }
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -630,7 +665,8 @@ namespace Akka.Cluster.Sharding
             TimeSpan? shardRegionQueryTimeout = null,
             TuningParameters tuningParameters = null,
             ClusterSingletonManagerSettings coordinatorSingletonSettings = null,
-            Option<LeaseUsageSettings> leaseSettings = default)
+            Option<LeaseUsageSettings> leaseSettings = default,
+            SupervisorStrategy? supervisorStrategy = null)
         {
             return new ClusterShardingSettings(
                 role: role.HasValue ? role.Value : Role,
@@ -643,7 +679,8 @@ namespace Akka.Cluster.Sharding
                 shardRegionQueryTimeout: shardRegionQueryTimeout ?? ShardRegionQueryTimeout,
                 tuningParameters: tuningParameters ?? TuningParameters,
                 coordinatorSingletonSettings: coordinatorSingletonSettings ?? CoordinatorSingletonSettings,
-                leaseSettings: leaseSettings.HasValue ? leaseSettings.Value : LeaseSettings);
+                leaseSettings: leaseSettings.HasValue ? leaseSettings.Value : LeaseSettings,
+                supervisorStrategy: supervisorStrategy ?? SupervisorStrategy);
         }
     }
 }

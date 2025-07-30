@@ -5,101 +5,196 @@ title: Building Akka.NET Repositories
 
 # Building Akka.NET Repositories
 
-Akka.NET's build system is a modified version of [Petabridge's `dotnet new` template](https://github.com/petabridge/petabridge-dotnet-new), in particular [the Petabridge.Library template](https://github.com/petabridge/Petabridge.Library/) - we typically keep our build system in sync with the documentation you can find there.
+Akka.NET has migrated from using FAKE build scripts to using the .NET CLI for building and testing. This approach provides better integration with modern .NET tooling and improved performance.
 
-> [!TIP]
-> All repositories in the [Akka.NET Github organization](https://github.com/akkadotnet) use a nearly identical build process. Type `build.cmd help` or `build.sh help` in the root of any repository to see a full list of supported build instructions.
+> [!NOTE]
+> We have dropped the F# FAKE build script (`build.fsx`) in favor of using the .NET CLI directly. The build system now uses standard .NET commands and tools.
 
-## Supported Commands
+## Prerequisites
 
-This project supports a wide variety of commands.
+* .NET SDK (as specified in `global.json`)
+* PowerShell
 
-To list on Windows:
+## Building the Solution
 
-```console
-build.cmd help
+### Basic Build Commands
+
+To build the entire solution:
+
+```bash
+# Build in Debug mode (default)
+dotnet build
+
+# Build in Release mode
+dotnet build -c Release
+
+# Build with warnings as errors
+dotnet build -warnaserror
 ```
 
-To list on Linux / OS X:
+For more information, see the [dotnet build documentation](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-build).
 
-```console
-build.sh help
+### Building Specific Projects
+
+```bash
+# Build a specific project
+dotnet build src/core/Akka/Akka.csproj
+
+# Build with specific configuration
+dotnet build src/core/Akka/Akka.csproj -c Release
 ```
 
-However, please see this readme for full details.
+## Running Tests
 
-### Summary
+### All Tests
 
-* `build.[cmd|sh] all` - runs the entire build system minus documentation: `NBench`, `Tests`, and `Nuget`.
-* `build.[cmd|sh] buildrelease` - compiles the solution in `Release` mode.
-* `build.[cmd|sh] runtests` - compiles the solution in `Release` mode and runs the unit test suite (all projects that end with the `.Tests.csproj` suffix) but only under the .NET Framework configuration. All of the output will be published to the `./TestResults` folder.
-* `build.[cmd|sh] runtestsnetcore` - compiles the solution in `Release` mode and runs the unit test suite (all projects that end with the `.Tests.csproj` suffix) but only under the .NET Core configuration. All of the output will be published to the `./TestResults` folder.
-* `build.[cmd|sh] MultiNodeTests` - compiles the solution in `Release` mode and runs the [multi-node unit test suite](xref:multi-node-testing) (all projects that end with the `.Tests.csproj` suffix) but only under the .NET Framework configuration. All of the output will be published to the `./TestResults/multinode` folder.
-* `build.[cmd|sh] MultiNodeTestsNetCore` - compiles the solution in `Release` mode and runs the [multi-node unit test suite](xref:multi-node-testing) (all projects that end with the `.Tests.csproj` suffix) but only under the .NET Core configuration. All of the output will be published to the `./TestResults/multinode` folder.
-* `build.[cmd|sh] MultiNodeTestsNetCore spec={className}` - compiles the solution in `Release` mode and runs the [multi-node unit test suite](xref:multi-node-testing) (all projects that end with the `.Tests.csproj` suffix) but only under the .NET Core configuration. Only tests that match the `{className}` will run. All of the output will be published to the `./TestResults/multinode` folder. This is a very useful setting for running multi-node tests locally.
-* `build.[cmd|sh] nbench` - compiles the solution in `Release` mode and runs the [NBench](https://nbench.io/) performance test suite (all projects that end with the `.Tests.Performance.csproj` suffix). All of the output will be published to the `./PerfResults` folder.
-* `build.[cmd|sh] nuget` - compiles the solution in `Release` mode and creates Nuget packages from any project that does not have `<IsPackable>false</IsPackable>` set and uses the version number from `RELEASE_NOTES.md`.
-* `build.[cmd|sh] nuget nugetprerelease=dev` - compiles the solution in `Release` mode and creates Nuget packages from any project that does not have `<IsPackable>false</IsPackable>` set - but in this instance all projects will have a `VersionSuffix` of `-beta{DateTime.UtcNow.Ticks}`. It's typically used for publishing nightly releases.
-* `build.[cmd|sh] nuget nugetpublishurl=$(nugetUrl) nugetkey=$(nugetKey)` - compiles the solution in `Release` modem creates Nuget packages from any project that does not have `<IsPackable>false</IsPackable>` set using the version number from `RELEASE_NOTES.md`and then publishes those packages to the `$(nugetUrl)` using NuGet key `$(nugetKey)`.
-* `build.[cmd|sh] DocFx` - compiles the solution in `Release` mode and then uses [DocFx](http://dotnet.github.io/docfx/) to generate website documentation inside the `./docs/_site` folder. Use the `./serve-docs.cmd` on Windows to preview the documentation.
+```bash
+# Run all tests in Release mode
+dotnet test -c Release
 
-This build script is powered by [FAKE](https://fake.build/); please see their API documentation should you need to make any changes to the [`build.fsx`](https://github.com/akkadotnet/akka.net/blob/dev/build.fsx) file.
-
-### Incremental Builds
-
-Akka.NET is a large project, so it's often necessary to run tests incrementally in order to reduce the total end-to-end build time during development. In Akka.NET this is accomplished using [the Incrementalist project](https://github.com/petabridge/Incrementalist) - which can be invoked by adding the `incremental` option to any `build.sh` or `build.cmd` command:
-
-```console
-PS> build.cmd MultiNodeTestsNetCore spec={className} incremental
+# Run tests with specific framework
+dotnet test -c Release --framework net8.0
+dotnet test -c Release --framework net48
 ```
 
-This option will work locally on Linux or Windows.
+For more information, see the [dotnet test documentation](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-test).
 
-### Release Notes, Version Numbers, Etc
+### Specific Test Projects
 
-This project will automatically populate its release notes in all of its modules via the entries written inside [`RELEASE_NOTES.md`](https://github.com/akkadotnet/akka.net/blob/dev/RELEASE_NOTES.md) and will automatically update the versions of all assemblies and NuGet packages via the metadata included inside [`common.props`](https://github.com/akkadotnet/akka.net/blob/dev/src/common.props).
+```bash
+# Run tests for a specific project
+dotnet test src/core/Akka.Tests/Akka.Tests.csproj -c Release
 
-#### RELEASE_NOTES.md
-
-```text
-#### 0.1.0 October 05 2019 ####
-First release
+# Run tests with filtering
+dotnet test -c Release --filter DisplayName="TestName"
+dotnet test -c Release --filter "FullyQualifiedName~TestClass"
 ```
 
-In this instance, the NuGet and assembly version will be `0.1.0` based on what's available at the top of the `RELEASE_NOTES.md` file.
+### Multi-Node Tests
 
-#### RELEASE_NOTES.md
+```bash
+# Run multi-node tests
+dotnet test -c Release --framework net8.0 --filter "Category=MultiNodeTest"
 
-```text
-#### 0.1.0-beta1 October 05 2019 ####
-First release
+# Run specific multi-node test class
+dotnet test -c Release --filter "FullyQualifiedName~ClusterSpec"
 ```
 
-But in this case the NuGet and assembly version will be `0.1.0-beta1`.
+### Performance Tests
 
-If you add any new projects to the solution created with this template, be sure to add the following line to each one of them in order to ensure that you can take advantage of `common.props` for standardization purposes:
-
-```xml
-<Import Project="..\common.props" />
+```bash
+# Run performance tests (NBench)
+dotnet test -c Release --filter "Category=Performance"
 ```
 
-### Conventions
+## Incremental Builds with Incrementalist
 
-The attached build script will automatically do the following based on the conventions of the project names added to this project:
+Akka.NET is a large project, so it's often necessary to run tests incrementally to reduce build time during development. The project uses [Incrementalist](https://github.com/petabridge/Incrementalist) for optimized builds.
 
-* Any project name ending with `.Tests` will automatically be treated as a [XUnit2](https://xunit.github.io/) project and will be included during the test stages of this build script;
-* Any project name ending with `.Tests.Performance` will automatically be treated as a [NBench](https://github.com/petabridge/NBench) project and will be included during the test stages of this build script; and
-* Any project meeting neither of these conventions will be treated as a NuGet packaging target and its `.nupkg` file will automatically be placed in the `bin\nuget` folder upon running the `build.[cmd|sh] all` command.
+### Using Incrementalist
 
-## Triggering Builds and Updates on Akka.NET Github Repositories
+```bash
+# Run only tests for changed projects
+dotnet incrementalist run --config .incrementalist/testsOnly.json -- test -c Release --no-build --framework net8.0
 
-## Routine Updates and Pull Requests
+# Run multi-node tests incrementally
+dotnet incrementalist run --config .incrementalist/mutliNodeOnly.json -- test -c Release --no-build --framework net8.0
 
-Akka.NET uses Azure DevOps to run its builds and the conventions it uses are rather sample:
+# Run all tests incrementally
+dotnet incrementalist run --config .incrementalist/incrementalist.json -- test -c Release --no-build
+```
 
-1. All pull requests should be created on their own feature branch and should be sent to Akka.NET's `dev` branch;
-2. Always review your own pull requests so other developers understand why you made the changes;
-3. Any pull request that gets merged into the `dev` branch will appear in the [Akka.NET Nightly Build that evening](xref:nightly-builds); and
-4. Always `squash` any merges into the `dev` branch in order to preserve a clean commit history.
+### Incrementalist Configuration
 
-Please read "[How to Use Github Professionally](https://petabridge.com/blog/use-github-professionally/)" for some more general ideas on how to work with a project like Akka.NET on Github.
+The project includes several Incrementalist configuration files:
+
+* `.incrementalist/incrementalist.json` - General incremental build configuration
+* `.incrementalist/testsOnly.json` - Configuration for running only tests
+* `.incrementalist/mutliNodeOnly.json` - Configuration for multi-node tests only
+
+For more information about Incrementalist, visit the [GitHub repository](https://github.com/petabridge/Incrementalist).
+
+## Creating NuGet Packages
+
+```bash
+# Create packages in Release mode
+dotnet pack -c Release
+
+# Create packages with version suffix (for nightly builds)
+dotnet pack -c Release -p:VersionSuffix=beta$(Get-Date -Format "yyyyMMddHHmmss")
+
+# Create packages for specific project
+dotnet pack src/core/Akka/Akka.csproj -c Release
+```
+
+For more information, see the [dotnet pack documentation](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-pack).
+
+## Documentation Generation
+
+```bash
+# Generate documentation using DocFX
+dotnet docfx metadata ./docs/docfx.json --warningsAsErrors
+dotnet docfx build ./docs/docfx.json --warningsAsErrors
+
+# Serve documentation locally (Windows)
+./serve-docs.cmd
+
+# Serve documentation locally (PowerShell - works on Windows, macOS, and Linux)
+./serve-docs.ps1
+```
+
+For more information about DocFX, see the [DocFX documentation](https://dotnet.github.io/docfx/).
+
+## Release Notes and Version Management
+
+The project uses a PowerShell script (`build.ps1`) to handle release notes and version updates:
+
+```powershell
+# Update release notes and version information
+./build.ps1
+```
+
+This script:
+
+* Reads release notes from `RELEASE_NOTES.md`
+* Updates version information in `Directory.Build.props`
+* Prepares the project for building with the correct version
+
+> [!NOTE]
+> PowerShell is now available on Linux and macOS, so the `build.ps1` script can be run on all supported platforms.
+
+## CI/CD Integration
+
+The project uses Azure DevOps for continuous integration. The build pipelines use the same .NET CLI commands shown above, ensuring consistency between local development and CI/CD environments.
+
+### Common CI Commands
+
+```bash
+# Restore tools
+dotnet tool restore
+
+# Build solution
+dotnet build -c Release
+
+# Run tests with results output
+dotnet test -c Release --framework net8.0 --logger:trx --results-directory TestResults
+
+# Create packages
+dotnet pack -c Release -o $(Build.ArtifactStagingDirectory)/nuget
+```
+
+For more information about .NET tools, see the [dotnet tool documentation](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-tool).
+
+## Troubleshooting
+
+If you were previously using the FAKE build scripts, here are the equivalent .NET CLI commands:
+
+| FAKE Command | .NET CLI Equivalent |
+|--------------|---------------------|
+| `build.cmd buildrelease` | `dotnet build -c Release` |
+| `build.cmd runtests` | `dotnet test -c Release --framework net48` |
+| `build.cmd runtestsnetcore` | `dotnet test -c Release --framework net8.0` |
+| `build.cmd nuget` | `dotnet pack -c Release` |
+| `build.cmd DocFx` | `dotnet docfx build ./docs/docfx.json` |
+
+The new approach provides better integration with modern .NET tooling and improved performance through incremental builds.
