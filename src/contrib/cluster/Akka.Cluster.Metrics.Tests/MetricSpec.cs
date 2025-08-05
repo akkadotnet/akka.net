@@ -13,11 +13,10 @@ using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Cluster.Metrics.Tests.Base;
 using Akka.Cluster.Metrics.Tests.Helpers;
-using Akka.TestKit;
 using Akka.Util;
-using Akka.Util.Extensions;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Address = Akka.Actor.Address;
 
@@ -303,19 +302,38 @@ namespace Akka.Cluster.Metrics.Tests
         
         public MetricValuesSpec() : base(ClusterMetricsTestConfig.DefaultEnabled)
         {
-            _node1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), 1, Collector.Sample().Metrics);
-            _node2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), 1, Collector.Sample().Metrics);
-            _nodes = Enumerable.Range(1, 100).Aggregate(ImmutableList.Create(_node1, _node2), (nodes, _) =>
+            Queue<NodeMetrics> testData;
+            try
             {
-                return nodes.Select(n =>
+                testData = CreateTestData(202, 10.Seconds(), [
+                    StandardMetrics.MemoryUsed, 
+                    StandardMetrics.MemoryAvailable,
+                    StandardMetrics.Processors,
+                    StandardMetrics.CpuProcessUsage,
+                    StandardMetrics.CpuTotalUsage ]);
+            }
+            catch (Exception e)
+            {
+                throw new Exception("Failed to initialize test data", e);
+            }
+            
+            _node1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), 1, testData.Dequeue().Metrics);
+            _node2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), 1, testData.Dequeue().Metrics);
+            _nodes = Enumerable.Range(1, 100).Aggregate(ImmutableList.Create(_node1, _node2),
+                (nodes, _) =>
                 {
-                    return new NodeMetrics(n.Address, n.Timestamp, metrics: Collector.Sample().Metrics.SelectMany(latest =>
+                    return nodes.Select(n =>
                     {
-                        return n.Metrics.Where(latest.SameAs).Select(streaming => streaming + latest);
-                    }));
-                }).ToImmutableList();
-            });
+                        return new NodeMetrics(n.Address, n.Timestamp,
+                            metrics: testData.Dequeue().Metrics.SelectMany(latest =>
+                            {
+                                return n.Metrics.Where(latest.SameAs)
+                                    .Select(streaming => streaming + latest);
+                            }));
+                    }).ToImmutableList();
+                });
         }
+
 
         [Fact]
         public void NodeMetrics_MetricValues_should_extract_expected_metrics_for_load_balancing()
