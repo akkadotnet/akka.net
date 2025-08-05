@@ -48,6 +48,11 @@ public static class ProducerController
         return p;
     }
 
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// This method should only be used for testing purposes
+    /// </summary>
     [InternalApi]
     public static Props CreateWithFuzzing<T>(IActorRefFactory actorRefFactory, string producerId,
         Func<object, double> fuzzing,
