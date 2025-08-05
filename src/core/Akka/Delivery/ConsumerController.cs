@@ -43,7 +43,8 @@ public static class ConsumerController
         return p;
     }
     
-    internal static Props CreateWithFuzzing<T>(IActorRefFactory actorRefFactory, Option<IActorRef> producerControllerReference, Func<object, double> fuzzing, Settings? settings = null)
+    [InternalApi]
+    public static Props CreateWithFuzzing<T>(IActorRefFactory actorRefFactory, Option<IActorRef> producerControllerReference, Func<object, double> fuzzing, Settings? settings = null)
     {
         Props p;
         switch (actorRefFactory)
