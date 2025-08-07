@@ -12,9 +12,9 @@ namespace Akka.Persistence.TestKit;
 using System;
 using System.Threading.Tasks;
 using Actor;
-using Akka.TestKit.Xunit2;
+using Akka.TestKit.Xunit;
 using Configuration;
-using Xunit.Abstractions;
+using Xunit;
 
 /// <summary>
 /// This class represents an Akka.NET Persistence TestKit that uses <a href="https://xunit.github.io/">xUnit</a>
