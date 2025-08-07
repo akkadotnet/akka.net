@@ -16,6 +16,7 @@ using Akka.Event;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
+using Akka.Actor.Scheduler;
 using Akka.Serialization;
 using Akka.Util;
 using Assert = System.Diagnostics.Debug;
@@ -153,7 +154,19 @@ namespace Akka.Actor
         /// </summary>
         public IActorRef Self { get { return _self; } }
         IActorRef IActorContext.Parent { get { return Parent; } }
-        
+
+        private ITimerScheduler? _timers;
+
+        public ITimerScheduler Timers
+        {
+            get
+            {
+                return _timers ??= new TimerScheduler(this);
+            }
+        }
+
+        public bool HaveTimers => _timers is not null;
+
         /// <summary>
         /// This actor's parent actor.
         /// </summary>

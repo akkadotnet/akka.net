@@ -99,7 +99,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// replies.
     /// </para>
     /// </summary>
-    public class DistributedPubSubMediator : ReceiveActor, IWithTimers
+    public class DistributedPubSubMediator : ReceiveActor
     {
         private const string GossipTimerKey = "GossipTimer";
         private const string PruneTimerKey = "PruneTimer";
@@ -134,7 +134,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private readonly Dictionary<string, List<BufferedMessage>> _bufferedMessages = new();
         private readonly List<string> _newlyAddedKeys = new();
         
-        public ITimerScheduler Timers { get; set; }
+        private ITimerScheduler Timers { get; }
 
         /// <summary>
         /// Transforms the local bucket registry dictionary into a dictionary of topic key and version number pairs 
@@ -175,6 +175,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
             _topicPrefix = Self.Path.ToStringWithoutAddress();
             _cache = new PubSubCache();
+            
+            Timers = Context.Timers;
             
             Receive<Send>(send =>
             {

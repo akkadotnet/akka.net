@@ -124,9 +124,9 @@ namespace Akka.Actor
             if (ActorCell.Current == null)
                 throw new ActorInitializationException("Do not create actors using 'new', always create them using an ActorContext/System");
 
-            if (this is IWithTimers withTimers)
-                withTimers.Timers = new Scheduler.TimerScheduler(Context);
-
+            if(Context.HaveTimers)
+                Context.Timers.CancelAll();
+            
             Context.Become(Receive);
         }
 
@@ -181,8 +181,9 @@ namespace Akka.Actor
         {
             if (message is TimerScheduler.ITimerMsg tm)
             {
-                if (this is IWithTimers { Timers: TimerScheduler timers })
+                if (Context.HaveTimers)
                 {
+                    var timers = (TimerScheduler)Context.Timers;
                     switch (timers.InterceptTimerMsg(Context.System.Log, tm))
                     {
                         case IAutoReceivedMessage m:

@@ -77,7 +77,7 @@ namespace Akka.Cluster.Sharding.Tests
     /// <summary>
     /// A journal that delegates actual storage to a target actor. For testing only.
     /// </summary>
-    public abstract class AsyncWriteProxyEx : AsyncWriteJournal, IWithUnboundedStash, IWithTimers
+    public abstract class AsyncWriteProxyEx : AsyncWriteJournal, IWithUnboundedStash
     {
         private const string InitTimeoutTimerKey = nameof(InitTimeoutTimerKey);
         
@@ -99,6 +99,7 @@ namespace Akka.Cluster.Sharding.Tests
             _isInitialized = false;
             _isInitTimedOut = false;
             _store = null;
+            Timers = Context.Timers;
         }
 
         /// <summary>
@@ -257,7 +258,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// </summary>
         public IStash Stash { get; set; }
 
-        public ITimerScheduler Timers { get; set; }
+        private ITimerScheduler Timers { get; }
     }
 
     /// <summary>

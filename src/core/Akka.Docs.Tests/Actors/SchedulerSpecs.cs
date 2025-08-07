@@ -24,15 +24,17 @@ namespace DocsExamples.Actors
         public sealed class Print { }
         public sealed class Total { }
 
-        public sealed class TimerActor : ReceiveActor, IWithTimers
+        public sealed class TimerActor : ReceiveActor
         {
-            public ITimerScheduler Timers { get; set; }
+            private ITimerScheduler Timers { get; }
 
             private int _count = 0;
             private readonly ILoggingAdapter _log = Context.GetLogger();
 
             public TimerActor()
             {
+                Timers = Context.Timers;
+                
                 Receive<int>(i =>
                 {
                     _count += i;
@@ -52,15 +54,17 @@ namespace DocsExamples.Actors
         }
         // </TimerActor>
 
-        public sealed class StartStopTimerActor : ReceiveActor, IWithTimers
+        public sealed class StartStopTimerActor : ReceiveActor
         {
-            public ITimerScheduler Timers { get; set; }
+            private ITimerScheduler Timers { get; }
 
             private int _count = 0;
             private ILoggingAdapter _log = Context.GetLogger();
 
             public StartStopTimerActor()
             {
+                Timers = Context.Timers;
+                
                 Receive<int>(i =>
                 {
                     _count += i;

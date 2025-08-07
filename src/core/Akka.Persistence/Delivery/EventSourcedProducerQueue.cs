@@ -134,7 +134,7 @@ public static class EventSourcedProducerQueue
 /// INTERNAL API
 /// </summary>
 /// <typeparam name="T">The types of messages that can be handled by the <see cref="ProducerController"/>.</typeparam>
-internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWithTimers, IWithStash
+internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWithStash
 {
     public EventSourcedProducerQueue(string persistenceId, EventSourcedProducerQueue.Settings? settings = null,
         ITimeProvider? timeProvider = null)
@@ -145,6 +145,8 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
         JournalPluginId = Settings.JournalPluginId;
         SnapshotPluginId = Settings.SnapshotPluginId;
         Self.Tell(EventSourcedProducerQueue.CleanupTick.Instance);
+
+        Timers = Context.Timers;
         Timers.StartPeriodicTimer(EventSourcedProducerQueue.CleanupTick.Instance,
             EventSourcedProducerQueue.CleanupTick.Instance,
             TimeSpan.FromMilliseconds(Settings.CleanupUnusedAfter.TotalMilliseconds / 2));
@@ -153,7 +155,7 @@ internal sealed class EventSourcedProducerQueue<T> : UntypedPersistentActor, IWi
     public EventSourcedProducerQueue.Settings Settings { get; }
 
     public override string PersistenceId { get; }
-    public ITimerScheduler Timers { get; set; } = null!;
+    private ITimerScheduler Timers { get; }
     private readonly ITimeProvider _timeProvider;
     private readonly ILoggingAdapter _log = Context.GetLogger();
 

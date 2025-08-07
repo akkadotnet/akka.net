@@ -29,7 +29,7 @@ namespace Akka.Delivery.Internal;
 ///     The types of messages handled by the <see cref="ConsumerController" /> and
 ///     <see cref="ProducerController" />.
 /// </typeparam>
-internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithStash
+internal sealed class ConsumerController<T> : ReceiveActor, IWithStash
 {
     /// <summary>
     ///     Used only for testing to simulate network failures.
@@ -48,6 +48,7 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
         _producerControllerRegistration = producerControllerRegistration;
         Settings = settings;
         _fuzzingControl = fuzzingControl;
+        Timers = Context.Timers;
         _retryTimer = new RetryTimer(Settings.ResendIntervalMin, Settings.ResendIntervalMax, Timers);
 
         WaitForStart();
@@ -58,7 +59,7 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
     public bool ResendLost => !Settings.OnlyFlowControl;
     public IStash Stash { get; set; } = null!;
 
-    public ITimerScheduler Timers { get; set; } = null!;
+    private ITimerScheduler Timers { get; }
 
     protected internal override bool AroundReceive(Receive receive, object message)
     {

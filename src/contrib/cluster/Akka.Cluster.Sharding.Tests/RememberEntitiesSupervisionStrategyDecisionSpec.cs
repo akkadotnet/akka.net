@@ -172,7 +172,7 @@ public class RememberEntitiesSupervisionStrategyDecisionSpec : AkkaSpec
         }
     }
 
-    private class FakeShardStoreActor : ActorBase, IWithTimers
+    private class FakeShardStoreActor : ActorBase
     {
         public static Props Props(string shardId) => Actor.Props.Create(() => new FakeShardStoreActor(shardId));
 
@@ -184,8 +184,6 @@ public class RememberEntitiesSupervisionStrategyDecisionSpec : AkkaSpec
             _shardId = shardId;
             Context.System.EventStream.Publish(new ShardStoreCreated(Self, shardId));
         }
-
-        public ITimerScheduler Timers { get; set; }
 
         protected override bool Receive(object message)
         {
@@ -202,13 +200,11 @@ public class RememberEntitiesSupervisionStrategyDecisionSpec : AkkaSpec
         }
     }
 
-    private class FakeCoordinatorStoreActor : ActorBase, IWithTimers
+    private class FakeCoordinatorStoreActor : ActorBase
     {
         public static Props Props() => Actor.Props.Create(() => new FakeCoordinatorStoreActor());
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
-
-        public ITimerScheduler Timers { get; set; }
 
         public FakeCoordinatorStoreActor()
         {

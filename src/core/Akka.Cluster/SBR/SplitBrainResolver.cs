@@ -66,7 +66,7 @@ namespace Akka.Cluster.SBR
     ///     The implementation is split into two classes SplitBrainResolver and SplitBrainResolverBase to be
     ///     able to unit test the logic without running cluster.
     /// </summary>
-    internal abstract class SplitBrainResolverBase : ActorBase, IWithUnboundedStash, IWithTimers
+    internal abstract class SplitBrainResolverBase : ActorBase, IWithUnboundedStash
     {
         // would be better as constructor parameter, but don't want to break Cinnamon instrumentation
         private readonly SplitBrainResolverSettings _settings;
@@ -87,7 +87,7 @@ namespace Akka.Cluster.SBR
 
             _settings = new SplitBrainResolverSettings(Context.System.Settings.Config);
 
-            // ReSharper disable once VirtualMemberCallInConstructor
+            Timers = Context.Timers;
             Timers.StartPeriodicTimer(Tick.Instance, Tick.Instance, TickInterval);
 
             ResetStableDeadline();
@@ -111,7 +111,7 @@ namespace Akka.Cluster.SBR
 
         public bool IsResponsible => Leader && _selfMemberAdded;
 
-        public ITimerScheduler Timers { get; set; }
+        protected ITimerScheduler Timers { get; }
 
         public IStash Stash { get; set; }
 

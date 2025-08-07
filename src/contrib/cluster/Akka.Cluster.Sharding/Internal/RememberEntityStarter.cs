@@ -16,7 +16,7 @@ namespace Akka.Cluster.Sharding.Internal
     using EntityId = String;
     using ShardId = String;
 
-    internal class RememberEntityStarter : ActorBase, IWithTimers
+    internal class RememberEntityStarter : ActorBase
     {
         public static Props Props(
               IActorRef region,
@@ -90,10 +90,13 @@ namespace Akka.Cluster.Sharding.Internal
                     OnStartBatch(settings.TuningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities);
                     break;
             }
+
+            Timers = Context.Timers;
+            
             Timers.StartPeriodicTimer("retry", ResendUnAcked.Instance, settings.TuningParameters.RetryInterval);
         }
 
-        public ITimerScheduler Timers { get; set; } = null!;
+        private ITimerScheduler Timers { get; }
 
         public ILoggingAdapter Log { get; } = Context.GetLogger();
 

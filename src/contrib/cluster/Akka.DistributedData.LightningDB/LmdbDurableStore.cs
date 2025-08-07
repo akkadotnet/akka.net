@@ -36,7 +36,7 @@ namespace Akka.DistributedData.LightningDB
     /// to the durable store actor, which must then reply with the <see cref="StoreReply.SuccessMessage"/> or
     /// <see cref="StoreReply.FailureMessage"/> to the <see cref="StoreReply.ReplyTo"/>.
     /// </summary>
-    public sealed class LmdbDurableStore : ReceiveActor, IWithTimers
+    public sealed class LmdbDurableStore : ReceiveActor
     {
         public static Actor.Props Props(Config config) => Actor.Props.Create(() => new LmdbDurableStore(config));
 
@@ -88,6 +88,7 @@ namespace Akka.DistributedData.LightningDB
                 _log.Warning("No directory path configured for LMDB durable store, using default path");
                 _path = DatabaseName;
             }
+            Timers = Context.Timers;
 
             Init();
         }
@@ -275,6 +276,6 @@ namespace Akka.DistributedData.LightningDB
             }
         }
 
-        public ITimerScheduler Timers { get; set; }
+        private ITimerScheduler Timers { get; }
     }
 }

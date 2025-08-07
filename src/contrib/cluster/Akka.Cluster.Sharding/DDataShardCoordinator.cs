@@ -24,7 +24,7 @@ namespace Akka.Cluster.Sharding
     /// <summary>
     /// Singleton coordinator (with state based on ddata) that decides where to allocate shards.
     /// </summary>
-    internal sealed class DDataShardCoordinator : ActorBase, IWithTimers, IWithUnboundedStash
+    internal sealed class DDataShardCoordinator : ActorBase, IWithUnboundedStash
     {
 
         private sealed class RememberEntitiesStoreStopped
@@ -90,7 +90,7 @@ namespace Akka.Cluster.Sharding
         private readonly IActorRef? _rememberEntitiesStore;
         private readonly bool _rememberEntities;
 
-        public ITimerScheduler Timers { get; set; } = null!;
+        private ITimerScheduler Timers { get; }
         public IStash Stash { get; set; } = null!;
 
         private string TypeName => _baseImpl.TypeName;
@@ -130,6 +130,7 @@ namespace Akka.Cluster.Sharding
 
             _initEmptyState = CoordinatorState.Empty.WithRememberEntities(settings.RememberEntities);
 
+            Timers = Context.Timers;
 
             if (rememberEntitiesStoreProvider != null)
             {

@@ -16,7 +16,7 @@ using Akka.Persistence.Snapshot;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public abstract class SnapshotStoreProxy : SnapshotStore, IWithUnboundedStash, IWithTimers
+    public abstract class SnapshotStoreProxy : SnapshotStore, IWithUnboundedStash
     {
         private const string TimeoutTimerKey = nameof(TimeoutTimerKey);
         
@@ -39,6 +39,7 @@ namespace Akka.Cluster.Sharding.Tests
             _isInitialized = false;
             _isInitTimedOut = false;
             _store = null;
+            Timers = Context.Timers;
         }
 
         /// <summary>
@@ -51,7 +52,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// </summary>
         public IStash Stash { get; set; }
 
-        public ITimerScheduler Timers { get; set; }
+        private ITimerScheduler Timers { get; }
 
         /// <summary>
         /// TBD

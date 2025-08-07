@@ -34,7 +34,7 @@ namespace Akka.Cluster.Sharding
     /// responsible for.
     /// </summary>
     [InternalStableApi]
-    internal sealed class Shard : ActorBase, IWithTimers, IWithUnboundedStash
+    internal sealed class Shard : ActorBase, IWithUnboundedStash
     {
         #region messages
 
@@ -971,7 +971,7 @@ namespace Akka.Cluster.Sharding
         
         public ILoggingAdapter Log { get; } = Context.GetLogger();
         public IStash Stash { get; set; } = null!;
-        public ITimerScheduler Timers { get; set; } = null!;
+        private ITimerScheduler Timers { get; }
 
         public Shard(
             string typeName,
@@ -992,6 +992,7 @@ namespace Akka.Cluster.Sharding
 
             _verboseDebug = Context.System.Settings.Config.GetBoolean("akka.cluster.sharding.verbose-debug-logging");
 
+            Timers = Context.Timers;
             if (rememberEntitiesProvider != null)
             {
                 var store = Context.ActorOf(rememberEntitiesProvider.ShardStoreProps(shardId).WithDeploy(Deploy.Local),

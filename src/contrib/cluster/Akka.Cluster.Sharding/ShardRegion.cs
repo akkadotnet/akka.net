@@ -34,7 +34,7 @@ namespace Akka.Cluster.Sharding
     /// <see cref="ShardRegion"/> actor on other nodes.
     /// </summary>
     [InternalStableApi]
-    public sealed class ShardRegion : ActorBase, IWithTimers
+    public sealed class ShardRegion : ActorBase
     {
         #region messages
 
@@ -220,7 +220,7 @@ namespace Akka.Cluster.Sharding
         /// them have terminated it replies with <see cref="ShardCoordinator.ShardStopped"/>.
         /// If the entities don't terminate after `handoffTimeout` it will try stopping them forcefully.
         /// </summary>
-        internal class HandOffStopper : ReceiveActor, IWithTimers
+        internal class HandOffStopper : ReceiveActor
         {
             private sealed class StopTimeout
             {
@@ -244,7 +244,7 @@ namespace Akka.Cluster.Sharding
 
             public ILoggingAdapter Log { get; } = Context.GetLogger();
 
-            public ITimerScheduler Timers { get; set; } = null!;
+            private ITimerScheduler Timers { get; }
 
             /// <summary>
             /// TBD
@@ -289,6 +289,7 @@ namespace Akka.Cluster.Sharding
                 TimeSpan handoffTimeout)
             {
                 var remaining = new HashSet<IActorRef>(entities);
+                Timers = Context.Timers;
 
                 Receive<Terminated>(t =>
                 {
@@ -466,6 +467,8 @@ namespace Akka.Cluster.Sharding
             _nextRegistrationDelay = _initRegistrationDelay;
 
             _bufferMessageAdapter = ClusterSharding.Get(Context.System).BufferMessageAdapter;
+
+            Timers = Context.Timers;
             
             SetupCoordinatedShutdown();
         }
@@ -487,7 +490,7 @@ namespace Akka.Cluster.Sharding
             });
         }
 
-        public ITimerScheduler Timers { get; set; } = null!;
+        private ITimerScheduler Timers { get; }
 
         /// <summary>
         /// When leaving the coordinator singleton is started rather quickly on next

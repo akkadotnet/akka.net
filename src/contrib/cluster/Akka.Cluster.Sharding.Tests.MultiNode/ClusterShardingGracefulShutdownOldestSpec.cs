@@ -123,7 +123,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         // slow stop previously made it more likely that the coordinator would stop before the local region
-        public class SlowStopShardedEntity : ActorBase, IWithTimers
+        public class SlowStopShardedEntity : ActorBase
         {
             #region StopMessage
             public class Stop
@@ -143,8 +143,6 @@ namespace Akka.Cluster.Sharding.Tests
                 }
             }
 
-            public ITimerScheduler Timers { get; set; }
-
             #region DelayedStop
             protected override bool Receive(object message)
             {
@@ -154,7 +152,7 @@ namespace Akka.Cluster.Sharding.Tests
                         Sender.Tell(id);
                         return true;
                     case Stop _:
-                        Timers.StartSingleTimer(ActualStop.Instance, ActualStop.Instance, TimeSpan.FromMilliseconds(50));
+                        Context.Timers.StartSingleTimer(ActualStop.Instance, ActualStop.Instance, TimeSpan.FromMilliseconds(50));
                         return true;
                     case ActualStop _:
                         Context.Stop(Self);

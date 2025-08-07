@@ -135,7 +135,7 @@ public class LeaseActorDocSpec: TestKit
     
 }
 
-public class LeaseActor: ReceiveActor, IWithStash, IWithTimers
+public class LeaseActor: ReceiveActor, IWithStash
 {
     #region messages
     private sealed record LeaseAcquireResult(bool Acquired, Exception? Reason);
@@ -158,6 +158,8 @@ public class LeaseActor: ReceiveActor, IWithStash, IWithTimers
     #region constructor
     public LeaseActor(LeaseUsageSettings leaseSettings, string resourceId, string actorUniqueId)
     {
+        Timers = Context.Timers;
+        
         _resourceId = resourceId;
         _uniqueId = actorUniqueId;
         
@@ -173,7 +175,7 @@ public class LeaseActor: ReceiveActor, IWithStash, IWithTimers
 
     public IStash Stash { get; set; } = null!;
 
-    public ITimerScheduler Timers { get; set; } = null!;
+    private ITimerScheduler Timers { get; }
 
     #region actor-states
     private void AcquiringLease()

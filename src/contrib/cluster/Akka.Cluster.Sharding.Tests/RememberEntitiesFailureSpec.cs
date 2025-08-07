@@ -165,7 +165,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private class FakeShardStoreActor : ActorBase, IWithTimers
+        private class FakeShardStoreActor : ActorBase
         {
             public static Props Props(string shardId) => Actor.Props.Create(() => new FakeShardStoreActor(shardId));
 
@@ -202,10 +202,11 @@ namespace Akka.Cluster.Sharding.Tests
             public FakeShardStoreActor(string shardId)
             {
                 this.shardId = shardId;
+                Timers = Context.Timers;
                 Context.System.EventStream.Publish(new ShardStoreCreated(Self, shardId));
             }
 
-            public ITimerScheduler Timers { get; set; }
+            private ITimerScheduler Timers { get; }
 
             //protected override void PreStart()
             //{
@@ -277,7 +278,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private class FakeCoordinatorStoreActor : ActorBase, IWithTimers
+        private class FakeCoordinatorStoreActor : ActorBase
         {
             public static Props Props() => Actor.Props.Create(() => new FakeCoordinatorStoreActor());
 
@@ -306,10 +307,11 @@ namespace Akka.Cluster.Sharding.Tests
             private readonly ILoggingAdapter log = Context.GetLogger();
             private ImmutableDictionary<string, IFail> failAddShard = ImmutableDictionary<string, IFail>.Empty;
 
-            public ITimerScheduler Timers { get; set; }
+            private ITimerScheduler Timers { get; }
 
             public FakeCoordinatorStoreActor()
             {
+                Timers = Context.Timers;
                 Context.System.EventStream.Publish(new CoordinatorStoreCreated(Context.Self));
             }
 

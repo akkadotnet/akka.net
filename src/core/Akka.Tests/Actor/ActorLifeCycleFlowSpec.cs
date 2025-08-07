@@ -83,7 +83,7 @@ public class ActorLifeCycleFlowSpec : AkkaSpec
         }
     }
 
-    private class LifeCycleActor : UntypedActor, IWithTimers
+    private class LifeCycleActor : UntypedActor
     {
         private readonly int _id;
         private readonly IActorRef _probe;
@@ -96,9 +96,10 @@ public class ActorLifeCycleFlowSpec : AkkaSpec
             _probe = probe;
             _id = id;
             _startTimers = startTimers;
+            Timers = Context.Timers;
         }
 
-        public ITimerScheduler Timers { get; set; } = null!;
+        private ITimerScheduler Timers { get; }
 
         protected override void OnReceive(object message)
         {

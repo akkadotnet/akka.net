@@ -21,7 +21,7 @@ using Newtonsoft.Json;
 #nullable enable
 namespace Akka.Cluster.Tools.Client;
 
-public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTimers
+public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash
 {
     #region Discovery messages
 
@@ -114,11 +114,13 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
         
         _verboseLogging = _settings.VerboseLogging;
         
+        Timers = Context.Timers;
+        
         Become(Discovering);
     }
 
     public IStash Stash { get; set; } = null!;
-    public ITimerScheduler Timers { get; set; } = null!;
+    private ITimerScheduler Timers { get; }
     
     protected override void OnReceive(object message)
     {

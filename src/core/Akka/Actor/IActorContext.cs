@@ -90,6 +90,13 @@ namespace Akka.Actor
         IActorRef Parent { get; }
 
         /// <summary>
+        /// Get a timer scheduler for this actor
+        /// </summary>
+        ITimerScheduler Timers { get; }
+        
+        bool HaveTimers { get; }
+        
+        /// <summary>
         /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
         /// </summary>
         /// <param name="receive">The new message handler.</param>

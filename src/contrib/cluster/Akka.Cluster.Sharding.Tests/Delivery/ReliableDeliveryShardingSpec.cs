@@ -541,7 +541,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         }
     }
 
-    private class TestShardingProducer : ReceiveActor, IWithTimers
+    private class TestShardingProducer : ReceiveActor
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly IActorRef _producerController;
@@ -552,8 +552,6 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
             _producerController = producerController;
             Idle(0);
         }
-
-        public ITimerScheduler Timers { get; set; } = null!;
 
         protected override void PreStart()
         {
@@ -570,7 +568,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                     }, "sendNextAdapter");
 
             // simulate fast producer
-            Timers.StartPeriodicTimer("tick", Tick.Instance, TimeSpan.FromMilliseconds(20));
+            Context.Timers.StartPeriodicTimer("tick", Tick.Instance, TimeSpan.FromMilliseconds(20));
         }
 
         private void Idle(int n)

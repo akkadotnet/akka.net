@@ -16,7 +16,7 @@ using Akka.Util.Internal;
 
 namespace Akka.Cluster.Sharding
 {
-    internal sealed class KeepAlivePinger : UntypedActor, IWithTimers
+    internal sealed class KeepAlivePinger : UntypedActor
     {
         private sealed class Tick
         {
@@ -32,7 +32,7 @@ namespace Akka.Cluster.Sharding
         public IActorRef ShardingRef { get; }
         public ShardedDaemonProcessSettings Settings { get; }
 
-        public ITimerScheduler Timers { get; set; } = null!; // gets set by Akka.NET
+        private ITimerScheduler Timers { get; }
 
         public static Props Props(ShardedDaemonProcessSettings settings, string name, string[] identities,
             IActorRef shardingRef) =>
@@ -45,6 +45,7 @@ namespace Akka.Cluster.Sharding
             Name = name;
             Identities = identities;
             ShardingRef = shardingRef;
+            Timers = Context.Timers;
         }
 
         protected override void PreStart()

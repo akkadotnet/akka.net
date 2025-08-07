@@ -19,14 +19,14 @@ using Debug = Akka.Event.Debug;
 
 namespace Akka.Tests.Actor.Scheduler;
 
-internal sealed class TimerTestActor: UntypedActor, IWithTimers
+internal sealed class TimerTestActor: UntypedActor
 {
     protected override void OnReceive(object message)
     {
         switch (message)
         {
             case "startTimer":
-                Timers.StartSingleTimer("test", "test", 1.Seconds());
+                Context.Timers.StartSingleTimer("test", "test", 1.Seconds());
                 break;
             case "test":
                 break;
@@ -35,8 +35,6 @@ internal sealed class TimerTestActor: UntypedActor, IWithTimers
                 break;
         }
     }
-
-    public ITimerScheduler Timers { get; set; }
 }
     
 public class TimerSchedulerDebug: TestKit.Xunit2.TestKit

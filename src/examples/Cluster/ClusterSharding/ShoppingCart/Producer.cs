@@ -19,7 +19,7 @@ namespace ShoppingCart;
 /// <summary>
 /// Actor is responsible for producing messages
 /// </summary>
-public sealed class Producer : ReceiveActor, IWithTimers
+public sealed class Producer : ReceiveActor
 {
     private static readonly string[] Customers = new[]
     {
@@ -39,12 +39,13 @@ public sealed class Producer : ReceiveActor, IWithTimers
         private Produce() {}
     }
 
-    public ITimerScheduler Timers { get; set; }
+    private ITimerScheduler Timers { get; }
 
     public IActorRef SendNext { get; set; } = ActorRefs.Nobody;
 
     public Producer()
     {
+        Timers = Context.Timers;
         Idle();
     }
 
