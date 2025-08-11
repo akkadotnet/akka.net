@@ -198,13 +198,25 @@ namespace Akka.TestKit
             var deadline = settings.TestKitStartupTimeout;
             var stopwatch = Stopwatch.StartNew();
             var ready = false;
+            
             try
             {
+                // TestActor should start almost instantly (microseconds).
+                // Use SpinWait which will spin for ~10-20 microseconds then yield.
+                var spinWait = new SpinWait();
+                
                 while (stopwatch.Elapsed < deadline)
                 {
                     ready = testActor is not IRepointableRef repRef || repRef.IsStarted;
                     if (ready) break;
-                    Thread.Sleep(10);
+                    
+                    // SpinWait automatically handles the progression:
+                    // - First ~10 iterations: tight spin loop (microseconds)
+                    // - Next iterations: Thread.Yield() 
+                    // - Later: Thread.Sleep(0)
+                    // - Finally: Thread.Sleep(1)
+                    // This is optimal for both fast startup and system under load
+                    spinWait.SpinOnce();
                 }
             }
             finally
