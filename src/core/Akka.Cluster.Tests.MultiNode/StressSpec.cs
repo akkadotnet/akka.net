@@ -1002,7 +1002,7 @@ akka.remote.default-remote-dispatcher {
                                     Log.Info("Shutting down [{0}]", removeAddress);
                                 }
 
-                                TestConductor.Exit(removeRole, 0).GetAwaiter().GetResult();
+                                TestConductor.Exit(removeRole, 0).Wait();
                             }
                         }, Roles.First());
 
@@ -1060,7 +1060,7 @@ akka.remote.default-remote-dispatcher {
                                     {
                                         if (Settings.Infolog)
                                             Log.Info("Shutting down [{0}]", GetAddress(role));
-                                        TestConductor.Exit(role, 0).GetAwaiter().GetResult();
+                                        TestConductor.Exit(role, 0).Wait(RemainingOrDefault);
                                     }
                                 }
                             }, Roles.First());
@@ -1093,7 +1093,7 @@ akka.remote.default-remote-dispatcher {
                         {
                             foreach (var y in removeRoles)
                             {
-                                TestConductor.Blackhole(x, y, ThrottleTransportAdapter.Direction.Both).GetAwaiter().GetResult();
+                                TestConductor.Blackhole(x, y, ThrottleTransportAdapter.Direction.Both).Wait();
                             }
                         }
                     }, Roles.First());
