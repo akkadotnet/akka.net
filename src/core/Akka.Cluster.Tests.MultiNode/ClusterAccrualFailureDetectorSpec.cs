@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
@@ -55,17 +56,17 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void ClusterAccrualFailureDetectorSpecs()
+        public async Task ClusterAccrualFailureDetectorSpecs()
         {
-            A_heartbeat_driven_Failure_Detector_receive_heartbeats_so_that_all_member_nodes_in_the_cluster_are_marked_available
+            await A_heartbeat_driven_Failure_Detector_receive_heartbeats_so_that_all_member_nodes_in_the_cluster_are_marked_available
                 ();
-            A_heartbeat_driven_Failure_Detector_mark_node_as_unavailable_when_network_partition_and_then_back_to_available_when_partition_is_healed
+            await A_heartbeat_driven_Failure_Detector_mark_node_as_unavailable_when_network_partition_and_then_back_to_available_when_partition_is_healed
                 ();
-            A_heartbeat_driven_Failure_Detector_mark_node_as_unavailable_if_a_node_in_the_cluster_is_shut_down_and_its_heartbeats_stops
+            await A_heartbeat_driven_Failure_Detector_mark_node_as_unavailable_if_a_node_in_the_cluster_is_shut_down_and_its_heartbeats_stops
                 ();
         }
 
-        public void
+        public async Task
             A_heartbeat_driven_Failure_Detector_receive_heartbeats_so_that_all_member_nodes_in_the_cluster_are_marked_available
             ()
         {
@@ -76,18 +77,18 @@ namespace Akka.Cluster.Tests.MultiNode
             Cluster.FailureDetector.IsAvailable(GetAddress(_config.Second)).ShouldBeTrue();
             Cluster.FailureDetector.IsAvailable(GetAddress(_config.Third)).ShouldBeTrue();
 
-            EnterBarrier("after-1");
+            await EnterBarrierAsync("after-1");
         }
 
-        public void
+        public async Task
             A_heartbeat_driven_Failure_Detector_mark_node_as_unavailable_when_network_partition_and_then_back_to_available_when_partition_is_healed
             ()
         {
-            RunOn(() => {
-                TestConductor.Blackhole(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+            await RunOnAsync(async () => {
+                await TestConductor.BlackholeAsync(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
             }, _config.First);
 
-            EnterBarrier("broken");
+            await EnterBarrierAsync("broken");
 
             RunOn(() =>
             {
@@ -108,13 +109,13 @@ namespace Akka.Cluster.Tests.MultiNode
             }, _config.Second);
 
 
-            EnterBarrier("partitioned");
+            await EnterBarrierAsync("partitioned");
 
-            RunOn(() => {
-                TestConductor.PassThrough(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+            await RunOnAsync(async () => {
+                await TestConductor.PassThroughAsync(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
             }, _config.First);
 
-            EnterBarrier("repaired");
+            await EnterBarrierAsync("repaired");
 
             RunOn(() =>
             {
@@ -128,18 +129,18 @@ namespace Akka.Cluster.Tests.MultiNode
                     TimeSpan.FromSeconds(15));
             }, _config.Second);
 
-            EnterBarrier("after-2");
+            await EnterBarrierAsync("after-2");
         }
         
-        public void
+        public async Task
             A_heartbeat_driven_Failure_Detector_mark_node_as_unavailable_if_a_node_in_the_cluster_is_shut_down_and_its_heartbeats_stops
             ()
         {
-            RunOn(() => {
-                TestConductor.Exit(_config.Third, 0).Wait();
+            await RunOnAsync(async () => {
+                await TestConductor.ExitAsync(_config.Third, 0);
             }, _config.First);
 
-            EnterBarrier("third-shutdown");
+            await EnterBarrierAsync("third-shutdown");
 
             RunOn(() =>
             {
@@ -150,7 +151,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 Cluster.FailureDetector.IsAvailable(GetAddress(_config.Second)).ShouldBeTrue();
             }, _config.First, _config.Second);
 
-            EnterBarrier("after-3");
+            await EnterBarrierAsync("after-3");
         }
     }
 }
