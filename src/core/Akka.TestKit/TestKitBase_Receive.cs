@@ -247,6 +247,9 @@ namespace Akka.TestKit
             bool shouldLog, 
             CancellationToken cancellationToken)
         {
+            // Check for cancellation upfront to avoid extra wrapping
+            cancellationToken.ThrowIfCancellationRequested();
+            
             (bool didTake, MessageEnvelope env) take;
             var maxDuration = GetTimeoutOrDefault(max);
             var start = Now;    
@@ -259,26 +262,38 @@ namespace Akka.TestKit
             else if (maxDuration.IsPositiveFinite())
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue within {0}", maxDuration);
-                var delayTask = Task.Delay(maxDuration, cancellationToken);
-                var readTask = _testState.Queue.Reader.WaitToReadAsync(cancellationToken).AsTask();
-                var completedTask = await Task.WhenAny(readTask, delayTask);
+                
+                try
+                {
+                    var delayTask = Task.Delay(maxDuration, cancellationToken);
+                    var readTask = _testState.Queue.Reader.WaitToReadAsync(cancellationToken).AsTask();
+                    var completedTask = await Task.WhenAny(readTask, delayTask).ConfigureAwait(false);
 
-                if (completedTask == readTask && readTask.Result)
-                {
-                    // Data is available within the timeout.
-                    var didTake = _testState.Queue.Reader.TryRead(out var item);
-                    take = (didTake, item);
+                    // Check if cancellation was requested during the wait
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (completedTask == readTask && readTask.Result)
+                    {
+                        // Data is available within the timeout.
+                        var didTake = _testState.Queue.Reader.TryRead(out var item);
+                        take = (didTake, item);
+                    }
+                    else
+                    {
+                        // Timeout occurred before data was available.
+                        take = (false, null);
+                    }
                 }
-                else
+                catch (OperationCanceledException)
                 {
-                    // Timeout occurred before data was available.
-                    take = (false, null);
+                    // Re-throw without extra wrapping
+                    throw;
                 }
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
                 Log.Warning("Trying to receive message from TestActor queue with infinite timeout! Will wait indefinitely!");
-                var readItem = await _testState.Queue.Reader.ReadAsync(cancellationToken);
+                var readItem = await _testState.Queue.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
                 take = (true, readItem);
             }
             else
