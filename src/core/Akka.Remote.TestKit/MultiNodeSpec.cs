@@ -15,6 +15,7 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
@@ -553,6 +554,24 @@ namespace Akka.Remote.TestKit
         }
 
         /// <summary>
+        /// Async version of EnterBarrier. Enter the named barriers in the order given.
+        /// Use the remaining duration from the innermost enclosing `within` block or the default `BarrierTimeout`
+        /// </summary>
+        public Task EnterBarrierAsync(params string[] name)
+        {
+            return EnterBarrierAsync(CancellationToken.None, name);
+        }
+
+        /// <summary>
+        /// Async version of EnterBarrier with cancellation support. Enter the named barriers in the order given.
+        /// Use the remaining duration from the innermost enclosing `within` block or the default `BarrierTimeout`
+        /// </summary>
+        public Task EnterBarrierAsync(CancellationToken cancellationToken, params string[] name)
+        {
+            return TestConductor.EnterAsync(RemainingOr(TestConductor.Settings.BarrierTimeout), Myself, name.ToImmutableList(), cancellationToken);
+        }
+
+        /// <summary>
         /// Query the controller for the transport address of the given node (by role name) and
         /// return that as an ActorPath for easy composition:
         ///
@@ -562,6 +581,16 @@ namespace Akka.Remote.TestKit
         {
             //TODO: Async stuff here
             return new RootActorPath(TestConductor.GetAddressFor(role).Result);
+        }
+
+        /// <summary>
+        /// Async version of Node. Query the controller for the transport address of the given node (by role name) and
+        /// return that as an ActorPath for easy composition.
+        /// </summary>
+        public async Task<ActorPath> NodeAsync(RoleName role, CancellationToken cancellationToken = default)
+        {
+            var address = await TestConductor.GetAddressForAsync(role, cancellationToken).ConfigureAwait(false);
+            return new RootActorPath(address);
         }
 
         public void MuteDeadLetters(ActorSystem system = null, params Type[] messageClasses)

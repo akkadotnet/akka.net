@@ -109,10 +109,36 @@ namespace Akka.Remote.TestKit
         }
 
         /// <summary>
+        /// Async version of Enter. Enter the named barrier.
+        /// Will throw an exception in case of timeouts or other errors.
+        /// </summary>
+        public Task EnterAsync(RoleName roleName, string name, CancellationToken cancellationToken = default)
+        {
+            return EnterAsync(Settings.BarrierTimeout, roleName, ImmutableList.Create(name), cancellationToken);
+        }
+
+        /// <summary>
         /// Enter the named barriers, one after the other, in the order given. Will
         /// throw an exception in case of timeouts or other errors.
         /// </summary>
         public void Enter(TimeSpan timeout, RoleName roleName, ImmutableList<string> names)
+        {
+            // Use sync-over-async pattern to maintain single source of truth
+            try
+            {
+                EnterAsync(timeout, roleName, names, CancellationToken.None).GetAwaiter().GetResult();
+            }
+            catch (AggregateException ex) when (ex.InnerException != null)
+            {
+                throw ex.InnerException;
+            }
+        }
+
+        /// <summary>
+        /// Async version of Enter. Enter the named barriers, one after the other, in the order given.
+        /// Will throw an exception in case of timeouts or other errors.
+        /// </summary>
+        public async Task EnterAsync(TimeSpan timeout, RoleName roleName, ImmutableList<string> names, CancellationToken cancellationToken = default)
         {
             _system.Log.Debug("entering barriers {0}", names.Aggregate((a, b) => "(" + a + "," + b + ")"));
             var stop = Deadline.Now + timeout;
@@ -128,18 +154,18 @@ namespace Akka.Remote.TestKit
                 try
                 {
                     var askTimeout = barrierTimeout + Settings.QueryTimeout;
-                    // Need to force barrier to wait here, so we can pass along a "fail barrier" message in the event
-                    // of a failed operation
-                    var result = _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout, roleName)), askTimeout).Result;
+                    // Use async ask with cancellation token
+                    var result = await _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout, roleName)), askTimeout, cancellationToken).ConfigureAwait(false);
                 }
-                catch (AggregateException ex)
+                catch (TaskCanceledException ex)
                 {
                     _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name, roleName)));
                     throw new TimeoutException("Client timed out while waiting for barrier " + name, ex);
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException ex)
                 {
-                   _system.Log.Debug("OperationCanceledException was thrown instead of AggregateException");
+                    _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name, roleName)));
+                    throw new TimeoutException("Operation was cancelled while waiting for barrier " + name, ex);
                 }
                 _system.Log.Debug("passed barrier {0}", name);
             }
@@ -147,7 +173,15 @@ namespace Akka.Remote.TestKit
 
         public Task<Address> GetAddressFor(RoleName name)
         {
-            return _client.Ask<Address>(new ToServer<GetAddress>(new GetAddress(name)), Settings.QueryTimeout);
+            return GetAddressForAsync(name, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Async version of GetAddressFor with cancellation token support.
+        /// </summary>
+        public Task<Address> GetAddressForAsync(RoleName name, CancellationToken cancellationToken = default)
+        {
+            return _client.Ask<Address>(new ToServer<GetAddress>(new GetAddress(name)), Settings.QueryTimeout, cancellationToken);
         }
     }
 

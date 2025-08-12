@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -97,8 +98,17 @@ namespace Akka.Remote.TestKit
         public Task<Done> Throttle(RoleName node, RoleName target, ThrottleTransportAdapter.Direction direction,
             float rateMBit)
         {
+            return ThrottleAsync(node, target, direction, rateMBit, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Async version of Throttle with cancellation token support.
+        /// </summary>
+        public Task<Done> ThrottleAsync(RoleName node, RoleName target, ThrottleTransportAdapter.Direction direction,
+            float rateMBit, CancellationToken cancellationToken = default)
+        {
             RequireTestConductorTransport();
-            return Controller.Ask<Done>(new Throttle(node, target, direction, rateMBit), Settings.QueryTimeout);
+            return Controller.Ask<Done>(new Throttle(node, target, direction, rateMBit), Settings.QueryTimeout, cancellationToken);
         }
 
         /// <summary>
@@ -117,7 +127,28 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public Task<Done> Blackhole(RoleName node, RoleName target, ThrottleTransportAdapter.Direction direction)
         {
-            return Throttle(node, target, direction, 0f);
+            return BlackholeAsync(node, target, direction, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Async version of Blackhole with cancellation token support.
+        /// Switch the helios pipeline of the remote support into blackhole mode for
+        /// sending and/or receiving: it will just drop all messages right before
+        /// submitting them to the Socket or right after receiving them from the
+        /// Socket.
+        /// 
+        ///  ====Note====
+        /// To use this feature you must activate the failure injector and throttler
+        /// transport adapters by specifying `testTransport(on = true)` in your MultiNodeConfig.
+        /// </summary>
+        /// <param name="node">is the symbolic name of the node which is to be affected</param>
+        /// <param name="target">is the symbolic name of the other node to which connectivity shall be impeded</param>
+        /// <param name="direction">can be either `Direction.Send`, `Direction.Receive` or `Direction.Both`</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Task indicating completion</returns>
+        public Task<Done> BlackholeAsync(RoleName node, RoleName target, ThrottleTransportAdapter.Direction direction, CancellationToken cancellationToken = default)
+        {
+            return ThrottleAsync(node, target, direction, 0f, cancellationToken);
         }
 
         private void RequireTestConductorTransport()
@@ -142,7 +173,26 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public Task<Done> PassThrough(RoleName node, RoleName target, ThrottleTransportAdapter.Direction direction)
         {
-            return Throttle(node, target, direction, -1f);
+            return PassThroughAsync(node, target, direction, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Async version of PassThrough with cancellation token support.
+        /// Switch the Helios pipeline of the remote support into pass through mode for
+        /// sending and/or receiving.
+        /// 
+        /// ====Note====
+        /// To use this feature you must activate the failure injector and throttler
+        /// transport adapters by specifying `testTransport(on = true)` in your MultiNodeConfig.
+        /// </summary>
+        /// <param name="node">is the symbolic name of the node which is to be affected</param>
+        /// <param name="target">is the symbolic name of the other node to which connectivity shall be impeded</param>
+        /// <param name="direction">can be either `Direction.Send`, `Direction.Receive` or `Direction.Both`</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Task indicating completion</returns>
+        public Task<Done> PassThroughAsync(RoleName node, RoleName target, ThrottleTransportAdapter.Direction direction, CancellationToken cancellationToken = default)
+        {
+            return ThrottleAsync(node, target, direction, -1f, cancellationToken);
         }
 
         /// <summary>
@@ -181,16 +231,33 @@ namespace Akka.Remote.TestKit
         /// <returns>TBD</returns>
         public Task<Done> Exit(RoleName node, int exitValue)
         {
-            // the recover is needed to handle ClientDisconnectedException exception,
-            // which is normal during shutdown
-            return Controller.Ask(new Terminate(node, new Right<bool, int>(exitValue)), Settings.QueryTimeout).ContinueWith(t =>
-            {
-                if(t.Result is Done) return Done.Instance;
-                var failure = t.Result as FSMBase.Failure;
-                if (failure != null && failure.Cause is Controller.ClientDisconnectedException) return Done.Instance;
+            // Use the async version with no cancellation token for consistency
+            return ExitAsync(node, exitValue, CancellationToken.None);
+        }
 
-                throw new InvalidOperationException($"Expected Done but received {t.Result}");
-            });
+        /// <summary>
+        /// Async version of Exit with cancellation token support.
+        /// Tell the actor system at the remote node to shut itself down. The node will also be
+        /// removed, so that the remaining nodes may still pass subsequent barriers.
+        /// </summary>
+        /// <param name="node">is the symbolic name of the node which is to be affected</param>
+        /// <param name="exitValue">is the return code which shall be given to System.exit</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Task indicating completion</returns>
+        public async Task<Done> ExitAsync(RoleName node, int exitValue, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var result = await Controller.Ask(new Terminate(node, new Right<bool, int>(exitValue)), Settings.QueryTimeout, cancellationToken).ConfigureAwait(false);
+                if (result is Done) return Done.Instance;
+                if (result is FSMBase.Failure failure && failure.Cause is Controller.ClientDisconnectedException) 
+                    return Done.Instance;
+                throw new InvalidOperationException($"Expected Done but received {result}");
+            }
+            catch (TaskCanceledException)
+            {
+                throw new TimeoutException($"ExitAsync operation was cancelled for node {node}");
+            }
         }
 
         /// <summary>
@@ -221,7 +288,16 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public Task<IEnumerable<RoleName>> GetNodes()
         {
-            return Controller.Ask<IEnumerable<RoleName>>(TestKit.Controller.GetNodes.Instance, Settings.QueryTimeout);
+            return GetNodesAsync(CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Async version of GetNodes with cancellation token support.
+        /// Obtain the list of remote host names currently registered.
+        /// </summary>
+        public Task<IEnumerable<RoleName>> GetNodesAsync(CancellationToken cancellationToken = default)
+        {
+            return Controller.Ask<IEnumerable<RoleName>>(TestKit.Controller.GetNodes.Instance, Settings.QueryTimeout, cancellationToken);
         }
 
         /// <summary>
@@ -234,7 +310,22 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public Task<Done> RemoveNode(RoleName node)
         {
-            return Controller.Ask<Done>(new Remove(node), Settings.QueryTimeout);
+            return RemoveNodeAsync(node, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Async version of RemoveNode with cancellation token support.
+        /// Remove a remote host from the list, so that the remaining nodes may still
+        /// pass subsequent barriers. This must be done before the client connection
+        /// breaks down in order to affect an "orderly" removal (i.e. without failing
+        /// present and future barriers).
+        /// </summary>
+        /// <param name="node">is the symbolic name of the node which is to be removed</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Task indicating completion</returns>
+        public Task<Done> RemoveNodeAsync(RoleName node, CancellationToken cancellationToken = default)
+        {
+            return Controller.Ask<Done>(new Remove(node), Settings.QueryTimeout, cancellationToken);
         }
     }
 
