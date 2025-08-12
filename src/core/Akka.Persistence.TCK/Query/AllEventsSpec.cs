@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
@@ -70,7 +71,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public virtual void ReadJournal_query_AllEvents_should_find_events_from_offset_exclusive()
+        public virtual async Task ReadJournal_query_AllEvents_should_find_events_from_offset_exclusive()
         {
             var queries = ReadJournal as IAllEventsQuery;
 
@@ -79,23 +80,24 @@ namespace Akka.Persistence.TCK.Query
             var c = Sys.ActorOf(Query.TestActor.Props("c"));
 
             a.Tell("keep");
-            ExpectMsg("keep-done");
+            await ExpectMsgAsync("keep-done");
             a.Tell("calm");
-            ExpectMsg("calm-done");
+            await ExpectMsgAsync("calm-done");
             b.Tell("and");
-            ExpectMsg("and-done");
+            await ExpectMsgAsync("and-done");
             a.Tell("keep");
-            ExpectMsg("keep-done");
+            await ExpectMsgAsync("keep-done");
             a.Tell("streaming");
-            ExpectMsg("streaming-done");
+            await ExpectMsgAsync("streaming-done");
 
             var eventSrc1 = queries.AllEvents(NoOffset.Instance);
             var probe1 = eventSrc1.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe1.Request(4);
-            probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 1L && p.Event.Equals("keep"));
-            probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 2L && p.Event.Equals("calm"));
-            probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 1L && p.Event.Equals("and"));
-            var offs = probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 3L && p.Event.Equals("keep")).Offset;
+            await probe1.ExpectNextAsync<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 1L && p.Event.Equals("keep"));
+            await probe1.ExpectNextAsync<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 2L && p.Event.Equals("calm"));
+            await probe1.ExpectNextAsync<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 1L && p.Event.Equals("and"));
+            var keepEvent = await probe1.ExpectNextAsync<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 3L && p.Event.Equals("keep"));
+            var offs = keepEvent.Offset;
             probe1.Cancel();
 
             var eventSrc2 = queries.AllEvents(offs);
@@ -103,14 +105,14 @@ namespace Akka.Persistence.TCK.Query
             probe2.Request(10);
 
             b.Tell("new");
-            ExpectMsg("new-done");
+            await ExpectMsgAsync("new-done");
             c.Tell("events");
-            ExpectMsg("events-done");
+            await ExpectMsgAsync("events-done");
 
             // everything before "streaming" are not included, since exclusive offset
-            probe2.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 4L && p.Event.Equals("streaming"));
-            probe2.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 2L && p.Event.Equals("new"));
-            probe2.ExpectNext<EventEnvelope>(p => p.PersistenceId == "c" && p.SequenceNr == 1L && p.Event.Equals("events"));
+            await probe2.ExpectNextAsync<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 4L && p.Event.Equals("streaming"));
+            await probe2.ExpectNextAsync<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 2L && p.Event.Equals("new"));
+            await probe2.ExpectNextAsync<EventEnvelope>(p => p.PersistenceId == "c" && p.SequenceNr == 1L && p.Event.Equals("events"));
             probe2.Cancel();
         }
     }
