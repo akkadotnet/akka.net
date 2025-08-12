@@ -69,10 +69,10 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
         }
 
         [MultiNodeFact]
-        public void ATestConductorMust()
+        public async Task ATestConductorMust()
         {
             Enter_a_Barrier();
-            Support_Throttling_of_Network_Connections();
+            await Support_Throttling_of_Network_ConnectionsAsync();
         }
 
         public void Enter_a_Barrier()
@@ -89,7 +89,7 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
             EnterBarrier("name");
         }
 
-        public void Support_Throttling_of_Network_Connections()
+        public async Task Support_Throttling_of_Network_ConnectionsAsync()
         {
             RunOn(() =>
             {
@@ -99,9 +99,9 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
 
             ExpectMsg("start");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.Throttle(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Send, 0.01f).Wait();
+                await TestConductor.ThrottleAsync(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Send, 0.01f);
             }, _config.Master);
 
             EnterBarrier("throttled_send");
@@ -122,10 +122,10 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
             });
 
             EnterBarrier("throttled_send2");
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.Throttle(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Send, -1).Wait();
-                TestConductor.Throttle(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Receive, 0.01F).Wait();
+                await TestConductor.ThrottleAsync(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Send, -1);
+                await TestConductor.ThrottleAsync(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Receive, 0.01F);
             }, _config.Master);
 
             EnterBarrier("throttled_recv");
@@ -150,9 +150,9 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
 
             EnterBarrier("throttled_recv2");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.Throttle(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Receive, -1).Wait();
+                await TestConductor.ThrottleAsync(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Receive, -1);
             }, _config.Master);
 
             EnterBarrier("after");
