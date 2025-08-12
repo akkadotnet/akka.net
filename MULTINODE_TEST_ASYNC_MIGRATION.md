@@ -153,7 +153,7 @@ using System.Threading.Tasks;
 - [ ] ClusterClient/ClusterClientDiscoverySpec
 - [ ] ClusterClient/ClusterClientSpec
 - [ ] PublishSubscribe/DistributedPubSubMediatorSpec
-- [ ] PublishSubscribe/DistributedPubSubRestartSpec
+- [x] PublishSubscribe/DistributedPubSubRestartSpec
 - [ ] Singleton/ClusterSingletonManagerDownedSpec
 - [ ] Singleton/ClusterSingletonManagerSpec
 

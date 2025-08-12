@@ -15,6 +15,7 @@ using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
+using System.Threading.Tasks;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 {
@@ -68,26 +69,26 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         }
 
         [MultiNodeFact]
-        public void DistributedPubSubRestartSpecs()
+        public async Task DistributedPubSubRestartSpecs()
         {
-            A_Cluster_with_DistributedPubSub_must_startup_3_node_cluster();
-            A_Cluster_with_DistributedPubSub_must_handle_restart_of_nodes_with_same_address();
+            await A_Cluster_with_DistributedPubSub_must_startup_3_node_cluster();
+            await A_Cluster_with_DistributedPubSub_must_handle_restart_of_nodes_with_same_address();
         }
 
-        public void A_Cluster_with_DistributedPubSub_must_startup_3_node_cluster()
+        public async Task A_Cluster_with_DistributedPubSub_must_startup_3_node_cluster()
         {
-            Within(15.Seconds(), () =>
+            await WithinAsync(15.Seconds(), async () =>
             {
-                Join(_config.First, _config.First);
-                Join(_config.Second, _config.First);
-                Join(_config.Third, _config.First);
-                EnterBarrier("after-1");
+                await Join(_config.First, _config.First);
+                await Join(_config.Second, _config.First);
+                await Join(_config.Third, _config.First);
+                await EnterBarrierAsync("after-1");
             });
         }
 
-        public void A_Cluster_with_DistributedPubSub_must_handle_restart_of_nodes_with_same_address()
+        public async Task A_Cluster_with_DistributedPubSub_must_handle_restart_of_nodes_with_same_address()
         {
-            Within(30.Seconds(), () =>
+            await WithinAsync(30.Seconds(), async () =>
             {
                 Mediator.Tell(new Subscribe("topic1", TestActor));
                 ExpectMsg<SubscribeAck>();
@@ -97,24 +98,24 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 {
                     Mediator.Tell(new Publish("topic1", "msg1"));
                 }, _config.First);
-                EnterBarrier("pub-msg1");
+                await EnterBarrierAsync("pub-msg1");
 
                 ExpectMsg("msg1");
-                EnterBarrier("got-msg1");
+                await EnterBarrierAsync("got-msg1");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     Mediator.Tell(DeltaCount.Instance);
                     var oldDeltaCount = ExpectMsg<long>();
 
-                    EnterBarrier("end");
+                    await EnterBarrierAsync("end");
 
                     Mediator.Tell(DeltaCount.Instance);
                     var deltaCount = ExpectMsg<long>();
                     deltaCount.Should().Be(oldDeltaCount);
                 }, _config.Second);
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     Mediator.Tell(DeltaCount.Instance);
                     var oldDeltaCount = ExpectMsg<long>();
@@ -133,17 +134,17 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
                     Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell("shutdown");
 
-                    EnterBarrier("end");
+                    await EnterBarrierAsync("end");
 
                     Mediator.Tell(DeltaCount.Instance);
                     var deltaCount = ExpectMsg<long>();
                     deltaCount.Should().Be(oldDeltaCount);
                 }, _config.First);
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     var node3Address = Cluster.Get(Sys).SelfAddress;
-                    Sys.WhenTerminated.Wait(10.Seconds());
+                    await Sys.WhenTerminated.WaitAsync(10.Seconds());
                     var newSystem = ActorSystem.Create(
                         Sys.Name,
                         ConfigurationFactory
@@ -166,11 +167,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
                         newSystem.Log.Info("Shutdown actor started on {0}",node3Address);
                         newSystem.ActorOf<DistributedPubSubRestartSpecConfig.Shutdown>("shutdown");
-                        newSystem.WhenTerminated.Wait(10.Seconds());
+                        await newSystem.WhenTerminated.WaitAsync(10.Seconds());
                     }
                     finally
                     {
-                        newSystem.Terminate();
+                        await newSystem.Terminate();
                     }
                 }, _config.Third);
             });
@@ -191,14 +192,14 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             }
         }
 
-        private void Join(RoleName from, RoleName to)
+        private async Task Join(RoleName from, RoleName to)
         {
             RunOn(() =>
             {
                 Cluster.Get(Sys).Join(Node(to).Address);
                 CreateMediator();
             }, from);
-            EnterBarrier(from.Name + "-joined");
+            await EnterBarrierAsync(from.Name + "-joined");
         }
 
         private void AwaitCount(int expected)
