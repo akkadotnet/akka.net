@@ -260,14 +260,20 @@ namespace Akka.TestKit
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue within {0}", maxDuration);
                 
-                // Use a combined cancellation token to handle both timeout and user cancellation
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(maxDuration);
-                
                 try
                 {
+                    // Create timeout task
+                    using var cts = new CancellationTokenSource(maxDuration);
+                    
+                    // Combine with user cancellation token if provided
+                    using var linkedCts = cancellationToken.CanBeCanceled 
+                        ? CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken)
+                        : null;
+                    
+                    var effectiveToken = linkedCts?.Token ?? cts.Token;
+                    
                     // This will throw OperationCanceledException if cancelled
-                    var canRead = await _testState.Queue.Reader.WaitToReadAsync(cts.Token).ConfigureAwait(false);
+                    var canRead = await _testState.Queue.Reader.WaitToReadAsync(effectiveToken).ConfigureAwait(false);
                     if (canRead)
                     {
                         // Data is available within the timeout.
@@ -280,12 +286,16 @@ namespace Akka.TestKit
                         take = (false, null);
                     }
                 }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                catch (OperationCanceledException) when (cancellationToken.CanBeCanceled && cancellationToken.IsCancellationRequested)
                 {
-                    // This was a timeout, not user cancellation - return false
+                    // User cancellation - let it propagate
+                    throw;
+                }
+                catch (OperationCanceledException)
+                {
+                    // This was a timeout - return false
                     take = (false, null);
                 }
-                // If cancellationToken.IsCancellationRequested is true, let the exception propagate
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
