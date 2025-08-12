@@ -273,7 +273,7 @@ namespace Akka.TestKit
                     var effectiveToken = linkedCts?.Token ?? cts.Token;
                     
                     // This will throw OperationCanceledException if cancelled
-                    var canRead = await _testState.Queue.Reader.WaitToReadAsync(effectiveToken).ConfigureAwait(false);
+                    var canRead = await _testState.Queue.Reader.WaitToReadAsync(effectiveToken);
                     if (canRead)
                     {
                         // Data is available within the timeout.
@@ -300,7 +300,7 @@ namespace Akka.TestKit
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
                 Log.Warning("Trying to receive message from TestActor queue with infinite timeout! Will wait indefinitely!");
-                var readItem = await _testState.Queue.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+                var readItem = await _testState.Queue.Reader.ReadAsync(cancellationToken);
                 take = (true, readItem);
             }
             else
