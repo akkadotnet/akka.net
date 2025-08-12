@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Cluster.TestKit;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
@@ -77,11 +78,11 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void LeaderElectionSpecs()
+        public async Task LeaderElectionSpecs()
         {
             Cluster_of_four_nodes_must_be_able_to_elect_single_leader();
-            Cluster_of_four_nodes_must_be_able_to_reelect_single_leader_after_leader_has_left();
-            Cluster_of_four_nodes_must_be_able_to_reelect_single_leader_after_leader_has_left_again();
+            await Cluster_of_four_nodes_must_be_able_to_reelect_single_leader_after_leader_has_left();
+            await Cluster_of_four_nodes_must_be_able_to_reelect_single_leader_after_leader_has_left_again();
         }
 
         public void Cluster_of_four_nodes_must_be_able_to_elect_single_leader()
@@ -97,7 +98,7 @@ namespace Akka.Cluster.Tests.MultiNode
             EnterBarrier("after-1");
         }
 
-        public void ShutdownLeaderAndVerifyNewLeader(int alreadyShutdown)
+        public async Task ShutdownLeaderAndVerifyNewLeader(int alreadyShutdown)
         {
             var currentRoles = _sortedRoles.Skip(alreadyShutdown).ToList();
             currentRoles.Count.ShouldBeGreaterOrEqual(2);
@@ -108,66 +109,66 @@ namespace Akka.Cluster.Tests.MultiNode
 
             if (Myself == _config.Controller)
             {
-                EnterBarrier("before-shutdown" + n);
-                TestConductor.Exit(leader, 0).Wait();
-                EnterBarrier("after-shutdown" + n, "after-unavailable" + n, "after-down" + n, "completed" + n);
+                await EnterBarrierAsync("before-shutdown" + n);
+                await TestConductor.ExitAsync(leader, 0);
+                await EnterBarrierAsync("after-shutdown" + n, "after-unavailable" + n, "after-down" + n, "completed" + n);
             }
             else if (Myself == leader)
             {
-                EnterBarrier("before-shutdown" + n, "after-shutdown" + n);
+                await EnterBarrierAsync("before-shutdown" + n, "after-shutdown" + n);
                 // this node will be shutdown by the controller and doesn't participate in more barriers
             }
             else if (Myself == aUser)
             {
                 var leaderAddress = GetAddress(leader);
-                EnterBarrier("before-shutdown" + n, "after-shutdown" + n);
+                await EnterBarrierAsync("before-shutdown" + n, "after-shutdown" + n);
 
                 // detect failure
                 MarkNodeAsUnavailable(leaderAddress);
                 AwaitAssert(() => ClusterView.UnreachableMembers.Select(x => x.Address).Contains(leaderAddress).ShouldBeTrue());
-                EnterBarrier("after-unavailable" + n);
+                await EnterBarrierAsync("after-unavailable" + n);
 
                 // user marks the shutdown leader as DOWN
                 Cluster.Down(leaderAddress);
 
                 // removed
                 AwaitAssert((() => ClusterView.UnreachableMembers.Select(x => x.Address).Contains(leaderAddress).ShouldBeFalse()));
-                EnterBarrier("after-down" + n, "completed" + n);
+                await EnterBarrierAsync("after-down" + n, "completed" + n);
             }
             else if (remainingRoles.Contains(Myself))
             {
                 // remaining cluster nodes, not shutdown
                 var leaderAddress = GetAddress(leader);
-                EnterBarrier("before-shutdown" + n, "after-shutdown" + n);
+                await EnterBarrierAsync("before-shutdown" + n, "after-shutdown" + n);
 
                 AwaitAssert(() => ClusterView.UnreachableMembers.Select(x => x.Address).Contains(leaderAddress).ShouldBeTrue());
-                EnterBarrier("after-unavailable" + n);
+                await EnterBarrierAsync("after-unavailable" + n);
 
-                EnterBarrier("after-down" + n);
+                await EnterBarrierAsync("after-down" + n);
                 AwaitMembersUp(currentRoles.Count - 1);
                 var nextExpectedLeader = remainingRoles.First();
                 ClusterView.IsLeader.ShouldBe(Myself == nextExpectedLeader);
                 AssertLeaderIn(remainingRoles);
 
-                EnterBarrier("completed" + n);
+                await EnterBarrierAsync("completed" + n);
             }
         }
 
-        public void Cluster_of_four_nodes_must_be_able_to_reelect_single_leader_after_leader_has_left()
+        public async Task Cluster_of_four_nodes_must_be_able_to_reelect_single_leader_after_leader_has_left()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
             {
-                ShutdownLeaderAndVerifyNewLeader(0);
-                EnterBarrier("after-2");
+                await ShutdownLeaderAndVerifyNewLeader(0);
+                await EnterBarrierAsync("after-2");
             });
         }
 
-        public void Cluster_of_four_nodes_must_be_able_to_reelect_single_leader_after_leader_has_left_again()
+        public async Task Cluster_of_four_nodes_must_be_able_to_reelect_single_leader_after_leader_has_left_again()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
             {
-                ShutdownLeaderAndVerifyNewLeader(1);
-                EnterBarrier("after-3");
+                await ShutdownLeaderAndVerifyNewLeader(1);
+                await EnterBarrierAsync("after-3");
             });
         }
     }
