@@ -13,6 +13,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -936,24 +937,24 @@ akka.remote.default-remote-dispatcher {
                 });
         }
 
-        public void RemoveOneByOne(int numberOfNodes, bool shutdown)
+        public async Task RemoveOneByOne(int numberOfNodes, bool shutdown)
         {
             foreach (var i in Enumerable.Range(0, numberOfNodes))
             {
-                RemoveOne(shutdown);
+                await RemoveOne(shutdown);
                 NbrUsedRoles -= 1;
                 Step += 1;
             }
         }
 
-        public void RemoveOne(bool shutdown)
+        public async Task RemoveOne(bool shutdown)
         {
             string FormatNodeLeave()
             {
                 return shutdown ? "shutdown" : "remove";
             }
 
-            Within(TimeSpan.FromSeconds(25) + ConvergenceWithin(TimeSpan.FromSeconds(3), NbrUsedRoles - 1), ()
+            await WithinAsync(TimeSpan.FromSeconds(25) + ConvergenceWithin(TimeSpan.FromSeconds(3), NbrUsedRoles - 1), async ()
                 =>
             {
                 var currentRoles = Roles.Take(NbrUsedRoles - 1).ToArray();
@@ -969,7 +970,7 @@ akka.remote.default-remote-dispatcher {
                     Console.WriteLine("Created watchee [{0}]", watchee);
                 }, removeRole);
 
-                EnterBarrier("watchee-created-" + Step);
+                await EnterBarrierAsync("watchee-created-" + Step);
 
                 RunOn(() =>
                 {
@@ -981,7 +982,7 @@ akka.remote.default-remote-dispatcher {
                     }, interval:TimeSpan.FromSeconds(1.25d));
                    
                 }, Roles.First());
-                EnterBarrier("watchee-established-" + Step);
+                await EnterBarrierAsync("watchee-established-" + Step);
 
                 RunOn(() =>
                 {
@@ -991,9 +992,9 @@ akka.remote.default-remote-dispatcher {
 
                 RunOn(() =>
                 {
-                    ReportResult(() =>
+                    ReportResult(async () =>
                     {
-                        RunOn(() =>
+                        await RunOnAsync(async () =>
                         {
                             if (shutdown)
                             {
@@ -1002,7 +1003,7 @@ akka.remote.default-remote-dispatcher {
                                     Log.Info("Shutting down [{0}]", removeAddress);
                                 }
 
-                                TestConductor.Exit(removeRole, 0).Wait();
+                                await TestConductor.ExitAsync(removeRole, 0);
                             }
                         }, Roles.First());
 
@@ -1018,22 +1019,22 @@ akka.remote.default-remote-dispatcher {
                     ExpectMsg<Terminated>(t => t.ActorRef.Path == expectedPath);
                 }, Roles.First());
 
-                EnterBarrier("watch-verified-" + Step);
+                await EnterBarrierAsync("watch-verified-" + Step);
 
                 AwaitClusterResult();
-                EnterBarrier("remove-one-" + Step);
+                await EnterBarrierAsync("remove-one-" + Step);
             });
         }
 
-        public void RemoveSeveral(int numberOfNodes, bool shutdown)
+        public async Task RemoveSeveral(int numberOfNodes, bool shutdown)
         {
             string FormatNodeLeave()
             {
                 return shutdown ? "shutdown" : "remove";
             }
 
-            Within(TimeSpan.FromSeconds(25) + ConvergenceWithin(TimeSpan.FromSeconds(5), NbrUsedRoles - numberOfNodes),
-                () =>
+            await WithinAsync(TimeSpan.FromSeconds(25) + ConvergenceWithin(TimeSpan.FromSeconds(5), NbrUsedRoles - numberOfNodes),
+                async () =>
                 {
                     var currentRoles = Roles.Take(NbrUsedRoles - numberOfNodes).ToArray();
                     var removeRoles = Roles.Skip(currentRoles.Length).Take(numberOfNodes).ToArray();
@@ -1050,9 +1051,9 @@ akka.remote.default-remote-dispatcher {
 
                     RunOn(() =>
                     {
-                        ReportResult(() =>
+                        ReportResult(async () =>
                         {
-                            RunOn(() =>
+                            await RunOnAsync(async () =>
                             {
                                 if (shutdown)
                                 {
@@ -1060,7 +1061,7 @@ akka.remote.default-remote-dispatcher {
                                     {
                                         if (Settings.Infolog)
                                             Log.Info("Shutting down [{0}]", GetAddress(role));
-                                        TestConductor.Exit(role, 0).Wait(RemainingOrDefault);
+                                        await TestConductor.ExitAsync(role, 0);
                                     }
                                 }
                             }, Roles.First());
@@ -1071,14 +1072,14 @@ akka.remote.default-remote-dispatcher {
                     }, currentRoles);
 
                     AwaitClusterResult();
-                    EnterBarrier("remove-several-" + Step);
+                    await EnterBarrierAsync("remove-several-" + Step);
                 });
         }
 
-        public void PartitionSeveral(int numberOfNodes)
+        public async Task PartitionSeveral(int numberOfNodes)
         {
-            Within(TimeSpan.FromSeconds(25) + ConvergenceWithin(TimeSpan.FromSeconds(5), NbrUsedRoles - numberOfNodes),
-                () =>
+            await WithinAsync(TimeSpan.FromSeconds(25) + ConvergenceWithin(TimeSpan.FromSeconds(5), NbrUsedRoles - numberOfNodes),
+                async () =>
                 {
                     var currentRoles = Roles.Take(NbrUsedRoles - numberOfNodes).ToArray();
                     var removeRoles = Roles.Skip(currentRoles.Length).Take(numberOfNodes).ToArray();
@@ -1087,17 +1088,17 @@ akka.remote.default-remote-dispatcher {
                     Console.WriteLine("[{0}] are blackholing [{1}]", string.Join(",", currentRoles.Select(x => x.ToString())), string.Join(",", removeRoles.Select(x => x.ToString())));
                     CreateResultAggregator(title, expectedResults: currentRoles.Length, includeInHistory: true);
 
-                    RunOn(() =>
+                    await RunOnAsync(async () =>
                     {
                         foreach (var x in currentRoles)
                         {
                             foreach (var y in removeRoles)
                             {
-                                TestConductor.Blackhole(x, y, ThrottleTransportAdapter.Direction.Both).Wait();
+                                await TestConductor.BlackholeAsync(x, y, ThrottleTransportAdapter.Direction.Both);
                             }
                         }
                     }, Roles.First());
-                    EnterBarrier("partition-several-blackhole");
+                    await EnterBarrierAsync("partition-several-blackhole");
 
                     RunOn(() =>
                     {
@@ -1121,7 +1122,7 @@ akka.remote.default-remote-dispatcher {
                         });
                     }, removeRoles);
                     AwaitClusterResult();
-                    EnterBarrier("partition-several-" + Step);
+                    await EnterBarrierAsync("partition-several-" + Step);
                 });
         }
 
@@ -1252,42 +1253,42 @@ akka.remote.default-remote-dispatcher {
         }
 
         [MultiNodeFact]
-        public void Cluster_under_stress()
+        public async Task Cluster_under_stress()
         {
-            MustLogSettings();
+            await MustLogSettings();
             IncrementStep();
-            MustJoinSeedNodes();
+            await MustJoinSeedNodes();
             IncrementStep();
-            MustJoinSeedNodesOneByOneToSmallCluster();
+            await MustJoinSeedNodesOneByOneToSmallCluster();
             IncrementStep();
-            MustJoinSeveralNodesToOneNode();
+            await MustJoinSeveralNodesToOneNode();
             IncrementStep();
-            MustJoinSeveralNodesToSeedNodes();
+            await MustJoinSeveralNodesToSeedNodes();
             IncrementStep();
-            MustJoinNodesOneByOneToLargeCluster();
+            await MustJoinNodesOneByOneToLargeCluster();
             IncrementStep();
-            MustExerciseJoinRemoveJoinRemove();
+            await MustExerciseJoinRemoveJoinRemove();
             IncrementStep();
-            MustGossipWhenIdle();
+            await MustGossipWhenIdle();
             IncrementStep();
-            MustDownPartitionedNodes();
+            await MustDownPartitionedNodes();
             IncrementStep();
-            MustLeaveNodesOneByOneFromLargeCluster();
+            await MustLeaveNodesOneByOneFromLargeCluster();
             IncrementStep();
-            MustShutdownNodesOneByOneFromLargeCluster();
+            await MustShutdownNodesOneByOneFromLargeCluster();
             IncrementStep();
-            MustLeaveSeveralNodes();
+            await MustLeaveSeveralNodes();
             IncrementStep();
-            MustShutdownSeveralNodes();
+            await MustShutdownSeveralNodes();
             IncrementStep();
-            MustShutdownNodesOneByOneFromSmallCluster();
+            await MustShutdownNodesOneByOneFromSmallCluster();
             IncrementStep();
-            MustLeaveNodesOneByOneFromSmallCluster();
+            await MustLeaveNodesOneByOneFromSmallCluster();
             IncrementStep();
-            MustLogClrInfo();
+            await MustLogClrInfo();
         }
 
-        public void MustLogSettings()
+        public async Task MustLogSettings()
         {
             if (Settings.Infolog)
             {
@@ -1297,12 +1298,12 @@ akka.remote.default-remote-dispatcher {
                     Log.Info("StressSpec settings:" + Environment.NewLine + Settings);
                 });
             }
-            EnterBarrier("after-" + Step);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustJoinSeedNodes()
+        public async Task MustJoinSeedNodes()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
             {
                 var otherNodesJoiningSeedNodes = Roles.Skip(Settings.NumberOfSeedNodes)
                     .Take(Settings.NumberOfNodesJoiningToSeedNodesInitially).ToArray();
@@ -1312,113 +1313,113 @@ akka.remote.default-remote-dispatcher {
 
                 RunOn(() =>
                 {
-                    ReportResult(() =>
+                    ReportResult(async () =>
                     {
                         Cluster.JoinSeedNodes(SeedNodes.Select(x => GetAddress(x)));
                         AwaitMembersUp(size, timeout: RemainingOrDefault);
-                        return true;
+                        return await Task.FromResult(true);
                     });
                 }, SeedNodes.AddRange(otherNodesJoiningSeedNodes).ToArray());
 
                 AwaitClusterResult();
                 NbrUsedRoles += size;
-                EnterBarrier("after-" + Step);
+                await EnterBarrierAsync("after-" + Step);
             });
         }
 
-        public void MustJoinSeedNodesOneByOneToSmallCluster()
+        public async Task MustJoinSeedNodesOneByOneToSmallCluster()
         {
             JoinOneByOne(Settings.NumberOfNodesJoiningOneByOneSmall);
-            EnterBarrier("after-" + Step);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustJoinSeveralNodesToOneNode()
+        public async Task MustJoinSeveralNodesToOneNode()
         {
             JoinSeveral(Settings.NumberOfNodesJoiningToOneNode, false);
             NbrUsedRoles += Settings.NumberOfNodesJoiningToOneNode;
-            EnterBarrier("after-" + Step);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustJoinSeveralNodesToSeedNodes()
+        public async Task MustJoinSeveralNodesToSeedNodes()
         {
             if (Settings.NumberOfNodesJoiningToSeedNodes > 0)
             {
                 JoinSeveral(Settings.NumberOfNodesJoiningToSeedNodes, true);
                 NbrUsedRoles += Settings.NumberOfNodesJoiningToSeedNodes;
             }
-            EnterBarrier("after-" + Step);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustJoinNodesOneByOneToLargeCluster()
+        public async Task MustJoinNodesOneByOneToLargeCluster()
         {
             JoinOneByOne(Settings.NumberOfNodesJoiningOneByOneLarge);
-            EnterBarrier("after-" + Step);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustExerciseJoinRemoveJoinRemove()
+        public async Task MustExerciseJoinRemoveJoinRemove()
         {
             ExerciseJoinRemove("exercise join/remove", Settings.JoinRemoveDuration);
-            EnterBarrier("after-" + Step);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustGossipWhenIdle()
+        public async Task MustGossipWhenIdle()
         {
             IdleGossip("idle gossip");
-            EnterBarrier("after-" + Step);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustDownPartitionedNodes()
+        public async Task MustDownPartitionedNodes()
         {
-            PartitionSeveral(Settings.NumberOfNodesPartition);
+            await PartitionSeveral(Settings.NumberOfNodesPartition);
             NbrUsedRoles -= Settings.NumberOfNodesPartition;
-            EnterBarrier("after-" + Step);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustLeaveNodesOneByOneFromLargeCluster()
+        public async Task MustLeaveNodesOneByOneFromLargeCluster()
         {
-            RemoveOneByOne(Settings.NumberOfNodesLeavingOneByOneLarge, shutdown:false);
-            EnterBarrier("after-" + Step);
+            await RemoveOneByOne(Settings.NumberOfNodesLeavingOneByOneLarge, shutdown:false);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustShutdownNodesOneByOneFromLargeCluster()
+        public async Task MustShutdownNodesOneByOneFromLargeCluster()
         {
-            RemoveOneByOne(Settings.NumberOfNodesShutdownOneByOneLarge, shutdown: true);
-            EnterBarrier("after-" + Step);
+            await RemoveOneByOne(Settings.NumberOfNodesShutdownOneByOneLarge, shutdown: true);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustLeaveSeveralNodes()
+        public async Task MustLeaveSeveralNodes()
         {
-            RemoveSeveral(Settings.NumberOfNodesLeaving, shutdown: false);
+            await RemoveSeveral(Settings.NumberOfNodesLeaving, shutdown: false);
             NbrUsedRoles -= Settings.NumberOfNodesLeaving;
-            EnterBarrier("after-" + Step);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustShutdownSeveralNodes()
+        public async Task MustShutdownSeveralNodes()
         {
-            RemoveSeveral(Settings.NumberOfNodesShutdown, shutdown: true);
+            await RemoveSeveral(Settings.NumberOfNodesShutdown, shutdown: true);
             NbrUsedRoles -= Settings.NumberOfNodesShutdown;
-            EnterBarrier("after-" + Step);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustShutdownNodesOneByOneFromSmallCluster()
+        public async Task MustShutdownNodesOneByOneFromSmallCluster()
         {
-            RemoveOneByOne(Settings.NumberOfNodesShutdownOneByOneSmall, true);
-            EnterBarrier("after-" + Step);
+            await RemoveOneByOne(Settings.NumberOfNodesShutdownOneByOneSmall, true);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustLeaveNodesOneByOneFromSmallCluster()
+        public async Task MustLeaveNodesOneByOneFromSmallCluster()
         {
-            RemoveOneByOne(Settings.NumberOfNodesLeavingOneByOneSmall, false);
-            EnterBarrier("after-" + Step);
+            await RemoveOneByOne(Settings.NumberOfNodesLeavingOneByOneSmall, false);
+            await EnterBarrierAsync("after-" + Step);
         }
 
-        public void MustLogClrInfo()
+        public async Task MustLogClrInfo()
         {
             if (Settings.Infolog)
             {
                 Log.Info("StressSpec CLR: " + Environment.NewLine + "{0}", ClrInfo());
             }
-            EnterBarrier("after-" + Step);
+            await EnterBarrierAsync("after-" + Step);
         }
     }
 }
