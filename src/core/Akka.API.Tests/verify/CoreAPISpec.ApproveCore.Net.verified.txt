@@ -2551,6 +2551,10 @@ namespace Akka.Delivery
         public static Akka.Actor.Props Create<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(Akka.Actor.IActorRefFactory actorRefFactory, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 0,
                 1})] Akka.Util.Option<Akka.Actor.IActorRef> producerControllerReference, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Delivery.ConsumerController.Settings settings = null) { }
+        [Akka.Annotations.InternalApiAttribute()]
+        public static Akka.Actor.Props CreateWithFuzzing<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(Akka.Actor.IActorRefFactory actorRefFactory, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                0,
+                1})] Akka.Util.Option<Akka.Actor.IActorRef> producerControllerReference, System.Func<object, double> fuzzing, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Delivery.ConsumerController.Settings settings = null) { }
         public sealed class Confirmed
         {
             [System.Runtime.CompilerServices.NullableAttribute(1)]
@@ -2719,6 +2723,13 @@ namespace Akka.Delivery
     public class static ProducerController
     {
         public static Akka.Actor.Props Create<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(Akka.Actor.IActorRefFactory actorRefFactory, string producerId, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                0,
+                1})] Akka.Util.Option<Akka.Actor.Props> durableProducerQueue, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Delivery.ProducerController.Settings settings = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1,
+                1})] System.Action<Akka.Delivery.ConsumerController.SequencedMessage<T>> sendAdapter = null) { }
+        [Akka.Annotations.InternalApiAttribute()]
+        public static Akka.Actor.Props CreateWithFuzzing<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(Akka.Actor.IActorRefFactory actorRefFactory, string producerId, System.Func<object, double> fuzzing, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 0,
                 1})] Akka.Util.Option<Akka.Actor.Props> durableProducerQueue, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Delivery.ProducerController.Settings settings = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
                 2,

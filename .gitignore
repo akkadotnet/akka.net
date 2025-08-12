@@ -234,3 +234,6 @@ launchSettings.json
 .ionide/symbolCache.db
 *.mdc
 
+
+# Claude worktree management
+.claude-wt/worktrees

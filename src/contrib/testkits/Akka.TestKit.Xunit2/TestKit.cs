@@ -142,8 +142,12 @@ namespace Akka.TestKit.Xunit2
             {
                 var extSystem = (ExtendedActorSystem)system;
                 var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(Output)), "log-test");
-                logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TestKitSettings.TestKitStartupTimeout)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                // Start the logger initialization task but don't wait for it yet
+                var loggerTask = logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TestKitSettings.TestKitStartupTimeout);
+                
+                // By the time TestActor is ready (which happens in base constructor), 
+                // the logger is likely ready too. Now we can safely wait.
+                loggerTask.ConfigureAwait(false).GetAwaiter().GetResult();
             }
         }
 
@@ -154,8 +158,12 @@ namespace Akka.TestKit.Xunit2
                 var extSystem = (ExtendedActorSystem)system;
                 var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(
                     string.IsNullOrEmpty(prefix) ? Output : new PrefixedOutput(Output, prefix))), "log-test");
-                logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TestKitSettings.TestKitStartupTimeout)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                // Start the logger initialization task but don't wait for it yet
+                var loggerTask = logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TestKitSettings.TestKitStartupTimeout);
+                
+                // By the time TestActor is ready (which happens in base constructor), 
+                // the logger is likely ready too. Now we can safely wait.
+                loggerTask.ConfigureAwait(false).GetAwaiter().GetResult();
             }
         }
 
