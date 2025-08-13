@@ -205,7 +205,21 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public Task<Done> Disconnect(RoleName node, RoleName target)
         {
-            return Controller.Ask<Done>(new Disconnect(node, target, false), Settings.QueryTimeout);
+            return DisconnectAsync(node, target, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Tell the remote support to TCP_RESET the connection to the given remote
+        /// peer. It works regardless of whether the recipient was initiator or
+        /// responder.
+        /// </summary>
+        /// <param name="node">is the symbolic name of the node which is to be affected</param>
+        /// <param name="target">is the symbolic name of the other node to which connectivity shall be impeded</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns></returns>
+        public Task<Done> DisconnectAsync(RoleName node, RoleName target, CancellationToken cancellationToken = default)
+        {
+            return Controller.Ask<Done>(new Disconnect(node, target, false), Settings.QueryTimeout, cancellationToken);
         }
 
         /// <summary>
@@ -218,7 +232,21 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public Task<Done> Abort(RoleName node, RoleName target)
         {
-            return Controller.Ask<Done>(new Disconnect(node, target, true), Settings.QueryTimeout);
+            return AbortAsync(node, target, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Tell the remote support to TCP_RESET the connection to the given remote
+        /// peer. It works regardless of whether the recipient was initiator or
+        /// responder.
+        /// </summary>
+        /// <param name="node">is the symbolic name of the node which is to be affected</param>
+        /// <param name="target">is the symbolic name of the other node to which connectivity shall be impeded</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns></returns>
+        public Task<Done> AbortAsync(RoleName node, RoleName target, CancellationToken cancellationToken = default)
+        {
+            return Controller.Ask<Done>(new Disconnect(node, target, true), Settings.QueryTimeout, cancellationToken);
         }
 
         /// <summary>
@@ -268,7 +296,7 @@ namespace Akka.Remote.TestKit
         /// <param name="node">is the symbolic name of the node which is to be affected</param>
         /// <param name="abort">TBD</param>
         /// <exception cref="InvalidOperationException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <returns>Task indicating completion</returns>
         public Task<Done> Shutdown(RoleName node, bool abort = false)
         {
             // the recover is needed to handle ClientDisconnectedException exception,
@@ -281,6 +309,27 @@ namespace Akka.Remote.TestKit
 
                 throw new InvalidOperationException($"Expected Done but received {t.Result}");
             });
+        }
+
+        /// <summary>
+        /// Tell the actor system at the remote node to shut itself down without
+        /// awaiting termination of remote-deployed children. The node will also be
+        /// removed, so that the remaining nodes may still pass subsequent barriers.
+        /// </summary>
+        /// <param name="node">is the symbolic name of the node which is to be affected</param>
+        /// <param name="abort">TBD</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Task indicating completion</returns>
+        public async Task<Done> ShutdownAsync(RoleName node, bool abort = false, CancellationToken cancellationToken = default)
+        {
+            // the recover is needed to handle ClientDisconnectedException exception,
+            // which is normal during shutdown
+            var result = await Controller.Ask(new Terminate(node, new Left<bool, int>(abort)), Settings.QueryTimeout, cancellationToken);
+            return result switch
+            {
+                Done or FSMBase.Failure { Cause: TestKit.Controller.ClientDisconnectedException } => Done.Instance,
+                _ => throw new InvalidOperationException($"Expected Done but received {result}")
+            };
         }
 
         /// <summary>
