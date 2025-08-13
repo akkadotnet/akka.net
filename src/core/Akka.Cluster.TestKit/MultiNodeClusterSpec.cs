@@ -422,6 +422,11 @@ namespace Akka.Cluster.TestKit
             AwaitAssert(() => _assertions.AssertFalse(ClusterView.UnreachableMembers.Any()));
         }
 
+        public async Task AwaitAllReachableAsync()
+        {
+            await AwaitAssertAsync(() => _assertions.AssertFalse(ClusterView.UnreachableMembers.Any()));
+        }
+
         public void AwaitSeenSameState(params Address[] addresses)
         {
             AwaitAssert(() => _assertions.AssertFalse(addresses.ToImmutableHashSet().Except(ClusterView.SeenBy).Any()));
