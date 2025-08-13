@@ -267,7 +267,8 @@ namespace Akka.Cluster.TestKit
         {
             if (ClusterView.Members.IsEmpty)
             {
-                await Cluster.JoinAsync(GetAddress(Myself), cancellationToken);
+                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                Cluster.Join(GetAddress(Myself));
                 await AwaitAssertAsync(() => Assert.Contains(GetAddress(Myself), ClusterView.Members.Select(m => m.Address)), cancellationToken: cancellationToken);
             }
         }
