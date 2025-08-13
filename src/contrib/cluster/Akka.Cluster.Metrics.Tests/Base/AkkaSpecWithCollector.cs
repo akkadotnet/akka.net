@@ -66,6 +66,29 @@ namespace Akka.Cluster.Metrics.Tests.Base
             } while (!HasRequiredMetrics(metrics.Metrics, requiredMetrics));
             return metrics;
         }
+        
+        protected async Task<NodeMetrics> CreateTestDataAsync(TimeSpan timeout, string[] requiredMetrics)
+        {
+            using var cts = new CancellationTokenSource(timeout);
+            NodeMetrics metrics;
+            
+            do
+            {
+                cts.Token.ThrowIfCancellationRequested();
+                metrics = Collector.Sample();
+                
+                if (HasRequiredMetrics(metrics.Metrics, requiredMetrics))
+                {
+                    return metrics;
+                }
+                
+                // Small delay between attempts to avoid tight loop
+                await Task.Delay(100, cts.Token);
+                
+            } while (!cts.Token.IsCancellationRequested);
+            
+            throw new OperationCanceledException($"Could not collect required metrics {string.Join(", ", requiredMetrics)} within {timeout}");
+        }
 
         private static bool HasRequiredMetrics(ImmutableHashSet<NodeMetrics.Types.Metric> metrics, string[] requiredMetrics)
         {

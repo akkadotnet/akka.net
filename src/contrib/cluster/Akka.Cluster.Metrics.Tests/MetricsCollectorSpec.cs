@@ -47,12 +47,12 @@ namespace Akka.Cluster.Metrics.Tests
         }
 
         [Fact]
-        public void MetricsCollector_should_collector_accurate_metrics_for_node()
+        public async Task MetricsCollector_should_collector_accurate_metrics_for_node()
         {
             NodeMetrics sample;
             try
             {
-                sample = CreateTestData(10.Seconds(), [
+                sample = await CreateTestDataAsync(30.Seconds(), [
                     StandardMetrics.MemoryAvailable,
                     StandardMetrics.MemoryUsed
                 ]);
