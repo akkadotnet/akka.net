@@ -253,7 +253,11 @@ namespace Akka.Cluster.TestKit
         /// </summary>
         public void StartClusterNode()
         {
-            StartClusterNodeAsync(CancellationToken.None).GetAwaiter().GetResult();
+            if (ClusterView.Members.IsEmpty)
+            {
+                Cluster.Join(GetAddress(Myself));
+                AwaitAssert(() => Assert.Contains(GetAddress(Myself), ClusterView.Members.Select(m => m.Address)));
+            }
         }
 
         /// <summary>
@@ -276,7 +280,17 @@ namespace Akka.Cluster.TestKit
         /// </summary>
         public void AwaitClusterUp(params RoleName[] roles)
         {
-            AwaitClusterUpAsync(CancellationToken.None,  roles).GetAwaiter().GetResult();
+            // make sure that the node-to-join is started before other join
+            RunOn(StartClusterNode, roles.First());
+
+            EnterBarrier(roles.First().Name + "-started");
+            if (roles.Skip(1).Contains(Myself)) Cluster.Join(GetAddress(roles.First()));
+
+            if (roles.Contains(Myself))
+            {
+                AwaitMembersUp(roles.Length);
+            }
+            EnterBarrier(roles.Select(r => r.Name).Aggregate((a, b) => a + "-" + b) + "-joined");
         }
 
         /// <summary>
@@ -382,7 +396,24 @@ namespace Akka.Cluster.TestKit
             ImmutableHashSet<Address> canNotBePartOfMemberRing = null,
             TimeSpan? timeout = null)
         {
-            AwaitMembersUpAsync(numbersOfMembers, canNotBePartOfMemberRing, timeout).GetAwaiter().GetResult();
+            if (canNotBePartOfMemberRing == null)
+                canNotBePartOfMemberRing = ImmutableHashSet.Create<Address>();
+            if (timeout == null) timeout = TimeSpan.FromSeconds(25);
+            Within(timeout.Value, () =>
+            {
+                if (canNotBePartOfMemberRing.Any()) // don't run this on an empty set
+                    AwaitAssert(() =>
+                    {
+                        foreach (var a in canNotBePartOfMemberRing)
+                            _assertions.AssertFalse(ClusterView.Members.Select(m => m.Address).Contains(a));
+                    });
+                AwaitAssert(() => _assertions.AssertEqual(numbersOfMembers, ClusterView.Members.Count));
+                AwaitAssert(() => _assertions.AssertTrue(ClusterView.Members.All(m => m.Status == MemberStatus.Up), "All members should be up"));
+                // clusterView.leader is updated by LeaderChanged, await that to be updated also
+                var firstMember = ClusterView.Members.FirstOrDefault();
+                var expectedLeader = firstMember == null ? null : firstMember.Address;
+                AwaitAssert(() => _assertions.AssertEqual(expectedLeader, ClusterView.Leader));
+            });
         }
 
         public async Task AwaitMembersUpAsync(
