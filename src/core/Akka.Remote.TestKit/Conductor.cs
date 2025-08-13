@@ -302,7 +302,7 @@ namespace Akka.Remote.TestKit
         {
             try
             {
-                var result = await Controller.Ask(new Terminate(node, new Right<bool, int>(exitValue)), Settings.QueryTimeout, cancellationToken).ConfigureAwait(false);
+                var result = await Controller.Ask(new Terminate(node, new Right<bool, int>(exitValue)), Settings.QueryTimeout, cancellationToken);
                 if (result is Done) return Done.Instance;
                 if (result is FSMBase.Failure failure && failure.Cause is Controller.ClientDisconnectedException) 
                     return Done.Instance;
@@ -325,16 +325,8 @@ namespace Akka.Remote.TestKit
         /// <returns>Task indicating completion</returns>
         public Task<Done> Shutdown(RoleName node, bool abort = false)
         {
-            // the recover is needed to handle ClientDisconnectedException exception,
-            // which is normal during shutdown
-            return Controller.Ask(new Terminate(node, new Left<bool, int>(abort)), Settings.QueryTimeout).ContinueWith(t =>
-            {
-                if (t.Result is Done) return Done.Instance;
-                var failure = t.Result as FSMBase.Failure;
-                if (failure != null && failure.Cause is Controller.ClientDisconnectedException) return Done.Instance;
-
-                throw new InvalidOperationException($"Expected Done but received {t.Result}");
-            });
+            // Use the async version with no cancellation token for consistency
+            return ShutdownAsync(node, abort, CancellationToken.None);
         }
 
         /// <summary>
@@ -363,6 +355,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public Task<IEnumerable<RoleName>> GetNodes()
         {
+            // Use the async version with no cancellation token for consistency
             return GetNodesAsync(CancellationToken.None);
         }
 
@@ -385,6 +378,7 @@ namespace Akka.Remote.TestKit
         /// <returns></returns>
         public Task<Done> RemoveNode(RoleName node)
         {
+            // Use the async version with no cancellation token for consistency
             return RemoveNodeAsync(node, CancellationToken.None);
         }
 

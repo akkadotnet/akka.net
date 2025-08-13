@@ -54,6 +54,7 @@ partial class TestConductor //Player trait in JVM version
     /// </summary>
     public Task<Done> StartClient(RoleName name, IPEndPoint controllerAddr)
     {
+        // Use the async version with no cancellation token for consistency
         return StartClientAsync(name, controllerAddr, CancellationToken.None);
     }
 
@@ -65,7 +66,7 @@ partial class TestConductor //Player trait in JVM version
     /// this is a first barrier in itself). The number of expected participants is
     /// set in <see cref="TestConductor"/>`.startController()`.
     /// </summary>
-    public async Task<Done> StartClientAsync(RoleName name, IPEndPoint controllerAddr, CancellationToken cancellationToken = default)
+    public Task<Done> StartClientAsync(RoleName name, IPEndPoint controllerAddr, CancellationToken cancellationToken = default)
     {
         if(_client != null) 
             throw new IllegalStateException("TestConductorClient already started");
@@ -73,7 +74,7 @@ partial class TestConductor //Player trait in JVM version
         _client = _system.ActorOf(Props.Create(() => new ClientFSM(name, controllerAddr)), "TestConductorClient");
             
         var a = _system.ActorOf(Props.Create<WaitForClientFSMToConnect>());
-        return await a.Ask<Done>(_client, cancellationToken);
+        return a.Ask<Done>(_client, cancellationToken);
     }
 
     private class WaitForClientFSMToConnect : UntypedActor
