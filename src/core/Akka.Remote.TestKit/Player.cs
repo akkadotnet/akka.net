@@ -54,13 +54,26 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public Task<Done> StartClient(RoleName name, IPEndPoint controllerAddr)
         {
-            if(_client != null) throw new IllegalStateException("TestConductorClient already started");
-                _client =
-                _system.ActorOf(Props.Create(() => new ClientFSM(name, controllerAddr)), "TestConductorClient");
-                
-            var a = _system.ActorOf(Props.Create<WaitForClientFSMToConnect>());
+            return StartClientAsync(name, controllerAddr, CancellationToken.None);
+        }
 
-            return a.Ask<Done>(_client);
+        /// <summary>
+        /// Connect to the conductor on the given port (the host is taken from setting
+        /// `akka.testconductor.host`). The connection is made asynchronously, but you
+        /// should await completion of the returned Future because that implies that
+        /// all expected participants of this test have successfully connected (i.e.
+        /// this is a first barrier in itself). The number of expected participants is
+        /// set in <see cref="TestConductor"/>`.startController()`.
+        /// </summary>
+        public async Task<Done> StartClientAsync(RoleName name, IPEndPoint controllerAddr, CancellationToken cancellationToken = default)
+        {
+            if(_client != null) 
+                throw new IllegalStateException("TestConductorClient already started");
+            
+            _client = _system.ActorOf(Props.Create(() => new ClientFSM(name, controllerAddr)), "TestConductorClient");
+            
+            var a = _system.ActorOf(Props.Create<WaitForClientFSMToConnect>());
+            return await a.Ask<Done>(_client, cancellationToken);
         }
 
         private class WaitForClientFSMToConnect : UntypedActor

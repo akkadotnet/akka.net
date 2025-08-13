@@ -62,14 +62,40 @@ namespace Akka.Remote.TestKit
         /// <param name="name"></param>
         /// <param name="controllerPort"></param>
         /// <returns></returns>
-        public async Task<IPEndPoint> StartController(int participants, RoleName name, IPEndPoint controllerPort)
+        public Task<IPEndPoint> StartController(int participants, RoleName name, IPEndPoint controllerPort)
+        {
+            return StartControllerAsync(participants, name, controllerPort, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Start the <see cref="Controller"/>, which in turn will
+        /// bind to a TCP port as specified in the `akka.testconductor.port` config
+        /// property, where 0 denotes automatic allocation. Since the latter is
+        /// actually preferred, a `Future[Int]` is returned which will be completed
+        /// with the port number actually chosen, so that this can then be communicated
+        /// to the players for their proper start-up.
+        /// 
+        /// This method also invokes Player.startClient,
+        /// since it is expected that the conductor participates in barriers for
+        /// overall coordination. The returned Future will only be completed once the
+        /// client’s start-up finishes, which in fact waits for all other players to
+        /// connect.
+        /// </summary>
+        /// <param name="participants">participants gives the number of participants which shall connect
+        ///  before any of their startClient() operations complete
+        /// </param>
+        /// <param name="name"></param>
+        /// <param name="controllerPort"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async Task<IPEndPoint> StartControllerAsync(int participants, RoleName name, IPEndPoint controllerPort, CancellationToken cancellationToken = default)
         {
             if(_controller != null) throw new IllegalStateException("TestConductorServer was already started");
             _controller = _system.ActorOf(Props.Create(() => new Controller(participants, controllerPort)),
-               "controller");
+                "controller");
 
-            var node = await _controller.Ask<IPEndPoint>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout).ConfigureAwait(false);
-            await StartClient(name, node).ConfigureAwait(false);
+            var node = await _controller.Ask<IPEndPoint>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout, cancellationToken);
+            await StartClient(name, node);
             return node;
         }
 
