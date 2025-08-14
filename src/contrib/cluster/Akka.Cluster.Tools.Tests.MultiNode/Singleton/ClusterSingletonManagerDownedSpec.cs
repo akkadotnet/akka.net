@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Singleton;
@@ -17,21 +18,21 @@ using Akka.Remote.Transport;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 
-namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
+namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton;
+
+public class ClusterSingletonManagerDownedSpecConfig : MultiNodeConfig
 {
-    public class ClusterSingletonManagerDownedSpecConfig : MultiNodeConfig
+    public RoleName First { get; }
+    public RoleName Second { get; }
+    public RoleName Third { get; }
+
+    public ClusterSingletonManagerDownedSpecConfig()
     {
-        public RoleName First { get; }
-        public RoleName Second { get; }
-        public RoleName Third { get; }
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
 
-        public ClusterSingletonManagerDownedSpecConfig()
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
-
-            CommonConfig = ConfigurationFactory.ParseString(@"
+        CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
@@ -40,142 +41,153 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSingletonProxy.DefaultConfig())
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());
-        }
+            
+        TestTransport = true;
+    }
 
-        internal class EchoStarted
+    internal class EchoStarted
+    {
+        public static readonly EchoStarted Instance = new();
+        private EchoStarted()
         {
-            public static readonly EchoStarted Instance = new();
-            private EchoStarted()
-            {
-            }
-        }
-
-        internal class EchoStopped
-        {
-            public static readonly EchoStopped Instance = new();
-            private EchoStopped()
-            {
-            }
-        }
-
-        /// <summary>
-        /// The singleton actor
-        /// </summary>
-        internal class Echo : UntypedActor
-        {
-            private readonly IActorRef _testActorRef;
-
-            public Echo(IActorRef testActorRef)
-            {
-                _testActorRef = testActorRef;
-                _testActorRef.Tell(EchoStarted.Instance);
-            }
-
-            protected override void PostStop()
-            {
-                _testActorRef.Tell(EchoStopped.Instance);
-            }
-
-            public static Props Props(IActorRef testActorRef)
-                => Actor.Props.Create(() => new Echo(testActorRef));
-
-            protected override void OnReceive(object message)
-            {
-                Sender.Tell(message);
-            }
         }
     }
 
-    public class ClusterSingletonManagerDownedSpec : MultiNodeClusterSpec
+    internal class EchoStopped
     {
-        private readonly ClusterSingletonManagerDownedSpecConfig _config;
-        private readonly Lazy<IActorRef> _echoProxy;
-
-        protected override int InitialParticipantsValueFactory => Roles.Count;
-
-        public ClusterSingletonManagerDownedSpec() : this(new ClusterSingletonManagerDownedSpecConfig())
+        public static readonly EchoStopped Instance = new();
+        private EchoStopped()
         {
         }
+    }
 
-        protected ClusterSingletonManagerDownedSpec(ClusterSingletonManagerDownedSpecConfig config) : base(config, typeof(ClusterSingletonManagerDownedSpec))
+    /// <summary>
+    /// The singleton actor
+    /// </summary>
+    internal class Echo : UntypedActor
+    {
+        private readonly IActorRef _testActorRef;
+
+        public Echo(IActorRef testActorRef)
         {
-            _config = config;
+            _testActorRef = testActorRef;
+            _testActorRef.Tell(EchoStarted.Instance);
+        }
 
-            _echoProxy = new Lazy<IActorRef>(() => Watch(Sys.ActorOf(ClusterSingletonProxy.Props(
+        protected override void PostStop()
+        {
+            _testActorRef.Tell(EchoStopped.Instance);
+        }
+
+        public static Props Props(IActorRef testActorRef)
+            => Actor.Props.Create(() => new Echo(testActorRef));
+
+        protected override void OnReceive(object message)
+        {
+            Sender.Tell(message);
+        }
+    }
+}
+
+public class ClusterSingletonManagerDownedSpec : MultiNodeClusterSpec
+{
+    private readonly ClusterSingletonManagerDownedSpecConfig _config;
+    private readonly Lazy<IActorRef> _echoProxy;
+
+    protected override int InitialParticipantsValueFactory => Roles.Count;
+
+    public ClusterSingletonManagerDownedSpec() : this(new ClusterSingletonManagerDownedSpecConfig())
+    {
+    }
+
+    protected ClusterSingletonManagerDownedSpec(ClusterSingletonManagerDownedSpecConfig config) : base(config, typeof(ClusterSingletonManagerDownedSpec))
+    {
+        _config = config;
+
+        _echoProxy = new Lazy<IActorRef>(() => Watch(Sys.ActorOf(ClusterSingletonProxy.Props(
                 singletonManagerPath: "/user/echo",
                 settings: ClusterSingletonProxySettings.Create(Sys)),
-                name: "echoProxy")));
-        }
+            name: "echoProxy")));
+    }
 
-        private void Join(RoleName from, RoleName to)
+    private async Task Join(RoleName from, RoleName to)
+    {
+        RunOn(() =>
         {
-            RunOn(() =>
-            {
-                Cluster.Join(Node(to).Address);
-                CreateSingleton();
-            }, from);
-        }
+            Cluster.Join(Node(to).Address);
+            CreateSingleton();
+        }, from);
+        await EnterBarrierAsync(from.Name + "-joined");
+    }
 
-        private IActorRef CreateSingleton()
-        {
-            return Sys.ActorOf(ClusterSingletonManager.Props(
+    private IActorRef CreateSingleton()
+    {
+        return Sys.ActorOf(ClusterSingletonManager.Props(
                 singletonProps: ClusterSingletonManagerDownedSpecConfig.Echo.Props(TestActor),
                 terminationMessage: PoisonPill.Instance,
                 settings: ClusterSingletonManagerSettings.Create(Sys)),
-                name: "echo");
-        }
+            name: "echo");
+    }
 
-        [MultiNodeFact]
-        public void ClusterSingletonManagerDownedSpecs()
+    [MultiNodeFact]
+    public async Task ClusterSingletonManagerDownedSpecs()
+    {
+        await ClusterSingletonManager_downing_must_startup_3_node();
+        await ClusterSingletonManager_downing_must_stop_instance_when_member_is_downed();
+    }
+
+    private async Task ClusterSingletonManager_downing_must_startup_3_node()
+    {
+        await Join(_config.First, _config.First);
+        await Join(_config.Second, _config.First);
+        await Join(_config.Third, _config.First);
+
+        await WithinAsync(15.Seconds(), async () =>
         {
-            ClusterSingletonManager_downing_must_startup_3_node();
-        }
-
-        private void ClusterSingletonManager_downing_must_startup_3_node()
-        {
-            Join(_config.First, _config.First);
-            Join(_config.Second, _config.First);
-            Join(_config.Third, _config.First);
-
-            Within(15.Seconds(), () =>
+            await AwaitAssertAsync(() => 
             {
-                AwaitAssert(() => Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(3));
+                Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(3);
+                return Task.CompletedTask;
             });
+        });
 
-            RunOn(() =>
-            {
-                ExpectMsg(ClusterSingletonManagerDownedSpecConfig.EchoStarted.Instance);
-            }, _config.First);
-
-            EnterBarrier("started");
-        }
-
-        private void ClusterSingletonManager_downing_must_stop_instance_when_member_is_downed()
+        RunOn(() =>
         {
-            RunOn(() =>
-            {
-                TestConductor.Blackhole(_config.First, _config.Third, ThrottleTransportAdapter.Direction.Both).Wait();
-                TestConductor.Blackhole(_config.Second, _config.Third, ThrottleTransportAdapter.Direction.Both).Wait();
+            ExpectMsg(ClusterSingletonManagerDownedSpecConfig.EchoStarted.Instance);
+        }, _config.First);
 
-                Within(15.Seconds(), () =>
+        await EnterBarrierAsync("started");
+    }
+
+    private async Task ClusterSingletonManager_downing_must_stop_instance_when_member_is_downed()
+    {
+        await RunOnAsync(async () =>
+        {
+            await TestConductor.BlackholeAsync(_config.First, _config.Third, ThrottleTransportAdapter.Direction.Both);
+            await TestConductor.BlackholeAsync(_config.Second, _config.Third, ThrottleTransportAdapter.Direction.Both);
+
+            await WithinAsync(15.Seconds(), async () =>
+            {
+                await AwaitAssertAsync(() => 
                 {
-                    AwaitAssert(() => Cluster.State.Unreachable.Count.Should().Be(1));
+                    Cluster.State.Unreachable.Count.Should().Be(1);
+                    return Task.CompletedTask;
                 });
-            }, _config.First);
+            });
+        }, _config.First);
 
-            EnterBarrier("blackhole-1");
+        await EnterBarrierAsync("blackhole-1");
 
-            RunOn(() =>
-            {
-                // another blackhole so that second can't mark gossip as seen and thereby deferring shutdown of first
-                TestConductor.Blackhole(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
-                Cluster.Down(Node(_config.Second).Address);
-                Cluster.Down(Cluster.SelfAddress);
-                // singleton instance stopped, before failure detection of first-second
-                ExpectMsg<ClusterSingletonManagerDownedSpecConfig.EchoStopped>(TimeSpan.FromSeconds(3));
-            }, _config.First);
+        await RunOnAsync(async () =>
+        {
+            // another blackhole so that second can't mark gossip as seen and thereby deferring shutdown of first
+            await TestConductor.BlackholeAsync(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
+            Cluster.Down((await NodeAsync(_config.Second)).Address);
+            Cluster.Down(Cluster.SelfAddress);
+            // singleton instance stopped, before failure detection of first-second
+            await ExpectMsgAsync<ClusterSingletonManagerDownedSpecConfig.EchoStopped>(TimeSpan.FromSeconds(3));
+        }, _config.First);
 
-            EnterBarrier("stopped");
-        }
+        await EnterBarrierAsync("stopped");
     }
 }
