@@ -18,8 +18,6 @@ using Akka.IO.Buffers;
 
 namespace Akka.IO
 {
-    using ByteBuffer = ArraySegment<byte>;
-
     /// <summary>
     /// UDP Extension for Akka's IO layer.
     ///

@@ -17,8 +17,6 @@ using System.Threading.Tasks;
 namespace Akka.IO
 {
     // TODO: Move to Akka.Util namespace - this will require changes as name clashes with ProtoBuf class
-    using ByteBuffer = ArraySegment<byte>;
-
     /// <summary>
     /// A rope-like immutable data structure containing bytes.
     /// The goal of this structure is to reduce copying of arrays
@@ -173,7 +171,7 @@ namespace Akka.IO
         /// </summary>
         /// <param name="buffer">TBD</param>
         /// <returns>TBD</returns>
-        public static ByteString FromBytes(ArraySegment<byte> buffer) =>
+        public static ByteString FromBytes(ByteBuffer buffer) =>
             FromBytes(buffer.Array, buffer.Offset, buffer.Count);
 
         /// <summary>
