@@ -1,3 +1,7 @@
+#### 1.5.48 August 14th, 2025 ####
+
+**Placeholder for nightly build**
+
 #### 1.5.47 August 12th, 2025 ####
 
 Akka.NET v1.5.47 is a minor patch containing several stability improvements to Akka.TestKit.
