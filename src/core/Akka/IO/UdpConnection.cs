@@ -17,7 +17,6 @@ using Akka.Event;
 namespace Akka.IO
 {
     using static UdpConnected;
-    using ByteBuffer = ArraySegment<byte>;
 
     internal class UdpConnection : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
