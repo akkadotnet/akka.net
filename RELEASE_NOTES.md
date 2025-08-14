@@ -1,6 +1,6 @@
 #### 1.5.47 August 12th, 2025 ####
 
-Akka.NET v1.5.46 is a minor patch containing several stability improvements to Akka.TestKit.
+Akka.NET v1.5.47 is a minor patch containing several stability improvements to Akka.TestKit.
 
 * [TestKit: Replace Thread.Sleep with SpinWait](https://github.com/akkadotnet/akka.net/pull/7745)
 * [TestKit: Fix excessive AggregateException nesting when cancelling ExpectMessageAsync](https://github.com/akkadotnet/akka.net/pull/7747)
