@@ -12,7 +12,6 @@ using Akka.Event;
 namespace Akka.IO
 {
     using static Tcp;
-    using ByteBuffer = ArraySegment<byte>;
 
     /// <summary>
     /// INTERNAL API
