@@ -122,7 +122,7 @@ using System.Threading.Tasks;
 - [x] SplitBrainResolverDowningSpec
 - [x] SplitBrainSpec
 - [x] SurviveNetworkInstabilitySpec
-- [x] UnreachableNodeJoinsAgainSpec
+- [ ] UnreachableNodeJoinsAgainSpec *(Not migrated - victim node shutdown pattern incompatible with async)*
 
 ### Core Tests - Akka.Cluster.Tests.MultiNode/Routing
 - [ ] ClusterRoundRobinSpec

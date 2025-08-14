@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -73,52 +72,52 @@ namespace Akka.Cluster.Tests.MultiNode
             return roles.Where(x => !x.Equals(roleName));
         }
 
-        protected async Task EndBarrier()
+        protected void EndBarrier()
         {
             _endBarrierNumber += 1;
-            await EnterBarrierAsync("after_" + _endBarrierNumber);
+            EnterBarrier("after_" + _endBarrierNumber);
         }
 
         [MultiNodeFact]
-        public async Task AClusterOf4MembersMust()
+        public void AClusterOf4MembersMust()
         {
-            await ReachInitialConvergence();
-            await MarkNodeAsUNREACHABLEWhenWePullTheNetwork();
-            await MarkTheNodeAsDOWN();
-            await AllowFreshNodeWithSameHostAndPortToJoinAgainWhenTheNetworkIsPluggedBackIn();
+            ReachInitialConvergence();
+            MarkNodeAsUNREACHABLEWhenWePullTheNetwork();
+            MarkTheNodeAsDOWN();
+            AllowFreshNodeWithSameHostAndPortToJoinAgainWhenTheNetworkIsPluggedBackIn();
         }
 
-        public async Task ReachInitialConvergence()
+        public void ReachInitialConvergence()
         {
             AwaitClusterUp(roles: Roles.ToArray());
-            await EndBarrier();
+            EndBarrier();
         }
 
         // ReSharper disable once InconsistentNaming
-        public async Task MarkNodeAsUNREACHABLEWhenWePullTheNetwork()
+        public void MarkNodeAsUNREACHABLEWhenWePullTheNetwork()
         {
             // let them send at least one heartbeat to each other after the gossip convergence
             // because for new joining nodes we remove them from the failure detector when
             // receive gossip
             Thread.Sleep(Dilated(TimeSpan.FromSeconds(2)));
 
-            await RunOnAsync(async () =>
+            RunOn(() =>
             {
                 // pull network for victim node from all nodes
-                foreach (var role in AllBut(_victim.Value))
+                AllBut(_victim.Value).ForEach(role =>
                 {
-                    await TestConductor.BlackholeAsync(_victim.Value, role, ThrottleTransportAdapter.Direction.Both);
-                }
+                    TestConductor.Blackhole(_victim.Value, role, ThrottleTransportAdapter.Direction.Both).Wait();
+                });
             }, _config.First);
 
-            await EnterBarrierAsync("unplug_victim");
+            EnterBarrier("unplug_victim");
 
             var allButVictim = AllBut(_victim.Value).ToArray();
-            await RunOnAsync(async () =>
+            RunOn(() =>
             {
                 var victimAddress = GetAddress(_victim.Value);
                 allButVictim.ForEach(name => MarkNodeAsUnavailable(GetAddress(name)));
-                await WithinAsync(TimeSpan.FromSeconds(30), () =>
+                Within(TimeSpan.FromSeconds(30), () =>
                 {
                     // victim becomes all alone
                     AwaitAssert(() =>
@@ -128,14 +127,13 @@ namespace Akka.Cluster.Tests.MultiNode
                     });
                     var addresses = allButVictim.Select(GetAddress).ToList();
                     Assert.True(ClusterView.UnreachableMembers.Select(x => x.Address).All(y => addresses.Contains(y)));
-                    return Task.CompletedTask;
                 });
             }, _victim.Value);
 
-            await RunOnAsync(async () =>
+            RunOn(() =>
             {
                 MarkNodeAsUnavailable(GetAddress(_victim.Value));
-                await WithinAsync(TimeSpan.FromSeconds(30), () =>
+                Within(TimeSpan.FromSeconds(30), () =>
                 {
                     // victim becomes unreachable
                     AwaitAssert(() =>
@@ -149,15 +147,14 @@ namespace Akka.Cluster.Tests.MultiNode
                     Assert.Single(ClusterView.UnreachableMembers);
                     Assert.Equal(Node(_victim.Value).Address, ClusterView.UnreachableMembers.First().Address);
                     Assert.Equal(MemberStatus.Up, ClusterView.UnreachableMembers.First().Status);
-                    return Task.CompletedTask;
                 });
             }, allButVictim);
 
-            await EndBarrier();
+            EndBarrier();
         }
 
         // ReSharper disable once InconsistentNaming
-        public async Task MarkTheNodeAsDOWN()
+        public void MarkTheNodeAsDOWN()
         {
             RunOn(() =>
             {
@@ -174,38 +171,37 @@ namespace Akka.Cluster.Tests.MultiNode
                 AwaitAssert(() => Assert.True(ClusterView.Members.Select(x => x.Address).All(y => addresses.Contains(y))));
             }, allButVictim);
 
-            await EndBarrier();
+            EndBarrier();
         }
 
-        public async Task AllowFreshNodeWithSameHostAndPortToJoinAgainWhenTheNetworkIsPluggedBackIn()
+        public void AllowFreshNodeWithSameHostAndPortToJoinAgainWhenTheNetworkIsPluggedBackIn()
         {
             var expectedNumberOfMembers = Roles.Count;
 
             // victim actor system will be shutdown, not part of TestConductor any more
             // so we can't use barriers to synchronize with it
             var masterAddress = GetAddress(_master.Value);
-            await RunOnAsync(() =>
+            RunOn(() =>
             {
                 Sys.ActorOf(Props.Create(() => new EndActor(TestActor, null)), "end");
-                return Task.CompletedTask;
             }, _master.Value);
-            await EnterBarrierAsync("end-actor-created");
+            EnterBarrier("end-actor-created");
 
-            await RunOnAsync(async () =>
+            RunOn(() =>
             {
                 // put the network back in
-                foreach (var role in AllBut(_victim.Value))
+                AllBut(_victim.Value).ForEach(role =>
                 {
-                    await TestConductor.PassThroughAsync(_victim.Value, role, ThrottleTransportAdapter.Direction.Both);
-                }
+                    TestConductor.PassThrough(_victim.Value, role, ThrottleTransportAdapter.Direction.Both).Wait();
+                });
             }, _config.First);
 
-            await EnterBarrierAsync("plug_in_victim");
+            EnterBarrier("plug_in_victim");
 
-            await RunOnAsync(async () =>
+            RunOn(() =>
             {
                 // will shutdown ActorSystem of victim
-                await TestConductor.ShutdownAsync(_victim.Value);
+                TestConductor.Shutdown(_victim.Value);
             }, _config.First);
 
             RunOn(() =>
