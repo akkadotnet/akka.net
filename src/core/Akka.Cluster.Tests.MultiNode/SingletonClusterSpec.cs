@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Immutable;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -63,15 +64,15 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void SingletonClusterSpecs()
+        public async Task SingletonClusterSpecs()
         {
-            Cluster_of_2_nodes_must_become_singleton_cluster_when_started_with_seednodes();
-            Cluster_of_2_nodes_must_not_be_singleton_cluster_when_joined_with_other_node();
-            Cluster_of_2_nodes_must_become_singleton_cluster_when_one_node_is_shutdown();
-            Cluster_of_2_nodes_must_leave_and_shutdown_itself_when_singleton_cluster();
+            await Cluster_of_2_nodes_must_become_singleton_cluster_when_started_with_seednodes();
+            await Cluster_of_2_nodes_must_not_be_singleton_cluster_when_joined_with_other_node();
+            await Cluster_of_2_nodes_must_become_singleton_cluster_when_one_node_is_shutdown();
+            await Cluster_of_2_nodes_must_leave_and_shutdown_itself_when_singleton_cluster();
         }
 
-        public void Cluster_of_2_nodes_must_become_singleton_cluster_when_started_with_seednodes()
+        public async Task Cluster_of_2_nodes_must_become_singleton_cluster_when_started_with_seednodes()
         {
             RunOn(() =>
             {
@@ -81,24 +82,24 @@ namespace Akka.Cluster.Tests.MultiNode
                 ClusterView.IsSingletonCluster.ShouldBeTrue();
             }, _config.First);
 
-            EnterBarrier("after-1");
+            await EnterBarrierAsync("after-1");
         }
 
-        public void Cluster_of_2_nodes_must_not_be_singleton_cluster_when_joined_with_other_node()
+        public async Task Cluster_of_2_nodes_must_not_be_singleton_cluster_when_joined_with_other_node()
         {
             AwaitClusterUp(_config.First, _config.Second);
             ClusterView.IsSingletonCluster.ShouldBeFalse();
             AssertLeader(_config.First, _config.Second);
 
-            EnterBarrier("after-2");
+            await EnterBarrierAsync("after-2");
         }
 
-        public void Cluster_of_2_nodes_must_become_singleton_cluster_when_one_node_is_shutdown()
+        public async Task Cluster_of_2_nodes_must_become_singleton_cluster_when_one_node_is_shutdown()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var secondAddress = GetAddress(_config.Second);
-                TestConductor.Exit(_config.Second, 0).Wait();
+                await TestConductor.ExitAsync(_config.Second, 0);
 
                 MarkNodeAsUnavailable(secondAddress);
 
@@ -107,18 +108,19 @@ namespace Akka.Cluster.Tests.MultiNode
                 AwaitCondition(() => ClusterView.IsLeader);
             }, _config.First);
 
-            EnterBarrier("after-3");
+            await EnterBarrierAsync("after-3");
         }
 
-        public void Cluster_of_2_nodes_must_leave_and_shutdown_itself_when_singleton_cluster()
+        public async Task Cluster_of_2_nodes_must_leave_and_shutdown_itself_when_singleton_cluster()
         {
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 Cluster.Leave(GetAddress(_config.First));
                 AwaitCondition(() => Cluster.IsTerminated, TimeSpan.FromSeconds(5));
+                return Task.CompletedTask;
             }, _config.First);
 
-            EnterBarrier("after-4");
+            await EnterBarrierAsync("after-4");
         }
     }
 }

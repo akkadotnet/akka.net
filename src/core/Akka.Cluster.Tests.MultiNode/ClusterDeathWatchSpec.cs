@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -90,24 +91,24 @@ namespace Akka.Cluster.Tests.MultiNode
 
 
         [MultiNodeFact]
-        public void ClusterDeathWatchSpecTests()
+        public async Task ClusterDeathWatchSpecTests()
         {
-            An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed();
+            await An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed();
             //AnActorWatchingARemoteActorInTheClusterMustReceiveTerminatedWhenWatchedPathDoesNotExist();
-            An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_watch_actor_before_node_joins_cluster_and_cluster_remote_watcher_takes_over_from_remote_watcher();
-            An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_shutdown_system_when_using_remote_deployed_actor_on_node_that_crashed();
+            await An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_watch_actor_before_node_joins_cluster_and_cluster_remote_watcher_takes_over_from_remote_watcher();
+            await An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_shutdown_system_when_using_remote_deployed_actor_on_node_that_crashed();
         }
 
-        public void An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed()
+        public async Task An_actor_watching_a_remote_actor_in_the_cluster_must_receive_terminated_when_watched_node_becomes_down_removed()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
             {
                 AwaitClusterUp(_config.First, _config.Second, _config.Third, _config.Fourth);
-                EnterBarrier("cluster-up");
+                await EnterBarrierAsync("cluster-up");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
-                    EnterBarrier("subjected-started");
+                    await EnterBarrierAsync("subjected-started");
 
                     var path2 = new RootActorPath(GetAddress(_config.Second)) / "user" / "subject";
                     var path3 = new RootActorPath(GetAddress(_config.Third)) / "user" / "subject";
@@ -116,10 +117,10 @@ namespace Akka.Cluster.Tests.MultiNode
                         .WithDeploy(Deploy.Local), "observer1");
 
                     watchEstablished.Ready();
-                    EnterBarrier("watch-established");
+                    await EnterBarrierAsync("watch-established");
                     ExpectMsg(path2);
                     ExpectNoMsg(TimeSpan.FromSeconds(2));
-                    EnterBarrier("second-terminated");
+                    await EnterBarrierAsync("second-terminated");
                     MarkNodeAsUnavailable(GetAddress(_config.Third));
                     AwaitAssert(() => Assert.Contains(GetAddress(_config.Third), ClusterView.UnreachableMembers.Select(x => x.Address)));
                     Cluster.Down(GetAddress(_config.Third));
@@ -127,15 +128,15 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Third), ClusterView.Members.Select(x => x.Address)));
                     AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Third), ClusterView.UnreachableMembers.Select(x => x.Address)));
                     ExpectMsg(path3);
-                    EnterBarrier("third-terminated");
+                    await EnterBarrierAsync("third-terminated");
                 }, _config.First);
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     Sys.ActorOf(BlackHoleActor.Props, "subject");
-                    EnterBarrier("subjected-started");
-                    EnterBarrier("watch-established");
-                    RunOn(() =>
+                    await EnterBarrierAsync("subjected-started");
+                    await EnterBarrierAsync("watch-established");
+                    await RunOnAsync(() =>
                     {
                         MarkNodeAsUnavailable(GetAddress(_config.Second));
                         AwaitAssert(() => Assert.Contains(GetAddress(_config.Second), ClusterView.UnreachableMembers.Select(x => x.Address)));
@@ -143,20 +144,21 @@ namespace Akka.Cluster.Tests.MultiNode
                         //removed
                         AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Second), ClusterView.Members.Select(x => x.Address)));
                         AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Second), ClusterView.UnreachableMembers.Select(x => x.Address)));
+                        return Task.CompletedTask;
                     }, _config.Third);
-                    EnterBarrier("second-terminated");
-                    EnterBarrier("third-terminated");
+                    await EnterBarrierAsync("second-terminated");
+                    await EnterBarrierAsync("third-terminated");
                 }, _config.Second, _config.Third, _config.Fourth);
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
-                    EnterBarrier("subjected-started");
-                    EnterBarrier("watch-established");
-                    EnterBarrier("second-terminated");
-                    EnterBarrier("third-terminated");
+                    await EnterBarrierAsync("subjected-started");
+                    await EnterBarrierAsync("watch-established");
+                    await EnterBarrierAsync("second-terminated");
+                    await EnterBarrierAsync("third-terminated");
                 }, _config.Fifth);
 
-                EnterBarrier("after-1");
+                await EnterBarrierAsync("after-1");
             });
         }
 
@@ -180,12 +182,12 @@ namespace Akka.Cluster.Tests.MultiNode
         //    EnterBarrier("after-2");
         //}
 
-        public void An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_watch_actor_before_node_joins_cluster_and_cluster_remote_watcher_takes_over_from_remote_watcher()
+        public async Task An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_watch_actor_before_node_joins_cluster_and_cluster_remote_watcher_takes_over_from_remote_watcher()
         {
-            Within(TimeSpan.FromSeconds(20), () =>
+            await WithinAsync(TimeSpan.FromSeconds(20), async () =>
             {
                 RunOn(() => Sys.ActorOf(BlackHoleActor.Props.WithDeploy(Deploy.Local), "subject5"), _config.Fifth);
-                EnterBarrier("subjected-started");
+                await EnterBarrierAsync("subjected-started");
 
                 RunOn(() =>
                 {
@@ -202,7 +204,7 @@ namespace Akka.Cluster.Tests.MultiNode
                         stats.WatchingAddresses.Contains(GetAddress(_config.Fifth)).ShouldBeTrue();
                     });
                 }, _config.First);
-                EnterBarrier("remote-watch");
+                await EnterBarrierAsync("remote-watch");
 
                 // second and third are already removed
                 AwaitClusterUp(_config.First, _config.Fourth, _config.Fifth);
@@ -220,7 +222,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     });
                 }, _config.First);
 
-                EnterBarrier("cluster-watch");
+                await EnterBarrierAsync("cluster-watch");
 
                 RunOn(() =>
                 {
@@ -232,20 +234,20 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.Fifth), ClusterView.Members.Select(x => x.Address)));
                 }, _config.Fourth);
 
-                EnterBarrier("fifth-terminated");
+                await EnterBarrierAsync("fifth-terminated");
                 RunOn(() =>
                 {
                     ExpectMsg<Terminated>().ActorRef.Path.Name.ShouldBe("subject5");
                 }, _config.First);
 
-                EnterBarrier("after-3");
+                await EnterBarrierAsync("after-3");
             });
 
         }
 
-        public void An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_shutdown_system_when_using_remote_deployed_actor_on_node_that_crashed()
+        public async Task An_actor_watching_a_remote_actor_in_the_cluster_must_be_able_to_shutdown_system_when_using_remote_deployed_actor_on_node_that_crashed()
         {
-            Within(TimeSpan.FromSeconds(20), () =>
+            await WithinAsync(TimeSpan.FromSeconds(20), async () =>
             {
                 // fourth actor system will be shutdown, not part of testConductor any more
                 // so we can't use barriers to synchronize with it
@@ -254,15 +256,15 @@ namespace Akka.Cluster.Tests.MultiNode
                 {
                     Sys.ActorOf(Props.Create(() => new EndActor(TestActor, null)), "end");
                 }, _config.First);
-                EnterBarrier("end-actor-created");
+                await EnterBarrierAsync("end-actor-created");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     var hello = Sys.ActorOf(BlackHoleActor.Props, "hello");
                     Assert.IsType<RemoteActorRef>(hello);
                     hello.Path.Address.ShouldBe(GetAddress(_config.First));
                     Watch(hello);
-                    EnterBarrier("hello-deployed");
+                    await EnterBarrierAsync("hello-deployed");
                     MarkNodeAsUnavailable(GetAddress(_config.First));
                     AwaitAssert(() => ClusterView.UnreachableMembers.Select(x => x.Address).Contains(GetAddress(_config.First)).ShouldBeTrue());
                     Cluster.Down(GetAddress(_config.First));
@@ -271,7 +273,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() => Assert.DoesNotContain(GetAddress(_config.First), ClusterView.Members.Select(x => x.Address)));
 
                     ExpectTerminated(hello);
-                    EnterBarrier("first-unavailable");
+                    await EnterBarrierAsync("first-unavailable");
 
                     var timeout = RemainingOrDefault;
                     try
@@ -306,20 +308,20 @@ namespace Akka.Cluster.Tests.MultiNode
 
                 }, _config.Fourth);
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
-                    EnterBarrier("hello-deployed");
-                    EnterBarrier("first-unavailable");
+                    await EnterBarrierAsync("hello-deployed");
+                    await EnterBarrierAsync("first-unavailable");
 
                     // don't end the test until fourth is done
-                    RunOn(() =>
+                    await RunOnAsync(async () =>
                     {
                         // fourth system will be shutdown, remove to not participate in barriers any more
-                        TestConductor.Shutdown(_config.Fourth).Wait();
+                        await TestConductor.ShutdownAsync(_config.Fourth);
                         ExpectMsg<EndActor.End>();
                     }, _config.First);
 
-                    EnterBarrier("after-4");
+                    await EnterBarrierAsync("after-4");
                 }, _config.First, _config.Second, _config.Third, _config.Fifth);
 
             });

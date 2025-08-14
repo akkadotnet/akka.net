@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -64,55 +65,58 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void SplitBrainKeepMajorityDowningSpec()
+        public async Task SplitBrainKeepMajorityDowningSpec()
         {
-            A_Cluster_of_5_nodes_must_reach_initial_convergence();
-            A_Cluster_must_detect_network_partition_and_down_minor_part_of_the_cluster();
+            await A_Cluster_of_5_nodes_must_reach_initial_convergence();
+            await A_Cluster_must_detect_network_partition_and_down_minor_part_of_the_cluster();
         }
 
-        private void A_Cluster_of_5_nodes_must_reach_initial_convergence()
+        private async Task A_Cluster_of_5_nodes_must_reach_initial_convergence()
         {
             AwaitClusterUp(Roles.ToArray());
-            EnterBarrier("after-1");
+            await EnterBarrierAsync("after-1");
         }
 
-        private void A_Cluster_must_detect_network_partition_and_down_minor_part_of_the_cluster()
+        private async Task A_Cluster_must_detect_network_partition_and_down_minor_part_of_the_cluster()
         {
             var majority = new[] { _config.First, _config.Second, _config.Third };
             var minority = new[] { _config.Fourth, _config.Fifth };
 
-            EnterBarrier("before-split");
+            await EnterBarrierAsync("before-split");
 
             var downed = false;
 
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 Cluster.RegisterOnMemberRemoved(() => downed = true);
+                return Task.CompletedTask;
             }, minority);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 foreach (var a in majority)
                     foreach (var b in minority)
-                        TestConductor.Blackhole(a, b, ThrottleTransportAdapter.Direction.Both).Wait();
+                        await TestConductor.BlackholeAsync(a, b, ThrottleTransportAdapter.Direction.Both);
             }, _config.First);
 
-            EnterBarrier("after-split");
+            await EnterBarrierAsync("after-split");
 
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 // side with majority of the nodes must stay up
                 AwaitMembersUp(majority.Length, canNotBePartOfMemberRing: minority.Select(GetAddress).ToImmutableHashSet());
                 AssertLeader(majority);
+                return Task.CompletedTask;
             }, majority);
             
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 // side with majority of the nodes must stay up, minority must go down
                 AwaitAssert(() => downed.Should().BeTrue("cluster node on-removed hook has been triggered"));
+                return Task.CompletedTask;
             }, minority);
 
-            EnterBarrier("after-2");
+            await EnterBarrierAsync("after-2");
         }
     }
 }

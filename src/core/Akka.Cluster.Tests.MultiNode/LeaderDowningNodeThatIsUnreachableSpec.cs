@@ -72,24 +72,24 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void LeaderDowningNodeThatIsUnreachableSpecs()
+        public async Task LeaderDowningNodeThatIsUnreachableSpecs()
         {
-            Leader_in_4_node_cluster_must_be_able_to_down_last_node_that_is_unreachable();
-            Leader_in_4_node_cluster_must_be_able_to_down_middle_node_that_is_unreachable();
+            await Leader_in_4_node_cluster_must_be_able_to_down_last_node_that_is_unreachable();
+            await Leader_in_4_node_cluster_must_be_able_to_down_middle_node_that_is_unreachable();
         }
 
-        public void Leader_in_4_node_cluster_must_be_able_to_down_last_node_that_is_unreachable()
+        public async Task Leader_in_4_node_cluster_must_be_able_to_down_last_node_that_is_unreachable()
         {
             AwaitClusterUp(_config.First, _config.Second, _config.Third, _config.Fourth);
 
             var fourthAddress = GetAddress(_config.Fourth);
 
-            EnterBarrier("before-exit-fourth-node");
-            RunOn(() =>
+            await EnterBarrierAsync("before-exit-fourth-node");
+            await RunOnAsync(async () =>
             {
                 // kill 'fourth' node
-                TestConductor.Exit(_config.Fourth, 0).Wait();
-                EnterBarrier("down-fourth-node");
+                await TestConductor.ExitAsync(_config.Fourth, 0);
+                await EnterBarrierAsync("down-fourth-node");
 
                 // mark the node as unreachable in the failure detector
                 MarkNodeAsUnavailable(fourthAddress);
@@ -98,30 +98,30 @@ namespace Akka.Cluster.Tests.MultiNode
                 AwaitMembersUp(3, ImmutableHashSet.Create(fourthAddress), 30.Seconds());
             }, _config.First);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                EnterBarrier("down-fourth-node");
+                await EnterBarrierAsync("down-fourth-node");
             }, _config.Fourth);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                EnterBarrier("down-fourth-node");
+                await EnterBarrierAsync("down-fourth-node");
                 AwaitMembersUp(3, ImmutableHashSet.Create(fourthAddress), 30.Seconds());
             }, _config.Second, _config.Third);
 
-            EnterBarrier("await-completion-1");
+            await EnterBarrierAsync("await-completion-1");
         }
 
-        public void Leader_in_4_node_cluster_must_be_able_to_down_middle_node_that_is_unreachable()
+        public async Task Leader_in_4_node_cluster_must_be_able_to_down_middle_node_that_is_unreachable()
         {
             var secondAddress = GetAddress(_config.Second);
 
-            EnterBarrier("before-down-second-node");
-            RunOn(() =>
+            await EnterBarrierAsync("before-down-second-node");
+            await RunOnAsync(async () =>
             {
                 // kill 'fourth' node
-                TestConductor.Exit(_config.Second, 0).Wait();
-                EnterBarrier("down-second-node");
+                await TestConductor.ExitAsync(_config.Second, 0);
+                await EnterBarrierAsync("down-second-node");
 
                 // mark the node as unreachable in the failure detector
                 MarkNodeAsUnavailable(secondAddress);
@@ -130,18 +130,18 @@ namespace Akka.Cluster.Tests.MultiNode
                 AwaitMembersUp(2, ImmutableHashSet.Create(secondAddress), 30.Seconds());
             }, _config.First);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                EnterBarrier("down-second-node");
+                await EnterBarrierAsync("down-second-node");
             }, _config.Second);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                EnterBarrier("down-second-node");
+                await EnterBarrierAsync("down-second-node");
                 AwaitMembersUp(2, ImmutableHashSet.Create(secondAddress), 30.Seconds());
             }, _config.Second, _config.Third);
 
-            EnterBarrier("await-completion-2");
+            await EnterBarrierAsync("await-completion-2");
 
         }
     }

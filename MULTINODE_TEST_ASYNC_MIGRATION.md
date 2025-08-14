@@ -112,17 +112,17 @@ using System.Threading.Tasks;
 - [x] RemoteNodeDeathWatchSpec (in Remote.Tests.MultiNode)
 
 ### Core Tests - Akka.Cluster.Tests.MultiNode
-- [ ] AttemptSysMsgRedeliverySpec
-- [ ] ClientDowningNodeThatIsUnreachableSpec
-- [ ] ClusterDeathWatchSpec
-- [ ] ConvergenceSpec
-- [ ] LeaderDowningAllOtherNodesSpec
-- [ ] LeaderDowningNodeThatIsUnreachableSpec
-- [ ] SingletonClusterSpec
-- [ ] SplitBrainResolverDowningSpec
-- [ ] SplitBrainSpec
-- [ ] SurviveNetworkInstabilitySpec
-- [ ] UnreachableNodeJoinsAgainSpec
+- [x] AttemptSysMsgRedeliverySpec
+- [x] ClientDowningNodeThatIsUnreachableSpec
+- [x] ClusterDeathWatchSpec
+- [x] ConvergenceSpec
+- [x] LeaderDowningAllOtherNodesSpec
+- [x] LeaderDowningNodeThatIsUnreachableSpec
+- [x] SingletonClusterSpec
+- [x] SplitBrainResolverDowningSpec
+- [x] SplitBrainSpec
+- [x] SurviveNetworkInstabilitySpec
+- [x] UnreachableNodeJoinsAgainSpec
 
 ### Core Tests - Akka.Cluster.Tests.MultiNode/Routing
 - [ ] ClusterRoundRobinSpec

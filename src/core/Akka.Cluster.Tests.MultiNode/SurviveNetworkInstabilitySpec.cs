@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -131,13 +132,13 @@ namespace Akka.Cluster.Tests.MultiNode
                 .Select(c => c.Address).Should().BeEquivalentTo(expected));
         }
 
-        private void AssertCanTalk(params RoleName[] alive)
+        private async Task AssertCanTalk(params RoleName[] alive)
         {
             RunOn(() =>
             {
                 AwaitAllReachable();
             }, alive);
-            EnterBarrier("reachable-ok");
+            await EnterBarrierAsync("reachable-ok");
 
             RunOn(() =>
             {
@@ -154,250 +155,264 @@ namespace Akka.Cluster.Tests.MultiNode
                     p.Ref.Tell(PoisonPill.Instance);
                 }
             }, alive);
-            EnterBarrier("ping-ok");
+            await EnterBarrierAsync("ping-ok");
         }
 
         [MultiNodeFact]
-        public void SurviveNetworkInstabilitySpecs()
+        public async Task SurviveNetworkInstabilitySpecs()
         {
-            A_Network_partition_tolerant_cluster_must_reach_initial_convergence();
-            A_Network_partition_tolerant_cluster_must_heal_after_a_broken_pair();
-            A_Network_partition_tolerant_cluster_must_heal_after_one_isolated_node();
-            A_Network_partition_tolerant_cluster_must_heal_two_isolated_islands();
-            A_Network_partition_tolerant_cluster_must_heal_after_unreachable_when_ring_is_changed();
-            A_Network_partition_tolerant_cluster_must_mark_quarantined_node_with_reachability_status_Terminated();
-            A_Network_partition_tolerant_cluster_must_continue_and_move_Joining_to_Up_after_downing_of_one_half();
+            await A_Network_partition_tolerant_cluster_must_reach_initial_convergence();
+            await A_Network_partition_tolerant_cluster_must_heal_after_a_broken_pair();
+            await A_Network_partition_tolerant_cluster_must_heal_after_one_isolated_node();
+            await A_Network_partition_tolerant_cluster_must_heal_two_isolated_islands();
+            await A_Network_partition_tolerant_cluster_must_heal_after_unreachable_when_ring_is_changed();
+            await A_Network_partition_tolerant_cluster_must_mark_quarantined_node_with_reachability_status_Terminated();
+            await A_Network_partition_tolerant_cluster_must_continue_and_move_Joining_to_Up_after_downing_of_one_half();
         }
 
-        public void A_Network_partition_tolerant_cluster_must_reach_initial_convergence()
+        public async Task A_Network_partition_tolerant_cluster_must_reach_initial_convergence()
         {
             AwaitClusterUp(_config.First, _config.Second, _config.Third, _config.Fourth, _config.Fifth);
 
-            EnterBarrier("after-1");
-            AssertCanTalk(_config.First, _config.Second, _config.Third, _config.Fourth, _config.Fifth);
+            await EnterBarrierAsync("after-1");
+            await AssertCanTalk(_config.First, _config.Second, _config.Third, _config.Fourth, _config.Fifth);
         }
 
-        public void A_Network_partition_tolerant_cluster_must_heal_after_a_broken_pair()
+        public async Task A_Network_partition_tolerant_cluster_must_heal_after_a_broken_pair()
         {
-            Within(45.Seconds(), () =>
+            await WithinAsync(45.Seconds(), async () =>
             {
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
-                    TestConductor.Blackhole(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                    await TestConductor.BlackholeAsync(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
                 }, _config.First);
-                EnterBarrier("blackhole-2");
+                await EnterBarrierAsync("blackhole-2");
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     AssertUnreachable(_config.Second);
+                    return Task.CompletedTask;
                 }, _config.First);
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     AssertUnreachable(_config.First);
+                    return Task.CompletedTask;
                 }, _config.Second);
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     AssertUnreachable(_config.First, _config.Second);
+                    return Task.CompletedTask;
                 }, _config.Third, _config.Fourth, _config.Fifth);
 
-                EnterBarrier("unreachable-2");
+                await EnterBarrierAsync("unreachable-2");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
-                    TestConductor.PassThrough(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                    await TestConductor.PassThroughAsync(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
                 }, _config.First);
-                EnterBarrier("repair-2");
+                await EnterBarrierAsync("repair-2");
 
                 // This test illustrates why we can't ignore gossip from unreachable aggregated
                 // status. If all third, fourth, and fifth has been infected by first and second
                 // unreachable they must accept gossip from first and second when their
                 // broken connection has healed, otherwise they will be isolated forever.
-                EnterBarrier("after-2");
-                AssertCanTalk(_config.First, _config.Second, _config.Third, _config.Fourth, _config.Fifth);
+                await EnterBarrierAsync("after-2");
+                await AssertCanTalk(_config.First, _config.Second, _config.Third, _config.Fourth, _config.Fifth);
             });
         }
 
-        public void A_Network_partition_tolerant_cluster_must_heal_after_one_isolated_node()
+        public async Task A_Network_partition_tolerant_cluster_must_heal_after_one_isolated_node()
         {
-            Within(45.Seconds(), () =>
+            await WithinAsync(45.Seconds(), async () =>
             {
                 var others = ImmutableArray.Create(_config.Second, _config.Third, _config.Fourth, _config.Fifth);
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     foreach (var other in others)
                     {
-                        TestConductor.Blackhole(_config.First, other, ThrottleTransportAdapter.Direction.Both).Wait();
+                        await TestConductor.BlackholeAsync(_config.First, other, ThrottleTransportAdapter.Direction.Both);
                     }
                 }, _config.First);
-                EnterBarrier("blackhole-3");
+                await EnterBarrierAsync("blackhole-3");
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     AssertUnreachable(others.ToArray());
+                    return Task.CompletedTask;
                 }, _config.First);
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     AssertUnreachable(_config.First);
+                    return Task.CompletedTask;
                 }, others.ToArray());
 
-                EnterBarrier("unreachable-3");
+                await EnterBarrierAsync("unreachable-3");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     foreach (var other in others)
                     {
-                        TestConductor.PassThrough(_config.First, other, ThrottleTransportAdapter.Direction.Both).Wait();
+                        await TestConductor.PassThroughAsync(_config.First, other, ThrottleTransportAdapter.Direction.Both);
                     }
                 }, _config.First);
-                EnterBarrier("repair-3");
-                AssertCanTalk(others.Add(_config.First).ToArray());
+                await EnterBarrierAsync("repair-3");
+                await AssertCanTalk(others.Add(_config.First).ToArray());
             });
         }
 
-        public void A_Network_partition_tolerant_cluster_must_heal_two_isolated_islands()
+        public async Task A_Network_partition_tolerant_cluster_must_heal_two_isolated_islands()
         {
-            Within(45.Seconds(), () =>
+            await WithinAsync(45.Seconds(), async () =>
             {
                 var island1 = ImmutableArray.Create(_config.First, _config.Second);
                 var island2 = ImmutableArray.Create(_config.Third, _config.Fourth, _config.Fifth);
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     // split the cluster in two parts (first, second) / (third, fourth, fifth)
                     foreach (var role1 in island1)
                     {
                         foreach (var role2 in island2)
                         {
-                            TestConductor.Blackhole(role1, role2, ThrottleTransportAdapter.Direction.Both).Wait();
+                            await TestConductor.BlackholeAsync(role1, role2, ThrottleTransportAdapter.Direction.Both);
                         }
                     }
                 }, _config.First);
-                EnterBarrier("blackhole-4");
+                await EnterBarrierAsync("blackhole-4");
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     AssertUnreachable(island2.ToArray());
+                    return Task.CompletedTask;
                 }, island1.ToArray());
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     AssertUnreachable(island1.ToArray());
+                    return Task.CompletedTask;
                 }, island2.ToArray());
 
-                EnterBarrier("unreachable-4");
+                await EnterBarrierAsync("unreachable-4");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     foreach (var role1 in island1)
                     {
                         foreach (var role2 in island2)
                         {
-                            TestConductor.PassThrough(role1, role2, ThrottleTransportAdapter.Direction.Both).Wait();
+                            await TestConductor.PassThroughAsync(role1, role2, ThrottleTransportAdapter.Direction.Both);
                         }
                     }
                 }, _config.First);
-                EnterBarrier("repair-4");
+                await EnterBarrierAsync("repair-4");
 
-                AssertCanTalk(island1.AddRange(island2).ToArray());
+                await AssertCanTalk(island1.AddRange(island2).ToArray());
             });
         }
 
-        public void A_Network_partition_tolerant_cluster_must_heal_after_unreachable_when_ring_is_changed()
+        public async Task A_Network_partition_tolerant_cluster_must_heal_after_unreachable_when_ring_is_changed()
         {
-            Within(60.Seconds(), () =>
+            await WithinAsync(60.Seconds(), async () =>
             {
                 var joining = ImmutableArray.Create(_config.Sixth, _config.Seventh);
                 var others = ImmutableArray.Create(_config.Second, _config.Third, _config.Fourth, _config.Fifth);
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     foreach (var role1 in joining.Add(_config.First))
                     {
                         foreach (var role2 in others)
                         {
-                            TestConductor.Blackhole(role1, role2, ThrottleTransportAdapter.Direction.Both).Wait();
+                            await TestConductor.BlackholeAsync(role1, role2, ThrottleTransportAdapter.Direction.Both);
                         }
                     }
                 }, _config.First);
-                EnterBarrier("blackhole-5");
+                await EnterBarrierAsync("blackhole-5");
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     AssertUnreachable(others.ToArray());
+                    return Task.CompletedTask;
                 }, _config.First);
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     AssertUnreachable(_config.First);
+                    return Task.CompletedTask;
                 }, others.ToArray());
 
-                EnterBarrier("unreachable-5");
+                await EnterBarrierAsync("unreachable-5");
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     Cluster.Join(GetAddress(_config.First));
 
                     // let them join and stabilize heartbeating
                     Thread.Sleep(Dilated(5000.Milliseconds()));
+                    return Task.CompletedTask;
                 }, joining.ToArray());
 
-                EnterBarrier("joined-5");
+                await EnterBarrierAsync("joined-5");
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     AssertUnreachable(others.ToArray());
+                    return Task.CompletedTask;
                 }, joining.Add(_config.First).ToArray());
 
                 // others doesn't know about the joining nodes yet, no gossip passed through
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     AssertUnreachable(_config.First);
+                    return Task.CompletedTask;
                 }, others.ToArray());
 
-                EnterBarrier("more-unreachable-5");
+                await EnterBarrierAsync("more-unreachable-5");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     foreach (var role1 in joining.Add(_config.First))
                     {
                         foreach (var role2 in others)
                         {
-                            TestConductor.PassThrough(role1, role2, ThrottleTransportAdapter.Direction.Both).Wait();
+                            await TestConductor.PassThroughAsync(role1, role2, ThrottleTransportAdapter.Direction.Both);
                         }
                     }
                 }, _config.First);
-                EnterBarrier("repair-5");
+                await EnterBarrierAsync("repair-5");
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     // eighth not joined yet
                     AwaitMembersUp(Roles.Count - 1, timeout: Remaining);
+                    return Task.CompletedTask;
                 }, joining.AddRange(others).Add(_config.First).ToArray());
-                EnterBarrier("after-5");
+                await EnterBarrierAsync("after-5");
 
-                AssertCanTalk(joining.AddRange(others).Add(_config.First).ToArray());
+                await AssertCanTalk(joining.AddRange(others).Add(_config.First).ToArray());
             });
         }
 
-        public void A_Network_partition_tolerant_cluster_must_mark_quarantined_node_with_reachability_status_Terminated()
+        public async Task A_Network_partition_tolerant_cluster_must_mark_quarantined_node_with_reachability_status_Terminated()
         {
-            Within(60.Seconds(), () =>
+            await WithinAsync(60.Seconds(), async () =>
             {
                 var others = ImmutableArray.Create(_config.First, _config.Third, _config.Fourth, _config.Fifth, _config.Sixth, _config.Seventh);
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     Sys.ActorOf<SurviveNetworkInstabilitySpecConfig.Watcher>("watcher");
 
                     // undelivered system messages in RemoteChild on third should trigger QuarantinedEvent
                     Sys.EventStream.Subscribe(TestActor, typeof(QuarantinedEvent));
+                    return Task.CompletedTask;
                 }, _config.Third);
-                EnterBarrier("watcher-created");
+                await EnterBarrierAsync("watcher-created");
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     var sysMsgBufferSize = Sys
                         .AsInstanceOf<ExtendedActorSystem>().Provider
@@ -408,32 +423,34 @@ namespace Akka.Cluster.Tests.MultiNode
 
                     Sys.ActorSelection(Node(_config.Third) / "user" / "watcher").Tell(new SurviveNetworkInstabilitySpecConfig.Targets(refs));
                     ExpectMsg<SurviveNetworkInstabilitySpecConfig.TargetsRegistered>();
+                    return Task.CompletedTask;
                 }, _config.Second);
-                EnterBarrier("targets-registered");
+                await EnterBarrierAsync("targets-registered");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     foreach (var role in others)
                     {
-                        TestConductor.Blackhole(role, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                        await TestConductor.BlackholeAsync(role, _config.Second, ThrottleTransportAdapter.Direction.Both);
                     }
                 }, _config.First);
-                EnterBarrier("blackhole-6");
+                await EnterBarrierAsync("blackhole-6");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     // this will trigger watch of targets on second, resulting in too many outstanding
                     // system messages and quarantine
                     Sys.ActorSelection("/user/watcher").Tell("boom");
-                    Within(10.Seconds(), () =>
+                    await WithinAsync(10.Seconds(), () =>
                     {
                         ExpectMsg<QuarantinedEvent>().Address.Should().Be(GetAddress(_config.Second));
+                        return Task.CompletedTask;
                     });
                     Sys.EventStream.Unsubscribe(TestActor, typeof(QuarantinedEvent));
                 }, _config.Third);
-                EnterBarrier("quarantined");
+                await EnterBarrierAsync("quarantined");
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     Thread.Sleep(2000.Milliseconds());
 
@@ -443,129 +460,136 @@ namespace Akka.Cluster.Tests.MultiNode
                     
                     // second should be marked with reachability status Terminated
                     AwaitAssert(() => ClusterView.Reachability.Status(secondUniqueAddress?.UniqueAddress).Should().Be(Reachability.ReachabilityStatus.Terminated));
+                    return Task.CompletedTask;
                 }, others.ToArray());
-                EnterBarrier("reachability-terminated");
+                await EnterBarrierAsync("reachability-terminated");
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     Cluster.Down(GetAddress(_config.Second));
+                    return Task.CompletedTask;
                 }, _config.Fourth);
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     // second should be removed because of quarantine
                     AwaitAssert(() => ClusterView.Members.Select(c => c.Address).Should().NotContain(GetAddress(_config.Second)));
                     // and also removed from reachability table
                     AwaitAssert(() => ClusterView.Reachability.AllUnreachableOrTerminated.Should().BeEmpty());
+                    return Task.CompletedTask;
                 }, others.ToArray());
-                EnterBarrier("removed-after-down");
+                await EnterBarrierAsync("removed-after-down");
 
-                EnterBarrier("after-6");
-                AssertCanTalk(others.ToArray());
+                await EnterBarrierAsync("after-6");
+                await AssertCanTalk(others.ToArray());
             });
         }
 
-        public void A_Network_partition_tolerant_cluster_must_continue_and_move_Joining_to_Up_after_downing_of_one_half()
+        public async Task A_Network_partition_tolerant_cluster_must_continue_and_move_Joining_to_Up_after_downing_of_one_half()
         {
-            Within(60.Seconds(), () =>
+            await WithinAsync(60.Seconds(), async () =>
             {
                 // note that second is already removed in previous step
                 var side1 = ImmutableArray.Create(_config.First, _config.Third, _config.Fourth);
                 var side1AfterJoin = side1.Add(_config.Eighth);
                 var side2 = ImmutableArray.Create(_config.Fifth, _config.Sixth, _config.Seventh);
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     foreach (var role1 in side1AfterJoin)
                     {
                         foreach (var role2 in side2)
                         {
-                            TestConductor.Blackhole(role1, role2, ThrottleTransportAdapter.Direction.Both).Wait();
+                            await TestConductor.BlackholeAsync(role1, role2, ThrottleTransportAdapter.Direction.Both);
                         }
                     }
                 }, _config.First);
-                EnterBarrier("blackhole-7");
+                await EnterBarrierAsync("blackhole-7");
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     AssertUnreachable(side2.ToArray());
+                    return Task.CompletedTask;
                 }, side1.ToArray());
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     AssertUnreachable(side1.ToArray());
+                    return Task.CompletedTask;
                 }, side2.ToArray());
 
-                EnterBarrier("unreachable-7");
+                await EnterBarrierAsync("unreachable-7");
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     Cluster.Join(GetAddress(_config.Third));
+                    return Task.CompletedTask;
                 }, _config.Eighth);
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     foreach (var role2 in side2)
                     {
                         Cluster.Down(GetAddress(role2));
                     }
+                    return Task.CompletedTask;
                 }, _config.Fourth);
 
-                EnterBarrier("downed-7");
+                await EnterBarrierAsync("downed-7");
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     // side2 removed
                     var expected = side1AfterJoin.Select(c => GetAddress(c)).ToImmutableHashSet();
                     AwaitAssert(() =>
                     {
-                        RunOn(() =>
+                        // repeat the downing in case it was not successful, which may
+                        // happen if the removal was reverted due to gossip merge
+                        foreach (var role2 in side2)
                         {
-                            // repeat the downing in case it was not successful, which may
-                            // happen if the removal was reverted due to gossip merge
-                            foreach (var role2 in side2)
-                            {
-                                Cluster.Down(GetAddress(role2));
-                            }
-                        }, _config.Fourth);
+                            Cluster.Down(GetAddress(role2));
+                        }
 
                         ClusterView.Members.Select(c => c.Address).Should().BeEquivalentTo(expected);
                         ClusterView.Members.Where(m => m.Address.Equals(GetAddress(_config.Eighth))).Select(m => m.Status).FirstOrDefault().Should().Be(MemberStatus.Up);
                     });
+                    return Task.CompletedTask;
                 }, side1AfterJoin.ToArray());
-                EnterBarrier("side2-removed");
+                await EnterBarrierAsync("side2-removed");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     foreach (var role1 in side1AfterJoin)
                     {
                         foreach (var role2 in side2)
                         {
-                            TestConductor.PassThrough(role1, role2, ThrottleTransportAdapter.Direction.Both).Wait();
+                            await TestConductor.PassThroughAsync(role1, role2, ThrottleTransportAdapter.Direction.Both);
                         }
                     }
                 }, _config.First);
-                EnterBarrier("repair-7");
+                await EnterBarrierAsync("repair-7");
 
                 // side2 should not detect side1 as reachable again
                 Thread.Sleep(10000);
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     var expected = side1AfterJoin.Select(c => GetAddress(c)).ToImmutableHashSet();
                     ClusterView.Members.Select(c => c.Address).Should().BeEquivalentTo(expected);
+                    return Task.CompletedTask;
                 }, side1AfterJoin.ToArray());
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     // side2 comes back but stays unreachable
                     var expected = side2.AddRange(side1).Select(c => GetAddress(c)).ToImmutableHashSet();
                     ClusterView.Members.Select(c => c.Address).Should().BeEquivalentTo(expected);
                     AssertUnreachable(side1.ToArray());
+                    return Task.CompletedTask;
                 }, side2.ToArray());
 
-                EnterBarrier("after-7");
-                AssertCanTalk(side1AfterJoin.ToArray());
+                await EnterBarrierAsync("after-7");
+                await AssertCanTalk(side1AfterJoin.ToArray());
             });
         }
     }

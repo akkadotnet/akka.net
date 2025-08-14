@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.MultiNode.TestAdapter;
@@ -56,34 +57,34 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void AttemptSysMsgRedeliverySpecs()
+        public async Task AttemptSysMsgRedeliverySpecs()
         {
-            AttemptSysMsgRedelivery_must_reach_initial_convergence();
-            AttemptSysMsgRedelivery_must_redeliver_system_message_after_inactivity();
+            await AttemptSysMsgRedelivery_must_reach_initial_convergence();
+            await AttemptSysMsgRedelivery_must_redeliver_system_message_after_inactivity();
         }
 
-        private void AttemptSysMsgRedelivery_must_reach_initial_convergence()
+        private async Task AttemptSysMsgRedelivery_must_reach_initial_convergence()
         {
             AwaitClusterUp(_config.First, _config.Second, _config.Third);
-            EnterBarrier("after-1");
+            await EnterBarrierAsync("after-1");
         }
 
-        private void AttemptSysMsgRedelivery_must_redeliver_system_message_after_inactivity()
+        private async Task AttemptSysMsgRedelivery_must_redeliver_system_message_after_inactivity()
         {
             Sys.ActorOf(Props.Create<AttemptSysMsgRedeliverySpecConfig.Echo>(), "echo");
-            EnterBarrier("echo-started");
+            await EnterBarrierAsync("echo-started");
 
             Sys.ActorSelection(Node(_config.First) / "user" / "echo").Tell(new Identify(null));
             var firstRef = ExpectMsg<ActorIdentity>().Subject;
             Sys.ActorSelection(Node(_config.First) / "user" / "echo").Tell(new Identify(null));
             var secondRef = ExpectMsg<ActorIdentity>().Subject;
-            EnterBarrier("refs-retrieved");
+            await EnterBarrierAsync("refs-retrieved");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.Blackhole(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                await TestConductor.BlackholeAsync(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
             }, _config.First);
-            EnterBarrier("blackhole");
+            await EnterBarrierAsync("blackhole");
 
             RunOn(() =>
             {
@@ -94,13 +95,13 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 Watch(firstRef);
             }, _config.Second);
-            EnterBarrier("watch-established");
+            await EnterBarrierAsync("watch-established");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.PassThrough(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                await TestConductor.PassThroughAsync(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
             }, _config.First);
-            EnterBarrier("pass-through");
+            await EnterBarrierAsync("pass-through");
 
             Sys.ActorSelection("/user/echo").Tell(PoisonPill.Instance);
 
@@ -114,7 +115,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 ExpectTerminated(firstRef, 10.Seconds());
             }, _config.Second);
 
-            EnterBarrier("done");
+            await EnterBarrierAsync("done");
         }
     }
 }

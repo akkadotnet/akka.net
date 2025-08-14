@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -77,37 +78,37 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void SplitBrainSpecs()
+        public async Task SplitBrainSpecs()
         {
-            Cluster_of_5_members_must_reach_initial_convergence();
-            Cluster_of_5_members_must_detect_network_partition_and_mark_nodes_on_other_side_as_unreachable_and_form_new_cluster();
+            await Cluster_of_5_members_must_reach_initial_convergence();
+            await Cluster_of_5_members_must_detect_network_partition_and_mark_nodes_on_other_side_as_unreachable_and_form_new_cluster();
         }
 
-        public void Cluster_of_5_members_must_reach_initial_convergence()
+        public async Task Cluster_of_5_members_must_reach_initial_convergence()
         {
             AwaitClusterUp(_config.First, _config.Second, _config.Third, _config.Fourth, _config.Fifth);
 
-            EnterBarrier("after-1");
+            await EnterBarrierAsync("after-1");
         }
 
-        public void Cluster_of_5_members_must_detect_network_partition_and_mark_nodes_on_other_side_as_unreachable_and_form_new_cluster()
+        public async Task Cluster_of_5_members_must_detect_network_partition_and_mark_nodes_on_other_side_as_unreachable_and_form_new_cluster()
         {
-            EnterBarrier("before-split");
+            await EnterBarrierAsync("before-split");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 // split the cluster in two parts (first, second) / (third, fourth, fifth)
                 foreach (var role1 in side1)
                 {
                     foreach (var role2 in side2)
                     {
-                        TestConductor.Blackhole(role1, role2, ThrottleTransportAdapter.Direction.Both).Wait();
+                        await TestConductor.BlackholeAsync(role1, role2, ThrottleTransportAdapter.Direction.Both);
                     }
                 }
             }, _config.First);
-            EnterBarrier("after-split");
+            await EnterBarrierAsync("after-split");
 
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 foreach (var role in side2)
                 {
@@ -117,9 +118,10 @@ namespace Akka.Cluster.Tests.MultiNode
                 // auto-down
                 AwaitMembersUp(side1.Count, side2.Select(r => GetAddress(r)).ToImmutableHashSet());
                 AssertLeader(side1.ToArray());
+                return Task.CompletedTask;
             }, side1.ToArray());
 
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 foreach (var role in side1)
                 {
@@ -129,9 +131,10 @@ namespace Akka.Cluster.Tests.MultiNode
                 // auto-down
                 AwaitMembersUp(side2.Count, side1.Select(r => GetAddress(r)).ToImmutableHashSet());
                 AssertLeader(side2.ToArray());
+                return Task.CompletedTask;
             }, side2.ToArray());
 
-            EnterBarrier("after-2");
+            await EnterBarrierAsync("after-2");
         }
     }
 }

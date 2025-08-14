@@ -7,6 +7,7 @@
 
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -57,33 +58,33 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void LeaderDowningAllOtherNodesSpecs()
+        public async Task LeaderDowningAllOtherNodesSpecs()
         {
-            A_Cluster_of_6_nodes_with_monitored_by_nr_of_members_2_must_setup();
-            A_Cluster_of_6_nodes_with_monitored_by_nr_of_members_2_must_remove_all_shutdown_nodes();
+            await A_Cluster_of_6_nodes_with_monitored_by_nr_of_members_2_must_setup();
+            await A_Cluster_of_6_nodes_with_monitored_by_nr_of_members_2_must_remove_all_shutdown_nodes();
         }
 
-        public void A_Cluster_of_6_nodes_with_monitored_by_nr_of_members_2_must_setup()
+        public async Task A_Cluster_of_6_nodes_with_monitored_by_nr_of_members_2_must_setup()
         {
             // start some
             AwaitClusterUp(Roles.ToArray());
-            EnterBarrier("after-1");
+            await EnterBarrierAsync("after-1");
         }
 
-        public void A_Cluster_of_6_nodes_with_monitored_by_nr_of_members_2_must_remove_all_shutdown_nodes()
+        public async Task A_Cluster_of_6_nodes_with_monitored_by_nr_of_members_2_must_remove_all_shutdown_nodes()
         {
             var others = Roles.Drop(1).ToList();
             var shutdownAddresses = others.Select(c => GetAddress(c)).ToImmutableHashSet();
-            EnterBarrier("before-all-other-shutdown");
+            await EnterBarrierAsync("before-all-other-shutdown");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 foreach (var node in others)
                 {
-                    TestConductor.Exit(node, 0).Wait();
+                    await TestConductor.ExitAsync(node, 0);
                 }
             }, _config.First);
-            EnterBarrier("all-other-shutdown");
+            await EnterBarrierAsync("all-other-shutdown");
             AwaitMembersUp(numbersOfMembers: 1, canNotBePartOfMemberRing: shutdownAddresses, timeout: 30.Seconds());
         }
     }

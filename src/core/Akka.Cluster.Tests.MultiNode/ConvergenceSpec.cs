@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -77,36 +78,36 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void ConvergenceSpecTests()
+        public async Task ConvergenceSpecTests()
         {
             //TODO: This better
-            A_cluster_of_3_members_must_reach_initial_convergence();
-            A_cluster_of_3_members_must_not_reach_convergence_while_any_nodes_are_unreachable();
-            A_cluster_of_3_members_must_not_move_a_new_joining_node_to_up_while_there_is_no_convergence();
+            await A_cluster_of_3_members_must_reach_initial_convergence();
+            await A_cluster_of_3_members_must_not_reach_convergence_while_any_nodes_are_unreachable();
+            await A_cluster_of_3_members_must_not_move_a_new_joining_node_to_up_while_there_is_no_convergence();
         }
 
-        public void A_cluster_of_3_members_must_reach_initial_convergence()
+        public async Task A_cluster_of_3_members_must_reach_initial_convergence()
         {
             AwaitClusterUp(_config.First, _config.Second, _config.Third);
 
             RunOn(() => { /*doesn't join immediately*/}, _config.Fourth);
 
-            EnterBarrier("after-1");
+            await EnterBarrierAsync("after-1");
         }
 
-        public void A_cluster_of_3_members_must_not_reach_convergence_while_any_nodes_are_unreachable()
+        public async Task A_cluster_of_3_members_must_not_reach_convergence_while_any_nodes_are_unreachable()
         {
             var thirdAddress = GetAddress(_config.Third);
-            EnterBarrier("before-shutdown");
+            await EnterBarrierAsync("before-shutdown");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 //kill 'third' node
-                TestConductor.Exit(_config.Third, 0).Wait();
+                await TestConductor.ExitAsync(_config.Third, 0);
                 MarkNodeAsUnavailable(thirdAddress);
             }, _config.First);
 
-            RunOn(() => Within(TimeSpan.FromSeconds(28), () =>
+            await RunOnAsync(() => WithinAsync(TimeSpan.FromSeconds(28), () =>
             {
                 //third becomes unreachable
                 AwaitAssert(() => ClusterView.UnreachableMembers.Count.ShouldBe(1));
@@ -115,16 +116,17 @@ namespace Akka.Cluster.Tests.MultiNode
                 ClusterView.UnreachableMembers.Count.ShouldBe(1);
                 ClusterView.UnreachableMembers.First().Address.ShouldBe(thirdAddress);
                 ClusterView.Members.Count.ShouldBe(3);
+                return Task.CompletedTask;
             }), _config.First, _config.Second);
 
-            EnterBarrier("after-2");
+            await EnterBarrierAsync("after-2");
         }
 
-        public void A_cluster_of_3_members_must_not_move_a_new_joining_node_to_up_while_there_is_no_convergence()
+        public async Task A_cluster_of_3_members_must_not_move_a_new_joining_node_to_up_while_there_is_no_convergence()
         {
             RunOn(() => Cluster.Join(GetAddress(_config.First)), _config.Fourth);
 
-            EnterBarrier("after-join");
+            await EnterBarrierAsync("after-join");
 
             RunOn(() =>
             {
@@ -140,7 +142,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 }
             }, _config.First, _config.Second, _config.Fourth);
 
-            EnterBarrier("after-3");
+            await EnterBarrierAsync("after-3");
         }
 
         MemberStatus? MemberStatus(Address address)
