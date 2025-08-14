@@ -22,7 +22,6 @@ using Akka.Pattern;
 namespace Akka.IO
 {
     using static Akka.IO.Tcp;
-    using ByteBuffer = ArraySegment<byte>;
 
     // A **green‑field** rewrite of the connection actor, distilled to
     //   • 4 stable phases (Connecting ▸ AwaitRegistration ▸ Open ▸ HalfOpen)
@@ -559,7 +558,7 @@ namespace Akka.IO
             if (!_state.CanSend) return;
             if (_state.IsSending || _pendingWrites.Count == 0) return;
 
-            var segs = new List<ArraySegment<byte>>(8);
+            var segs = new List<ByteBuffer>(8);
             var batchBytes = 0;
 
             while (_pendingWrites.Count > 0 && batchBytes < Settings.MaxFrameSizeBytes)
