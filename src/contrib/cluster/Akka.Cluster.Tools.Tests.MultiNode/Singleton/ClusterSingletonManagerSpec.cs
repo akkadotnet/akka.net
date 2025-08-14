@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Singleton;
@@ -347,9 +348,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             _controllerRootActorPath = Node(config.Controller);
         }
 
-        private void Join(RoleName from, RoleName to)
+        private async Task Join(RoleName from, RoleName to)
         {
-            RunOn(() =>
+            await Task.Run(() => RunOn(() =>
             {
                 Cluster.Join(Node(to).Address);
                 if (Cluster.SelfRoles.Contains("worker"))
@@ -357,10 +358,10 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                     CreateSingleton();
                     CreateSingletonProxy();
                 }
-            }, from);
+            }, from));
         }
 
-        private void AwaitMemberUp(TestProbe memberProbe, params RoleName[] nodes)
+        private async Task AwaitMemberUp(TestProbe memberProbe, params RoleName[] nodes)
         {
             if (nodes.Length > 1)
             {
@@ -383,7 +384,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 addresses.Except(roleNodes).Count().Should().Be(0);
             }, nodes.First());
 
-            EnterBarrier(nodes[0].Name + "-up");
+            await EnterBarrierAsync(nodes[0].Name + "-up");
         }
 
         private void CreateSingleton()
@@ -403,20 +404,20 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 name: "consumerProxy");
         }
 
-        private void VerifyProxyMsg(RoleName oldest, RoleName proxyNode, int msg)
+        private async Task VerifyProxyMsg(RoleName oldest, RoleName proxyNode, int msg)
         {
-            EnterBarrier("before-" + msg + "-proxy-verified");
+            await EnterBarrierAsync("before-" + msg + "-proxy-verified");
 
             // send message to the proxy
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 // make sure that the proxy has received membership changes
                 // and points to the current singleton
                 var p = CreateTestProbe();
                 var oldestAddress = Node(oldest).Address;
-                Within(TimeSpan.FromSeconds(10), () =>
+                await WithinAsync(TimeSpan.FromSeconds(10), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         Sys.ActorSelection("/user/consumerProxy").Tell(Consumer.Ping.Instance, p.Ref);
                         p.ExpectMsg<Consumer.Pong>(TimeSpan.FromSeconds(1));
@@ -425,6 +426,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                             replyFromAddress.HasLocalScope.Should().BeTrue();
                         else
                             replyFromAddress.Should().Be(oldestAddress);
+                        return Task.CompletedTask;
                     });
                 });
 
@@ -432,7 +434,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 Sys.ActorSelection("/user/consumerProxy").Tell(msg);
             }, proxyNode);
 
-            EnterBarrier($"sent-msg-{msg}");
+            await EnterBarrierAsync($"sent-msg-{msg}");
 
             // expect a message on the oldest node
             RunOn(() =>
@@ -440,7 +442,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 ExpectMsg(msg);
             }, oldest);
 
-            EnterBarrier("after-" + msg + "-proxy-verified");
+            await EnterBarrierAsync("after-" + msg + "-proxy-verified");
         }
 
         private ActorSelection GetConsumer(RoleName oldest)
@@ -448,9 +450,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             return Sys.ActorSelection(new RootActorPath(Node(oldest).Address) / "user" / "consumer" / "singleton");
         }
 
-        private void VerifyRegistration(RoleName oldest)
+        private async Task VerifyRegistration(RoleName oldest)
         {
-            EnterBarrier("before-" + oldest.Name + "-registration-verified");
+            await EnterBarrierAsync("before-" + oldest.Name + "-registration-verified");
 
             RunOn(() =>
             {
@@ -459,12 +461,12 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 ExpectMsg(0);
             }, oldest);
 
-            EnterBarrier("after-" + oldest.Name + "-registration-verified");
+            await EnterBarrierAsync("after-" + oldest.Name + "-registration-verified");
         }
 
-        private void VerifyMsg(RoleName oldest, int msg)
+        private async Task VerifyMsg(RoleName oldest, int msg)
         {
-            EnterBarrier("before-" + msg + "-verified");
+            await EnterBarrierAsync("before-" + msg + "-verified");
 
             RunOn(() =>
             {
@@ -483,19 +485,19 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 ExpectNoMsg(TimeSpan.FromSeconds(1));
             }, Roles.Where(r => r != oldest && r != _controller && r != _observer).ToArray());
 
-            EnterBarrier("after-" + msg + "-verified");
+            await EnterBarrierAsync("after-" + msg + "-verified");
         }
 
-        private void Crash(params RoleName[] roles)
+        private async Task Crash(params RoleName[] roles)
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 Queue.Tell(PointToPointChannel.Reset.Instance);
                 ExpectMsg<PointToPointChannel.ResetOk>();
                 foreach (var role in roles)
                 {
                     Log.Info("Shutdown [{0}]", GetAddress(role));
-                    TestConductor.Exit(role, 0).Wait();
+                    await TestConductor.ExitAsync(role, 0);
                 }
             }, _controller);
         }
@@ -504,19 +506,19 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 
 
         [MultiNodeFact]
-        public void ClusterSingletonManagerSpecs()
+        public async Task ClusterSingletonManagerSpecs()
         {
-            ClusterSingletonManager_should_startup_6_node_cluster();
-            ClusterSingletonManager_should_let_the_proxy_messages_to_the_singleton_in_a_6_node_cluster();
-            ClusterSingletonManager_should_handover_when_oldest_leaves_in_6_node_cluster();
-            ClusterSingletonManager_should_takeover_when_oldest_crashes_in_5_node_cluster();
-            ClusterSingletonManager_should_takeover_when_two_oldest_crash_in_3_node_cluster();
-            ClusterSingletonManager_should_takeover_when_oldest_crashes_in_2_node_cluster();
+            await ClusterSingletonManager_should_startup_6_node_cluster();
+            await ClusterSingletonManager_should_let_the_proxy_messages_to_the_singleton_in_a_6_node_cluster();
+            await ClusterSingletonManager_should_handover_when_oldest_leaves_in_6_node_cluster();
+            await ClusterSingletonManager_should_takeover_when_oldest_crashes_in_5_node_cluster();
+            await ClusterSingletonManager_should_takeover_when_two_oldest_crash_in_3_node_cluster();
+            await ClusterSingletonManager_should_takeover_when_oldest_crashes_in_2_node_cluster();
         }
 
-        public void ClusterSingletonManager_should_startup_6_node_cluster()
+        public async Task ClusterSingletonManager_should_startup_6_node_cluster()
         {
-            Within(TimeSpan.FromSeconds(60), () =>
+            await WithinAsync(TimeSpan.FromSeconds(60), async () =>
             {
                 var memberProbe = CreateTestProbe();
                 Cluster.Subscribe(memberProbe.Ref, new[] { typeof(ClusterEvent.MemberUp) });
@@ -527,63 +529,63 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                     // watch that it is not terminated, which would indicate misbehaviour
                     Watch(Sys.ActorOf(Props.Create<PointToPointChannel>(), "queue"));
                 }, _controller);
-                EnterBarrier("queue-started");
+                await EnterBarrierAsync("queue-started");
 
-                Join(_first, _first);
-                AwaitMemberUp(memberProbe, _first);
-                VerifyRegistration(_first);
-                VerifyMsg(_first, Msg);
+                await Join(_first, _first);
+                await AwaitMemberUp(memberProbe, _first);
+                await VerifyRegistration(_first);
+                await VerifyMsg(_first, Msg);
 
                 // join the observer node as well, which should not influence since it doesn't have the "worker" role
-                Join(_observer, _first);
-                AwaitMemberUp(memberProbe, _observer, _first);
-                VerifyProxyMsg(_first, _first, Msg);
+                await Join(_observer, _first);
+                await AwaitMemberUp(memberProbe, _observer, _first);
+                await VerifyProxyMsg(_first, _first, Msg);
 
-                Join(_second, _first);
-                AwaitMemberUp(memberProbe, _second, _observer, _first);
-                VerifyMsg(_first, Msg);
-                VerifyProxyMsg(_first, _second, Msg);
+                await Join(_second, _first);
+                await AwaitMemberUp(memberProbe, _second, _observer, _first);
+                await VerifyMsg(_first, Msg);
+                await VerifyProxyMsg(_first, _second, Msg);
 
-                Join(_third, _first);
-                AwaitMemberUp(memberProbe, _third, _second, _observer, _first);
-                VerifyMsg(_first, Msg);
-                VerifyProxyMsg(_first, _third, Msg);
+                await Join(_third, _first);
+                await AwaitMemberUp(memberProbe, _third, _second, _observer, _first);
+                await VerifyMsg(_first, Msg);
+                await VerifyProxyMsg(_first, _third, Msg);
 
-                Join(_fourth, _first);
-                AwaitMemberUp(memberProbe, _fourth, _third, _second, _observer, _first);
-                VerifyMsg(_first, Msg);
-                VerifyProxyMsg(_first, _fourth, Msg);
+                await Join(_fourth, _first);
+                await AwaitMemberUp(memberProbe, _fourth, _third, _second, _observer, _first);
+                await VerifyMsg(_first, Msg);
+                await VerifyProxyMsg(_first, _fourth, Msg);
 
-                Join(_fifth, _first);
-                AwaitMemberUp(memberProbe, _fifth, _fourth, _third, _second, _observer, _first);
-                VerifyMsg(_first, Msg);
-                VerifyProxyMsg(_first, _fifth, Msg);
+                await Join(_fifth, _first);
+                await AwaitMemberUp(memberProbe, _fifth, _fourth, _third, _second, _observer, _first);
+                await VerifyMsg(_first, Msg);
+                await VerifyProxyMsg(_first, _fifth, Msg);
 
-                Join(_sixth, _first);
-                AwaitMemberUp(memberProbe, _sixth, _fifth, _fourth, _third, _second, _observer, _first);
-                VerifyMsg(_first, Msg);
-                VerifyProxyMsg(_first, _sixth, Msg);
+                await Join(_sixth, _first);
+                await AwaitMemberUp(memberProbe, _sixth, _fifth, _fourth, _third, _second, _observer, _first);
+                await VerifyMsg(_first, Msg);
+                await VerifyProxyMsg(_first, _sixth, Msg);
 
-                EnterBarrier("after-1");
+                await EnterBarrierAsync("after-1");
             });
         }
 
-        public void ClusterSingletonManager_should_let_the_proxy_messages_to_the_singleton_in_a_6_node_cluster()
+        public async Task ClusterSingletonManager_should_let_the_proxy_messages_to_the_singleton_in_a_6_node_cluster()
         {
-            Within(TimeSpan.FromSeconds(60), () =>
+            await WithinAsync(TimeSpan.FromSeconds(60), async () =>
             {
-                VerifyProxyMsg(_first, _first, Msg);
-                VerifyProxyMsg(_first, _second, Msg);
-                VerifyProxyMsg(_first, _third, Msg);
-                VerifyProxyMsg(_first, _fourth, Msg);
-                VerifyProxyMsg(_first, _fifth, Msg);
-                VerifyProxyMsg(_first, _sixth, Msg);
+                await VerifyProxyMsg(_first, _first, Msg);
+                await VerifyProxyMsg(_first, _second, Msg);
+                await VerifyProxyMsg(_first, _third, Msg);
+                await VerifyProxyMsg(_first, _fourth, Msg);
+                await VerifyProxyMsg(_first, _fifth, Msg);
+                await VerifyProxyMsg(_first, _sixth, Msg);
             });
         }
 
-        public void ClusterSingletonManager_should_handover_when_oldest_leaves_in_6_node_cluster()
+        public async Task ClusterSingletonManager_should_handover_when_oldest_leaves_in_6_node_cluster()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
             {
                 var leaveNode = _first;
 
@@ -592,13 +594,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                     Cluster.Leave(GetAddress(leaveNode));
                 }, leaveNode);
 
-                VerifyRegistration(_second);
-                VerifyMsg(_second, Msg);
-                VerifyProxyMsg(_second, _second, Msg);
-                VerifyProxyMsg(_second, _third, Msg);
-                VerifyProxyMsg(_second, _fourth, Msg);
-                VerifyProxyMsg(_second, _fifth, Msg);
-                VerifyProxyMsg(_second, _sixth, Msg);
+                await VerifyRegistration(_second);
+                await VerifyMsg(_second, Msg);
+                await VerifyProxyMsg(_second, _second, Msg);
+                await VerifyProxyMsg(_second, _third, Msg);
+                await VerifyProxyMsg(_second, _fourth, Msg);
+                await VerifyProxyMsg(_second, _fifth, Msg);
+                await VerifyProxyMsg(_second, _sixth, Msg);
 
                 RunOn(() =>
                 {
@@ -612,49 +614,49 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                         }
                     });
                 }, leaveNode);
-                EnterBarrier("after-leave");
+                await EnterBarrierAsync("after-leave");
             });
         }
 
-        public void ClusterSingletonManager_should_takeover_when_oldest_crashes_in_5_node_cluster()
+        public async Task ClusterSingletonManager_should_takeover_when_oldest_crashes_in_5_node_cluster()
         {
-            Within(TimeSpan.FromSeconds(60), () =>
+            await WithinAsync(TimeSpan.FromSeconds(60), async () =>
             {
                 // mute logging of deadLetters during shutdown of systems
                 if (!Log.IsDebugEnabled)
                     Sys.EventStream.Publish(new Mute(new DeadLettersFilter(new PredicateMatcher(_ => true), new PredicateMatcher(_ => true))));
-                EnterBarrier("logs-muted");
+                await EnterBarrierAsync("logs-muted");
 
-                Crash(_second);
-                VerifyRegistration(_third);
-                VerifyMsg(_third, Msg);
-                VerifyProxyMsg(_third, _third, Msg);
-                VerifyProxyMsg(_third, _fourth, Msg);
-                VerifyProxyMsg(_third, _fifth, Msg);
-                VerifyProxyMsg(_third, _sixth, Msg);
+                await Crash(_second);
+                await VerifyRegistration(_third);
+                await VerifyMsg(_third, Msg);
+                await VerifyProxyMsg(_third, _third, Msg);
+                await VerifyProxyMsg(_third, _fourth, Msg);
+                await VerifyProxyMsg(_third, _fifth, Msg);
+                await VerifyProxyMsg(_third, _sixth, Msg);
             });
         }
 
-        public void ClusterSingletonManager_should_takeover_when_two_oldest_crash_in_3_node_cluster()
+        public async Task ClusterSingletonManager_should_takeover_when_two_oldest_crash_in_3_node_cluster()
         {
-            Within(TimeSpan.FromSeconds(60), () =>
+            await WithinAsync(TimeSpan.FromSeconds(60), async () =>
             {
-                Crash(_third, _fourth);
-                VerifyRegistration(_fifth);
-                VerifyMsg(_fifth, Msg);
-                VerifyProxyMsg(_fifth, _fifth, Msg);
-                VerifyProxyMsg(_fifth, _sixth, Msg);
+                await Crash(_third, _fourth);
+                await VerifyRegistration(_fifth);
+                await VerifyMsg(_fifth, Msg);
+                await VerifyProxyMsg(_fifth, _fifth, Msg);
+                await VerifyProxyMsg(_fifth, _sixth, Msg);
             });
         }
 
-        public void ClusterSingletonManager_should_takeover_when_oldest_crashes_in_2_node_cluster()
+        public async Task ClusterSingletonManager_should_takeover_when_oldest_crashes_in_2_node_cluster()
         {
-            Within(TimeSpan.FromSeconds(60), () =>
+            await WithinAsync(TimeSpan.FromSeconds(60), async () =>
             {
-                Crash(_fifth);
-                VerifyRegistration(_sixth);
-                VerifyMsg(_sixth, Msg);
-                VerifyProxyMsg(_sixth, _sixth, Msg);
+                await Crash(_fifth);
+                await VerifyRegistration(_sixth);
+                await VerifyMsg(_sixth, Msg);
+                await VerifyProxyMsg(_sixth, _sixth, Msg);
             });
         }
     }

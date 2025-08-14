@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Singleton;
@@ -40,6 +41,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSingletonProxy.DefaultConfig())
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());
+            
+            TestTransport = true;
         }
 
         internal class EchoStarted
@@ -107,13 +110,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 name: "echoProxy")));
         }
 
-        private void Join(RoleName from, RoleName to)
+        private async Task Join(RoleName from, RoleName to)
         {
-            RunOn(() =>
+            await Task.Run(() => RunOn(() =>
             {
                 Cluster.Join(Node(to).Address);
                 CreateSingleton();
-            }, from);
+            }, from));
         }
 
         private IActorRef CreateSingleton()
@@ -126,20 +129,25 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         }
 
         [MultiNodeFact]
-        public void ClusterSingletonManagerDownedSpecs()
+        public async Task ClusterSingletonManagerDownedSpecs()
         {
-            ClusterSingletonManager_downing_must_startup_3_node();
+            await ClusterSingletonManager_downing_must_startup_3_node();
+            await ClusterSingletonManager_downing_must_stop_instance_when_member_is_downed();
         }
 
-        private void ClusterSingletonManager_downing_must_startup_3_node()
+        private async Task ClusterSingletonManager_downing_must_startup_3_node()
         {
-            Join(_config.First, _config.First);
-            Join(_config.Second, _config.First);
-            Join(_config.Third, _config.First);
+            await Join(_config.First, _config.First);
+            await Join(_config.Second, _config.First);
+            await Join(_config.Third, _config.First);
 
-            Within(15.Seconds(), () =>
+            await WithinAsync(15.Seconds(), async () =>
             {
-                AwaitAssert(() => Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(3));
+                await AwaitAssertAsync(() => 
+                {
+                    Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(3);
+                    return Task.CompletedTask;
+                });
             });
 
             RunOn(() =>
@@ -147,35 +155,39 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 ExpectMsg(ClusterSingletonManagerDownedSpecConfig.EchoStarted.Instance);
             }, _config.First);
 
-            EnterBarrier("started");
+            await EnterBarrierAsync("started");
         }
 
-        private void ClusterSingletonManager_downing_must_stop_instance_when_member_is_downed()
+        private async Task ClusterSingletonManager_downing_must_stop_instance_when_member_is_downed()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.Blackhole(_config.First, _config.Third, ThrottleTransportAdapter.Direction.Both).Wait();
-                TestConductor.Blackhole(_config.Second, _config.Third, ThrottleTransportAdapter.Direction.Both).Wait();
+                await TestConductor.BlackholeAsync(_config.First, _config.Third, ThrottleTransportAdapter.Direction.Both);
+                await TestConductor.BlackholeAsync(_config.Second, _config.Third, ThrottleTransportAdapter.Direction.Both);
 
-                Within(15.Seconds(), () =>
+                await WithinAsync(15.Seconds(), async () =>
                 {
-                    AwaitAssert(() => Cluster.State.Unreachable.Count.Should().Be(1));
+                    await AwaitAssertAsync(() => 
+                    {
+                        Cluster.State.Unreachable.Count.Should().Be(1);
+                        return Task.CompletedTask;
+                    });
                 });
             }, _config.First);
 
-            EnterBarrier("blackhole-1");
+            await EnterBarrierAsync("blackhole-1");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 // another blackhole so that second can't mark gossip as seen and thereby deferring shutdown of first
-                TestConductor.Blackhole(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                await TestConductor.BlackholeAsync(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
                 Cluster.Down(Node(_config.Second).Address);
                 Cluster.Down(Cluster.SelfAddress);
                 // singleton instance stopped, before failure detection of first-second
                 ExpectMsg<ClusterSingletonManagerDownedSpecConfig.EchoStopped>(TimeSpan.FromSeconds(3));
             }, _config.First);
 
-            EnterBarrier("stopped");
+            await EnterBarrierAsync("stopped");
         }
     }
 }

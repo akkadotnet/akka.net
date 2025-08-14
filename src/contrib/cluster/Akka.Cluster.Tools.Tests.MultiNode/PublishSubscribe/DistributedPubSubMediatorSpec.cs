@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.PublishSubscribe;
@@ -265,14 +266,14 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             return _chatUsers.TryGetValue(name, out var a) ? a : ActorRefs.Nobody;
         }
 
-        private void Join(RoleName from, RoleName to)
+        private async Task Join(RoleName from, RoleName to)
         {
             RunOn(() =>
             {
                 Cluster.Join(Node(to).Address);
                 CreateMediator();
             }, from);
-            EnterBarrier(from.Name + "-joined");
+            await EnterBarrierAsync(from.Name + "-joined");
         }
 
         private void CreateMediator()
@@ -301,39 +302,39 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         #endregion
 
         [MultiNodeFact]
-        public void DistributedPubSubMediatorSpecs()
+        public async Task DistributedPubSubMediatorSpecs()
         {
-            DistributedPubSubMediator_must_startup_2_nodes_cluster();
-            DistributedPubSubMediator_must_keep_track_of_added_users();
-            DistributedPubSubMediator_must_replicate_users_to_new_node();
-            DistributedPubSubMediator_must_keep_track_of_removed_users();
-            DistributedPubSubMediator_must_remove_terminated_users();
-            DistributedPubSubMediator_must_publish();
-            DistributedPubSubMediator_must_publish_to_topic();
-            DistributedPubSubMediator_must_demonstrate_usage_of_Publish();
-            DistributedPubSubMediator_must_demonstrate_usage_of_Send();
-            DistributedPubSubMediator_must_SendAll_to_all_other_nodes();
-            DistributedPubSubMediator_must_send_one_message_to_each_group();
-            DistributedPubSubMediator_must_transfer_delta_correctly();
-            DistributedPubSubMediator_must_remove_entries_when_node_is_removed();
-            DistributedPubSubMediator_must_receive_proper_UnsubscribeAck_message();
-            DistributedPubSubMediator_must_get_topics_after_simple_publish();
-            DistributedPubSubMediator_must_remove_topic_subscribers_when_they_terminate();
+            await DistributedPubSubMediator_must_startup_2_nodes_cluster();
+            await DistributedPubSubMediator_must_keep_track_of_added_users();
+            await DistributedPubSubMediator_must_replicate_users_to_new_node();
+            await DistributedPubSubMediator_must_keep_track_of_removed_users();
+            await DistributedPubSubMediator_must_remove_terminated_users();
+            await DistributedPubSubMediator_must_publish();
+            await DistributedPubSubMediator_must_publish_to_topic();
+            await DistributedPubSubMediator_must_demonstrate_usage_of_Publish();
+            await DistributedPubSubMediator_must_demonstrate_usage_of_Send();
+            await DistributedPubSubMediator_must_SendAll_to_all_other_nodes();
+            await DistributedPubSubMediator_must_send_one_message_to_each_group();
+            await DistributedPubSubMediator_must_transfer_delta_correctly();
+            await DistributedPubSubMediator_must_remove_entries_when_node_is_removed();
+            await DistributedPubSubMediator_must_receive_proper_UnsubscribeAck_message();
+            await DistributedPubSubMediator_must_get_topics_after_simple_publish();
+            await DistributedPubSubMediator_must_remove_topic_subscribers_when_they_terminate();
         }
 
-        public void DistributedPubSubMediator_must_startup_2_nodes_cluster()
+        public async Task DistributedPubSubMediator_must_startup_2_nodes_cluster()
         {
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
-                Join(_first, _first);
-                Join(_second, _first);
-                EnterBarrier("after-1");
+                await Join(_first, _first);
+                await Join(_second, _first);
+                await EnterBarrierAsync("after-1");
             });
         }
 
-        public void DistributedPubSubMediator_must_keep_track_of_added_users()
+        public async Task DistributedPubSubMediator_must_keep_track_of_added_users()
         {
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
                 RunOn(() =>
                 {
@@ -361,7 +362,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 {
                     AwaitCount(3);
                 }, _first, _second);
-                EnterBarrier("3-registered");
+                await EnterBarrierAsync("3-registered");
 
                 RunOn(() =>
                 {
@@ -373,7 +374,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 {
                     AwaitCount(4);
                 }, _first, _second);
-                EnterBarrier("4-registered");
+                await EnterBarrierAsync("4-registered");
 
                 RunOn(() =>
                 {
@@ -386,15 +387,15 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     ExpectMsg("hi there");
                     LastSender.Path.Name.Should().Be("u4");
                 }, _second);
-                EnterBarrier("after-2");
+                await EnterBarrierAsync("after-2");
             });
         }
 
-        public void DistributedPubSubMediator_must_replicate_users_to_new_node()
+        public async Task DistributedPubSubMediator_must_replicate_users_to_new_node()
         {
-            Within(TimeSpan.FromSeconds(20), () =>
+            await WithinAsync(TimeSpan.FromSeconds(20), async () =>
             {
-                Join(_third, _first);
+                await Join(_third, _first);
                 RunOn(() =>
                 {
                     var u5 = CreateChatUser("u5");
@@ -402,7 +403,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 }, _third);
 
                 AwaitCount(5);
-                EnterBarrier("5-registered");
+                await EnterBarrierAsync("5-registered");
 
                 RunOn(() =>
                 {
@@ -414,13 +415,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     ExpectMsg("go");
                     LastSender.Path.Name.Should().Be("u4");
                 }, _second);
-                EnterBarrier("after-3");
+                await EnterBarrierAsync("after-3");
             });
         }
 
-        public void DistributedPubSubMediator_must_keep_track_of_removed_users()
+        public async Task DistributedPubSubMediator_must_keep_track_of_removed_users()
         {
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
                 RunOn(() =>
                 {
@@ -428,7 +429,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     Mediator.Tell(new Put(u6));
                 }, _first);
                 AwaitCount(6);
-                EnterBarrier("6-registered");
+                await EnterBarrierAsync("6-registered");
 
                 RunOn(() =>
                 {
@@ -436,13 +437,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 }, _first);
                 AwaitCount(5);
 
-                EnterBarrier("after-4");
+                await EnterBarrierAsync("after-4");
             });
         }
 
-        public void DistributedPubSubMediator_must_remove_terminated_users()
+        public async Task DistributedPubSubMediator_must_remove_terminated_users()
         {
-            Within(TimeSpan.FromSeconds(5), () =>
+            await WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
                 RunOn(() =>
                 {
@@ -450,13 +451,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 }, _second);
 
                 AwaitCount(4);
-                EnterBarrier("after-5");
+                await EnterBarrierAsync("after-5");
             });
         }
 
-        public void DistributedPubSubMediator_must_publish()
+        public async Task DistributedPubSubMediator_must_publish()
         {
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
                 RunOn(() =>
                 {
@@ -464,7 +465,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     Mediator.Tell(new Put(u7));
                 }, _first, _second);
                 AwaitCount(6);
-                EnterBarrier("7-registered");
+                await EnterBarrierAsync("7-registered");
 
                 RunOn(() =>
                 {
@@ -482,13 +483,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     ExpectNoMsg(TimeSpan.FromSeconds(2));
                 }, _third);
 
-                EnterBarrier("after-6");
+                await EnterBarrierAsync("after-6");
             });
         }
 
-        public void DistributedPubSubMediator_must_publish_to_topic()
+        public async Task DistributedPubSubMediator_must_publish_to_topic()
         {
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
                 RunOn(() =>
                 {
@@ -509,7 +510,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
                 // one topic on two nodes
                 AwaitCount(8);
-                EnterBarrier("topic1-registered");
+                await EnterBarrierAsync("topic1-registered");
 
                 RunOn(() =>
                 {
@@ -532,13 +533,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 {
                     ExpectNoMsg(TimeSpan.FromSeconds(2));
                 }, _third);
-                EnterBarrier("after-7");
+                await EnterBarrierAsync("after-7");
             });
         }
 
-        public void DistributedPubSubMediator_must_demonstrate_usage_of_Publish()
+        public async Task DistributedPubSubMediator_must_demonstrate_usage_of_Publish()
         {
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
                 RunOn(() =>
                 {
@@ -558,13 +559,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     // after a while the subscriptions are replicated
                     publisher.Tell("hello");
                 }, _third);
-                EnterBarrier("after-8");
+                await EnterBarrierAsync("after-8");
             });
         }
 
-        public void DistributedPubSubMediator_must_demonstrate_usage_of_Send()
+        public async Task DistributedPubSubMediator_must_demonstrate_usage_of_Send()
         {
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
                 RunOn(() =>
                 {
@@ -584,13 +585,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     sender.Tell("hello");
                 }, _third);
 
-                EnterBarrier("after-8");
+                await EnterBarrierAsync("after-8");
             });
         }
 
-        public void DistributedPubSubMediator_must_SendAll_to_all_other_nodes()
+        public async Task DistributedPubSubMediator_must_SendAll_to_all_other_nodes()
         {
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
                 RunOn(() =>
                 {
@@ -598,7 +599,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     Mediator.Tell(new Put(u11));
                 }, _first, _second, _third);
                 AwaitCount(15);
-                EnterBarrier("11-registered");
+                await EnterBarrierAsync("11-registered");
 
                 RunOn(() =>
                 {
@@ -615,13 +616,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 {
                     ExpectNoMsg(TimeSpan.FromSeconds(2));
                 }, _third);
-                EnterBarrier("after-11");
+                await EnterBarrierAsync("after-11");
             });
         }
 
-        public void DistributedPubSubMediator_must_send_one_message_to_each_group()
+        public async Task DistributedPubSubMediator_must_send_one_message_to_each_group()
         {
-            Within(TimeSpan.FromSeconds(20), () =>
+            await WithinAsync(TimeSpan.FromSeconds(20), async () =>
             {
                 RunOn(() =>
                 {
@@ -651,7 +652,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 }, _second);
 
                 AwaitCount(19);
-                EnterBarrier("12-registered");
+                await EnterBarrierAsync("12-registered");
 
                 RunOn(() =>
                 {
@@ -663,7 +664,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     ExpectMsg("hi");
                     ExpectNoMsg(TimeSpan.FromSeconds(2));   // each group receive only one message
                 }, _first, _second);
-                EnterBarrier("12-published");
+                await EnterBarrierAsync("12-published");
 
                 RunOn(() =>
                 {
@@ -690,11 +691,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     message2.Unsubscribe.Group.Should().Be("group2");
                     message2.Unsubscribe.Ref.Should().Be(u13);
                 }, _second);
-                EnterBarrier("after-12");
+                await EnterBarrierAsync("after-12");
             });
         }
 
-        public void DistributedPubSubMediator_must_transfer_delta_correctly()
+        public async Task DistributedPubSubMediator_must_transfer_delta_correctly()
         {
             var firstAddress = Node(_first).Address;
             var secondAddress = Node(_second).Address;
@@ -709,7 +710,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 deltaBuckets.First(x => x.Owner == secondAddress).Content.Count.Should().Be(9);
                 deltaBuckets.First(x => x.Owner == thirdAddress).Content.Count.Should().Be(2);
             }, _first);
-            EnterBarrier("verified-initial-delta");
+            await EnterBarrierAsync("verified-initial-delta");
 
             // this test is configured with max-delta-elements = 500
             var many = 1010;
@@ -733,40 +734,40 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 var deltaBuckets3 = ExpectMsg<Delta>().Buckets;
                 deltaBuckets3.Sum(x => x.Content.Count).Should().Be(10 + 9 + 2 + many - 500 - 500);
             }, _first);
-            EnterBarrier("verified-delta-with-many");
+            await EnterBarrierAsync("verified-delta-with-many");
 
             Within(TimeSpan.FromSeconds(10), () =>
             {
                 AwaitCount(19 + many);
             });
-            EnterBarrier("after-13");
+            await EnterBarrierAsync("after-13");
         }
 
-        public void DistributedPubSubMediator_must_remove_entries_when_node_is_removed()
+        public async Task DistributedPubSubMediator_must_remove_entries_when_node_is_removed()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
             {
                 Mediator.Tell(Count.Instance);
                 var countBefore = ExpectMsg<int>();
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
-                    TestConductor.Exit(_third, 0).Wait();
+                    await TestConductor.ExitAsync(_third, 0);
                 }, _first);
-                EnterBarrier("third-shutdown");
+                await EnterBarrierAsync("third-shutdown");
 
                 // third had 2 entries u5 and u11, and those should be removed everywhere
                 RunOn(() =>
                 {
                     AwaitCount(countBefore - 2);
                 }, _first, _second);
-                EnterBarrier("after-14");
+                await EnterBarrierAsync("after-14");
             });
         }
 
-        public void DistributedPubSubMediator_must_receive_proper_UnsubscribeAck_message()
+        public async Task DistributedPubSubMediator_must_receive_proper_UnsubscribeAck_message()
         {
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
                 RunOn(() =>
                 {
@@ -779,13 +780,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     Mediator.Tell(uns);
                     ExpectMsg<UnsubscribeAck>(x => x.Unsubscribe.Equals(uns));
                 }, _first);
-                EnterBarrier("after-15");
+                await EnterBarrierAsync("after-15");
             });
         }
 
-        public void DistributedPubSubMediator_must_get_topics_after_simple_publish()
+        public async Task DistributedPubSubMediator_must_get_topics_after_simple_publish()
         {
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
                 RunOn(() =>
                 {
@@ -810,7 +811,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     ExpectMsg<SubscribeAck>(x => x.Subscribe.Equals(s3));
 
                 }, _second);
-                EnterBarrier("topics-registered");
+                await EnterBarrierAsync("topics-registered");
 
                 RunOn(() =>
                 {
@@ -831,13 +832,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                         topics.Contains("topic_a2").Should().BeTrue();
                     });
                 }, _second);
-                EnterBarrier("after-get-topics");
+                await EnterBarrierAsync("after-get-topics");
             });
         }
 
-        public void DistributedPubSubMediator_must_remove_topic_subscribers_when_they_terminate()
+        public async Task DistributedPubSubMediator_must_remove_topic_subscribers_when_they_terminate()
         {
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
                 RunOn(() =>
                 {
@@ -849,7 +850,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     ChatUser("u18").Tell(PoisonPill.Instance);
                     AwaitCountSubscribers(0, "topic_b1");
                 }, _first);
-                EnterBarrier("after-15");
+                await EnterBarrierAsync("after-15");
             });
         }
     }

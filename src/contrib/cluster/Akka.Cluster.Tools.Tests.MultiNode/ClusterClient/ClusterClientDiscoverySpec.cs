@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Client;
@@ -107,47 +108,47 @@ akka {
             _config = config;
         }
 
-        private void Join(RoleName from, RoleName to)
+        private async Task Join(RoleName from, RoleName to)
         {
             RunOn(() =>
             {
                 Cluster.Join(Node(to).Address);
                 ClusterClientReceptionist.Get(Sys);
             }, from);
-            EnterBarrier(from.Name + "-joined");
+            await EnterBarrierAsync(from.Name + "-joined");
         }
 
         private IActorRef _clusterClient = null;
 
         [MultiNodeFact]
-        public void ClusterClientDiscoverySpecs()
+        public async Task ClusterClientDiscoverySpecs()
         {
-            ClusterClient_must_startup_cluster_with_single_node();
-            ClusterClient_must_establish_connection_to_first_node();
-            ClusterClient_must_down_existing_cluster();
-            ClusterClient_second_node_must_form_a_new_cluster();
-            ClusterClient_must_re_establish_on_cluster_restart();
-            ClusterClient_must_simulate_a_cluster_forced_shutdown();
-            ClusterClient_third_node_formed_a_cluster();
-            ClusterClient_must_re_establish_on_cluster_restart_after_hard_shutdown();
+            await ClusterClient_must_startup_cluster_with_single_node();
+            await ClusterClient_must_establish_connection_to_first_node();
+            await ClusterClient_must_down_existing_cluster();
+            await ClusterClient_second_node_must_form_a_new_cluster();
+            await ClusterClient_must_re_establish_on_cluster_restart();
+            await ClusterClient_must_simulate_a_cluster_forced_shutdown();
+            await ClusterClient_third_node_formed_a_cluster();
+            await ClusterClient_must_re_establish_on_cluster_restart_after_hard_shutdown();
         }
         
-        private void ClusterClient_must_startup_cluster_with_single_node()
+        private async Task ClusterClient_must_startup_cluster_with_single_node()
         {
-            Join(_config.First, _config.First);
+            await Join(_config.First, _config.First);
             
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                AkkaManagement.Get(Sys).Start().Wait();
+                await AkkaManagement.Get(Sys).Start();
                     
                 var service = Sys.ActorOf(EchoActor.Props(this), "testService");
                 ClusterClientReceptionist.Get(Sys).RegisterService(service);
                 AwaitMembersUp(1);
             }, _config.First);
             
-            EnterBarrier("cluster-started");
+            await EnterBarrierAsync("cluster-started");
                 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 _discoveryService =
                     (ConfigServiceDiscovery)Discovery.Discovery.Get(Sys).LoadServiceDiscovery("config");
@@ -155,14 +156,14 @@ akka {
                 _discoveryService.TryAddEndpoint("test-cluster", 
                     new ServiceDiscovery.ResolvedTarget(address.Host, ClusterClientDiscoverySpecConfig.HttpPorts[0]));
                     
-                var resolved = _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
+                var resolved = await _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1));
                 resolved.Addresses.Count.Should().Be(1);
             }, _config.Client);
             
-            EnterBarrier("discovery-entry-added");
+            await EnterBarrierAsync("discovery-entry-added");
         }
 
-        private void ClusterClient_must_establish_connection_to_first_node()
+        private async Task ClusterClient_must_establish_connection_to_first_node()
         {
             RunOn(() =>
             {
@@ -180,62 +181,62 @@ akka {
                 FishForMessage(msg => msg is string).Should().Be("hello");
             }, _config.Client);
             
-            EnterBarrier("established");
+            await EnterBarrierAsync("established");
         }
 
-        private void ClusterClient_must_down_existing_cluster()
+        private async Task ClusterClient_must_down_existing_cluster()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                AkkaManagement.Get(Sys).Stop().Wait();
+                await AkkaManagement.Get(Sys).Stop();
                 
                 Cluster.Get(Sys).Leave(Node(_config.First).Address);
             }, _config.First);
 
-            EnterBarrier("cluster-downed");
+            await EnterBarrierAsync("cluster-downed");
             
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var address = GetAddress(_config.First);
                 _discoveryService.TryRemoveEndpoint("test-cluster", 
                     new ServiceDiscovery.ResolvedTarget(address.Host, ClusterClientDiscoverySpecConfig.HttpPorts[0]));
                 
-                var resolved = _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
+                var resolved = await _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1));
                 resolved.Addresses.Count.Should().Be(0);
             }, _config.Client);
             
-            EnterBarrier("discovery-entry-removed");
+            await EnterBarrierAsync("discovery-entry-removed");
             
         }
         
-        private void ClusterClient_second_node_must_form_a_new_cluster()
+        private async Task ClusterClient_second_node_must_form_a_new_cluster()
         {
-            Join(_config.Second, _config.Second);
-            RunOn(() =>
+            await Join(_config.Second, _config.Second);
+            await RunOnAsync(async () =>
             {
-                AkkaManagement.Get(Sys).Start().Wait();
+                await AkkaManagement.Get(Sys).Start();
                 
                 var service = Sys.ActorOf(EchoActor.Props(this), "testService");
                 ClusterClientReceptionist.Get(Sys).RegisterService(service);
                 AwaitMembersUp(1);
             }, _config.Second);
             
-            EnterBarrier("cluster-restarted");
+            await EnterBarrierAsync("cluster-restarted");
             
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var address = GetAddress(_config.Second);
                 _discoveryService.TryAddEndpoint("test-cluster", 
                     new ServiceDiscovery.ResolvedTarget(address.Host, ClusterClientDiscoverySpecConfig.HttpPorts[1]));
                 
-                var resolved = _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
+                var resolved = await _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1));
                 resolved.Addresses.Count.Should().Be(1);
             }, _config.Client);
             
-            EnterBarrier("discovery-entry-updated");
+            await EnterBarrierAsync("discovery-entry-updated");
         }
 
-        private void ClusterClient_must_re_establish_on_cluster_restart()
+        private async Task ClusterClient_must_re_establish_on_cluster_restart()
         {
             RunOn(() =>
             {
@@ -251,50 +252,50 @@ akka {
                 FishForMessage(msg => msg is string).Should().Be("hello");
             }, _config.Client);
             
-            EnterBarrier("re-establish-successful");
+            await EnterBarrierAsync("re-establish-successful");
         }
 
-        private void ClusterClient_must_simulate_a_cluster_forced_shutdown()
+        private async Task ClusterClient_must_simulate_a_cluster_forced_shutdown()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                AkkaManagement.Get(Sys).Stop().Wait();
+                await AkkaManagement.Get(Sys).Stop();
 
                 // simulate a hard shutdown
-                TestConductor.Exit(_config.Second, 0).Wait();
+                await TestConductor.ExitAsync(_config.Second, 0);
             }, _config.Client);
             
-            EnterBarrier("hard-shutdown-and-discovery-entry-updated");
+            await EnterBarrierAsync("hard-shutdown-and-discovery-entry-updated");
         }
 
-        private void ClusterClient_third_node_formed_a_cluster()
+        private async Task ClusterClient_third_node_formed_a_cluster()
         {
-            Join(_config.Third, _config.Third);
-            RunOn(() =>
+            await Join(_config.Third, _config.Third);
+            await RunOnAsync(async () =>
             {
-                AkkaManagement.Get(Sys).Start().Wait();
+                await AkkaManagement.Get(Sys).Start();
                 
                 var service = Sys.ActorOf(EchoActor.Props(this), "testService");
                 ClusterClientReceptionist.Get(Sys).RegisterService(service);
                 AwaitMembersUp(1);
             }, _config.Third);
             
-            EnterBarrier("cluster-restarted");
+            await EnterBarrierAsync("cluster-restarted");
             
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var address = GetAddress(_config.Third);
                 _discoveryService.TryAddEndpoint("test-cluster", 
                     new ServiceDiscovery.ResolvedTarget(address.Host, ClusterClientDiscoverySpecConfig.HttpPorts[2]));
                 
-                var resolved = _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1)).Result;
+                var resolved = await _discoveryService.Lookup(new Lookup("test-cluster"), TimeSpan.FromSeconds(1));
                 resolved.Addresses.Count.Should().Be(2);
             }, _config.Client);
             
-            EnterBarrier("discovery-entry-updated");
+            await EnterBarrierAsync("discovery-entry-updated");
         }
         
-        private void ClusterClient_must_re_establish_on_cluster_restart_after_hard_shutdown()
+        private async Task ClusterClient_must_re_establish_on_cluster_restart_after_hard_shutdown()
         {
             RunOn(() =>
             {
@@ -310,7 +311,7 @@ akka {
                 FishForMessage(msg => msg is string).Should().Be("hello");
             }, _config.Client);
             
-            EnterBarrier("re-establish-successful");
+            await EnterBarrierAsync("re-establish-successful");
         }
 
     }
