@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -80,12 +81,12 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
         }
 
         [MultiNodeFact]
-        public void DownAllUnstable5NodeSpecTests()
+        public async Task DownAllUnstable5NodeSpecTests()
         {
-            A_5_node_cluster_with_down_all_when_unstable_should_down_all_when_instability_continues();
+            await A_5_node_cluster_with_down_all_when_unstable_should_down_all_when_instability_continues();
         }
 
-        public void A_5_node_cluster_with_down_all_when_unstable_should_down_all_when_instability_continues()
+        public async Task A_5_node_cluster_with_down_all_when_unstable_should_down_all_when_instability_continues()
         {
             var cluster = Cluster.Get(Sys);
 
@@ -93,14 +94,14 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
             {
                 cluster.Join(cluster.SelfAddress);
             }, _config.Node1);
-            EnterBarrier("node1 joined");
+            await EnterBarrierAsync("node1 joined");
             RunOn(() =>
             {
                 cluster.Join(Node(_config.Node1).Address);
             }, _config.Node2, _config.Node3, _config.Node4, _config.Node5);
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     cluster.State.Members.Count.Should().Be(5);
                     foreach (var m in cluster.State.Members)
@@ -110,27 +111,27 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                 });
             });
 
-            EnterBarrier("Cluster formed");
+            await EnterBarrierAsync("Cluster formed");
 
             // acceptable-heartbeat-pause = 3s
             // stable-after = 10s
             // down-all-when-unstable = 7s
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 foreach (var x in new[] { _config.Node1, _config.Node2, _config.Node3 })
                 {
                     foreach (var y in new[] { _config.Node4, _config.Node5 })
                     {
-                        TestConductor.Blackhole(x, y, ThrottleTransportAdapter.Direction.Both).Wait();
+                        await TestConductor.BlackholeAsync(x, y, ThrottleTransportAdapter.Direction.Both);
                     }
                 }
             }, _config.Node1);
-            EnterBarrier("blackholed-clean-partition");
+            await EnterBarrierAsync("blackholed-clean-partition");
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     RunOn(() =>
                     {
@@ -142,36 +143,36 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                     }, _config.Node4, _config.Node5);
                 });
             });
-            EnterBarrier("unreachable-clean-partition");
+            await EnterBarrierAsync("unreachable-clean-partition");
 
             // no decision yet
-            Thread.Sleep(2000);
+            await Task.Delay(2000);
             cluster.State.Members.Count.Should().Be(5);
             foreach (var m in cluster.State.Members)
             {
                 m.Status.Should().Be(MemberStatus.Up);
             }
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.Blackhole(_config.Node2, _config.Node3, ThrottleTransportAdapter.Direction.Both).Wait();
+                await TestConductor.BlackholeAsync(_config.Node2, _config.Node3, ThrottleTransportAdapter.Direction.Both);
             }, _config.Node1);
-            EnterBarrier("blackhole-2");
+            await EnterBarrierAsync("blackhole-2");
             // then it takes about 5 seconds for failure detector to observe that
-            Thread.Sleep(7000);
+            await Task.Delay(7000);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.PassThrough(_config.Node2, _config.Node3, ThrottleTransportAdapter.Direction.Both).Wait();
+                await TestConductor.PassThroughAsync(_config.Node2, _config.Node3, ThrottleTransportAdapter.Direction.Both);
             }, _config.Node1);
-            EnterBarrier("passThrough-2");
+            await EnterBarrierAsync("passThrough-2");
 
             // now it should have been unstable for more than 17 seconds
 
             // all downed
-            AwaitCondition(() => cluster.IsTerminated, max: TimeSpan.FromSeconds(15));
+            await AwaitConditionAsync(() => Task.FromResult(cluster.IsTerminated), max: TimeSpan.FromSeconds(15));
 
-            EnterBarrier("done");
+            await EnterBarrierAsync("done");
         }
     }
 }
