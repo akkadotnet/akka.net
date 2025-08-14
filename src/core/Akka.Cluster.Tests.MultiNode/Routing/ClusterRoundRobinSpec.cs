@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Routing;
 using Akka.Cluster.TestKit;
@@ -177,27 +178,27 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
 
         [MultiNodeFact]
-        public void ClusterRoundRobinSpecs()
+        public async Task ClusterRoundRobinSpecs()
         {
-            A_cluster_router_with_a_RoundRobin_router_must_start_cluster_with_2_nodes();
-            A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_the_member_nodes_in_the_cluster();
-            A_cluster_router_with_a_RoundRobin_router_must_lookup_routees_on_the_member_nodes_in_the_cluster();
-            A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_new_nodes_in_the_cluster();
-            A_cluster_router_with_a_RoundRobin_router_must_lookup_routees_on_new_nodes_in_the_cluster();
-            A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_only_remote_nodes_when_allowlocalrouteesoff();
-            A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_specified_node_role();
-            A_cluster_router_with_a_RoundRobin_router_must_deploy_programatically_defined_routees_to_the_member_nodes_in_the_cluster();
-            A_cluster_router_with_a_RoundRobin_router_must_remove_routees_for_unreachable_nodes_and_add_when_reachable_again();
-            A_cluster_router_with_a_RoundRobin_router_must_deploy_programatically_defined_routees_to_other_node_when_a_node_becomes_down();
+            await A_cluster_router_with_a_RoundRobin_router_must_start_cluster_with_2_nodes();
+            await A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_the_member_nodes_in_the_cluster();
+            await A_cluster_router_with_a_RoundRobin_router_must_lookup_routees_on_the_member_nodes_in_the_cluster();
+            await A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_new_nodes_in_the_cluster();
+            await A_cluster_router_with_a_RoundRobin_router_must_lookup_routees_on_new_nodes_in_the_cluster();
+            await A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_only_remote_nodes_when_allowlocalrouteesoff();
+            await A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_specified_node_role();
+            await A_cluster_router_with_a_RoundRobin_router_must_deploy_programatically_defined_routees_to_the_member_nodes_in_the_cluster();
+            await A_cluster_router_with_a_RoundRobin_router_must_remove_routees_for_unreachable_nodes_and_add_when_reachable_again();
+            await A_cluster_router_with_a_RoundRobin_router_must_deploy_programatically_defined_routees_to_other_node_when_a_node_becomes_down();
         }
 
-        private void A_cluster_router_with_a_RoundRobin_router_must_start_cluster_with_2_nodes()
+        private async Task A_cluster_router_with_a_RoundRobin_router_must_start_cluster_with_2_nodes()
         {
             AwaitClusterUp(_config.First, _config.Second);
-            EnterBarrier("after-1");
+            await EnterBarrierAsync("after-1");
         }
 
-        private void A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_the_member_nodes_in_the_cluster()
+        private async Task A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_the_member_nodes_in_the_cluster()
         {
             RunOn(() =>
             {
@@ -221,17 +222,17 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 replays.Values.Sum().Should().Be(iterationCount);
             }, _config.First);
 
-            EnterBarrier("after-2");
+            await EnterBarrierAsync("after-2");
         }
 
-        private void A_cluster_router_with_a_RoundRobin_router_must_lookup_routees_on_the_member_nodes_in_the_cluster()
+        private async Task A_cluster_router_with_a_RoundRobin_router_must_lookup_routees_on_the_member_nodes_in_the_cluster()
         {
             // cluster consists of first and second
             Sys.ActorOf(Props.Create(() => new ClusterRoundRobinSpecConfig.SomeActor(new ClusterRoundRobinSpecConfig.GroupRoutee())),
                 "myserviceA");
             Sys.ActorOf(Props.Create(() => new ClusterRoundRobinSpecConfig.SomeActor(new ClusterRoundRobinSpecConfig.GroupRoutee())),
                 "myserviceB");
-            EnterBarrier("myservice-started");
+            await EnterBarrierAsync("myservice-started");
 
             RunOn(() =>
             {
@@ -256,10 +257,10 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 replays.Values.Sum().Should().Be(iterationCount);
             }, _config.First);
 
-            EnterBarrier("after-3");
+            await EnterBarrierAsync("after-3");
         }
 
-        private void A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_new_nodes_in_the_cluster()
+        private async Task A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_new_nodes_in_the_cluster()
         {
             // add third and fourth
             AwaitClusterUp(_config.First, _config.Second, _config.Third, _config.Fourth);
@@ -281,10 +282,10 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 replays.Values.Sum().Should().Be(iterationCount);
             }, _config.First);
 
-            EnterBarrier("after-4");
+            await EnterBarrierAsync("after-4");
         }
 
-        private void A_cluster_router_with_a_RoundRobin_router_must_lookup_routees_on_new_nodes_in_the_cluster()
+        private async Task A_cluster_router_with_a_RoundRobin_router_must_lookup_routees_on_new_nodes_in_the_cluster()
         {
             // cluster consists of first, second, third and fourth
             RunOn(() =>
@@ -304,10 +305,10 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 replays.Values.Sum().Should().Be(iterationCount);
             }, _config.First);
 
-            EnterBarrier("after-5");
+            await EnterBarrierAsync("after-5");
         }
 
-        private void A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_only_remote_nodes_when_allowlocalrouteesoff()
+        private async Task A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_only_remote_nodes_when_allowlocalrouteesoff()
         {
             RunOn(() =>
             {
@@ -329,10 +330,10 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 replays.Values.Sum().Should().Be(iterationCount);
             }, _config.First);
 
-            EnterBarrier("after-6");
+            await EnterBarrierAsync("after-6");
         }
 
-        private void A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_specified_node_role()
+        private async Task A_cluster_router_with_a_RoundRobin_router_must_deploy_routees_to_specified_node_role()
         {
             RunOn(() =>
             {
@@ -353,10 +354,10 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 replays.Values.Sum().Should().Be(iterationCount);
             }, _config.First);
 
-            EnterBarrier("after-7");
+            await EnterBarrierAsync("after-7");
         }
 
-        private void A_cluster_router_with_a_RoundRobin_router_must_deploy_programatically_defined_routees_to_the_member_nodes_in_the_cluster()
+        private async Task A_cluster_router_with_a_RoundRobin_router_must_deploy_programatically_defined_routees_to_the_member_nodes_in_the_cluster()
         {
             RunOn(() =>
             {
@@ -381,12 +382,12 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 replays.Values.Sum().Should().Be(iterationCount);
             }, _config.First);
 
-            EnterBarrier("after-8");
+            await EnterBarrierAsync("after-8");
         }
 
-        private void A_cluster_router_with_a_RoundRobin_router_must_remove_routees_for_unreachable_nodes_and_add_when_reachable_again()
+        private async Task A_cluster_router_with_a_RoundRobin_router_must_remove_routees_for_unreachable_nodes_and_add_when_reachable_again()
         {
-            Within(30.Seconds(), () =>
+            await WithinAsync(30.Seconds(), async () =>
             {
                 // myservice is already running
 
@@ -396,26 +397,26 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                         .Select(c => FullAddress(((ActorSelectionRoutee)c).Selection.Anchor))
                         .ToList();
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     // 4 nodes, 2 routees on each node
                     AwaitAssert(() => CurrentRoutees(router4.Value).Count().Should().Be(8));
 
-                    TestConductor.Blackhole(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                    await TestConductor.BlackholeAsync(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
 
                     AwaitAssert(() => routees().Count.Should().Be(6));
                     routeeAddresses().Should().NotContain(GetAddress(_config.Second));
 
-                    TestConductor.PassThrough(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
+                    await TestConductor.PassThroughAsync(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
                     AwaitAssert(() => routees().Count.Should().Be(8));
                     routeeAddresses().Should().Contain(GetAddress(_config.Second));
                 }, _config.First);
             });
 
-            EnterBarrier("after-9");
+            await EnterBarrierAsync("after-9");
         }
 
-        private void A_cluster_router_with_a_RoundRobin_router_must_deploy_programatically_defined_routees_to_other_node_when_a_node_becomes_down()
+        private async Task A_cluster_router_with_a_RoundRobin_router_must_deploy_programatically_defined_routees_to_other_node_when_a_node_becomes_down()
         {
             MuteMarkingAsUnreachable();
 
@@ -459,7 +460,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 replays.Values.Sum().Should().Be(iterationCount);
 
             }, _config.First);
-            EnterBarrier("after-10");
+            await EnterBarrierAsync("after-10");
         }
     }
 }
