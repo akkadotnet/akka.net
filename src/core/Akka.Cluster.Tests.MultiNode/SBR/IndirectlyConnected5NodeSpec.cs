@@ -92,9 +92,9 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
             {
                 cluster.Join(Node(_config.Node1).Address);
             }, _config.Node2, _config.Node3, _config.Node4, _config.Node5);
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     cluster.State.Members.Count.Should().Be(5);
                     foreach (var m in cluster.State.Members)
@@ -124,9 +124,9 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
             }, _config.Node1);
             await EnterBarrierAsync("blackholed-indirectly-connected");
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     RunOn(() =>
                     {
@@ -148,11 +148,11 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
             });
             await EnterBarrierAsync("unreachable");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                Within(TimeSpan.FromSeconds(15), () =>
+                await WithinAsync(TimeSpan.FromSeconds(15), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         cluster.State.Members.Select(i => i.Address).Should().BeEquivalentTo(Node(_config.Node1).Address);
                         foreach (var m in cluster.State.Members)
@@ -163,10 +163,10 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                 });
             }, _config.Node1);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 // downed
-                AwaitCondition(() => cluster.IsTerminated, max: TimeSpan.FromSeconds(15));
+                await AwaitConditionAsync(() => Task.FromResult(cluster.IsTerminated), max: TimeSpan.FromSeconds(15));
             }, _config.Node2, _config.Node3, _config.Node4, _config.Node5);
 
             await EnterBarrierAsync("done");

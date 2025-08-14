@@ -142,9 +142,9 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
             {
                 Cluster.Join(Node(_config.Node1).Address);
             }, _config.Node2, _config.Node3, _config.Node4, _config.Node5);
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     Cluster.State.Members.Count.Should().Be(5);
                     foreach (var m in Cluster.State.Members)
@@ -182,11 +182,11 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
             }, _config.Node1);
             await EnterBarrierAsync("blackholed-clean-partition");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                Within(TimeSpan.FromSeconds(20), () =>
+                await WithinAsync(TimeSpan.FromSeconds(20), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         Cluster.State.Members.Count.Should().Be(3);
                     });
@@ -198,11 +198,11 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                     leaseProbe.ExpectMsg<TestLease.ReleaseReq>(TimeSpan.FromSeconds(14));
                 }, Leader(_config.Node1, _config.Node2, _config.Node3));
             }, _config.Node1, _config.Node2, _config.Node3);
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                Within(TimeSpan.FromSeconds(20), () =>
+                await WithinAsync(TimeSpan.FromSeconds(20), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         Cluster.IsTerminated.Should().BeTrue();
                     });
@@ -243,21 +243,21 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
             }, _config.Node1);
             await EnterBarrierAsync("blackholed-clean-partition-2");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                Within(TimeSpan.FromSeconds(20), () =>
+                await WithinAsync(TimeSpan.FromSeconds(20), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         Cluster.State.Members.Count.Should().Be(1);
                     });
                 });
             }, _config.Node1);
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                Within(TimeSpan.FromSeconds(20), () =>
+                await WithinAsync(TimeSpan.FromSeconds(20), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         Cluster.IsTerminated.Should().BeTrue();
                     });
