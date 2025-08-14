@@ -1,6 +1,22 @@
 #### 1.5.47 August 12th, 2025 ####
 
-**Placeholder for nightly build**
+Akka.NET v1.5.47 is a minor patch containing several stability improvements to Akka.TestKit.
+
+* [TestKit: Replace Thread.Sleep with SpinWait](https://github.com/akkadotnet/akka.net/pull/7745)
+* [TestKit: Fix excessive AggregateException nesting when cancelling ExpectMessageAsync](https://github.com/akkadotnet/akka.net/pull/7747)
+* [TestKit: Add async overload to multi-node TestConductor API](https://github.com/akkadotnet/akka.net/pull/7750)
+* [Core: Move ByteBuffer alias to global using](https://github.com/akkadotnet/akka.net/pull/7681)
+
+4 contributors since release 1.5.46
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 7       | 4185 | 3156 | Aaron Stannard      |
+| 5       | 352  | 142  | Gregorius Soedharmo |
+| 1       | 2    | 2    | dependabot[bot]     |
+| 1       | 13   | 22   | Simon Cropp         |
+
+To [see the full set of changes in Akka.NET v1.5.47, click here](https://github.com/akkadotnet/akka.net/milestone/130?closed=1)
 
 #### 1.5.46 July 17th, 2025 ####
 
