@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter;
@@ -186,16 +187,16 @@ namespace Akka.Cluster.Sharding.Tests
         #endregion
 
         [MultiNodeFact]
-        public void Cluster_sharding_with_down_member_scenario_1_specs()
+        public async Task Cluster_sharding_with_down_member_scenario_1_specs()
         {
-            Cluster_sharding_with_down_member_scenario_1_must_join_cluster();
-            Cluster_sharding_with_down_member_scenario_1_must_initialize_shards();
-            Cluster_sharding_with_down_member_scenario_1_must_recover_after_downing_coordinator_node();
+            await Cluster_sharding_with_down_member_scenario_1_must_join_cluster();
+            await Cluster_sharding_with_down_member_scenario_1_must_initialize_shards();
+            await Cluster_sharding_with_down_member_scenario_1_must_recover_after_downing_coordinator_node();
         }
 
-        private void Cluster_sharding_with_down_member_scenario_1_must_join_cluster()
+        private async Task Cluster_sharding_with_down_member_scenario_1_must_join_cluster()
         {
-            Within(TimeSpan.FromSeconds(20), () =>
+            await WithinAsync(TimeSpan.FromSeconds(20), async () =>
             {
                 StartPersistenceIfNeeded(startOn: Config.Controller, Config.First, Config.Second);
 
@@ -212,12 +213,12 @@ namespace Akka.Cluster.Sharding.Tests
                     });
                 }, Config.First, Config.Second);
 
-                EnterBarrier("after-2");
+                await EnterBarrierAsync("after-2");
             });
         }
 
 
-        private void Cluster_sharding_with_down_member_scenario_1_must_initialize_shards()
+        private async Task Cluster_sharding_with_down_member_scenario_1_must_initialize_shards()
         {
             RunOn(() =>
             {
@@ -231,22 +232,22 @@ namespace Akka.Cluster.Sharding.Tests
                 shardLocations.Tell(new Locations(locations));
                 Sys.Log.Debug("Original locations: [{0}]", string.Join(", ", locations.Select(i => $"{i.Key}: {i.Value}")));
             }, Config.First);
-            EnterBarrier("after-3");
+            await EnterBarrierAsync("after-3");
         }
 
-        private void Cluster_sharding_with_down_member_scenario_1_must_recover_after_downing_coordinator_node()
+        private async Task Cluster_sharding_with_down_member_scenario_1_must_recover_after_downing_coordinator_node()
         {
-            Within(TimeSpan.FromSeconds(20), () =>
+            await WithinAsync(TimeSpan.FromSeconds(20), async () =>
             {
                 var firstAddress = GetAddress(Config.First);
                 Sys.ActorSelection(Node(Config.First) / "user" / "shardLocations").Tell(GetLocations.Instance);
                 var originalLocations = ExpectMsg<Locations>().Locs;
 
-                EnterBarrier("after-3-locations");
+                await EnterBarrierAsync("after-3-locations");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
-                    TestConductor.Blackhole(Config.First, Config.Second, Direction.Both).Wait();
+                    await TestConductor.BlackholeAsync(Config.First, Config.Second, Direction.Both);
                 }, Config.Controller);
 
                 Thread.Sleep(3000);
@@ -293,7 +294,7 @@ namespace Akka.Cluster.Sharding.Tests
                 }, Config.Second);
             });
 
-            EnterBarrier("after-4");
+            await EnterBarrierAsync("after-4");
         }
     }
 }

@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -182,18 +183,18 @@ namespace Akka.Cluster.Sharding.Tests
         #endregion
 
         [MultiNodeFact]
-        public void Cluster_sharding_with_remember_entities_specs()
+        public async Task Cluster_sharding_with_remember_entities_specs()
         {
-            Cluster_sharding_with_remember_entities_must_start_remembered_entities_when_coordinator_fail_over();
+            await Cluster_sharding_with_remember_entities_must_start_remembered_entities_when_coordinator_fail_over();
 
             // https://github.com/akkadotnet/akka.net/issues/4262 - need to resolve this and then we can remove if statement
             if (!IsDdataMode)
-                Cluster_sharding_with_remember_entities_must_start_remembered_entities_in_new_cluster();
+                await Cluster_sharding_with_remember_entities_must_start_remembered_entities_in_new_cluster();
         }
 
-        private void Cluster_sharding_with_remember_entities_must_start_remembered_entities_when_coordinator_fail_over()
+        private async Task Cluster_sharding_with_remember_entities_must_start_remembered_entities_when_coordinator_fail_over()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
             {
                 StartPersistenceIfNeeded(startOn: Config.First, Config.First, Config.Second, Config.Third);
 
@@ -207,7 +208,7 @@ namespace Akka.Cluster.Sharding.Tests
                     probe.ExpectMsg(1);
                     entityProbe.ExpectMsg<EntityActor.Started>();
                 }, Config.Second);
-                EnterBarrier("second-started");
+                await EnterBarrierAsync("second-started");
 
                 Join(Config.Third, Config.Second);
                 RunOn(() =>
@@ -226,9 +227,9 @@ namespace Akka.Cluster.Sharding.Tests
                         });
                     });
                 }, Config.Second, Config.Third);
-                EnterBarrier("all-up");
+                await EnterBarrierAsync("all-up");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     if (IsDdataMode)
                     {
@@ -237,23 +238,23 @@ namespace Akka.Cluster.Sharding.Tests
                         // gossip. So we must give that a chance to replicate before shutting down second.
                         Thread.Sleep(5000);
                     }
-                    TestConductor.Exit(Config.Second, 0).Wait();
+                    await TestConductor.ExitAsync(Config.Second, 0);
                 }, Config.First);
 
-                EnterBarrier("crash-second");
+                await EnterBarrierAsync("crash-second");
 
                 RunOn(() =>
                 {
                     ExpectEntityRestarted(Sys, 1, probe, entityProbe);
                 }, Config.Third);
 
-                EnterBarrier("after-2");
+                await EnterBarrierAsync("after-2");
             });
         }
 
-        private void Cluster_sharding_with_remember_entities_must_start_remembered_entities_in_new_cluster()
+        private async Task Cluster_sharding_with_remember_entities_must_start_remembered_entities_in_new_cluster()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
             {
                 RunOn(() =>
                 {
@@ -282,7 +283,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     Shutdown(sys2);
                 }, Config.Third);
-                EnterBarrier("after-3");
+                await EnterBarrierAsync("after-3");
             });
         }
     }

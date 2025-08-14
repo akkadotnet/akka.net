@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter;
@@ -185,15 +186,15 @@ namespace Akka.Cluster.Sharding.Tests
         #endregion
 
         [MultiNodeFact]
-        public void ClusterSharding_with_flaky_journal_network_specs()
+        public async Task ClusterSharding_with_flaky_journal_network_specs()
         {
-            ClusterSharding_with_flaky_journal_network_must_join_cluster();
-            ClusterSharding_with_flaky_journal_network_must_recover_after_journal_network_failure();
+            await ClusterSharding_with_flaky_journal_network_must_join_cluster();
+            await ClusterSharding_with_flaky_journal_network_must_recover_after_journal_network_failure();
         }
 
-        private void ClusterSharding_with_flaky_journal_network_must_join_cluster()
+        private async Task ClusterSharding_with_flaky_journal_network_must_join_cluster()
         {
-            Within(TimeSpan.FromSeconds(20), () =>
+            await WithinAsync(TimeSpan.FromSeconds(20), async () =>
             {
                 StartPersistenceIfNeeded(startOn: Config.Controller, Config.First, Config.Second);
 
@@ -213,27 +214,27 @@ namespace Akka.Cluster.Sharding.Tests
                     region.Tell(new Get("21"));
                     ExpectMsg<Value>(v => v.Id == "21" && v.N == 3);
                 }, Config.First);
-                EnterBarrier("after-2");
+                await EnterBarrierAsync("after-2");
             });
         }
 
-        private void ClusterSharding_with_flaky_journal_network_must_recover_after_journal_network_failure()
+        private async Task ClusterSharding_with_flaky_journal_network_must_recover_after_journal_network_failure()
         {
-            Within(TimeSpan.FromSeconds(20), () =>
+            await WithinAsync(TimeSpan.FromSeconds(20), async () =>
             {
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     if (PersistenceIsNeeded)
                     {
-                        TestConductor.Blackhole(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both).Wait();
-                        TestConductor.Blackhole(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                        await TestConductor.BlackholeAsync(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both);
+                        await TestConductor.BlackholeAsync(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both);
                     }
                     else
                     {
-                        TestConductor.Blackhole(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                        await TestConductor.BlackholeAsync(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both);
                     }
                 }, Config.Controller);
-                EnterBarrier("journal-backholded");
+                await EnterBarrierAsync("journal-backholded");
 
                 RunOn(() =>
                 {
@@ -244,21 +245,21 @@ namespace Akka.Cluster.Sharding.Tests
                     region.Tell(new Get("40"), probe.Ref);
                     probe.ExpectNoMsg(TimeSpan.FromSeconds(1));
                 }, Config.First);
-                EnterBarrier("first-delayed");
+                await EnterBarrierAsync("first-delayed");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     if (PersistenceIsNeeded)
                     {
-                        TestConductor.PassThrough(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both).Wait();
-                        TestConductor.PassThrough(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                        await TestConductor.PassThroughAsync(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both);
+                        await TestConductor.PassThroughAsync(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both);
                     }
                     else
                     {
-                        TestConductor.PassThrough(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
+                        await TestConductor.PassThroughAsync(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both);
                     }
                 }, Config.Controller);
-                EnterBarrier("journal-ok");
+                await EnterBarrierAsync("journal-ok");
 
                 RunOn(() =>
                 {
@@ -304,7 +305,7 @@ namespace Akka.Cluster.Sharding.Tests
                     region.Tell(new Get("40"));
                     ExpectMsg<Value>(v => v.Id == "40" && v.N == 4);
                 }, Config.First);
-                EnterBarrier("verified-first");
+                await EnterBarrierAsync("verified-first");
 
                 RunOn(() =>
                 {
@@ -322,7 +323,7 @@ namespace Akka.Cluster.Sharding.Tests
                     region.Tell(new Get("30"));
                     ExpectMsg<Value>(v => v.Id == "30" && v.N == 6);
                 }, Config.Second);
-                EnterBarrier("after-3");
+                await EnterBarrierAsync("after-3");
             });
         }
     }

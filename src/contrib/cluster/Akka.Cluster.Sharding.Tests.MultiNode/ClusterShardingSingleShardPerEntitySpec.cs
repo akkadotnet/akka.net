@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -70,7 +71,7 @@ namespace Akka.Cluster.Sharding.Tests
                     entityProps: Props.Create(() => new ShardedEntity())));
         }
 
-        private void JoinAndAllocate(RoleName node, int entityId)
+        private async Task JoinAndAllocate(RoleName node, int entityId)
         {
             Within(TimeSpan.FromSeconds(10), () =>
             {
@@ -84,32 +85,32 @@ namespace Akka.Cluster.Sharding.Tests
                     LastSender.Path.Should().Be(_region.Value.Path / $"{entityId}" / $"{entityId}");
                 }, node);
             });
-            EnterBarrier($"started-{entityId}");
+            await EnterBarrierAsync($"started-{entityId}");
         }
 
 
         #endregion
 
         [MultiNodeFact]
-        public void Cluster_sharding_with_single_shard_per_entity_specs()
+        public async Task Cluster_sharding_with_single_shard_per_entity_specs()
         {
-            Cluster_sharding_with_single_shard_per_entity_must_use_specified_region();
+            await Cluster_sharding_with_single_shard_per_entity_must_use_specified_region();
         }
 
-        private void Cluster_sharding_with_single_shard_per_entity_must_use_specified_region()
+        private async Task Cluster_sharding_with_single_shard_per_entity_must_use_specified_region()
         {
-            JoinAndAllocate(Config.First, 1);
-            JoinAndAllocate(Config.Second, 2);
-            JoinAndAllocate(Config.Third, 3);
-            JoinAndAllocate(Config.Fourth, 4);
-            JoinAndAllocate(Config.Fifth, 5);
+            await JoinAndAllocate(Config.First, 1);
+            await JoinAndAllocate(Config.Second, 2);
+            await JoinAndAllocate(Config.Third, 3);
+            await JoinAndAllocate(Config.Fourth, 4);
+            await JoinAndAllocate(Config.Fifth, 5);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 // coordinator is on 'first', blackhole 3 other means that it can't update with WriteMajority
-                TestConductor.Blackhole(Config.First, Config.Third, ThrottleTransportAdapter.Direction.Both).Wait();
-                TestConductor.Blackhole(Config.First, Config.Fourth, ThrottleTransportAdapter.Direction.Both).Wait();
-                TestConductor.Blackhole(Config.First, Config.Fifth, ThrottleTransportAdapter.Direction.Both).Wait();
+                await TestConductor.BlackholeAsync(Config.First, Config.Third, ThrottleTransportAdapter.Direction.Both);
+                await TestConductor.BlackholeAsync(Config.First, Config.Fourth, ThrottleTransportAdapter.Direction.Both);
+                await TestConductor.BlackholeAsync(Config.First, Config.Fifth, ThrottleTransportAdapter.Direction.Both);
 
                 // shard 6 not allocated yet and due to the blackhole it will not be completed
                 _region.Value.Tell(6);
@@ -124,13 +125,13 @@ namespace Akka.Cluster.Sharding.Tests
                 ExpectMsg(2);
                 LastSender.Path.Should().Be(Node(Config.Second) / "system" / "sharding" / "Entity" / "2" / "2");
 
-                TestConductor.PassThrough(Config.First, Config.Third, ThrottleTransportAdapter.Direction.Both).Wait();
-                TestConductor.PassThrough(Config.First, Config.Fourth, ThrottleTransportAdapter.Direction.Both).Wait();
-                TestConductor.PassThrough(Config.First, Config.Fifth, ThrottleTransportAdapter.Direction.Both).Wait();
+                await TestConductor.PassThroughAsync(Config.First, Config.Third, ThrottleTransportAdapter.Direction.Both);
+                await TestConductor.PassThroughAsync(Config.First, Config.Fourth, ThrottleTransportAdapter.Direction.Both);
+                await TestConductor.PassThroughAsync(Config.First, Config.Fifth, ThrottleTransportAdapter.Direction.Both);
                 ExpectMsg(6, TimeSpan.FromSeconds(10));
             }, Config.First);
 
-            EnterBarrier("after-1");
+            await EnterBarrierAsync("after-1");
         }
     }
 }

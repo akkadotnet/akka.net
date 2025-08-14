@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -196,16 +197,16 @@ namespace Akka.Cluster.Sharding.Tests
         #endregion
 
         [MultiNodeFact]
-        public void Cluster_sharding_with_remember_entities_specs()
+        public async Task Cluster_sharding_with_remember_entities_specs()
         {
-            Cluster_with_min_nr_of_members_using_sharding_must_start_up_first_cluster_and_sharding();
-            Cluster_with_min_nr_of_members_using_sharding_must_shutdown_sharding_nodes();
-            Cluster_with_min_nr_of_members_using_sharding_must_start_new_nodes_with_different_extractor_and_have_the_entities_running_on_the_right_shards();
+            await Cluster_with_min_nr_of_members_using_sharding_must_start_up_first_cluster_and_sharding();
+            await Cluster_with_min_nr_of_members_using_sharding_must_shutdown_sharding_nodes();
+            await Cluster_with_min_nr_of_members_using_sharding_must_start_new_nodes_with_different_extractor_and_have_the_entities_running_on_the_right_shards();
         }
 
-        private void Cluster_with_min_nr_of_members_using_sharding_must_start_up_first_cluster_and_sharding()
+        private async Task Cluster_with_min_nr_of_members_using_sharding_must_start_up_first_cluster_and_sharding()
         {
-            Within(TimeSpan.FromSeconds(15), () =>
+            await WithinAsync(TimeSpan.FromSeconds(15), async () =>
             {
                 StartPersistenceIfNeeded(startOn: Config.First, Config.Second, Config.Third);
 
@@ -228,7 +229,7 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     StartShardingWithExtractor1();
                 }, Config.Second, Config.Third);
-                EnterBarrier("first-cluster-up");
+                await EnterBarrierAsync("first-cluster-up");
 
                 RunOn(() =>
                 {
@@ -239,18 +240,18 @@ namespace Akka.Cluster.Sharding.Tests
                         ExpectMsg(n);
                     }
                 }, Config.Second, Config.Third);
-                EnterBarrier("first-cluster-entities-up");
+                await EnterBarrierAsync("first-cluster-entities-up");
             });
         }
 
-        private void Cluster_with_min_nr_of_members_using_sharding_must_shutdown_sharding_nodes()
+        private async Task Cluster_with_min_nr_of_members_using_sharding_must_shutdown_sharding_nodes()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
             {
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
-                    TestConductor.Exit(Config.Second, 0).Wait();
-                    TestConductor.Exit(Config.Third, 0).Wait();
+                    await TestConductor.ExitAsync(Config.Second, 0);
+                    await TestConductor.ExitAsync(Config.Third, 0);
                 }, Config.First);
 
                 RunOn(() =>
@@ -265,12 +266,12 @@ namespace Akka.Cluster.Sharding.Tests
                 }, Config.First);
 
             });
-            EnterBarrier("first-sharding-cluster-stopped");
+            await EnterBarrierAsync("first-sharding-cluster-stopped");
         }
 
-        private void Cluster_with_min_nr_of_members_using_sharding_must_start_new_nodes_with_different_extractor_and_have_the_entities_running_on_the_right_shards()
+        private async Task Cluster_with_min_nr_of_members_using_sharding_must_start_new_nodes_with_different_extractor_and_have_the_entities_running_on_the_right_shards()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
             {
                 // start it with a new shard id messageExtractor, which will put the entities
                 // on different shards
@@ -286,10 +287,10 @@ namespace Akka.Cluster.Sharding.Tests
                     });
 
                 }, Config.Second, Config.Third);
-                EnterBarrier("first-cluster-terminated");
+                await EnterBarrierAsync("first-cluster-terminated");
 
                 // no sharding nodes left of the original cluster, start a new nodes
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     var sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
                     var probe2 = CreateTestProbe(sys2);
@@ -331,16 +332,16 @@ namespace Akka.Cluster.Sharding.Tests
                         }
                     }
 
-                    EnterBarrier("verified");
+                    await EnterBarrierAsync("verified");
                     Shutdown(sys2);
                 }, Config.Second, Config.Third);
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
-                    EnterBarrier("verified");
+                    await EnterBarrierAsync("verified");
                 }, Config.First);
 
-                EnterBarrier("done");
+                await EnterBarrierAsync("done");
             });
         }
     }
