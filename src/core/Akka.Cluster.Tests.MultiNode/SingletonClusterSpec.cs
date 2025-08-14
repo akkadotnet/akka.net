@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Immutable;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
@@ -19,8 +20,8 @@ namespace Akka.Cluster.Tests.MultiNode
 {
     public class SingletonClusterConfig : MultiNodeConfig
     {
-        public RoleName First { get; set; }
-        public RoleName Second { get; set; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
 
         public SingletonClusterConfig(bool failureDetectorPuppet)
         {
@@ -74,11 +75,11 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public async Task Cluster_of_2_nodes_must_become_singleton_cluster_when_started_with_seednodes()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var nodes = ImmutableList.Create(GetAddress(_config.First));
                 Cluster.JoinSeedNodes(nodes);
-                AwaitMembersUp(1);
+                await AwaitMembersUpAsync(1);
                 ClusterView.IsSingletonCluster.ShouldBeTrue();
             }, _config.First);
 
@@ -87,7 +88,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public async Task Cluster_of_2_nodes_must_not_be_singleton_cluster_when_joined_with_other_node()
         {
-            AwaitClusterUp(_config.First, _config.Second);
+            await AwaitClusterUpAsync(CancellationToken.None, _config.First, _config.Second);
             ClusterView.IsSingletonCluster.ShouldBeFalse();
             AssertLeader(_config.First, _config.Second);
 
@@ -103,9 +104,9 @@ namespace Akka.Cluster.Tests.MultiNode
 
                 MarkNodeAsUnavailable(secondAddress);
 
-                AwaitMembersUp(1, ImmutableHashSet.Create(secondAddress), TimeSpan.FromSeconds(30));
+                await AwaitMembersUpAsync(1, ImmutableHashSet.Create(secondAddress), TimeSpan.FromSeconds(30));
                 ClusterView.IsSingletonCluster.ShouldBeTrue();
-                AwaitCondition(() => ClusterView.IsLeader);
+                await AwaitConditionAsync(() => ClusterView.IsLeader);
             }, _config.First);
 
             await EnterBarrierAsync("after-3");
@@ -113,11 +114,10 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public async Task Cluster_of_2_nodes_must_leave_and_shutdown_itself_when_singleton_cluster()
         {
-            await RunOnAsync(() =>
+            await RunOnAsync(async () =>
             {
                 Cluster.Leave(GetAddress(_config.First));
-                AwaitCondition(() => Cluster.IsTerminated, TimeSpan.FromSeconds(5));
-                return Task.CompletedTask;
+                await AwaitConditionAsync(() => Task.FromResult(Cluster.IsTerminated), TimeSpan.FromSeconds(5));
             }, _config.First);
 
             await EnterBarrierAsync("after-4");

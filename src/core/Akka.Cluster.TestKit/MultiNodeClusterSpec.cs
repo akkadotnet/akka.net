@@ -462,7 +462,12 @@ namespace Akka.Cluster.TestKit
 
         public void AwaitSeenSameState(params Address[] addresses)
         {
-            AwaitAssert(() => _assertions.AssertFalse(addresses.ToImmutableHashSet().Except(ClusterView.SeenBy).Any()));
+            AwaitSeenSameStateAsync(CancellationToken.None, addresses).GetAwaiter().GetResult();
+        }
+
+        public async Task AwaitSeenSameStateAsync(CancellationToken cancellationToken, params Address[] addresses)
+        {
+            await AwaitAssertAsync(() => _assertions.AssertFalse(addresses.ToImmutableHashSet().Except(ClusterView.SeenBy).Any()), cancellationToken: cancellationToken);
         }
 
         /// <summary>
