@@ -7,6 +7,7 @@
 
 using System;
 using System.Text;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -81,26 +82,26 @@ namespace Akka.Remote.Tests.MultiNode
         protected override int InitialParticipantsValueFactory { get; } = 2;
 
         [MultiNodeFact]
-        public void A_restarted_quarantined_system_should_not_crash_the_other_system()
+        public async Task A_restarted_quarantined_system_should_not_crash_the_other_system()
         {
             Sys.ActorOf<RemoteRestartedQuarantinedMultiNetSpec.Subject>("subject");
-            EnterBarrier("subject-started");
+            await EnterBarrierAsync("subject-started");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var secondAddress = Node(_config.Second).Address;
                 var uid = _identifyWithUid(_config.Second, "subject").Item1;
 
                 RARP.For(Sys).Provider.Transport.Quarantine(Node(_config.Second).Address, uid);
 
-                EnterBarrier("quarantined");
-                EnterBarrier("still-quarantined");
+                await EnterBarrierAsync("quarantined");
+                await EnterBarrierAsync("still-quarantined");
 
-                TestConductor.Shutdown(_config.Second).Wait();
+                await TestConductor.ShutdownAsync(_config.Second);
 
-                Within(TimeSpan.FromSeconds(30), () =>
+                await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         Sys.ActorSelection(new RootActorPath(secondAddress)/"user"/"subject")
                             .Tell(new Identify("subject"));
@@ -111,7 +112,7 @@ namespace Akka.Remote.Tests.MultiNode
                 Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("shutdown");
             }, _config.First);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var addr = ((ExtendedActorSystem) Sys).Provider.DefaultAddress;
                 var firstAddress = Node(_config.First).Address;
@@ -119,12 +120,12 @@ namespace Akka.Remote.Tests.MultiNode
 
                 var actorRef = _identifyWithUid(_config.First, "subject").Item2;
 
-                EnterBarrier("quarantined");
+                await EnterBarrierAsync("quarantined");
 
                 // Check that quarantine is intact
-                Within(TimeSpan.FromSeconds(30), () =>
+                await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         EventFilter.Warning(null, null, "The remote system has quarantined this system")
                             .ExpectOne(TimeSpan.FromSeconds(10), () => actorRef.Tell("boo!"));
@@ -133,7 +134,7 @@ namespace Akka.Remote.Tests.MultiNode
 
                 ExpectMsg<ThisActorSystemQuarantinedEvent>(TimeSpan.FromSeconds(10));
 
-                EnterBarrier("still-quarantined");
+                await EnterBarrierAsync("still-quarantined");
 
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(10));
 

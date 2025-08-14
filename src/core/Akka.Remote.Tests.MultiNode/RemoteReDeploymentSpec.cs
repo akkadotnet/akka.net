@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -66,40 +67,41 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void RemoteReDeployment_must_terminate_the_child_when_its_parent_system_is_replaced_by_a_new_one()
+        public async Task RemoteReDeployment_must_terminate_the_child_when_its_parent_system_is_replaced_by_a_new_one()
         {
             var echo = Sys.ActorOf(EchoProps(TestActor), "echo");
-            EnterBarrier("echo-started");
+            await EnterBarrierAsync("echo-started");
 
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 Sys.ActorOf(Props.Create(() => new Parent()), "parent")
                     .Tell(new ParentMessage(Props.Create(() => new Hello()), "hello"));
 
                 ExpectMsg("HelloParent", TimeSpan.FromSeconds(15));
+                return Task.CompletedTask;
             }, _config.Second);
 
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 ExpectMsg("PreStart", TimeSpan.FromSeconds(15));
-                
+                return Task.CompletedTask;
             }, _config.First);
 
-            EnterBarrier("first-deployed");
+            await EnterBarrierAsync("first-deployed");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.Blackhole(_config.Second, _config.First, ThrottleTransportAdapter.Direction.Both)
-                    .Wait();
-                TestConductor.Shutdown(_config.Second, true).Wait();
+                await TestConductor.BlackholeAsync(_config.Second, _config.First, ThrottleTransportAdapter.Direction.Both);
+                await TestConductor.ShutdownAsync(_config.Second, true);
                 if (ExpectQuarantine)
                 {
                     
-                    Within(SleepAfterKill, () => 
+                    await WithinAsync(SleepAfterKill, () => 
                     {
                         ExpectMsg("PostStop");
                         //need to pad the timing here, since `ExpectNoMsg` will wait until exactly SleepAfterKill and fail the spec
                         ExpectNoMsg(Remaining - TimeSpan.FromSeconds(0.2));
+                        return Task.CompletedTask;
                     });
                 }
                 else
@@ -111,29 +113,31 @@ namespace Akka.Remote.Tests.MultiNode
 
             ActorSystem tempSys = null;
 
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
                 ExpectNoMsg(SleepAfterKill);
                 tempSys = StartNewSystem();
+                return Task.CompletedTask;
             }, _config.Second);
 
-            EnterBarrier("cable-cut");
+            await EnterBarrierAsync("cable-cut");
 
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 var p = CreateTestProbe(tempSys);
                 tempSys.ActorOf(EchoProps(p.Ref), "echo");
                 p.Send(tempSys.ActorOf(Props.Create(() => new Parent()), "parent"),
                     new ParentMessage(Props.Create(() => new Hello()), "hello"));
                 p.ExpectMsg("HelloParent", TimeSpan.FromSeconds(15));
+                return Task.CompletedTask;
             }, _config.Second);
 
-            EnterBarrier("re-deployed");
+            await EnterBarrierAsync("re-deployed");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                Within(TimeSpan.FromSeconds(15), () =>
+                await WithinAsync(TimeSpan.FromSeconds(15), () =>
                 {
                     if (ExpectQuarantine)
                     {
@@ -143,10 +147,11 @@ namespace Akka.Remote.Tests.MultiNode
                     {
                         ExpectMsgAllOf(new []{ "PostStop", "PreStart" });
                     }
+                    return Task.CompletedTask;
                 });
             }, _config.First);
 
-            EnterBarrier("the-end");
+            await EnterBarrierAsync("the-end");
 
             ExpectNoMsg(TimeSpan.FromSeconds(1));
         }

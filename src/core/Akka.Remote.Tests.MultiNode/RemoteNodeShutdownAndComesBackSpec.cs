@@ -8,6 +8,7 @@
 using System;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -73,20 +74,20 @@ namespace Akka.Remote.Tests.MultiNode
         protected override int InitialParticipantsValueFactory { get; } = 2;
 
         [MultiNodeFact]
-        public void RemoteNodeShutdownAndComesBack_must_properly_reset_system_message_buffer_state_when_new_system_with_same_Address_comes_up()
+        public async Task RemoteNodeShutdownAndComesBack_must_properly_reset_system_message_buffer_state_when_new_system_with_same_Address_comes_up()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var secondAddress = Node(_config.Second).Address;
                 Sys.ActorOf<RemoteNodeShutdownAndComesBackMultiNetSpec.Subject>("subject");
-                EnterBarrier("actors-started");
+                await EnterBarrierAsync("actors-started");
 
                 var subject = _identify(_config.Second, "subject");
                 var sysmsgBarrier = _identify(_config.Second, "sysmsgBarrier");
 
                 // Prime up the system message buffer
                 Watch(subject);
-                EnterBarrier("watch-established");
+                await EnterBarrierAsync("watch-established");
 
                 // Wait for proper system message propagation
                 // (Using a helper actor to ensure that all previous system messages arrived)
@@ -95,28 +96,27 @@ namespace Akka.Remote.Tests.MultiNode
                 ExpectTerminated(sysmsgBarrier);
 
                 // Drop all messages from this point so no SHUTDOWN is ever received
-                TestConductor.Blackhole(_config.Second, _config.First, ThrottleTransportAdapter.Direction.Send).Wait();
+                await TestConductor.BlackholeAsync(_config.Second, _config.First, ThrottleTransportAdapter.Direction.Send);
 
                 // Shut down all existing connections so that the system can enter recovery mode (association attempts)
-                RARP.For(Sys)
-                    .Provider.Transport.ManagementCommand(new ForceDisassociate(Node(_config.Second).Address))
-                    .Wait(TimeSpan.FromSeconds(3));
+                await RARP.For(Sys)
+                    .Provider.Transport.ManagementCommand(new ForceDisassociate(Node(_config.Second).Address));
 
                 // Trigger reconnect attempt and also queue up a system message to be in limbo state (UID of remote system
                 // is unknown, and system message is pending)
                 Sys.Stop(subject);
 
                 // Get rid of old system -- now SHUTDOWN is lost
-                TestConductor.Shutdown(_config.Second).Wait();
+                await TestConductor.ShutdownAsync(_config.Second);
 
                 // At this point the second node is restarting, while the first node is trying to reconnect without resetting
                 // the system message send state
 
                 // Now wait until second system becomes alive again
-                Within(TimeSpan.FromSeconds(30), () =>
+                await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
                     // retry because the Subject actor might not be started yet
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         var p = CreateTestProbe();
                         Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell(new Identify("subject"), p.Ref);
@@ -138,14 +138,14 @@ namespace Akka.Remote.Tests.MultiNode
                 ReceiveWhile(TimeSpan.FromSeconds(5), msg => msg as ActorIdentity);
             }, _config.First);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var addr = ((ExtendedActorSystem)Sys).Provider.DefaultAddress;
                 Sys.ActorOf<RemoteNodeShutdownAndComesBackMultiNetSpec.Subject>("subject");
                 Sys.ActorOf<RemoteNodeShutdownAndComesBackMultiNetSpec.Subject>("sysmsgBarrier");
-                EnterBarrier("actors-started");
+                await EnterBarrierAsync("actors-started");
 
-                EnterBarrier("watch-established");
+                await EnterBarrierAsync("watch-established");
 
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
 
