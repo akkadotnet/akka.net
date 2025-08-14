@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -68,12 +69,12 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
         }
 
         [MultiNodeFact]
-        public void IndirectlyConnected3NodeSpecTests()
+        public async Task IndirectlyConnected3NodeSpecTests()
         {
-            A_3_node_cluster_should_avoid_a_split_brain_when_two_unreachable_but_can_talk_via_third();
+            await A_3_node_cluster_should_avoid_a_split_brain_when_two_unreachable_but_can_talk_via_third();
         }
 
-        public void A_3_node_cluster_should_avoid_a_split_brain_when_two_unreachable_but_can_talk_via_third()
+        public async Task A_3_node_cluster_should_avoid_a_split_brain_when_two_unreachable_but_can_talk_via_third()
         {
             var cluster = Cluster.Get(Sys);
 
@@ -81,14 +82,14 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
             {
                 cluster.Join(cluster.SelfAddress);
             }, _config.Node1);
-            EnterBarrier("node1 joined");
+            await EnterBarrierAsync("node1 joined");
             RunOn(() =>
             {
                 cluster.Join(Node(_config.Node1).Address);
             }, _config.Node2, _config.Node3);
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     cluster.State.Members.Count.Should().Be(3);
                     foreach (var m in cluster.State.Members)
@@ -97,17 +98,17 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                     }
                 });
             });
-            EnterBarrier("Cluster formed");
+            await EnterBarrierAsync("Cluster formed");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.Blackhole(_config.Node2, _config.Node3, ThrottleTransportAdapter.Direction.Both).Wait();
+                await TestConductor.BlackholeAsync(_config.Node2, _config.Node3, ThrottleTransportAdapter.Direction.Both);
             }, _config.Node1);
-            EnterBarrier("Blackholed");
+            await EnterBarrierAsync("Blackholed");
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     RunOn(() =>
                     {
@@ -123,13 +124,13 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                     }, _config.Node1);
                 });
             });
-            EnterBarrier("unreachable");
+            await EnterBarrierAsync("unreachable");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                Within(TimeSpan.FromSeconds(15), () =>
+                await WithinAsync(TimeSpan.FromSeconds(15), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         cluster.State.Members.Select(i => i.Address).Should().BeEquivalentTo(Node(_config.Node1).Address);
                         foreach (var m in cluster.State.Members)
@@ -140,13 +141,13 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                 });
             }, _config.Node1);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 // downed
-                AwaitCondition(() => cluster.IsTerminated, max: TimeSpan.FromSeconds(15));
+                await AwaitConditionAsync(() => Task.FromResult(cluster.IsTerminated), max: TimeSpan.FromSeconds(15));
             }, _config.Node2, _config.Node3);
 
-            EnterBarrier("done");
+            await EnterBarrierAsync("done");
         }
     }
 }

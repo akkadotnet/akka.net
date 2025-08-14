@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -66,89 +67,87 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void RemoteReDeployment_must_terminate_the_child_when_its_parent_system_is_replaced_by_a_new_one()
+        public async Task RemoteReDeployment_must_terminate_the_child_when_its_parent_system_is_replaced_by_a_new_one()
         {
             var echo = Sys.ActorOf(EchoProps(TestActor), "echo");
-            EnterBarrier("echo-started");
+            await EnterBarrierAsync("echo-started");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 Sys.ActorOf(Props.Create(() => new Parent()), "parent")
                     .Tell(new ParentMessage(Props.Create(() => new Hello()), "hello"));
 
-                ExpectMsg("HelloParent", TimeSpan.FromSeconds(15));
+                await ExpectMsgAsync("HelloParent", TimeSpan.FromSeconds(15));
             }, _config.Second);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                ExpectMsg("PreStart", TimeSpan.FromSeconds(15));
-                
+                await ExpectMsgAsync("PreStart", TimeSpan.FromSeconds(15));
             }, _config.First);
 
-            EnterBarrier("first-deployed");
+            await EnterBarrierAsync("first-deployed");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.Blackhole(_config.Second, _config.First, ThrottleTransportAdapter.Direction.Both)
-                    .Wait();
-                TestConductor.Shutdown(_config.Second, true).Wait();
+                await TestConductor.BlackholeAsync(_config.Second, _config.First, ThrottleTransportAdapter.Direction.Both);
+                await TestConductor.ShutdownAsync(_config.Second, true);
                 if (ExpectQuarantine)
                 {
                     
-                    Within(SleepAfterKill, () => 
+                    await WithinAsync(SleepAfterKill, async () => 
                     {
-                        ExpectMsg("PostStop");
+                        await ExpectMsgAsync("PostStop");
                         //need to pad the timing here, since `ExpectNoMsg` will wait until exactly SleepAfterKill and fail the spec
-                        ExpectNoMsg(Remaining - TimeSpan.FromSeconds(0.2));
+                        await ExpectNoMsgAsync(Remaining - TimeSpan.FromSeconds(0.2));
                     });
                 }
                 else
                 {
-                    ExpectNoMsg(SleepAfterKill);
+                    await ExpectNoMsgAsync(SleepAfterKill);
                 }
-                AwaitAssert(() => Node(_config.Second), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(100));
+                await AwaitAssertAsync(() => { Node(_config.Second); }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(100));
             }, _config.First);
 
             ActorSystem tempSys = null;
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
-                ExpectNoMsg(SleepAfterKill);
+                await Sys.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(30));
+                await ExpectNoMsgAsync(SleepAfterKill);
                 tempSys = StartNewSystem();
             }, _config.Second);
 
-            EnterBarrier("cable-cut");
+            await EnterBarrierAsync("cable-cut");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var p = CreateTestProbe(tempSys);
                 tempSys.ActorOf(EchoProps(p.Ref), "echo");
                 p.Send(tempSys.ActorOf(Props.Create(() => new Parent()), "parent"),
                     new ParentMessage(Props.Create(() => new Hello()), "hello"));
-                p.ExpectMsg("HelloParent", TimeSpan.FromSeconds(15));
+                await p.ExpectMsgAsync("HelloParent", TimeSpan.FromSeconds(15));
             }, _config.Second);
 
-            EnterBarrier("re-deployed");
+            await EnterBarrierAsync("re-deployed");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                Within(TimeSpan.FromSeconds(15), () =>
+                await WithinAsync(TimeSpan.FromSeconds(15), async () =>
                 {
                     if (ExpectQuarantine)
                     {
-                        ExpectMsg("PreStart");
+                        await ExpectMsgAsync("PreStart");
                     }
                     else
                     {
-                        ExpectMsgAllOf(new []{ "PostStop", "PreStart" });
+                        await foreach (var _ in ExpectMsgAllOfAsync(new []{ "PostStop", "PreStart" })) { }
                     }
                 });
             }, _config.First);
 
-            EnterBarrier("the-end");
+            await EnterBarrierAsync("the-end");
 
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         private Props EchoProps(IActorRef target)
