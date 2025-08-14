@@ -132,11 +132,11 @@ namespace Akka.Remote.Tests.MultiNode
                     });
                 });
 
-                ExpectMsg<ThisActorSystemQuarantinedEvent>(TimeSpan.FromSeconds(10));
+                await ExpectMsgAsync<ThisActorSystemQuarantinedEvent>(TimeSpan.FromSeconds(10));
 
                 await EnterBarrierAsync("still-quarantined");
 
-                Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(10));
+                await Sys.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(10));
 
                 var sb = new StringBuilder()
                     .AppendLine("akka.remote.retry-gate-closed-for = 0.5 s")
@@ -155,11 +155,11 @@ namespace Akka.Remote.Tests.MultiNode
                 // TODO sometimes it takes long time until the new connection is established,
                 //      It seems like there must first be a transport failure detector timeout, that triggers
                 //      "No response from remote. Handshake timed out or transport failure detector triggered"
-                probe.ExpectMsg<ActorIdentity>(i => i.Subject != null, TimeSpan.FromSeconds(30));
+                await probe.ExpectMsgAsync<ActorIdentity>(i => i.Subject != null, TimeSpan.FromSeconds(30));
 
                 freshSystem.ActorOf<RemoteRestartedQuarantinedMultiNetSpec.Subject>("subject");
 
-                freshSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(10));
+                await freshSystem.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(10));
             }, _config.Second);
         }
     }

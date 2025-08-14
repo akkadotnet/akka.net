@@ -93,7 +93,7 @@ namespace Akka.Remote.Tests.MultiNode
                 // (Using a helper actor to ensure that all previous system messages arrived)
                 Watch(sysmsgBarrier);
                 Sys.Stop(sysmsgBarrier);
-                ExpectTerminated(sysmsgBarrier);
+                await ExpectTerminatedAsync(sysmsgBarrier);
 
                 // Drop all messages from this point so no SHUTDOWN is ever received
                 await TestConductor.BlackholeAsync(_config.Second, _config.First, ThrottleTransportAdapter.Direction.Send);
@@ -124,18 +124,18 @@ namespace Akka.Remote.Tests.MultiNode
                     });
                 });
 
-                ExpectTerminated(subject, TimeSpan.FromSeconds(10));
+                await ExpectTerminatedAsync(subject, TimeSpan.FromSeconds(10));
 
                 // Establish watch with the new system. This triggers additional system message traffic. If buffers are out
                 // of sync the remote system will be quarantined and the rest of the test will fail (or even in earlier
                 // stages depending on circumstances).
                 Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell(new Identify("subject"));
-                var subjectNew = ExpectMsg<ActorIdentity>(i => i.Subject != null).Subject;
+                var subjectNew = (await ExpectMsgAsync<ActorIdentity>(i => i.Subject != null)).Subject;
                 Watch(subjectNew);
 
                 subjectNew.Tell("shutdown");
                 // we are waiting for a Terminated here, but it is ok if it does not arrive
-                ReceiveWhile(TimeSpan.FromSeconds(5), msg => msg as ActorIdentity);
+                await foreach (var _ in ReceiveWhileAsync(TimeSpan.FromSeconds(5), msg => msg as ActorIdentity)) { }
             }, _config.First);
 
             await RunOnAsync(async () =>
@@ -147,7 +147,7 @@ namespace Akka.Remote.Tests.MultiNode
 
                 await EnterBarrierAsync("watch-established");
 
-                Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
+                await Sys.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(30));
 
                 var freshConfig = new StringBuilder().AppendLine("akka.remote.dot-netty.tcp {").AppendLine("hostname = " + addr.Host)
                         .AppendLine("port = " + addr.Port)
@@ -159,7 +159,7 @@ namespace Akka.Remote.Tests.MultiNode
 
                 freshSystem.ActorOf<RemoteNodeShutdownAndComesBackMultiNetSpec.Subject>("subject");
 
-                freshSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
+                await freshSystem.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(30));
             }, _config.Second);
         }
     }

@@ -61,19 +61,18 @@ namespace Akka.Remote.Tests.MultiNode
 
                 Identify(_specConfig.Second, "subject");
 
-                EventFilter.Warning(new Regex("address is now gated")).ExpectOne(() =>
+                await EventFilter.Warning(new Regex("address is now gated")).ExpectOneAsync(async () =>
                 {
-                    RARP.For(Sys).Provider.Transport.ManagementCommand(
-                            new ForceDisassociateExplicitly(Node(_specConfig.Second).Address, DisassociateInfo.Unknown))
-                        .Wait(TimeSpan.FromSeconds(3));
+                    await RARP.For(Sys).Provider.Transport.ManagementCommand(
+                            new ForceDisassociateExplicitly(Node(_specConfig.Second).Address, DisassociateInfo.Unknown));
                 });
 
 
                 await EnterBarrierAsync("gated");
                 await TestConductor.ShutdownAsync(_specConfig.Second);
-                Within(TimeSpan.FromSeconds(10), () =>
+                await WithinAsync(TimeSpan.FromSeconds(10), async () =>
                 {
-                    AwaitAssert(
+                    await AwaitAssertAsync(
                         () =>
                         {
                             Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject")
@@ -91,7 +90,7 @@ namespace Akka.Remote.Tests.MultiNode
 
                 await EnterBarrierAsync("gated");
 
-                Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(10));
+                await Sys.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(10));
 
                 var sb = new StringBuilder();
                 sb.AppendLine("akka.remote.retry-gate-closed-for = 0.5s")
@@ -106,10 +105,9 @@ namespace Akka.Remote.Tests.MultiNode
                 var probe = CreateTestProbe(freshSystem);
 
                 // Pierce the gate
-                Within(TimeSpan.FromSeconds(30), () =>
+                await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
-                    AwaitAssert(() =>
-
+                    await AwaitAssertAsync(() =>
                     {
                         freshSystem.ActorSelection(new RootActorPath(firstAddress) / "user" / "subject")
                             .Tell(new Identify("subject"), probe);
@@ -119,7 +117,7 @@ namespace Akka.Remote.Tests.MultiNode
 
                 // Now the other system will be able to pass, too
                 freshSystem.ActorOf(Props.Create(() => new Subject()), "subject");
-                freshSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
+                await freshSystem.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(30));
             }, _specConfig.Second);
         }
 
