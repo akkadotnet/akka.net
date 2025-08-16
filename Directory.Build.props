@@ -33,7 +33,7 @@
     <FsharpVersion>6.0.5</FsharpVersion>
     <NetFrameworkTestVersion>net48</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
-    <NetLibVersion>net6.0</NetLibVersion>
+    <NetLibVersion>net8.0</NetLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <FsCheckVersion>2.16.6</FsCheckVersion>
