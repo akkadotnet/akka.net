@@ -94,7 +94,7 @@ namespace Akka.TestKit.Xunit2
     
         public TException AssertThrows<TException>(Action action) where TException : Exception
         {
-            return Assert.Throws<TException>(action);
+            return Assert.ThrowsAny<TException>(action);
         }
 
         public async Task<Exception> AssertThrowsAsync(Func<Task> action)
@@ -104,7 +104,7 @@ namespace Akka.TestKit.Xunit2
     
         public Task<TException> AssertThrowsAsync<TException>(Func<Task> action) where TException : Exception
         {
-            return Assert.ThrowsAsync<TException>(action);
+            return Assert.ThrowsAnyAsync<TException>(action);
         }
     }
 }
