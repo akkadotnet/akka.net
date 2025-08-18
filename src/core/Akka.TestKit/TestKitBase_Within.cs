@@ -9,7 +9,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit.Internal;
-using FluentAssertions.Extensions;
 using Nito.AsyncEx.Synchronous;
 
 namespace Akka.TestKit
@@ -304,7 +303,7 @@ namespace Akka.TestKit
                     var executionTask = function();
                     // Limit the execution time block to the maximum allowed execution time.
                     // 200 milliseconds is added because Task.Delay() timer is not precise and can return prematurely.
-                    var resultTask = await Task.WhenAny(executionTask, Task.Delay(max + 200.Milliseconds(), cts.Token));
+                    var resultTask = await Task.WhenAny(executionTask, Task.Delay(max + TimeSpan.FromMilliseconds(200), cts.Token));
 
                     if (resultTask == executionTask)
                     {

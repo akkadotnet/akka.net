@@ -432,7 +432,7 @@ namespace Akka.Streams.Tests.Dsl
                     .SendComplete()
                     .ExecuteAsync();
 
-                await tcs.Task.ShouldCompleteWithin(3.Seconds());
+                await tcs.Task.WaitAsync(3.Seconds());
                 tcs.Task.Result.Should().ContainInOrder("a", "b", "c");
                 created.Current.Should().Be(1);
             }, Materializer);

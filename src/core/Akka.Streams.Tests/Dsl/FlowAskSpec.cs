@@ -276,7 +276,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 r.Tell(PoisonPill.Instance);
                 await done;
-            }).ShouldCompleteWithin(RemainingOrDefault);
+            }).WaitAsync(RemainingOrDefault);
             
         }, _materializer);
 

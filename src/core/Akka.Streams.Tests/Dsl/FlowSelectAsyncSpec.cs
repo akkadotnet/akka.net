@@ -124,7 +124,7 @@ namespace Akka.Streams.Tests.Dsl
                 await c.ExpectNextNAsync(Enumerable.Range(1, 13));
             
                 await c.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
-            }, Materializer).ShouldCompleteWithin(RemainingOrDefault);
+            }, Materializer).WaitAsync(RemainingOrDefault);
         }
 
         // Turning this on in CI/CD for now
@@ -150,7 +150,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var exception = await c.ExpectErrorAsync();
                 exception.InnerException!.Message.Should().Be("err1");
-            }, Materializer).ShouldCompleteWithin(RemainingOrDefault);
+            }, Materializer).WaitAsync(RemainingOrDefault);
         }
 
         [Fact]
@@ -172,7 +172,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Request(10)
                     .ExpectNextN([1, 2])
                     .ExpectErrorAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
                 exception.Message.Should().Be("err1");
             }, Materializer);
         }
@@ -205,7 +205,7 @@ namespace Akka.Streams.Tests.Dsl
                 await Awaiting(async () => await done).Should()
                     .ThrowAsync<Exception>()
                     .WithMessage("err1")
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
                 
                 latch.CountDown();
             }, Materializer);
@@ -509,7 +509,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 
-                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                var complete = await t.WaitAsync(3.Seconds());
                 complete.Should().BeEquivalentTo(new[] { 1, 2 });
             }, Materializer);
         }
@@ -732,7 +732,7 @@ namespace Akka.Streams.Tests.Dsl
                         return 1;
                     })
                     .RunAggregate(0, (acc, i) => acc + i, Materializer)
-                    .ShouldCompleteWithin(3.Seconds());
+                    .WaitAsync(3.Seconds());
 
                 result.Should().Be(n);
             }, Materializer);

@@ -127,6 +127,12 @@ namespace Akka.TestKit
         void AssertEqual<T>(T expected, T actual, string format = "", params object[] args);
         void AssertEqual<T>(T expected, T actual, System.Func<T, T, bool> comparer, string format = "", params object[] args);
         void AssertFalse(bool condition, string format = "", params object[] args);
+        System.Exception AssertThrows(System.Action action);
+        TException AssertThrows<TException>(System.Action action)
+            where TException : System.Exception;
+        System.Threading.Tasks.Task<System.Exception> AssertThrowsAsync(System.Func<System.Threading.Tasks.Task> action);
+        System.Threading.Tasks.Task<TException> AssertThrowsAsync<TException>(System.Func<System.Threading.Tasks.Task> action)
+            where TException : System.Exception;
         void AssertTrue(bool condition, string format = "", params object[] args);
         void Fail(string format = "", params object[] args);
     }
@@ -611,13 +617,6 @@ namespace Akka.TestKit.Extensions
     public class static TaskExtensions
     {
         public static System.Threading.Tasks.Task<bool> AwaitWithTimeout(this System.Threading.Tasks.Task parentTask, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = null) { }
-        public static System.Threading.Tasks.Task ShouldCompleteWithin<T>(this System.Threading.Tasks.Task<T> task, T expected, System.TimeSpan timeout, string because = "", params object[] becauseArgs) { }
-        public static System.Threading.Tasks.Task<T> ShouldCompleteWithin<T>(this System.Threading.Tasks.Task<T> task, System.TimeSpan timeout, string because = "", params object[] becauseArgs) { }
-        public static System.Threading.Tasks.Task ShouldCompleteWithin(this System.Threading.Tasks.Task task, System.TimeSpan timeout, string because = "", params object[] becauseArgs) { }
-        public static System.Threading.Tasks.Task ShouldThrowWithin<T>(this System.Threading.Tasks.Task task, T expected, System.TimeSpan timeout, string because = "", params object[] becauseArgs)
-            where T : System.Exception { }
-        public static System.Threading.Tasks.Task<T> ShouldThrowWithin<T>(this System.Threading.Tasks.Task task, System.TimeSpan timeout, string because = "", params object[] becauseArgs)
-            where T : System.Exception { }
         public static System.Threading.Tasks.Task<T> WithTimeout<T>(this System.Threading.Tasks.Task<T> parentTask, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = null) { }
     }
 }
