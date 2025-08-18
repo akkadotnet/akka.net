@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,6 +27,40 @@ namespace Akka.IO
     [DebuggerDisplay("(Count = {_count}, Buffers = {_buffers})")]
     public sealed class ByteString : IEquatable<ByteString>, IEnumerable<byte>
     {
+        /// <summary>
+        /// A <see cref="ReadOnlySequenceSegment{T}"/> to encapsulate
+        /// Parts of a <see cref="ByteString"/> in a <see cref="ReadOnlySequence{T}"/>
+        /// </summary>
+        [DebuggerDisplay("(RunningIndex = {RunningIndex}, Length = {Memory.Length})}")]
+        public sealed class ByteStringReadOnlySequenceSegment : ReadOnlySequenceSegment<byte>
+        {
+            private ByteStringReadOnlySequenceSegment(ReadOnlyMemory<byte> memory, long runningIndex)
+            {
+                Memory = memory;
+                RunningIndex = runningIndex;
+            }
+
+            /// <remarks>
+            /// This is here because <see cref="ReadOnlySequenceSegment{T}"/>
+            /// has predefined properties with Protected Setters.
+            /// </remarks>
+            public static ReadOnlySequence<byte> CreateSequence(ByteString bs)
+            {
+                var bArr = bs._buffers;
+                var first = new ByteStringReadOnlySequenceSegment(bArr[0], 0);
+                var prior = first;
+                for (int i = 1; i < bArr.Length; i++)
+                {
+                    var item = bArr[i];
+                    var curr = new ByteStringReadOnlySequenceSegment(item, prior.RunningIndex + prior.Memory.Length);
+                    prior.Next = curr;
+                    prior = curr;
+                }
+
+                return new ReadOnlySequence<byte>(first, 0, prior, prior.Memory.Length);
+            }
+        }
+        
         #region creation methods
 
         /// <summary>
@@ -525,6 +560,33 @@ namespace Akka.IO
             }
            
             return new ReadOnlySpan<byte>(ToArray());
+        }
+        
+        /// <summary>
+        /// Returns a <see cref="ReadOnlySequence{T}"/> of <see cref="byte"/> over the contents of this ByteString.
+        /// This is not a copying operation and zero-alloc when ByteString is compact 
+        /// Otherwise N <see cref="ByteStringReadOnlySequenceSegment"/>s will be allocated
+        /// Where N is the number of arrays currently internally held by the ByteString
+        /// </summary>
+        /// <returns>
+        /// A <see cref="ReadOnlySequence{T}"/> of <see cref="byte"/>
+        /// over the data in the <see cref="ByteString"/>
+        /// </returns>
+        public ReadOnlySequence<byte> ToReadOnlySequence()
+        {
+            if (_count == 0)
+            {
+                return ReadOnlySequence<byte>.Empty;
+            }
+            else if (_buffers.Length == 1)
+            {
+                //Happy path, we can just pass ArraySegment here and avoid alloc.
+                return new ReadOnlySequence<byte>(_buffers[0]);
+            }
+            else
+            {
+                return ByteStringReadOnlySequenceSegment.CreateSequence(this);
+            }
         }
 
         /// <summary>

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -96,6 +97,64 @@ namespace Akka.Tests.Util
             var concatSpan3 = compacted.ToReadOnlySpan();
             var concatSpan4 = compacted.ToReadOnlySpan();
             (concatSpan3 == concatSpan4).Should().BeTrue();
+        }
+        
+        [Fact]
+        public void A_ByteString_ToReadOnlySequence_must_have_correct_size()
+        {
+            Prop.ForAll((ByteString a, ByteString b) =>
+            {
+                a.ToReadOnlySequence().Length.Should().Be(a.Count);
+                b.ToReadOnlySequence().Length.Should().Be(b.Count);
+                var concat = a + b;
+                var spanConcat = concat.ToReadOnlySequence();
+                return spanConcat.Length == concat.Count;
+            }).QuickCheckThrowOnFailure();
+        }
+        
+        [Fact]
+        public void A_ByteString_ToReadOnlySequence_compacted_must_have_identical_contents_to_original()
+        {
+            var bytesA = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+            var bytesB = new byte[] { 10, 11, 12, 13, 14, 15, 16, 17, 18 };
+            var a = ByteString.FromBytes(bytesA);
+            var b = ByteString.FromBytes(bytesB);
+            
+            var concat = a + b;
+            
+            var concatSpan = concat.ToReadOnlySequence();
+            var concatSpan2 = concat.ToReadOnlySequence();
+            // not compact, returns a new span
+            (concatSpan.ToArray().SequenceEqual(concatSpan2.ToArray())).Should().BeTrue();
+
+            // compact, will return same span
+            var compacted = concat.Compact();
+            var concatSpan3 = compacted.ToReadOnlySequence();
+            (concatSpan.ToArray().SequenceEqual(concatSpan3.ToArray())).Should().BeTrue();
+        }
+        
+        [Fact]
+        public void A_ByteString_ToReadOnlySequence_compacted_must_have_identical_contents_to_original_with_many_Segments()
+        {
+            var bytesA = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+            var bytesB = new byte[] { 10, 11, 12, 13, 14, 15, 16, 17, 18 };
+            var bytesC = new byte[] { 19, 20, 21, 22, 23, 24, 25, 26, 27 };
+            var a = ByteString.FromBytes(bytesA);
+            var b = ByteString.FromBytes(bytesB);
+            var c = ByteString.FromBytes(bytesC);
+            var concat = a + b +c;
+            
+            var concatSpan = concat.ToReadOnlySequence();
+            var concatSpan2 = concat.ToReadOnlySequence();
+            // not compact, returns a new span
+            (concatSpan.ToArray().SequenceEqual(concatSpan2.ToArray())).Should().BeTrue();
+
+            // compact, will return same span
+            var compacted = concat.Compact();
+            var concatSpan3 = compacted.ToReadOnlySequence();
+            (concatSpan.ToArray().SequenceEqual(concatSpan3.ToArray())).Should().BeTrue();
+            
+            (concatSpan.ToArray().SequenceEqual(compacted.ToArray())).Should().BeTrue();
         }
 
         [Fact]

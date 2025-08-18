@@ -3813,6 +3813,7 @@ namespace Akka.IO
         public Akka.IO.ByteString Slice(int index) { }
         public Akka.IO.ByteString Slice(int index, int count) { }
         public byte[] ToArray() { }
+        public System.Buffers.ReadOnlySequence<byte> ToReadOnlySequence() { }
         public System.ReadOnlySpan<byte> ToReadOnlySpan() { }
         public override string ToString() { }
         public string ToString(System.Text.Encoding encoding) { }
@@ -3823,6 +3824,11 @@ namespace Akka.IO
         public static Akka.IO.ByteString op_Explicit(byte[] bytes) { }
         public static byte[] op_Explicit(Akka.IO.ByteString byteString) { }
         public static bool !=(Akka.IO.ByteString x, Akka.IO.ByteString y) { }
+        [System.Diagnostics.DebuggerDisplayAttribute("(RunningIndex = {RunningIndex}, Length = {Memory.Length})}")]
+        public sealed class ByteStringReadOnlySequenceSegment : System.Buffers.ReadOnlySequenceSegment<byte>
+        {
+            public static System.Buffers.ReadOnlySequence<byte> CreateSequence(Akka.IO.ByteString bs) { }
+        }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public class ConnectException : System.Exception
