@@ -67,7 +67,7 @@ namespace Akka.Streams.Tests.Dsl
             var eventualActual = Source.From(elements)
                 .ScanAsync(0L, (l, l1) => Task.FromResult(l + l1))
                 .RunWith(Sink.Last<long>(), Materializer);
-            var complete = await eventualActual.ShouldCompleteWithin(3.Seconds());
+            var complete = await eventualActual.WaitAsync(3.Seconds());
             complete.ShouldBe(expectedSum);
         }
 

@@ -49,7 +49,7 @@ namespace Akka.Streams.Tests.Dsl
                 var source = PagedSource.Create(0, new MultiplesOfTwoPage().Page);
                 var t = source.Take(3).RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                var complete = await t.WaitAsync(3.Seconds());
                 complete.Should().BeEquivalentTo(new[] { 0, 2, 4 }, o => o.WithStrictOrdering());
             }
 
@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Dsl
                 var source = PagedSource.Create(0, new MultiplesOfTwoPage(4).Page);
                 var t = source.Take(10).RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                var complete = await t.WaitAsync(3.Seconds());
                 complete.Should().HaveCount(4);
             }
         }
@@ -88,7 +88,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var t = _source.Take(4).RunWith(Sink.Seq<string>(), Sys.Materializer());
 
-                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                var complete = await t.WaitAsync(3.Seconds());
                 complete.Should().BeEquivalentTo(new[] { "a", "b", "c", "d" }, o => o.WithStrictOrdering());
             }
 
@@ -97,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var t = _source.RunWith(Sink.Seq<string>(), Sys.Materializer());
 
-                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                var complete = await t.WaitAsync(3.Seconds());
                 complete.Should().BeEquivalentTo(new[] { "a", "b", "c", "d", "e" }, o => o.WithStrictOrdering());
             }
         }
@@ -133,7 +133,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var t = _source.Take(4).RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                var complete = await t.WaitAsync(3.Seconds());
                 complete.Should().BeEquivalentTo(new[] { 1, 2, 3, 4 }, o => o.WithStrictOrdering());
             }
 
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var t = _source.RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                var complete = await t.WaitAsync(3.Seconds());
                 complete.Should().BeEquivalentTo(new[] { 1, 2, 3, 4, 5 }, o => o.WithStrictOrdering());
             }
         }

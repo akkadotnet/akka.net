@@ -147,7 +147,7 @@ namespace Akka.Remote.Tests.Transport
         private async Task<IActorRef> Here()
         {
             var identity = await Sys.ActorSelection(RootB / "user" / "echo").Ask<ActorIdentity>(new Identify(null))
-                .ShouldCompleteWithin(DefaultTimeout);
+                .WaitAsync(DefaultTimeout);
             return identity.Subject;
         }
 
@@ -158,7 +158,7 @@ namespace Akka.Remote.Tests.Transport
                 Sys.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
 
             return transport.ManagementCommand(new SetThrottle(rootBAddress, direction, mode))
-                .ShouldCompleteWithin(DefaultTimeout);
+                .WaitAsync(DefaultTimeout);
         }
 
         private Task<bool> Disassociate()
@@ -168,7 +168,7 @@ namespace Akka.Remote.Tests.Transport
                 Sys.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
 
             return transport.ManagementCommand(new ForceDisassociate(rootBAddress))
-                .ShouldCompleteWithin(DefaultTimeout);
+                .WaitAsync(DefaultTimeout);
         }
 
         #endregion
@@ -188,7 +188,7 @@ namespace Akka.Remote.Tests.Transport
             await Throttle(
                     ThrottleTransportAdapter.Direction.Send,
                     new Remote.Transport.TokenBucket(PingPacketSize * 4, BytesPerSecond, 0, 0))
-                .ShouldCompleteWithin(true, TimeSpan.FromSeconds(3));
+                .WaitAsync(TimeSpan.FromSeconds(3));
 
             var here = await Here();
             var tester = Sys.ActorOf(Props.Create(() => new ThrottlingTester(here, TestActor)));
@@ -199,7 +199,7 @@ namespace Akka.Remote.Tests.Transport
             time.Should().BeGreaterThan(TotalTime - 12);
 
             await Throttle(ThrottleTransportAdapter.Direction.Send, Unthrottled.Instance)
-                .ShouldCompleteWithin(true, TimeSpan.FromSeconds(3));
+                .WaitAsync(TimeSpan.FromSeconds(3));
         }
 
         [Fact]
@@ -214,15 +214,15 @@ namespace Akka.Remote.Tests.Transport
             MuteDeadLetters(_systemB, typeof(ThrottlingTester.Lost));
 
             await Throttle(ThrottleTransportAdapter.Direction.Both, Blackhole.Instance)
-                .ShouldCompleteWithin(true, 3.Seconds());
+                .WaitAsync(3.Seconds());
 
             here.Tell(new ThrottlingTester.Lost("BlackHole 2"));
             await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
-            await Disassociate().ShouldCompleteWithin(true, TimeSpan.FromSeconds(3));
+            await Disassociate().WaitAsync(TimeSpan.FromSeconds(3));
             await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
             await Throttle(ThrottleTransportAdapter.Direction.Both, Unthrottled.Instance)
-                .ShouldCompleteWithin(true, TimeSpan.FromSeconds(3));
+                .WaitAsync(TimeSpan.FromSeconds(3));
 
             // after we remove the Blackhole we can't be certain of the state
             // of the connection, repeat until success

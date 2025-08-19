@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.IO
                         var completion = Source.From(_testByteStrings)
                             .RunWith(FileIO.ToFile(f), _materializer);
                         
-                        var result = await completion.ShouldCompleteWithin(Remaining); 
+                        var result = await completion.WaitAsync(Remaining); 
                         result.Count.Should().Be(6006);
 
                         await AwaitAssertAsync(
@@ -84,7 +84,7 @@ namespace Akka.Streams.Tests.IO
                     var completion = Source.From(_testByteStrings)
                         .RunWith(FileIO.ToFile(f), _materializer);
                     
-                    var result = await completion.ShouldCompleteWithin(Remaining);
+                    var result = await completion.WaitAsync(Remaining);
                     result.Count.Should().Be(6006);
                     await AwaitAssertAsync(
                         () => CheckFileContent(f, _testLines.Aggregate((s, s1) => s + s1)),
@@ -105,7 +105,7 @@ namespace Akka.Streams.Tests.IO
                         .RunWith(FileIO.ToFile(f, FileMode.OpenOrCreate), _materializer);
 
                     var completion1 = Write(_testLines);
-                    await completion1.ShouldCompleteWithin(Remaining);
+                    await completion1.WaitAsync(Remaining);
 
                     var lastWrite = new string[100];
                     for (var i = 0; i < 100; i++)
@@ -113,7 +113,7 @@ namespace Akka.Streams.Tests.IO
 
                     var completion2 = Write(lastWrite);
                     
-                    var result = await completion2.ShouldCompleteWithin(Remaining); 
+                    var result = await completion2.WaitAsync(Remaining); 
 
                     var lastWriteString = new string(lastWrite.SelectMany(x => x).ToArray());
                     result.Count.Should().Be(lastWriteString.Length);
@@ -138,11 +138,11 @@ namespace Akka.Streams.Tests.IO
                             .RunWith(FileIO.ToFile(f), _materializer);
 
                     var task1 = Write(_testLines);
-                    await task1.ShouldCompleteWithin(Remaining);
+                    await task1.WaitAsync(Remaining);
                     var lastWrite = Enumerable.Range(0, 100).Select(_ => "x").ToList();
 
                     var task2 = Write(lastWrite);
-                    var result = await task2.ShouldCompleteWithin(Remaining);
+                    var result = await task2.WaitAsync(Remaining);
 
                     result.Count.Should().Be(lastWrite.Count);
 
@@ -166,7 +166,7 @@ namespace Akka.Streams.Tests.IO
 
                     var completion1 = Write(_testLines);
                     
-                    var result1 = await completion1.ShouldCompleteWithin(Remaining); ;
+                    var result1 = await completion1.WaitAsync(Remaining); ;
 
                     var lastWrite = new List<string>();
                     for (var i = 0; i < 100; i++)
@@ -174,7 +174,7 @@ namespace Akka.Streams.Tests.IO
 
                     var completion2 = Write(lastWrite);
                     
-                    var result2 = await completion2.ShouldCompleteWithin(Remaining);
+                    var result2 = await completion2.WaitAsync(Remaining);
 
                     var lastWriteString = new string(lastWrite.SelectMany(x => x).ToArray());
                     var testLinesString = new string(_testLines.SelectMany(x => x).ToArray());
@@ -221,10 +221,10 @@ namespace Akka.Streams.Tests.IO
                             _materializer);
 
                     var completion1 = Write(_testLines, 0);
-                    await completion1.ShouldCompleteWithin(Remaining);
+                    await completion1.WaitAsync(Remaining);
 
                     var completion2 = Write(testLinesPart2, startPosition);
-                    var result2 = await completion2.ShouldCompleteWithin(Remaining);
+                    var result2 = await completion2.WaitAsync(Remaining);
 
                     f.Length.ShouldBe(startPosition + result2.Count);
 
@@ -321,7 +321,7 @@ namespace Akka.Streams.Tests.IO
                     var completion = Source.From(new []{_testByteStrings.Head()})
                         .RunWith(lazySink, _materializer);
 
-                    await completion.ShouldCompleteWithin(Remaining);
+                    await completion.WaitAsync(Remaining);
                     await AwaitAssertAsync(
                         () => CheckFileContent(f, _testLines.Head()),
                         Remaining);
@@ -342,7 +342,7 @@ namespace Akka.Streams.Tests.IO
                     })
                     .RunWith(FileIO.ToFile(f), _materializer);
 
-                var ex = await InterceptAsync<AbruptIOTerminationException>(() => completion).ShouldCompleteWithin(3.Seconds());
+                var ex = await InterceptAsync<AbruptIOTerminationException>(() => completion).WaitAsync(3.Seconds());
                 ex.IoResult.Count.ShouldBe(1001);
                 CheckFileContent(f, string.Join("", _testLines.TakeWhile(s => !s.Contains('b'))));
                 await Task.CompletedTask;
@@ -357,12 +357,7 @@ namespace Akka.Streams.Tests.IO
                 var completion = Source.Single(ByteString.FromString("42"))
                     .RunWith(FileIO.ToFile(new FileInfo("I-hope-this-file-doesnt-exist.txt"), FileMode.Open), _materializer);
 
-                async Task Exec()
-                {
-                    await completion;
-                }
-
-                await Exec().ShouldThrowWithin<FileNotFoundException>(RemainingOrDefault);
+                await AssertThrowsAsync<FileNotFoundException>(() => completion).WaitAsync(RemainingOrDefault);
             }, _materializer);
         }
 
@@ -397,7 +392,7 @@ namespace Akka.Streams.Tests.IO
 
                     // We still have to wait for the task to complete, because the signal
                     // came from the FileSink actor, not the source actor.
-                    await task.ShouldCompleteWithin(Remaining);
+                    await task.WaitAsync(Remaining);
                     await ExpectTerminatedAsync(actor, Remaining);
 
                     f.Length.ShouldBe(8);

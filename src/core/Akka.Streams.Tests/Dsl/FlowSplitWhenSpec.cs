@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -135,7 +136,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FirstOrDefault<IEnumerable<int>>(), Materializer);
                 result.Should().BeEquivalentTo(default(IEnumerable<int>));
             }, Materializer)
-                .ShouldCompleteWithin(RemainingOrDefault);
+                .WaitAsync(RemainingOrDefault);
         }
 
         [Fact]
@@ -157,8 +158,7 @@ namespace Akka.Streams.Tests.Dsl
                         masterSubscription.Request(1);
                         await masterSubscriber.ExpectCompleteAsync();
                     });
-            }, Materializer)
-                .ShouldCompleteWithin(RemainingOrDefault);
+            }, Materializer);
         }
 
         [Fact]
@@ -186,7 +186,7 @@ namespace Akka.Streams.Tests.Dsl
                         await masterSubscriber.ExpectCompleteAsync();
                     });
             }, Materializer)
-                .ShouldCompleteWithin(RemainingOrDefault);
+                .WaitAsync(RemainingOrDefault);
         }
 
         [Fact]
@@ -256,7 +256,7 @@ namespace Akka.Streams.Tests.Dsl
                 masterStream3.Cancel();
                 await inputs3.ExpectCancellationAsync();
             }, Materializer)
-                .ShouldCompleteWithin(RemainingOrDefault);
+                .WaitAsync(RemainingOrDefault);
         }
 
         [Fact]
@@ -277,9 +277,8 @@ namespace Akka.Streams.Tests.Dsl
                         await s1.ExpectNextAsync(4);
                         s1.Request(1);
                         await s1.ExpectCompleteAsync();
-                    });
-            }, Materializer)
-                .ShouldCompleteWithin(RemainingOrDefault);
+                    }).WaitAsync(TimeSpan.FromSeconds(3));
+            }, Materializer);
         }
 
         [Fact]
@@ -319,7 +318,7 @@ namespace Akka.Streams.Tests.Dsl
                 await substreamPuppet.ExpectErrorAsync(ex);
                 await upstreamSubscription.ExpectCancellationAsync();
             }, Materializer)
-                .ShouldCompleteWithin(RemainingOrDefault);
+                .WaitAsync(RemainingOrDefault);
         }
 
         [Fact]
@@ -334,7 +333,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
             }, Materializer)
-                .ShouldCompleteWithin(RemainingOrDefault);
+                .WaitAsync(RemainingOrDefault);
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
@@ -359,7 +358,7 @@ namespace Akka.Streams.Tests.Dsl
                             .RunWith(Sink.Ignore<int>(), Materializer)
                     ).Should().ThrowAsync<IllegalStateException>();
                 }, Materializer)
-                .ShouldCompleteWithin(RemainingOrDefault);
+                .WaitAsync(RemainingOrDefault);
         }
 
         [Fact]
@@ -385,7 +384,7 @@ namespace Akka.Streams.Tests.Dsl
                         .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer);
                 }).Should().ThrowAsync<SubscriptionTimeoutException>();
             }, Materializer)
-                .ShouldCompleteWithin(RemainingOrDefault);
+                .WaitAsync(RemainingOrDefault);
         }
 
         [Fact(Skip = "Supervision is not supported fully by GraphStages yet")]
@@ -412,7 +411,7 @@ namespace Akka.Streams.Tests.Dsl
                 var upSub = await up.ExpectSubscriptionAsync();
                 await upSub.ExpectCancellationAsync();
             }, Materializer)
-                .ShouldCompleteWithin(RemainingOrDefault);
+                .WaitAsync(RemainingOrDefault);
         }
 
         [Fact]
@@ -429,7 +428,7 @@ namespace Akka.Streams.Tests.Dsl
                         await masterSubscriber.ExpectCompleteAsync();
                     });
             }, Materializer)
-                .ShouldCompleteWithin(RemainingOrDefault);
+                .WaitAsync(RemainingOrDefault);
         }
     }
 }

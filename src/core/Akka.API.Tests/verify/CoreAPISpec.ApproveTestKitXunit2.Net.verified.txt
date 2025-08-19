@@ -70,6 +70,12 @@ namespace Akka.TestKit.Xunit2
         public void AssertEqual<T>(T expected, T actual, string format = "", params object[] args) { }
         public void AssertEqual<T>(T expected, T actual, System.Func<T, T, bool> comparer, string format = "", params object[] args) { }
         public void AssertFalse(bool condition, string format = "", params object[] args) { }
+        public System.Exception AssertThrows(System.Action action) { }
+        public TException AssertThrows<TException>(System.Action action)
+            where TException : System.Exception { }
+        public System.Threading.Tasks.Task<System.Exception> AssertThrowsAsync(System.Func<System.Threading.Tasks.Task> action) { }
+        public System.Threading.Tasks.Task<TException> AssertThrowsAsync<TException>(System.Func<System.Threading.Tasks.Task> action)
+            where TException : System.Exception { }
         public void AssertTrue(bool condition, string format = "", params object[] args) { }
         public void Fail(string format = "", params object[] args) { }
     }

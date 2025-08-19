@@ -35,7 +35,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var result = await Source.From(Enumerable.Range(1,42)).Select(x=>x)
                     .RunWith(Sink.Last<int>(), Materializer)
-                    .ShouldCompleteWithin(3.Seconds());
+                    .WaitAsync(3.Seconds());
                 result.Should().Be(42);
             }, Materializer);
         }
@@ -45,8 +45,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                (await Source.Failed<int>(new Exception("ex")).RunWith(Sink.Last<int>(), Materializer)
-                    .ShouldThrowWithin<Exception>(1.Seconds())).Message.Should().Be("ex");
+                var task = Source.Failed<int>(new Exception("ex")).RunWith(Sink.Last<int>(), Materializer);
+                var ex = await AssertThrowsAsync(() => task).WaitAsync(1.Seconds());
+                ex.Message.Should().Be("ex");
             }, Materializer);
         }
 
@@ -55,9 +56,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                (await Source.Empty<int>().RunWith(Sink.Last<int>(), Materializer)
-                    .ShouldThrowWithin<NoSuchElementException>(1.Seconds()))
-                    .Message.Should().Be("Last of empty stream");
+                var task = Source.Empty<int>().RunWith(Sink.Last<int>(), Materializer);
+                var ex = await AssertThrowsAsync(() => task).WaitAsync(1.Seconds());
+                ex.Message.Should().Be("Last of empty stream");
             }, Materializer);
         }
 
@@ -68,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var result = await Source.From(Enumerable.Range(1, 42)).Select(x => x)
                     .RunWith(Sink.LastOrDefault<int>(), Materializer)
-                    .ShouldCompleteWithin(1.Seconds());
+                    .WaitAsync(1.Seconds());
                 result.Should().Be(42);
             }, Materializer);
         }
@@ -78,8 +79,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                (await Source.Failed<int>(new Exception("ex")).RunWith(Sink.LastOrDefault<int>(), Materializer)
-                    .ShouldThrowWithin<Exception>(1.Seconds())).Message.Should().Be("ex");
+                var task = Source.Failed<int>(new Exception("ex")).RunWith(Sink.LastOrDefault<int>(), Materializer);
+                var ex = await AssertThrowsAsync(() => task).WaitAsync(1.Seconds());
+                ex.Message.Should().Be("ex");
             }, Materializer);
         }
 
@@ -90,7 +92,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var result = await Source.Empty<int>()
                     .RunWith(Sink.LastOrDefault<int>(), Materializer)
-                    .ShouldCompleteWithin(1.Seconds());
+                    .WaitAsync(1.Seconds());
                 result.Should().Be(0);
             }, Materializer);
         }

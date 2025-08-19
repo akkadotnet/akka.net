@@ -105,7 +105,7 @@ namespace Akka.Streams.Tests.IO
 
             serverConnection.ConfirmedClose();
             // Reduced timeout - otherwise we're just waiting longer for the failure
-            var result = await resultFuture.ShouldCompleteWithin(3.Seconds());
+            var result = await resultFuture.WaitAsync(3.Seconds());
             result.ShouldBe(expectedOutput);
         }
 
@@ -124,7 +124,7 @@ namespace Akka.Streams.Tests.IO
                         .ToMaterialized(Sink.Ignore<ByteString>(), Keep.Left)
                         .Run(Materializer);
 
-                await Awaiting(() => task.ShouldCompleteWithin(3.Seconds()))
+                await Awaiting(() => task.WaitAsync(3.Seconds()))
                     .Should().ThrowAsync<Exception>().WithMessage("Connection failed*");
             }, Materializer);
         }
@@ -438,7 +438,7 @@ namespace Akka.Streams.Tests.IO
                             Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(writeButIgnoreRead).Run(Materializer)),
                             Keep.Left)
                         .Run(Materializer);
-                await task.ShouldCompleteWithin(3.Seconds());
+                await task.WaitAsync(3.Seconds());
                 var binding = task.Result;
 
                 var (promise, result) = Source.Maybe<ByteString>()
@@ -446,11 +446,11 @@ namespace Akka.Streams.Tests.IO
                     .ToMaterialized(Sink.Aggregate<ByteString, ByteString>(ByteString.Empty, (s, s1) => s + s1), Keep.Both)
                     .Run(Materializer);
 
-                await result.ShouldCompleteWithin(5.Seconds());
+                await result.WaitAsync(5.Seconds());
                 result.Result.Should().BeEquivalentTo(ByteString.FromString("Early response"));
 
                 promise.SetResult(null); // close client upstream, no more data
-                await binding.Unbind().ShouldCompleteWithin(3.Seconds());
+                await binding.Unbind().WaitAsync(3.Seconds());
 
             }, Materializer);
         }
@@ -470,7 +470,7 @@ namespace Akka.Streams.Tests.IO
             var result = await Source.From(Enumerable.Repeat(0, 1000)
                 .Select(i => ByteString.FromBytes([Convert.ToByte(i)])))
                 .Via(Sys.TcpStream().OutgoingConnection(serverAddress, halfClose: true))
-                .RunAggregate(0, (i, s) => i + s.Count, Materializer).ShouldCompleteWithin(10.Seconds());
+                .RunAggregate(0, (i, s) => i + s.Count, Materializer).WaitAsync(10.Seconds());
             
             result.Should().Be(1000);
 
@@ -507,7 +507,7 @@ namespace Akka.Streams.Tests.IO
                                 // Getting rid of existing connection actors by using a blunt instrument
                                 system2.ActorSelection(system2.Tcp().Path / "tcp-client-connection-*").Tell(Kill.Instance);
                             
-                                await result.ShouldCompleteWithin(3.Seconds());
+                                await result.WaitAsync(3.Seconds());
                             }, interval:TimeSpan.FromSeconds(4));
                         });
                         
@@ -515,7 +515,7 @@ namespace Akka.Streams.Tests.IO
                     })
                     .Should().ThrowAsync<StreamTcpException>();
 
-                await binding.Result.Unbind().ShouldCompleteWithin(3.Seconds());
+                await binding.Result.Unbind().WaitAsync(3.Seconds());
             }
             finally
             {
@@ -540,10 +540,10 @@ namespace Akka.Streams.Tests.IO
                 // and is possible to communicate with 
                 await Source.Single(ByteString.FromString(""))
                     .Via(sys2.TcpStream().OutgoingConnection(address))
-                    .RunWith(Sink.Ignore<ByteString>(), mat2).ShouldCompleteWithin(10.Seconds());
+                    .RunWith(Sink.Ignore<ByteString>(), mat2).WaitAsync(10.Seconds());
 
-                await sys2.Terminate().ShouldCompleteWithin(10.Seconds());
-                await binding.Unbind().ShouldCompleteWithin(10.Seconds());
+                await sys2.Terminate().WaitAsync(10.Seconds());
+                await binding.Unbind().WaitAsync(10.Seconds());
             }
             finally
             {
@@ -573,7 +573,7 @@ namespace Akka.Streams.Tests.IO
                 .Run(Materializer);
 
             // make sure that the server has bound to the socket
-            var binding = await bindTask.ShouldCompleteWithin(3.Seconds());
+            var binding = await bindTask.WaitAsync(3.Seconds());
 
             var testInput = Enumerable.Range(0, 255)
                 .Select(i => ByteString.FromBytes([Convert.ToByte(i)]))
@@ -584,11 +584,11 @@ namespace Akka.Streams.Tests.IO
             var result = await Source.From(testInput)
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
                     .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer)
-                    .ShouldCompleteWithin(10.Seconds());
+                    .WaitAsync(10.Seconds());
             
             result.Should().BeEquivalentTo(expectedOutput);
-            await binding.Unbind().ShouldCompleteWithin(3.Seconds());
-            await echoServerFinish.ShouldCompleteWithin(3.Seconds());
+            await binding.Unbind().WaitAsync(3.Seconds());
+            await echoServerFinish.WaitAsync(3.Seconds());
         }
 
         [Fact]
@@ -601,7 +601,7 @@ namespace Akka.Streams.Tests.IO
                 .Run(Materializer);
 
             // make sure that the server has bound to the socket
-            var binding = await bindTask.ShouldCompleteWithin(3.Seconds());
+            var binding = await bindTask.WaitAsync(3.Seconds());
 
             var echoConnection = Sys.TcpStream().OutgoingConnection(serverAddress);
 
@@ -617,11 +617,11 @@ namespace Akka.Streams.Tests.IO
                 .Via(echoConnection)
                 .Via(echoConnection)
                 .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer)
-                .ShouldCompleteWithin(10.Seconds());
+                .WaitAsync(10.Seconds());
             
             result.Should().BeEquivalentTo(expectedOutput);
-            await binding.Unbind().ShouldCompleteWithin(3.Seconds());
-            await echoServerFinish.ShouldCompleteWithin(3.Seconds());
+            await binding.Unbind().WaitAsync(3.Seconds());
+            await echoServerFinish.WaitAsync(3.Seconds());
         }
 
         [Fact]
@@ -634,7 +634,7 @@ namespace Akka.Streams.Tests.IO
                 .Run(Materializer);
 
             // make sure that the server has bound to the socket
-            var binding = await bindTask.ShouldCompleteWithin(3.Seconds());
+            var binding = await bindTask.WaitAsync(3.Seconds());
 
             await Task.WhenAll(
                 binding.Unbind(),
@@ -644,9 +644,9 @@ namespace Akka.Streams.Tests.IO
                 binding.Unbind(),
                 binding.Unbind(),
                 binding.Unbind())
-                .ShouldCompleteWithin(3.Seconds());
+                .WaitAsync(3.Seconds());
             
-            await echoServerFinish.ShouldCompleteWithin(3.Seconds());
+            await echoServerFinish.WaitAsync(3.Seconds());
         }
 
         [Fact]
@@ -661,7 +661,7 @@ namespace Akka.Streams.Tests.IO
 
                 // bind succeed, we have local address
                 var binding1 = await bind.To(Sink.FromSubscriber(probe1)).Run(Materializer)
-                    .ShouldCompleteWithin(3.Seconds());
+                    .WaitAsync(3.Seconds());
 
                 await probe1.ExpectSubscriptionAsync();
 
@@ -673,22 +673,22 @@ namespace Akka.Streams.Tests.IO
                 var binding3F = bind.To(Sink.FromSubscriber(probe3)).Run(Materializer);
                 (await probe3.ExpectSubscriptionAndErrorAsync()).Should().BeOfType<BindFailedException>();
 
-                await Awaiting(() => binding2F.ShouldCompleteWithin(3.Seconds()))
+                await Awaiting(() => binding2F.WaitAsync(3.Seconds()))
                     .Should().ThrowAsync<BindFailedException>();
-                await Awaiting(() => binding3F.ShouldCompleteWithin(3.Seconds()))
+                await Awaiting(() => binding3F.WaitAsync(3.Seconds()))
                     .Should().ThrowAsync<BindFailedException>();
                 
                 // Now unbind first
-                await binding1.Unbind().ShouldCompleteWithin(3.Seconds());
+                await binding1.Unbind().WaitAsync(3.Seconds());
                 probe1.ExpectComplete();
 
                 var probe4 = this.CreateManualSubscriberProbe<Tcp.IncomingConnection>();
                 // bind succeeded, we have local address
-                var binding4 = await bind.To(Sink.FromSubscriber(probe4)).Run(Materializer).ShouldCompleteWithin(3.Seconds());
+                var binding4 = await bind.To(Sink.FromSubscriber(probe4)).Run(Materializer).WaitAsync(3.Seconds());
                 await probe4.ExpectSubscriptionAsync();
 
                 // clean up
-                await binding4.Unbind().ShouldCompleteWithin(5.Seconds());
+                await binding4.Unbind().WaitAsync(5.Seconds());
             });
         }
 
@@ -713,7 +713,7 @@ namespace Akka.Streams.Tests.IO
                     .Run(Materializer);
 
                 // make sure server is running first
-                await bindingTask.ShouldCompleteWithin(3.Seconds());
+                await bindingTask.WaitAsync(3.Seconds());
                 var result = bindingTask.Result;
 
                 // then connect, should trigger a block and then
@@ -721,7 +721,7 @@ namespace Akka.Streams.Tests.IO
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
                     .RunAggregate(0, (i, s) => i + s.Count, Materializer);
 
-                (await total.ShouldCompleteWithin(5.Seconds())).Should().Be(1000);
+                (await total.WaitAsync(5.Seconds())).Should().Be(1000);
             }, Materializer);
         }
 
@@ -750,12 +750,12 @@ namespace Akka.Streams.Tests.IO
 
                 var total = folder.Run(Materializer);
 
-                await firstClientConnected.Task.ShouldCompleteWithin(2.Seconds());
+                await firstClientConnected.Task.WaitAsync(2.Seconds());
                 var rejected = folder.Run(Materializer);
 
-                (await total.ShouldCompleteWithin(10.Seconds())).Should().Be(100);
+                (await total.WaitAsync(10.Seconds())).Should().Be(100);
                 
-                await rejected.ShouldThrowWithin<StreamTcpException>(3.Seconds());
+                await AssertThrowsAsync<StreamTcpException>(() => rejected).WaitAsync(3.Seconds());
             }, Materializer);
         }
     }
