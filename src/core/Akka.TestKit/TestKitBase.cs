@@ -172,8 +172,12 @@ namespace Akka.TestKit
 
             var testActor = CreateInitialTestActor(system, testActorName);
 
-            // Wait for the testactor to start
-            WaitUntilTestActorIsReady(testActor, _testState.TestKitSettings);
+            // For async initialization, don't wait in constructor to avoid deadlock
+            // The TestActor property getter will ensure it's ready when first accessed
+            _testState.TestActor = testActor;
+            
+            // Only set implicit sender context after TestActor is confirmed ready
+            EnsureTestActorReady();
 
             if (this is not INoImplicitSender)
             {
@@ -187,8 +191,14 @@ namespace Akka.TestKit
             }
             SynchronizationContext.SetSynchronizationContext(
                 new ActorCellKeepingSynchronizationContext(InternalCurrentActorCellKeeper.Current));
+        }
 
-            _testState.TestActor = testActor;
+        /// <summary>
+        /// Ensures the TestActor is ready for use. Called lazily to avoid constructor deadlocks.
+        /// </summary>
+        private void EnsureTestActorReady()
+        {
+            WaitUntilTestActorIsReady(_testState.TestActor, _testState.TestKitSettings);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -720,14 +730,14 @@ namespace Akka.TestKit
 
         private IActorRef CreateInitialTestActor(ActorSystem system, string name)
         {
-            // Use the default dispatcher for initial TestActor creation to avoid deadlock
-            // The CallingThreadDispatcher causes deadlocks during async initialization
-            // because the Supervise message can't be processed while we're blocking.
-            // Using the default dispatcher allows initialization to complete on a thread pool thread.
-            var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue));
-                // Note: NOT using .WithDispatcher("akka.test.test-actor.dispatcher")
+            // Use synchronous initialization to avoid deadlock with CallingThreadDispatcher
+            // Instead of SystemActorOf (which hardcodes async=true), directly call AttachChild
+            // with async=false to prevent the async initialization chain that causes deadlock
+            var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
+                .WithDispatcher("akka.test.test-actor.dispatcher");
             
-            var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
+            var systemImpl = system.AsInstanceOf<ActorSystemImpl>();
+            var testActor = systemImpl.Provider.SystemGuardian.Cell.AttachChild(testActorProps, false, name);
             
             return testActor;
         }
