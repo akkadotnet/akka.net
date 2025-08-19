@@ -170,7 +170,7 @@ namespace Akka.TestKit
             if (string.IsNullOrEmpty(testActorName))
                 testActorName = "testActor" + _testActorId.IncrementAndGet();
 
-            var testActor = CreateTestActor(system, testActorName);
+            var testActor = CreateInitialTestActor(system, testActorName);
 
             // Wait for the testactor to start
             WaitUntilTestActorIsReady(testActor, _testState.TestKitSettings);
@@ -718,12 +718,12 @@ namespace Akka.TestKit
             return CreateTestActor(_testState.System, name);
         }
 
-        private IActorRef CreateTestActor(ActorSystem system, string name)
+        private IActorRef CreateInitialTestActor(ActorSystem system, string name)
         {
             var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
             
-            // IMPORTANT: We need to create the TestActor with special handling to avoid deadlocks
+            // IMPORTANT: For the initial TestActor, we need special handling to avoid deadlocks
             // when running tests in parallel. The default SystemActorOf uses async initialization
             // which can deadlock when the TestActor runs on CallingThreadDispatcher.
             //
@@ -731,9 +731,6 @@ namespace Akka.TestKit
             // Initialize(async) method sends a Supervise message but doesn't immediately call Point().
             // This Supervise message needs to be processed on the CallingThreadDispatcher thread,
             // but that thread may be blocked waiting for initialization to complete.
-            //
-            // For now, we still use SystemActorOf but with enhanced waiting logic below
-            // that can handle the initialization better.
             var systemImpl = system.AsInstanceOf<ActorSystemImpl>();
             var guardian = systemImpl.Provider.SystemGuardian;
             var path = guardian.Path / name;
@@ -746,9 +743,16 @@ namespace Akka.TestKit
     
             // Initialize synchronously by passing async=false
             repointableRef.Initialize(async: false);
-    
-            _testState.TestActor = repointableRef;
             
+            return repointableRef;
+        }
+        
+        private IActorRef CreateTestActor(ActorSystem system, string name)
+        {
+            var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
+                .WithDispatcher("akka.test.test-actor.dispatcher");
+            
+            // For additional test actors, always use the standard SystemActorOf
             var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
             return testActor;
         }
