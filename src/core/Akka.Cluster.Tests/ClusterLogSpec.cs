@@ -73,7 +73,7 @@ namespace Akka.Cluster.Tests
                         tcs.TrySetResult(true);
                     });
                     _cluster.Join(_selfAddress);
-                    await tcs.Task.ShouldCompleteWithin(10.Seconds());
+                    await tcs.Task.WaitAsync(10.Seconds());
                 });
         }
 
@@ -93,7 +93,7 @@ namespace Akka.Cluster.Tests
                         tcs.TrySetResult(true);
                     });
                     _cluster.Down(_selfAddress);
-                    await tcs.Task.ShouldCompleteWithin(10.Seconds());
+                    await tcs.Task.WaitAsync(10.Seconds());
                 });
         }
     }
@@ -125,9 +125,9 @@ namespace Akka.Cluster.Tests
         public async Task A_cluster_must_not_log_verbose_cluster_events_by_default()
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
-            await JoinAsync(upLogMessage).ShouldThrowWithin<XunitException>(11.Seconds());
+            await AssertThrowsAsync<XunitException>(() => JoinAsync(upLogMessage)).WaitAsync(11.Seconds());
             await AwaitUpAsync();
-            await DownAsync(downLogMessage).ShouldThrowWithin<XunitException>(11.Seconds());
+            await AssertThrowsAsync<XunitException>(() => DownAsync(downLogMessage)).WaitAsync(11.Seconds());
         }
     }
 

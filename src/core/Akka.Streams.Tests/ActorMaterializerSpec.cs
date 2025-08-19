@@ -45,7 +45,7 @@ namespace Akka.Streams.Tests
 
             m.Shutdown();
 
-            Func<Task> task = () => f.ShouldCompleteWithin(3.Seconds());
+            Func<Task> task = () => f.WaitAsync(3.Seconds());
             await task.Should().ThrowAsync<AbruptTerminationException>();
         }
 

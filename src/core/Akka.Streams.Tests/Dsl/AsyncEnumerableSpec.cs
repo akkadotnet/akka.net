@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         cts.Cancel();
                     }
-                }).Should().ThrowAsync<OperationCanceledException>().ShouldCompleteWithin(3.Seconds());
+                }).Should().ThrowAsync<OperationCanceledException>().WaitAsync(3.Seconds());
             }, Materializer);
         }
 
@@ -70,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var input = Enumerable.Range(1, 6).ToList();
                 var asyncEnumerable = Source.From(input).RunAsAsyncEnumerable(Materializer);
-                var output = await asyncEnumerable.ToListAsync().AsTask().ShouldCompleteWithin(3.Seconds());
+                var output = await asyncEnumerable.ToListAsync().AsTask().WaitAsync(3.Seconds());
                 output.Should().BeEquivalentTo(input, options => options.WithStrictOrdering());
             }, Materializer);
         }
@@ -83,10 +83,10 @@ namespace Akka.Streams.Tests.Dsl
                 var input = Enumerable.Range(1, 6).ToList();
                 var asyncEnumerable = Source.From(input).RunAsAsyncEnumerable(Materializer);
 
-                var output = await asyncEnumerable.ToListAsync().AsTask().ShouldCompleteWithin(3.Seconds());
+                var output = await asyncEnumerable.ToListAsync().AsTask().WaitAsync(3.Seconds());
                 output.Should().BeEquivalentTo(input, options => options.WithStrictOrdering());
 
-                output = await asyncEnumerable.ToListAsync().AsTask().ShouldCompleteWithin(3.Seconds());
+                output = await asyncEnumerable.ToListAsync().AsTask().WaitAsync(3.Seconds());
                 output.Should().BeEquivalentTo(input, options => options.WithStrictOrdering());
             }, Materializer);
         }
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
             var thrown = false;
             try
             {
-                await a.ShouldCompleteWithin(10.Seconds());
+                await a.WaitAsync(10.Seconds());
             }
             catch (StreamDetachedException)
             {
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
                 await foreach (var a in task)
                 {
                 }
-            }).Should().ThrowAsync<IllegalStateException>().ShouldCompleteWithin(3.Seconds());
+            }).Should().ThrowAsync<IllegalStateException>().WaitAsync(3.Seconds());
         }
 
         [Fact]

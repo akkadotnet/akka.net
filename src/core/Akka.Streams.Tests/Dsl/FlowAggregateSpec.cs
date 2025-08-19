@@ -43,7 +43,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var task = InputSource.RunAggregate(0, (sum, i) => sum + i, Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Be(Expected);
             }, Materializer);
         }
@@ -54,7 +54,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var task = AggregateSource.RunWith(Sink.First<int>(), Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Be(Expected);
             }, Materializer);
         }
@@ -65,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var task = InputSource.RunWith(AggregateSink, Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Be(Expected);
             }, Materializer);
         }
@@ -76,7 +76,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var task = InputSource.Via(AggregateFlow).RunWith(Sink.First<int>(), Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Be(Expected);
             }, Materializer);
         }
@@ -87,7 +87,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var task = AggregateSource.Via(AggregateFlow).RunWith(AggregateSink, Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Be(Expected);
             }, Materializer);
         }
@@ -149,7 +149,7 @@ namespace Akka.Streams.Tests.Dsl
                 var task = InputSource.RunWith(
                     aggregate.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider)),
                     Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Be(Expected - 50);
             }, Materializer);
         }
@@ -170,7 +170,7 @@ namespace Akka.Streams.Tests.Dsl
                 var task = InputSource.RunWith(
                     aggregate.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider)),
                     Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Be(Enumerable.Range(51, 50).Sum());
             }, Materializer);
         }
@@ -182,7 +182,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var task = Source.From(Enumerable.Empty<int>())
                     .RunAggregate(0, (acc, element) => acc + element, Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Be(0);
             }, Materializer);
         }

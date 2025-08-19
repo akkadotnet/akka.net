@@ -17,13 +17,9 @@ using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
-using Akka.Util;
 using Akka.Util.Internal;
-using FluentAssertions;
-using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
-using static FluentAssertions.FluentActions;
 
 // ReSharper disable once CheckNamespace
 namespace Akka.TestKit
@@ -281,13 +277,12 @@ namespace Akka.TestKit
         /// <exception cref="ThrowsException">If the passed action does not complete abruptly with an exception that's an instance of the specified type.</exception>
         protected T Intercept<T>(Action actionThatThrows) where T : Exception
         {
-            return Invoking(actionThatThrows)
-                .Should().ThrowExactly<T>().And;
+            return Assertions.AssertThrows<T>(actionThatThrows);
         }
 
-        protected async Task<T> InterceptAsync<T>(Func<Task> funcThatThrows) where T : Exception
+        protected Task<T> InterceptAsync<T>(Func<Task> funcThatThrows) where T : Exception
         {
-            return (await funcThatThrows.Should().ThrowExactlyAsync<T>()).And;
+            return Assertions.AssertThrowsAsync<T>(funcThatThrows);
         }
 
         /// <summary>
@@ -311,10 +306,30 @@ namespace Akka.TestKit
             Intercept<T>(actionThatThrows); 
         }
 
-        [Obsolete("Use AssertThrows instead.")]
-        protected void Intercept(Action actionThatThrows)
+        protected async Task AssertThrowsAsync(Func<Task> funcThatThrows, Exception expected)
         {
-            Invoking(actionThatThrows).Should().Throw<Exception>();
+            var exception = await Assertions.AssertThrowsAsync(funcThatThrows);
+            
+            // NOTE:
+            // This is how FluentAssertions do exception equality, more or less
+            // It unwraps AggregateException and checks to see if any of the internal exceptions
+            // matches the expected exception.
+            // Without this code, some unit tests will fail.
+            if (exception is AggregateException ae)
+            {
+                exception = ae.InnerExceptions[0];
+            }
+            Assertions.AssertEqual(expected, exception);
+        }
+        
+        protected Task<T> AssertThrowsAsync<T>(Func<Task> funcThatThrows) where T : Exception
+        {
+            return Assertions.AssertThrowsAsync<T>(funcThatThrows);
+        }
+        
+        protected Task<Exception> AssertThrowsAsync(Func<Task> funcThatThrows)
+        {
+            return Assertions.AssertThrowsAsync(funcThatThrows);
         }
 
         protected void MuteDeadLetters(params Type[] messageClasses)

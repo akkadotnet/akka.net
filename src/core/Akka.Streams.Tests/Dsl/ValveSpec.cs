@@ -32,10 +32,10 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item1;
             var seq = t.Item2;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+            var valveSwitch = await switchTask.WaitAsync(3.Seconds());
             await Task.Delay(100);
             var flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete = await flip.ShouldCompleteWithin(3.Seconds());
+            var complete = await flip.WaitAsync(3.Seconds());
             complete.Should().BeTrue();
         }
 
@@ -48,12 +48,12 @@ namespace Akka.Streams.Tests.Dsl
                 .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                 .Run(Sys.Materializer());
             
-            IValveSwitch valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+            IValveSwitch valveSwitch = await switchTask.WaitAsync(3.Seconds());
             probe.Request(2);
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             Task<bool> flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete = await flip.ShouldCompleteWithin(3.Seconds());
+            var complete = await flip.WaitAsync(3.Seconds());
             // valve is now open
             complete.Should().BeTrue();
             // </OpenValve>
@@ -78,11 +78,11 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item1.Item2;
             var sinkProbe = t.Item2;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+            var valveSwitch = await switchTask.WaitAsync(3.Seconds());
 
             sinkProbe.Request(1);
             var flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete = await flip.ShouldCompleteWithin(3.Seconds());
+            var complete = await flip.WaitAsync(3.Seconds());
             complete.Should().BeTrue();
 
             sourceProbe.SendNext(1);
@@ -90,13 +90,13 @@ namespace Akka.Streams.Tests.Dsl
             sinkProbe.ExpectNext().Should().Be(1);
 
             flip = valveSwitch.Flip(SwitchMode.Close);
-            var complete1 = await flip.ShouldCompleteWithin(3.Seconds());
+            var complete1 = await flip.WaitAsync(3.Seconds());
             complete1.Should().BeTrue();
 
             sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete2 = await flip.ShouldCompleteWithin(3.Seconds());
+            var complete2 = await flip.WaitAsync(3.Seconds());
             complete2.Should().BeTrue();   
 
             sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
@@ -123,12 +123,12 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item1;
             var probe = t.Item2;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+            var valveSwitch = await switchTask.WaitAsync(3.Seconds());
 
-            var complete = await valveSwitch.Flip(SwitchMode.Close).ShouldCompleteWithin(3.Seconds());
+            var complete = await valveSwitch.Flip(SwitchMode.Close).WaitAsync(3.Seconds());
             complete.Should().BeFalse();
 
-            var complete1 = await valveSwitch.Flip(SwitchMode.Close).ShouldCompleteWithin(3.Seconds());
+            var complete1 = await valveSwitch.Flip(SwitchMode.Close).WaitAsync(3.Seconds());
             complete1.Should().BeFalse();
         }
 
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            var complete = await seq.ShouldCompleteWithin(3.Seconds());
+            var complete = await seq.WaitAsync(3.Seconds());
             complete.Should().BeEmpty();
         }
 
@@ -159,7 +159,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var resultException = await Awaiting(async () => await seq)
             .Should().ThrowAsync<Exception>()
-            .ShouldCompleteWithin(3.Seconds());
+            .WaitAsync(3.Seconds());
 
             resultException.And.Should().Be(ex);
         }
@@ -176,7 +176,7 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item2;
             var resultTask = t.Item3;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+            var valveSwitch = await switchTask.WaitAsync(3.Seconds());
 
             async Task<int> result()
             {
@@ -189,7 +189,7 @@ namespace Akka.Streams.Tests.Dsl
                 return await resultTask;
             }
 
-            var complete = await result().ShouldCompleteWithin(3.Seconds());
+            var complete = await result().WaitAsync(3.Seconds());
             complete.Should().Be(1);
         }
 
@@ -204,8 +204,8 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item1;
             var seq = t.Item2;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
-            var mode = await valveSwitch.GetMode().ShouldCompleteWithin(3.Seconds());
+            var valveSwitch = await switchTask.WaitAsync(3.Seconds());
+            var mode = await valveSwitch.GetMode().WaitAsync(3.Seconds());
             mode.Should().Be(SwitchMode.Close);
         }
 
@@ -221,28 +221,28 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item1.Item2;
             var sinkProbe = t.Item2;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+            var valveSwitch = await switchTask.WaitAsync(3.Seconds());
 
             sinkProbe.Request(1);
             var flip = valveSwitch.Flip(SwitchMode.Close);
-            var complete = await flip.ShouldCompleteWithin(3.Seconds());
+            var complete = await flip.WaitAsync(3.Seconds());
             complete.Should().BeTrue();
 
             sourceProbe.SendNext(1);
             sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete1 = await flip.ShouldCompleteWithin(3.Seconds());
+            var complete1 = await flip.WaitAsync(3.Seconds());
             complete1.Should().BeTrue();
 
             sinkProbe.ExpectNext().Should().Be(1);
 
             flip = valveSwitch.Flip(SwitchMode.Close);
-            var complete2 = await flip.ShouldCompleteWithin(3.Seconds());
+            var complete2 = await flip.WaitAsync(3.Seconds());
             complete2.Should().BeTrue();
 
             flip = valveSwitch.Flip(SwitchMode.Open);
-            var complete3 = await flip.ShouldCompleteWithin(3.Seconds());
+            var complete3 = await flip.WaitAsync(3.Seconds());
             complete3.Should().BeTrue();
 
             sinkProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
@@ -268,12 +268,12 @@ namespace Akka.Streams.Tests.Dsl
 
             var switchTask = t.Item1;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+            var valveSwitch = await switchTask.WaitAsync(3.Seconds());
 
-            var complete = await valveSwitch.Flip(SwitchMode.Open).ShouldCompleteWithin(3.Seconds());
+            var complete = await valveSwitch.Flip(SwitchMode.Open).WaitAsync(3.Seconds());
             complete.Should().BeFalse();
 
-            var complete1 = await valveSwitch.Flip(SwitchMode.Open).ShouldCompleteWithin(3.Seconds());
+            var complete1 = await valveSwitch.Flip(SwitchMode.Open).WaitAsync(3.Seconds());
             complete1.Should().BeFalse();
         }
 
@@ -287,7 +287,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            var complete = await seq.ShouldCompleteWithin(TimeSpan.FromMilliseconds(200));
+            var complete = await seq.WaitAsync(TimeSpan.FromMilliseconds(200));
             complete.Should().ContainInOrder(1, 2, 3);
         }
 
@@ -301,7 +301,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            var complete = await seq.ShouldCompleteWithin(3.Seconds());
+            var complete = await seq.WaitAsync(3.Seconds());
             complete.Should().BeEmpty();
         }
 
@@ -319,7 +319,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var resultException = await Awaiting(async () => await seq)
             .Should().ThrowAsync<Exception>()
-            .ShouldCompleteWithin(3.Seconds());
+            .WaitAsync(3.Seconds());
 
             resultException.And.Should().Be(ex);
         }
@@ -336,7 +336,7 @@ namespace Akka.Streams.Tests.Dsl
             var switchTask = t.Item2;
             var resultTask = t.Item3;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
+            var valveSwitch = await switchTask.WaitAsync(3.Seconds());
 
             async Task<int> result()
             {
@@ -348,7 +348,7 @@ namespace Akka.Streams.Tests.Dsl
                 return await resultTask;
             }
 
-            var complete = await result().ShouldCompleteWithin(3.Seconds());
+            var complete = await result().WaitAsync(3.Seconds());
             complete.Should().Be(1);
         }
 
@@ -362,8 +362,8 @@ namespace Akka.Streams.Tests.Dsl
 
             var switchTask = t.Item1;
 
-            var valveSwitch = await switchTask.ShouldCompleteWithin(3.Seconds());
-            var complete = await valveSwitch.GetMode().ShouldCompleteWithin(3.Seconds());
+            var valveSwitch = await switchTask.WaitAsync(3.Seconds());
+            var complete = await valveSwitch.GetMode().WaitAsync(3.Seconds());
             complete.Should().Be(SwitchMode.Open);
         }
     }

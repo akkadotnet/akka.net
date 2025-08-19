@@ -242,7 +242,7 @@ namespace Akka.Streams.Tests.IO
 
                 c.ExpectSubscription();
                 c.ExpectError();
-                var complete = await r.ShouldCompleteWithin(Dilated(TimeSpan.FromSeconds(3)));
+                var complete = await r.WaitAsync(Dilated(TimeSpan.FromSeconds(3)));
                 complete.WasSuccessful.ShouldBeFalse();
             }, _materializer);
         }

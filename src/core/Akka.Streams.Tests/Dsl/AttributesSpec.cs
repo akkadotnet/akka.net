@@ -41,7 +41,7 @@ namespace Akka.Streams.Tests.Dsl
                         Keep.Right);
             var task = runnable.Run(Materializer);
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            var complete = await task.WaitAsync(3.Seconds());
             complete.GetAttribute<Attributes.Name>().Value.Should().Contain("new-name");
         }
 
@@ -60,7 +60,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ToMaterialized(AttributesSink.Create(), Keep.Right)
                 .WithAttributes(Attributes.CreateName("new-name"))
                 .Run(Materializer);
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            var complete = await task.WaitAsync(3.Seconds());
             complete.GetAttribute<Attributes.Name>().Value.Should().Contain("attributesSink");
         }
 

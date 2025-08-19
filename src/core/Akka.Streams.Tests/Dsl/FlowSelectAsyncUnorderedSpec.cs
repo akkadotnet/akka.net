@@ -240,7 +240,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(Sink.First<string>(), Materializer);
 
-                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                var complete = await t.WaitAsync(3.Seconds());
                 complete.Should().Be("happy");
             }, Materializer);
         }

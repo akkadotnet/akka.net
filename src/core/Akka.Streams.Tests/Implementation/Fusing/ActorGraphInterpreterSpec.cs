@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Via(identity)
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Equal(Enumerable.Range(1, 100));
             }, Materializer);
         }
@@ -67,7 +67,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Grouped(200)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Equal(Enumerable.Range(1, 100));
             }, Materializer);
         }
@@ -85,7 +85,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Equal(Enumerable.Range(1, 10));
             }, Materializer);
         }
@@ -104,7 +104,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Equal(Enumerable.Range(1, 10));
             }, Materializer);
         }
@@ -136,9 +136,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                         return ClosedShape.Instance;
                     })).Run(Materializer);
                 
-                var complete = await tasks.Item1.ShouldCompleteWithin(3.Seconds());
+                var complete = await tasks.Item1.WaitAsync(3.Seconds());
                 complete.Should().Equal(Enumerable.Range(1, 100));
-                var complete1 = await tasks.Item2.ShouldCompleteWithin(3.Seconds());
+                var complete1 = await tasks.Item2.WaitAsync(3.Seconds());
                 complete1.Should().Equal(Enumerable.Range(1, 10));
             }, Materializer);
         }
