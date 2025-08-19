@@ -172,9 +172,6 @@ namespace Akka.TestKit
 
             var testActor = CreateInitialTestActor(system, testActorName);
 
-            // Wait for the testactor to start
-            WaitUntilTestActorIsReady(testActor, _testState.TestKitSettings);
-
             if (this is not INoImplicitSender)
             {
                 InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)testActor).Underlying;
@@ -731,12 +728,10 @@ namespace Akka.TestKit
             // executes on the calling thread, we need to trigger the mailbox to run now.
             // Sending any message to the TestActor will cause its mailbox to process
             // both the pending Supervise message and our message synchronously.
-            if (testActor is RepointableActorRef repointable && !repointable.IsStarted)
-            {
-                // Send a dummy message to force the mailbox to run on this thread
-                // This will process the Supervise message and complete initialization
-                testActor.Tell(new TestActor.SetIgnore(null));
-            }
+            
+            // Send a dummy message to force the mailbox to run on this thread
+            // This will process the Supervise message and complete initialization
+            testActor.Tell(new TestActor.SetIgnore(null));
             
             return testActor;
         }
