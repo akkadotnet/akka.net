@@ -720,23 +720,14 @@ namespace Akka.TestKit
 
         private IActorRef CreateInitialTestActor(ActorSystem system, string name)
         {
-            var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
-                .WithDispatcher("akka.test.test-actor.dispatcher");
+            // Use the default dispatcher for initial TestActor creation to avoid deadlock
+            // The CallingThreadDispatcher causes deadlocks during async initialization
+            // because the Supervise message can't be processed while we're blocking.
+            // Using the default dispatcher allows initialization to complete on a thread pool thread.
+            var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue));
+                // Note: NOT using .WithDispatcher("akka.test.test-actor.dispatcher")
             
             var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
-            
-            // Force the TestActor to start synchronously to avoid deadlock
-            // The TestActor uses CallingThreadDispatcher, and the Supervise message
-            // needs to be processed on the current thread. Since the CallingThreadDispatcher
-            // executes on the calling thread, we need to trigger the mailbox to run now.
-            // Sending any message to the TestActor will cause its mailbox to process
-            // both the pending Supervise message and our message synchronously.
-            if (testActor is RepointableActorRef repointable && !repointable.IsStarted)
-            {
-                // Send a dummy message to force the mailbox to run on this thread
-                // This will process the Supervise message and complete initialization
-                testActor.Tell(new TestActor.SetIgnore(null));
-            }
             
             return testActor;
         }
