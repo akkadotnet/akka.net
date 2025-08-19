@@ -225,7 +225,15 @@ namespace Akka.TestKit
             }
 
             if (!ready)
-                throw new Exception("Timeout waiting for test actor to be ready");
+            {
+                // Enhanced error message with more diagnostic information
+                var actorType = testActor?.GetType().Name ?? "unknown";
+                var isRepointableStr = testActor is IRepointableRef ? "RepointableActorRef" : "regular actor";
+                throw new Exception($"Timeout ({deadline.TotalSeconds}s) waiting for test actor to be ready. " +
+                                  $"Actor type: {actorType} ({isRepointableStr}). " +
+                                  $"This may indicate a deadlock during parallel test execution. " +
+                                  $"Consider reducing test parallelism or increasing the timeout.");
+            }
         }
         
         /// <summary>
@@ -714,6 +722,33 @@ namespace Akka.TestKit
         {
             var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
+            
+            // IMPORTANT: We need to create the TestActor with special handling to avoid deadlocks
+            // when running tests in parallel. The default SystemActorOf uses async initialization
+            // which can deadlock when the TestActor runs on CallingThreadDispatcher.
+            //
+            // The issue is that when async=true, a RepointableActorRef is created and its
+            // Initialize(async) method sends a Supervise message but doesn't immediately call Point().
+            // This Supervise message needs to be processed on the CallingThreadDispatcher thread,
+            // but that thread may be blocked waiting for initialization to complete.
+            //
+            // For now, we still use SystemActorOf but with enhanced waiting logic below
+            // that can handle the initialization better.
+            var systemImpl = system.AsInstanceOf<ActorSystemImpl>();
+            var guardian = systemImpl.Provider.SystemGuardian;
+            var path = guardian.Path / name;
+    
+            var dispatcher = systemImpl.Dispatchers.Lookup("akka.test.test-actor.dispatcher");
+            var mailboxType = systemImpl.Mailboxes.GetMailboxType(testActorProps, dispatcher.Configurator.Config);
+    
+            var repointableRef = new RepointableActorRef(
+                systemImpl, testActorProps, dispatcher, mailboxType, guardian, path);
+    
+            // Initialize synchronously by passing async=false
+            repointableRef.Initialize(async: false);
+    
+            _testState.TestActor = repointableRef;
+            
             var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
             return testActor;
         }
