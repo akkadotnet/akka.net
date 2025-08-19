@@ -723,28 +723,22 @@ namespace Akka.TestKit
             var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
             
-            // IMPORTANT: For the initial TestActor, we need special handling to avoid deadlocks
-            // when running tests in parallel. The default SystemActorOf uses async initialization
-            // which can deadlock when the TestActor runs on CallingThreadDispatcher.
-            //
-            // The issue is that when async=true, a RepointableActorRef is created and its
-            // Initialize(async) method sends a Supervise message but doesn't immediately call Point().
-            // This Supervise message needs to be processed on the CallingThreadDispatcher thread,
-            // but that thread may be blocked waiting for initialization to complete.
-            var systemImpl = system.AsInstanceOf<ActorSystemImpl>();
-            var guardian = systemImpl.Provider.SystemGuardian;
-            var path = guardian.Path / name;
-    
-            var dispatcher = systemImpl.Dispatchers.Lookup("akka.test.test-actor.dispatcher");
-            var mailboxType = systemImpl.Mailboxes.GetMailboxType(testActorProps, dispatcher.Configurator.Config);
-    
-            var repointableRef = new RepointableActorRef(
-                systemImpl, testActorProps, dispatcher, mailboxType, guardian, path);
-    
-            // Initialize synchronously by passing async=false
-            repointableRef.Initialize(async: false);
+            var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
             
-            return repointableRef;
+            // Force the TestActor to start synchronously to avoid deadlock
+            // The TestActor uses CallingThreadDispatcher, and the Supervise message
+            // needs to be processed on the current thread. Since the CallingThreadDispatcher
+            // executes on the calling thread, we need to trigger the mailbox to run now.
+            // Sending any message to the TestActor will cause its mailbox to process
+            // both the pending Supervise message and our message synchronously.
+            if (testActor is RepointableActorRef repointable && !repointable.IsStarted)
+            {
+                // Send a dummy message to force the mailbox to run on this thread
+                // This will process the Supervise message and complete initialization
+                testActor.Tell(new TestActor.SetIgnore(null));
+            }
+            
+            return testActor;
         }
         
         private IActorRef CreateTestActor(ActorSystem system, string name)
