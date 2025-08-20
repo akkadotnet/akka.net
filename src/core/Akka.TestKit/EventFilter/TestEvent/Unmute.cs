@@ -9,37 +9,37 @@ using System.Collections.Generic;
 using Akka.Actor;
 using Akka.TestKit.Internal;
 
-namespace Akka.TestKit.TestEvent
+#nullable enable
+namespace Akka.TestKit.TestEvent;
+
+/// <summary>
+/// TBD
+/// </summary>
+public sealed class Unmute : INoSerializationVerificationNeeded
 {
+    private readonly IReadOnlyCollection<EventFilterBase> _filters;
+
     /// <summary>
     /// TBD
     /// </summary>
-    public sealed class Unmute : INoSerializationVerificationNeeded
+    /// <param name="filters">TBD</param>
+    public Unmute(params EventFilterBase[] filters)
     {
-        private readonly IReadOnlyCollection<EventFilterBase> _filters;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="filters">TBD</param>
-        public Unmute(params EventFilterBase[] filters)
-        {
-            _filters = filters;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="filters">TBD</param>
-        public Unmute(IReadOnlyCollection<EventFilterBase> filters)
-        {
-            _filters = filters;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public IReadOnlyCollection<EventFilterBase> Filters { get { return _filters; } }
+        _filters = filters;
     }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <param name="filters">TBD</param>
+    public Unmute(IReadOnlyCollection<EventFilterBase> filters)
+    {
+        _filters = filters;
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public IReadOnlyCollection<EventFilterBase> Filters { get { return _filters; } }
 }
