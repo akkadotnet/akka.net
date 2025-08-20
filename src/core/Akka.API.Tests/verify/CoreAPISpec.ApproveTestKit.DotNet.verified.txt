@@ -24,9 +24,12 @@ namespace Akka.TestKit
         public CallingThreadDispatcherConfigurator(Akka.Configuration.Config config, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
         public override Akka.Dispatch.MessageDispatcher Dispatcher() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class DeadLettersFilter : Akka.TestKit.Internal.EventFilterBase
     {
-        public DeadLettersFilter(Akka.TestKit.Internal.StringMatcher.IStringMatcher messageMatcher, Akka.TestKit.Internal.StringMatcher.IStringMatcher sourceMatcher, System.Predicate<Akka.Event.DeadLetter> isMatch = null) { }
+        public DeadLettersFilter(Akka.TestKit.Internal.StringMatcher.IStringMatcher messageMatcher, Akka.TestKit.Internal.StringMatcher.IStringMatcher sourceMatcher, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1})] System.Predicate<Akka.Event.DeadLetter> isMatch = null) { }
         protected override string FilterDescriptiveName { get; }
         protected override bool IsMatch(Akka.Event.LogEvent evt) { }
     }
@@ -45,37 +48,47 @@ namespace Akka.TestKit
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public void Update(Akka.Actor.IActorRef child, Akka.Actor.SupervisorStrategy supervisorStrategy) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class EventFilterFactory
     {
         public EventFilterFactory(Akka.TestKit.TestKitBase testkit) { }
         public EventFilterFactory(Akka.TestKit.TestKitBase testkit, Akka.Actor.ActorSystem system) { }
         public EventFilterFactory(Akka.TestKit.TestKitBase testkit, Akka.Actor.ActorSystem actorSystem, System.Collections.Generic.IReadOnlyList<Akka.TestKit.Internal.EventFilterBase> filters) { }
         protected Akka.TestKit.IEventFilterApplier CreateApplier(Akka.TestKit.Internal.EventFilterBase filter, Akka.Actor.ActorSystem system) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(1)]
         protected static Akka.TestKit.Internal.StringMatcher.IStringMatcher CreateMessageMatcher(string message, string start, string contains) { }
         public Akka.TestKit.IEventFilterApplier Custom(System.Predicate<Akka.Event.LogEvent> predicate) { }
-        public Akka.TestKit.IEventFilterApplier Custom<TLogEvent>(System.Predicate<TLogEvent> predicate)
+        public Akka.TestKit.IEventFilterApplier Custom<[System.Runtime.CompilerServices.NullableAttribute(0)]  TLogEvent>(System.Predicate<TLogEvent> predicate)
             where TLogEvent : Akka.Event.LogEvent { }
         public Akka.TestKit.IEventFilterApplier DeadLetter() { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(1)]
         public Akka.TestKit.IEventFilterApplier DeadLetter<TMessage>(string source = null) { }
-        public Akka.TestKit.IEventFilterApplier DeadLetter<TMessage>(System.Func<TMessage, bool> isMatch, string source = null) { }
-        public Akka.TestKit.IEventFilterApplier DeadLetter(System.Type type, string source = null) { }
-        public Akka.TestKit.IEventFilterApplier DeadLetter(System.Type type, System.Func<object, bool> isMatch, string source = null) { }
+        public Akka.TestKit.IEventFilterApplier DeadLetter<[System.Runtime.CompilerServices.NullableAttribute(2)]  TMessage>(System.Func<TMessage, bool> isMatch, [System.Runtime.CompilerServices.NullableAttribute(2)] string source = null) { }
+        public Akka.TestKit.IEventFilterApplier DeadLetter(System.Type type, [System.Runtime.CompilerServices.NullableAttribute(2)] string source = null) { }
+        public Akka.TestKit.IEventFilterApplier DeadLetter(System.Type type, System.Func<object, bool> isMatch, [System.Runtime.CompilerServices.NullableAttribute(2)] string source = null) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(1)]
         public Akka.TestKit.IEventFilterApplier Debug(string message = null, string start = null, string contains = null, string source = null) { }
-        public Akka.TestKit.IEventFilterApplier Debug(System.Text.RegularExpressions.Regex pattern, string source = null) { }
+        public Akka.TestKit.IEventFilterApplier Debug(System.Text.RegularExpressions.Regex pattern, [System.Runtime.CompilerServices.NullableAttribute(2)] string source = null) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(1)]
         public Akka.TestKit.IEventFilterApplier Error(string message = null, string start = null, string contains = null, string source = null) { }
-        public Akka.TestKit.IEventFilterApplier Error(System.Text.RegularExpressions.Regex pattern, string source = null) { }
-        public Akka.TestKit.IEventFilterApplier Exception<TException>(System.Text.RegularExpressions.Regex pattern, string source = null)
+        public Akka.TestKit.IEventFilterApplier Error(System.Text.RegularExpressions.Regex pattern, [System.Runtime.CompilerServices.NullableAttribute(2)] string source = null) { }
+        public Akka.TestKit.IEventFilterApplier Exception<[System.Runtime.CompilerServices.NullableAttribute(0)]  TException>(System.Text.RegularExpressions.Regex pattern, [System.Runtime.CompilerServices.NullableAttribute(2)] string source = null)
             where TException : System.Exception { }
-        public Akka.TestKit.IEventFilterApplier Exception(System.Type exceptionType, System.Text.RegularExpressions.Regex pattern, string source = null, bool checkInnerExceptions = False) { }
-        public Akka.TestKit.IEventFilterApplier Exception<TException>(string message = null, string start = null, string contains = null, string source = null)
+        public Akka.TestKit.IEventFilterApplier Exception(System.Type exceptionType, System.Text.RegularExpressions.Regex pattern, [System.Runtime.CompilerServices.NullableAttribute(2)] string source = null, bool checkInnerExceptions = False) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(1)]
+        public Akka.TestKit.IEventFilterApplier Exception<[System.Runtime.CompilerServices.NullableAttribute(0)]  TException>(string message = null, string start = null, string contains = null, string source = null)
             where TException : System.Exception { }
-        public Akka.TestKit.IEventFilterApplier Exception(System.Type exceptionType, string message = null, string start = null, string contains = null, string source = null, bool checkInnerExceptions = False) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(1)]
+        public Akka.TestKit.IEventFilterApplier Exception([System.Runtime.CompilerServices.NullableAttribute(1)] System.Type exceptionType, string message = null, string start = null, string contains = null, string source = null, bool checkInnerExceptions = False) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(1)]
         public Akka.TestKit.IEventFilterApplier ForLogLevel(Akka.Event.LogLevel logLevel, string message = null, string start = null, string contains = null, string source = null) { }
-        public Akka.TestKit.IEventFilterApplier ForLogLevel(Akka.Event.LogLevel logLevel, System.Text.RegularExpressions.Regex pattern, string source = null) { }
+        public Akka.TestKit.IEventFilterApplier ForLogLevel(Akka.Event.LogLevel logLevel, System.Text.RegularExpressions.Regex pattern, [System.Runtime.CompilerServices.NullableAttribute(2)] string source = null) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(1)]
         public Akka.TestKit.IEventFilterApplier Info(string message = null, string start = null, string contains = null, string source = null) { }
-        public Akka.TestKit.IEventFilterApplier Info(System.Text.RegularExpressions.Regex pattern, string source = null) { }
+        public Akka.TestKit.IEventFilterApplier Info(System.Text.RegularExpressions.Regex pattern, [System.Runtime.CompilerServices.NullableAttribute(2)] string source = null) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(1)]
         public Akka.TestKit.IEventFilterApplier Warning(string message = null, string start = null, string contains = null, string source = null) { }
-        public Akka.TestKit.IEventFilterApplier Warning(System.Text.RegularExpressions.Regex pattern, string source = null) { }
+        public Akka.TestKit.IEventFilterApplier Warning(System.Text.RegularExpressions.Regex pattern, [System.Runtime.CompilerServices.NullableAttribute(2)] string source = null) { }
     }
     public class static FSMSpecHelpers
     {
@@ -91,31 +104,31 @@ namespace Akka.TestKit
         Akka.TestKit.EventFilterFactory And { get; }
         void Expect(int expectedCount, System.Action action, System.Threading.CancellationToken cancellationToken = null);
         void Expect(int expectedCount, System.TimeSpan timeout, System.Action action, System.Threading.CancellationToken cancellationToken = null);
-        T Expect<T>(int expectedCount, System.Func<T> func, System.Threading.CancellationToken cancellationToken = null);
-        T Expect<T>(int expectedCount, System.TimeSpan timeout, System.Func<T> func, System.Threading.CancellationToken cancellationToken = null);
+        T Expect<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(int expectedCount, System.Func<T> func, System.Threading.CancellationToken cancellationToken = null);
+        T Expect<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(int expectedCount, System.TimeSpan timeout, System.Func<T> func, System.Threading.CancellationToken cancellationToken = null);
         System.Threading.Tasks.Task ExpectAsync(int expectedCount, System.Func<System.Threading.Tasks.Task> actionAsync, System.Threading.CancellationToken cancellationToken = null);
         System.Threading.Tasks.Task ExpectAsync(int expectedCount, System.Func<System.Threading.Tasks.Task> actionAsync, System.Nullable<System.TimeSpan> timeout, System.Threading.CancellationToken cancellationToken = null);
         System.Threading.Tasks.Task ExpectAsync(int expectedCount, System.TimeSpan timeout, System.Func<System.Threading.Tasks.Task> action, System.Threading.CancellationToken cancellationToken = null);
         [System.ObsoleteAttribute("Use ExpectAsync<T>(expectedCount, TimeSpan, Func<Task<T>>) instead. This method o" +
             "nly exists to support backwards compatibility as of Akka.NET v1.5.")]
         System.Threading.Tasks.Task ExpectAsync(int expectedCount, System.TimeSpan timeout, System.Action action, System.Threading.CancellationToken cancellationToken = null);
-        System.Threading.Tasks.Task<T> ExpectAsync<T>(int expectedCount, System.Func<System.Threading.Tasks.Task<T>> func, System.Threading.CancellationToken cancellationToken = null);
-        System.Threading.Tasks.Task<T> ExpectAsync<T>(int expectedCount, System.TimeSpan timeout, System.Func<System.Threading.Tasks.Task<T>> func, System.Threading.CancellationToken cancellationToken = null);
+        System.Threading.Tasks.Task<T> ExpectAsync<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(int expectedCount, System.Func<System.Threading.Tasks.Task<T>> func, System.Threading.CancellationToken cancellationToken = null);
+        System.Threading.Tasks.Task<T> ExpectAsync<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(int expectedCount, System.TimeSpan timeout, System.Func<System.Threading.Tasks.Task<T>> func, System.Threading.CancellationToken cancellationToken = null);
         void ExpectOne(System.Action action, System.Threading.CancellationToken cancellationToken = null);
         void ExpectOne(System.TimeSpan timeout, System.Action action, System.Threading.CancellationToken cancellationToken = null);
-        T ExpectOne<T>(System.Func<T> func, System.Threading.CancellationToken cancellationToken = null);
-        T ExpectOne<T>(System.TimeSpan timeout, System.Func<T> func, System.Threading.CancellationToken cancellationToken = null);
+        T ExpectOne<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Func<T> func, System.Threading.CancellationToken cancellationToken = null);
+        T ExpectOne<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.TimeSpan timeout, System.Func<T> func, System.Threading.CancellationToken cancellationToken = null);
         System.Threading.Tasks.Task ExpectOneAsync(System.Func<System.Threading.Tasks.Task> actionAsync, System.Threading.CancellationToken cancellationToken = null);
         System.Threading.Tasks.Task ExpectOneAsync(System.TimeSpan timeout, System.Func<System.Threading.Tasks.Task> action, System.Threading.CancellationToken cancellationToken = null);
         [System.ObsoleteAttribute("Only for backwards compat. Use ExpectOneAsync(Func<Task>, CancellationToken) inst" +
             "ead beginning in Akka.NET v1.5")]
         System.Threading.Tasks.Task ExpectOneAsync(System.Action action, System.Threading.CancellationToken cancellationToken = null);
-        System.Threading.Tasks.Task<T> ExpectOneAsync<T>(System.Func<System.Threading.Tasks.Task<T>> func, System.Threading.CancellationToken cancellationToken = null);
-        System.Threading.Tasks.Task<T> ExpectOneAsync<T>(System.TimeSpan timeout, System.Func<System.Threading.Tasks.Task<T>> func, System.Threading.CancellationToken cancellationToken = null);
-        T Mute<T>(System.Func<T> func, System.Threading.CancellationToken cancellationToken = null);
+        System.Threading.Tasks.Task<T> ExpectOneAsync<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Func<System.Threading.Tasks.Task<T>> func, System.Threading.CancellationToken cancellationToken = null);
+        System.Threading.Tasks.Task<T> ExpectOneAsync<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.TimeSpan timeout, System.Func<System.Threading.Tasks.Task<T>> func, System.Threading.CancellationToken cancellationToken = null);
+        T Mute<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Func<T> func, System.Threading.CancellationToken cancellationToken = null);
         void Mute(System.Action action, System.Threading.CancellationToken cancellationToken = null);
         Akka.TestKit.IUnmutableFilter Mute();
-        System.Threading.Tasks.Task<T> MuteAsync<T>(System.Func<System.Threading.Tasks.Task<T>> func, System.Threading.CancellationToken cancellationToken = null);
+        System.Threading.Tasks.Task<T> MuteAsync<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(System.Func<System.Threading.Tasks.Task<T>> func, System.Threading.CancellationToken cancellationToken = null);
         System.Threading.Tasks.Task MuteAsync(System.Func<System.Threading.Tasks.Task> action, System.Threading.CancellationToken cancellationToken = null);
         [System.ObsoleteAttribute("Use MuteAsync(Func<Task>) instead. This method only exists for backwards compatib" +
             "ility as of Akka.NET v1.5.0.")]
@@ -271,6 +284,7 @@ namespace Akka.TestKit
         public Akka.Pattern.CircuitBreaker Instance { get; }
         public System.Threading.CountdownEvent OpenLatch { get; }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class TestEventListener : Akka.Event.DefaultLogger
     {
         public TestEventListener() { }
@@ -835,12 +849,14 @@ namespace Akka.TestKit.TestActors
 }
 namespace Akka.TestKit.TestEvent
 {
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class Mute : Akka.Actor.INoSerializationVerificationNeeded
     {
         public Mute(params Akka.TestKit.Internal.EventFilterBase[] filters) { }
         public Mute(System.Collections.Generic.IReadOnlyCollection<Akka.TestKit.Internal.EventFilterBase> filters) { }
         public System.Collections.Generic.IReadOnlyCollection<Akka.TestKit.Internal.EventFilterBase> Filters { get; }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class Unmute : Akka.Actor.INoSerializationVerificationNeeded
     {
         public Unmute(params Akka.TestKit.Internal.EventFilterBase[] filters) { }
