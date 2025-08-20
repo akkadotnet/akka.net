@@ -606,6 +606,7 @@ namespace Akka.TestKit
 }
 namespace Akka.TestKit.Configs
 {
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class static TestConfigs
     {
         public static Akka.Configuration.Config DefaultConfig { get; }
@@ -614,10 +615,11 @@ namespace Akka.TestKit.Configs
 }
 namespace Akka.TestKit.Extensions
 {
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class static TaskExtensions
     {
         public static System.Threading.Tasks.Task<bool> AwaitWithTimeout(this System.Threading.Tasks.Task parentTask, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = null) { }
-        public static System.Threading.Tasks.Task<T> WithTimeout<T>(this System.Threading.Tasks.Task<T> parentTask, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = null) { }
+        public static System.Threading.Tasks.Task<T> WithTimeout<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(this System.Threading.Tasks.Task<T> parentTask, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = null) { }
     }
 }
 namespace Akka.TestKit.Internal
@@ -709,25 +711,29 @@ namespace Akka.TestKit.Internal
             public virtual void HandleEvent(Akka.TestKit.Internal.EventFilterBase eventFilter, Akka.Event.LogEvent logEvent) { }
         }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class InternalTestActorRef : Akka.Actor.LocalActorRef
     {
         public object UnderlyingActor { get; }
-        public static Akka.TestKit.Internal.InternalTestActorRef Create(Akka.Actor.ActorSystem system, Akka.Actor.Props props, Akka.Actor.IActorRef supervisor = null, string name = null) { }
+        public static Akka.TestKit.Internal.InternalTestActorRef Create(Akka.Actor.ActorSystem system, Akka.Actor.Props props, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Actor.IActorRef supervisor = null, [System.Runtime.CompilerServices.NullableAttribute(2)] string name = null) { }
         public static string CreateUniqueName() { }
         protected Akka.TestKit.Internal.InternalTestActorRef.TestActorCell GetTestActorCell() { }
         protected override Akka.Actor.ActorCell NewActorCell(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.IInternalActorRef self, Akka.Actor.Props props, Akka.Dispatch.MessageDispatcher dispatcher, Akka.Actor.IInternalActorRef supervisor) { }
-        public void Receive(object message, Akka.Actor.IActorRef sender = null) { }
-        public System.Threading.Tasks.Task ReceiveAsync(object message, Akka.Actor.IActorRef sender = null) { }
+        public void Receive(object message, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Actor.IActorRef sender = null) { }
+        public System.Threading.Tasks.Task ReceiveAsync(object message, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Actor.IActorRef sender = null) { }
         public override string ToString() { }
         public void Unwatch(Akka.Actor.IActorRef subject) { }
         public void Watch(Akka.Actor.IActorRef subject) { }
         public class InternalGetActor : Akka.Actor.IAutoReceivedMessage, Akka.Actor.IPossiblyHarmful
         {
+            [System.Runtime.CompilerServices.NullableAttribute(1)]
             public static readonly Akka.TestKit.Internal.InternalTestActorRef.InternalGetActor Instance;
         }
+        [System.Runtime.CompilerServices.NullableAttribute(0)]
         protected class TestActorCell : Akka.Actor.ActorCell
         {
             public TestActorCell(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.IInternalActorRef self, Akka.Actor.Props props, Akka.Dispatch.MessageDispatcher dispatcher, Akka.Actor.IInternalActorRef parent) { }
+            [System.Runtime.CompilerServices.NullableAttribute(2)]
             public object Actor { get; }
             public override Akka.Dispatch.ActorTaskScheduler TaskScheduler { get; }
             protected override void AutoReceiveMessage(Akka.Actor.Envelope envelope) { }
