@@ -116,6 +116,7 @@ namespace Akka.TestKit
         {
             _assertions = assertions ?? throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
             
+            // ReSharper disable once VirtualMemberCallInConstructor
             InitializeTest(system, config, actorSystemName, testActorName);
         }
 
