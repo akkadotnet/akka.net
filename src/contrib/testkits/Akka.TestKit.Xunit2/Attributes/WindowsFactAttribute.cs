@@ -22,12 +22,12 @@ namespace Akka.TestKit.Xunit2.Attributes
     /// </summary>
     public class WindowsFactAttribute : FactAttribute
     {
-        private string _skip;
+        private string? _skip;
 
         /// <summary>
         /// Marks the test so that it will not be run, and gets or sets the skip reason
         /// </summary>
-        public override string Skip
+        public override string? Skip
         {
             get
             {
@@ -45,7 +45,7 @@ namespace Akka.TestKit.Xunit2.Attributes
         /// The reason why this unit test is being skipped by the <see cref="WindowsFactAttribute"/>.
         /// Note that the original <see cref="Skip"/> property takes precedence over this message. 
         /// </summary>
-        public string SkipUnix { get; set; }
+        public string? SkipUnix { get; set; }
     }
 }
 
