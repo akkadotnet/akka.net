@@ -7,74 +7,74 @@
 
 using Akka.Actor;
 
-namespace Akka.TestKit.TestActors
+#nullable enable
+namespace Akka.TestKit.TestActors;
+
+/// <summary>
+/// An <see cref="EchoActor"/> is an actor that echoes whatever is sent to it, to the
+/// TestKit's <see cref="TestKitBase.TestActor"/>.
+/// By default it also echoes back to the sender, unless the sender is the <see cref="TestKitBase.TestActor"/>
+/// (in this case the <see cref="TestKitBase.TestActor"/> will only receive one message).
+/// </summary>
+public class EchoActor : ReceiveActor
 {
     /// <summary>
-    /// An <see cref="EchoActor"/> is an actor that echoes whatever is sent to it, to the
-    /// TestKit's <see cref="TestKitBase.TestActor"/>.
-    /// By default it also echoes back to the sender, unless the sender is the <see cref="TestKitBase.TestActor"/>
-    /// (in this case the <see cref="TestKitBase.TestActor"/> will only receive one message).
+    /// TBD
     /// </summary>
-    public class EchoActor : ReceiveActor
+    /// <param name="testkit">TBD</param>
+    /// <param name="echoBackToSenderAsWell">TBD</param>
+    public EchoActor(TestKitBase testkit, bool echoBackToSenderAsWell = true)
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="testkit">TBD</param>
-        /// <param name="echoBackToSenderAsWell">TBD</param>
-        public EchoActor(TestKitBase testkit, bool echoBackToSenderAsWell = true)
+        ReceiveAny(msg =>
         {
-            ReceiveAny(msg =>
-            {
-                var sender = Sender;
-                var testActor = testkit.TestActor;
-                if (echoBackToSenderAsWell && testActor != sender)
-                    sender.Forward(msg);
-                testActor.Tell(msg, Sender);
-            });
-        }
-
-        /// <summary>
-        /// Returns a <see cref="Props"/> object that can be used to create an <see cref="EchoActor"/>.
-        /// The <see cref="EchoActor"/> echoes whatever is sent to it, to the
-        /// TestKit's <see cref="TestKitBase.TestActor"/>.
-        /// By default it also echoes back to the sender, unless the sender is the <see cref="TestKitBase.TestActor"/>
-        /// (in this case the <see cref="TestKitBase.TestActor"/> will only receive one message) or unless
-        /// <paramref name="echoBackToSenderAsWell"/> has been set to <c>false</c>.
-        /// </summary>
-        /// <param name="testkit">TBD</param>
-        /// <param name="echoBackToSenderAsWell">TBD</param>
-        /// <returns>TBD</returns>
-        public static Props Props(TestKitBase testkit, bool echoBackToSenderAsWell = true)
-        {
-            return Actor.Props.Create(() => new EchoActor(testkit, echoBackToSenderAsWell));
-        }
+            var sender = Sender;
+            var testActor = testkit.TestActor;
+            if (echoBackToSenderAsWell && testActor != sender)
+                sender.Forward(msg);
+            testActor.Tell(msg, Sender);
+        });
     }
 
     /// <summary>
-    /// An <see cref="SimpleEchoActor"/> is an actor that echoes whatever is sent to it, to the `Sender`.
+    /// Returns a <see cref="Props"/> object that can be used to create an <see cref="EchoActor"/>.
+    /// The <see cref="EchoActor"/> echoes whatever is sent to it, to the
+    /// TestKit's <see cref="TestKitBase.TestActor"/>.
+    /// By default it also echoes back to the sender, unless the sender is the <see cref="TestKitBase.TestActor"/>
+    /// (in this case the <see cref="TestKitBase.TestActor"/> will only receive one message) or unless
+    /// <paramref name="echoBackToSenderAsWell"/> has been set to <c>false</c>.
     /// </summary>
-    public class SimpleEchoActor : ReceiveActor
+    /// <param name="testkit">TBD</param>
+    /// <param name="echoBackToSenderAsWell">TBD</param>
+    /// <returns>TBD</returns>
+    public static Props Props(TestKitBase testkit, bool echoBackToSenderAsWell = true)
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public SimpleEchoActor()
-        {
-            ReceiveAny(msg =>
-            {
-                Sender.Tell(msg);
-            });
-        }
+        return Actor.Props.Create(() => new EchoActor(testkit, echoBackToSenderAsWell));
+    }
+}
 
-        /// <summary>
-        /// Returns a <see cref="Props"/> object that can be used to create an <see cref="SimpleEchoActor"/>.
-        /// The <see cref="SimpleEchoActor"/> echoes whatever is sent to it, to the `Sender`.
-        /// </summary>
-        /// <returns>TBD</returns>
-        public static Props Props()
+/// <summary>
+/// An <see cref="SimpleEchoActor"/> is an actor that echoes whatever is sent to it, to the `Sender`.
+/// </summary>
+public class SimpleEchoActor : ReceiveActor
+{
+    /// <summary>
+    /// TBD
+    /// </summary>
+    public SimpleEchoActor()
+    {
+        ReceiveAny(msg =>
         {
-            return Actor.Props.Create(() => new SimpleEchoActor());
-        }
+            Sender.Tell(msg);
+        });
+    }
+
+    /// <summary>
+    /// Returns a <see cref="Props"/> object that can be used to create an <see cref="SimpleEchoActor"/>.
+    /// The <see cref="SimpleEchoActor"/> echoes whatever is sent to it, to the `Sender`.
+    /// </summary>
+    /// <returns>TBD</returns>
+    public static Props Props()
+    {
+        return Actor.Props.Create(() => new SimpleEchoActor());
     }
 }

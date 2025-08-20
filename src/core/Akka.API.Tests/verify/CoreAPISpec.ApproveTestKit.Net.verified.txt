@@ -807,17 +807,20 @@ namespace Akka.TestKit.Internal.StringMatcher
 }
 namespace Akka.TestKit.TestActors
 {
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class BlackHoleActor : Akka.Actor.ActorBase
     {
         public BlackHoleActor() { }
         public static Akka.Actor.Props Props { get; }
         protected override bool Receive(object message) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class EchoActor : Akka.Actor.ReceiveActor
     {
         public EchoActor(Akka.TestKit.TestKitBase testkit, bool echoBackToSenderAsWell = True) { }
         public static Akka.Actor.Props Props(Akka.TestKit.TestKitBase testkit, bool echoBackToSenderAsWell = True) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class ForwardActor : Akka.Actor.ReceiveActor
     {
         public ForwardActor(Akka.Actor.IActorRef target) { }
