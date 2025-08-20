@@ -730,14 +730,19 @@ namespace Akka.TestKit
 
         private IActorRef CreateInitialTestActor(ActorSystem system, string name)
         {
-            // Fix serialization issue by using AttachChild with isSystemService=true
-            // This exempts the TestActor from serialization verification while maintaining
-            // proper system integration and supervision tree structure
+            // Fix both serialization and deadlock issues:
+            // 1. Use isSystemService=true to skip serialization checks
+            // 2. Use isAsync=false to create LocalActorRef synchronously (avoids RepointableActorRef deadlock)
             var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
             
             var systemImpl = system.AsInstanceOf<ActorSystemImpl>();
-            var testActor = systemImpl.Provider.SystemGuardian.Cell.AttachChild(testActorProps, true, name);
+            // Use the new AttachChildWithAsync method to create TestActor synchronously
+            var testActor = systemImpl.Provider.SystemGuardian.Cell.AttachChildWithAsync(
+                testActorProps, 
+                isSystemService: true,  // Skip serialization checks
+                isAsync: false,         // Create synchronously to avoid deadlock
+                name: name);
             
             return testActor;
         }
