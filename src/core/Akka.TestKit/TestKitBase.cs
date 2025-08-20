@@ -175,9 +175,6 @@ namespace Akka.TestKit
             // For async initialization, don't wait in constructor to avoid deadlock
             // The TestActor property getter will ensure it's ready when first accessed
             _testState.TestActor = testActor;
-            
-            // Only set implicit sender context after TestActor is confirmed ready
-            EnsureTestActorReady();
 
             if (this is not INoImplicitSender)
             {
@@ -191,59 +188,6 @@ namespace Akka.TestKit
             }
             SynchronizationContext.SetSynchronizationContext(
                 new ActorCellKeepingSynchronizationContext(InternalCurrentActorCellKeeper.Current));
-        }
-
-        /// <summary>
-        /// Ensures the TestActor is ready for use. Called lazily to avoid constructor deadlocks.
-        /// </summary>
-        private void EnsureTestActorReady()
-        {
-            WaitUntilTestActorIsReady(_testState.TestActor, _testState.TestKitSettings);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        // Do not convert this method to async, it is being called inside the constructor.
-        private static void WaitUntilTestActorIsReady(IActorRef testActor, TestKitSettings settings)
-        {
-            var deadline = settings.TestKitStartupTimeout;
-            var stopwatch = Stopwatch.StartNew();
-            var ready = false;
-            
-            try
-            {
-                // TestActor should start almost instantly (microseconds).
-                // Use SpinWait which will spin for ~10-20 microseconds then yield.
-                var spinWait = new SpinWait();
-                
-                while (stopwatch.Elapsed < deadline)
-                {
-                    ready = testActor is not IRepointableRef repRef || repRef.IsStarted;
-                    if (ready) break;
-                    
-                    // SpinWait automatically handles the progression:
-                    // - First ~10 iterations: tight spin loop (microseconds)
-                    // - Next iterations: Thread.Yield() 
-                    // - Later: Thread.Sleep(0)
-                    // - Finally: Thread.Sleep(1)
-                    // This is optimal for both fast startup and system under load
-                    spinWait.SpinOnce();
-                }
-            }
-            finally
-            {
-                stopwatch.Stop();
-            }
-
-            if (!ready)
-            {
-                // Enhanced error message with more diagnostic information
-                var actorType = testActor?.GetType().Name ?? "unknown";
-                var isRepointableStr = testActor is IRepointableRef ? "RepointableActorRef" : "regular actor";
-                throw new Exception($"Timeout ({deadline.TotalSeconds}s) waiting for test actor to be ready. " +
-                                  $"Actor type: {actorType} ({isRepointableStr}). " +
-                                  $"This may indicate a deadlock during parallel test execution. " +
-                                  $"Consider reducing test parallelism or increasing the timeout.");
-            }
         }
         
         /// <summary>
