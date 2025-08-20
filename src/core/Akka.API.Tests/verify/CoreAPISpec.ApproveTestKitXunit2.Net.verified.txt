@@ -4,6 +4,7 @@
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.TestKit.Xunit2.Attributes
 {
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class LocalFactAttribute : Xunit.FactAttribute
     {
         public LocalFactAttribute() { }
@@ -11,6 +12,7 @@ namespace Akka.TestKit.Xunit2.Attributes
         public string SkipLocal { get; set; }
     }
     [System.AttributeUsageAttribute(System.AttributeTargets.Method | System.AttributeTargets.All, AllowMultiple=false)]
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     [Xunit.Sdk.XunitTestCaseDiscovererAttribute("Xunit.Sdk.TheoryDiscoverer", "xunit.execution.{Platform}")]
     public class LocalTheoryAttribute : Xunit.TheoryAttribute
     {
@@ -18,6 +20,7 @@ namespace Akka.TestKit.Xunit2.Attributes
         public override string Skip { get; set; }
         public string SkipLocal { get; set; }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class WindowsFactAttribute : Xunit.FactAttribute
     {
         public WindowsFactAttribute() { }
@@ -27,6 +30,7 @@ namespace Akka.TestKit.Xunit2.Attributes
 }
 namespace Akka.TestKit.Xunit2.Internals
 {
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class AkkaAssertEqualityComparer<T> : System.Collections.Generic.IEqualityComparer<T>
     {
         public AkkaAssertEqualityComparer(bool skipTypeCheck = False, System.Collections.IEqualityComparer innerComparer = null) { }
@@ -41,6 +45,7 @@ namespace Akka.TestKit.Xunit2.Internals
         [return: System.Runtime.CompilerServices.NullableAttribute(1)]
         public static Akka.TestKit.Xunit2.Internals.AkkaEqualException ForMismatchedValues(object expected, object actual, string format = null, [System.Runtime.CompilerServices.NullableAttribute(1)] params object[] args) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class TestOutputLogger : Akka.Actor.ReceiveActor
     {
         public TestOutputLogger(Xunit.Abstractions.ITestOutputHelper output) { }
@@ -48,13 +53,15 @@ namespace Akka.TestKit.Xunit2.Internals
 }
 namespace Akka.TestKit.Xunit2
 {
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class TestKit : Akka.TestKit.TestKitBase, System.IDisposable
     {
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
         protected readonly Xunit.Abstractions.ITestOutputHelper Output;
         public TestKit(Akka.Actor.ActorSystem system = null, Xunit.Abstractions.ITestOutputHelper output = null) { }
-        public TestKit(Akka.Actor.Setup.ActorSystemSetup config, string actorSystemName = null, Xunit.Abstractions.ITestOutputHelper output = null) { }
-        public TestKit(Akka.Configuration.Config config, string actorSystemName = null, Xunit.Abstractions.ITestOutputHelper output = null) { }
-        public TestKit(string config, Xunit.Abstractions.ITestOutputHelper output = null) { }
+        public TestKit([System.Runtime.CompilerServices.NullableAttribute(1)] Akka.Actor.Setup.ActorSystemSetup config, string actorSystemName = null, Xunit.Abstractions.ITestOutputHelper output = null) { }
+        public TestKit([System.Runtime.CompilerServices.NullableAttribute(1)] Akka.Configuration.Config config, string actorSystemName = null, Xunit.Abstractions.ITestOutputHelper output = null) { }
+        public TestKit(string config, [System.Runtime.CompilerServices.NullableAttribute(2)] Xunit.Abstractions.ITestOutputHelper output = null) { }
         protected static Akka.TestKit.Xunit2.XunitAssertions Assertions { get; }
         public new static Akka.Configuration.Config DefaultConfig { get; }
         public new static Akka.Configuration.Config FullDebugConfig { get; }
@@ -64,17 +71,18 @@ namespace Akka.TestKit.Xunit2
         protected void InitializeLogger(Akka.Actor.ActorSystem system) { }
         protected void InitializeLogger(Akka.Actor.ActorSystem system, string prefix) { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public class XunitAssertions : Akka.TestKit.ITestKitAssertions
     {
         public XunitAssertions() { }
-        public void AssertEqual<T>(T expected, T actual, string format = "", params object[] args) { }
-        public void AssertEqual<T>(T expected, T actual, System.Func<T, T, bool> comparer, string format = "", params object[] args) { }
+        public void AssertEqual<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(T expected, T actual, string format = "", params object[] args) { }
+        public void AssertEqual<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(T expected, T actual, System.Func<T, T, bool> comparer, string format = "", params object[] args) { }
         public void AssertFalse(bool condition, string format = "", params object[] args) { }
         public System.Exception AssertThrows(System.Action action) { }
-        public TException AssertThrows<TException>(System.Action action)
+        public TException AssertThrows<[System.Runtime.CompilerServices.NullableAttribute(0)]  TException>(System.Action action)
             where TException : System.Exception { }
         public System.Threading.Tasks.Task<System.Exception> AssertThrowsAsync(System.Func<System.Threading.Tasks.Task> action) { }
-        public System.Threading.Tasks.Task<TException> AssertThrowsAsync<TException>(System.Func<System.Threading.Tasks.Task> action)
+        public System.Threading.Tasks.Task<TException> AssertThrowsAsync<[System.Runtime.CompilerServices.NullableAttribute(0)]  TException>(System.Func<System.Threading.Tasks.Task> action)
             where TException : System.Exception { }
         public void AssertTrue(bool condition, string format = "", params object[] args) { }
         public void Fail(string format = "", params object[] args) { }
