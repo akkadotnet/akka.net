@@ -12,6 +12,12 @@ using System.Reflection;
 
 namespace Akka.TestKit.Xunit2.Internals
 {
+    internal static class AkkaAssertEqualityComparer
+    {
+        public static readonly IEqualityComparer DefaultInnerComparer = new AkkaAssertEqualityComparerAdapter<object>(new AkkaAssertEqualityComparer<object>());
+        public static readonly Type NullableType = typeof(Nullable<>);
+    }
+    
     /// <summary>
     /// Default implementation of <see cref="IEqualityComparer{T}"/> used by the Akka's xUnit.net equality assertions.
     /// Copy of xUnits code
@@ -21,8 +27,6 @@ namespace Akka.TestKit.Xunit2.Internals
     /// <typeparam name="T">The type that is being compared.</typeparam>
     public class AkkaAssertEqualityComparer<T> : IEqualityComparer<T>
     {
-        private static readonly IEqualityComparer DefaultInnerComparer = new AkkaAssertEqualityComparerAdapter<object>(new AkkaAssertEqualityComparer<object>());
-        private static readonly Type NullableType = typeof(Nullable<>);
 
         private readonly Func<IEqualityComparer> _innerComparerFactory;
         private readonly bool _skipTypeCheck;
@@ -32,35 +36,35 @@ namespace Akka.TestKit.Xunit2.Internals
         /// </summary>
         /// <param name="skipTypeCheck">Set to <c>true</c> to skip type equality checks.</param>
         /// <param name="innerComparer">The inner comparer to be used when the compared objects are enumerable.</param>
-        public AkkaAssertEqualityComparer(bool skipTypeCheck = false, IEqualityComparer innerComparer = null)
+        public AkkaAssertEqualityComparer(bool skipTypeCheck = false, IEqualityComparer? innerComparer = null)
         {
             _skipTypeCheck = skipTypeCheck;
 
             // Use a thunk to delay evaluation of DefaultInnerComparer
-            _innerComparerFactory = () => innerComparer ?? DefaultInnerComparer;
+            _innerComparerFactory = () => innerComparer ?? AkkaAssertEqualityComparer.DefaultInnerComparer;
         }
 
        
-        public bool Equals(T x, T y)
+        public bool Equals(T? x, T? y)
         {
             var type = typeof(T);
 
             // Null?
-            if(!type.IsValueType || (type.IsGenericType && type.GetGenericTypeDefinition().IsAssignableFrom(NullableType)))
+            if(!type.IsValueType || (type.IsGenericType && type.GetGenericTypeDefinition().IsAssignableFrom(AkkaAssertEqualityComparer.NullableType)))
             {
-                if(object.Equals(x, default(T)))
-                    return object.Equals(y, default(T));
+                if(x is null)
+                    return Equals(y, null);
 
-                if(object.Equals(y, default(T)))
+                if(y is null)
                     return false;
             }
 
             switch (x)
             {
                 case IEquatable<T> equatable:
-                    return equatable.Equals(y);
+                    return equatable.Equals(y!);
                 case IComparable<T> comparableGeneric:
-                    return comparableGeneric.CompareTo(y) == 0;
+                    return comparableGeneric.CompareTo(y!) == 0;
                 case IComparable comparable:
                     return comparable.CompareTo(y) == 0;
                 case IEnumerable enumerableX
@@ -70,21 +74,31 @@ namespace Akka.TestKit.Xunit2.Internals
                     var enumeratorY = enumerableY.GetEnumerator();
                     var equalityComparer = _innerComparerFactory();
 
-                    while (true)
+                    try
                     {
-                        var hasNextX = enumeratorX.MoveNext();
-                        var hasNextY = enumeratorY.MoveNext();
+                        while (true)
+                        {
+                            var hasNextX = enumeratorX.MoveNext();
+                            var hasNextY = enumeratorY.MoveNext();
 
-                        if (!hasNextX || !hasNextY)
-                            return (hasNextX == hasNextY);
+                            if (!hasNextX || !hasNextY)
+                                return (hasNextX == hasNextY);
 
-                        if (!equalityComparer.Equals(enumeratorX.Current, enumeratorY.Current))
-                            return false;
+                            if (!equalityComparer.Equals(enumeratorX.Current, enumeratorY.Current))
+                                return false;
+                        }
+                    }
+                    finally
+                    {
+                        if(enumeratorX is IDisposable disposableX)
+                            disposableX.Dispose();
+                        if(enumeratorY is IDisposable disposableY)
+                            disposableY.Dispose();
                     }
             }
 
             // Same type?
-            if (!_skipTypeCheck && x.GetType() != y.GetType())
+            if (!_skipTypeCheck && x!.GetType() != y!.GetType())
                 return false;
 
             // Last case, rely on Object.Equals
