@@ -52,7 +52,11 @@ namespace Akka.TestKit.Tests.TestActorRefTests
                         var actor = testKit.Sys.ActorOf(Props.Create(() => new PingerActor(testKit.TestActor)));
                         _output.WriteLine($"[{id}] PingerActor created");
 
-                        // Verify the TestKit is working
+                        // Expect the "ping" message from PingerActor's PreStart
+                        await testKit.ExpectMsgAsync<string>("ping", TimeSpan.FromSeconds(2));
+                        _output.WriteLine($"[{id}] Received ping from PingerActor");
+
+                        // Now verify the TestKit is working normally
                         _output.WriteLine($"[{id}] Sending test message...");
                         testKit.TestActor.Tell("test-message");
                         await testKit.ExpectMsgAsync<string>("test-message", TimeSpan.FromSeconds(2));
