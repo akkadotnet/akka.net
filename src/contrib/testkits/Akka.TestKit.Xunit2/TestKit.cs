@@ -153,7 +153,7 @@ namespace Akka.TestKit.Xunit2
                 
                 // Send the initialization message without waiting for response to avoid deadlock
                 // The logger will subscribe to the event stream when it processes this message
-                logger.Tell(new InitializeLogger(system.EventStream));
+                logger.Tell(new InitializeLogger(system.EventStream), ActorRefs.NoSender);
             }
         }
 
@@ -173,7 +173,7 @@ namespace Akka.TestKit.Xunit2
                 
                 // Send the initialization message without waiting for response to avoid deadlock
                 // The logger will subscribe to the event stream when it processes this message
-                logger.Tell(new InitializeLogger(system.EventStream));
+                logger.Tell(new InitializeLogger(system.EventStream), ActorRefs.NoSender);
             }
         }
 
