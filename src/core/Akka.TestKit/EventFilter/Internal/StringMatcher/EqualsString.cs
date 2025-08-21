@@ -7,41 +7,41 @@
 
 using System;
 
-namespace Akka.TestKit.Internal.StringMatcher
+#nullable enable
+namespace Akka.TestKit.Internal.StringMatcher;
+
+/// <summary>
+/// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+/// </summary>
+public class EqualsString : IStringMatcher
 {
+    private readonly string _s;
+
     /// <summary>
-    /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+    /// TBD
     /// </summary>
-    public class EqualsString : IStringMatcher
+    /// <param name="s">TBD</param>
+    public EqualsString(string s)
     {
-        private readonly string _s;
+        _s = s;
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="s">TBD</param>
-        public EqualsString(string s)
-        {
-            _s = s;
-        }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <param name="s">TBD</param>
+    /// <returns>TBD</returns>
+    public bool IsMatch(string s)
+    {
+        return String.Equals(_s, s, StringComparison.OrdinalIgnoreCase);
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="s">TBD</param>
-        /// <returns>TBD</returns>
-        public bool IsMatch(string s)
-        {
-            return String.Equals(_s, s, StringComparison.OrdinalIgnoreCase);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return "== \"" + _s + "\"";
-        }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public override string ToString()
+    {
+        return "== \"" + _s + "\"";
     }
 }
