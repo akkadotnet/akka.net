@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
@@ -170,10 +171,19 @@ public class TestKit : TestKitBase, IDisposable
         if (Output == null) 
             return;
             
-        var extSystem = (ExtendedActorSystem)system;
-        var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(Output)), "log-test");
-        logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TestKitSettings.TestKitStartupTimeout)
-            .ConfigureAwait(false).GetAwaiter().GetResult();
+        var systemImpl = system as ActorSystemImpl ?? throw new InvalidOperationException("Expected ActorSystemImpl");
+        
+        // Create logger actor synchronously to avoid deadlock during parallel test execution
+        // Use AttachChildWithAsync with isAsync:false to create LocalActorRef instead of RepointableActorRef
+        var logger = systemImpl.Provider.SystemGuardian.Cell.AttachChildWithAsync(
+            Props.Create(() => new TestOutputLogger(Output)),
+            isSystemService: true,  // Mark as system service
+            isAsync: false,         // Create synchronously to avoid deadlock
+            name: "log-test");
+        
+        // Send the initialization message without waiting for response to avoid deadlock
+        // The logger will subscribe to the event stream when it processes this message
+        logger.Tell(new InitializeLogger(system.EventStream), ActorRefs.NoSender);
     }
 
     protected void InitializeLogger(ActorSystem system, string prefix)
@@ -181,11 +191,19 @@ public class TestKit : TestKitBase, IDisposable
         if (Output == null) 
             return;
             
-        var extSystem = (ExtendedActorSystem)system;
-        var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(
-            string.IsNullOrEmpty(prefix) ? Output : new PrefixedOutput(Output, prefix))), "log-test");
-        logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TestKitSettings.TestKitStartupTimeout)
-            .ConfigureAwait(false).GetAwaiter().GetResult();
+        var systemImpl = system as ActorSystemImpl ?? throw new InvalidOperationException("Expected ActorSystemImpl");
+        
+        // Create logger actor synchronously to avoid deadlock during parallel test execution
+        var logger = systemImpl.Provider.SystemGuardian.Cell.AttachChildWithAsync(
+            Props.Create(() => new TestOutputLogger(
+                string.IsNullOrEmpty(prefix) ? Output : new PrefixedOutput(Output, prefix))),
+            isSystemService: true,  // Mark as system service
+            isAsync: false,         // Create synchronously to avoid deadlock
+            name: "log-test");
+        
+        // Send the initialization message without waiting for response to avoid deadlock
+        // The logger will subscribe to the event stream when it processes this message
+        logger.Tell(new InitializeLogger(system.EventStream), ActorRefs.NoSender);
     }
 
     /// <summary>

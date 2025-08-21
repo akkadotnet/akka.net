@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
@@ -140,14 +141,19 @@ namespace Akka.TestKit.Xunit2
         {
             if (Output != null)
             {
-                var extSystem = (ExtendedActorSystem)system;
-                var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(Output)), "log-test");
-                // Start the logger initialization task but don't wait for it yet
-                var loggerTask = logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TestKitSettings.TestKitStartupTimeout);
+                var systemImpl = system as ActorSystemImpl ?? throw new InvalidOperationException("Expected ActorSystemImpl");
                 
-                // By the time TestActor is ready (which happens in base constructor), 
-                // the logger is likely ready too. Now we can safely wait.
-                loggerTask.ConfigureAwait(false).GetAwaiter().GetResult();
+                // Create logger actor synchronously to avoid deadlock during parallel test execution
+                // Use AttachChildWithAsync with isAsync:false to create LocalActorRef instead of RepointableActorRef
+                var logger = systemImpl.Provider.SystemGuardian.Cell.AttachChildWithAsync(
+                    Props.Create(() => new TestOutputLogger(Output)),
+                    isSystemService: true,  // Mark as system service
+                    isAsync: false,         // Create synchronously to avoid deadlock
+                    name: "log-test");
+                
+                // Send the initialization message without waiting for response to avoid deadlock
+                // The logger will subscribe to the event stream when it processes this message
+                logger.Tell(new InitializeLogger(system.EventStream), ActorRefs.NoSender);
             }
         }
 
@@ -155,15 +161,19 @@ namespace Akka.TestKit.Xunit2
         {
             if (Output != null)
             {
-                var extSystem = (ExtendedActorSystem)system;
-                var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(
-                    string.IsNullOrEmpty(prefix) ? Output : new PrefixedOutput(Output, prefix))), "log-test");
-                // Start the logger initialization task but don't wait for it yet
-                var loggerTask = logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TestKitSettings.TestKitStartupTimeout);
+                var systemImpl = system as ActorSystemImpl ?? throw new InvalidOperationException("Expected ActorSystemImpl");
                 
-                // By the time TestActor is ready (which happens in base constructor), 
-                // the logger is likely ready too. Now we can safely wait.
-                loggerTask.ConfigureAwait(false).GetAwaiter().GetResult();
+                // Create logger actor synchronously to avoid deadlock during parallel test execution
+                var logger = systemImpl.Provider.SystemGuardian.Cell.AttachChildWithAsync(
+                    Props.Create(() => new TestOutputLogger(
+                        string.IsNullOrEmpty(prefix) ? Output : new PrefixedOutput(Output, prefix))),
+                    isSystemService: true,  // Mark as system service
+                    isAsync: false,         // Create synchronously to avoid deadlock
+                    name: "log-test");
+                
+                // Send the initialization message without waiting for response to avoid deadlock
+                // The logger will subscribe to the event stream when it processes this message
+                logger.Tell(new InitializeLogger(system.EventStream), ActorRefs.NoSender);
             }
         }
 
