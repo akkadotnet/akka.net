@@ -1,6 +1,17 @@
-#### 1.5.48 August 14th, 2025 ####
+#### 1.5.48 August 21st, 2025 ####
 
-**Placeholder for nightly build**
+Akka.NET v1.5.48 is a minor patch containing stability improvement to Akka.TestKit.
+
+* [TestKit: Fix deadlock during parallel test execution](https://github.com/akkadotnet/akka.net/pull/7787)
+
+2 contributors since release 1.5.47
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 4       | 5494 | 5561 | Aaron Stannard      |
+| 2       | 204  | 66   | Gregorius Soedharmo |
+
+To [see the full set of changes in Akka.NET v1.5.48, click here](https://github.com/akkadotnet/akka.net/milestone/131?closed=1)
 
 #### 1.5.47 August 12th, 2025 ####
 
