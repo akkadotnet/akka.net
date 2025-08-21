@@ -25,30 +25,30 @@ namespace Akka.TestKit.Xunit2
     {
         private class PrefixedOutput : ITestOutputHelper
         {
-            private readonly ITestOutputHelper output;
-            private readonly string prefix;
+            private readonly ITestOutputHelper _output;
+            private readonly string _prefix;
 
             public PrefixedOutput(ITestOutputHelper output, string prefix)
             {
-                this.output = output;
-                this.prefix = prefix;
+                _output = output;
+                _prefix = prefix;
             }
 
             public void WriteLine(string message)
             {
-                output.WriteLine(prefix + message);
+                _output.WriteLine(_prefix + message);
             }
 
             public void WriteLine(string format, params object[] args)
             {
-                output.WriteLine(prefix + format, args);
+                _output.WriteLine(_prefix + format, args);
             }
         }
 
         /// <summary>
         /// The provider used to write test output.
         /// </summary>
-        protected readonly ITestOutputHelper Output;
+        protected readonly ITestOutputHelper? Output;
 
         private bool _disposed;
         private bool _disposing;
@@ -64,7 +64,7 @@ namespace Akka.TestKit.Xunit2
         /// </summary>
         /// <param name="system">The actor system to use for testing. The default value is <see langword="null"/>.</param>
         /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
-        public TestKit(ActorSystem system = null, ITestOutputHelper output = null)
+        public TestKit(ActorSystem? system = null, ITestOutputHelper? output = null)
             : base(Assertions, system)
         {
             Output = output;
@@ -77,7 +77,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="config">The <see cref="Setup"/> to use for configuring the ActorSystem.</param>
         /// <param name="actorSystemName">The name of the system. The default name is "test".</param>
         /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
-        public TestKit(ActorSystemSetup config, string actorSystemName = null, ITestOutputHelper output = null)
+        public TestKit(ActorSystemSetup config, string? actorSystemName = null, ITestOutputHelper? output = null)
             : base(Assertions, config, actorSystemName)
         {
             Output = output;
@@ -90,7 +90,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="config">The configuration to use for the system.</param>
         /// <param name="actorSystemName">The name of the system. The default name is "test".</param>
         /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
-        public TestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
+        public TestKit(Config config, string? actorSystemName = null, ITestOutputHelper? output = null)
             : base(Assertions, config, actorSystemName)
         {
             Output = output;
@@ -102,7 +102,7 @@ namespace Akka.TestKit.Xunit2
         /// </summary>
         /// <param name="config">The configuration to use for the system.</param>
         /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
-        public TestKit(string config, ITestOutputHelper output = null)
+        public TestKit(string config, ITestOutputHelper? output = null)
             : base(Assertions, ConfigurationFactory.ParseString(config))
         {
             Output = output;
