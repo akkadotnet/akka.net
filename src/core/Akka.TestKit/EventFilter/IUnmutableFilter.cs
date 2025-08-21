@@ -7,17 +7,17 @@
 
 using System;
 
-namespace Akka.TestKit
+#nullable enable
+namespace Akka.TestKit;
+
+// ReSharper disable once InconsistentNaming
+/// <summary>
+/// TBD
+/// </summary>
+public interface IUnmutableFilter : IDisposable
 {
-    // ReSharper disable once InconsistentNaming
     /// <summary>
-    /// TBD
+    /// Call this to let events that previously have been muted to be logged again.
     /// </summary>
-    public interface IUnmutableFilter : IDisposable
-    {
-        /// <summary>
-        /// Call this to let events that previously have been muted to be logged again.
-        /// </summary>
-        void Unmute();
-    }
+    void Unmute();
 }
