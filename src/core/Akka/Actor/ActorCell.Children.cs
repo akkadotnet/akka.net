@@ -98,6 +98,22 @@ namespace Akka.Actor
         {
             return MakeChild(props, name == null ? GetRandomActorName() : CheckName(name), true, isSystemService);
         }
+        
+        /// <summary>
+        /// INTERNAL API
+        /// 
+        /// Attaches a child actor with explicit control over async initialization.
+        /// Used by TestKit to create TestActors synchronously to avoid deadlocks.
+        /// </summary>
+        /// <param name="props">The <see cref="Props"/> this child actor will use.</param>
+        /// <param name="isSystemService">If <c>true</c>, then this actor is a system actor and skips serialization checks.</param>
+        /// <param name="isAsync">If <c>true</c>, creates RepointableActorRef with async init. If <c>false</c>, creates LocalActorRef synchronously.</param>
+        /// <param name="name">The name of the actor being started. Can be <c>null</c> for auto-generated name.</param>
+        /// <returns>A reference to the initialized child actor.</returns>
+        internal IActorRef AttachChildWithAsync(Props props, bool isSystemService, bool isAsync, string? name = null)
+        {
+            return MakeChild(props, name == null ? GetRandomActorName() : CheckName(name), isAsync, isSystemService);
+        }
 
         /// <summary>
         /// TBD
