@@ -14,19 +14,25 @@ jobs:
     timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
     pool:
       vmImage: ${{ parameters.vmImage }}
-    variables:
-      # Determine the base branch for Incrementalist based on the target branch
-      - name: incrementalist.baseBranch
-        ${{ if eq(variables['System.PullRequest.TargetBranch'], '') }}:
-          value: 'dev' # Default for non-PR builds
-        ${{ else }}:
-          value: $(System.PullRequest.TargetBranch)
     steps:
       - task: UseDotNet@2
         displayName: 'Use .NET'
         inputs:
           packageType: 'sdk'
           useGlobalJson: true
+      
+      # Set the Incrementalist base branch based on PR target branch
+      - pwsh: |
+          if ('$(Build.Reason)' -eq 'PullRequest') {
+            # Extract branch name from refs/heads/branch format
+            $targetBranch = '$(System.PullRequest.TargetBranch)'.Replace('refs/heads/', '')
+            Write-Host "PR detected - using base branch: $targetBranch"
+            Write-Host "##vso[task.setvariable variable=IncrementalistBaseBranch]$targetBranch"
+          } else {
+            Write-Host "Not a PR - using default base branch: dev"
+            Write-Host "##vso[task.setvariable variable=IncrementalistBaseBranch]dev"
+          }
+        displayName: 'Set Incrementalist base branch'
 
       - script: dotnet tool restore
         displayName: 'Restore dotnet tools'
