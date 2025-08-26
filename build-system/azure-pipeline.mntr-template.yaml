@@ -14,6 +14,13 @@ jobs:
     timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
     pool:
       vmImage: ${{ parameters.vmImage }}
+    variables:
+      # Determine the base branch for Incrementalist based on the target branch
+      - name: incrementalist.baseBranch
+        ${{ if eq(variables['System.PullRequest.TargetBranch'], '') }}:
+          value: 'dev' # Default for non-PR builds
+        ${{ else }}:
+          value: $(System.PullRequest.TargetBranch)
     steps:
       - task: UseDotNet@2
         displayName: 'Use .NET'
