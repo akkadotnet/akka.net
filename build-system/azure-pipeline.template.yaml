@@ -27,6 +27,19 @@ jobs:
         inputs:
           packageType: 'sdk'
           useGlobalJson: true
+      
+      # Set the Incrementalist base branch based on PR target branch
+      - pwsh: |
+          if ('$(Build.Reason)' -eq 'PullRequest') {
+            # Extract branch name from refs/heads/branch format
+            $targetBranch = '$(System.PullRequest.TargetBranch)'.Replace('refs/heads/', '')
+            Write-Host "PR detected - using base branch: $targetBranch"
+            Write-Host "##vso[task.setvariable variable=IncrementalistBaseBranch]$targetBranch"
+          } else {
+            Write-Host "Not a PR - using default base branch: dev"
+            Write-Host "##vso[task.setvariable variable=IncrementalistBaseBranch]dev"
+          }
+        displayName: 'Set Incrementalist base branch'
 
       - script: dotnet tool restore
         displayName: 'Restore dotnet tools'
