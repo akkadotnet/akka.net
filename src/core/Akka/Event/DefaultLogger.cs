@@ -48,22 +48,11 @@ namespace Akka.Event
             if (_stdoutLogger == null)
             {
                 // Include context about the failed log event to help with debugging
-                // but avoid creating a cascade of logging failures
                 var logDetails = $"[{logEvent.LogLevel()}] {logEvent.LogSource}: {logEvent.Message}";
                 throw new Exception($"Logger has not been initialized yet. Failed to log: {logDetails}");
             }
             
-            try
-            {
-                _stdoutLogger.Tell(logEvent);
-            }
-            catch (Exception ex)
-            {
-                // Prevent cascade failures by not attempting to log the logging failure
-                // In IIS/Windows Service environments, this prevents the feedback loop
-                // that causes millions of log messages and memory exhaustion
-                System.Diagnostics.Debug.WriteLine($"Failed to write to stdout logger: {ex.Message}");
-            }
+            _stdoutLogger.Tell(logEvent);
         }
     }
 }

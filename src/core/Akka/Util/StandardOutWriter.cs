@@ -30,19 +30,16 @@ namespace Akka.Util
         /// </summary>
         private static bool DetectConsoleAvailability()
         {
-            // Check if console streams are redirected (common in IIS, Windows Services, etc.)
-            // When all streams are redirected, we're likely in a non-interactive environment
-            // where console output goes to StreamWriter.Null
-            if (Console.IsOutputRedirected && Console.IsErrorRedirected)
-            {
-                // Additional check: In IIS/Windows Services, Console.Out is StreamWriter.Null
-                // This is the specific condition that causes the race condition
-                if (Console.Out == StreamWriter.Null || Console.Error == StreamWriter.Null)
-                    return false;
-            }
+            // Specifically detect the IIS/Windows Service scenario where both Console.Out 
+            // and Console.Error point to the SAME StreamWriter.Null singleton instance.
+            // This is the exact condition that causes the race condition.
+            // Note: We check both because in these environments, both are always set to the same instance
+            if (Console.Out == StreamWriter.Null && Console.Error == StreamWriter.Null)
+                return false;
             
-            // For .NET Framework compatibility, also check Environment.UserInteractive
-            // This returns false for Windows Services and IIS (though not reliable in .NET Core)
+            // Also check Environment.UserInteractive for additional safety
+            // This returns false for Windows Services and IIS in .NET Framework
+            // (though less reliable in .NET Core, the StreamWriter.Null check above is the key)
             if (!Environment.UserInteractive)
                 return false;
                 
