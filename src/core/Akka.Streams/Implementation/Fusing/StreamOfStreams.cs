@@ -1242,30 +1242,26 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void SetCallback(Action<IActorSubscriberMessage> callback)
             {
-                var status = _stage._status.Value;
-
-                if (status == null)
+                // Single atomic operation that both attempts the change AND returns the previous value
+                var previous = _stage._status.CompareExchange(null, callback);
+                
+                if (previous == null)
                 {
-                    if (!_stage._status.CompareAndSet(null, callback))
-                    {
-                        // Race condition detected - check the new status immediately
-                        var newStatus = _stage._status.Value;
-                        if (newStatus is Action<IActorSubscriberMessage>)
-                            throw new IllegalStateException("Substream Source cannot be materialized more than once");
-                        else if (newStatus is OnComplete)
-                            CompleteStage();
-                        else if (newStatus is OnError error)
-                            FailStage(error.Cause);
-                        else
-                            SetCallback(callback); // Retry only if status is still null (highly unlikely)
-                    }
+                    return; // Success - we set the callback, previous was null
                 }
-                else if (status is OnComplete)
+                
+                // CompareExchange failed - handle the different states based on what was actually there
+                if (previous is OnComplete)
                     CompleteStage();
-                else if (status is OnError error)
+                else if (previous is OnError error)
                     FailStage(error.Cause);
-                else if (status is Action<IActorSubscriberMessage>)
+                else if (previous is Action<IActorSubscriberMessage>)
                     throw new IllegalStateException("Substream Source cannot be materialized more than once");
+                else
+                {
+                    // Unexpected state - should not happen, but be safe
+                    throw new IllegalStateException("Substream Source cannot be materialized more than once");
+                }
             }
 
             public override void PreStart()

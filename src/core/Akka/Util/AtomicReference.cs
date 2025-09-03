@@ -66,6 +66,18 @@ namespace Akka.Util
         }
 
         /// <summary>
+        /// Atomically compares the current value with <paramref name="expected"/> and, if they are equal, 
+        /// replaces the current value with <paramref name="newValue"/>.
+        /// </summary>
+        /// <param name="expected">The value expected to be referenced currently.</param>
+        /// <param name="newValue">The new value to reference if the current matches the expected value.</param>
+        /// <returns>The original value that was in the atomic reference before the operation.</returns>
+        public T CompareExchange(T expected, T newValue)
+        {
+            return Interlocked.CompareExchange(ref atomicValue, newValue, expected);
+        }
+
+        /// <summary>
         /// Atomically sets the <see cref="Value"/> to <paramref name="newValue"/> and returns the old <see cref="Value"/>.
         /// </summary>
         /// <param name="newValue">The new value</param>
