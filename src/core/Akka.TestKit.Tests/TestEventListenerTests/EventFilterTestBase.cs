@@ -25,15 +25,19 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
             //It should respond with an "OK" message when it has received the message.
             var initLoggerMessage = new ForwardAllEventsTestEventListener.ForwardAllEventsTo(TestActor);
             
-            // Ensure the logging system is fully started before sending initialization message
-            // This fixes race conditions where the message is sent before loggers are ready
-            AwaitAssert(() => 
+            // Use async initialization to handle potential race conditions without blocking constructor
+            InitializeEventForwarding(initLoggerMessage).Wait();
+            //From now on we know that all messages will be forwarded to TestActor
+        }
+
+        private async Task InitializeEventForwarding(object initLoggerMessage)
+        {
+            // Retry logger initialization to handle race conditions where logging system isn't ready yet
+            await AwaitAssertAsync(async () =>
             {
                 SendRawLogEventMessage(initLoggerMessage);
-                ExpectMsg("OK", TimeSpan.FromSeconds(1));
+                await ExpectMsgAsync("OK", TimeSpan.FromSeconds(1));
             }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(200));
-            
-            //From now on we know that all messages will be forwarded to TestActor
         }
 
         protected abstract void SendRawLogEventMessage(object message);
