@@ -1245,22 +1245,22 @@ namespace Akka.Streams.Implementation.Fusing
                 // Single atomic operation that both attempts the change AND returns the previous value
                 var previous = _stage._status.CompareExchange(null, callback);
                 
-                if (previous == null)
+                switch (previous)
                 {
-                    return; // Success - we set the callback, previous was null
-                }
-                
-                // CompareExchange failed - handle the different states based on what was actually there
-                if (previous is OnComplete)
-                    CompleteStage();
-                else if (previous is OnError error)
-                    FailStage(error.Cause);
-                else if (previous is Action<IActorSubscriberMessage>)
-                    throw new IllegalStateException("Substream Source cannot be materialized more than once");
-                else
-                {
-                    // Unexpected state - should not happen, but be safe
-                    throw new IllegalStateException("Substream Source cannot be materialized more than once");
+                    case null:
+                        return; // Success - we set the callback, previous was null
+                    // CompareExchange failed - handle the different states based on what was actually there
+                    case OnComplete:
+                        CompleteStage();
+                        break;
+                    case OnError error:
+                        FailStage(error.Cause);
+                        break;
+                    case Action<IActorSubscriberMessage>:
+                        throw new IllegalStateException("Substream Source cannot be materialized more than once");
+                    default:
+                        // Unexpected state - should not happen but be safe
+                        throw new IllegalStateException($"Substream Source cannot be materialized more than once - found [{previous}]");
                 }
             }
 
@@ -1268,12 +1268,18 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 var ourOwnCallback = GetAsyncCallback<IActorSubscriberMessage>(msg =>
                 {
-                    if (msg is OnComplete)
-                        CompleteStage();
-                    else if (msg is OnError error)
-                        FailStage(error.Cause);
-                    else if (msg is OnNext next)
-                        Push(_stage._out, (T) next.Element);
+                    switch (msg)
+                    {
+                        case OnComplete:
+                            CompleteStage();
+                            break;
+                        case OnError error:
+                            FailStage(error.Cause);
+                            break;
+                        case OnNext next:
+                            Push(_stage._out, (T) next.Element);
+                            break;
+                    }
                 });
                 SetCallback(ourOwnCallback);
             }
