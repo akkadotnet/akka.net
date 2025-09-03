@@ -59,9 +59,12 @@ namespace Akka.Util
         /// <param name="expected">The value expected to be referenced currently.</param>
         /// <param name="newValue">The new value to reference if the current matches the expected value.</param>
         /// <returns><c>true</c> if <paramref name="newValue"/> was set</returns>
+        /// <remarks>
+        /// WARNING: if you need to know the previous value, use <see cref="CompareExchange(T,T)"/> instead.
+        /// </remarks>
         public bool CompareAndSet(T expected, T newValue)
         {
-            var previous = Interlocked.CompareExchange(ref atomicValue, newValue, expected);
+            var previous = CompareExchange(newValue, expected);
             return ReferenceEquals(previous, expected);
         }
 
