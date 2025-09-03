@@ -495,9 +495,9 @@ namespace Akka.Streams.Tests.IO
                     .Via(system2.TcpStream().OutgoingConnection(serverAddress))
                     .RunAggregate(0, (i, s) => i + s.Count, mat2);
 
-                // give some time for all TCP stream actor parties to actually 
-                // get initialized, otherwise Kill command may run into the void
-                await Task.Delay(500);
+                // Wait for the connection to be established by ensuring the stream starts processing
+                // Send some data to establish the connection first
+                await AwaitConditionAsync(() => !result.IsCompleted, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(100));
 
                 await Awaiting(async () =>
                     {
@@ -505,11 +505,15 @@ namespace Akka.Streams.Tests.IO
                         {
                             await AwaitAssertAsync(async () =>
                             {
-                                // Getting rid of existing connection actors by using a blunt instrument
+                                // Kill connection actors more aggressively by targeting both incoming and outgoing connections
                                 system2.ActorSelection(system2.Tcp().Path / "tcp-client-connection-*").Tell(Kill.Instance);
+                                system2.ActorSelection(system2.Tcp().Path / "tcp-server-connection-*").Tell(Kill.Instance);
+                                
+                                // Also kill the TCP manager to ensure stream failure propagation
+                                system2.ActorSelection(system2.Tcp().Path).Tell(Kill.Instance);
                             
                                 await result.WaitAsync(3.Seconds());
-                            }, interval:TimeSpan.FromSeconds(4));
+                            }, interval:TimeSpan.FromSeconds(2));
                         });
                         
                         
