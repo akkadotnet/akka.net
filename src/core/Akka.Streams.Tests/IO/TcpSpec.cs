@@ -252,7 +252,7 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5 });
+                var testData = ByteString.FromBytes([1, 2, 3, 4, 5]);
                 var server = await new Server(this).InitializeAsync();
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
@@ -289,7 +289,7 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5 });
+                var testData = ByteString.FromBytes([1, 2, 3, 4, 5]);
                 var server = await new Server(this).InitializeAsync();
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
@@ -491,13 +491,27 @@ namespace Akka.Streams.Tests.IO
                 var binding = system2.TcpStream()
                     .BindAndHandle(Flow.Create<ByteString>(), mat2, serverAddress.Address.ToString(), serverAddress.Port);
 
+                // Ensure server is bound before creating client connection
+                await binding.WaitAsync(TimeSpan.FromSeconds(3));
+
                 var result = Source.Maybe<ByteString>()
                     .Via(system2.TcpStream().OutgoingConnection(serverAddress))
                     .RunAggregate(0, (i, s) => i + s.Count, mat2);
 
-                // Wait for the connection to be established by ensuring the stream starts processing
-                // Send some data to establish the connection first
-                await AwaitConditionAsync(() => !result.IsCompleted, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(100));
+                // Wait for connection to be established by checking that connection actors exist
+                await AwaitAssertAsync(async () =>
+                {
+                    try
+                    {
+                        await system2.ActorSelection(system2.Tcp().Path / "tcp-client-connection-*")
+                            .ResolveOne(TimeSpan.FromMilliseconds(100));
+                        // If we get here, connection actor exists
+                    }
+                    catch (ActorNotFoundException)
+                    {
+                        throw new Exception("Connection not yet established");
+                    }
+                }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200));
 
                 await Awaiting(async () =>
                     {
@@ -505,15 +519,11 @@ namespace Akka.Streams.Tests.IO
                         {
                             await AwaitAssertAsync(async () =>
                             {
-                                // Kill connection actors more aggressively by targeting both incoming and outgoing connections
+                                // Getting rid of existing connection actors by using a blunt instrument
                                 system2.ActorSelection(system2.Tcp().Path / "tcp-client-connection-*").Tell(Kill.Instance);
-                                system2.ActorSelection(system2.Tcp().Path / "tcp-server-connection-*").Tell(Kill.Instance);
-                                
-                                // Also kill the TCP manager to ensure stream failure propagation
-                                system2.ActorSelection(system2.Tcp().Path).Tell(Kill.Instance);
                             
                                 await result.WaitAsync(3.Seconds());
-                            }, interval:TimeSpan.FromSeconds(2));
+                            }, interval:TimeSpan.FromSeconds(4));
                         });
                         
                         
