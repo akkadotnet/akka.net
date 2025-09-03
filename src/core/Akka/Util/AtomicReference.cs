@@ -64,7 +64,7 @@ namespace Akka.Util
         /// </remarks>
         public bool CompareAndSet(T expected, T newValue)
         {
-            var previous = CompareExchange(newValue, expected);
+            var previous = CompareExchange(expected, newValue);
             return ReferenceEquals(previous, expected);
         }
 
