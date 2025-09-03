@@ -295,64 +295,50 @@ namespace Akka.Cluster.Metrics.Tests
         }
     }
 
-    public class MetricValuesSpec : AkkaSpecWithCollector, IAsyncLifetime
+    public class MetricValuesSpec
     {
-        private NodeMetrics _node1;
-        private NodeMetrics _node2;
-        private IImmutableList<NodeMetrics> _nodes;
+        private readonly NodeMetrics _node1;
+        private readonly NodeMetrics _node2;
+        private readonly IImmutableList<NodeMetrics> _nodes;
         
-        public MetricValuesSpec() : base(ClusterMetricsTestConfig.DefaultEnabled)
+        public MetricValuesSpec()
         {
+            // Create deterministic test data instead of waiting for real system metrics
+            var testMetrics = CreateTestMetrics();
+            
+            _node1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), 1, testMetrics);
+            _node2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), 1, testMetrics);
+            
+            // Create 100 variations of the nodes for testing
+            _nodes = Enumerable.Range(1, 100)
+                .Select(i => new NodeMetrics(_node1.Address, i, CreateTestMetricsVariation(i)))
+                .Concat(Enumerable.Range(1, 100)
+                    .Select(i => new NodeMetrics(_node2.Address, i, CreateTestMetricsVariation(i))))
+                .ToImmutableList();
         }
 
-        public async Task InitializeAsync()
+        private static ImmutableHashSet<NodeMetrics.Types.Metric> CreateTestMetrics()
         {
-            try
-            {
-                // Get one good sample with all required metrics, then reuse it
-                // This is much more efficient than calling CreateTestDataAsync 202 times
-                var baseSample = await CreateTestDataAsync(30.Seconds(), [
-                    StandardMetrics.MemoryUsed, 
-                    StandardMetrics.MemoryAvailable,
-                    StandardMetrics.Processors,
-                    StandardMetrics.CpuProcessUsage,
-                    StandardMetrics.CpuTotalUsage ]);
-                
-                // Generate 202 samples by creating variations of the base sample
-                var testData = new Queue<NodeMetrics>();
-                for (int i = 0; i < 202; i++)
-                {
-                    // Create sample with slight timestamp variation to simulate real data
-                    var sampleMetrics = baseSample.Metrics.Select(m => 
-                        NodeMetrics.Types.Metric.Create(m.Name, m.Value, m.SmoothValue).Value).ToList();
-                    testData.Enqueue(new NodeMetrics(baseSample.Address, baseSample.Timestamp + i, sampleMetrics));
-                }
-                
-                _node1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), 1, testData.Dequeue().Metrics);
-                _node2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), 1, testData.Dequeue().Metrics);
-                _nodes = Enumerable.Range(1, 100).Aggregate(ImmutableList.Create(_node1, _node2),
-                    (nodes, _) =>
-                    {
-                        return nodes.Select(n =>
-                        {
-                            return new NodeMetrics(n.Address, n.Timestamp,
-                                metrics: testData.Dequeue().Metrics.SelectMany(latest =>
-                                {
-                                    return n.Metrics.Where(latest.SameAs)
-                                        .Select(streaming => streaming + latest);
-                                }));
-                        }).ToImmutableList();
-                    });
-            }
-            catch (Exception e)
-            {
-                throw new Exception("Failed to initialize test data", e);
-            }
+            return ImmutableHashSet.Create(
+                NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, 1024L * 1024 * 512, Option<double>.None).Value, // 512MB
+                NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, 1024L * 1024 * 1536, Option<double>.None).Value, // 1.5GB  
+                NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, 4, Option<double>.None).Value,
+                NodeMetrics.Types.Metric.Create(StandardMetrics.CpuProcessUsage, 0.25, Option<double>.None).Value, // 25%
+                NodeMetrics.Types.Metric.Create(StandardMetrics.CpuTotalUsage, 0.60, Option<double>.None).Value // 60%
+            );
         }
-
-        public Task DisposeAsync()
+        
+        private static ImmutableHashSet<NodeMetrics.Types.Metric> CreateTestMetricsVariation(int variation)
         {
-            return Task.CompletedTask;
+            // Create slight variations for testing aggregation logic
+            var factor = 1.0 + (variation * 0.01); // 1% variation per iteration
+            return ImmutableHashSet.Create(
+                NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, (long)(1024L * 1024 * 512 * factor), Option<double>.None).Value,
+                NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, (long)(1024L * 1024 * 1536 * factor), Option<double>.None).Value,
+                NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, 4, Option<double>.None).Value, // Processors don't vary
+                NodeMetrics.Types.Metric.Create(StandardMetrics.CpuProcessUsage, Math.Min(0.25 * factor, 1.0), Option<double>.None).Value,
+                NodeMetrics.Types.Metric.Create(StandardMetrics.CpuTotalUsage, Math.Min(0.60 * factor, 1.0), Option<double>.None).Value
+            );
         }
 
 
