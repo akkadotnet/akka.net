@@ -1247,7 +1247,18 @@ namespace Akka.Streams.Implementation.Fusing
                 if (status == null)
                 {
                     if (!_stage._status.CompareAndSet(null, callback))
-                        SetCallback(callback);
+                    {
+                        // Race condition detected - check the new status immediately
+                        var newStatus = _stage._status.Value;
+                        if (newStatus is Action<IActorSubscriberMessage>)
+                            throw new IllegalStateException("Substream Source cannot be materialized more than once");
+                        else if (newStatus is OnComplete)
+                            CompleteStage();
+                        else if (newStatus is OnError error)
+                            FailStage(error.Cause);
+                        else
+                            SetCallback(callback); // Retry only if status is still null (highly unlikely)
+                    }
                 }
                 else if (status is OnComplete)
                     CompleteStage();
