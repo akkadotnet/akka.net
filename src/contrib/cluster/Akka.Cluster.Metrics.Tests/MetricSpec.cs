@@ -294,44 +294,64 @@ namespace Akka.Cluster.Metrics.Tests
         }
     }
 
-    public class MetricValuesSpec : AkkaSpecWithCollector
+    public class MetricValuesSpec : AkkaSpecWithCollector, IAsyncLifetime
     {
-        private readonly NodeMetrics _node1;
-        private readonly NodeMetrics _node2;
-        private readonly IImmutableList<NodeMetrics> _nodes;
+        private NodeMetrics _node1;
+        private NodeMetrics _node2;
+        private IImmutableList<NodeMetrics> _nodes;
         
         public MetricValuesSpec() : base(ClusterMetricsTestConfig.DefaultEnabled)
         {
-            Queue<NodeMetrics> testData;
+        }
+
+        public async Task InitializeAsync()
+        {
             try
             {
-                testData = CreateTestData(202, 10.Seconds(), [
+                // Get one good sample with all required metrics, then reuse it
+                // This is much more efficient than calling CreateTestDataAsync 202 times
+                var baseSample = await CreateTestDataAsync(30.Seconds(), [
                     StandardMetrics.MemoryUsed, 
                     StandardMetrics.MemoryAvailable,
                     StandardMetrics.Processors,
                     StandardMetrics.CpuProcessUsage,
                     StandardMetrics.CpuTotalUsage ]);
+                
+                // Generate 202 samples by creating variations of the base sample
+                var testData = new Queue<NodeMetrics>();
+                for (int i = 0; i < 202; i++)
+                {
+                    // Create sample with slight timestamp variation to simulate real data
+                    var sampleMetrics = baseSample.Metrics.Select(m => 
+                        NodeMetrics.Types.Metric.Create(m.Name, m.Value, m.SmoothValue).Value).ToList();
+                    testData.Enqueue(new NodeMetrics(baseSample.Address, baseSample.Timestamp + i, sampleMetrics));
+                }
+                
+                _node1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), 1, testData.Dequeue().Metrics);
+                _node2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), 1, testData.Dequeue().Metrics);
+                _nodes = Enumerable.Range(1, 100).Aggregate(ImmutableList.Create(_node1, _node2),
+                    (nodes, _) =>
+                    {
+                        return nodes.Select(n =>
+                        {
+                            return new NodeMetrics(n.Address, n.Timestamp,
+                                metrics: testData.Dequeue().Metrics.SelectMany(latest =>
+                                {
+                                    return n.Metrics.Where(latest.SameAs)
+                                        .Select(streaming => streaming + latest);
+                                }));
+                        }).ToImmutableList();
+                    });
             }
             catch (Exception e)
             {
                 throw new Exception("Failed to initialize test data", e);
             }
-            
-            _node1 = new NodeMetrics(new Address("akka", "sys", "a", 2554), 1, testData.Dequeue().Metrics);
-            _node2 = new NodeMetrics(new Address("akka", "sys", "a", 2555), 1, testData.Dequeue().Metrics);
-            _nodes = Enumerable.Range(1, 100).Aggregate(ImmutableList.Create(_node1, _node2),
-                (nodes, _) =>
-                {
-                    return nodes.Select(n =>
-                    {
-                        return new NodeMetrics(n.Address, n.Timestamp,
-                            metrics: testData.Dequeue().Metrics.SelectMany(latest =>
-                            {
-                                return n.Metrics.Where(latest.SameAs)
-                                    .Select(streaming => streaming + latest);
-                            }));
-                    }).ToImmutableList();
-                });
+        }
+
+        public Task DisposeAsync()
+        {
+            return Task.CompletedTask;
         }
 
 
