@@ -498,36 +498,27 @@ namespace Akka.Streams.Tests.IO
                     .Via(system2.TcpStream().OutgoingConnection(serverAddress))
                     .RunAggregate(0, (i, s) => i + s.Count, mat2);
 
-                // Wait for connection to be established by checking that connection actors exist
+                // Get the actual connection actor reference and watch it
+                IActorRef connectionActor = null;
                 await AwaitAssertAsync(async () =>
                 {
-                    try
-                    {
-                        await system2.ActorSelection(system2.Tcp().Path / "tcp-client-connection-*")
-                            .ResolveOne(TimeSpan.FromMilliseconds(100));
-                        // If we get here, connection actor exists
-                    }
-                    catch (ActorNotFoundException)
-                    {
-                        throw new Exception("Connection not yet established");
-                    }
+                    connectionActor = await system2.ActorSelection(system2.Tcp().Path / "tcp-client-connection-*")
+                        .ResolveOne(TimeSpan.FromMilliseconds(100));
                 }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200));
 
-                await Awaiting(async () =>
-                    {
-                        await WithinAsync(TimeSpan.FromSeconds(15), async () =>
-                        {
-                            await AwaitAssertAsync(async () =>
-                            {
-                                // Getting rid of existing connection actors by using a blunt instrument
-                                system2.ActorSelection(system2.Tcp().Path / "tcp-client-connection-*").Tell(Kill.Instance);
-                            
-                                await result.WaitAsync(3.Seconds());
-                            }, interval:TimeSpan.FromSeconds(4));
-                        });
-                        
-                        
-                    })
+                // Watch the connection actor so we can verify it's actually dead
+                var probe = CreateTestProbe(system2);
+                await probe.WatchAsync(connectionActor);
+
+                // Kill the specific connection actor
+                connectionActor.Tell(Kill.Instance);
+
+                // Wait for the actor to actually terminate
+                var terminated = await probe.ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(3));
+                terminated.ActorRef.Should().Be(connectionActor);
+
+                // Now the result should throw StreamTcpException since connection is definitely dead
+                await Awaiting(async () => await result.WaitAsync(TimeSpan.FromSeconds(3)))
                     .Should().ThrowAsync<StreamTcpException>();
 
                 await binding.Result.Unbind().WaitAsync(3.Seconds());
