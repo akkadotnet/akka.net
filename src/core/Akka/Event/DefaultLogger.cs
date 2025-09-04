@@ -46,7 +46,11 @@ namespace Akka.Event
         protected virtual void Print(LogEvent logEvent)
         {
             if (_stdoutLogger == null)
-                throw new Exception("Logger has not been initialized yet.");
+            {
+                // Include context about the failed log event to help with debugging
+                var logDetails = $"[{logEvent.LogLevel()}] {logEvent.LogSource}: {logEvent.Message}";
+                throw new Exception($"Logger has not been initialized yet. Failed to log: {logDetails}");
+            }
             
             _stdoutLogger.Tell(logEvent);
         }
