@@ -1240,7 +1240,7 @@ namespace Akka.DistributedData
             if (!HasSubscriber(subscriber))
                 Context.Unwatch(subscriber);
 
-            if (!_subscribers.ContainsKey(key.Id) || !_newSubscribers.ContainsKey(key.Id))
+            if (!_subscribers.ContainsKey(key.Id) && !_newSubscribers.ContainsKey(key.Id))
                 _subscriptionKeys = _subscriptionKeys.Remove(key.Id);
         }
 
