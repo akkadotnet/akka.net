@@ -885,11 +885,18 @@ namespace Akka.Streams.Stage
                 _ownedStage = ownedStage;
                 _wrappedHandler = obj =>
                 {
-                    if (obj is T e)
-                        handler1(e);
-                    else
-                        throw new ArgumentException(
-                            $"Expected {nameof(obj)} to be of type {typeof(T)}, but was {obj.GetType()}");
+                    switch (obj)
+                    {
+                        // Always assume that T can be null and the handler will handle null values
+                        case null:
+                            handler1(default);
+                            break;
+                        case T e:
+                            handler1(e);
+                            break;
+                        default:
+                            throw new ArgumentException($"Expected {nameof(obj)} to be of type {typeof(T)}, but was {obj.GetType()}");
+                    }
                 };
             }
 
